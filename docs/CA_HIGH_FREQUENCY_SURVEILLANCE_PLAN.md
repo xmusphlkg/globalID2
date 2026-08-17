@@ -90,6 +90,15 @@ run into replay mode. A single task must explicitly use
 and records the original filename, modification time, byte count, and SHA-256.
 Arbitrary dashboard-provided paths are not accepted.
 
+The live discovery contract supports both Power BI's legacy embedded
+`config/query` containers and its Fabric PBIR report definitions. For PBIR, the
+connector reconstructs the read-only semantic query from the official table
+projections plus report, page, and visual filters; it does not hard-code the
+current PHU, disease exclusions, or reporting cutoff. The configured page and
+visual must still resolve uniquely, and the official date filter must identify
+exactly one reviewed reporting year. Missing or ambiguous contracts fail the
+run rather than reusing prior data or publishing an empty success.
+
 ### Normalized row contract
 
 Each row must contain:

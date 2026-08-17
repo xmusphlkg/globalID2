@@ -1,0 +1,109 @@
+---
+import type { SituationReportV3 } from '../utils/situation';
+import { formatDate, formatNumber, label, labelZh } from '../utils/situation';
+
+interface Props { snapshot: SituationReportV3; }
+const { snapshot } = Astro.props;
+const slices = [...(snapshot.data_currency.by_source ?? [])].sort((left, right) => {
+  const rank = (status: string) => ({ stale: 0, failed: 0, partial: 1, not_checked: 2, fresh: 3 })[status] ?? 2;
+  return rank(left.status) - rank(right.status) || left.source_system.localeCompare(right.source_system);
+});
+const ready = slices.filter(slice => slice.status === 'fresh').length;
+const partial = slices.filter(slice => slice.status === 'partial').length;
+const unavailable = slices.filter(slice => slice.status === 'stale' || slice.status === 'failed').length;
+const heldBack = slices.reduce((sum, slice) => sum + (slice.held_back_series_count ?? 0), 0);
+const delayed = slices.reduce((sum, slice) => sum + (slice.delayed_series_count ?? 0), 0);
+const readiness = snapshot.coverage.evaluated_series_count > 0
+  ? snapshot.coverage.modeled_series_count / snapshot.coverage.evaluated_series_count
+  : null;
+---
+
+<section class="readiness" aria-labelledby="readiness-title">
+  <header>
+    <div>
+      <p data-lang-en="Data readiness" data-lang-zh="数据就绪度">Data readiness</p>
+      <h2 id="readiness-title" data-lang-en="Compare only mature source periods" data-lang-zh="仅比较已成熟的来源周期">Compare only mature source periods</h2>
+      <span data-lang-en="Each feed advances on its own schedule. New periods are held back until the source cohort is sufficiently complete; delayed feeds do not enter the current FDR family." data-lang-zh="各来源按自身节奏更新。新周期只有在来源序列群达到足够完整度后才进入分析；延迟来源不进入当期 FDR 检验族。">Each feed advances on its own schedule. New periods are held back until the source cohort is sufficiently complete; delayed feeds do not enter the current FDR family.</span>
+    </div>
+    <div class="readiness-score">
+      <b>{readiness === null ? '—' : `${Math.round(readiness * 100)}%`}</b>
+      <small data-lang-en="usable series coverage" data-lang-zh="可用序列覆盖率">usable series coverage</small>
+    </div>
+  </header>
+
+  <dl class="readiness-strip">
+    <div class="ready"><dt data-lang-en="Ready feeds" data-lang-zh="就绪来源">Ready feeds</dt><dd>{ready}</dd></div>
+    <div class="partial"><dt data-lang-en="Partial feeds" data-lang-zh="部分就绪">Partial feeds</dt><dd>{partial}</dd></div>
+    <div class="unavailable"><dt data-lang-en="Stale / failed" data-lang-zh="陈旧 / 失败">Stale / failed</dt><dd>{unavailable}</dd></div>
+    <div><dt data-lang-en="Periods held back" data-lang-zh="暂缓周期序列">Periods held back</dt><dd>{heldBack}</dd></div>
+    <div><dt data-lang-en="Delayed series" data-lang-zh="延迟序列">Delayed series</dt><dd>{delayed}</dd></div>
+  </dl>
+
+  <details class="source-ledger">
+    <summary>
+      <span data-lang-en={`Inspect ${slices.length} source / cadence groups`} data-lang-zh={`查看 ${slices.length} 个来源 / 频率组`}>Inspect {slices.length} source / cadence groups</span>
+      <small data-lang-en="Analysis through · latest received · cohort readiness" data-lang-zh="分析截至 · 最新收到 · 来源群就绪度">Analysis through · latest received · cohort readiness</small>
+    </summary>
+    <div class="source-table" role="table" aria-label="Source data readiness">
+      <div class="source-head" role="row">
+        <span role="columnheader" data-lang-en="Source" data-lang-zh="来源">Source</span>
+        <span role="columnheader" data-lang-en="Analysis through" data-lang-zh="分析截至">Analysis through</span>
+        <span role="columnheader" data-lang-en="Latest received" data-lang-zh="最新收到">Latest received</span>
+        <span role="columnheader" data-lang-en="Readiness" data-lang-zh="就绪度">Readiness</span>
+        <span role="columnheader" data-lang-en="Status" data-lang-zh="状态">Status</span>
+      </div>
+      {slices.map(slice => {
+        const ratio = slice.readiness_ratio ?? (slice.status === 'fresh' ? 1 : 0);
+        return <div class={`source-row status-${slice.status}`} role="row">
+          <span role="cell"><b>{slice.source_system}</b><small data-lang-en={label(slice.cadence || 'mixed')} data-lang-zh={labelZh(slice.cadence || 'mixed')}>{label(slice.cadence || 'mixed')}</small></span>
+          <span role="cell"><b>{formatDate(slice.comparable_through || slice.latest_data_through)}</b><small>{slice.analyzed_series_count} <i data-lang-en="series analyzed" data-lang-zh="条序列已分析">series analyzed</i></small></span>
+          <span role="cell"><b>{formatDate(slice.latest_available_through || slice.latest_data_through)}</b><small>{slice.held_back_series_count ?? 0} <i data-lang-en="held back" data-lang-zh="条暂缓">held back</i></small></span>
+          <span role="cell" class="meter-cell"><span class="meter"><i style={`width:${Math.round(ratio * 100)}%`}></i></span><small>{formatNumber(ratio * 100, 0)}%</small></span>
+          <span role="cell"><em data-lang-en={label(slice.status)} data-lang-zh={labelZh(slice.status)}>{label(slice.status)}</em>{(slice.delayed_series_count ?? 0) > 0 && <small>{slice.delayed_series_count} <i data-lang-en="delayed" data-lang-zh="条延迟">delayed</i></small>}</span>
+        </div>;
+      })}
+    </div>
+  </details>
+</section>
+
+<style>
+  .readiness { background: linear-gradient(135deg, rgb(var(--surface-raised)), rgb(var(--surface) / .55)); border: 1px solid rgb(var(--border)); display: grid; gap: 1.1rem; padding: clamp(1rem, 2.4vw, 1.6rem); }
+  header { align-items: end; display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr) auto; }
+  header > div:first-child { max-width: 58rem; }
+  header p { color: rgb(var(--color-teal)); font-size: .68rem; font-weight: 800; letter-spacing: .13em; margin: 0 0 .35rem; text-transform: uppercase; }
+  h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: clamp(1.45rem, 3vw, 2rem); line-height: 1.08; margin: 0; }
+  header span { color: rgb(var(--text-muted)); display: block; font-size: .84rem; line-height: 1.6; margin-top: .55rem; }
+  .readiness-score { border-left: 1px solid rgb(var(--border)); display: grid; min-width: 10rem; padding-left: 1.2rem; }
+  .readiness-score b { color: rgb(var(--text-strong)); font-family: 'JetBrains Mono', monospace; font-size: 2.15rem; line-height: 1; }
+  .readiness-score small { color: rgb(var(--text-faint)); font-size: .66rem; margin-top: .35rem; }
+  .readiness-strip { display: grid; gap: .55rem; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0; }
+  .readiness-strip div { border-top: 3px solid rgb(var(--border)); padding-top: .55rem; }
+  .readiness-strip .ready { border-color: rgb(31 126 92); }
+  .readiness-strip .partial { border-color: rgb(198 140 44); }
+  .readiness-strip .unavailable { border-color: rgb(174 61 67); }
+  dt { color: rgb(var(--text-faint)); font-size: .59rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+  dd { color: rgb(var(--text-strong)); font-family: 'JetBrains Mono', monospace; font-size: 1.22rem; margin: .18rem 0 0; }
+  .source-ledger { border-top: 1px solid rgb(var(--border)); padding-top: .9rem; }
+  .source-ledger > summary { align-items: baseline; color: rgb(var(--text-strong)); cursor: pointer; display: flex; font-size: .78rem; font-weight: 750; justify-content: space-between; list-style: none; }
+  .source-ledger > summary::-webkit-details-marker { display: none; }
+  .source-ledger > summary::after { color: rgb(var(--color-teal)); content: '+'; font: 1.2rem 'JetBrains Mono', monospace; margin-left: .8rem; }
+  .source-ledger[open] > summary::after { content: '−'; }
+  .source-ledger > summary small { color: rgb(var(--text-faint)); font-size: .62rem; font-weight: 500; margin-left: auto; }
+  .source-table { border-top: 1px solid rgb(var(--border)); margin-top: .8rem; }
+  .source-head, .source-row { align-items: center; display: grid; gap: .8rem; grid-template-columns: minmax(12rem, 1.4fr) repeat(4, minmax(7rem, .8fr)); }
+  .source-head { color: rgb(var(--text-faint)); font-size: .57rem; font-weight: 750; letter-spacing: .08em; padding: .55rem .65rem; text-transform: uppercase; }
+  .source-row { border-top: 1px solid rgb(var(--border)); padding: .62rem .65rem; }
+  .source-row > span { display: grid; gap: .1rem; min-width: 0; }
+  .source-row b { color: rgb(var(--text-strong)); font-family: 'JetBrains Mono', monospace; font-size: .66rem; overflow-wrap: anywhere; }
+  .source-row small { color: rgb(var(--text-faint)); font-size: .59rem; }
+  .source-row i { font-style: normal; }
+  .source-row em { border: 1px solid currentColor; color: rgb(var(--text-muted)); font-size: .57rem; font-style: normal; justify-self: start; padding: .15rem .32rem; text-transform: uppercase; }
+  .status-stale em, .status-failed em { color: rgb(174 61 67); }
+  .status-partial em { color: rgb(162 105 28); }
+  .status-fresh em { color: rgb(31 126 92); }
+  .meter-cell { grid-template-columns: minmax(3.5rem, 1fr) auto !important; }
+  .meter { background: rgb(var(--border)); display: block; height: .32rem; overflow: hidden; }
+  .meter i { background: rgb(var(--color-teal)); display: block; height: 100%; }
+  @media (max-width: 900px) { .readiness-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } .source-head { display: none; } .source-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 600px) { header { align-items: start; grid-template-columns: 1fr; } .readiness-score { border-left: 0; border-top: 1px solid rgb(var(--border)); padding: .8rem 0 0; } .readiness-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } .source-ledger > summary small { display: none; } .source-row { grid-template-columns: 1fr; } }
+</style>

@@ -1,0 +1,163 @@
+{
+  "schema_version": "situation_room.v3",
+  "public_enabled": true,
+  "report": {
+    "report_id": "situation-v3-daily-2026-08-17-r1",
+    "kind": "daily",
+    "period_key": "2026-08-17",
+    "period_start": "2026-08-17",
+    "period_end": "2026-08-17",
+    "as_of": "2026-08-17T02:00:00Z",
+    "revision": 1,
+    "status": "published",
+    "supersedes_report_id": null
+  },
+  "method": {
+    "version": "situation_room_v3.0",
+    "model": "robust_quasi_poisson_v1",
+    "config_hash": "fixture-config-hash",
+    "code_version": "fixture",
+    "fdr_method": "benjamini_hochberg",
+    "fdr_family": "metric_type_cadence",
+    "alert_q": 0.05,
+    "strong_q": 0.01
+  },
+  "data_currency": {
+    "earliest_data_through": "2026-08-09",
+    "latest_data_through": "2026-08-09",
+    "by_source": [{
+      "source_system": "SRC_FIXTURE",
+      "cadence": "weekly",
+      "earliest_data_through": "2026-08-09",
+      "latest_data_through": "2026-08-09",
+      "analyzed_series_count": 1,
+      "status": "fresh"
+    }]
+  },
+  "coverage": {
+    "registered_series_count": 1,
+    "evaluated_series_count": 1,
+    "modeled_series_count": 1,
+    "rejected_series_count": 0,
+    "published_signal_count": 1,
+    "jurisdiction_count": 1,
+    "disease_count": 1,
+    "rejection_reasons": {},
+    "note": {"en": "Fixture coverage.", "zh": "测试覆盖。"}
+  },
+  "summary": {
+    "unique_signal_count": 1,
+    "alert_count": 1,
+    "strong_count": 1,
+    "official_event_count": 1,
+    "new_count": 1,
+    "persistent_count": 0,
+    "resolved_count": 0,
+    "active_at_period_end_count": 1
+  },
+  "signals": [{
+    "identity": {
+      "signal_id": "signal-v3:fixture",
+      "disease_id": "D001",
+      "disease_name": "Example disease",
+      "disease_slug": "example-disease",
+      "country_code": "US",
+      "country_name": "United States",
+      "canonical_geography_key": "country:US:national",
+      "source_geography_keys": ["national"],
+      "dimension_key": "all",
+      "dimensions": {},
+      "series_code": "SER_FIXTURE",
+      "source_system": "SRC_FIXTURE",
+      "source_label": "Fixture source",
+      "metric_type": "case_notifications",
+      "metric_label": "cases",
+      "unit": "count",
+      "cadence": "weekly"
+    },
+    "observation": {
+      "window_label": "Last 4 weeks",
+      "window_periods": 4,
+      "data_through": "2026-08-09",
+      "current": 160,
+      "previous": 100,
+      "expected": 105,
+      "predictive_upper_95": 130,
+      "absolute_change": 60,
+      "relative_change_pct": 60,
+      "completeness": 1
+    },
+    "anomaly": {
+      "model": "robust_quasi_poisson_v1",
+      "state": "strong",
+      "raw_p_value": 0.0001,
+      "q_value": 0.001,
+      "standardized_exceedance": 4.2,
+      "dispersion": 1.8,
+      "fit_status": "completed",
+      "effect_threshold_passed": true,
+      "diagnostics": {"history_count": 260}
+    },
+    "assessment": {
+      "review_priority": "high",
+      "evidence_gaps": ["public_health_risk_not_assessed"],
+      "public_health_risk": {
+        "status": "not_assessed",
+        "level": null,
+        "source": null,
+        "rationale": null,
+        "evidence_url": null
+      }
+    },
+    "tags": ["increasing", "unusual"],
+    "recent_points": [
+      {"period": "2026-07-19", "value": 24, "expected": 25, "predictive_upper_95": 33},
+      {"period": "2026-07-26", "value": 29, "expected": 26, "predictive_upper_95": 34},
+      {"period": "2026-08-02", "value": 55, "expected": 27, "predictive_upper_95": 36},
+      {"period": "2026-08-09", "value": 52, "expected": 27, "predictive_upper_95": 36}
+    ],
+    "evidence_links": [{"title": "Fixture source", "url": "https://example.invalid/source", "source": "fixture"}],
+    "lifecycle": {
+      "status": "new",
+      "first_seen_at": "2026-08-17T02:00:00Z",
+      "last_seen_at": "2026-08-17T02:00:00Z",
+      "active_run_count": 1,
+      "peak_q_value": 0.001
+    }
+  }],
+  "events": [{
+    "cluster_id": "event-cluster:fixture",
+    "disease_id": "D001",
+    "disease_name": "Example disease",
+    "geographies": [{"code": "US", "name": "United States"}],
+    "first_published_at": "2026-08-12",
+    "last_published_at": "2026-08-12",
+    "status": "active",
+    "updates": [{
+      "update_id": "event-update:fixture",
+      "source": "WHO",
+      "title": "Fixture official update",
+      "url": "https://example.invalid/event",
+      "published_at": "2026-08-12"
+    }],
+    "matched_signal_ids": ["signal-v3:fixture"]
+  }],
+  "context_panels": [],
+  "sources": [{
+    "source_id": "SRC_FIXTURE",
+    "label": "Fixture source",
+    "status": "fresh",
+    "checked_at": "2026-08-17T02:00:00Z",
+    "last_success_at": "2026-08-17T02:00:00Z",
+    "item_count": 1,
+    "error": null
+  }],
+  "narrative": {"en": "One unique review signal.", "zh": "一个唯一复核信号。"},
+  "limitations": {"en": "Review signal, not a risk rating.", "zh": "复核信号并非风险评级。"},
+  "quality_gate": {
+    "status": "passed",
+    "passed": true,
+    "failed_checks": [],
+    "checks": [{"id": "fixture", "passed": true, "details": {}}]
+  }
+}

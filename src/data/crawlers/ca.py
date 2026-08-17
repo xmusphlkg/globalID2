@@ -2,9 +2,10 @@
 
 The public IDTO report is an embedded Power BI report.  The live path obtains a
 short-lived embed token from PHO's public wrapper, discovers the current model,
-page, visual, and query, then executes that visual's read-only query. No token
-or response cookie is persisted; public report/model identifiers are retained
-in raw provenance when archival is enabled.
+page, visual, and query, then executes that visual's read-only query. Both the
+legacy Power BI visual-container metadata and the newer Fabric PBIR definition
+are supported. No token or response cookie is persisted; public report/model
+identifiers are retained in raw provenance when archival is enabled.
 
 For auditable replay and deployments where the undocumented Power BI data plane
 is unavailable, the connector also accepts an official CSV/XLSX export through
@@ -16,6 +17,7 @@ leaving the environment variable set cannot change a live scheduled run.
 from __future__ import annotations
 
 import base64
+import copy
 import csv
 import hashlib
 import io
@@ -278,6 +280,304 @@ def _visual_title(config: Mapping[str, Any]) -> str:
     return text.replace("''", "'")
 
 
+def _transform_query_tree(value: Any, transform: Any) -> Any:
+    """Deep-copy a Power BI query fragment while transforming each object."""
+
+    if isinstance(value, Mapping):
+        transformed = {
+            str(key): _transform_query_tree(item, transform)
+            for key, item in value.items()
+        }
+        return transform(transformed)
+    if isinstance(value, list):
+        return [_transform_query_tree(item, transform) for item in value]
+    return copy.deepcopy(value)
+
+
+def _build_pbir_visual_query(
+    *,
+    report: Mapping[str, Any],
+    page: Mapping[str, Any],
+    visual: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Compile a Fabric PBIR visual definition into a read-only query.
+
+    Power BI's newer PBIR response no longer includes the legacy executable
+    ``visualContainer.query``.  It retains the same source contract as
+    declarative projections and report/page/visual filters, so build the
+    equivalent SemanticQueryDataShape command without hard-coding PHO values.
+    """
+
+    visual_definition = visual.get("visual")
+    if not isinstance(visual_definition, Mapping):
+        raise ValueError("PHO IDTO PBIR table visual definition is invalid")
+    query_state = (visual_definition.get("query") or {}).get("queryState")
+    if not isinstance(query_state, Mapping):
+        raise ValueError("PHO IDTO PBIR table query state is missing")
+    values = query_state.get("Values")
+    projections = values.get("projections") if isinstance(values, Mapping) else None
+    if not isinstance(projections, list) or not projections:
+        raise ValueError("PHO IDTO PBIR table projections are missing")
+
+    entities: list[str] = []
+
+    def alias_for(entity: object) -> str:
+        name = _norm_text(entity)
+        if not name:
+            raise ValueError("PHO IDTO PBIR query contains a blank entity")
+        if name not in entities:
+            entities.append(name)
+        return f"s{entities.index(name)}"
+
+    def projection_transform(node: dict[str, Any]) -> dict[str, Any]:
+        source_ref = node.get("SourceRef")
+        if isinstance(source_ref, Mapping) and source_ref.get("Entity"):
+            node["SourceRef"] = {"Source": alias_for(source_ref["Entity"])}
+        return node
+
+    selections: list[dict[str, Any]] = []
+    semantic_names: set[str] = set()
+    for projection in projections:
+        if not isinstance(projection, Mapping):
+            raise ValueError("PHO IDTO PBIR projection is not an object")
+        field = projection.get("field")
+        if not isinstance(field, Mapping) or len(field) != 1:
+            raise ValueError("PHO IDTO PBIR projection field is invalid")
+        field_kind = next(iter(field))
+        if field_kind not in {"Column", "Measure"}:
+            raise ValueError(
+                f"PHO IDTO PBIR projection type is unsupported: {field_kind}"
+            )
+        query_ref = _norm_text(projection.get("queryRef"))
+        if not query_ref or query_ref in semantic_names:
+            raise ValueError("PHO IDTO PBIR projection names are invalid")
+        semantic_names.add(query_ref)
+        transformed = _transform_query_tree(field, projection_transform)
+        selection = {
+            field_kind: transformed[field_kind],
+            "Name": query_ref,
+            "NativeReferenceName": _norm_text(
+                projection.get("nativeQueryRef")
+                or projection.get("displayName")
+                or query_ref
+            ),
+        }
+        selections.append(selection)
+
+    where: list[dict[str, Any]] = []
+    filter_configs = (
+        report.get("filterConfig"),
+        page.get("filterConfig"),
+        visual.get("filterConfig"),
+    )
+    for filter_config in filter_configs:
+        filters = (
+            filter_config.get("filters")
+            if isinstance(filter_config, Mapping)
+            else []
+        )
+        if not isinstance(filters, list):
+            raise ValueError("PHO IDTO PBIR filter configuration is invalid")
+        for item in filters:
+            if not isinstance(item, Mapping):
+                raise ValueError("PHO IDTO PBIR filter is not an object")
+            query_filter = item.get("filter")
+            # Power BI includes empty Advanced filter placeholders for visible
+            # measures. They carry no condition and must not become queries.
+            if query_filter is None:
+                continue
+            if not isinstance(query_filter, Mapping):
+                raise ValueError("PHO IDTO PBIR filter query is invalid")
+            filter_from = query_filter.get("From") or []
+            filter_where = query_filter.get("Where") or []
+            if not isinstance(filter_from, list) or not isinstance(
+                filter_where, list
+            ):
+                raise ValueError("PHO IDTO PBIR filter query shape is invalid")
+            local_aliases: dict[str, str] = {}
+            for source in filter_from:
+                if not isinstance(source, Mapping):
+                    raise ValueError("PHO IDTO PBIR filter source is invalid")
+                local_name = _norm_text(source.get("Name"))
+                entity = _norm_text(source.get("Entity"))
+                if not local_name or not entity or local_name in local_aliases:
+                    raise ValueError("PHO IDTO PBIR filter source is ambiguous")
+                local_aliases[local_name] = alias_for(entity)
+
+            def filter_transform(node: dict[str, Any]) -> dict[str, Any]:
+                source_ref = node.get("SourceRef")
+                if not isinstance(source_ref, Mapping):
+                    return node
+                if source_ref.get("Entity"):
+                    node["SourceRef"] = {
+                        "Source": alias_for(source_ref["Entity"])
+                    }
+                    return node
+                local_name = _norm_text(source_ref.get("Source"))
+                if local_name:
+                    if local_name not in local_aliases:
+                        raise ValueError(
+                            "PHO IDTO PBIR filter references an unknown source"
+                        )
+                    node["SourceRef"] = {"Source": local_aliases[local_name]}
+                return node
+
+            transformed_where = _transform_query_tree(
+                filter_where, filter_transform
+            )
+            if not isinstance(transformed_where, list):
+                raise ValueError("PHO IDTO PBIR transformed filter is invalid")
+            where.extend(transformed_where)
+
+    semantic_query: dict[str, Any] = {
+        "Version": 2,
+        "From": [
+            {"Name": alias_for(entity), "Entity": entity, "Type": 0}
+            for entity in entities
+        ],
+        "Select": selections,
+    }
+    if where:
+        semantic_query["Where"] = where
+    return {
+        "Commands": [
+            {
+                "SemanticQueryDataShapeCommand": {
+                    "Query": semantic_query,
+                    "Binding": {
+                        "Primary": {
+                            "Groupings": [
+                                {"Projections": list(range(len(selections)))}
+                            ]
+                        },
+                        "DataReduction": {
+                            "DataVolume": 3,
+                            "Primary": {"Window": {"Count": 500}},
+                        },
+                        "Version": 1,
+                    },
+                    "ExecutionMetricsKind": 1,
+                }
+            }
+        ]
+    }
+
+
+def _discover_pbir_monthly_visual(
+    metadata: Mapping[str, Any],
+    *,
+    page_display_name: str,
+    preferred_visual_name: str,
+) -> tuple[dict[str, Any], str, str, str] | None:
+    exploration = metadata.get("exploration")
+    if not isinstance(exploration, Mapping):
+        return None
+    exploration_content = exploration.get("explorationContent")
+    if not isinstance(exploration_content, Mapping):
+        return None
+    document_value = exploration_content.get("explorationDocument")
+    if document_value is None:
+        return None
+    try:
+        document = _json_object(document_value, label="PBIR exploration document")
+    except (ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError("PHO IDTO PBIR exploration document is invalid") from exc
+
+    pages_container = document.get("pages")
+    pages = pages_container.get("pages") if isinstance(pages_container, Mapping) else None
+    if not isinstance(pages, list):
+        raise RuntimeError("PHO IDTO PBIR page definitions are missing")
+    page_matches = [
+        item
+        for item in pages
+        if isinstance(item, Mapping)
+        and isinstance(item.get("content"), Mapping)
+        and _norm_text(item["content"].get("displayName")).casefold()
+        == page_display_name.casefold()
+    ]
+    if len(page_matches) != 1:
+        raise RuntimeError(
+            f"PHO IDTO monthly page discovery returned {len(page_matches)} matches"
+        )
+    page_wrapper = page_matches[0]
+    page = page_wrapper["content"]
+
+    candidates: list[Mapping[str, Any]] = []
+    for wrapper in page_wrapper.get("visualContainers") or []:
+        if not isinstance(wrapper, Mapping):
+            continue
+        content = wrapper.get("content")
+        definition = content.get("visual") if isinstance(content, Mapping) else None
+        if (
+            isinstance(definition, Mapping)
+            and definition.get("visualType") == "tableEx"
+            and isinstance(definition.get("query"), Mapping)
+        ):
+            candidates.append(content)
+    preferred = [
+        item
+        for item in candidates
+        if _norm_text(item.get("name")) == preferred_visual_name
+    ]
+    selected_pool = preferred or candidates
+    if len(selected_pool) != 1:
+        raise RuntimeError(
+            f"PHO IDTO monthly table discovery returned {len(selected_pool)} matches"
+        )
+    visual = selected_pool[0]
+
+    # The preliminary reporting year is a source contract, not the crawler's
+    # wall-clock year. Recover it from the official current-date page filter and
+    # fail closed if PHO changes that definition.
+    reporting_years: set[int] = set()
+    page_filter_config = page.get("filterConfig")
+    page_filters = (
+        page_filter_config.get("filters")
+        if isinstance(page_filter_config, Mapping)
+        else []
+    )
+    if not isinstance(page_filters, list):
+        raise RuntimeError("PHO IDTO PBIR page filter configuration is invalid")
+    for item in page_filters:
+        if not isinstance(item, Mapping):
+            continue
+        field = item.get("field")
+        column = field.get("Column") if isinstance(field, Mapping) else None
+        if not isinstance(column, Mapping) or _norm_header(
+            column.get("Property")
+        ) != "date":
+            continue
+        filter_text = json.dumps(item.get("filter") or {}, ensure_ascii=False)
+        reporting_years.update(int(value) for value in YEAR_RE.findall(filter_text))
+    if len(reporting_years) != 1:
+        raise RuntimeError(
+            "PHO IDTO PBIR reporting-year filter is missing or ambiguous"
+        )
+    reporting_year = next(iter(reporting_years))
+
+    report_wrapper = document.get("report")
+    report = (
+        report_wrapper.get("content")
+        if isinstance(report_wrapper, Mapping)
+        and isinstance(report_wrapper.get("content"), Mapping)
+        else {}
+    )
+    try:
+        query = _build_pbir_visual_query(
+            report=report,
+            page=page,
+            visual=visual,
+        )
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
+    return (
+        query,
+        _norm_text(page.get("displayName")),
+        _norm_text(visual.get("name")),
+        f"{_norm_text(page.get('displayName'))} {reporting_year}",
+    )
+
+
 def discover_monthly_visual(
     metadata: Mapping[str, Any],
     *,
@@ -293,49 +593,78 @@ def discover_monthly_visual(
     if not isinstance(model, dict):
         raise RuntimeError("PHO IDTO Power BI model metadata is invalid")
 
+    page_name = ""
+    visual_name = ""
+    title = ""
+    query: dict[str, Any] | None = None
     sections = (metadata.get("exploration") or {}).get("sections")
-    if not isinstance(sections, list):
-        raise RuntimeError("PHO IDTO Power BI page metadata is missing")
-    page_matches = [
-        page
-        for page in sections
-        if _norm_text(page.get("displayName")).casefold()
-        == page_display_name.casefold()
-    ]
-    if len(page_matches) != 1:
-        raise RuntimeError(
-            f"PHO IDTO monthly page discovery returned {len(page_matches)} matches"
-        )
-    page = page_matches[0]
+    if isinstance(sections, list):
+        page_matches = [
+            page
+            for page in sections
+            if _norm_text(page.get("displayName")).casefold()
+            == page_display_name.casefold()
+        ]
+        if len(page_matches) == 1:
+            page = page_matches[0]
+            candidates: list[tuple[dict[str, Any], dict[str, Any], str]] = []
+            for visual in page.get("visualContainers") or []:
+                if not isinstance(visual, dict):
+                    continue
+                try:
+                    config = _json_object(
+                        visual.get("config") or {}, label="visual config"
+                    )
+                except (ValueError, json.JSONDecodeError):
+                    continue
+                single = config.get("singleVisual") or {}
+                if single.get("visualType") != "tableEx" or not visual.get("query"):
+                    continue
+                candidates.append((visual, config, _visual_title(config)))
 
-    candidates: list[tuple[dict[str, Any], dict[str, Any], str]] = []
-    for visual in page.get("visualContainers") or []:
-        if not isinstance(visual, dict):
-            continue
-        try:
-            config = _json_object(visual.get("config") or {}, label="visual config")
-        except (ValueError, json.JSONDecodeError):
-            continue
-        single = config.get("singleVisual") or {}
-        if single.get("visualType") != "tableEx" or not visual.get("query"):
-            continue
-        candidates.append((visual, config, _visual_title(config)))
+            preferred = [
+                item
+                for item in candidates
+                if _norm_text(item[1].get("name")) == preferred_visual_name
+            ]
+            semantic = [
+                item
+                for item in candidates
+                if "disease" in item[2].casefold()
+                and "month" in item[2].casefold()
+            ]
+            selected_pool = preferred or semantic or candidates
+            if len(selected_pool) == 1:
+                visual, config, title = selected_pool[0]
+                query = _json_object(
+                    visual["query"], label="monthly visual query"
+                )
+                page_name = _norm_text(page.get("displayName"))
+                visual_name = _norm_text(config.get("name"))
 
-    preferred = [
-        item for item in candidates if _norm_text(item[1].get("name")) == preferred_visual_name
-    ]
-    semantic = [
-        item
-        for item in candidates
-        if "disease" in item[2].casefold() and "month" in item[2].casefold()
-    ]
-    selected_pool = preferred or semantic or candidates
-    if len(selected_pool) != 1:
-        raise RuntimeError(
-            f"PHO IDTO monthly table discovery returned {len(selected_pool)} matches"
+    if query is None:
+        pbir = _discover_pbir_monthly_visual(
+            metadata,
+            page_display_name=page_display_name,
+            preferred_visual_name=preferred_visual_name,
         )
-    visual, config, title = selected_pool[0]
-    query = _json_object(visual["query"], label="monthly visual query")
+        if pbir is None:
+            if not isinstance(sections, list):
+                raise RuntimeError("PHO IDTO Power BI page metadata is missing")
+            page_count = len(
+                [
+                    page
+                    for page in sections
+                    if _norm_text(page.get("displayName")).casefold()
+                    == page_display_name.casefold()
+                ]
+            )
+            if page_count != 1:
+                raise RuntimeError(
+                    f"PHO IDTO monthly page discovery returned {page_count} matches"
+                )
+            raise RuntimeError("PHO IDTO monthly table discovery returned 0 matches")
+        query, page_name, visual_name, title = pbir
 
     try:
         model_id = int(model["id"])
@@ -349,8 +678,8 @@ def discover_monthly_visual(
         model_id=model_id,
         dataset_id=dataset_id,
         query=query,
-        page_name=_norm_text(page.get("displayName")),
-        visual_name=_norm_text(config.get("name")),
+        page_name=page_name,
+        visual_name=visual_name,
         title=title,
         model_refresh_time=_norm_text(
             model.get("LastRefreshTime") or model.get("lastRefreshTime")
@@ -1339,7 +1668,7 @@ class CanadaOntarioPHOCrawler(BaseCrawler):
             max_retries=3,
             delay=0.2,
         )
-        config = get_country_bootstrap_config("CA")
+        config = get_country_bootstrap_config("CA-ON")
         crawler = config.get("crawler_config", {}) if isinstance(config, dict) else {}
         self.landing_url = str(crawler.get("landing_url") or DEFAULT_LANDING_URL)
         self.embed_url = str(crawler.get("embed_url") or DEFAULT_EMBED_URL)

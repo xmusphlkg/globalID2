@@ -10,6 +10,8 @@ export default defineConfig({
     react(),
   ],
   build: {
+    // Inline compact page-specific styles while preserving the shared base
+    // stylesheet as a cacheable asset across the generated page catalogue.
     inlineStylesheets: 'auto',
   },
   vite: {
@@ -31,7 +33,10 @@ export default defineConfig({
       rollupOptions: {
         output: {
           manualChunks(id) {
-            if (id.includes('/node_modules/echarts/')) return 'echarts';
+            // ECharts shares zrender across every feature registry. Keeping it
+            // as a stable cacheable vendor chunk prevents the shared graph
+            // from collapsing back into a >500 kB monolith.
+            if (id.includes('/node_modules/zrender/')) return 'zrender';
           },
         },
       },

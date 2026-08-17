@@ -1,6 +1,126 @@
 {
   "schema_version": 1,
   "diseases": {
+    "D232": {
+      "aliases": [
+        "Infectious syphilis less than two years duration",
+        "Syphilis less than 2 years duration",
+        "Primary secondary and early latent syphilis Australia"
+      ],
+      "sources": [
+        {
+          "source_type": "web_search",
+          "source_name": "Australian Government Department of Health and Aged Care",
+          "title": "Syphilis (less than 2 years duration) – surveillance case definition",
+          "url": "https://www.health.gov.au/sites/default/files/documents/2022/06/syphilis-less-than-2-years-duration-surveillance-case-definition.pdf",
+          "authority_level": "high",
+          "raw_excerpt": "The Australian national surveillance case definition treats infectious syphilis of less than two years duration as a notifiable category that includes primary, secondary and early latent infection and specifies confirmed and probable case criteria.",
+          "content_text": "This reviewed summary reflects the Australian national surveillance case-definition document for infectious syphilis of less than two years duration. The category includes primary, secondary and early latent syphilis and is used by state and territory health departments when deciding whether a case should be notified nationally. Confirmed classification can be based on definitive laboratory evidence, or on suggestive laboratory evidence together with compatible clinical evidence. The laboratory pathways include recent seroconversion, a substantial rise in non-treponemal antibody titre with treponemal confirmation, direct demonstration of Treponema pallidum, or specified combinations of treponemal and non-treponemal tests. Compatible clinical evidence includes a primary chancre or signs of secondary syphilis. The definition also describes probable cases using laboratory findings together with treatment history, contact, immunoglobulin M, or titre criteria. The less-than-two-year boundary is a surveillance classification and must not be interpreted as a claim that every infection date is known exactly. Both confirmed and probable cases meeting the national definition are reportable, and trend interpretation should retain the applicable definition version and jurisdictional notification practice.",
+          "content_sections": [
+            {
+              "heading": "Definition and reporting",
+              "text": "The nationally notifiable category covers infectious syphilis of less than two years duration, including primary, secondary and early latent infection. Confirmed and probable cases meeting the surveillance definition are notified."
+            },
+            {
+              "heading": "Clinical and laboratory scope",
+              "text": "Classification combines specified laboratory evidence with clinical findings such as a primary chancre or signs of secondary syphilis; recent seroconversion and qualifying antibody-titre changes are among the laboratory pathways."
+            },
+            {
+              "heading": "Surveillance interpretation",
+              "text": "The duration boundary is a national reporting classification. Comparisons should preserve the definition version, confirmed-versus-probable scope, and jurisdictional notification practice."
+            }
+          ]
+        }
+      ]
+    },
+    "D233": {
+      "aliases": [
+        "Syphilis more than two years or unknown duration",
+        "Syphilis greater than 2 years or unspecified duration",
+        "Australian NNDSS syphilis duration category"
+      ],
+      "sources": [
+        {
+          "source_type": "web_search",
+          "source_name": "Australian Government Department of Health and Aged Care",
+          "title": "Australia's notifiable diseases status, 2005 – sexually transmissible diseases",
+          "url": "https://www1.health.gov.au/internet/main/publishing.nsf/Content/cda-cdi3101a12.htm",
+          "authority_level": "high",
+          "raw_excerpt": "The official NNDSS annual report distinguishes infectious syphilis of less than two years duration from syphilis of more than two years or unknown duration and describes the latter surveillance category and its confirmed-case boundary.",
+          "content_text": "This reviewed summary reflects the Australian Government NNDSS annual-report section on sexually transmissible diseases. Adult syphilis notifications were reported in two separate duration categories: infectious syphilis of less than two years duration, and syphilis of more than two years or unknown duration. The second category is a combined surveillance bucket rather than a distinct organism or transmission route. Its confirmed-case definition applies when the case does not meet the less-than-two-year category and has qualifying reactive treponemal serology confirmed by a reactive non-treponemal test or another treponemal test, together with no documented history of adequate previous treatment or endemic treponemal disease under the stated definition. The annual report presents notifications and rates separately for the two categories and notes that screening and reporting practice can affect observed patterns. Counts in the more-than-two-years-or-unknown category therefore combine infections with different or uncertain timing and must not be interpreted as incident infectious syphilis. Trend comparisons should preserve the Australian category label, definition period, and confirmed-case reporting basis, and the two duration categories should not be merged without an explicit analytic reason.",
+          "content_sections": [
+            {
+              "heading": "Classification definition",
+              "text": "Australian NNDSS reporting separates adult syphilis into less-than-two-years infectious syphilis and a combined more-than-two-years-or-unknown-duration category. The latter is a reporting bucket, not a separate pathogen."
+            },
+            {
+              "heading": "Included conditions and laboratory boundary",
+              "text": "The category includes confirmed syphilis that does not meet the less-than-two-year definition and satisfies the stated serologic and treatment-history criteria; infection timing may be older or unknown."
+            },
+            {
+              "heading": "Monitoring interpretation",
+              "text": "Notifications and rates are reported separately by duration category. Screening, classification, and reporting practices affect trends, so the category must not be treated as incident infectious syphilis."
+            }
+          ]
+        }
+      ]
+    },
+    "D241": {
+      "aliases": [
+        "E. coli enteritis all reported pathotypes",
+        "E. coli-enteritt",
+        "Diarrheagenic Escherichia coli Norway MSIS",
+        "EHEC EIEC EPEC ETEC EAEC"
+      ],
+      "sources": [
+        {
+          "source_type": "web_search",
+          "source_name": "Norwegian Institute of Public Health (FHI)",
+          "title": "E. coli enteritis excluding EHEC infection and HUS – handbook for health professionals",
+          "url": "https://www.fhi.no/sm/smittevernhandboka/sykdommer-a-a/e-coli/",
+          "authority_level": "high",
+          "raw_excerpt": "FHI describes diarrheagenic E. coli groups including EIEC, EPEC, ETEC and EAEC, their epidemiology, and their reporting history in Norway, while directing EHEC and HUS to a separate chapter.",
+          "content_text": "This reviewed summary reflects the Norwegian Institute of Public Health handbook page for E. coli enteritis other than EHEC infection and haemolytic uraemic syndrome. FHI explains that most Escherichia coli are harmless intestinal flora but several diarrheagenic groups can cause enteric infection. The non-EHEC reporting scope includes enteroinvasive E. coli (EIEC), enteropathogenic E. coli (EPEC, including typical and atypical forms), enterotoxigenic E. coli (ETEC), and enteroaggregative E. coli (EAEC). The page explicitly directs EHEC infection and HUS to a separate chapter, making the boundary between these surveillance components clear. It describes human reservoirs for several pathotypes, animal reservoirs for some forms, and food, water, environmental, or person-to-person exposure contexts. E. coli enteritis was historically reportable for children during an earlier period, and all cases have been notifiable to MSIS since 1989 under the described scope. FHI notes that observed increases for some pathotypes are affected by expanded use of sensitive multiplex PCR and broader testing. Counts can also include PCR findings that do not fully distinguish EIEC from Shigella, so longitudinal interpretation must preserve diagnostic method and pathotype definitions.",
+          "content_sections": [
+            {
+              "heading": "Included non-EHEC pathotypes",
+              "text": "The FHI non-EHEC chapter covers EIEC, typical and atypical EPEC, ETEC and EAEC. EHEC infection and HUS are handled separately."
+            },
+            {
+              "heading": "Epidemiology and exposure",
+              "text": "Reservoirs and exposure routes differ by pathotype and can involve humans, animals, food, water, environments or person-to-person spread."
+            },
+            {
+              "heading": "MSIS interpretation",
+              "text": "All cases have been notifiable since 1989. Changes in PCR testing intensity and the inability of some assays to separate EIEC from Shigella affect reported trends."
+            }
+          ]
+        },
+        {
+          "source_type": "web_search",
+          "source_name": "Norwegian Institute of Public Health (FHI)",
+          "title": "EHEC infection and HUS – handbook for health professionals",
+          "url": "https://www.fhi.no/sm/smittevernhandboka/sykdommer-a-a/ehec-infeksjon-og-hus/",
+          "authority_level": "high",
+          "raw_excerpt": "FHI describes enterohaemorrhagic or Shiga-toxin-producing E. coli as the EHEC/STEC component of Norwegian E. coli enteritis surveillance and explains severity, reservoirs, reporting and diagnostic changes.",
+          "content_text": "This reviewed summary reflects the Norwegian Institute of Public Health handbook page for enterohaemorrhagic Escherichia coli infection and haemolytic uraemic syndrome. FHI uses EHEC for the established Norwegian surveillance label while noting the international shift toward the broader term Shiga-toxin-producing E. coli (STEC). EHEC or STEC can range from asymptomatic infection to severe bloody diarrhoea and may cause haemolytic uraemic syndrome. Virulence classification uses Shiga-toxin genes and subtypes together with other bacterial and host factors. Ruminants are an important reservoir, and exposure can involve food, water, animals, environments, or person-to-person transmission. E. coli enteritis including EHEC has been notifiable to MSIS since 1989, while diarrhoea-associated HUS became separately notifiable later. FHI describes changes in primary-laboratory testing and broader examination of stool samples as important influences on observed notification trends. High-virulence or suspected high-virulence findings receive additional follow-up and isolate verification. This EHEC/STEC component is distinct from the non-EHEC pathotypes described on the companion FHI page, but both components may appear in a source-reported all-pathotype E. coli enteritis aggregate.",
+          "content_sections": [
+            {
+              "heading": "EHEC and STEC component",
+              "text": "FHI retains EHEC as the Norwegian surveillance label and relates it to STEC. Infection ranges from asymptomatic carriage to bloody diarrhoea and HUS."
+            },
+            {
+              "heading": "Exposure and severity",
+              "text": "Ruminants are an important reservoir; food, water, animal, environmental and person-to-person exposures occur. Shiga-toxin profiles and host factors influence severity."
+            },
+            {
+              "heading": "Reporting boundary",
+              "text": "E. coli enteritis including EHEC has been notifiable to MSIS since 1989, and diagnostic expansion affects trends. EHEC/STEC is a distinct component from other diarrheagenic pathotypes."
+            }
+          ]
+        }
+      ]
+    },
     "D227": {
       "aliases": [
         "CRE",

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import Text, cast, func, select
@@ -16,6 +16,7 @@ from src.domain import Country, Task, TaskStatus, TaskType, TaskWorkbook
 from src.services.automation_service import automation_service
 from src.services.crawl_task_service import crawl_task_service
 from src.services.data_release_service import data_release_service
+from src.services.literature_service import literature_service
 
 
 def _value(value: Any) -> str:
@@ -236,6 +237,7 @@ class ScheduleApplicationService:
     adapters = {
         "ingestion": automation_service,
         "release": data_release_service,
+        "literature": literature_service,
     }
 
     @staticmethod
@@ -246,7 +248,7 @@ class ScheduleApplicationService:
     def parse_id(cls, schedule_id: str) -> tuple[str, str]:
         kind, separator, job_id = schedule_id.partition(":")
         if not separator or kind not in cls.adapters or not job_id:
-            raise ValueError("Schedule id must be 'ingestion:<job-id>' or 'release:<job-id>'")
+            raise ValueError("Schedule id must use a supported '<kind>:<job-id>' identifier")
         return kind, job_id
 
     async def list(self, *, kind: str | None = None) -> list[dict[str, Any]]:
@@ -306,8 +308,14 @@ class ScheduleApplicationService:
         kind, job_id = self.parse_id(schedule_id)
         if kind == "ingestion":
             result = await automation_service.trigger_job(job_id, manual=True)
-        else:
+        elif kind == "release":
             result = await data_release_service.trigger_job(job_id, manual=True, trigger="manual")
+        elif job_id == literature_service.GAP_DISCOVERY_JOB_ID:
+            result = await literature_service.trigger_gap_discovery(manual=True)
+        elif job_id == literature_service.ENRICHMENT_JOB_ID:
+            result = await literature_service.trigger_enrichment(manual=True)
+        else:
+            result = await literature_service.trigger_job(job_id, manual=True)
         task_uuid = result.get("task_uuid")
         await control_plane_events.publish(
             "schedule.triggered",
@@ -404,7 +412,9 @@ class TaskOperationsService:
         metadata = dict(task.metadata_ or {})
         for key in ("cancel_requested", "cancel_requested_at", "cancel_reason"):
             metadata.pop(key, None)
-        metadata["retried_at"] = datetime.utcnow().isoformat() + "Z"
+        metadata["retried_at"] = (
+            datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        )
         task.metadata_ = metadata
         task.status = TaskStatus.QUEUED
         task.progress = 0
@@ -609,7 +619,15 @@ class ScheduleRunQueryRepository:
         offset: int,
     ) -> tuple[list[dict[str, Any]], int]:
         kind, job_id = ScheduleApplicationService.parse_id(schedule_id)
-        task_type = TaskType.CRAWL_DATA if kind == "ingestion" else TaskType.EXPORT_DATA
+        task_type = {
+            "ingestion": TaskType.CRAWL_DATA,
+            "release": TaskType.EXPORT_DATA,
+            "literature": TaskType.SYNC_LITERATURE,
+        }[kind]
+        if kind == "literature" and job_id == literature_service.GAP_DISCOVERY_JOB_ID:
+            task_type = TaskType.DISCOVER_LITERATURE_GAPS
+        elif kind == "literature" and job_id == literature_service.ENRICHMENT_JOB_ID:
+            task_type = TaskType.ENRICH_LITERATURE
         tasks = (
             await self.db.execute(
                 select(Task)
@@ -617,7 +635,11 @@ class ScheduleRunQueryRepository:
                 .order_by(Task.created_at.desc())
             )
         ).scalars().all()
-        metadata_key = "automation_job_id" if kind == "ingestion" else "release_job_id"
+        metadata_key = {
+            "ingestion": "automation_job_id",
+            "release": "release_job_id",
+            "literature": "literature_job_id",
+        }[kind]
         matching: list[dict[str, Any]] = []
         for task in tasks:
             source = {}

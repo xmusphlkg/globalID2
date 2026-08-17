@@ -1,0 +1,271 @@
+---
+import ReportLayout from '../../layouts/ReportLayout.astro';
+---
+
+<ReportLayout
+  title="Ask GIDS Research"
+  description="Search published Research Radar evidence and its public surveillance links with source-level citations."
+  seo={{
+    title: 'Ask GIDS Research | GIDS',
+    description: 'Search published Research Radar evidence and its public surveillance links with source-level citations.',
+    locale: 'en',
+    canonicalPath: '/research/ask/',
+    alternatePaths: { en: '/research/ask/' },
+    pageType: 'WebPage',
+  }}
+  breadcrumbs={[
+    { label: 'Research Radar', labelZh: '研究雷达', href: '/research/' },
+    { label: 'Ask GIDS Research', labelZh: '问研究雷达' },
+  ]}
+>
+  <main class="ask-page">
+    <header class="academic-hero ask-hero">
+      <p class="academic-kicker" data-lang-en="Evidence-grounded retrieval" data-lang-zh="基于证据的检索">Evidence-grounded retrieval</p>
+      <h1 data-lang-en="Ask GIDS Research" data-lang-zh="问研究雷达">Ask GIDS Research</h1>
+      <p class="ask-lede" data-lang-en="Ask about a disease, country, study design, or public-health topic. Results come only from published Research Radar records and their verified public surveillance links." data-lang-zh="可询问疾病、国家、研究设计或公共卫生主题。结果仅来自研究雷达已发布记录及其已核验的公开监测关联。">Ask about a disease, country, study design, or public-health topic. Results come only from published Research Radar records and their verified public surveillance links.</p>
+      <form id="research-question-form" class="ask-form" role="search">
+        <label for="research-question" data-lang-en="Research question" data-lang-zh="研究问题">Research question</label>
+        <div class="ask-input-row">
+          <input id="research-question" class="site-control-input" type="search" autocomplete="off" required minlength="2" maxlength="240" data-lang-en-placeholder="What does recent evidence say about pertussis resurgence?" data-lang-zh-placeholder="近期证据如何解释百日咳回升？" placeholder="What does recent evidence say about pertussis resurgence?" />
+          <button type="submit" data-lang-en="Find evidence" data-lang-zh="查找证据">Find evidence</button>
+        </div>
+      </form>
+      <div class="ask-examples" aria-label="Example questions">
+        <span data-lang-en="Try:" data-lang-zh="例如：">Try:</span>
+        <button type="button" data-question-en="pertussis resurgence and vaccination" data-question-zh="百日咳回升与疫苗接种">Pertussis resurgence</button>
+        <button type="button" data-question-en="dengue surveillance in Brazil" data-question-zh="巴西登革热监测">Dengue in Brazil</button>
+        <button type="button" data-question-en="antimicrobial resistance systematic reviews" data-question-zh="抗菌药物耐药系统综述">AMR reviews</button>
+      </div>
+      <p class="ask-privacy" data-lang-en="Your question is processed in this browser and is not sent to a model or stored by this page." data-lang-zh="你的问题只在当前浏览器中处理，本页面不会将其发送给模型或保存。">Your question is processed in this browser and is not sent to a model or stored by this page.</p>
+    </header>
+
+    <section id="ask-status" class="card ask-status" role="status" aria-live="polite" hidden></section>
+    <section id="ask-answer" class="ask-answer" aria-live="polite" hidden>
+      <article class="card answer-summary">
+        <div class="answer-heading"><div><p class="academic-kicker" data-lang-en="Catalogue answer" data-lang-zh="目录回答">Catalogue answer</p><h2 data-lang-en="What the indexed evidence shows" data-lang-zh="索引证据显示什么">What the indexed evidence shows</h2></div><a href="/research/" data-lang-en="Browse Research Radar →" data-lang-zh="浏览研究雷达 →">Browse Research Radar →</a></div>
+        <p id="answer-summary-text"></p>
+        <div id="answer-themes" class="answer-themes"></div>
+        <p id="answer-limitations" class="answer-limitations"></p>
+      </article>
+
+      <article id="answer-signals-card" class="card answer-section" hidden>
+        <p class="academic-kicker" data-lang-en="Current GIDS context" data-lang-zh="当前 GIDS 背景">Current GIDS context</p>
+        <h2 data-lang-en="Linked public surveillance signals" data-lang-zh="已关联的公开监测信号">Linked public surveillance signals</h2>
+        <div id="answer-signals" class="signal-list"></div>
+      </article>
+
+      <article class="card answer-section">
+        <p class="academic-kicker" data-lang-en="Cited evidence" data-lang-zh="引用证据">Cited evidence</p>
+        <h2 data-lang-en="Relevant Research Radar records" data-lang-zh="相关研究雷达记录">Relevant Research Radar records</h2>
+        <div id="answer-evidence" class="evidence-list"></div>
+      </article>
+    </section>
+  </main>
+</ReportLayout>
+
+<script>
+  import { answerResearchQuestion } from '../../lib/research-ask';
+
+  const form = document.querySelector<HTMLFormElement>('#research-question-form');
+  const input = document.querySelector<HTMLInputElement>('#research-question');
+  const status = document.querySelector<HTMLElement>('#ask-status');
+  const answer = document.querySelector<HTMLElement>('#ask-answer');
+  const summary = document.querySelector<HTMLElement>('#answer-summary-text');
+  const themes = document.querySelector<HTMLElement>('#answer-themes');
+  const limitations = document.querySelector<HTMLElement>('#answer-limitations');
+  const signalsCard = document.querySelector<HTMLElement>('#answer-signals-card');
+  const signals = document.querySelector<HTMLElement>('#answer-signals');
+  const evidence = document.querySelector<HTMLElement>('#answer-evidence');
+  let cataloguePromise: Promise<any[]> | null = null;
+  let lastAnswer: ReturnType<typeof answerResearchQuestion> | null = null;
+
+  const isZh = () => document.documentElement.getAttribute('data-lang') === 'zh';
+  const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    return element;
+  };
+  const formatDate = (value: string | null | undefined) => {
+    if (!value) return isZh() ? '日期暂缺' : 'Date unavailable';
+    return new Intl.DateTimeFormat(isZh() ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(value));
+  };
+  const setStatus = (message: string, kind = 'pending') => {
+    if (!status) return;
+    status.hidden = false;
+    status.dataset.kind = kind;
+    status.textContent = message;
+  };
+  const loadCatalogue = () => {
+    cataloguePromise ??= fetch('/research/catalogue.json', { headers: { accept: 'application/json' } })
+      .then((response) => {
+        if (!response.ok) throw new Error(`catalogue_${response.status}`);
+        return response.json();
+      })
+      .then((payload) => Array.isArray(payload?.articles) ? payload.articles : []);
+    return cataloguePromise;
+  };
+
+  const render = (result: ReturnType<typeof answerResearchQuestion>) => {
+    lastAnswer = result;
+    if (!answer || !summary || !themes || !limitations || !signals || !signalsCard || !evidence || !status) return;
+    status.hidden = true;
+    answer.hidden = false;
+    summary.textContent = isZh() ? result.summaryZh : result.summaryEn;
+    limitations.textContent = isZh() ? result.limitationsZh : result.limitationsEn;
+    themes.replaceChildren(...result.themes.map((item) => {
+      const chip = make('span');
+      chip.textContent = `${item.name} · ${item.count}`;
+      return chip;
+    }));
+
+    signalsCard.hidden = result.signals.length === 0;
+    signals.replaceChildren(...result.signals.map((signal) => {
+      const link = make('a');
+      link.href = signal.situation_url || '/situation/';
+      const title = make('strong');
+      title.textContent = isZh() ? (signal.disease_name_zh || signal.disease_name_en || signal.title || '监测信号') : (signal.disease_name_en || signal.title || 'Surveillance signal');
+      const detail = make('span');
+      const geographies = (signal.geographies ?? []).map((item: any) => item.name_en || item.name || item.code).filter(Boolean).join(', ');
+      detail.textContent = [geographies, signal.relation_level === 'exact_disease_geography' ? (isZh() ? '疾病与地区精确关联' : 'Exact disease–geography link') : (isZh() ? '疾病背景关联' : 'Disease-context link'), signal.data_through ? formatDate(signal.data_through) : ''].filter(Boolean).join(' · ');
+      link.append(title, detail);
+      return link;
+    }));
+
+    if (!result.evidence.length) {
+      const empty = make('p', 'evidence-empty');
+      empty.textContent = isZh() ? '请换一个更具体的疾病、地区或主题后重试。' : 'Try a more specific disease, geography, or topic.';
+      evidence.replaceChildren(empty);
+      return;
+    }
+    evidence.replaceChildren(...result.evidence.map((item, index) => {
+      const article = item.article;
+      const row = make('section', 'evidence-row');
+      const number = make('span', 'evidence-number');
+      number.textContent = String(index + 1).padStart(2, '0');
+      const body = make('div');
+      const heading = make('h3');
+      const internal = make('a');
+      internal.href = `/research/articles/${article.slug}/`;
+      internal.textContent = article.title || (isZh() ? '未命名研究' : 'Untitled research');
+      heading.append(internal);
+      const meta = make('p', 'evidence-meta');
+      meta.textContent = [article.journal, article.study_type, (article.countries ?? []).map((country: any) => country.name_en || country.code).join(', '), formatDate(article.published_at)].filter(Boolean).join(' · ');
+      const finding = make('p', 'evidence-finding');
+      finding.textContent = (isZh() ? item.findingZh : item.findingEn) || (isZh() ? '该记录尚无已发布的结构化结果摘要；请查看原文。' : 'No published structured finding is available for this record; consult the source.');
+      const citations = make('div', 'evidence-citations');
+      const radar = make('a');
+      radar.href = `/research/articles/${article.slug}/`;
+      radar.textContent = isZh() ? '证据摘要' : 'Evidence summary';
+      citations.append(radar);
+      if (article.doi) {
+        const doi = make('a');
+        doi.href = `https://doi.org/${article.doi}`;
+        doi.target = '_blank';
+        doi.rel = 'noopener noreferrer';
+        doi.textContent = `DOI ${article.doi} ↗`;
+        citations.append(doi);
+      }
+      if (article.pmid) {
+        const pmid = make('a');
+        pmid.href = `https://pubmed.ncbi.nlm.nih.gov/${article.pmid}/`;
+        pmid.target = '_blank';
+        pmid.rel = 'noopener noreferrer';
+        pmid.textContent = `PMID ${article.pmid} ↗`;
+        citations.append(pmid);
+      }
+      if (article.open_access_url) {
+        const oa = make('a');
+        oa.href = article.open_access_url;
+        oa.target = '_blank';
+        oa.rel = 'noopener noreferrer';
+        oa.textContent = isZh() ? '开放获取 ↗' : 'Open access ↗';
+        citations.append(oa);
+      }
+      body.append(heading, meta, finding, citations);
+      row.append(number, body);
+      return row;
+    }));
+  };
+
+  const ask = async (question: string) => {
+    const query = question.trim();
+    if (query.length < 2) return;
+    setStatus(isZh() ? '正在检索已发布目录…' : 'Searching the published catalogue…');
+    answer?.setAttribute('hidden', '');
+    try {
+      const articles = await loadCatalogue();
+      render(answerResearchQuestion(query, articles, { limit: 12 }));
+      const url = new URL(location.href);
+      url.searchParams.set('q', query);
+      history.replaceState(null, '', url);
+    } catch {
+      setStatus(isZh() ? '暂时无法读取研究目录，请稍后重试。' : 'The research catalogue could not be loaded. Please try again shortly.', 'error');
+    }
+  };
+
+  form?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void ask(input?.value ?? '');
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-question-en]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!input) return;
+      input.value = isZh() ? (button.dataset.questionZh || '') : (button.dataset.questionEn || '');
+      void ask(input.value);
+    });
+  });
+  new MutationObserver(() => {
+    if (input) input.placeholder = isZh() ? '近期证据如何解释百日咳回升？' : 'What does recent evidence say about pertussis resurgence?';
+    if (lastAnswer) render(lastAnswer);
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-lang'] });
+  const preset = new URLSearchParams(location.search).get('q');
+  if (preset && input) {
+    input.value = preset.slice(0, 240);
+    void ask(input.value);
+  }
+</script>
+
+<style>
+  .ask-page { width: min(74rem, calc(100% - 2rem)); margin: 0 auto; padding: 2.5rem 0 3rem; }
+  .ask-hero { padding: clamp(1.5rem, 4vw, 3rem); }
+  .ask-hero h1 { max-width: 62rem; margin-top: .7rem; color: rgb(var(--text-strong)); font: 600 clamp(2.4rem, 7vw, 5rem)/.98 'Source Serif 4', serif; letter-spacing: -.045em; }
+  .ask-lede { max-width: 52rem; margin-top: 1rem; color: rgb(var(--text-muted)); font-size: clamp(.92rem, 1.8vw, 1.08rem); line-height: 1.72; }
+  .ask-form { margin-top: 2rem; }
+  .ask-form > label { display: block; margin-bottom: .55rem; color: rgb(var(--text-strong)); font-size: .72rem; font-weight: 700; }
+  .ask-input-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .ask-input-row input { min-height: 3.2rem; border-right: 0; padding: 0 1rem; font-size: .92rem; }
+  .ask-input-row button { min-width: 9rem; border: 1px solid rgb(var(--color-brand)); background: rgb(var(--color-brand)); padding: 0 1rem; color: white; font-size: .78rem; font-weight: 700; }
+  .ask-examples { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin-top: .8rem; }
+  .ask-examples span { color: rgb(var(--text-faint)); font-size: .68rem; }
+  .ask-examples button { border: 1px solid rgb(var(--border)); padding: .25rem .5rem; color: rgb(var(--text-muted)); font-size: .66rem; }
+  .ask-examples button:hover { border-color: rgb(var(--color-brand) / .65); color: rgb(var(--color-brand)); }
+  .ask-privacy { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.5; }
+  .ask-status { margin-top: 1.5rem; padding: 1rem 1.2rem; color: rgb(var(--text-muted)); font-size: .8rem; }
+  .ask-status[data-kind='error'] { border-color: rgb(185 28 28 / .5); color: rgb(185 28 28); }
+  .ask-answer { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
+  .answer-summary, .answer-section { padding: clamp(1.25rem, 3vw, 2rem); }
+  .answer-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .7); }
+  .answer-heading h2, .answer-section h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 clamp(1.35rem, 3vw, 1.85rem)/1.12 'Source Serif 4', serif; }
+  .answer-heading a { flex: none; color: rgb(var(--color-brand)); font-size: .7rem; font-weight: 650; }
+  #answer-summary-text { margin-top: 1.1rem; color: rgb(var(--text)); font-size: .9rem; line-height: 1.65; }
+  .answer-themes { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
+  .answer-themes span { border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised) / .45); padding: .25rem .5rem; color: rgb(var(--text-muted)); font-size: .66rem; }
+  .answer-limitations { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgb(var(--border) / .6); color: rgb(var(--text-faint)); font-size: .7rem; line-height: 1.55; }
+  .signal-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: .65rem; margin-top: 1rem; }
+  .signal-list a { padding: .8rem; border: 1px solid rgb(var(--border) / .7); }
+  .signal-list strong, .signal-list span { display: block; }
+  .signal-list strong { color: rgb(var(--text-strong)); font: 600 .9rem/1.25 'Source Serif 4', serif; }
+  .signal-list span { margin-top: .3rem; color: rgb(var(--text-faint)); font-size: .64rem; line-height: 1.4; }
+  .evidence-list { margin-top: 1rem; }
+  .evidence-row { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: .8rem; padding: 1.1rem 0; border-top: 1px solid rgb(var(--border) / .6); }
+  .evidence-row:first-child { border-top: 0; }
+  .evidence-number { color: rgb(var(--border-soft)); font: 600 .66rem/1 'JetBrains Mono', monospace; }
+  .evidence-row h3 a { color: rgb(var(--text-strong)); font: 600 1.05rem/1.3 'Source Serif 4', serif; }
+  .evidence-row h3 a:hover { color: rgb(var(--color-brand)); }
+  .evidence-meta { margin-top: .35rem; color: rgb(var(--text-faint)); font-size: .66rem; line-height: 1.45; }
+  .evidence-finding { margin-top: .7rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.62; }
+  .evidence-citations { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .7rem; }
+  .evidence-citations a { border: 1px solid rgb(var(--border)); padding: .22rem .45rem; color: rgb(var(--color-brand)); font-size: .62rem; }
+  .evidence-empty { padding: 2rem 0; color: rgb(var(--text-muted)); font-size: .82rem; }
+  @media (max-width: 640px) { .ask-page { width: min(100% - 1rem, 74rem); padding-top: 1rem; } .ask-input-row { grid-template-columns: 1fr; } .ask-input-row input { border-right: 1px solid rgb(var(--border)); } .ask-input-row button { min-height: 2.8rem; } .answer-heading { align-items: start; flex-direction: column; } .signal-list { grid-template-columns: 1fr; } }
+</style>

@@ -1,0 +1,55 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "globalid-subscriptions-types-only",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ENVIRONMENT": "types-only",
+    "PUBLIC_BASE_URL": "https://subscriptions.example.invalid",
+    "ALLOWED_ORIGINS": "https://www.example.invalid",
+    "DEBUG_RETURN_TOKENS": "false",
+    "PENDING_EXPIRY_DAYS": "14",
+    "SUBMISSION_RATE_LIMIT_PER_HOUR": "30",
+    "CONFIRMATION_EMAIL_LIMIT_PER_10_MINUTES": "2",
+    "NOTIFICATION_BATCH_SIZE": "20",
+    "SITUATION_ALERT_BATCH_SIZE": "20",
+    "SITUATION_ALERT_MAX_ATTEMPTS": "5",
+    "SITUATION_ALERT_RETENTION_DAYS": "180",
+    "SITUATION_ALERT_AUTOMATED_POLICY_ENABLED": "false",
+    "SITUATION_PUBLIC_ORIGINS": "https://www.example.invalid",
+    "SMTP_HOST": "smtp.example.invalid",
+    "SMTP_PORT": "587",
+    "SMTP_FROM_EMAIL": "noreply@example.invalid",
+    "SMTP_FROM_NAME": "GIDS Alerts",
+    "SMTP_USE_TLS": "true"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "globalid-subscriptions-types-only",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "SITUATION_ALERT_QUEUE",
+        "queue": "globalid-subscriptions-types-only"
+      }
+    ]
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.05
+    }
+  }
+}

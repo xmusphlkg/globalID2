@@ -10,11 +10,13 @@ review.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
 from pathlib import Path
 import re
+import threading
 import time
 from typing import Any, Iterable
 from urllib.parse import parse_qs, quote, unquote, urlparse
@@ -126,10 +128,21 @@ class SourceCandidate:
         return sha256(self.raw_excerpt.encode("utf-8")).hexdigest()
 
 
+@dataclass
+class SourceFetchReport:
+    """Candidates plus adapter-level completion state for safe refreshes."""
+
+    candidates: list[SourceCandidate]
+    adapter_outcomes: dict[str, str] = field(default_factory=dict)
+    adapter_durations: dict[str, float] = field(default_factory=dict)
+
+
 class DiseaseKnowledgeFetcher:
     """Fetch short source candidates for one standard disease row."""
 
     WEB_SEARCH_ENDPOINT = "https://html.duckduckgo.com/html/"
+    _host_rate_lock = threading.Lock()
+    _host_last_request_at: dict[str, float] = {}
     TRUSTED_WEB_DOMAINS = (
         ("who.int", "WHO", True),
         ("cdc.gov", "CDC", True),
@@ -161,6 +174,9 @@ class DiseaseKnowledgeFetcher:
         self.max_retries = max(0, max_retries)
         self.source_hints_path = source_hints_path
         self._last_request_at = 0.0
+        self._request_error_count = 0
+        self._request_error_lock = threading.Lock()
+        self._adapter_request_state = threading.local()
         self._response_cache: dict[str, requests.Response] = {}
         self.session = requests.Session()
         self.session.headers.update(
@@ -178,6 +194,19 @@ class DiseaseKnowledgeFetcher:
         enabled_sources: Iterable[str] | None = None,
         target_sections: Iterable[str] | None = None,
     ) -> list[SourceCandidate]:
+        return self.fetch_with_report(
+            disease,
+            enabled_sources=enabled_sources,
+            target_sections=target_sections,
+        ).candidates
+
+    def fetch_with_report(
+        self,
+        disease: dict[str, Any],
+        *,
+        enabled_sources: Iterable[str] | None = None,
+        target_sections: Iterable[str] | None = None,
+    ) -> SourceFetchReport:
         enabled = list(enabled_sources or SOURCE_FETCH_ORDER)
         target_sections = self._unique_strings(target_sections or ())
         source_hints = self._source_hints(disease)
@@ -192,6 +221,8 @@ class DiseaseKnowledgeFetcher:
             ),
         }
         candidates: list[SourceCandidate] = []
+        adapter_outcomes: dict[str, str] = {}
+        adapter_durations: dict[str, float] = {}
 
         candidates.extend(
             self._fetch_configured_sources(
@@ -217,10 +248,13 @@ class DiseaseKnowledgeFetcher:
             discovery_round: str,
             disease_payload: dict[str, Any],
         ) -> None:
-            for key in keys:
-                adapter = adapters.get(key)
-                if not adapter:
-                    continue
+            selected = [(key, adapters[key]) for key in keys if key in adapters]
+            if not selected:
+                return
+
+            def run_one(key: str, adapter: Any) -> tuple[str, list[SourceCandidate], str, float]:
+                self._adapter_request_state.error_count = 0
+                started_at = time.monotonic()
                 try:
                     discovered = adapter(disease_payload)
                     for candidate in discovered:
@@ -229,13 +263,44 @@ class DiseaseKnowledgeFetcher:
                             "discovery_round": discovery_round,
                             "target_sections": target_sections,
                         }
-                    candidates.extend(discovered)
+                    outcome = (
+                        "success"
+                        if discovered
+                        else "error"
+                        if getattr(self._adapter_request_state, "error_count", 0) > 0
+                        else "success_empty"
+                    )
+                    return key, discovered, outcome, time.monotonic() - started_at
                 except Exception as exc:
                     logger.warning(
                         "Knowledge source adapter failed for %s/%s: %s",
                         disease.get("disease_id"),
                         key,
                         exc,
+                    )
+                    return key, [], "error", time.monotonic() - started_at
+
+            # Adapters are independent discovery paths. The global per-host
+            # limiter still serializes calls to one upstream while unrelated
+            # WHO, PubMed and Wikipedia requests can overlap.
+            with ThreadPoolExecutor(max_workers=min(4, len(selected))) as executor:
+                futures = [
+                    executor.submit(run_one, key, adapter)
+                    for key, adapter in selected
+                ]
+                for future in as_completed(futures):
+                    key, discovered, outcome, elapsed = future.result()
+                    candidates.extend(discovered)
+                    previous = adapter_outcomes.get(key)
+                    if previous == "success" or outcome == "success":
+                        adapter_outcomes[key] = "success"
+                    elif previous == "error" or outcome == "error":
+                        adapter_outcomes[key] = "error"
+                    else:
+                        adapter_outcomes[key] = "success_empty"
+                    adapter_durations[key] = round(
+                        adapter_durations.get(key, 0.0) + elapsed,
+                        3,
                     )
 
         run_adapters(enabled, discovery_round="primary", disease_payload=disease)
@@ -258,7 +323,11 @@ class DiseaseKnowledgeFetcher:
                 disease_payload=enriched_disease,
             )
 
-        return self._rank_candidates(self._dedupe(candidates))
+        return SourceFetchReport(
+            candidates=self._rank_candidates(self._dedupe(candidates)),
+            adapter_outcomes=adapter_outcomes,
+            adapter_durations=adapter_durations,
+        )
 
     def _source_hints(self, disease: dict[str, Any]) -> dict[str, Any]:
         """Load optional, reviewed aliases and official entry URLs."""
@@ -708,7 +777,11 @@ class DiseaseKnowledgeFetcher:
     def _fetch_pubmed(self, disease: dict[str, Any]) -> list[SourceCandidate]:
         """Fetch recent review articles from PubMed E-utilities for supplementary knowledge."""
         disease_id = str(disease["disease_id"])
-        query_candidates = self._query_candidates(disease)
+        # Catalogue descriptions contain boundary prose and negations that
+        # PubMed may silently tokenize into a broad query. Literature search
+        # should use reviewed entity names/aliases and their safe variants;
+        # descriptions remain useful for web ranking, not E-utilities terms.
+        query_candidates = self._pubmed_query_candidates(disease)
         id_list: list[str] = []
         search_term_used = ""
         for search_term in self._pubmed_search_terms(
@@ -1151,7 +1224,13 @@ class DiseaseKnowledgeFetcher:
         # numeric token (for example, 肠病毒71型感染 became just "71"), producing
         # unrelated abstracts. Keep PubMed discovery to Latin aliases while
         # retaining localized names for the other adapters.
-        terms = [term for term in query_terms[:10] if term and re.search(r"[A-Za-z]", term)]
+        terms = [
+            term
+            for term in query_terms[:10]
+            if term
+            and re.search(r"[A-Za-z]", term)
+            and not re.search(r"[\u3400-\u9fff]", term)
+        ]
         if not terms:
             return []
         title_abstract = " OR ".join(f'"{term}"[Title/Abstract]' for term in terms)
@@ -1181,7 +1260,23 @@ class DiseaseKnowledgeFetcher:
             "risk_groups": ["risk groups vulnerable populations"],
         }
         hints: list[str] = []
-        for field in target_sections:
+        requested = {str(field) for field in target_sections}
+        # Definition/clinical/epidemiology are usually present on overview
+        # pages. Spend the limited targeted-query budget on the sections most
+        # often responsible for incomplete profiles.
+        priority = (
+            "surveillance_note",
+            "risk_groups",
+            "prevention",
+            "transmission",
+            "clinical_features",
+            "epidemiology",
+            "definition",
+            "brief",
+        )
+        for field in priority:
+            if field not in requested:
+                continue
             hints.extend(mapping.get(str(field), ()))
         return DiseaseKnowledgeFetcher._unique_strings(hints)
 
@@ -1192,12 +1287,13 @@ class DiseaseKnowledgeFetcher:
             return cached
 
         for attempt in range(self.max_retries + 1):
-            self._throttle()
+            self._throttle(url)
             try:
                 response = self.session.get(url, params=params, timeout=self.timeout)
             except requests.RequestException as exc:
                 logger.debug("Knowledge source request failed: %s (%s)", url, exc)
                 if attempt >= self.max_retries:
+                    self._record_request_error()
                     return None
                 time.sleep(0.35 * (attempt + 1))
                 continue
@@ -1208,17 +1304,31 @@ class DiseaseKnowledgeFetcher:
                 time.sleep(delay)
                 continue
 
+            if response.status_code in {429, 500, 502, 503, 504}:
+                self._record_request_error()
+
             self._response_cache[cache_key] = response
             return response
         return None
 
-    def _throttle(self) -> None:
+    def _record_request_error(self) -> None:
+        with self._request_error_lock:
+            self._request_error_count += 1
+        self._adapter_request_state.error_count = (
+            getattr(self._adapter_request_state, "error_count", 0) + 1
+        )
+
+    def _throttle(self, url: str) -> None:
         if self.min_interval_seconds <= 0:
             return
-        elapsed = time.monotonic() - self._last_request_at
-        if elapsed < self.min_interval_seconds:
-            time.sleep(self.min_interval_seconds - elapsed)
-        self._last_request_at = time.monotonic()
+        host = urlparse(url).netloc.lower() or "unknown"
+        with self._host_rate_lock:
+            elapsed = time.monotonic() - self._host_last_request_at.get(host, 0.0)
+            if elapsed < self.min_interval_seconds:
+                time.sleep(self.min_interval_seconds - elapsed)
+            now = time.monotonic()
+            self._host_last_request_at[host] = now
+            self._last_request_at = now
 
     def _extract_html_content(self, html: str, *, resolved_url: str | None = None) -> dict[str, Any]:
         soup = BeautifulSoup(html, "html.parser")
@@ -1409,6 +1519,15 @@ class DiseaseKnowledgeFetcher:
 
         return cls._unique_strings([phrase for phrase in expanded if len(phrase) >= 3])[:12]
 
+    @classmethod
+    def _pubmed_query_candidates(cls, disease: dict[str, Any]) -> list[str]:
+        expanded: list[str] = []
+        for phrase in cls._name_candidates(disease):
+            if re.search(r"[\u3400-\u9fff]", phrase):
+                continue
+            expanded.extend(cls._phrase_variants(phrase))
+        return cls._unique_strings([phrase for phrase in expanded if len(phrase) >= 3])[:12]
+
     @staticmethod
     def _clean_search_phrase(value: Any) -> str:
         text = " ".join(str(value or "").split())
@@ -1438,6 +1557,41 @@ class DiseaseKnowledgeFetcher:
         if "haemorrhagic" in lower:
             variants.append(re.sub("haemorrhagic", "hemorrhagic", text, flags=re.I))
 
+        exposed_match = re.fullmatch(
+            r"(?P<subject>child(?:ren)?|infant(?:s)?|newborn(?:s)?)\s+exposed\s+to\s+(?P<agent>.+)",
+            text,
+            flags=re.I,
+        )
+        if exposed_match:
+            subject = exposed_match.group("subject")
+            agent = exposed_match.group("agent").strip()
+            variants.extend(
+                [
+                    f"{agent}-exposed {subject}",
+                    f"{agent} exposed {subject}",
+                ]
+            )
+
+        if re.search(r"human\s+t-(?:cell\s+)?lymphotropic\s+virus\s+1\s+or\s+2", text, re.I):
+            variants.extend(
+                [
+                    "HTLV-1",
+                    "HTLV-2",
+                    "human T-cell lymphotropic virus",
+                    "human T-lymphotropic virus",
+                ]
+            )
+
+        if "penicillin" in lower and "pneumococcal" in lower:
+            variants.extend(
+                [
+                    "penicillin-resistant pneumococcus",
+                    "penicillin-resistant pneumococci",
+                    "penicillin-nonsusceptible Streptococcus pneumoniae",
+                    "penicillin-resistant Streptococcus pneumoniae",
+                ]
+            )
+
         # Numbered enteroviruses are indexed inconsistently across surveillance
         # catalogues and literature (for example a full name, a compact EV form,
         # or a hyphenated EV form). Genus letters are deliberately not guessed;
@@ -1463,19 +1617,19 @@ class DiseaseKnowledgeFetcher:
         haystack = cls._slug(" ".join([url or "", str(title or ""), str(excerpt or "")]))
         if not haystack:
             return 0.0
-        tokens: list[str] = []
-        phrase_bonus = 0.0
+        best_score = 0.0
         for term in query_terms:
             slug = cls._slug(term)
-            if slug and slug in haystack:
-                phrase_bonus = max(phrase_bonus, 0.45)
-            tokens.extend(token for token in slug.split("-") if len(token) >= 4)
-        unique_tokens = cls._unique_strings(tokens)
-        if not unique_tokens:
-            return phrase_bonus
-        matched = sum(1 for token in unique_tokens if token in haystack)
-        token_score = matched / min(len(unique_tokens), 8)
-        return min(1.0, phrase_bonus + token_score * 0.65)
+            tokens = cls._unique_strings(
+                token for token in slug.split("-") if len(token) >= 3
+            )
+            if not tokens:
+                continue
+            matched = sum(1 for token in tokens if token in haystack)
+            token_score = matched / len(tokens)
+            phrase_bonus = 0.45 if slug and slug in haystack else 0.0
+            best_score = max(best_score, phrase_bonus + token_score * 0.65)
+        return min(1.0, best_score)
 
     @staticmethod
     def _unique_strings(values: Iterable[str]) -> list[str]:

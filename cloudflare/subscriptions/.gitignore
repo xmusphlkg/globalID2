@@ -1,1 +1,7 @@
 node_modules/
+wrangler.generated.jsonc
+.dry-run/
+.wrangler-config/
+wrangler.run.*.jsonc
+backups/
+worker-startup.cpuprofile

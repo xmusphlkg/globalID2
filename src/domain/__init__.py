@@ -55,6 +55,27 @@ from .disease_ontology import (
     DiseaseTaxonomyNode,
 )
 from .situation import PublicHealthEvent, SituationOverride, SituationSnapshot
+from .situation_v3 import (
+    SituationAnalysisRunV3,
+    SituationEventClusterItemV3,
+    SituationEventClusterV3,
+    SituationPeriodReportV3,
+    SituationPublicationPointerV3,
+    SituationReportMemberV3,
+    SituationReviewDecisionV3,
+    SituationSignalResultV3,
+)
+from .literature import (
+    LiteratureArticle,
+    LiteratureCountryLink,
+    LiteratureDiseaseLink,
+    LiteratureEvidenceGap,
+    LiteratureIngestRun,
+    LiteratureSignalArticleLink,
+    LiteratureStatusEvent,
+    LiteratureSummary,
+    LiteratureTopicLink,
+)
 
 __all__ = [
     # Base classes
@@ -117,4 +138,21 @@ __all__ = [
     "PublicHealthEvent",
     "SituationOverride",
     "SituationSnapshot",
+    "SituationAnalysisRunV3",
+    "SituationEventClusterItemV3",
+    "SituationEventClusterV3",
+    "SituationPeriodReportV3",
+    "SituationPublicationPointerV3",
+    "SituationReportMemberV3",
+    "SituationReviewDecisionV3",
+    "SituationSignalResultV3",
+    "LiteratureArticle",
+    "LiteratureCountryLink",
+    "LiteratureDiseaseLink",
+    "LiteratureEvidenceGap",
+    "LiteratureIngestRun",
+    "LiteratureSignalArticleLink",
+    "LiteratureStatusEvent",
+    "LiteratureSummary",
+    "LiteratureTopicLink",
 ]

@@ -29,7 +29,37 @@ export interface NotificationMetadata {
   template_version?: string;
   created_by?: string;
   ai?: JsonValue;
+  audience_filters?: Array<{ type: string; value: string }>;
+  idempotency_key?: string;
+  content_fingerprint?: string;
+  source_ref?: string;
+  frequency?: string;
   [key: string]: unknown;
+}
+
+const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
+
+export function normalizeCampaignIdempotencyKey(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const key = value.trim();
+  return IDEMPOTENCY_KEY.test(key) ? key : "";
+}
+
+function canonicalJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (isRecord(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalJson(value[key])]),
+    );
+  }
+  if (value === null || ["string", "number", "boolean"].includes(typeof value)) return value;
+  return null;
+}
+
+export async function campaignContentFingerprint(value: unknown): Promise<string> {
+  const bytes = new TextEncoder().encode(JSON.stringify(canonicalJson(value)));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export interface CampaignProgress extends Record<string, JsonValue> {
@@ -220,6 +250,10 @@ export function notificationCampaignMetadataProjection(
     template_version: metadata.template_version || "admin-notification-v1",
     created_by: metadata.created_by || "dashboard",
     ai: metadata.ai || null,
+    audience_filters: Array.isArray(metadata.audience_filters) ? metadata.audience_filters : [],
+    idempotency_key: metadata.idempotency_key || null,
+    source_ref: metadata.source_ref || null,
+    frequency: metadata.frequency || null,
   };
 }
 

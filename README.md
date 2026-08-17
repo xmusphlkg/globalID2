@@ -129,7 +129,8 @@ cp .env.example .env
 The shipped example includes these categories:
 
 - application settings: `APP_ENV`, `APP_NAME`, `DEBUG`, `LOG_LEVEL`
-- database: `DATABASE_URL`, `DATABASE_URL_SYNC`
+- runtime database: `DATABASE_URL`, `DATABASE_URL_SYNC`
+- Situation history database: `SITUATION_HISTORY_DATABASE_ENABLED`, `SITUATION_HISTORY_DATABASE_NAME`, `SITUATION_HISTORY_DATABASE_URL`
 - performance: `MAX_PARALLEL_TASKS`, `MAX_CRAWLER_CONCURRENT`, `TASK_WORKER_CONCURRENCY`
 - AI defaults: `DEFAULT_AI_PROVIDER`, `DEFAULT_MODEL`, `AI__MODEL_CHAIN_RAW`, `AI__KNOWLEDGE_MODEL_SHARDS_RAW`
 - paths: `DATA_DIR`, `LOG_DIR`, `CONFIG_DIR`
@@ -142,6 +143,35 @@ For disease knowledge building, `AI__KNOWLEDGE_MODEL_SHARDS_RAW` lets us distrib
 tasks across multiple preferred models. The worker deterministically rotates the preferred
 model order per disease/language and still falls back to the rest of `AI__MODEL_CHAIN_RAW`
 if the first choice is rate-limited or unavailable.
+
+Situation Room revisions, detector evidence, source checks, synchronization runs, and
+operator audit actions are retained in a dedicated database. When
+`SITUATION_HISTORY_DATABASE_URL` is blank, the service derives a connection from
+`DATABASE_URL` and replaces only the database name (default: `globalid_history`). Create
+the schema and reconcile existing snapshots idempotently with:
+
+```bash
+venv/bin/python scripts/init_situation_history_database.py --backfill
+```
+
+Situation Room v3 uses Pydantic as the canonical report contract, immutable
+analysis runs, history-first publication, robust quasi-Poisson detection, and
+BH FDR control. The normal operational sequence is:
+
+```bash
+venv/bin/alembic upgrade head
+venv/bin/python scripts/update_situation_room.py
+venv/bin/python scripts/generate_site_data.py
+cd astro-site && npm run build:astro
+cd .. && venv/bin/python scripts/validate_situation_release.py --site-dir astro-site/dist
+```
+
+Regenerate the JSON Schema, OpenAPI document, and both generated TypeScript
+clients with `venv/bin/python scripts/export_situation_v3_contracts.py`. Run the
+deterministic calibration suite with
+`venv/bin/python scripts/backtest_situation_v3.py`. See
+[`docs/SITUATION_ROOM_V3.md`](docs/SITUATION_ROOM_V3.md) for the data model,
+publication invariants, routes, and operational checks.
 
 The Python configuration layer also supports provider-specific credentials such as:
 

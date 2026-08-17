@@ -58,6 +58,8 @@ class ReportV4Persistence:
             },
             "death_reporting": document.get("death_reporting") or {},
             "disease_directory": document.get("disease_directory") or [],
+            "attention_ranking": document.get("attention_ranking") or document.get("risk_ranking") or [],
+            "score_semantics": document.get("score_semantics") or {},
             "risk_ranking": document.get("risk_ranking") or [],
             "references": document.get("references") or [],
             "figures": document.get("figures") or [],
@@ -153,6 +155,8 @@ class ReportV4FileExporter:
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "language": "zh",
             "disease_directory": document.get("disease_directory") or [],
+            "attention_ranking": document.get("attention_ranking") or document.get("risk_ranking") or [],
+            "score_semantics": document.get("score_semantics") or {},
         }
         markdown = self.formatter.format_markdown(sections, metadata)
         html = self.formatter.format_html(sections, metadata)

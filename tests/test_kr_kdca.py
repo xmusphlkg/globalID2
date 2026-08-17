@@ -133,6 +133,8 @@ def test_kr_monthly_updater_loads_crawler_csv_shape(tmp_path):
             "ImportedCases": "3",
             "Source": "Korea KDCA EID Open API",
             "SourceURL": "https://example.test",
+            "DatasetStatus": "provisional",
+            "IsProvisional": "true",
         }
     ]
 

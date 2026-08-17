@@ -1,0 +1,27 @@
+---
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
+import researchData from '../../../data/research/index.json';
+
+export function getStaticPaths() {
+  return ((researchData as any).facets?.topics ?? []).map((facet: any) => ({ params: { topic: facet.slug }, props: { facet } }));
+}
+
+const { facet } = Astro.props as { facet: any };
+const file = resolve(`./src/data/research/topics/${facet.slug}.json`);
+const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [] };
+const description = `Published Research Radar records connected to the ${facet.name} topic through the auditable classification pipeline.`;
+const descriptionZh = `通过可审计分类流程与“${facet.name}”主题关联的研究雷达已发布记录。`;
+---
+
+<ResearchCollectionPage
+  eyebrow="Public-health topic"
+  eyebrowZh="公共卫生主题"
+  title={facet.name}
+  titleZh={facet.name}
+  description={description}
+  descriptionZh={descriptionZh}
+  canonicalPath={`/research/topics/${facet.slug}/`}
+  articles={payload.articles ?? []}
+/>

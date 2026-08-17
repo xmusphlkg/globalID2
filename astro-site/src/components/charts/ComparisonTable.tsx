@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { CountryDatasetSeriesEntry } from './countryDataset';
 import { useChartLanguage } from './chartPreferences';
 import { useCountryDataset } from './useCountryDataset';
+import { toSeoSlug } from '../../lib/seo';
 
 interface DiseaseRow {
   disease_id: string;
@@ -30,6 +31,8 @@ interface Props {
 type SortKey = 'name_en' | 'total_cases' | 'total_deaths' | 'latest_cases' | 'category';
 
 const CATEGORY_ORDER = ['Viral', 'Bacterial', 'Parasitic', 'Fungal', 'Other'];
+const INITIAL_VISIBLE_ROWS = 24;
+const VISIBLE_ROW_INCREMENT = 16;
 
 const CATEGORY_STYLES: Record<string, string> = {
   Viral: 'bg-blue-600/10 text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-500/12 dark:text-blue-300 dark:ring-blue-500/20',
@@ -46,8 +49,8 @@ function Badge({ category }: { category: string }) {
   );
 }
 
-function fmtNum(n: number) {
-  return n.toLocaleString('en-US');
+function fmtNum(n: number | null | undefined) {
+  return n == null || !Number.isFinite(n) ? '—' : n.toLocaleString('en-US');
 }
 
 function Sparkline({
@@ -64,26 +67,39 @@ function Sparkline({
   const record = series?.[diseaseId];
   const values = record?.cases ?? [];
   const trendValues = values.slice(-24);
+  const observedValues = trendValues.filter(
+    (value): value is number => value != null && Number.isFinite(value)
+  );
 
-  if (trendValues.length === 0) {
+  if (observedValues.length === 0) {
     return <span className="comparison-empty">—</span>;
   }
 
   const width = 120;
   const height = 30;
   const innerWidth = width - 4;
-  const min = Math.min(...trendValues);
-  const max = Math.max(...trendValues);
+  const min = Math.min(...observedValues);
+  const max = Math.max(...observedValues);
   const range = Math.max(1, max - min);
   const denominator = Math.max(trendValues.length - 1, 1);
-  const points = trendValues
-    .map((value, index) => {
+  const pointValues = trendValues.map((value, index) => {
+      if (value == null || !Number.isFinite(value)) return null;
       const x = 2 + (index / denominator) * innerWidth;
       const y = height - 3 - ((value - min) / range) * (height - 8);
       return `${x},${y}`;
-    })
-    .join(' ');
-  const areaPoints = `2,${height - 2} ${points} ${width - 2},${height - 2}`;
+    });
+  const segments: string[] = [];
+  let currentSegment: string[] = [];
+  pointValues.forEach((point) => {
+    if (point) {
+      currentSegment.push(point);
+      return;
+    }
+    if (currentSegment.length > 0) segments.push(currentSegment.join(' '));
+    currentSegment = [];
+  });
+  if (currentSegment.length > 0) segments.push(currentSegment.join(' '));
+  const latestPoint = [...pointValues].reverse().find(Boolean);
 
   return (
     <svg
@@ -97,14 +113,17 @@ function Sparkline({
       }
     >
       <line x1="2" y1={height - 2} x2={width - 2} y2={height - 2} className="comparison-sparkline-track" />
-      <polygon points={areaPoints} className="comparison-sparkline-fill" />
-      <polyline points={points} className="comparison-sparkline-line" />
-      <circle
-        cx={points.split(' ').at(-1)?.split(',')[0]}
-        cy={points.split(' ').at(-1)?.split(',')[1]}
-        r="2.8"
-        className="comparison-sparkline-dot"
-      />
+      {segments.map((points, index) => (
+        <polyline key={`${points}-${index}`} points={points} className="comparison-sparkline-line" />
+      ))}
+      {latestPoint && (
+        <circle
+          cx={latestPoint.split(',')[0]}
+          cy={latestPoint.split(',')[1]}
+          r="2.8"
+          className="comparison-sparkline-dot"
+        />
+      )}
     </svg>
   );
 }
@@ -117,6 +136,7 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [catFilter, setCatFilter] = useState<string>('All');
   const [search, setSearch] = useState('');
+  const [visibleRowCount, setVisibleRowCount] = useState(INITIAL_VISIBLE_ROWS);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const lang = useChartLanguage();
   const shellRef = useRef<HTMLDivElement>(null);
@@ -152,6 +172,7 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
   }, []);
 
   function handleSort(key: SortKey) {
+    setVisibleRowCount(INITIAL_VISIBLE_ROWS);
     if (sortKey === key) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     } else {
@@ -181,6 +202,7 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
       return sortDir === 'asc' ? cmp : -cmp;
     });
   }, [rows, sortKey, sortDir, catFilter, search]);
+  const visibleRows = displayed.slice(0, visibleRowCount);
 
   const categories = ['All', ...CATEGORY_ORDER];
   const columnCount = 5 + (showDeaths ? 1 : 0) + (showCfr ? 1 : 0);
@@ -214,7 +236,10 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
           type="search"
           placeholder={lang === 'zh' ? '搜索疾病…' : 'Search diseases…'}
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => {
+            setSearch(e.target.value);
+            setVisibleRowCount(INITIAL_VISIBLE_ROWS);
+          }}
           className="site-control-input w-full sm:w-64 px-3 py-1.5 text-sm rounded-none border focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
         <div className="flex items-center gap-2 flex-wrap">
@@ -222,7 +247,10 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
             <button
               key={cat}
               type="button"
-              onClick={() => setCatFilter(cat)}
+              onClick={() => {
+                setCatFilter(cat);
+                setVisibleRowCount(INITIAL_VISIBLE_ROWS);
+              }}
               className={`chart-toggle ${
                 catFilter === cat
                   ? 'chart-toggle-active'
@@ -277,7 +305,7 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
 
       {/* Table */}
       <div className="comparison-table-wrap">
-        <table className="comparison-table text-sm">
+        <table id="disease-comparison-table" className="comparison-table text-sm">
           <thead>
             <tr className="site-table-head border-b border-slate-700/60 text-left">
               <th
@@ -323,9 +351,9 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
-            {displayed.map(row => {
+            {visibleRows.map(row => {
               const cfr = row.total_cases > 0 ? (row.total_deaths / row.total_cases) * 100 : null;
-              const diseasePath = `/diseases/${row.slug}/`;
+              const diseasePath = `/diseases/${toSeoSlug(row.slug)}/`;
               return (
                 <tr key={row.disease_id} className="site-table-row-hover transition-colors group">
                   <td className="comparison-cell-sticky px-4 py-3">
@@ -427,6 +455,35 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
           })()}
         </table>
       </div>
+      {visibleRows.length < displayed.length && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm">
+          <span className="comparison-cell-secondary" aria-live="polite">
+            {lang === 'zh'
+              ? `已显示 ${visibleRows.length} / ${displayed.length} 种疾病`
+              : `Showing ${visibleRows.length} of ${displayed.length} diseases`}
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="chart-link-btn"
+              aria-controls="disease-comparison-table"
+              onClick={() => setVisibleRowCount(current => Math.min(current + VISIBLE_ROW_INCREMENT, displayed.length))}
+            >
+              {lang === 'zh'
+                ? `再显示 ${Math.min(VISIBLE_ROW_INCREMENT, displayed.length - visibleRows.length)} 项`
+                : `Show ${Math.min(VISIBLE_ROW_INCREMENT, displayed.length - visibleRows.length)} more`}
+            </button>
+            <button
+              type="button"
+              className="chart-link-btn"
+              aria-controls="disease-comparison-table"
+              onClick={() => setVisibleRowCount(displayed.length)}
+            >
+              {lang === 'zh' ? '显示全部' : 'Show all'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

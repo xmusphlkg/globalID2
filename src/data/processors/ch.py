@@ -226,6 +226,7 @@ class CHMonthlyUpdater:
             )
 
         rows: List[Dict[str, str]] = []
+        today = datetime.now(timezone.utc).date()
         with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
@@ -235,6 +236,17 @@ class CHMonthlyUpdater:
                 if not disease or report_date is None or cases is None:
                     continue
 
+                data_complete = _norm_text(row.get("DataComplete"))
+                explicitly_incomplete = data_complete.casefold() in {
+                    "false", "0", "no"
+                }
+                open_month_without_completion = (
+                    _norm_text(row.get("PeriodType")).casefold() == "month"
+                    and (report_date.year, report_date.month)
+                    == (today.year, today.month)
+                    and data_complete.casefold() not in {"true", "1", "yes"}
+                )
+                is_provisional = explicitly_incomplete or open_month_without_completion
                 rows.append(
                     {
                         "Date": report_date.isoformat(),
@@ -248,12 +260,16 @@ class CHMonthlyUpdater:
                         "Cases": str(max(0, cases)),
                         "Geography": _norm_text(row.get("Geography")),
                         "Group": _norm_text(row.get("Group")),
-                        "DataComplete": _norm_text(row.get("DataComplete")),
+                        "DataComplete": data_complete,
                         "Trend": _norm_text(row.get("Trend")),
                         "SourceDate": _norm_text(row.get("SourceDate")),
                         "Version": _norm_text(row.get("Version")),
                         "Source": _norm_text(row.get("Source")) or self.source_name,
                         "SourceURL": _norm_text(row.get("SourceURL")),
+                        "DatasetStatus": (
+                            "provisional" if is_provisional else "closed_revisable"
+                        ),
+                        "IsProvisional": "true" if is_provisional else "false",
                     }
                 )
 

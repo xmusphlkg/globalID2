@@ -1,0 +1,39 @@
+---
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import ResearchArticleCard from './ResearchArticleCard.astro';
+
+interface Props { diseaseId: string }
+const { diseaseId } = Astro.props;
+const file = resolve(`./src/data/research/diseases/${diseaseId.toLowerCase()}.json`);
+const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : null;
+const articles = payload?.articles ?? [];
+const previewArticles = articles.slice(0, 5);
+---
+
+{articles.length > 0 && (
+  <section class="figure-panel disease-research-panel">
+    <div class="research-panel-heading">
+      <div>
+        <p class="academic-kicker" data-lang-en="Research Radar" data-lang-zh="研究雷达">Research Radar</p>
+        <h2 class="figure-title mt-1" data-lang-en="Recent related research" data-lang-zh="近期相关研究">Recent related research</h2>
+      </div>
+      <a href={`/research/?disease=${diseaseId}`} data-lang-en="View all research →" data-lang-zh="查看全部研究 →">View all research →</a>
+    </div>
+    <div class="mt-5">{previewArticles.map((article: any) => <ResearchArticleCard article={article} compact />)}</div>
+    {articles.length > previewArticles.length && (
+      <p class="research-panel-count" data-lang-en={`Showing ${previewArticles.length} of ${articles.length} related publications.`} data-lang-zh={`显示 ${articles.length} 篇相关论文中的 ${previewArticles.length} 篇。`}>
+        Showing {previewArticles.length} of {articles.length} related publications.
+      </p>
+    )}
+    <p class="research-panel-note" data-lang-en="Literature links are provided for discovery and do not alter or validate the surveillance series above." data-lang-zh="文献链接仅用于发现研究，不会改变或验证上方的监测序列。">Literature links are provided for discovery and do not alter or validate the surveillance series above.</p>
+  </section>
+)}
+
+<style>
+  .research-panel-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
+  .research-panel-heading > a { flex: none; color: rgb(var(--color-brand)); font-size: .78rem; font-weight: 650; }
+  .research-panel-count { margin-top: .75rem; color: rgb(var(--text-faint)); font: 500 .68rem/1.4 'JetBrains Mono', monospace; }
+  .research-panel-note { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .72rem; line-height: 1.5; }
+  @media (max-width: 640px) { .research-panel-heading { align-items: start; flex-direction: column; } }
+</style>

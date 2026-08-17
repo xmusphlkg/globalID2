@@ -306,6 +306,10 @@ class KRMonthlyUpdater:
                         "ImportedCases": str(max(0, imported_cases)),
                         "Source": _norm_text(row.get("Source")) or self.source_name,
                         "SourceURL": _norm_text(row.get("SourceURL")),
+                        # KDCA labels each year's portal statistics as
+                        # changeable provisional statistics.
+                        "DatasetStatus": "provisional",
+                        "IsProvisional": "true",
                     }
                 )
 

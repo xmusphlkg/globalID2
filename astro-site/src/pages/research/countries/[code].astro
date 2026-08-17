@@ -1,0 +1,27 @@
+---
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
+import researchData from '../../../data/research/index.json';
+
+export function getStaticPaths() {
+  return ((researchData as any).facets?.countries ?? []).map((facet: any) => ({ params: { code: facet.slug }, props: { facet } }));
+}
+
+const { facet } = Astro.props as { facet: any };
+const file = resolve(`./src/data/research/countries/${facet.slug}.json`);
+const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [] };
+const description = `Published infectious-disease research classified with a high-confidence geographic relationship to ${facet.name_en}.`;
+const descriptionZh = `与${facet.name_zh ?? facet.name_en}形成高置信度地理分类关系的已发布传染病研究。`;
+---
+
+<ResearchCollectionPage
+  eyebrow="Geographic evidence hub"
+  eyebrowZh="地区证据专题"
+  title={`${facet.name_en} research`}
+  titleZh={`${facet.name_zh ?? facet.name_en}研究`}
+  description={description}
+  descriptionZh={descriptionZh}
+  canonicalPath={`/research/countries/${facet.slug}/`}
+  articles={payload.articles ?? []}
+/>

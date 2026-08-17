@@ -22,6 +22,156 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.7.0',
+    date: '2026-08-17',
+    titleEn: 'Situation Room v3, verified alerts, and evidence-grade Research Radar',
+    titleZh: '态势室 v3、已核验提醒与证据级研究雷达',
+    summaryEn:
+      'This release moves Situation Room onto a versioned, auditable v3 contract, expands Research Radar into a searchable evidence product, and adds safer subscription, alerting, release, and quality-gate automation.',
+    summaryZh:
+      '本次更新将态势室迁移到可审计的 v3 版本化契约，扩展研究雷达为可检索的证据产品，并新增更安全的订阅、提醒、发布和质量门控自动化。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Introduced Situation Room v3 with Pydantic-owned contracts, immutable daily, weekly, and monthly reports, versioned public JSON, source-readiness ledgers, and dedicated public archive routes.',
+            zh: '推出态势室 v3，使用 Pydantic 作为契约源，支持不可变的日、周、月报告、版本化公开 JSON、来源就绪度台账和专用公开归档路由。',
+          },
+          {
+            en: 'Added a Situation v3 operations API and dashboard workspace for runs, signals, source health, event clusters, reports, audited review decisions, publish actions, and rollback.',
+            zh: '新增态势 v3 运营 API 与控制台工作区，覆盖运行、信号、来源健康、事件聚类、报告、审计化复核决策、发布操作和回滚。',
+          },
+          {
+            en: 'Expanded Research Radar with Ask GIDS Research, an evidence graph, topic and country collections, preprint and integrity registers, scoped RSS feeds, social cards, and a richer public catalogue.',
+            zh: '扩展研究雷达，新增“问研究雷达”、证据图谱、主题与国家集合、预印本与完整性登记、分范围 RSS、社交分享卡片和更丰富的公开目录。',
+          },
+          {
+            en: 'Added subscription support for weekly Research Radar digests and verified Situation alerts, including D1 migrations, preference filters, idempotent campaigns, an alert outbox, and optional Cloudflare Queue fan-out.',
+            zh: '新增研究雷达周报和已核验态势提醒的订阅支持，包括 D1 迁移、偏好筛选、幂等 campaign、提醒 outbox 和可选 Cloudflare Queue 分发。',
+          },
+          {
+            en: 'Added production-oriented GitHub workflows for Situation Room release gates, exact artifact deployment verification, reviewed-alert dispatch, full project quality checks, and PostgreSQL migration smoke tests.',
+            zh: '新增面向生产的 GitHub 工作流，支持态势室发布门控、精确制品部署验证、已复核提醒分发、全项目质量检查和 PostgreSQL 迁移冒烟测试。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Strengthened Situation analysis with source-cadence maturity windows, deterministic geography identity, bounded concurrent adapters, robust quasi-Poisson modeling, rare-count tail correction, and detector-tier FDR families.',
+            zh: '加强态势分析，加入来源频率成熟窗口、确定性地理身份、有界并发适配器、稳健 quasi-Poisson 建模、稀有计数尾部修正和按检测层级划分的 FDR 检验族。',
+          },
+          {
+            en: 'Made Situation publication fail closed with immutable history storage, quality-gated pointer advancement, calibrated backtesting, guarded automation diagnostics, and analyst-review-only production alert dispatch.',
+            zh: '让态势发布默认失败关闭，支持不可变历史存储、质量门控后的指针推进、校准回测、受控自动化诊断，以及生产环境仅分发人工复核提醒。',
+          },
+          {
+            en: 'Upgraded Research Radar ingestion with controlled discovery, publisher RSS, WHO IRIS guidance metadata, OpenAlex and Unpaywall enrichment, resumable metadata backfill, version-5 classification, and privacy-safe health checks.',
+            zh: '升级研究雷达接入，支持受控发现、出版社 RSS、WHO IRIS 指南元数据、OpenAlex 与 Unpaywall 增强、可恢复元数据回填、v5 分类和隐私安全健康检查。',
+          },
+          {
+            en: 'Improved static-site reliability and performance with deterministic build fixtures, research release validation, ECharts bundle splitting, world-map optimization, font/logo assets, sitemap coverage, and route-level performance budgets.',
+            zh: '提升静态站点可靠性与性能，加入确定性构建夹具、研究发布验证、ECharts 拆包、世界地图优化、字体与标志资源、站点地图覆盖和路由级性能预算。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Fixed unattended ingestion and data-release recovery so transient scheduled failures park in retrying, requeue atomically, preserve their task identity, and keep crawl-run audit rows from remaining indefinitely active.',
+            zh: '修复无人值守接入与数据发布恢复流程，使计划任务的暂态失败进入 retrying、到期后原子化重入队列、保留原任务身份，并避免抓取运行审计行永久停留在活跃状态。',
+          },
+          {
+            en: 'Tightened public evidence boundaries so raw abstracts, provider payloads, PDFs, unreviewed summaries, stale contracts, unverified automated alerts, and invalid research or Situation artifacts fail before publication.',
+            zh: '收紧公开证据边界，确保原始摘要、供应商载荷、PDF、未复核摘要、陈旧契约、未核验自动提醒以及无效研究或态势制品在发布前失败关闭。',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.6.1',
+    date: '2026-08-14',
+    titleEn: 'Research Radar, Situation Room v2, and stronger analysis workflows',
+    titleZh: '研究雷达、态势室 v2 与更强的分析工作流',
+    summaryEn:
+      'This release introduces public literature intelligence, upgrades the Situation Room into a reviewable signal system, and gives operators safer automation, release, and disease-mapping controls.',
+    summaryZh:
+      '本次更新上线公开文献情报能力，将态势室升级为可复核的信号系统，并为运营人员提供更安全的自动化、发布和疾病映射控制。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added Research Radar with public literature pages for articles, disease evidence hubs, country collections, topic collections, weekly briefs, catalogue JSON, RSS, and curated historical baselines.',
+            zh: '新增研究雷达，提供公开文献文章页、疾病证据中心、国家集合、主题集合、周报、目录 JSON、RSS 以及经策展的历史基线文献。',
+          },
+          {
+            en: 'Added a literature operations workspace with Crossref and Europe PMC synchronization, editorial review, evidence-gap discovery, autopilot policy gates, and model-enriched bilingual summaries.',
+            zh: '新增文献运营工作区，支持 Crossref 与 Europe PMC 同步、编辑复核、证据缺口发现、自动策略门控以及模型增强的中英文摘要。',
+          },
+          {
+            en: 'Introduced Situation Room v2 with daily, weekly, and monthly snapshots, a dedicated history database, methodology pages, public/shadow preview controls, and richer signal detail pages.',
+            zh: '推出态势室 v2，支持日、周、月快照、专用历史数据库、方法页、公开/影子预览控制以及更丰富的信号详情页面。',
+          },
+          {
+            en: 'Added Austria and Germany source mappings, reviewed mapping registries, expanded provisional-source fixtures, and migrations for situation history, source tasks, and literature evidence gaps.',
+            zh: '新增奥地利和德国来源映射、已复核映射注册表、扩展的临时来源测试夹具，并加入态势历史、来源任务和文献证据缺口迁移。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Upgraded epidemic curves with monitor, compare, and outbreak analysis modes, comparability safeguards, stable series colors, historical reference bands, event markers, and provisional-period treatment.',
+            zh: '升级流行曲线，新增监测、比较和暴发分析模式，并加入可比性保护、稳定序列配色、历史参考带、事件标记和临时数据期间处理。',
+          },
+          {
+            en: 'Expanded Situation Room scoring with respiratory, increasing, emerging, and unusual sections, priority queues, source freshness checks, quality gates, and SEO-safe public publication rules.',
+            zh: '扩展态势室评分，覆盖呼吸道、上升、新发和异常栏目，并加入优先队列、来源新鲜度检查、质量门控和 SEO 安全的公开发布规则。',
+          },
+          {
+            en: 'Strengthened disease mapping automation with retry windows, provider cooldowns, digest notifications, source-category reconciliation, and safer AI-assisted review workflows.',
+            zh: '加强疾病映射自动化，支持重试窗口、供应商冷却、摘要通知、来源类别对账以及更安全的 AI 辅助复核流程。',
+          },
+          {
+            en: 'Improved data release publishing with parallel raw/archive publishers, resumable GitHub pushes, SSH-over-443 fallback, atomic site-data writes, and expanded repository-boundary documentation.',
+            zh: '优化数据发布，支持原始归档与下载发布器并行、可恢复的 GitHub 推送、SSH 443 端口回退、原子化站点数据写入以及更完整的仓库边界文档。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Kept Research Radar public JSON limited to published, integrity-safe metadata and GIDS-authored summaries; raw abstracts and provider payloads stay outside the static site.',
+            zh: '确保研究雷达公开 JSON 只包含已发布且完整性安全的元数据与 GIDS 自有摘要，原始摘要和供应商响应不会进入静态站点。',
+          },
+          {
+            en: 'Added regression coverage for Situation Room v2 statistics, history services, provisional ingestion policies, literature radar flows, task-log compaction, sitemap entries, and expanded source processors.',
+            zh: '新增态势室 v2 统计、历史服务、临时接入策略、文献雷达流程、任务日志压缩、站点地图条目和扩展来源处理器的回归测试。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.5.3',
     date: '2026-08-10',
     titleEn: 'Broader surveillance coverage and a clearer public data experience',

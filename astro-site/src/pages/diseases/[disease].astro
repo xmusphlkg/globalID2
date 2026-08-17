@@ -1,10 +1,13 @@
 ---
 // src/pages/diseases/[disease].astro — Individual disease detail page
 import ReportLayout from '../../layouts/ReportLayout.astro';
+import CountryFlag from '../../components/CountryFlag.astro';
 import DownloadPanel from '../../components/DownloadPanel.astro';
+import DiseaseResearchPanel from '../../components/research/DiseaseResearchPanel.astro';
 import DiseaseMonthlyBar from '../../components/charts/DiseaseMonthlyBar';
 import DiseaseCountryCurve from '../../components/charts/DiseaseCountryCurve';
 import { buildChartSourceMeta } from '../../utils/chartMeta';
+import { getCountryCoverage } from '../../lib/country-coverage';
 import {
   formatReferenceCitation,
   hasCitations,
@@ -27,6 +30,7 @@ import {
 } from '../../lib/seo';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import metaRaw from '../../data/meta.json';
 
 export async function getStaticPaths() {
   const diseasesPath = resolve('./src/data/diseases/index.json');
@@ -204,7 +208,20 @@ const coverageDates = Object.values(diseaseData?.country_series ?? {})
 const coverageStart = coverageDates[0] ?? null;
 const coverageEnd = coverageDates.at(-1) ?? null;
 const coverageLabel = coverageStart && coverageEnd ? `${coverageStart} → ${coverageEnd}` : '—';
-const countryCount = Object.keys(diseaseData?.country_series ?? {}).length;
+const countryMetaByCode = new Map(
+  ((metaRaw as any).countries ?? []).map((country: any) => [String(country.code).toUpperCase(), country]),
+);
+const reportingCountries = Object.keys(diseaseData?.country_series ?? {})
+  .map((rawCode) => {
+    const code = rawCode.toUpperCase();
+    const metadata = countryMetaByCode.get(code) as any;
+    const coverage = getCountryCoverage(code);
+    const nameEn = metadata?.name_en ?? metadata?.name ?? coverage?.name_en ?? code;
+    const nameZh = metadata?.name_zh ?? coverage?.name_zh ?? nameEn;
+    return { code, nameEn, nameZh };
+  })
+  .sort((a, b) => a.nameEn.localeCompare(b.nameEn, 'en'));
+const countryCount = reportingCountries.length;
 const hasDeathsData = diseaseData?.total_deaths > 0
   || Object.values(diseaseData?.country_series ?? {}).some((series: any) =>
     Array.isArray(series?.deaths) && series.deaths.some((value: number) => value > 0)
@@ -516,15 +533,50 @@ const diseaseSeo = {
 
         {countryCount > 0 && (
           <section class="figure-panel">
-            <p class="figure-kicker" data-lang-en="Coverage" data-lang-zh="数据覆盖">Coverage</p>
-            <h2 class="figure-title" data-lang-en="Reporting countries and regions" data-lang-zh="报告国家和地区">
-              Reporting countries and regions
-            </h2>
-            <ul class="mt-4 flex flex-wrap gap-2">
-              {Object.keys(diseaseData.country_series ?? {}).sort().map((code) => (
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p class="figure-kicker" data-lang-en="Coverage" data-lang-zh="数据覆盖">Coverage</p>
+                <h2 class="figure-title" data-lang-en="Reporting countries and regions" data-lang-zh="报告国家和地区">
+                  Reporting countries and regions
+                </h2>
+                <p
+                  class="figure-caption"
+                  data-lang-en="Select a country or region to view its complete surveillance profile."
+                  data-lang-zh="选择国家或地区，查看完整的监测资料。"
+                >
+                  Select a country or region to view its complete surveillance profile.
+                </p>
+              </div>
+              <span
+                class="site-control-pill inline-flex w-fit items-center border px-3 py-1.5 text-xs"
+                data-lang-en={`${countryCount} ${countryCount === 1 ? 'location' : 'locations'}`}
+                data-lang-zh={`${countryCount} 个国家/地区`}
+              >
+                {countryCount} {countryCount === 1 ? 'location' : 'locations'}
+              </span>
+            </div>
+            <ul class="reporting-country-grid">
+              {reportingCountries.map(({ code, nameEn, nameZh }) => (
                 <li>
-                  <a href={`/countries/${code.toLowerCase()}/`} class="site-action-secondary inline-flex px-3 py-1.5 text-sm rounded-none border">
-                    {code.toUpperCase()} <span class="sr-only">surveillance profile</span>
+                  <a
+                    href={`/countries/${code.toLowerCase()}/`}
+                    class="reporting-country-link focus-ring group"
+                    aria-label={`${nameEn} surveillance profile`}
+                  >
+                    <CountryFlag code={code} name={`${nameEn} flag`} sizeClass="h-8 w-11 shrink-0" />
+                    <span class="min-w-0 flex-1">
+                      <span
+                        class="reporting-country-name"
+                        data-lang-en={nameEn}
+                        data-lang-zh={nameZh}
+                      >
+                        {nameEn}
+                      </span>
+                      <span class="reporting-country-code">{code}</span>
+                    </span>
+                    <svg class="reporting-country-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <path d="m7.5 4.5 5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
                   </a>
                 </li>
               ))}
@@ -537,6 +589,9 @@ const diseaseSeo = {
               <h2 class="figure-title" data-lang-en="Trends by reporting country" data-lang-zh="各报告国家的趋势">
                 Trends by reporting country
               </h2>
+              <p class="figure-caption mt-2" data-lang-en="Inspect one country first, or select any number of reporting countries for comparison. The chart automatically handles common time windows and separates incompatible reporting frequencies." data-lang-zh="默认先查看一个国家；需要时可选择任意数量的报告国家进行比较。图表会自动处理共同时间窗，并将不兼容的报告频率分开显示。">
+                Inspect one country first, or select any number of reporting countries for comparison. The chart automatically handles common time windows and separates incompatible reporting frequencies.
+              </p>
               <div class="mt-5">
               <DiseaseCountryCurve
                 client:visible
@@ -564,6 +619,8 @@ const diseaseSeo = {
             </div>
           </section>
         )}
+
+        <DiseaseResearchPanel diseaseId={diseaseId} />
 
         {diseaseDownload && (
           <DownloadPanel

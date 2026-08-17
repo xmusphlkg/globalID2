@@ -34,3 +34,9 @@ Integration settings cover SMTP, GitHub, Cloudflare, site publication, and runti
 5. Run release checks before triggering a data release.
 
 Cancellation is cooperative for running work and immediate for queued work. Retry clears cancellation metadata and requeues the same stable task UUID so audit history is retained.
+
+Scheduled and upstream-triggered data releases automatically retry recognized
+transient external failures with a persisted exponential backoff. A release in
+`retrying` is waiting for its durable deadline and does not require the manual
+Retry action. Code, contract/gate, configuration, and credential failures remain
+terminal. See [Data release automatic recovery](../DATA_RELEASE_RESILIENCE.md).

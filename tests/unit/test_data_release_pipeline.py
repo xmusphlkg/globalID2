@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -25,6 +26,45 @@ def _runtime(manager) -> pipeline.ReleasePipelineRuntime:
         download_publish_timeout_seconds=900,
         cloudflare_deploy_timeout_seconds=900,
     )
+
+
+@pytest.mark.asyncio
+async def test_repository_publishers_run_concurrently():
+    started: set[str] = set()
+    both_started = asyncio.Event()
+
+    async def publish(name: str) -> None:
+        started.add(name)
+        if len(started) == 2:
+            both_started.set()
+        await asyncio.wait_for(both_started.wait(), timeout=0.2)
+
+    completed = await pipeline._run_repository_publications(
+        [
+            ("raw_archive", publish("raw_archive")),
+            ("direct_downloads", publish("direct_downloads")),
+        ]
+    )
+
+    assert completed == {"raw_archive", "direct_downloads"}
+
+
+@pytest.mark.asyncio
+async def test_repository_publisher_failures_are_aggregated_after_all_finish():
+    completed = []
+
+    async def fail() -> None:
+        raise RuntimeError("raw transport failed")
+
+    async def succeed() -> None:
+        completed.append("downloads")
+
+    with pytest.raises(RuntimeError, match="raw_archive: raw transport failed"):
+        await pipeline._run_repository_publications(
+            [("raw_archive", fail()), ("direct_downloads", succeed())]
+        )
+
+    assert completed == ["downloads"]
 
 
 @pytest.mark.asyncio
@@ -121,6 +161,9 @@ async def test_pipeline_local_only_success_preserves_stage_order():
         def _update_situation_room_command(self, **_kwargs):
             return ["update-situation-room"]
 
+        def _validate_situation_release_command(self, **_kwargs):
+            return ["validate-situation-release"]
+
         def _publish_download_repo_command(self, **_kwargs):
             return ["publish-downloads"]
 
@@ -152,7 +195,7 @@ async def test_pipeline_local_only_success_preserves_stage_order():
 
     output = await pipeline.execute_release_task(Service(), task, runtime=runtime)
 
-    assert commands == ["Refresh Situation Room", "Generate Site Data", "Build Astro Site"]
+    assert commands == ["Refresh Situation Room", "Generate Site Data", "Build Astro Site", "Validate Situation Release Gate"]
     assert progress == [5, 15, 22, 35, 60, 88, 100]
     assert output["direct_downloads_published"] is False
     assert output["raw_archive_published"] is False
@@ -189,6 +232,158 @@ async def test_pipeline_preflight_failure_stops_before_release_commands():
 
     assert len(entries) == 1
     assert entries[0][1]["metadata"]["event"] == "release_preflight"
+
+
+@pytest.mark.asyncio
+async def test_retry_reuses_completed_cloudflare_deploy_and_only_verifies():
+    commands = []
+    entries = []
+    stored_task = SimpleNamespace(output_data=None)
+
+    class Manager:
+        async def add_workbook_entry(self, _task_uuid, **kwargs):
+            entries.append(kwargs)
+
+        async def update_task_progress(self, *_args):
+            return None
+
+    class Database:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def get(self, _model, _task_id):
+            return stored_task
+
+        async def commit(self):
+            return None
+
+    identity = {
+        "release_id": "release-retry-1",
+        "source_commit": "abc123",
+        "source_branch": "main",
+        "deployment_branch": "main",
+        "built_at": "2026-08-05T00:00:00+00:00",
+        "commit_dirty": False,
+    }
+
+    class Service:
+        def _config(self):
+            return SimpleNamespace(timezone="UTC")
+
+        async def load_jobs(self):
+            return [
+                SimpleNamespace(
+                    job_id="site-release",
+                    name="Site Release",
+                    timezone="UTC",
+                    cloudflare_project_name="globalid",
+                    github_branch="main",
+                    include_git_push=False,
+                    include_cloudflare_deploy=True,
+                    commit_message_template="publish {branch}",
+                )
+            ]
+
+        async def integration_checks(self, _job_id):
+            return {
+                "overall_ready": True,
+                "blockers": [],
+                "git": {"ssh_transport": "default"},
+                "cloudflare": {
+                    "production_branch": "main",
+                    "subdomain": "globalid.example",
+                },
+                "raw_archive": {},
+            }
+
+        def _cloudflare_project_name(self, value):
+            return value
+
+        def _download_repo_url(self):
+            return "git@example/snapshot.git"
+
+        def _build_git_env(self, *_args, **_kwargs):
+            return {}
+
+        def _download_repo_raw_base(self, _job):
+            return "https://raw.example/data/main"
+
+        def _download_repo_branch(self, _job):
+            return "main"
+
+        def _render_commit_message(self, *_args, **_kwargs):
+            return "publish main"
+
+        def _python_executable(self):
+            return Path("/venv/python")
+
+        async def _current_git_branch(self):
+            return "main"
+
+        async def _release_identity_for_task(self, *_args):
+            return identity, {
+                "cloudflare_deploy": {"release_id": "release-retry-1"}
+            }
+
+        def _generate_site_data_command(self, **_kwargs):
+            return ["generate"]
+
+        def _update_situation_room_command(self, **_kwargs):
+            return ["update"]
+
+        def _validate_situation_release_command(self, **_kwargs):
+            return ["validate"]
+
+        async def _run_logged_command(self, _task_uuid, *, title, **_kwargs):
+            commands.append(title)
+
+        def _write_site_release_manifest(self, value):
+            return value
+
+        async def _sync_subscription_options_if_needed(self, *_args, **_kwargs):
+            return False
+
+        def _cloudflare_deploy_command(self, **_kwargs):
+            raise AssertionError("a checkpointed deploy must not run twice")
+
+        def _cloudflare_api_token(self):
+            return "token"
+
+        def _cloudflare_account_id(self):
+            return "account"
+
+        async def _record_release_checkpoint(self, *_args, **_kwargs):
+            raise AssertionError("an existing checkpoint must not be rewritten")
+
+        async def _verify_cloudflare_production_release(self, **_kwargs):
+            return {"verified": True, "production_url": "https://globalid.example"}
+
+    runtime = _runtime(Manager())
+    runtime = pipeline.ReleasePipelineRuntime(
+        **{
+            **runtime.__dict__,
+            "get_config": lambda: SimpleNamespace(
+                raw_archive=SimpleNamespace(enabled=False, repo_url="")
+            ),
+            "get_database": Database,
+        }
+    )
+    task = SimpleNamespace(
+        id=8,
+        task_uuid="retry-task",
+        input_data={"release_job_id": "site-release"},
+    )
+
+    output = await pipeline.execute_release_task(Service(), task, runtime=runtime)
+
+    assert "Deploy Cloudflare Pages" not in commands
+    assert "Dispatch Reviewed Situation Alerts" in commands
+    assert output["pages_deployed"] is True
+    assert output["situation_alert_dispatch_attempted"] is True
+    assert any(entry["title"] == "Cloudflare Deploy Reused" for entry in entries)
 
 
 @pytest.mark.asyncio

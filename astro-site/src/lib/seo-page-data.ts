@@ -9,12 +9,27 @@ import { buildPublishableReports } from './report-routes';
 import { isIndexableDisease, toSeoSlug } from './seo';
 
 const DATA_ROOT = resolve('./src/data');
+const jsonCache = new Map<string, Record<string, any> | null>();
+const diseaseCache = new Map<string, Record<string, any> | null>();
+const knowledgeCache = new Map<string, Record<string, any> | null>();
+const countryCache = new Map<string, Record<string, any> | null>();
+const reportCache = new Map<string, Record<string, any> | null>();
+let indexableDiseaseCache: Array<Record<string, any>> | null = null;
+const countryDiseaseCandidateCache = new Map<number, CountryDiseaseCandidate[]>();
+let publishableReportCache: ReturnType<typeof buildPublishableReports> | null = null;
 
 function readJson(path: string): Record<string, any> | null {
-  if (!existsSync(path)) return null;
+  if (jsonCache.has(path)) return jsonCache.get(path) ?? null;
+  if (!existsSync(path)) {
+    jsonCache.set(path, null);
+    return null;
+  }
   try {
-    return JSON.parse(readFileSync(path, 'utf-8')) as Record<string, any>;
+    const payload = JSON.parse(readFileSync(path, 'utf-8')) as Record<string, any>;
+    jsonCache.set(path, payload);
+    return payload;
   } catch {
+    jsonCache.set(path, null);
     return null;
   }
 }
@@ -24,19 +39,34 @@ export const diseaseIndex = diseasesRaw as Array<Record<string, any>>;
 export const reportIndex = reportsRaw as Array<Record<string, any>>;
 
 export function loadDisease(id: string): Record<string, any> | null {
-  return readJson(resolve(DATA_ROOT, 'diseases', `${id.toLowerCase()}.json`));
+  const key = id.toLowerCase();
+  if (!diseaseCache.has(key)) {
+    diseaseCache.set(key, readJson(resolve(DATA_ROOT, 'diseases', `${key}.json`)));
+  }
+  return diseaseCache.get(key) ?? null;
 }
 
 export function loadKnowledge(id: string): Record<string, any> | null {
-  return readJson(resolve(DATA_ROOT, 'disease-knowledge', `${id.toLowerCase()}.json`));
+  const key = id.toLowerCase();
+  if (!knowledgeCache.has(key)) {
+    knowledgeCache.set(key, readJson(resolve(DATA_ROOT, 'disease-knowledge', `${key}.json`)));
+  }
+  return knowledgeCache.get(key) ?? null;
 }
 
 export function loadCountry(code: string): Record<string, any> | null {
-  return readJson(resolve(DATA_ROOT, 'countries', `${code.toLowerCase()}.json`));
+  const key = code.toLowerCase();
+  if (!countryCache.has(key)) {
+    countryCache.set(key, readJson(resolve(DATA_ROOT, 'countries', `${key}.json`)));
+  }
+  return countryCache.get(key) ?? null;
 }
 
 export function loadReport(id: string): Record<string, any> | null {
-  return readJson(resolve(DATA_ROOT, 'reports', `${id}.json`));
+  if (!reportCache.has(id)) {
+    reportCache.set(id, readJson(resolve(DATA_ROOT, 'reports', `${id}.json`)));
+  }
+  return reportCache.get(id) ?? null;
 }
 
 export function diseaseBySlug(slug: string): Record<string, any> | null {
@@ -44,7 +74,8 @@ export function diseaseBySlug(slug: string): Record<string, any> | null {
 }
 
 export function indexableDiseases(): Array<Record<string, any>> {
-  return diseaseIndex.filter((disease) => {
+  if (indexableDiseaseCache) return indexableDiseaseCache;
+  indexableDiseaseCache = diseaseIndex.filter((disease) => {
     const id = String(disease.disease_id ?? '').toLowerCase();
     const data = loadDisease(id);
     const knowledge = loadKnowledge(id);
@@ -54,6 +85,7 @@ export function indexableDiseases(): Array<Record<string, any>> {
       knowledgeSources: knowledge?.knowledge_sources ?? data?.knowledge_sources,
     });
   });
+  return indexableDiseaseCache;
 }
 
 export interface CountryDiseaseCandidate {
@@ -64,6 +96,9 @@ export interface CountryDiseaseCandidate {
 }
 
 export function countryDiseaseCandidates(limit = 50): CountryDiseaseCandidate[] {
+  if (countryDiseaseCandidateCache.has(limit)) {
+    return countryDiseaseCandidateCache.get(limit) ?? [];
+  }
   const candidates: Array<CountryDiseaseCandidate & { score: number }> = [];
   for (const snapshot of siteMeta.countries ?? []) {
     const code = String(snapshot.code ?? '').toLowerCase();
@@ -90,11 +125,16 @@ export function countryDiseaseCandidates(limit = 50): CountryDiseaseCandidate[] 
       candidates.push({ code, country, series, slug, score: Number(series.total_cases ?? 0) + dates.length });
     }
   }
-  return candidates
+  const result = candidates
     .sort((a, b) => b.score - a.score || `${a.code}/${a.slug}`.localeCompare(`${b.code}/${b.slug}`))
     .slice(0, limit);
+  countryDiseaseCandidateCache.set(limit, result);
+  return result;
 }
 
 export function publishableReports() {
-  return buildPublishableReports(reportIndex, loadReport);
+  if (!publishableReportCache) {
+    publishableReportCache = buildPublishableReports(reportIndex, loadReport);
+  }
+  return publishableReportCache;
 }

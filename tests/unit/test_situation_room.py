@@ -14,7 +14,7 @@ def _weekly_frame(values: list[int]) -> pd.DataFrame:
             "quality_status": "validated",
             "geography_key": "national",
             "series_code": "jp-influenza-weekly",
-            "disease_id": "D004",
+            "disease_id": "D038",
             "disease_name": "Influenza",
             "disease_slug": "influenza",
             "country_code": "JP",
@@ -30,13 +30,14 @@ def test_detects_confirmed_source_native_increase() -> None:
     signals = analyze_frame(_weekly_frame([10] * 176 + [35] * 4), load_config())
 
     assert len(signals) == 1
-    assert signals[0]["window"] == {
-        "periods": 4,
-        "current_cases": 140,
-        "previous_cases": 40,
-        "absolute_change": 100,
-        "change_pct": 250.0,
-    }
+    assert signals[0]["window"]["label"] == "Last 4 weeks"
+    assert signals[0]["window"]["periods"] == 4
+    assert signals[0]["window"]["current_cases"] == 140
+    assert signals[0]["window"]["previous_cases"] == 40
+    assert signals[0]["window"]["absolute_change"] == 100
+    assert signals[0]["window"]["change_pct"] == 250.0
+    assert signals[0]["statistics"]["detector_votes"] >= 2
+    assert signals[0]["risk"]["confidence"] == "low"
     assert signals[0]["cadence"] == "weekly"
 
 
@@ -56,6 +57,8 @@ def test_snapshot_separates_statistical_and_official_event_evidence() -> None:
     assert snapshot["increasing"][0]["kind"] == "statistical_signal"
     assert snapshot["emerging"] == [event]
     assert snapshot["coverage"]["note_en"].startswith("Statistical signals cover")
+    assert snapshot["schema_version"] == "situation_room.v2"
+    assert snapshot["checked_at"] == snapshot["content_updated_at"]
 
 
 def test_public_health_event_serializes_mapped_metadata_column() -> None:

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "aliases": {
+    "D004": ["SARS-CoV-2", "2019-nCoV", "coronavirus disease 2019"],
+    "D005": ["human immunodeficiency virus", "HIV/AIDS"],
+    "D007": ["hepatitis A virus", "HAV"],
+    "D010": ["hepatitis B virus", "HBV"],
+    "D011": ["hepatitis C virus", "HCV"],
+    "D017": ["measles virus", "rubeola"],
+    "D021": ["dengue virus", "DENV"],
+    "D025": ["Mycobacterium tuberculosis", "tuberculosis"],
+    "D028": ["Bordetella pertussis", "whooping cough", "DTaP", "Tdap"],
+    "D037": ["Plasmodium falciparum", "Plasmodium vivax"],
+    "D038": ["influenza virus", "avian influenza", "H5N1", "H7N9"],
+    "D065": ["mpox", "monkeypox", "MPXV"]
+  }
+}

@@ -1,0 +1,228 @@
+name: Situation Room automated release
+
+on:
+  schedule:
+    # GitHub cron uses UTC. Offset from the top of the hour to avoid peak load.
+    - cron: "17 03 * * *"
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy the gated artifact to the production Cloudflare Pages project
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+# Never run two writers against the Situation publication pointer at once.
+# A new run queues behind the active one instead of cancelling it mid-write.
+concurrency:
+  group: situation-room-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-gate:
+    name: Refresh, build, and gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DATABASE_URL: ${{ secrets.SITUATION_DATABASE_URL }}
+      SITUATION_HISTORY_DATABASE_URL: ${{ secrets.SITUATION_HISTORY_DATABASE_URL }}
+      PUBLIC_GA4_MEASUREMENT_ID: ${{ vars.PUBLIC_GA4_MEASUREMENT_ID }}
+      PUBLIC_SUBSCRIPTIONS_API_BASE: ${{ vars.PUBLIC_SUBSCRIPTIONS_API_BASE }}
+      AUTOMATION_ARTIFACT_ROOT: ${{ runner.temp }}/situation-release
+
+    steps:
+      - name: Check out the release source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            dashboard/package-lock.json
+            astro-site/package-lock.json
+
+      - name: Require production database connectivity
+        shell: bash
+        run: |
+          if [[ -z "${DATABASE_URL}" ]]; then
+            echo "SITUATION_DATABASE_URL is not configured in GitHub Actions secrets." >&2
+            exit 2
+          fi
+          if [[ -z "${SITUATION_HISTORY_DATABASE_URL}" ]]; then
+            echo "SITUATION_HISTORY_DATABASE_URL is not configured in GitHub Actions secrets." >&2
+            exit 2
+          fi
+
+      - name: Install Python dependencies
+        run: |
+          python -m venv venv
+          venv/bin/pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Install contract and site dependencies
+        run: npm ci
+        working-directory: dashboard
+
+      - name: Install Astro and Wrangler dependencies
+        run: npm ci
+        working-directory: astro-site
+
+      - name: Refresh live sources, analyze, export, build, and gate
+        run: >-
+          venv/bin/python scripts/automation/run_situation_release.py
+          --python venv/bin/python
+          --require-env
+          --artifact-root "${AUTOMATION_ARTIFACT_ROOT}"
+          --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+      - name: Upload run manifest and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: situation-room-run-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/situation-release/${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 21
+
+      - name: Upload deployment-ready static site
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: situation-room-dist-${{ github.run_id }}-${{ github.run_attempt }}
+          path: astro-site/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy-production:
+    name: Deploy gated artifact
+    needs: build-and-gate
+    if: >-
+      needs.build-and-gate.result == 'success' &&
+      github.ref == 'refs/heads/master' &&
+      ((github.event_name == 'schedule' && vars.SITUATION_AUTO_DEPLOY == 'true') ||
+       (github.event_name == 'workflow_dispatch' && inputs.deploy == true))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: situation-production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_PROJECT_NAME: ${{ vars.CLOUDFLARE_PROJECT_NAME }}
+      SITUATION_PUBLIC_DATA_URL: ${{ vars.SITUATION_PUBLIC_DATA_URL }}
+
+    steps:
+      - name: Check out deployment tooling
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: astro-site/package-lock.json
+
+      - name: Install pinned Wrangler dependency
+        run: npm ci
+        working-directory: astro-site
+
+      - name: Download gated static site
+        uses: actions/download-artifact@v4
+        with:
+          name: situation-room-dist-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/situation-dist
+
+      - name: Download release manifest
+        uses: actions/download-artifact@v4
+        with:
+          name: situation-room-run-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/situation-run
+
+      - name: Verify downloaded artifact and release provenance
+        run: >-
+          python scripts/automation/verify_situation_artifact.py
+          --manifest "${RUNNER_TEMP}/situation-run/manifest.json"
+          --dist "${RUNNER_TEMP}/situation-dist"
+          --expected-run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          --expected-source-commit "${GITHUB_SHA}"
+
+      - name: Require production deployment configuration
+        shell: bash
+        run: |
+          if [[ -z "${CLOUDFLARE_API_TOKEN}" || -z "${CLOUDFLARE_ACCOUNT_ID}" || -z "${CLOUDFLARE_PROJECT_NAME}" || -z "${SITUATION_PUBLIC_DATA_URL}" ]]; then
+            echo "Cloudflare production credentials, project, or public verification URL are missing." >&2
+            exit 2
+          fi
+
+      - name: Deploy to Cloudflare Pages
+        working-directory: astro-site
+        run: >-
+          npx --no-install wrangler pages deploy "${RUNNER_TEMP}/situation-dist"
+          --project-name="${CLOUDFLARE_PROJECT_NAME}"
+          --branch=master
+          --commit-hash="${GITHUB_SHA}"
+          --commit-message="Automated Situation Room release ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          --commit-dirty=false
+
+      - name: Verify production serves the exact gated report
+        run: >-
+          python scripts/automation/verify_situation_deployment.py
+          --artifact "${RUNNER_TEMP}/situation-dist/site-data/situation/v3/latest.json"
+          --public-data-url "${SITUATION_PUBLIC_DATA_URL}"
+          --attempts 12
+          --timeout-seconds 10
+          --initial-delay-seconds 2
+          --maximum-delay-seconds 20
+
+  dispatch-reviewed-alerts:
+    name: Dispatch reviewed Situation alerts
+    needs: deploy-production
+    if: needs.deploy-production.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: situation-production
+    env:
+      SITUATION_ALERT_WORKER_URL: ${{ vars.SITUATION_ALERT_WORKER_URL }}
+      SITUATION_PUBLIC_REPORT_URL: ${{ vars.SITUATION_PUBLIC_REPORT_URL }}
+      SITUATION_ALERT_INGEST_TOKEN: ${{ secrets.SITUATION_ALERT_INGEST_TOKEN }}
+      SITUATION_ALERT_DISPATCH_STRICT: "true"
+      SITUATION_ALERT_TIMEOUT_SECONDS: "15"
+      SITUATION_ALERT_MAX_ATTEMPTS: "4"
+      SITUATION_ALERT_RETRY_BASE_SECONDS: "2"
+      SITUATION_ALERT_RETRY_MAX_SECONDS: "15"
+
+    steps:
+      - name: Check out alert dispatcher
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Download the deployed static artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: situation-room-dist-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/situation-dist
+
+      - name: Dispatch analyst-reviewed signals
+        run: >-
+          python scripts/automation/dispatch_situation_alerts.py
+          --report "${RUNNER_TEMP}/situation-dist/site-data/situation/v3/latest.json"

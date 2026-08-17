@@ -11,6 +11,7 @@ interface Props {
   textClass?: string;
   titleClass?: string;
   subtitleClass?: string;
+  loading?: 'eager' | 'lazy';
 }
 
 const {
@@ -25,6 +26,7 @@ const {
   textClass = '',
   titleClass = '',
   subtitleClass = '',
+  loading = 'eager',
 } = Astro.props;
 
 const Wrapper = href ? 'a' : 'div';
@@ -33,30 +35,43 @@ const Wrapper = href ? 'a' : 'div';
 <Wrapper href={href} class:list={['brand-logo', `brand-logo-theme-${theme}`, className]}>
   {(variant === 'mark' || variant === 'lockup') && (
     <img
-      src="/logo.png"
-      alt={alt}
+      src="/logo-mark-128.png"
+      alt=""
+      aria-hidden="true"
+      width="128"
+      height="128"
       class:list={['brand-logo-mark object-contain', imgClass]}
-      loading="eager"
+      loading={loading}
       decoding="async"
     />
   )}
 
   {(variant === 'wordmark' || variant === 'lockup') && (
     <div class:list={['brand-logo-wordmark-wrap', variant === 'wordmark' ? 'w-full' : 'min-w-0']}>
-      <img
-        src="/logo-1.png"
-        alt={alt}
-        class:list={['brand-logo-wordmark brand-logo-wordmark-light object-contain', wordmarkClass]}
-        loading="eager"
-        decoding="async"
-      />
-      <img
-        src="/logo-2.png"
-        alt={alt}
-        class:list={['brand-logo-wordmark brand-logo-wordmark-dark object-contain', wordmarkClass]}
-        loading="eager"
-        decoding="async"
-      />
+      {theme !== 'dark' && (
+        <img
+          src="/logo-1-256.webp"
+          alt={variant === 'wordmark' ? alt : ''}
+          aria-hidden={variant === 'lockup' ? 'true' : undefined}
+          width="256"
+          height="151"
+          class:list={['brand-logo-wordmark brand-logo-wordmark-light object-contain', wordmarkClass]}
+          loading={loading}
+          decoding="async"
+        />
+      )}
+      {theme !== 'light' && (
+        <img
+          src="/logo-2-256.webp"
+          alt={variant === 'wordmark' ? alt : ''}
+          aria-hidden={variant === 'lockup' ? 'true' : undefined}
+          width="256"
+          height="151"
+          class:list={['brand-logo-wordmark brand-logo-wordmark-dark object-contain', wordmarkClass]}
+          loading={loading}
+          decoding="async"
+        />
+      )}
     </div>
   )}
 

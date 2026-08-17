@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_database, get_logger
@@ -193,6 +194,11 @@ class CrawlService:
                 disease_mapping_registry_service,
             )
 
+            source_series_rows = series_store.enrich_registry_identities(
+                source_series_rows,
+                country_code,
+                source_id=source_id,
+            )
             discovery = await disease_mapping_registry_service.discover_rows(
                 db,
                 country_code=country_code,
@@ -214,19 +220,27 @@ class CrawlService:
                 updater.country_code,
                 source_id=source_id,
             )
-            if source_series_rows and not selection.rows:
+            holding_rows = list(getattr(selection, "unregistered_rows", ()) or ())
+            if source_series_rows and not selection.rows and not holding_rows:
                 raise ValueError(
                     "Registry-scoped dual write selected no non-missing source rows"
                 )
-            source_series_rows = selection.rows
-            skipped_unregistered = selection.skipped_unregistered
+            source_series_rows = [*selection.rows, *holding_rows]
+            # Older/test selection adapters do not expose the retained rows. In
+            # that compatibility case the count still means rows were omitted;
+            # the production selector forwards them into dynamic holding series.
+            skipped_unregistered = (
+                0 if holding_rows else selection.skipped_unregistered
+            )
             skipped_missing = selection.skipped_missing
             logger.info(
                 "Disease source-series Registry selection | country={} "
-                "selected={} omitted_unregistered={} omitted_missing={}",
+                "selected={} retained_unmapped={} omitted_unregistered={} "
+                "omitted_missing={}",
                 updater.country_code,
                 len(selection.rows),
-                selection.skipped_unregistered,
+                len(holding_rows),
+                skipped_unregistered,
                 selection.skipped_missing,
             )
 
@@ -289,7 +303,7 @@ class CrawlService:
         logger.info(
             "Disease source-series dual write complete | country={} upserted={} "
             "unregistered={} missing={} unmatched={} ambiguous={} invalid={} "
-            "registry_not_synced={} "
+            "registry_not_synced={} holding={} "
             "quality_mode={} quality_issues={} quality_highest={}",
             updater.country_code,
             series_result.upserted,
@@ -299,6 +313,7 @@ class CrawlService:
             series_result.skipped_ambiguous,
             series_result.skipped_invalid,
             series_result.skipped_registry_not_synced,
+            getattr(series_result, "holding_observations", 0),
             quality_policy.mode,
             len(quality_report.issues),
             quality_report.highest_severity or "none",
@@ -470,6 +485,60 @@ class CrawlService:
             save_raw=save_raw,
             fill_missing=fill_missing,
         )
+
+    async def fail_current_run(
+        self,
+        *,
+        country_code: str,
+        source: str,
+        started_after: datetime,
+        error: BaseException,
+        status: str = "failed",
+    ) -> Optional[int]:
+        """Finalize the run opened by a failed task invocation.
+
+        Pipelines create their audit row before external I/O.  This bounded
+        lookup is safe because crawl tasks are serialized per country and the
+        timestamp fence prevents an older orphan from being rewritten when the
+        current run failed before it could create its own audit row.
+        """
+
+        if status not in {"failed", "cancelled"}:
+            raise ValueError(f"Unsupported CrawlRun terminal status: {status}")
+        normalized_country = str(country_code or "").strip().upper()
+        normalized_source = str(source or "all").strip().lower()
+        fence = started_after
+        if fence.tzinfo is None:
+            fence = fence.replace(tzinfo=timezone.utc)
+        else:
+            fence = fence.astimezone(timezone.utc)
+        async with get_database() as db:
+            run = (
+                await db.execute(
+                    select(CrawlRun)
+                    .where(
+                        CrawlRun.country_code == normalized_country,
+                        CrawlRun.source == normalized_source,
+                        CrawlRun.status == "running",
+                        CrawlRun.started_at >= fence,
+                    )
+                    .order_by(CrawlRun.started_at.desc())
+                    .with_for_update(skip_locked=True)
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            if run is None:
+                return None
+            run.status = status
+            run.finished_at = datetime.now(timezone.utc)
+            run.error_message = str(error)[-12000:]
+            metadata = dict(run.metadata_ or {})
+            metadata["failed_closed"] = status == "failed"
+            metadata["terminal_status"] = status
+            run.metadata_ = metadata
+            run_id = run.id
+            await db.commit()
+        return run_id
 
     @staticmethod
     def _configure_monthly_runtime_policy(

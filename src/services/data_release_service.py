@@ -32,11 +32,16 @@ from src.services.data_release.commands import (
     build_publish_download_repo_command,
     build_publish_raw_archive_command,
     build_update_situation_room_command,
+    build_validate_situation_release_command,
 )
 from src.services.data_release.process_runner import (
     run_capture,
     run_logged_command,
     terminate_process_tree,
+)
+from src.services.data_release.resilience import (
+    automatic_trigger_eligible,
+    classify_release_failure,
 )
 from src.services.exceptions import TaskCancelledError
 from src.services.settings_service import system_settings_service
@@ -62,6 +67,7 @@ GENERATED_DATA_PATHS = (
     "astro-site/src/data/downloads.json",
     "astro-site/src/data/meta.json",
     "astro-site/src/data/reports",
+    "astro-site/src/data/research",
     "astro-site/src/data/situation",
     "data/current",
     "data/raw",
@@ -79,7 +85,15 @@ AUTO_RELEASE_TASK_TYPES = (
     TaskType.CRAWL_DATA,
     TaskType.PROCESS_DATA,
     TaskType.GENERATE_REPORT,
+    TaskType.SYNC_LITERATURE,
+    TaskType.ENRICH_LITERATURE,
+    TaskType.DISCOVER_LITERATURE_GAPS,
 )
+LITERATURE_RELEASE_TASK_TYPES = {
+    TaskType.SYNC_LITERATURE,
+    TaskType.ENRICH_LITERATURE,
+    TaskType.DISCOVER_LITERATURE_GAPS,
+}
 GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
 SUBSCRIPTION_SYNC_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 SUBSCRIPTION_SYNC_STRICT_VALUES = {"1", "true", "yes", "on", "required", "strict", "force"}
@@ -120,14 +134,14 @@ class DataReleaseJobConfig:
     name: str
     enabled: bool = True
     priority: str = "high"
-    auto_after_crawls: bool = True
+    auto_after_crawls: bool = False
     # When enabled, publish the validated v2 snapshot after local generation.
     include_git_push: bool = True
     include_cloudflare_deploy: bool = True
     require_clean_worktree: bool = True
     interval_minutes: Optional[int] = None
-    daily_time: Optional[str] = None
-    timezone: Optional[str] = None
+    daily_time: Optional[str] = "02:00"
+    timezone: Optional[str] = "UTC"
     github_remote: str = "origin"
     github_branch: Optional[str] = None
     cloudflare_project_name: Optional[str] = None
@@ -194,18 +208,18 @@ class DataReleaseService:
                     name="Site Data Release",
                     enabled=True,
                     priority="high",
-                    auto_after_crawls=True,
+                    auto_after_crawls=False,
                     include_git_push=True,
                     include_cloudflare_deploy=True,
                     require_clean_worktree=True,
-                    daily_time="03:00",
+                    daily_time="02:00",
                     interval_minutes=None,
-                    timezone=cfg.timezone,
+                    timezone="UTC",
                     github_remote=github_settings["default_github_remote"] or "origin",
                     github_branch=get_data_share_repo_branch(),
                     cloudflare_project_name=cloudflare_settings["default_cloudflare_project_name"] or "globalid",
                     commit_message_template=cfg.default_commit_message_template,
-                    notes="Default 03:00 UTC release pipeline for generated site data, Situation Room refresh, and Cloudflare Pages deploy.",
+                    notes="Default 02:00 UTC release pipeline for one daily Situation Room refresh, static export, build, and Cloudflare Pages deploy.",
                 )
             )
             await db.commit()
@@ -310,8 +324,9 @@ class DataReleaseService:
         cfg = self._config()
         assert self._stop_event is not None
         while not self._stop_event.is_set():
-            self._last_tick_at = datetime.utcnow()
+            self._last_tick_at = datetime.now(ZoneInfo("UTC"))
             try:
+                await self.requeue_due_automatic_retries()
                 for job in await self.load_jobs():
                     if not job.enabled:
                         continue
@@ -328,6 +343,263 @@ class DataReleaseService:
                 )
             except asyncio.TimeoutError:
                 pass
+
+    def _automatic_retry_settings(self) -> tuple[int, int, int]:
+        cfg = self._config()
+        attempts = max(0, int(getattr(cfg, "auto_retry_max_attempts", 3) or 0))
+        base_delay = max(
+            5,
+            int(getattr(cfg, "auto_retry_base_delay_seconds", 300) or 300),
+        )
+        max_delay = max(
+            base_delay,
+            int(getattr(cfg, "auto_retry_max_delay_seconds", 3600) or 3600),
+        )
+        return attempts, base_delay, max_delay
+
+    async def schedule_automatic_retry_after_failure(
+        self,
+        task_uuid: str,
+        exc: BaseException,
+    ) -> bool:
+        """Persist a delayed retry for one eligible automatic release failure.
+
+        The task's existing ``retrying`` state is the durable reservation.  It
+        blocks normal scheduled/upstream enqueue paths for the same release job
+        while remaining invisible to task workers until the scheduler changes
+        it back to ``queued`` at ``next_attempt_at``.
+        """
+
+        classification = classify_release_failure(exc)
+        max_attempts, base_delay, max_delay = self._automatic_retry_settings()
+        now = datetime.now(ZoneInfo("UTC"))
+        scheduled = False
+        entry_payload: dict[str, Any] = {}
+        job_id = ""
+
+        async with get_database() as db:
+            task = (
+                await db.execute(
+                    select(Task)
+                    .where(Task.task_uuid == task_uuid)
+                    .with_for_update()
+                )
+            ).scalar_one_or_none()
+            if task is None or task.task_type != TaskType.EXPORT_DATA:
+                return False
+            if task.status != TaskStatus.FAILED:
+                return task.status == TaskStatus.RETRYING
+
+            input_data = dict(task.input_data or {})
+            metadata = dict(task.metadata_ or {})
+            job_id = str(
+                metadata.get("release_job_id")
+                or input_data.get("release_job_id")
+                or ""
+            ).strip()
+            retry = dict(metadata.get("automatic_retry") or {})
+            prior_scheduled = max(0, int(retry.get("scheduled_attempts") or 0))
+            eligible_trigger = automatic_trigger_eligible(input_data)
+            scheduled = bool(
+                eligible_trigger
+                and classification.retryable
+                and prior_scheduled < max_attempts
+            )
+
+            entry_payload = {
+                "policy_version": "release-transient-v1",
+                "eligible_trigger": eligible_trigger,
+                "retryable": classification.retryable,
+                "category": classification.category,
+                "stage": classification.stage,
+                "reason": classification.reason,
+                "max_attempts": max_attempts,
+                "scheduled_attempts": prior_scheduled,
+                "last_failure_at": now.isoformat(),
+                "last_error": str(exc)[-4000:],
+            }
+            if scheduled:
+                retry_number = prior_scheduled + 1
+                delay_seconds = min(
+                    max_delay,
+                    base_delay * (2 ** (retry_number - 1)),
+                )
+                next_attempt_at = now + timedelta(seconds=delay_seconds)
+                entry_payload.update(
+                    {
+                        "status": "scheduled",
+                        "scheduled_attempts": retry_number,
+                        "delay_seconds": delay_seconds,
+                        "next_attempt_at": next_attempt_at.isoformat(),
+                        "exhausted": False,
+                    }
+                )
+                task.status = TaskStatus.RETRYING
+            else:
+                entry_payload.update(
+                    {
+                        "status": "terminal",
+                        "next_attempt_at": None,
+                        "exhausted": bool(
+                            eligible_trigger
+                            and classification.retryable
+                            and prior_scheduled >= max_attempts
+                        ),
+                    }
+                )
+            metadata["automatic_retry"] = entry_payload
+            task.metadata_ = metadata
+            await db.commit()
+
+        if scheduled:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="warning",
+                title="Automatic Release Retry Scheduled",
+                content=(
+                    f"Transient {classification.stage or 'external'} failure; "
+                    f"retry {entry_payload['scheduled_attempts']}/{max_attempts} will be "
+                    f"eligible at {entry_payload['next_attempt_at']}."
+                ),
+                content_type="text",
+                metadata={
+                    "event": "release_auto_retry_scheduled",
+                    "release_job_id": job_id,
+                    **entry_payload,
+                },
+            )
+            logger.warning(
+                "Automatic release retry scheduled task=%s job=%s attempt=%s/%s at=%s",
+                task_uuid,
+                job_id,
+                entry_payload["scheduled_attempts"],
+                max_attempts,
+                entry_payload["next_attempt_at"],
+            )
+        return scheduled
+
+    async def requeue_due_automatic_retries(
+        self,
+        *,
+        now: Optional[datetime] = None,
+    ) -> list[str]:
+        """Atomically make persisted, due release retries visible to workers."""
+
+        current = _as_aware_utc(now) or datetime.now(ZoneInfo("UTC"))
+        requeued: list[tuple[str, str, dict[str, Any]]] = []
+        async with get_database() as db:
+            retrying = (
+                await db.execute(
+                    select(Task)
+                    .where(
+                        Task.task_type == TaskType.EXPORT_DATA,
+                        Task.status == TaskStatus.RETRYING,
+                    )
+                    .order_by(Task.created_at.asc())
+                    .with_for_update(skip_locked=True)
+                )
+            ).scalars().all()
+
+            for task in retrying:
+                input_data = dict(task.input_data or {})
+                metadata = dict(task.metadata_ or {})
+                retry = dict(metadata.get("automatic_retry") or {})
+                next_attempt_raw = str(retry.get("next_attempt_at") or "").strip()
+                try:
+                    next_attempt = _as_aware_utc(datetime.fromisoformat(next_attempt_raw))
+                except (TypeError, ValueError):
+                    next_attempt = None
+
+                # Never leave a malformed or manually-triggered task parked in
+                # RETRYING forever.  It becomes terminal and follows the normal
+                # alert/operator path instead of being guessed back into queue.
+                if (
+                    retry.get("status") != "scheduled"
+                    or next_attempt is None
+                    or not automatic_trigger_eligible(input_data)
+                ):
+                    retry.update(
+                        {
+                            "status": "terminal",
+                            "next_attempt_at": None,
+                            "reason": "invalid or ineligible persisted automatic retry reservation",
+                        }
+                    )
+                    metadata["automatic_retry"] = retry
+                    task.metadata_ = metadata
+                    task.status = TaskStatus.FAILED
+                    continue
+                if next_attempt > current:
+                    continue
+
+                job_id = str(
+                    metadata.get("release_job_id")
+                    or input_data.get("release_job_id")
+                    or ""
+                ).strip()
+                active = (
+                    await db.execute(
+                        select(Task.id)
+                        .where(
+                            Task.id != task.id,
+                            Task.task_type == TaskType.EXPORT_DATA,
+                            Task.status.in_(
+                                [TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING]
+                            ),
+                        )
+                    )
+                ).scalars().all()
+                if active:
+                    # A release worker is globally serialized because the
+                    # generated artifact directories are shared across jobs.
+                    continue
+
+                retry.update(
+                    {
+                        "status": "queued",
+                        "queued_at": current.isoformat(),
+                        "next_attempt_at": None,
+                    }
+                )
+                metadata["automatic_retry"] = retry
+                task.metadata_ = metadata
+                task.status = TaskStatus.QUEUED
+                task.progress = 0
+                task.completed_steps = 0
+                task.started_at = None
+                task.completed_at = None
+                task.actual_duration = None
+                # Preserve last_error for diagnosis until task_lifecycle marks
+                # the retry RUNNING and clears it.
+                requeued.append((task.task_uuid, job_id, retry))
+            await db.commit()
+
+        for task_uuid, job_id, retry in requeued:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="info",
+                title="Automatic Release Retry Queued",
+                content=(
+                    f"Retry {retry.get('scheduled_attempts')}/{retry.get('max_attempts')} "
+                    "is now queued for the task worker."
+                ),
+                content_type="text",
+                metadata={
+                    "event": "release_auto_retry_queued",
+                    "release_job_id": job_id,
+                    **retry,
+                },
+            )
+            await task_manager._broadcast(
+                {
+                    "event": "task_status",
+                    "task_uuid": task_uuid,
+                    "status": TaskStatus.QUEUED.value,
+                    "progress": 0,
+                    "automatic_retry": True,
+                }
+            )
+        return [task_uuid for task_uuid, _job_id, _retry in requeued]
 
     async def trigger_job(
         self,
@@ -391,6 +663,18 @@ class DataReleaseService:
             return
         if normalized_task_type not in AUTO_RELEASE_TASK_TYPES:
             return
+        if normalized_task_type in LITERATURE_RELEASE_TASK_TYPES:
+            async with get_database() as db:
+                trigger_task = (
+                    await db.execute(select(Task).where(Task.task_uuid == trigger_task_uuid))
+                ).scalar_one_or_none()
+            output = dict((trigger_task.output_data if trigger_task else None) or {})
+            automation = dict(output.get("automation") or {})
+            public_changes = int(automation.get("changed") or 0)
+            if normalized_task_type == TaskType.SYNC_LITERATURE:
+                public_changes += int(output.get("published") or 0)
+            if public_changes <= 0:
+                return
         enabled_jobs = [job for job in await self.load_jobs() if job.enabled and job.auto_after_crawls]
         if not enabled_jobs:
             return
@@ -515,25 +799,6 @@ class DataReleaseService:
         trigger: str,
         trigger_task_uuid: Optional[str],
     ) -> dict[str, Any]:
-        async with get_database() as db:
-            existing_tasks = (
-                await db.execute(
-                    select(Task).where(
-                        Task.task_type == TaskType.EXPORT_DATA,
-                        Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.RETRYING]),
-                    )
-                )
-            ).scalars().all()
-            for existing in existing_tasks:
-                metadata = dict(existing.metadata_ or {})
-                if metadata.get("release_job_id") == job.job_id:
-                    return {
-                        "job_id": job.job_id,
-                        "status": "skipped",
-                        "task_uuid": existing.task_uuid,
-                        "reason": "already_running",
-                    }
-
         branch = self._download_repo_branch(job)
         project_name = self._cloudflare_project_name(job.cloudflare_project_name)
         download_repo_url = self._download_repo_url()
@@ -577,30 +842,78 @@ class DataReleaseService:
             "raw_archive_repo_url": raw_archive.repo_url,
             "raw_archive_branch": raw_archive.branch,
         }
-        task = await task_manager.create_task(
-            task_type=TaskType.EXPORT_DATA,
-            task_name=f"Data Release: {job.name}",
-            priority=self._normalize_priority(job.priority),
-            description=" ".join(description_parts),
-            input_data=input_data,
-        )
         async with get_database() as db:
-            task_obj = await db.get(Task, task.id)
-            if task_obj:
-                metadata = dict(task_obj.metadata_ or {})
-                metadata.update(
-                    {
-                        "release_job_id": job.job_id,
-                        "release_job_name": job.name,
-                        "trigger": trigger,
-                        "manual_trigger": manual,
-                        "trigger_task_uuid": trigger_task_uuid,
-                    }
+            # All release jobs share generated output directories. Locking the
+            # complete job registry makes the active-task check and task insert
+            # one cross-process critical section, not merely an in-process
+            # asyncio lock. The task is born QUEUED with complete metadata, so a
+            # worker cannot claim a half-initialized PENDING row.
+            await db.execute(
+                select(DataReleaseJob.id)
+                .order_by(DataReleaseJob.id.asc())
+                .with_for_update()
+            )
+            existing_tasks = (
+                await db.execute(
+                    select(Task)
+                    .where(
+                        Task.task_type == TaskType.EXPORT_DATA,
+                        Task.status.in_(
+                            [
+                                TaskStatus.PENDING,
+                                TaskStatus.QUEUED,
+                                TaskStatus.RUNNING,
+                                TaskStatus.RETRYING,
+                            ]
+                        ),
+                    )
+                    .with_for_update()
                 )
-                task_obj.metadata_ = metadata
-                await db.commit()
+            ).scalars().all()
+            if existing_tasks:
+                existing = existing_tasks[0]
+                metadata = dict(existing.metadata_ or {})
+                same_job = metadata.get("release_job_id") == job.job_id
+                return {
+                    "job_id": job.job_id,
+                    "status": "skipped",
+                    "task_uuid": existing.task_uuid,
+                    "reason": "already_running" if same_job else "release_pipeline_busy",
+                }
 
-        task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
+            task = Task(
+                task_type=TaskType.EXPORT_DATA,
+                task_name=f"Data Release: {job.name}",
+                priority=self._normalize_priority(job.priority),
+                description=" ".join(description_parts),
+                input_data=input_data,
+                status=TaskStatus.QUEUED,
+                max_retries=self._automatic_retry_settings()[0],
+                metadata_={
+                    "release_job_id": job.job_id,
+                    "release_job_name": job.name,
+                    "trigger": trigger,
+                    "manual_trigger": manual,
+                    "trigger_task_uuid": trigger_task_uuid,
+                    "automatic_retry": {
+                        "policy_version": "release-transient-v1",
+                        "status": "not_scheduled",
+                        "scheduled_attempts": 0,
+                    },
+                },
+            )
+            db.add(task)
+            await db.commit()
+            await db.refresh(task)
+
+        await task_manager._broadcast(
+            {
+                "event": "task_status",
+                "task_uuid": task.task_uuid,
+                "status": TaskStatus.QUEUED.value,
+                "progress": 0,
+            }
+        )
         return {
             "job_id": job.job_id,
             "status": "queued",
@@ -640,6 +953,9 @@ class DataReleaseService:
             "timezone": cfg.timezone,
             "poll_interval_seconds": cfg.poll_interval_seconds,
             "auto_failure_cooldown_minutes": cfg.auto_failure_cooldown_minutes,
+            "auto_retry_max_attempts": self._automatic_retry_settings()[0],
+            "auto_retry_base_delay_seconds": self._automatic_retry_settings()[1],
+            "auto_retry_max_delay_seconds": self._automatic_retry_settings()[2],
             "last_tick_at": _iso(self._last_tick_at),
             "jobs": jobs_payload,
         }
@@ -761,6 +1077,68 @@ class DataReleaseService:
             cloudflare_deploy_timeout_seconds=CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS,
         )
         return await release_pipeline.execute_release_task(self, task, runtime=runtime)
+
+    async def _release_identity_for_task(
+        self,
+        task: Task,
+        deployment_branch: str,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Persist and reuse one release identity across retries of the same task."""
+
+        generated = await self._site_release_identity(deployment_branch)
+        async with get_database() as db:
+            task_obj = (
+                await db.execute(
+                    select(Task).where(Task.id == task.id).with_for_update()
+                )
+            ).scalar_one_or_none()
+            if task_obj is None:
+                return generated, {}
+            metadata = dict(task_obj.metadata_ or {})
+            existing = dict(metadata.get("release_identity") or {})
+            if (
+                existing.get("source_commit") == generated.get("source_commit")
+                and existing.get("deployment_branch") == generated.get("deployment_branch")
+                and existing.get("release_id")
+            ):
+                identity = existing
+            else:
+                identity = generated
+                metadata["release_identity"] = identity
+                # A code/deployment-branch change is a new immutable attempt;
+                # prior downstream checkpoints do not apply to it.
+                metadata["release_checkpoints"] = {}
+                task_obj.metadata_ = metadata
+                await db.commit()
+            return identity, dict(metadata.get("release_checkpoints") or {})
+
+    async def _record_release_checkpoint(
+        self,
+        task_uuid: str,
+        name: str,
+        payload: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """Durably record a completed external side effect for retry recovery."""
+
+        async with get_database() as db:
+            task_obj = (
+                await db.execute(
+                    select(Task)
+                    .where(Task.task_uuid == task_uuid)
+                    .with_for_update()
+                )
+            ).scalar_one_or_none()
+            if task_obj is None:
+                return
+            metadata = dict(task_obj.metadata_ or {})
+            checkpoints = dict(metadata.get("release_checkpoints") or {})
+            checkpoints[name] = {
+                "completed_at": datetime.now(ZoneInfo("UTC")).isoformat(),
+                **dict(payload or {}),
+            }
+            metadata["release_checkpoints"] = checkpoints
+            task_obj.metadata_ = metadata
+            await db.commit()
 
     def _compute_next_run(
         self,
@@ -951,6 +1329,9 @@ class DataReleaseService:
     def _update_situation_room_command(self, *, python_path: Path) -> list[str]:
         return build_update_situation_room_command(python_path=python_path)
 
+    def _validate_situation_release_command(self, *, python_path: Path) -> list[str]:
+        return build_validate_situation_release_command(python_path=python_path)
+
     def _publish_download_repo_command(
         self,
         *,
@@ -1015,6 +1396,11 @@ class DataReleaseService:
             for name in ("SUBSCRIPTIONS__D1_DATABASE_NAME", "SUBSCRIPTIONS__D1_DATABASE_ID")
             if not self._env_value(name)
         ]
+        target_environment = self._env_value("SUBSCRIPTIONS__REMOTE_ENVIRONMENT").lower()
+        if target_environment not in {"staging", "production"}:
+            missing.append("SUBSCRIPTIONS__REMOTE_ENVIRONMENT")
+        if self._env_value("SUBSCRIPTIONS__ALLOW_REMOTE_OPTION_SYNC") != target_environment:
+            missing.append("SUBSCRIPTIONS__ALLOW_REMOTE_OPTION_SYNC")
         if not self._cloudflare_api_token():
             missing.append("CLOUDFLARE_API_TOKEN")
         if missing and raw not in SUBSCRIPTION_SYNC_STRICT_VALUES:
@@ -1044,12 +1430,19 @@ class DataReleaseService:
             await self._run_logged_command(
                 task_uuid,
                 title="Sync Subscription Options",
-                cmd=[str(SUBSCRIPTIONS_SCRIPT), "sync-options-remote"],
+                cmd=[
+                    str(SUBSCRIPTIONS_SCRIPT),
+                    "sync-options-remote",
+                    self._env_value("SUBSCRIPTIONS__REMOTE_ENVIRONMENT").lower(),
+                ],
                 cwd=ROOT_DIR,
                 env={
                     "CI": "1",
                     "CLOUDFLARE_API_TOKEN": self._cloudflare_api_token(),
                     "CLOUDFLARE_ACCOUNT_ID": self._cloudflare_account_id(),
+                    "SUBSCRIPTIONS__ALLOW_REMOTE_OPTION_SYNC": self._env_value(
+                        "SUBSCRIPTIONS__ALLOW_REMOTE_OPTION_SYNC"
+                    ),
                 },
                 metadata=metadata,
                 timeout_seconds=SUBSCRIPTION_SYNC_TIMEOUT_SECONDS,

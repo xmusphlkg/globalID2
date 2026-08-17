@@ -17,7 +17,7 @@ class DataReleaseJob(BaseModel):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     priority: Mapped[str] = mapped_column(String(20), nullable=False, default="high")
-    auto_after_crawls: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    auto_after_crawls: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     include_git_push: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     include_cloudflare_deploy: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     require_clean_worktree: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

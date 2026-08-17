@@ -1,65 +1,139 @@
 ---
-interface Props { snapshot: any; compact?: boolean; }
+import type { SituationReportV3 } from '../utils/situation';
+import { diseaseHref, formatNumber, geographyLabel, label, labelZh } from '../utils/situation';
+
+interface Props { snapshot: SituationReportV3; compact?: boolean; }
+
 const { snapshot, compact = false } = Astro.props;
-const date = snapshot?.generated_at ? new Date(snapshot.generated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
-const signals = (snapshot?.increasing ?? []).slice(0, compact ? 3 : 12);
-const events = (snapshot?.emerging ?? []).slice(0, compact ? 3 : 9);
-const fmtPct = (value: unknown) => typeof value === 'number' ? `${value >= 0 ? '+' : ''}${value.toFixed(0)}%` : 'Reappearing';
-const diseaseHref = (signal: any) => signal?.disease_slug ? `/diseases/${signal.disease_slug}/` : '/diseases/';
-const countryHref = (signal: any) => signal?.country_code ? `/countries/${String(signal.country_code).toLowerCase()}/` : '/countries/';
+const signals = snapshot.signals.slice(0, compact ? 3 : 5);
+const currency = snapshot.data_currency.by_source ?? [];
+const staleSources = currency.filter(source => source.status === 'stale' || source.status === 'failed').length;
+const heldBack = currency.reduce((sum, source) => sum + (source.held_back_series_count ?? 0), 0);
+const delayed = currency.reduce((sum, source) => sum + (source.delayed_series_count ?? 0), 0);
+const publication = (snapshot.method.parameters?.publication ?? {}) as {
+  mode?: string;
+  shadow_weeks?: number;
+  auto_verification?: {
+    enabled?: boolean;
+    policy_version?: string;
+    calibration_decision?: string;
+  };
+  automatic_triage?: { policy_version?: string };
+};
+const shadowMode = publication.mode === 'shadow';
+const guardedAutoMode = publication.mode === 'guarded_auto'
+  && publication.auto_verification?.enabled === true
+  && publication.auto_verification?.calibration_decision === 'supported';
+const exceptionReviewMode = publication.mode === 'exception_review';
+const assessedRisks = snapshot.signals.filter(signal => signal.assessment.public_health_risk?.status === 'assessed').length;
+const metricCards = snapshot.report.kind === 'daily'
+  ? [
+      ['Published signals', '已发布信号', snapshot.summary.unique_signal_count],
+      ['Strong', '强异常', snapshot.summary.strong_count],
+      ['Official events', '官方事件', snapshot.summary.official_event_count],
+      ['Modeled series', '已建模序列', snapshot.coverage.modeled_series_count],
+    ]
+  : [
+      ['New', '新增', snapshot.summary.new_count],
+      ['Persistent', '持续', snapshot.summary.persistent_count],
+      ['Resolved', '消退', snapshot.summary.resolved_count],
+      ['Active at end', '期末活跃', snapshot.summary.active_at_period_end_count],
+    ];
 ---
 
-<section class:list={['situation-summary', compact && 'situation-summary-compact']} aria-labelledby="situation-summary-title">
-  <div class="situation-heading">
+<section class:list={['situation-summary-v3', compact && 'compact']} aria-labelledby={`situation-summary-${snapshot.report.report_id}`}>
+  {!snapshot.public_enabled && (
+    <p class="shadow" role="status"><b>Shadow preview</b> · Development-only report</p>
+  )}
+  {shadowMode && (
+    <p class="shadow" role="status" data-lang-en={`Shadow calibration · Numerical signals require analyst verification during the ${publication.shadow_weeks ?? 8}-week observation window.`} data-lang-zh={`影子校准期 · 在 ${publication.shadow_weeks ?? 8} 周观察窗口内，数值信号须经分析员验证后方可公开。`}>Shadow calibration · Numerical signals require analyst verification during the {publication.shadow_weeks ?? 8}-week observation window.</p>
+  )}
+  {guardedAutoMode && (
+    <p class="automation" role="status" data-lang-en={`Guarded automation · ${publication.auto_verification?.policy_version ?? 'guarded_auto_v1'} publishes only current, primary-fit, evidence-linked strong signals. Exceptions go to analyst review.`} data-lang-zh={`受控自动化 · ${publication.auto_verification?.policy_version ?? 'guarded_auto_v1'} 仅自动发布数据新鲜、主模型稳定、证据完整的强信号；例外项才进入人工复核。`}>Guarded automation · {publication.auto_verification?.policy_version ?? 'guarded_auto_v1'} publishes only current, primary-fit, evidence-linked strong signals. Exceptions go to analyst review.</p>
+  )}
+  {exceptionReviewMode && (
+    <p class="calibrated" role="status" data-lang-en={`Calibrated automation · ${publication.automatic_triage?.policy_version ?? 'exception_review_v1'} automates collection, modeling, deduplication, and queueing. Statistical candidates remain private until independently verified; rare-count and fallback candidates enter the analyst queue only with an independent official match.`} data-lang-zh={`校准约束自动化 · ${publication.automatic_triage?.policy_version ?? 'exception_review_v1'} 自动完成采集、建模、去重和分流；统计候选在独立验证前保持非公开，稀有计数与回退模型候选只有匹配独立官方证据才进入人工队列。`}>Calibrated automation · {publication.automatic_triage?.policy_version ?? 'exception_review_v1'} automates collection, modeling, deduplication, and queueing. Statistical candidates remain private until independently verified; rare-count and fallback candidates enter the analyst queue only with an independent official match.</p>
+  )}
+  <header>
     <div>
-      <p class="situation-kicker" data-lang-en="Global Infectious Disease Situation" data-lang-zh="全球传染病态势">Global Infectious Disease Situation</p>
-      <h2 id="situation-summary-title" data-lang-en="Signals across GIDS-covered jurisdictions" data-lang-zh="GIDS 已覆盖地区的监测信号">Signals across GIDS-covered jurisdictions</h2>
+      <p class="eyebrow" data-lang-en="Situation Room v3" data-lang-zh="全球态势室 v3">Situation Room v3</p>
+      <h2 id={`situation-summary-${snapshot.report.report_id}`} data-lang-en="Today's review brief" data-lang-zh="今日复核简报">Today's review brief</h2>
+      {!compact && <p class="narrative" data-lang-en={snapshot.narrative.en} data-lang-zh={snapshot.narrative.zh}>{snapshot.narrative.en}</p>}
     </div>
-    <div class="situation-meta">
-      <span data-lang-en={`Updated ${date}`} data-lang-zh={`更新于 ${date}`}>Updated {date}</span>
-      {snapshot?.data_through && <span data-lang-en={`Data through ${snapshot.data_through}`} data-lang-zh={`数据截至 ${snapshot.data_through}`}>Data through {snapshot.data_through}</span>}
-    </div>
-  </div>
-  <div class="situation-grid">
-    <article class="situation-panel">
-      <h3 data-lang-en="Increasing signals" data-lang-zh="上升信号">Increasing signals</h3>
-      {signals.length ? <ul>{signals.map((signal: any) => <li>
-        <a href={diseaseHref(signal)}>{signal.disease_name}</a>
-        <span class="situation-place"><a href={countryHref(signal)}>{signal.country_name}</a> · {signal.cadence}</span>
-        <strong>{fmtPct(signal?.window?.change_pct)}</strong>
-        <span class:list={['signal-level', `signal-level-${signal.signal_level}`]}>{signal.signal_level}</span>
-      </li>)}</ul> : <p class="situation-empty" data-lang-en="No signals met the publication threshold this period." data-lang-zh="本期没有信号达到公开阈值。">No signals met the publication threshold this period.</p>}
-    </article>
-    <article class="situation-panel">
-      <h3 data-lang-en="Emerging events" data-lang-zh="新发事件">Emerging events</h3>
-      {events.length ? <ul>{events.map((event: any) => <li>
-        <a href={event.source_url} target="_blank" rel="noreferrer">{event.title}</a>
-        <span class="situation-place">{event.source} · {event.published_at ?? 'Date not supplied'}</span>
-      </li>)}</ul> : <p class="situation-empty" data-lang-en="No published official events currently match the display criteria." data-lang-zh="当前没有符合展示条件的已发布官方事件。">No published official events currently match the display criteria.</p>}
-    </article>
-  </div>
-  {compact && <a class="situation-link" href="/situation/" data-lang-en="Open Situation Room →" data-lang-zh="进入态势室 →">Open Situation Room →</a>}
+    <dl class="summary-meta">
+      <div><dt data-lang-en="Provisional periods excluded" data-lang-zh="已排除暂定周期">Provisional periods excluded</dt><dd>{heldBack}</dd></div>
+      <div><dt data-lang-en="Delayed series isolated" data-lang-zh="已隔离延迟序列">Delayed series isolated</dt><dd>{delayed}</dd></div>
+      <div><dt data-lang-en="Attributed risk assessments" data-lang-zh="可归因风险评估">Attributed risk assessments</dt><dd>{assessedRisks}</dd></div>
+      {staleSources > 0 && <div><dt data-lang-en="Unavailable feeds" data-lang-zh="不可用来源">Unavailable feeds</dt><dd>{staleSources}</dd></div>}
+    </dl>
+  </header>
+
+  <dl class="scoreboard">
+    {metricCards.map(([title, titleZh, value]) => (
+      <div>
+        <dt data-lang-en={String(title)} data-lang-zh={String(titleZh)}>{title}</dt>
+        <dd>{formatNumber(Number(value), 0)}</dd>
+      </div>
+    ))}
+  </dl>
+
+  {signals.length > 0 ? (
+    <ol class="signal-list">
+      {signals.map(signal => (
+        <li>
+          <a href={diseaseHref(signal)}>{signal.identity.disease_name}</a>
+          <span>{geographyLabel(signal)} · {signal.identity.metric_label}</span>
+          <b class={`state-${signal.anomaly.state}`} data-lang-en={label(signal.anomaly.state)} data-lang-zh={labelZh(signal.anomaly.state)}>{label(signal.anomaly.state)}</b>
+          <small>q {formatNumber(signal.anomaly.q_value, 4)} · <span data-lang-en={label(signal.assessment.verification_status)} data-lang-zh={labelZh(signal.assessment.verification_status)}>{label(signal.assessment.verification_status)}</span></small>
+        </li>
+      ))}
+    </ol>
+  ) : (
+    <p class="empty" data-lang-en="No alert-level numerical signal passed this report's quality and effect gates." data-lang-zh="本报告没有数值信号同时通过异常、效应和质量门。">No alert-level numerical signal passed this report's quality and effect gates.</p>
+  )}
+  {compact && <a class="open-report" href="/situation/" data-lang-en="Open full analysis" data-lang-zh="打开完整分析">Open full analysis →</a>}
 </section>
 
 <style>
-  .situation-summary { border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); padding: 1.5rem; box-shadow: var(--paper-shadow); }
-  .situation-heading { display: flex; gap: 1rem; align-items: start; justify-content: space-between; margin-bottom: 1.25rem; }
-  .situation-kicker { color: rgb(var(--color-teal)); font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin: 0 0 .35rem; }
-  h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: 1.55rem; line-height: 1.1; margin: 0; }
-  .situation-meta { color: rgb(var(--text-faint)); display: grid; font-family: 'JetBrains Mono', monospace; font-size: .7rem; gap: .25rem; text-align: right; }
-  .situation-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .situation-panel { border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised)); padding: 1rem; }
-  h3 { color: rgb(var(--text)); font-size: .76rem; font-weight: 700; letter-spacing: .09em; margin: 0 0 .7rem; text-transform: uppercase; }
-  ul { display: grid; gap: .7rem; list-style: none; margin: 0; padding: 0; }
-  li { display: grid; gap: .15rem; grid-template-columns: minmax(0, 1fr) auto; }
-  li > a { color: rgb(var(--text-strong)); font-size: .9rem; font-weight: 600; grid-column: 1 / -1; text-decoration: none; }
-  li > a:hover, .situation-link:hover { color: rgb(var(--color-teal)); text-decoration: underline; }
-  .situation-place { color: rgb(var(--text-faint)); font-size: .74rem; }
-  .situation-place a { color: inherit; }
-  strong { color: rgb(10 130 101); font-family: 'JetBrains Mono', monospace; font-size: .75rem; }
-  .signal-level { border: 1px solid currentColor; font-size: .62rem; font-weight: 700; justify-self: end; letter-spacing: .08em; padding: .1rem .3rem; text-transform: uppercase; }
-  .signal-level-watch { color: rgb(87 116 144); } .signal-level-elevated { color: rgb(181 106 20); } .signal-level-strong { color: rgb(190 69 55); }
-  .situation-empty { color: rgb(var(--text-faint)); font-size: .86rem; margin: 0; }
-  .situation-link { color: rgb(var(--color-teal)); display: inline-block; font-size: .86rem; font-weight: 700; margin-top: 1.15rem; text-decoration: none; }
-  @media (max-width: 640px) { .situation-heading, .situation-grid { grid-template-columns: 1fr; display: grid; } .situation-meta { text-align: left; } }
+  .situation-summary-v3 { display: grid; gap: 1rem; padding-block: .35rem; }
+  .shadow { background: rgb(255 247 220); border: 1px solid rgb(218 174 76); color: rgb(113 73 12); font-size: .72rem; margin: 0; padding: .6rem .75rem; }
+  .automation { background: rgb(232 248 243); border: 1px solid rgb(68 148 124); color: rgb(22 92 73); font-size: .72rem; margin: 0; padding: .6rem .75rem; }
+  .calibrated { background: rgb(244 242 255); border: 1px solid rgb(126 111 181); color: rgb(70 54 126); font-size: .72rem; margin: 0; padding: .6rem .75rem; }
+  header { align-items: end; border-bottom: 1px solid rgb(var(--border)); display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr) minmax(18rem, .55fr); padding-bottom: 1rem; }
+  .eyebrow { color: rgb(var(--color-teal)); font-size: .68rem; font-weight: 800; letter-spacing: .13em; margin: 0 0 .3rem; text-transform: uppercase; }
+  h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: clamp(1.45rem, 3vw, 2rem); line-height: 1.08; margin: 0; }
+  .compact h2 { font-size: 1.5rem; }
+  .narrative { color: rgb(var(--text-muted)); line-height: 1.65; margin: .6rem 0 0; max-width: 58rem; }
+  .summary-meta { display: grid; gap: .5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; min-width: 15rem; }
+  .summary-meta div { border-left: 2px solid rgb(var(--border)); padding-left: .65rem; }
+  dt { color: rgb(var(--text-faint)); font-size: .61rem; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+  .scoreboard dt { color: rgb(var(--text-muted)); }
+  dd { color: rgb(var(--text-strong)); font-family: 'JetBrains Mono', monospace; font-size: .78rem; margin: .14rem 0 0; }
+  .scoreboard { display: grid; gap: .65rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
+  .scoreboard div { background: rgb(var(--surface-raised)); border: 1px solid rgb(var(--border)); border-top: 3px solid rgb(var(--color-teal)); padding: .85rem; }
+  .scoreboard dd { font-size: 1.55rem; }
+  .signal-list { display: grid; gap: 0; list-style: none; margin: 0; padding: 0; }
+  .signal-list { border: 1px solid rgb(var(--border)); }
+  .signal-list li { align-items: baseline; display: grid; gap: .35rem .8rem; grid-template-columns: minmax(10rem, 1fr) minmax(10rem, 1fr) auto auto; padding: .8rem; }
+  .signal-list li + li { border-top: 1px solid rgb(var(--border)); }
+  .signal-list a { color: rgb(var(--text-strong)); font-size: .9rem; font-weight: 720; text-decoration: none; }
+  .signal-list a:hover, .open-report:hover { color: rgb(var(--color-teal)); text-decoration: underline; }
+  .signal-list span, .signal-list small { color: rgb(var(--text-faint)); font-size: .68rem; }
+  .signal-list b { border: 1px solid currentColor; font-family: 'JetBrains Mono', monospace; font-size: .62rem; padding: .18rem .4rem; text-transform: uppercase; }
+  .state-strong { color: rgb(174 61 67); }
+  .state-alert { color: rgb(198 104 44); }
+  .state-watch { color: rgb(176 132 30); }
+  .state-routine, .state-not_modeled { color: rgb(var(--text-faint)); }
+  .empty { color: rgb(var(--text-faint)); font-size: .8rem; margin: 0; }
+  .open-report { color: rgb(var(--color-teal)); font-size: .78rem; font-weight: 750; justify-self: start; text-decoration: none; }
+  @media (max-width: 900px) {
+    header { grid-template-columns: 1fr; }
+    .signal-list li { grid-template-columns: minmax(0, 1fr) auto; }
+    .signal-list span, .signal-list small { grid-column: 1; }
+    .signal-list b { grid-column: 2; grid-row: 1; }
+  }
+  @media (max-width: 640px) {
+    .scoreboard { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .summary-meta { min-width: 0; }
+  }
 </style>
