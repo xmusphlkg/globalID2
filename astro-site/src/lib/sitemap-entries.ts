@@ -12,6 +12,10 @@ import {
   reportArchiveCountries,
   type ReportIndexEntry,
 } from './report-routes.ts';
+import {
+  buildResearchFeedDefinitions,
+  type ResearchFeedData,
+} from './research-feed.ts';
 
 export interface SitemapEntry {
   path: string;
@@ -44,18 +48,46 @@ export interface BuildSitemapEntriesOptions {
   loadCountry?: (code: string) => unknown | null;
   countryDiseaseLimit?: number;
   situation?: {
-    latest?: { public_enabled?: unknown; generated_at?: unknown; content_updated_at?: unknown } | null;
-    weeks?: Array<{ period_key?: unknown; iso_week?: unknown; generated_at?: unknown; content_updated_at?: unknown }>;
-    months?: Array<{ period_key?: unknown; generated_at?: unknown; content_updated_at?: unknown }>;
-    archives?: Array<{ period_key?: unknown; iso_week?: unknown; generated_at?: unknown; content_updated_at?: unknown }>;
+    latest?: { public_enabled?: unknown; generated_at?: unknown; content_updated_at?: unknown; report?: { as_of?: unknown } } | null;
+    weeks?: Array<{ period_key?: unknown; iso_week?: unknown; generated_at?: unknown; content_updated_at?: unknown; report?: { period_key?: unknown; as_of?: unknown } }>;
+    months?: Array<{ period_key?: unknown; generated_at?: unknown; content_updated_at?: unknown; report?: { period_key?: unknown; as_of?: unknown } }>;
+    archives?: Array<{ period_key?: unknown; iso_week?: unknown; generated_at?: unknown; content_updated_at?: unknown; report?: { period_key?: unknown; as_of?: unknown } }>;
   };
   research?: {
     last_updated?: unknown;
-    articles?: Array<{ slug?: unknown; updated_at?: unknown; published_at?: unknown }>;
+    articles?: Array<{
+      slug?: unknown;
+      title?: unknown;
+      updated_at?: unknown;
+      published_at?: unknown;
+      study_type?: unknown;
+      article_type?: unknown;
+      peer_review_status?: unknown;
+      editorial_status?: unknown;
+      indexable?: unknown;
+      diseases?: Array<{ disease_id?: unknown; slug?: unknown; name_en?: unknown }>;
+      countries?: Array<{ code?: unknown; slug?: unknown; name_en?: unknown }>;
+      topics?: Array<{ name?: unknown; slug?: unknown }>;
+    }>;
+    preprints?: Array<{
+      slug?: unknown;
+      title?: unknown;
+      updated_at?: unknown;
+      published_at?: unknown;
+      study_type?: unknown;
+      article_type?: unknown;
+      peer_review_status?: unknown;
+      editorial_status?: unknown;
+      indexable?: unknown;
+      diseases?: Array<{ disease_id?: unknown; slug?: unknown; name_en?: unknown }>;
+      countries?: Array<{ code?: unknown; slug?: unknown; name_en?: unknown }>;
+      topics?: Array<{ name?: unknown; slug?: unknown }>;
+    }>;
+    reviews_and_guidelines?: Array<{ slug?: unknown; title?: unknown; study_type?: unknown; article_type?: unknown }>;
     facets?: {
-      diseases?: Array<{ slug?: unknown }>;
-      countries?: Array<{ slug?: unknown; code?: unknown }>;
-      topics?: Array<{ slug?: unknown }>;
+      diseases?: Array<{ disease_id?: unknown; slug?: unknown; name_en?: unknown; name_zh?: unknown }>;
+      countries?: Array<{ slug?: unknown; code?: unknown; name_en?: unknown; name_zh?: unknown }>;
+      topics?: Array<{ slug?: unknown; name?: unknown }>;
       weeks?: Array<{ week?: unknown }>;
     };
   };
@@ -194,8 +226,19 @@ export function buildSitemapGroups({
   if (research) {
     const researchLastmod = normalizeSitemapDate(research.last_updated) ?? siteLastmod;
     groups.research.push({ path: '/research/', lastmod: researchLastmod });
+    groups.research.push({ path: '/research/ask/', lastmod: researchLastmod });
+    groups.research.push({ path: '/research/graph/', lastmod: researchLastmod });
+    groups.research.push({ path: '/research/integrity/', lastmod: researchLastmod });
+    groups.research.push({ path: '/research/preprints/', lastmod: researchLastmod });
     groups.research.push({ path: '/research/rss.xml', lastmod: researchLastmod });
-    for (const article of research.articles ?? []) {
+    for (const feed of buildResearchFeedDefinitions(research as ResearchFeedData)) {
+      groups.research.push({ path: feed.path, lastmod: researchLastmod });
+    }
+    const publicPreprints = (research.preprints ?? []).filter(article => (
+      article.peer_review_status === 'preprint' && article.editorial_status === 'published'
+    ));
+    for (const article of [...(research.articles ?? []), ...publicPreprints]) {
+      if (article.indexable === false) continue;
       const slug = pathSegment(article.slug, true);
       if (!slug) continue;
       groups.research.push({
@@ -222,21 +265,24 @@ export function buildSitemapGroups({
   }
 
   if (situation?.latest?.public_enabled === true) {
-    const lastmod = normalizeSitemapDate(situation.latest.content_updated_at ?? situation.latest.generated_at) ?? siteLastmod;
+    const lastmod = normalizeSitemapDate(situation.latest.report?.as_of ?? situation.latest.content_updated_at ?? situation.latest.generated_at) ?? siteLastmod;
     groups.situation.push(...localizedEntry('/situation/', lastmod));
     groups.situation.push(...localizedEntry('/situation/methodology/', lastmod));
+    groups.situation.push(...localizedEntry('/situation/weekly/', lastmod));
+    groups.situation.push(...localizedEntry('/situation/monthly/', lastmod));
     for (const archive of situation.weeks ?? situation.archives ?? []) {
-      const rawWeek = archive.period_key ?? archive.iso_week;
+      const rawWeek = archive.report?.period_key ?? archive.period_key ?? archive.iso_week;
       const week = typeof rawWeek === 'string' && /^\d{4}-W\d{2}$/.test(rawWeek)
         ? rawWeek
         : null;
-      if (week) groups.situation.push(...localizedEntry(`/situation/${week}/`, normalizeSitemapDate(archive.content_updated_at ?? archive.generated_at) ?? lastmod));
+      if (week) groups.situation.push(...localizedEntry(`/situation/weekly/${week}/`, normalizeSitemapDate(archive.report?.as_of ?? archive.content_updated_at ?? archive.generated_at) ?? lastmod));
     }
     for (const archive of situation.months ?? []) {
-      const month = typeof archive.period_key === 'string' && /^\d{4}-\d{2}$/.test(archive.period_key)
-        ? archive.period_key
+      const rawMonth = archive.report?.period_key ?? archive.period_key;
+      const month = typeof rawMonth === 'string' && /^\d{4}-\d{2}$/.test(rawMonth)
+        ? rawMonth
         : null;
-      if (month) groups.situation.push(...localizedEntry(`/situation/${month}/`, normalizeSitemapDate(archive.content_updated_at ?? archive.generated_at) ?? lastmod));
+      if (month) groups.situation.push(...localizedEntry(`/situation/monthly/${month}/`, normalizeSitemapDate(archive.report?.as_of ?? archive.content_updated_at ?? archive.generated_at) ?? lastmod));
     }
   }
 

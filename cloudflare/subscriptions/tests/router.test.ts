@@ -9,6 +9,7 @@ test("matches every public and admin route with the established methods", () => 
   assert.deepEqual(matchWorkerRoute("POST", "/api/subscriptions"), { name: "create_subscription" });
   assert.deepEqual(matchWorkerRoute("GET", "/api/subscriptions/confirm"), { name: "confirm_subscription" });
   assert.deepEqual(matchWorkerRoute("GET", "/api/subscriptions/unsubscribe"), { name: "unsubscribe" });
+  assert.deepEqual(matchWorkerRoute("POST", "/api/internal/situation-alerts"), { name: "situation_alert_ingest" });
   assert.deepEqual(matchWorkerRoute("POST", "/api/admin/audience"), { name: "admin_audience" });
   assert.deepEqual(matchWorkerRoute("GET", "/api/admin/stats"), { name: "admin_stats" });
   assert.deepEqual(matchWorkerRoute("GET", "/api/admin/subscriptions"), { name: "admin_subscriptions" });
@@ -23,6 +24,12 @@ test("matches every public and admin route with the established methods", () => 
   });
   assert.deepEqual(matchWorkerRoute("POST", "/api/admin/notifications/campaign%201/process"), {
     name: "admin_notification", operation: "process", campaignId: "campaign 1",
+  });
+  assert.deepEqual(matchWorkerRoute("GET", "/api/admin/situation-alerts"), {
+    name: "admin_situation_alerts", operation: "list",
+  });
+  assert.deepEqual(matchWorkerRoute("POST", "/api/admin/situation-alerts/process"), {
+    name: "admin_situation_alerts", operation: "process",
   });
   assert.deepEqual(matchWorkerRoute("POST", "/api/admin/maintenance"), { name: "admin_maintenance" });
 });

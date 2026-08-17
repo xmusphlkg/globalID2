@@ -301,7 +301,8 @@
   }
 
   function riskRankingBarOption(figure, payload) {
-    var rows = (((payload.data || {}).risk_ranking) || []).slice(0, 10).reverse();
+    var data = payload.data || {};
+    var rows = (data.attention_ranking || data.risk_ranking || []).slice(0, 10).reverse();
     var option = baseOption();
     Object.assign(option, {
       tooltip: {
@@ -310,23 +311,25 @@
         formatter: function (params) {
           var item = params.data || {};
           var change = item.change_pct === null || item.change_pct === undefined ? 'N/A' : formatNumber(item.change_pct) + '%';
-          return params.name + '<br/>Risk: ' + formatNumber(item.value) + '<br/>Level: ' + (item.level || 'N/A') + '<br/>Latest cases: ' + formatNumber(item.latest_cases) + '<br/>Change: ' + change;
+          var scoreLabel = payload.language === 'zh' ? '监测关注分' : 'Attention score';
+          var bandLabel = payload.language === 'zh' ? '复核优先级分档' : 'Review-priority band';
+          return params.name + '<br/>' + scoreLabel + ': ' + formatNumber(item.value) + '<br/>' + bandLabel + ': ' + (item.level || 'N/A') + '<br/>Latest cases: ' + formatNumber(item.latest_cases) + '<br/>Change: ' + change;
         }
       },
       grid: { left: 150, right: 24, top: 20, bottom: 44 },
-      xAxis: { type: 'value', name: payload.language === 'zh' ? '风险分' : 'Risk score', min: 0, max: 100, axisLabel: { color: '#5d6978' }, splitLine: { lineStyle: { color: '#e7ebf0', type: 'dashed' } } },
+      xAxis: { type: 'value', name: payload.language === 'zh' ? '监测关注分' : 'Attention score', min: 0, max: 100, axisLabel: { color: '#5d6978' }, splitLine: { lineStyle: { color: '#e7ebf0', type: 'dashed' } } },
       yAxis: { type: 'category', data: rows.map(function (row) { return row.name || 'Unknown'; }), axisLabel: { color: '#5d6978' }, axisLine: { lineStyle: { color: '#d7dde5' } } },
       series: [{
-        name: payload.language === 'zh' ? '风险分' : 'Risk score',
+        name: payload.language === 'zh' ? '监测关注优先级' : 'Surveillance attention priority',
         type: 'bar',
         barMaxWidth: 18,
         data: rows.map(function (row) {
           return {
-            value: Number(row.risk_score || 0),
-            level: row.risk_level || 'low',
+            value: Number(row.attention_score == null ? row.risk_score || 0 : row.attention_score),
+            level: row.attention_level || row.risk_level || 'low',
             latest_cases: Number(row.latest_cases || 0),
             change_pct: row.change_pct,
-            itemStyle: { color: riskColor(row.risk_level) }
+            itemStyle: { color: riskColor(row.attention_level || row.risk_level) }
           };
         })
       }]
@@ -403,12 +406,13 @@
   }
 
   function riskMatrixOption(figure, payload) {
-    var rows = (((payload.data || {}).risk_ranking) || []).slice(0, 12);
+    var data = payload.data || {};
+    var rows = (data.attention_ranking || data.risk_ranking || []).slice(0, 12);
     if (rows.length < 2) return null;
-    var maxScore = rows.reduce(function (max, row) { return Math.max(max, Number(row.risk_score || 0)); }, 1);
+    var maxScore = rows.reduce(function (max, row) { return Math.max(max, Number(row.attention_score == null ? row.risk_score || 0 : row.attention_score)); }, 1);
     var option = baseOption();
     Object.assign(option, {
-      tooltip: { trigger: 'item', confine: true, formatter: function (params) { var row = params.data || {}; return row.name + '<br/>Latest cases: ' + formatNumber(row.value[0]) + '<br/>Change: ' + formatNumber(row.value[1]) + '%<br/>Risk: ' + formatNumber(row.risk_score); } },
+      tooltip: { trigger: 'item', confine: true, formatter: function (params) { var row = params.data || {}; var label = payload.language === 'zh' ? '监测关注分' : 'Attention score'; return row.name + '<br/>Latest cases: ' + formatNumber(row.value[0]) + '<br/>Change: ' + formatNumber(row.value[1]) + '%<br/>' + label + ': ' + formatNumber(row.attention_score); } },
       grid: { left: 68, right: 28, top: 30, bottom: 64 },
       xAxis: { type: 'value', name: payload.language === 'zh' ? '最新病例' : 'Latest cases', min: 0, axisLabel: { color: '#5d6978' }, splitLine: { lineStyle: { color: '#e7ebf0', type: 'dashed' } } },
       yAxis: { type: 'value', name: payload.language === 'zh' ? '较上一期变化(%)' : 'Change vs previous (%)', axisLabel: { color: '#5d6978' }, splitLine: { lineStyle: { color: '#e7ebf0', type: 'dashed' } } },
@@ -416,10 +420,10 @@
         name: payload.language === 'zh' ? '疾病' : 'Disease',
         type: 'scatter',
         data: rows.map(function (row) {
-          return { name: row.name || 'Unknown', value: [Number(row.latest_cases || 0), Number(row.change_pct || 0)], risk_score: Number(row.risk_score || 0), itemStyle: { color: riskColor(row.risk_level) } };
+          return { name: row.name || 'Unknown', value: [Number(row.latest_cases || 0), Number(row.change_pct || 0)], attention_score: Number(row.attention_score == null ? row.risk_score || 0 : row.attention_score), itemStyle: { color: riskColor(row.attention_level || row.risk_level) } };
         }),
         symbolSize: function (_value, params) {
-          return 10 + (Number((params.data || {}).risk_score || 0) / maxScore) * 28;
+          return 10 + (Number((params.data || {}).attention_score || 0) / maxScore) * 28;
         },
         label: { show: true, formatter: '{@[2]}', color: '#263647' }
       }]

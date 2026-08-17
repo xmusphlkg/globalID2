@@ -27,7 +27,7 @@ export async function verifySubscriptionToken(
   const [payload, signature] = token.split(".");
   if (!payload || !signature) return null;
   const expected = await hmacSha256(payload, secret);
-  if (!constantTimeEqual(signature, expected)) return null;
+  if (!(await secureTextEqual(signature, expected))) return null;
 
   try {
     const parsed = JSON.parse(base64UrlDecode(payload)) as { k?: string; sid?: string; exp?: number };
@@ -42,6 +42,25 @@ export async function verifySubscriptionToken(
 export async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", TEXT.encode(value));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export async function secureTextEqual(provided: string, expected: string): Promise<boolean> {
+  const [providedHash, expectedHash] = await Promise.all([
+    crypto.subtle.digest("SHA-256", TEXT.encode(provided)),
+    crypto.subtle.digest("SHA-256", TEXT.encode(expected)),
+  ]);
+  if (typeof crypto.subtle.timingSafeEqual === "function") {
+    return crypto.subtle.timingSafeEqual(providedHash, expectedHash);
+  }
+
+  // Node's Web Crypto test runtime does not yet expose the Workers extension.
+  const left = new Uint8Array(providedHash);
+  const right = new Uint8Array(expectedHash);
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left[index] ^ right[index];
+  }
+  return difference === 0;
 }
 
 async function hmacSha256(value: string, secret: string): Promise<string> {
@@ -71,13 +90,4 @@ function base64UrlEncode(value: string | ArrayBuffer): string {
 function base64UrlDecode(value: string): string {
   const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
   return atob(padded);
-}
-
-function constantTimeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let index = 0; index < a.length; index += 1) {
-    result |= a.charCodeAt(index) ^ b.charCodeAt(index);
-  }
-  return result === 0;
 }

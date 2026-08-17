@@ -1,147 +1,280 @@
 ---
+import type { SituationReportV3 } from '../utils/situation';
 import {
-  currentMetric,
-  detectorSummary,
-  evidenceLinks,
+  chartGeometry,
+  diseaseHref,
+  formatDate,
   formatNumber,
+  formatPercent,
+  geographyLabel,
   label,
-  placeLine,
-  riskScore,
-  riskTone,
-  rows,
-  sortSignals,
+  labelZh,
   unitSuffix,
 } from '../utils/situation';
 
-interface Props { snapshot: any; limit?: number; }
-
-const { snapshot, limit = 6 } = Astro.props;
-const allSignals = sortSignals([
-  ...rows(snapshot?.increasing),
-  ...rows(snapshot?.unusual),
-  ...rows(snapshot?.respiratory).filter((row: any) => row?.statistics),
-]);
-const signals = allSignals.slice(0, limit);
-const dimensionEntries = (signal: any) => Object.entries(signal?.risk?.dimensions ?? {});
-const detectorEntries = (signal: any) => Object.entries(signal?.statistics?.detectors ?? {});
+interface Props { snapshot: SituationReportV3; }
+const { snapshot } = Astro.props;
+const sourceOptions = [...new Set(snapshot.signals.map(signal => signal.identity.source_system))].sort();
+const stateOptions = [...new Set(snapshot.signals.map(signal => signal.anomaly.state))].sort();
+const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observation.data_status))].sort();
 ---
 
-<section class="signal-review" aria-labelledby="signal-review-title">
-  <header class="review-heading">
+<section class="analysis" aria-labelledby="signal-table-title">
+  <header class="section-heading">
     <div>
-      <p data-lang-en="Review layer" data-lang-zh="复核层">Review layer</p>
-      <h2 id="signal-review-title" data-lang-en="Why these signals surfaced" data-lang-zh="这些信号为何被提出">Why these signals surfaced</h2>
+      <p data-lang-en="Signal analysis" data-lang-zh="信号分析">Signal analysis</p>
+      <h2 id="signal-table-title" data-lang-en="One row per source-native identity" data-lang-zh="每个来源原生 identity 仅一行">One row per source-native identity</h2>
     </div>
-    <a href="/situation/methodology/" data-lang-en="Methodology" data-lang-zh="方法说明">Methodology</a>
+    <a href="/situation/methodology/" data-lang-en="Read methodology" data-lang-zh="查看方法">Read methodology</a>
   </header>
 
-  {signals.length ? (
-    <div class="review-list">
-      {signals.map((signal: any) => (
-        <details class="review-item" style={`--score:${Math.max(5, Math.min(100, riskScore(signal))).toFixed(1)}%`}>
+  <form class="filters" id="situation-filters" aria-label="Signal filters">
+    <label>
+      <span data-lang-en="Search" data-lang-zh="搜索">Search</span>
+      <input id="signal-query" type="search" placeholder="Disease, geography, series…" />
+    </label>
+    <label>
+      <span data-lang-en="State" data-lang-zh="异常状态">State</span>
+      <select id="signal-state"><option value="" data-lang-en="All states" data-lang-zh="全部状态">All states</option>{stateOptions.map(state => <option value={state} data-lang-en={label(state)} data-lang-zh={labelZh(state)}>{label(state)}</option>)}</select>
+    </label>
+    <label>
+      <span data-lang-en="Source" data-lang-zh="来源">Source</span>
+      <select id="signal-source"><option value="" data-lang-en="All sources" data-lang-zh="全部来源">All sources</option>{sourceOptions.map(source => <option value={source}>{source}</option>)}</select>
+    </label>
+    <label>
+      <span data-lang-en="Tag" data-lang-zh="标签">Tag</span>
+      <select id="signal-tag">
+        <option value="" data-lang-en="All tags" data-lang-zh="全部标签">All tags</option>
+        <option value="increasing" data-lang-en="Increasing" data-lang-zh="上升">Increasing</option>
+        <option value="unusual" data-lang-en="Unusual" data-lang-zh="异常">Unusual</option>
+        <option value="respiratory" data-lang-en="Respiratory" data-lang-zh="呼吸道">Respiratory</option>
+        <option value="official_match" data-lang-en="Official match" data-lang-zh="匹配官方事件">Official match</option>
+      </select>
+    </label>
+    <label>
+      <span data-lang-en="Data status" data-lang-zh="数据状态">Data status</span>
+      <select id="signal-data"><option value="" data-lang-en="All data states" data-lang-zh="全部数据状态">All data states</option>{dataOptions.map(state => <option value={state} data-lang-en={label(state)} data-lang-zh={labelZh(state)}>{label(state)}</option>)}</select>
+    </label>
+    <button type="reset" data-lang-en="Reset" data-lang-zh="重置">Reset</button>
+  </form>
+
+  <div class="column-guide" aria-hidden="true">
+    <span data-lang-en="Signal" data-lang-zh="信号">Signal</span><span data-lang-en="Observed vs expected" data-lang-zh="实际值与期望值">Observed vs expected</span><span data-lang-en="Statistical evidence" data-lang-zh="统计证据">Statistical evidence</span><span data-lang-en="Data readiness" data-lang-zh="数据就绪度">Data readiness</span>
+  </div>
+  <div class="signal-records" id="signal-records">
+    {snapshot.signals.map(signal => {
+      const points = signal.recent_points ?? [];
+      const evidenceLinks = signal.evidence_links ?? [];
+      const publicHealthRisk = signal.assessment.public_health_risk;
+      const riskTextEn = publicHealthRisk?.status === 'assessed'
+        ? publicHealthRisk.rationale || 'Risk was assessed from attributable evidence.'
+        : 'Public-health risk has not been assessed; statistical anomaly strength is not a risk rating.';
+      const riskTextZh = publicHealthRisk?.status === 'assessed'
+        ? publicHealthRisk.rationale || '风险依据可归因证据完成评估。'
+        : '公共卫生风险尚未评估；统计异常强度不等同于风险等级。';
+      const geometry = chartGeometry(points);
+      const search = [
+        signal.identity.disease_name,
+        signal.identity.country_name,
+        signal.identity.country_code,
+        signal.identity.series_code,
+        signal.identity.metric_label,
+      ].filter(Boolean).join(' ').toLowerCase();
+      return (
+        <details
+          class={`signal-record state-${signal.anomaly.state}`}
+          data-state={signal.anomaly.state}
+          data-source={signal.identity.source_system}
+          data-data-status={signal.observation.data_status}
+          data-tags={signal.tags.join(' ')}
+          data-search={search}
+        >
           <summary>
-            <span class="summary-copy">
-              <b>{signal.disease_name}</b>
-              <small>{placeLine(signal)} · {signal.metric_label}</small>
-            </span>
-            <span class:list={['summary-risk', riskTone(signal.risk?.level)]}>{label(signal.risk?.level)} · {formatNumber(signal.risk?.score, 1)}</span>
+            <span class="identity"><span><i class={`state-pill state-${signal.anomaly.state}`} data-lang-en={label(signal.anomaly.state)} data-lang-zh={labelZh(signal.anomaly.state)}>{label(signal.anomaly.state)}</i><span class="disease-name">{signal.identity.disease_name}</span></span><small>{geographyLabel(signal)} · {signal.identity.metric_label}</small></span>
+            <span class="measure"><b>{formatNumber(signal.observation.current)}{unitSuffix(signal.identity.unit)}</b><small><i data-lang-en="expected" data-lang-zh="期望">expected</i> {formatNumber(signal.observation.expected)} · <i data-lang-en="upper" data-lang-zh="上限">upper</i> {formatNumber(signal.observation.predictive_upper_95)}</small></span>
+            <span class="evidence"><b>{formatPercent(signal.observation.relative_change_pct)}</b><small>q {formatNumber(signal.anomaly.q_value, 4)} · <i data-lang-en={label(signal.assessment.review_priority)} data-lang-zh={labelZh(signal.assessment.review_priority)}>{label(signal.assessment.review_priority)}</i></small></span>
+            <span class="data-state"><b data-lang-en={label(signal.observation.data_status)} data-lang-zh={labelZh(signal.observation.data_status)}>{label(signal.observation.data_status)}</b><small><i data-lang-en="analyzed through" data-lang-zh="分析截至">analyzed through</i> {formatDate(signal.observation.data_through)}</small></span>
           </summary>
-
-          <div class="review-body">
-            <dl class="review-facts">
-              <div><dt>Current</dt><dd>{currentMetric(signal)}</dd></div>
-              <div><dt>Previous</dt><dd>{formatNumber(signal.window?.previous)}{unitSuffix(signal.unit)}</dd></div>
-              <div><dt>Seasonal baseline</dt><dd>{formatNumber(signal.baseline?.same_season_median)} · {signal.baseline?.sample_size ?? 0} seasons</dd></div>
-              <div><dt>Detector vote</dt><dd>{detectorSummary(signal).label}</dd></div>
+          <div class="signal-detail">
+            <div class="trend-panel">
+              <div class="trend-heading"><b data-lang-en="Observed vs expected" data-lang-zh="实际值与期望值">Observed vs expected</b><span>{formatDate(points[0]?.period)} – {formatDate(points.at(-1)?.period)}</span></div>
+              {points.length > 1 ? (
+                <svg viewBox="0 0 520 150" role="img" aria-label={`Observed and expected trend for ${signal.identity.disease_name}`}>
+                  <path class="gridline" d="M0,144 H520 M0,75 H520 M0,6 H520" />
+                  {geometry.upper && <path class="upper" d={geometry.upper} />}
+                  {geometry.expected && <path class="expected" d={geometry.expected} />}
+                  <path class="actual" d={geometry.actual} />
+                </svg>
+              ) : <p data-lang-en="No trend points available." data-lang-zh="暂无趋势数据点。">No trend points available.</p>}
+              <div class="legend"><span class="actual-key" data-lang-en="Observed" data-lang-zh="实际值">Observed</span><span class="expected-key" data-lang-en="Expected" data-lang-zh="期望值">Expected</span><span class="upper-key" data-lang-en="95% upper" data-lang-zh="95% 上限">95% upper</span><small>{formatNumber(geometry.min)}–{formatNumber(geometry.max)}</small></div>
+            </div>
+            <dl class="model-facts">
+              <div><dt data-lang-en="Model" data-lang-zh="模型">Model</dt><dd>{signal.anomaly.model}</dd></div>
+              <div><dt data-lang-en="Detector tier" data-lang-zh="检测分层">Detector tier</dt><dd data-lang-en={label(signal.anomaly.detector_tier)} data-lang-zh={labelZh(signal.anomaly.detector_tier)}>{label(signal.anomaly.detector_tier)}</dd></div>
+              <div><dt data-lang-en="Raw p" data-lang-zh="原始 p 值">Raw p</dt><dd>{formatNumber(signal.anomaly.raw_p_value, 5)}</dd></div>
+              <div><dt data-lang-en="Dispersion" data-lang-zh="离散度">Dispersion</dt><dd>{formatNumber(signal.anomaly.dispersion, 2)}</dd></div>
+              <div><dt data-lang-en="Completeness" data-lang-zh="完整度">Completeness</dt><dd>{formatPercent(signal.observation.completeness * 100, 0)}</dd></div>
+              <div><dt data-lang-en="Data through" data-lang-zh="数据截至">Data through</dt><dd>{formatDate(signal.observation.data_through)}</dd></div>
+              <div><dt data-lang-en="Latest received" data-lang-zh="最新收到">Latest received</dt><dd>{formatDate(signal.observation.latest_available_period)}</dd></div>
+              <div><dt data-lang-en="Data status" data-lang-zh="数据状态">Data status</dt><dd data-lang-en={label(signal.observation.data_status)} data-lang-zh={labelZh(signal.observation.data_status)}>{label(signal.observation.data_status)}</dd></div>
+              <div><dt data-lang-en="Temporal relevance" data-lang-zh="时间相关性">Temporal relevance</dt><dd data-lang-en={label(signal.assessment.temporal_relevance)} data-lang-zh={labelZh(signal.assessment.temporal_relevance)}>{label(signal.assessment.temporal_relevance)}</dd></div>
+              <div><dt data-lang-en="Verification" data-lang-zh="验证状态">Verification</dt><dd data-lang-en={label(signal.assessment.verification_status)} data-lang-zh={labelZh(signal.assessment.verification_status)}>{label(signal.assessment.verification_status)}</dd></div>
+              <div><dt data-lang-en="Verification basis" data-lang-zh="验证依据">Verification basis</dt><dd data-lang-en={label(signal.assessment.verification_basis)} data-lang-zh={labelZh(signal.assessment.verification_basis)}>{label(signal.assessment.verification_basis)}</dd></div>
+              <div><dt data-lang-en="Reporting lag" data-lang-zh="报告延迟">Reporting lag</dt><dd>{signal.observation.reporting_lag_days} <i data-lang-en="days" data-lang-zh="天">days</i></dd></div>
+              <div><dt data-lang-en="Fit" data-lang-zh="拟合状态">Fit</dt><dd data-lang-en={label(signal.anomaly.fit_status)} data-lang-zh={labelZh(signal.anomaly.fit_status)}>{label(signal.anomaly.fit_status)}</dd></div>
             </dl>
-
-            {dimensionEntries(signal).length > 0 && (
-              <div class="risk-bars" aria-label="Risk dimensions">
-                {dimensionEntries(signal).map(([name, score]) => (
-                  <div style={`--dimension:${typeof score === 'number' ? Math.max(3, Math.min(100, score)).toFixed(1) : 0}%`}>
-                    <span>{label(name)}</span>
-                    <b>{score == null ? 'missing' : `${formatNumber(score, 1)} / 100`}</b>
-                    <i aria-hidden="true"></i>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <details class="audit-details">
-              <summary data-lang-en="Show audit fields" data-lang-zh="显示审计字段">Show audit fields</summary>
-              <div>
-                {detectorEntries(signal).length > 0 && (
-                  <p class="detectors">
-                    {detectorEntries(signal).map(([name, passed]) => <span class:list={[passed && 'passed']}>{passed ? 'pass' : 'hold'} · {label(name)}</span>)}
-                  </p>
-                )}
-                <p class="provenance">Series <code>{signal.series_code}</code> · geography <code>{signal.geography_key}</code> · data through {signal.data_through} · quality {signal.quality?.status ?? 'unreported'}</p>
-                {evidenceLinks(signal).length > 0 && (
-                  <ul>
-                    {evidenceLinks(signal).map((link: any) => <li><a href={link.url} target="_blank" rel="noreferrer">{link.title ?? link.source ?? 'Evidence source'}</a></li>)}
-                  </ul>
-                )}
-              </div>
+            <div class="explanation">
+              <p><b data-lang-en="Interpretation" data-lang-zh="解释">Interpretation</b></p>
+              <p data-lang-en={`The ${signal.observation.window_label.toLowerCase()} observed value was ${formatNumber(signal.observation.current)}, compared with an expected ${formatNumber(signal.observation.expected)} and a one-sided 95% predictive upper bound of ${formatNumber(signal.observation.predictive_upper_95)}. The FDR-adjusted q value is ${formatNumber(signal.anomaly.q_value, 4)}.`} data-lang-zh={`${signal.observation.window_label}实际值为 ${formatNumber(signal.observation.current)}，模型期望值为 ${formatNumber(signal.observation.expected)}，单侧 95% 预测上限为 ${formatNumber(signal.observation.predictive_upper_95)}，FDR 校正后的 q 值为 ${formatNumber(signal.anomaly.q_value, 4)}。`}>The {signal.observation.window_label.toLowerCase()} observed value was {formatNumber(signal.observation.current)}, compared with an expected {formatNumber(signal.observation.expected)} and a one-sided 95% predictive upper bound of {formatNumber(signal.observation.predictive_upper_95)}. The FDR-adjusted q value is {formatNumber(signal.anomaly.q_value, 4)}.</p>
+              <p class="risk-note" data-lang-en={riskTextEn} data-lang-zh={riskTextZh}>{riskTextEn}</p>
+              <a class="disease-link" href={diseaseHref(signal)} data-lang-en="Open disease profile" data-lang-zh="打开疾病档案">Open disease profile</a>
+            </div>
+            <details class="provenance">
+              <summary data-lang-en="Raw identity and evidence" data-lang-zh="原始 identity 与证据">Raw identity and evidence</summary>
+              <p>Series <code>{signal.identity.series_code}</code> · canonical geography <code>{signal.identity.canonical_geography_key}</code> · raw geography <code>{signal.identity.source_geography_keys.join(', ')}</code> · dimension <code>{signal.identity.dimension_key}</code></p>
+              <ul>{evidenceLinks.map(link => <li><a href={link.url} target="_blank" rel="noreferrer">{link.title}</a></li>)}</ul>
             </details>
           </div>
         </details>
-      ))}
-    </div>
-  ) : (
-    <p class="empty">No eligible numerical series is available in this snapshot.</p>
-  )}
+      );
+    })}
+  </div>
+  <p id="signal-empty" class="empty" hidden data-lang-en="No signals match the current filters." data-lang-zh="没有信号符合当前筛选条件。">No signals match the current filters.</p>
 </section>
 
+{snapshot.events.length > 0 && (
+  <section class="event-section" aria-labelledby="event-title">
+    <header class="section-heading"><div><p data-lang-en="Official evidence" data-lang-zh="官方证据">Official evidence</p><h2 id="event-title" data-lang-en="Clustered event timelines" data-lang-zh="聚类事件时间线">Clustered event timelines</h2></div></header>
+    <div class="events">
+      {snapshot.events.map(event => (
+        <article>
+          <header><div><h3>{event.disease_name}</h3><p>{event.geographies.map(place => place.name).join(' · ')}</p></div><span>{formatDate(event.first_published_at)} – {formatDate(event.last_published_at)}</span></header>
+          <ol>{event.updates.map(update => <li><time>{formatDate(update.published_at)}</time><a href={update.url} target="_blank" rel="noreferrer">{update.title}</a><small>{update.source}</small></li>)}</ol>
+        </article>
+      ))}
+    </div>
+  </section>
+)}
+
+{snapshot.context_panels.length > 0 && (
+  <section class="context-section" aria-labelledby="context-title">
+    <header class="section-heading"><div><p data-lang-en="Context only" data-lang-zh="背景指标">Context only</p><h2 id="context-title" data-lang-en="Respiratory indicators remain separate" data-lang-zh="呼吸道指标保持分列">Respiratory indicators remain separate</h2></div></header>
+    <div class="context-grid">{snapshot.context_panels.map(panel => <article><h3>{panel.disease_name || panel.topic}</h3><p>{panel.geography}</p><dl>{panel.metrics.map(metric => <div><dt data-lang-en={metric.label.en} data-lang-zh={metric.label.zh}>{metric.label.en}</dt><dd>{typeof metric.value === 'number' ? formatNumber(metric.value) : metric.value || '—'}{unitSuffix(metric.unit)}<small>{formatDate(metric.data_through)}</small></dd></div>)}</dl></article>)}</div>
+  </section>
+)}
+
+<script>
+  const filterForm = document.querySelector<HTMLFormElement>('#situation-filters');
+  const records = [...document.querySelectorAll<HTMLElement>('#signal-records > .signal-record')];
+  const emptyState = document.querySelector<HTMLElement>('#signal-empty');
+  const applyFilters = () => {
+    const query = (document.querySelector<HTMLInputElement>('#signal-query')?.value || '').trim().toLowerCase();
+    const state = document.querySelector<HTMLSelectElement>('#signal-state')?.value || '';
+    const source = document.querySelector<HTMLSelectElement>('#signal-source')?.value || '';
+    const tag = document.querySelector<HTMLSelectElement>('#signal-tag')?.value || '';
+    const dataStatus = document.querySelector<HTMLSelectElement>('#signal-data')?.value || '';
+    let visible = 0;
+    for (const record of records) {
+      const matches = (!query || (record.dataset.search || '').includes(query))
+        && (!state || record.dataset.state === state)
+        && (!source || record.dataset.source === source)
+        && (!tag || (record.dataset.tags || '').split(' ').includes(tag))
+        && (!dataStatus || record.dataset.dataStatus === dataStatus);
+      record.hidden = !matches;
+      if (matches) visible += 1;
+    }
+    if (emptyState) emptyState.hidden = visible !== 0;
+  };
+  filterForm?.addEventListener('input', applyFilters);
+  filterForm?.addEventListener('reset', () => window.setTimeout(applyFilters, 0));
+</script>
+
 <style>
-  .signal-review { display: grid; gap: 1rem; }
-  .review-heading { align-items: end; border-bottom: 1px solid rgb(var(--border)); display: flex; gap: 1rem; justify-content: space-between; padding-bottom: .9rem; }
-  .review-heading p { color: rgb(var(--color-teal)); font-size: .66rem; font-weight: 700; letter-spacing: .12em; margin: 0 0 .2rem; text-transform: uppercase; }
-  h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: 1.65rem; letter-spacing: 0; line-height: 1.12; margin: 0; }
-  .review-heading a { color: rgb(var(--color-teal)); font-size: .78rem; font-weight: 700; text-decoration: none; }
-  .review-heading a:hover { text-decoration: underline; }
-  .review-list { display: grid; gap: .65rem; }
-  .review-item { background: rgb(var(--surface) / .72); border: 1px solid rgb(var(--border) / .78); }
-  .review-item[open] { background: linear-gradient(180deg, rgb(var(--surface-raised) / .72), rgb(var(--surface) / .86)); }
-  summary { align-items: center; cursor: pointer; display: grid; gap: .85rem; grid-template-columns: minmax(0, 1fr) auto; list-style: none; padding: .9rem 1rem; }
-  summary::-webkit-details-marker { display: none; }
-  summary::before { background: linear-gradient(90deg, rgb(var(--color-teal)), rgb(var(--color-accent))); content: ''; grid-column: 1 / -1; height: .2rem; order: 3; width: var(--score); }
-  .summary-copy { display: grid; gap: .16rem; min-width: 0; }
-  .summary-copy b { color: rgb(var(--text-strong)); font-size: .94rem; line-height: 1.22; overflow-wrap: anywhere; }
-  .summary-copy small { color: rgb(var(--text-faint)); font-size: .7rem; line-height: 1.35; }
-  .summary-risk { border: 1px solid currentColor; font-family: 'JetBrains Mono', monospace; font-size: .68rem; font-weight: 700; padding: .25rem .45rem; text-transform: capitalize; white-space: nowrap; }
-  .risk-elevated { color: rgb(218 96 75); }
-  .risk-watch { color: rgb(205 138 38); }
-  .risk-low { color: rgb(63 157 126); }
-  .risk-unknown { color: rgb(var(--text-faint)); }
-  .review-body { border-top: 1px solid rgb(var(--border)); display: grid; gap: 1rem; padding: 1rem; }
-  .review-facts { display: grid; gap: .65rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
-  .review-facts div { border-left: 2px solid rgb(var(--border)); min-width: 0; padding-left: .6rem; }
-  dt { color: rgb(var(--text-faint)); font-size: .62rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
-  dd { color: rgb(var(--text)); font-family: 'JetBrains Mono', monospace; font-size: .73rem; margin: .18rem 0 0; overflow-wrap: anywhere; }
-  .risk-bars { display: grid; gap: .55rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .risk-bars div { display: grid; gap: .22rem; min-width: 0; }
-  .risk-bars span { color: rgb(var(--text-faint)); font-size: .68rem; text-transform: capitalize; }
-  .risk-bars b { color: rgb(var(--text)); font-family: 'JetBrains Mono', monospace; font-size: .68rem; font-weight: 600; }
-  .risk-bars i { background: rgb(var(--border) / .48); display: block; height: .28rem; overflow: hidden; position: relative; }
-  .risk-bars i::after { background: rgb(var(--color-accent)); content: ''; display: block; height: 100%; width: var(--dimension); }
-  .audit-details { border-top: 1px solid rgb(var(--border) / .72); padding-top: .8rem; }
-  .audit-details > summary { color: rgb(var(--color-teal)); display: inline-flex; font-size: .72rem; font-weight: 700; padding: 0; }
-  .audit-details > summary::before { display: none; }
-  .audit-details > div { display: grid; gap: .55rem; padding-top: .7rem; }
-  .detectors { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; }
-  .detectors span { border: 1px solid rgb(var(--border)); color: rgb(var(--text-faint)); font-size: .66rem; padding: .18rem .4rem; text-transform: capitalize; }
-  .detectors .passed { border-color: rgb(24 128 99 / .5); color: rgb(63 157 126); }
-  .provenance, .empty { color: rgb(var(--text-faint)); font-size: .72rem; line-height: 1.5; margin: 0; }
-  code { font-family: 'JetBrains Mono', monospace; font-size: .66rem; }
-  ul { display: flex; flex-wrap: wrap; gap: .6rem; list-style: none; margin: 0; padding: 0; }
-  li a { color: rgb(var(--color-teal)); font-size: .7rem; }
-  @media (max-width: 900px) {
-    .review-facts, .risk-bars { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .analysis, .event-section, .context-section { display: grid; gap: 1rem; }
+  .section-heading { align-items: end; border-bottom: 1px solid rgb(var(--border)); display: flex; gap: 1rem; justify-content: space-between; padding-bottom: .85rem; }
+  .section-heading p { color: rgb(var(--color-teal)); font-size: .65rem; font-weight: 800; letter-spacing: .12em; margin: 0 0 .24rem; text-transform: uppercase; }
+  h2, h3 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; margin: 0; }
+  h2 { font-size: 1.65rem; line-height: 1.1; }
+  h3 { font-size: 1.15rem; }
+  .section-heading a { color: rgb(var(--color-teal)); font-size: .75rem; font-weight: 700; }
+  .filters { align-items: end; background: rgb(var(--surface) / .65); border: 1px solid rgb(var(--border)); display: grid; gap: .65rem; grid-template-columns: minmax(13rem, 1.2fr) repeat(4, minmax(7.5rem, .55fr)) auto; padding: .75rem; }
+  .filters label { display: grid; gap: .25rem; }
+  .filters label span { color: rgb(var(--text-faint)); font-size: .61rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+  .filters input, .filters select, .filters button { background: rgb(var(--surface-raised)); border: 1px solid rgb(var(--border)); color: rgb(var(--text)); font: inherit; font-size: .76rem; min-height: 2.25rem; padding: .4rem .55rem; }
+  .filters button { color: rgb(var(--text-strong)); cursor: pointer; font-weight: 750; }
+  .column-guide, .signal-record > summary { display: grid; gap: 1rem; grid-template-columns: minmax(14rem, 1.35fr) minmax(10rem, .8fr) minmax(9rem, .7fr) minmax(10rem, .8fr); }
+  .column-guide { color: rgb(var(--text-faint)); font-size: .57rem; font-weight: 750; letter-spacing: .06em; padding: 0 .75rem; text-transform: uppercase; }
+  .signal-record { background: rgb(var(--surface-raised)); border: 1px solid rgb(var(--border)); border-left: 4px solid rgb(var(--text-faint)); margin-top: .6rem; }
+  .signal-record.state-strong { border-left-color: rgb(174 61 67); }
+  .signal-record.state-alert { border-left-color: rgb(198 104 44); }
+  .signal-record > summary { align-items: center; cursor: pointer; list-style: none; padding: .9rem; }
+  .signal-record > summary::-webkit-details-marker { display: none; }
+  .signal-record > summary > span, .signal-record > summary > b { color: rgb(var(--text-muted)); font-family: 'JetBrains Mono', monospace; font-size: .7rem; font-weight: 550; overflow-wrap: anywhere; }
+  .signal-record .identity { display: grid; gap: .14rem; }
+  .identity > span { align-items: center; display: flex; flex-wrap: wrap; gap: .5rem; }
+  .identity .disease-name { color: rgb(var(--text-strong)); font-family: inherit; font-size: .95rem; font-weight: 750; }
+  .identity small, .measure small, .evidence small, .data-state small { color: rgb(var(--text-muted)); font-family: inherit; font-size: .63rem; }
+  .state-pill { border: 1px solid currentColor; font-size: .55rem; font-style: normal; padding: .15rem .32rem; text-transform: uppercase; }
+  .measure, .evidence, .data-state { display: grid; gap: .15rem; }
+  .measure b, .evidence b { color: rgb(var(--text-strong)); font-size: .88rem; }
+  .measure i, .evidence i, .data-state i, .model-facts i { font-style: normal; }
+  .data-state b { color: rgb(var(--text-strong)); font-size: .7rem; text-transform: uppercase; }
+  .signal-detail { background: rgb(var(--surface) / .5); border-top: 1px solid rgb(var(--border)); display: grid; gap: 1rem; grid-template-columns: minmax(18rem, 1.4fr) minmax(15rem, 1fr); padding: 1rem; }
+  .trend-panel { min-width: 0; }
+  .trend-heading { display: flex; font-size: .72rem; justify-content: space-between; }
+  .trend-heading span, .legend { color: rgb(var(--text-faint)); font-size: .63rem; }
+  svg { display: block; height: auto; margin-top: .5rem; overflow: visible; width: 100%; }
+  svg path { fill: none; vector-effect: non-scaling-stroke; }
+  .gridline { stroke: rgb(var(--border)); stroke-width: 1; }
+  .actual { stroke: rgb(var(--color-accent)); stroke-width: 2.5; }
+  .expected { stroke: rgb(var(--color-teal)); stroke-width: 2; }
+  .upper { stroke: rgb(var(--text-faint)); stroke-dasharray: 5 4; stroke-width: 1.4; }
+  .legend { display: flex; flex-wrap: wrap; gap: .7rem; }
+  .legend span::before { content: ''; display: inline-block; height: 2px; margin-right: .3rem; vertical-align: middle; width: 1rem; }
+  .actual-key::before { background: rgb(var(--color-accent)); }
+  .expected-key::before { background: rgb(var(--color-teal)); }
+  .upper-key::before { background: rgb(var(--text-faint)); }
+  .legend small { margin-left: auto; }
+  .model-facts { display: grid; gap: .55rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+  .model-facts div { border-left: 2px solid rgb(var(--border)); padding-left: .55rem; }
+  dt { color: rgb(var(--text-faint)); font-size: .58rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+  dd { color: rgb(var(--text)); font-family: 'JetBrains Mono', monospace; font-size: .67rem; margin: .12rem 0 0; overflow-wrap: anywhere; }
+  .explanation, .provenance { grid-column: 1 / -1; }
+  .explanation p, .provenance p { color: rgb(var(--text-muted)); font-size: .75rem; line-height: 1.55; margin: .25rem 0 0; }
+  .risk-note { border-left: 3px solid rgb(var(--color-teal)); padding-left: .65rem; }
+  .disease-link { color: rgb(var(--color-teal)); display: inline-block; font-size: .7rem; font-weight: 750; margin-top: .55rem; }
+  .provenance { border-top: 1px solid rgb(var(--border)); padding-top: .7rem; }
+  .provenance > summary { color: rgb(var(--color-teal)); cursor: pointer; font-size: .7rem; font-weight: 750; }
+  .provenance code { font-size: .64rem; }
+  .provenance ul { display: flex; flex-wrap: wrap; gap: .7rem; list-style: none; margin: .5rem 0 0; padding: 0; }
+  .provenance a { color: rgb(var(--color-teal)); font-size: .68rem; }
+  .events, .context-grid { display: grid; gap: .8rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .events article, .context-grid article { background: rgb(var(--surface) / .55); border: 1px solid rgb(var(--border)); padding: .9rem; }
+  .events article > header { align-items: start; border-bottom: 1px solid rgb(var(--border)); display: flex; gap: 1rem; justify-content: space-between; padding-bottom: .6rem; }
+  .context-grid dd small { color: rgb(var(--text-faint)); display: block; font-family: inherit; font-size: .6rem; margin-top: .18rem; }
+  .events header p, .context-grid article > p { color: rgb(var(--text-faint)); font-size: .68rem; margin: .2rem 0 0; }
+  .events header span { color: rgb(var(--text-faint)); font-family: 'JetBrains Mono', monospace; font-size: .62rem; }
+  .events ol { list-style: none; margin: .7rem 0 0; padding: 0; }
+  .events li { border-left: 2px solid rgb(var(--border)); display: grid; gap: .15rem; grid-template-columns: 6rem minmax(0, 1fr) auto; padding: .35rem 0 .55rem .65rem; }
+  .events time, .events small { color: rgb(var(--text-faint)); font-size: .62rem; }
+  .events a { color: rgb(var(--text-strong)); font-size: .73rem; }
+  .context-grid dl { display: grid; gap: .5rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .context-grid dl div { border-left: 2px solid rgb(var(--border)); padding-left: .5rem; }
+  .context-grid small { color: rgb(var(--text-faint)); font-size: .59rem; }
+  .empty { color: rgb(var(--text-faint)); font-size: .78rem; }
+  @media (max-width: 1120px) {
+    .column-guide { display: none; }
+    .signal-record > summary { grid-template-columns: minmax(12rem, 1.4fr) repeat(3, minmax(7rem, .7fr)); }
+    .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
-  @media (max-width: 640px) {
-    .review-heading { align-items: start; display: grid; }
-    summary { align-items: start; grid-template-columns: 1fr; }
-    .summary-risk { justify-self: start; }
-    .review-facts, .risk-bars { grid-template-columns: 1fr; }
+  @media (max-width: 760px) {
+    .filters, .events, .context-grid, .signal-detail { grid-template-columns: 1fr; }
+    .signal-record > summary { align-items: start; grid-template-columns: minmax(0, 1fr) auto; }
+    .signal-record > summary > .evidence { display: none; }
+    .signal-record > summary > .measure, .signal-record > summary > .data-state { grid-column: 1 / -1; }
+    .signal-record > summary::after { color: rgb(var(--text-faint)); content: 'Expand'; font-size: .62rem; grid-column: 2; grid-row: 1; }
+    .model-facts { grid-template-columns: 1fr; }
+    .events li { grid-template-columns: 1fr; }
+    .context-grid dl { grid-template-columns: 1fr; }
   }
 </style>

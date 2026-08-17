@@ -1,0 +1,69 @@
+---
+import ReportLayout from '../layouts/ReportLayout.astro';
+import SituationSummary from './SituationSummary.astro';
+import SituationDetails from './SituationDetails.astro';
+import { buildAlternatePaths, type SeoDocument } from '../lib/seo';
+import { formatDate, sourceEvidenceUrls, type SituationReportV3 } from '../utils/situation';
+
+interface Props {
+  report: SituationReportV3;
+  jsonPath: string;
+  canonicalPath: string;
+  archivePath: string;
+  previousPath?: string;
+  nextPath?: string;
+}
+const { report, jsonPath, canonicalPath, archivePath, previousPath, nextPath } = Astro.props;
+const periodKind = report.report.kind === 'weekly' ? 'Weekly' : 'Monthly';
+const title = `${periodKind} Infectious Disease Situation — ${report.report.period_key}`;
+const titleZh = `${report.report.kind === 'weekly' ? '周度' : '月度'}传染病态势 — ${report.report.period_key}`;
+const description = report.narrative.en;
+const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
+const structuredData = [{
+  '@type': 'Report', '@id': `${new URL(canonicalPath, siteOrigin)}#report`, name: title,
+  datePublished: report.report.as_of, dateModified: report.report.as_of,
+  temporalCoverage: `${report.report.period_start}/${report.report.period_end}`,
+  isBasedOn: sourceEvidenceUrls(report),
+  mainEntity: {
+    '@type': 'Dataset',
+    distribution: [{ '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: new URL(jsonPath, siteOrigin).toString() }],
+  },
+}];
+const seo: SeoDocument = {
+  title: `${title} | GIDS`, description, canonicalPath,
+  alternatePaths: buildAlternatePaths(canonicalPath, 'en'), noindex: !report.public_enabled,
+  pageType: 'Report', datePublished: report.report.as_of, dateModified: report.report.as_of,
+};
+---
+
+<ReportLayout title={title} description={description} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: 'Situation Room', labelZh: '全球态势室', href: '/situation/' }, { label: `${periodKind} reports`, labelZh: report.report.kind === 'weekly' ? '周报' : '月报', href: archivePath }, { label: report.report.period_key, labelZh: report.report.period_key }]}>
+  <main class="period-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header class="period-header">
+      <div><p data-lang-en={`${periodKind} period report`} data-lang-zh={report.report.kind === 'weekly' ? '周度期间报告' : '月度期间报告'}>{periodKind} period report</p><h1 data-lang-en={title} data-lang-zh={titleZh}>{title}</h1><span>{formatDate(report.report.period_start)} – {formatDate(report.report.period_end)} · <i data-lang-en="revision" data-lang-zh="修订版">revision</i> {report.report.revision}</span></div>
+      <a href={jsonPath} download data-lang-en="Download JSON" data-lang-zh="下载 JSON">Download JSON</a>
+    </header>
+    <nav class="adjacent" aria-label="Adjacent reports">
+      {previousPath ? <a href={previousPath}>← <span data-lang-en="Previous period" data-lang-zh="上一期间">Previous period</span></a> : <span />}
+      <a href={archivePath} data-lang-en="All period reports" data-lang-zh="全部期间报告">All period reports</a>
+      {nextPath ? <a href={nextPath}><span data-lang-en="Next period" data-lang-zh="下一期间">Next period</span> →</a> : <span />}
+    </nav>
+    <SituationSummary snapshot={report} />
+    <SituationDetails snapshot={report} />
+    <footer><p data-lang-en={report.limitations.en} data-lang-zh={report.limitations.zh}>{report.limitations.en}</p><code>{report.report.report_id}</code></footer>
+  </main>
+</ReportLayout>
+
+<style>
+  .period-page { display: grid; gap: 2rem; padding-bottom: 4rem; padding-top: 2.5rem; }
+  .period-header { align-items: end; border-bottom: 2px solid rgb(var(--text-strong)); display: flex; gap: 1rem; justify-content: space-between; padding-bottom: 1.25rem; }
+  .period-header p { color: rgb(var(--color-teal)); font-size: .66rem; font-weight: 800; letter-spacing: .13em; margin: 0 0 .35rem; text-transform: uppercase; }
+  h1 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.04; margin: 0; }
+  .period-header span { color: rgb(var(--text-faint)); display: block; font-size: .72rem; margin-top: .55rem; }
+  .period-header i { font-style: normal; }
+  .period-header > a, .adjacent a { border: 1px solid rgb(var(--border)); color: rgb(var(--color-teal)); font-size: .72rem; font-weight: 750; padding: .45rem .65rem; text-decoration: none; white-space: nowrap; }
+  .adjacent { display: grid; grid-template-columns: 1fr auto 1fr; margin-top: -1rem; }
+  .adjacent > :last-child { justify-self: end; }
+  footer { border-top: 1px solid rgb(var(--border)); color: rgb(var(--text-faint)); font-size: .7rem; line-height: 1.55; padding-top: 1rem; }
+  footer p { margin: 0 0 .4rem; }
+  @media (max-width: 640px) { .period-header { align-items: start; display: grid; } .adjacent { gap: .5rem; grid-template-columns: 1fr 1fr; } .adjacent > :nth-child(2) { display: none; } }
+</style>

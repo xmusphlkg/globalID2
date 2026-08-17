@@ -17,6 +17,7 @@ const research = existsSync(researchFile) ? JSON.parse(readFileSync(researchFile
 const surveillanceFile = resolve(`./src/data/diseases/${String(facet.disease_id).toLowerCase()}.json`);
 const surveillance = existsSync(surveillanceFile) ? JSON.parse(readFileSync(surveillanceFile, 'utf-8')) : null;
 const publications = new Map((research.publication_timeline ?? []).map((item: any) => [item.month, Number(item.publication_count ?? 0)]));
+const evidenceEvents: any[] = research.evidence_events ?? [];
 const months: string[] = surveillance?.global_monthly?.months ?? [];
 const cases: Array<number | null> = surveillance?.global_monthly?.cases ?? [];
 const timeline = months.slice(-24).map((month, offset) => {
@@ -52,7 +53,16 @@ const descriptionZh = `${facet.name_zh ?? facet.name_en}已发布研究、可审
       </div>)}
       <div class="timeline-legend"><span><i class="cases-dot"></i><b data-lang-en="GIDS reported records" data-lang-zh="GIDS 报告记录">GIDS reported records</b></span><span><i class="papers-dot"></i><b data-lang-en="Research Radar publications" data-lang-zh="研究雷达发表数量">Research Radar publications</b></span></div>
     </div> : <p class="timeline-empty" data-lang-en="No monthly GIDS series is available for this disease; the literature collection remains usable independently." data-lang-zh="该疾病暂无 GIDS 月度序列；文献集合仍可独立使用。">No monthly GIDS series is available for this disease; the literature collection remains usable independently.</p>}
+    {evidenceEvents.length > 0 && <div class="evidence-events" aria-label="Guidance and vaccine-policy evidence publications">
+      <h3 data-lang-en="Guidance and vaccine-policy evidence" data-lang-zh="指南与疫苗政策证据">Guidance and vaccine-policy evidence</h3>
+      {evidenceEvents.slice(0, 8).map((event) => <a href={`/research/articles/${event.slug}/`}>
+        <time datetime={event.date}>{event.date}</time>
+        <span data-lang-en={event.event_type === 'guideline_publication' ? 'Guideline publication' : 'Vaccine-policy evidence'} data-lang-zh={event.event_type === 'guideline_publication' ? '指南发布' : '疫苗政策证据'}>{event.event_type === 'guideline_publication' ? 'Guideline publication' : 'Vaccine-policy evidence'}</span>
+        <strong>{event.title}</strong>
+      </a>)}
+    </div>}
     <p class="timeline-note" data-lang-en="The two bars use independent scales. Their alignment supports navigation and comparison only; it does not claim that publication activity explains surveillance activity." data-lang-zh="两组条形使用独立刻度。并列展示仅用于导航和比较，并不表示发表活动能够解释监测活动。">The two bars use independent scales. Their alignment supports navigation and comparison only; it does not claim that publication activity explains surveillance activity.</p>
+    <p class="timeline-note" data-lang-en="Guidance and policy markers identify dated publications in the curated catalogue; they do not by themselves establish that an official policy changed on that date." data-lang-zh="指南与政策标记表示已收录文献的发布日期；该标记本身不代表官方政策一定在当日发生变化。">Guidance and policy markers identify dated publications in the curated catalogue; they do not by themselves establish that an official policy changed on that date.</p>
   </section>
 </ResearchCollectionPage>
 
@@ -73,6 +83,12 @@ const descriptionZh = `${facet.name_zh ?? facet.name_en}已发布研究、可审
   .timeline-legend span { display: inline-flex; align-items: center; gap: .4rem; }
   .timeline-legend i { width: .48rem; height: .48rem; }
   .timeline-legend b { font-weight: 550; }
+  .evidence-events { display: grid; gap: .45rem; margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid rgb(var(--border) / .6); }
+  .evidence-events h3 { color: rgb(var(--text-strong)); font: 600 .82rem/1.3 'Source Sans 3', sans-serif; }
+  .evidence-events a { display: grid; grid-template-columns: 5.6rem 8.6rem minmax(0, 1fr); gap: .65rem; align-items: baseline; color: rgb(var(--text)); font-size: .66rem; }
+  .evidence-events time { color: rgb(var(--text-faint)); font-family: 'JetBrains Mono', monospace; }
+  .evidence-events span { color: rgb(var(--color-brand)); font-weight: 650; }
+  .evidence-events strong { font-weight: 550; }
   .timeline-note, .timeline-empty { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.55; }
-  @media (max-width: 640px) { .timeline-heading { align-items: start; flex-direction: column; } .timeline-row { grid-template-columns: 3.8rem 1fr; } .timeline-row .bar-cell:last-child { grid-column: 2; } }
+  @media (max-width: 640px) { .timeline-heading { align-items: start; flex-direction: column; } .timeline-row { grid-template-columns: 3.8rem 1fr; } .timeline-row .bar-cell:last-child { grid-column: 2; } .evidence-events a { grid-template-columns: 5.4rem 1fr; } .evidence-events strong { grid-column: 1 / -1; } }
 </style>

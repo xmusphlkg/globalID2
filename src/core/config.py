@@ -309,6 +309,18 @@ class AutomationSettings(_BaseEnvSettings):
     timezone: str = Field(default="UTC", description="自动化调度时区")
     poll_interval_seconds: int = Field(default=30, ge=5, description="自动化轮询间隔秒数")
     default_retry_threshold: int = Field(default=3, ge=1, le=20, description="失败告警触发阈值")
+    auto_retry_base_delay_seconds: int = Field(
+        default=300,
+        ge=5,
+        le=86400,
+        description="定时采集瞬态失败首次自动重试延迟秒数",
+    )
+    auto_retry_max_delay_seconds: int = Field(
+        default=3600,
+        ge=5,
+        le=604800,
+        description="定时采集指数退避最大延迟秒数",
+    )
     alert_group_cooldown_minutes: int = Field(
         default=360,
         ge=0,
@@ -354,6 +366,27 @@ class DataReleaseSettings(_BaseEnvSettings):
         validation_alias="DATA_RELEASE__AUTO_FAILURE_COOLDOWN_MINUTES",
         description="自动触发 data release 失败后的冷却分钟数，0 表示不冷却",
     )
+    auto_retry_max_attempts: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        validation_alias="DATA_RELEASE__AUTO_RETRY_MAX_ATTEMPTS",
+        description="定时或上游触发发布发生可重试瞬时错误后的最大自动重试次数",
+    )
+    auto_retry_base_delay_seconds: int = Field(
+        default=300,
+        ge=5,
+        le=86400,
+        validation_alias="DATA_RELEASE__AUTO_RETRY_BASE_DELAY_SECONDS",
+        description="自动发布第一次重试前的等待秒数；后续按 2 的幂指数退避",
+    )
+    auto_retry_max_delay_seconds: int = Field(
+        default=3600,
+        ge=5,
+        le=86400,
+        validation_alias="DATA_RELEASE__AUTO_RETRY_MAX_DELAY_SECONDS",
+        description="自动发布指数退避的单次最长等待秒数",
+    )
     default_github_remote: str = Field(default="origin", description="默认 Git 远端名称")
     default_github_branch: str = Field(default="", description="默认 Git 分支，为空时读取当前分支")
     default_cloudflare_project_name: str = Field(
@@ -385,7 +418,25 @@ class LiteratureSettings(_BaseEnvSettings):
 
     enabled: bool = Field(default=True, description="Enable Research Radar APIs and manual synchronization")
     schedule_enabled: bool = Field(default=False, description="Run literature synchronization on the scheduler")
-    interval_minutes: int = Field(default=360, ge=30, le=10080)
+    interval_minutes: int = Field(
+        default=15,
+        ge=5,
+        le=10080,
+        description="Normal literature sync cadence; sized to stay ahead of the curated-journal arrival rate",
+    )
+    catch_up_enabled: bool = Field(
+        default=True,
+        description="Schedule an earlier bounded follow-up whenever the Crossref checkpoint is truncated",
+    )
+    catch_up_interval_minutes: int = Field(default=5, ge=1, le=60)
+    catch_up_max_exception_backlog: int = Field(
+        default=500,
+        ge=1,
+        le=100_000,
+        description=(
+            "Pause accelerated catch-up before the distinct article/summary review backlog can reach this limit"
+        ),
+    )
     poll_interval_seconds: int = Field(default=30, ge=5, le=300)
     timezone: str = Field(default="UTC")
     contact_email: str = Field(default="research-radar@globalinfectiousdisease.com")
@@ -393,10 +444,52 @@ class LiteratureSettings(_BaseEnvSettings):
     taxonomy_path: Path = Field(default=Path("configs/literature/taxonomy.json"))
     disease_aliases_path: Path = Field(default=Path("configs/literature/disease_aliases.json"))
     initial_lookback_days: int = Field(default=14, ge=1, le=365)
-    index_overlap_days: int = Field(default=2, ge=0, le=30)
+    index_overlap_days: int = Field(
+        default=0,
+        ge=0,
+        le=30,
+        description=(
+            "Deprecated compatibility setting; stable index-date checkpoints now continue at the "
+            "committed watermark instead of replaying a multi-day window"
+        ),
+    )
     max_records_per_run: int = Field(default=300, ge=1, le=5000)
+    controlled_discovery_enabled: bool = Field(
+        default=True,
+        description="Rotate bounded disease/pathogen/MeSH/vaccine/AMR queries during ordinary sync",
+    )
+    controlled_discovery_queries_per_run: int = Field(default=8, ge=1, le=50)
+    controlled_discovery_records_per_query: int = Field(default=15, ge=1, le=100)
+    controlled_discovery_max_records_per_run: int = Field(default=120, ge=2, le=1000)
+    controlled_discovery_max_terms_per_query: int = Field(default=8, ge=1, le=20)
     max_europe_pmc_records: int = Field(default=200, ge=0, le=2000)
     europe_pmc_enabled: bool = Field(default=True)
+    official_guidance_enabled: bool = Field(
+        default=True,
+        description="Discover licensed public-health guidance metadata from WHO IRIS OAI-PMH",
+    )
+    official_guidance_oai_endpoint: str = Field(
+        default="https://iris.who.int/server/oai/request",
+        description="Reviewed WHO IRIS OAI-PMH endpoint; the client rejects other hosts and paths",
+    )
+    max_official_guidance_records: int = Field(default=60, ge=1, le=500)
+    publisher_rss_enabled: bool = Field(
+        default=False,
+        description="Poll the explicitly trusted publisher RSS/Atom whitelist for Online First metadata",
+    )
+    publisher_rss_feeds_path: Path = Field(default=Path("configs/literature/publisher_feeds.json"))
+    max_publisher_rss_records: int = Field(default=50, ge=1, le=500)
+    publisher_rss_concurrency: int = Field(default=3, ge=1, le=8)
+    publisher_rss_max_feed_bytes: int = Field(default=2_000_000, ge=16_384, le=10_000_000)
+    publisher_rss_seen_id_limit: int = Field(default=2_000, ge=100, le=20_000)
+    max_openalex_records: int = Field(default=300, ge=0, le=5000)
+    openalex_enabled: bool = Field(default=True)
+    openalex_api_key: str = Field(default="", description="Optional OpenAlex API key for a larger daily budget")
+    openalex_batch_size: int = Field(default=100, ge=1, le=100)
+    max_unpaywall_records: int = Field(default=300, ge=0, le=5000)
+    unpaywall_enabled: bool = Field(default=True)
+    metadata_enrichment_concurrency: int = Field(default=3, ge=1, le=12)
+    metadata_enrichment_min_interval_seconds: float = Field(default=0.05, ge=0.0, le=10.0)
     source_concurrency: int = Field(default=4, ge=1, le=12)
     request_timeout_seconds: int = Field(default=30, ge=5, le=120)
     max_retries: int = Field(default=3, ge=1, le=5)

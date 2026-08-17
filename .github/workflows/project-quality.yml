@@ -1,0 +1,158 @@
+name: Project quality gates
+
+on:
+  pull_request:
+  push:
+    branches: [master, development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-and-contracts:
+    name: Python, release, and contract tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SKIP_NETWORK_TESTS: "1"
+      CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            dashboard/package-lock.json
+            astro-site/package-lock.json
+      - run: python -m venv venv
+      - run: venv/bin/pip install --disable-pip-version-check -r requirements.txt
+      - run: npm ci
+        working-directory: dashboard
+      - run: npm ci
+        working-directory: astro-site
+      - name: Prepare missing-only deterministic site fixture
+        run: venv/bin/python scripts/automation/prepare_site_build_fixture.py
+      - name: Run complete offline Python suite
+        run: PYTHON_BIN=venv/bin/python ./tests/run_tests.sh --type all
+      - name: Regenerate and verify API/schema contracts
+        run: |
+          venv/bin/python scripts/export_situation_v3_contracts.py
+          venv/bin/python scripts/automation/check_contract_drift.py
+      - name: Reject whitespace-corrupted patches
+        run: git diff --check
+
+  dashboard:
+    name: Dashboard type, unit, and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+        working-directory: dashboard
+      - run: npm run lint
+        working-directory: dashboard
+      - run: npm test -- --run
+        working-directory: dashboard
+      - run: npm run build
+        working-directory: dashboard
+
+  astro-site:
+    name: Public site type and deterministic unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: astro-site/package-lock.json
+      - run: npm ci
+        working-directory: astro-site
+      - name: Prepare missing-only deterministic site fixture
+        env:
+          CI: "1"
+        run: python3 scripts/automation/prepare_site_build_fixture.py
+      - run: npm run check
+        working-directory: astro-site
+      - run: npm run test:charts
+        working-directory: astro-site
+      - run: npm run test:knowledge
+        working-directory: astro-site
+      - run: npm run test:research
+        working-directory: astro-site
+      - run: npm run test:seo
+        working-directory: astro-site
+      - run: npm run test:perf
+        working-directory: astro-site
+      - run: npm run build:astro
+        working-directory: astro-site
+
+  subscriptions-worker:
+    name: Subscription Worker contract and type tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cloudflare/subscriptions/package-lock.json
+      - run: npm ci
+        working-directory: cloudflare/subscriptions
+      - run: npm test
+        working-directory: cloudflare/subscriptions
+      - run: npm run typecheck
+        working-directory: cloudflare/subscriptions
+
+  migration-smoke:
+    name: PostgreSQL migration round-trip
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: globalid_migration_smoke
+          POSTGRES_USER: globalid
+          POSTGRES_PASSWORD: migration-smoke-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U globalid -d globalid_migration_smoke"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL_SYNC: postgresql://globalid:migration-smoke-only@localhost:5432/globalid_migration_smoke
+      MIGRATION_SMOKE_ALLOW_DESTRUCTIVE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m venv venv
+      - run: venv/bin/pip install --disable-pip-version-check -r requirements.txt
+      - name: Validate single-head graph and latest migration round-trip
+        run: venv/bin/python scripts/automation/smoke_migrations.py

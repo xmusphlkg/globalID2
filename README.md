@@ -154,6 +154,25 @@ the schema and reconcile existing snapshots idempotently with:
 venv/bin/python scripts/init_situation_history_database.py --backfill
 ```
 
+Situation Room v3 uses Pydantic as the canonical report contract, immutable
+analysis runs, history-first publication, robust quasi-Poisson detection, and
+BH FDR control. The normal operational sequence is:
+
+```bash
+venv/bin/alembic upgrade head
+venv/bin/python scripts/update_situation_room.py
+venv/bin/python scripts/generate_site_data.py
+cd astro-site && npm run build:astro
+cd .. && venv/bin/python scripts/validate_situation_release.py --site-dir astro-site/dist
+```
+
+Regenerate the JSON Schema, OpenAPI document, and both generated TypeScript
+clients with `venv/bin/python scripts/export_situation_v3_contracts.py`. Run the
+deterministic calibration suite with
+`venv/bin/python scripts/backtest_situation_v3.py`. See
+[`docs/SITUATION_ROOM_V3.md`](docs/SITUATION_ROOM_V3.md) for the data model,
+publication invariants, routes, and operational checks.
+
 The Python configuration layer also supports provider-specific credentials such as:
 
 - `OPENAI_API_KEY`

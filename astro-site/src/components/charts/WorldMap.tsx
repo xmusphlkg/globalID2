@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import EChartsReact from '../../lib/echartsReact';
-import echarts from '../../lib/echarts';
+import echarts from '../../lib/echartsMap';
 
 interface WorldMapProps {
   activeCodes: string[];

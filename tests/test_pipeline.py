@@ -145,12 +145,11 @@ def setup_logging_once():
 async def app_ready():
     """Initialise DB for a single test, then discard the connection pool."""
     from src.core import init_app
-    from src.core.database import get_engine
+    from src.core.database import dispose_database
     await init_app()
     yield
     # Dispose engine so connections don’t bleed into the next test’s loop
-    engine = get_engine()
-    await engine.dispose()
+    await dispose_database()
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -19,7 +19,8 @@ from src.generation.site_data_literature import (
     collect_literature_export,
     write_literature_artifacts,
 )
-from src.services.situation_room import latest_snapshot
+from src.literature.release_validation import assert_public_research_payload
+from src.services.situation_v3.persistence import latest_report_v3
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -57,9 +58,10 @@ async def export_public_research_artifacts(
         )
     payload = attach_surveillance_evidence(
         payload,
-        await latest_snapshot(),
+        await latest_report_v3(),
         diseases_by_id=diseases_by_id,
     )
+    assert_public_research_payload(payload)
     write_literature_artifacts(payload, output)
     return {
         "articles": len(payload.get("articles") or []),

@@ -64,6 +64,9 @@ export function normalizeFilters(payload: SubscriptionPayload): Array<{ type: st
     { type: "disease", keys: ["disease", "diseases"] },
     { type: "report_type", keys: ["report_type", "report_types"] },
     { type: "severity", keys: ["severity", "severities"] },
+    { type: "research_topic", keys: ["research_topic", "research_topics"] },
+    { type: "study_type", keys: ["study_type", "study_types"] },
+    { type: "peer_review_status", keys: ["peer_review_status", "peer_review_statuses"] },
   ];
   for (const spec of specs) {
     for (const value of spec.keys.flatMap((key) => toArray(payload[key]))) {

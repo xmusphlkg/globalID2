@@ -22,10 +22,10 @@ const situationDirectory = resolve('./src/data/situation');
 const researchFile = resolve('./src/data/research/index.json');
 
 function loadSituation() {
-  const latestFile = resolve(situationDirectory, 'latest.json');
+  const latestFile = resolve(situationDirectory, 'v3', 'latest.json');
   const latest = existsSync(latestFile) ? JSON.parse(readFileSync(latestFile, 'utf-8')) : null;
   const loadDirectory = (directoryName: string, pattern: RegExp) => {
-    const directory = resolve(situationDirectory, directoryName);
+    const directory = resolve(situationDirectory, 'v3', directoryName);
     return existsSync(directory)
       ? readdirSync(directory)
         .filter(name => pattern.test(name))
@@ -34,8 +34,8 @@ function loadSituation() {
   };
   return {
     latest,
-    weeks: loadDirectory('weeks', /^\d{4}-W\d{2}\.json$/),
-    months: loadDirectory('months', /^\d{4}-\d{2}\.json$/),
+    weeks: loadDirectory('weekly', /^\d{4}-W\d{2}\.json$/),
+    months: loadDirectory('monthly', /^\d{4}-\d{2}\.json$/),
   };
 }
 

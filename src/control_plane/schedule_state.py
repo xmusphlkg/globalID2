@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.exc import DBAPIError
 
 from src.core import get_database, get_logger
@@ -63,6 +63,34 @@ class ScheduleStateRepository:
                 await db.commit()
         except DBAPIError as exc:
             logger.warning("Unable to persist schedule state: {}", exc)
+
+    async def schedule_earlier(
+        self,
+        job_kind: str,
+        job_id: str,
+        next_run_at: Any,
+    ) -> bool:
+        """Atomically pull a persisted run forward without overwriting worker state."""
+
+        try:
+            async with get_database() as db:
+                result = await db.execute(
+                    update(ScheduledJobState)
+                    .where(
+                        ScheduledJobState.job_kind == job_kind,
+                        ScheduledJobState.job_id == job_id,
+                        or_(
+                            ScheduledJobState.next_run_at.is_(None),
+                            ScheduledJobState.next_run_at > next_run_at,
+                        ),
+                    )
+                    .values(next_run_at=next_run_at)
+                )
+                await db.commit()
+                return bool(result.rowcount)
+        except DBAPIError as exc:
+            logger.warning("Unable to advance schedule state: {}", exc)
+            return False
 
     async def remove(self, job_kind: str, job_id: str) -> None:
         try:

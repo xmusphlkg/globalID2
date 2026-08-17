@@ -2130,6 +2130,16 @@
   color: rgb(var(--color-accent));
 }
 
+.research-badge-topic {
+  border-color: rgb(var(--color-accent) / .38);
+  background: rgb(var(--color-accent) / .05);
+  color: rgb(var(--color-accent));
+}
+
+.research-badge-topic:hover {
+  border-color: rgb(var(--color-accent) / .7);
+}
+
 .research-card-doi {
   flex: 0 0 auto;
   max-width: 50%;
@@ -2166,6 +2176,44 @@
   margin-top: .38rem;
   color: rgb(var(--text-faint));
   font-size: .78rem;
+}
+
+.research-card-authors {
+  overflow: hidden;
+  margin-top: .38rem;
+  color: rgb(var(--text-muted));
+  font-size: .75rem;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-top: .65rem;
+}
+
+.research-card-action {
+  display: inline-flex;
+  min-height: 1.9rem;
+  align-items: center;
+  border: 1px solid rgb(var(--border) / .78);
+  background: rgb(var(--surface-raised) / .36);
+  padding: 0 .58rem;
+  color: rgb(var(--color-brand));
+  font-size: .68rem;
+  font-weight: 700;
+}
+
+.research-card-action:hover {
+  border-color: rgb(var(--color-brand) / .58);
+}
+
+.research-card-action-oa {
+  border-color: rgb(var(--color-teal) / .48);
+  color: rgb(var(--color-teal));
 }
 
 .research-card-facts {

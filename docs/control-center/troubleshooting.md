@@ -20,6 +20,12 @@ Copy `request_id` from the body/header and search structured API logs. Validatio
 
 Check that the schedule is enabled, has a next run, and the scheduler heartbeat is present. Inspect `scheduled_job_states` for `last_status` and `last_error`, then open the schedule's task history. Redis loss affects heartbeats/events but not persisted next/last run projections.
 
+For a data release in `retrying`, inspect `tasks.metadata.automatic_retry` and
+`next_attempt_at`. The database row, rather than an in-memory timer, owns the
+deadline. A healthy release scheduler will move it to `queued` when due. A
+terminal classification or exhausted retry cap intentionally requires fixing
+the underlying permanent error before a manual retry.
+
 ## The UI shows stale or unavailable data
 
 The browser must not use a backend URL directly. Inspect the same-origin `/api/v1/...` request, BFF `API_PROXY_TARGET`, mutation Origin, and request ID. Regenerate the client if API and frontend schemas differ:

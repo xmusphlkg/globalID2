@@ -8,7 +8,7 @@ interface Props {
   initialLanguage?: 'en' | 'zh';
 }
 
-const situationPublic = existsSync(resolve('./src/data/situation/latest.json'));
+const situationPublic = existsSync(resolve('./src/data/situation/v3/latest.json'));
 const situationPreviewEnabled = import.meta.env.DEV || process.env.SITUATION_SHADOW_PREVIEW === 'true';
 const situationDevPreview = situationPreviewEnabled && existsSync(resolve('./src/data/situation/shadow-latest.json'));
 const navLinks = [
@@ -68,7 +68,7 @@ const currentPath = Astro.url.pathname;
         <button
           id="theme-toggle"
           class="site-toggle-btn text-xs font-medium px-3 py-1.5 rounded-none border transition-all focus-ring"
-          aria-label="Toggle color theme"
+          aria-label="Light: switch color theme"
           title="切换主题 / Toggle Theme"
         >
           <span id="theme-toggle-label">Light</span>
@@ -77,7 +77,7 @@ const currentPath = Astro.url.pathname;
         <button
           id="lang-toggle"
           class="site-toggle-btn text-xs font-medium px-3 py-1.5 rounded-none border transition-all focus-ring"
-          aria-label="Toggle language"
+          aria-label="中文: switch language"
           title="切换语言 / Switch Language"
         >
           <span id="lang-toggle-label">中文</span>
@@ -88,6 +88,8 @@ const currentPath = Astro.url.pathname;
           id="mobile-menu-toggle"
           class="site-toggle-btn md:hidden p-2 rounded-none border transition-colors focus-ring"
           aria-label="Toggle navigation menu"
+          aria-controls="mobile-menu"
+          aria-expanded="false"
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -135,7 +137,9 @@ const currentPath = Astro.url.pathname;
   function applyTheme(theme: 'light' | 'dark') {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.classList.toggle('dark', theme === 'dark');
-    if (themeLabel) themeLabel.textContent = theme === 'dark' ? 'Light' : 'Dark';
+    const nextThemeLabel = theme === 'dark' ? 'Light' : 'Dark';
+    if (themeLabel) themeLabel.textContent = nextThemeLabel;
+    themeBtn?.setAttribute('aria-label', `${nextThemeLabel}: switch color theme`);
   }
 
   let currentTheme = getPreferredTheme();
@@ -163,7 +167,9 @@ const currentPath = Astro.url.pathname;
   function updateLang(lang: string) {
     document.documentElement.setAttribute('data-lang', lang);
     document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : 'en');
-    if (toggleLabel) toggleLabel.textContent = lang === 'en' ? '中文' : 'EN';
+    const nextLanguageLabel = lang === 'en' ? '中文' : 'EN';
+    if (toggleLabel) toggleLabel.textContent = nextLanguageLabel;
+    toggleBtn?.setAttribute('aria-label', `${nextLanguageLabel}: switch language`);
 
     // Update all elements with data-lang-en / data-lang-zh attributes
     document.querySelectorAll('[data-lang-en]').forEach((el) => {
@@ -195,5 +201,6 @@ const currentPath = Astro.url.pathname;
 
   mobileMenuBtn?.addEventListener('click', () => {
     mobileMenu?.classList.toggle('hidden');
+    mobileMenuBtn?.setAttribute('aria-expanded', String(!mobileMenu?.classList.contains('hidden')));
   });
 </script>

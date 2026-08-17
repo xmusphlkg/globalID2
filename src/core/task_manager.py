@@ -162,7 +162,10 @@ class TaskManager:
             elif status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
                 task.completed_at = now
                 if task.started_at:
-                    task.actual_duration = int((task.completed_at - task.started_at).total_seconds())
+                    started_at = task.started_at
+                    if started_at.tzinfo is None:
+                        started_at = started_at.replace(tzinfo=timezone.utc)
+                    task.actual_duration = int((task.completed_at - started_at).total_seconds())
             
             if error_message:
                 task.last_error = error_message

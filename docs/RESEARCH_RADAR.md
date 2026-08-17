@@ -7,29 +7,51 @@ surveillance observations.
 
 ## Data flow
 
-1. The `sync_literature` task reads Crossref records by index date from the core
-   journal registry in `configs/literature/journals.json`.
-2. Europe PMC enriches matching DOI records with PMID, PMCID, abstract metadata,
-   and open-access status.
-3. Transparent first-pass rules link diseases, countries, topics, and study
-   types. The discovery score helps ordering; it is not a quality score.
-4. DOI-first upserts make overlapping incremental windows idempotent. Each run
-   records its own watermark, counts, and error state.
+1. The `sync_literature` task reads Crossref records by index date from the 31
+   journal registry entries in `configs/literature/journals.json`. A stable
+   timestamp-boundary resume token prevents capped runs from replaying or
+   starving records that share the same Crossref index time. A separate capped,
+   rotating controlled-query plan searches disease aliases, named pathogens,
+   MeSH terms, vaccines, and antimicrobial-resistance terms in Crossref and
+   Europe PMC; its nested checkpoint prevents a large vocabulary from making a
+   single run unbounded.
+2. WHO IRIS OAI-PMH supplies licensed Dublin Core metadata for official
+   guidance and technical documents. The client is pinned to the reviewed WHO
+   HTTPS endpoint, reads metadata only, never follows document links, resumes
+   within a capped OAI page without loss, and isolates provider failure from the
+   core journal sync. Europe PMC enriches identifiers and biomedical metadata, OpenAlex supplies
+   controlled topics/keywords/concepts, and Unpaywall supplies validated lawful
+   open-access locations. Provider failures remain isolated and observable.
+3. A transparent lexical pass and a controlled-metadata second pass link
+   diseases, ISO countries, topics, and study types. Every link retains its
+   confidence, matched terms, and provenance. Controlled pathogen, pathogen
+   type, population, and human/animal/plant/basic/One-Health domain evidence is
+   stored alongside those links. Animal-only and basic-laboratory candidates
+   cannot auto-publish; plant-only candidates are excluded. The discovery
+   score helps ordering; it is not a quality score.
+4. Stable upserts deduplicate in the order DOI, PMID, PMCID, OpenAlex ID, then
+   the exact stable article ID. Overlapping incremental windows are therefore
+   idempotent without risking false merges from fuzzy title similarity. Each
+   run records its own watermark, counts, and error state.
 5. The versioned autopilot publishes or excludes records that pass deterministic
    quality gates. Editors see only the exception band and can override or lock
    any publication decision.
 6. The established site data export writes only published, integrity-safe
-   records to `astro-site/src/data/research`. The normal release job then builds
-   and deploys the public pages.
+   records with both English and Chinese structured summaries to
+   `astro-site/src/data/research`. Metadata-only records remain withheld rather
+   than creating thin indexable pages. A fail-closed release validator runs
+   before files cross the public boundary.
 
 ## Evidence enrichment and knowledge graph
 
 Research Radar has two deliberately separate advanced-result paths:
 
 - The public knowledge graph is deterministic. It connects published articles
-  to diseases, countries, topics, and study designs using the same versioned,
-  confidence-bearing classifier links stored during ingestion. Model output
-  cannot create public nodes or edges.
+  to diseases, pathogens, countries, topics, study designs, populations,
+  settings, interventions, and policy concepts using versioned,
+  confidence-bearing links. Population/setting statements are admitted only
+  from published bilingual structured summaries; model output cannot silently
+  create untraceable public nodes or edges.
 - Model enrichment uses the existing Model Center routing, caching,
   retry, and provider controls to create English and Chinese structured summary
   drafts. It is limited to open-access records by default, grounded in one
@@ -49,7 +71,8 @@ the published literature catalogue without creating a second signal detector.
 The relationship is deterministic and has two explicit levels:
 
 - `exact_disease_geography` requires classifier confidence of at least `0.78`
-  for both the disease and a geography named by the signal.
+  for both the disease and a geography named by the signal, a verifiable
+  publication date, and publication within the 730-day evidence window.
 - `disease_context` requires the same disease threshold but does not claim that
   the article studies the signal geography, validates the signal, or explains
   its cause.
@@ -71,7 +94,8 @@ build-only warning:
 
 1. `refresh_from_snapshot` reconciles the latest eligible Situation Room
    snapshot into one persistent gap per signal and disease. It records priority,
-   source snapshot, risk context, geography, and a transparent provider query
+   source report, review priority, attributable risk assessment when present,
+   geography, and a transparent provider query
    plan.
 2. The `discover_literature_gaps` task sends bounded disease-and-geography
    searches to Crossref and Europe PMC. Disease-only fallback runs only when an
@@ -85,9 +109,10 @@ build-only warning:
    confirmed and published automatically. Weak links, incomplete metadata,
    preprints, integrity flags, future dates, and borderline scores are rejected
    or retained as private exceptions according to the policy.
-5. Only a published article with a confirmed exact relationship closes the
-   public coverage gap. Rejected relationships are explicitly suppressed from
-   future public projections.
+5. Only a published article with a confirmed, date-verifiable, current-window
+   exact relationship closes the public coverage gap. Older matches remain
+   clearly labelled historical context. Rejected relationships are explicitly
+   suppressed from future public projections.
 
 The lifecycle states are `open`, `searching`, `review`, `no_results`, `error`,
 `covered`, `dismissed`, and `inactive`. Searches have a retry watermark and all
@@ -143,6 +168,15 @@ Use a no-write simulation before changing thresholds:
 venv/bin/python scripts/run_literature_autopilot.py --dry-run
 ```
 
+When classifier aliases, controlled metadata rules, or their version changes,
+rehearse and then backfill stored records before the next public release. This
+path makes no provider requests and preserves editorial publication decisions:
+
+```bash
+PYTHONPATH=. venv/bin/python scripts/reclassify_literature.py --dry-run
+PYTHONPATH=. venv/bin/python scripts/reclassify_literature.py
+```
+
 ## Public collections and feeds
 
 The published catalogue now projects several first-class collections from the
@@ -152,7 +186,20 @@ same release artifact:
 - geographic collections at `/research/countries/{code}/`;
 - public-health topic collections at `/research/topics/{topic}/`;
 - factual ISO-week briefs at `/research/weekly/{week}/`;
-- the latest 50 published records at `/research/rss.xml`.
+- a separately reviewed, prominently labelled preprint collection at
+  `/research/preprints/`;
+- integrity notices at `/research/integrity/`;
+- an interactive provenance-bearing graph at `/research/graph/` and bilingual
+  evidence retrieval at `/research/ask/`;
+- full and scoped RSS feeds for diseases, countries, topics, study types,
+  reviews/guidelines, peer-reviewed records, and preprints.
+
+Article pages include deterministic related-research recommendations with
+stable identifier deduplication. ISO-week briefs cite the exact released
+articles behind each finding, separate monitoring context from literature
+evidence, disclose evidence gaps, and identify themselves as automated rather
+than editor-reviewed. Ask GIDS likewise separates exact evidence, background
+evidence, and gaps; it does not make causal, clinical, or disease-risk claims.
 
 Disease hubs place monthly GIDS reported records beside Research Radar
 publication volume on independent scales. This is a navigation/comparison
@@ -170,17 +217,180 @@ recent metrics, topic movement, and weekly briefs until its date arrives.
   access are eligible for model enrichment.
 - PDFs, publisher figures, tables, and graphical abstracts are not downloaded
   or hosted.
+- Publisher RSS/Atom is discovery-only: the ingester reads the trusted feed's
+  title, identifier/DOI, article link, journal, and publication timestamp. It
+  deliberately ignores feed summaries/content and never follows article links
+  or downloads full text.
 - Retractions and expressions of concern cannot be published. Corrections and
-  integrity changes are recorded as status events.
+  integrity changes are recorded as status events and projected through a
+  minimal-field integrity-notice stream. Private source/event payloads never
+  cross that boundary.
 - A DOI or lawful open-access URL points readers to the original source.
 
 ## Operations
 
 Apply Alembic migrations through `0008_literature_evidence_gaps` before enabling the module. Manual
 sync is available when `LITERATURE__ENABLED=true`. Recurring sync additionally
-requires `LITERATURE__SCHEDULE_ENABLED=true`; its default cadence is six hours.
+requires `LITERATURE__SCHEDULE_ENABLED=true`; its default cadence is 15 minutes.
 Use a monitored contact address in `LITERATURE__CONTACT_EMAIL` so Crossref
 requests identify the operator.
+
+### Crossref capacity and catch-up
+
+The curated 31-journal stream is globally ordered, not divided into 31
+independent quotas. The Crossref client keeps a proportional look-ahead page for
+each journal and performs a k-way merge by index timestamp and stable record ID.
+This preserves the global `MAX_RECORDS_PER_RUN=300` boundary and fair resume
+semantics without fetching 300 records from every journal and discarding most
+of them. Checkpoints expose `records_prefetched`, `lookahead_records`,
+`pages_fetched`, `fetch_efficiency_ratio`, and per-journal page state.
+
+Production observation on 2026-08-17 showed roughly 300 records per 21 minutes
+at the active index boundary, while a bounded run took about 3–5 minutes. That
+evidence supports the 15-minute normal cadence; increasing the record cap would
+also require proportionally increasing the Europe PMC/OpenAlex/Unpaywall budget
+and was therefore not used as the default fix. When a scheduled run remains
+truncated, `LITERATURE__CATCH_UP_ENABLED=true` atomically pulls the next run
+forward to `LITERATURE__CATCH_UP_INTERVAL_MINUTES` (default 5). The existing
+active-task check still permits only one sync at a time.
+
+Accelerated catch-up is also subject to editorial backpressure. Before pulling
+the schedule forward, the worker counts the distinct article IDs currently in
+article review or summary review. It uses a set union, so an article with an
+article exception and two bilingual summary exceptions still counts once; it
+does not reuse historical autopilot counters. Records explicitly marked with
+`metadata.autopilot.decision=defer` or
+`generation_metadata.autopilot.decision=defer` are inactive, as are archived
+summary statuses and explicit `archive` decisions. Missing or unknown decision
+metadata remains active fail-safe; if either the article or one of its summaries
+is still active, the article remains in the union. The worker conservatively adds
+the configured maximum records for the next run to that observed count. If the
+projected upper bound reaches
+`LITERATURE__CATCH_UP_MAX_EXCEPTION_BACKLOG` (default `500`), or if the read-only
+count fails, it does not schedule the five-minute follow-up. The already
+persisted normal 15-minute run remains in place, so source ingestion slows but
+does not stop completely. Task results expose only integer
+`catch_up_backlog_observed_count`, limit/projected counts, the boolean
+`catch_up_paused_backpressure`, and a stable reason code; titles, IDs, and error
+text are never included.
+
+Each run records `source_catch_up_required` and
+`source_remaining_index_span_seconds`; the checkpoint records the equivalent
+`catch_up_required` and `remaining_index_span_seconds`. Catch-up is complete only
+when `source_truncated=0`. After that, the next run continues at the committed
+watermark; it does not reopen the former two-day overlap. Crossref index dates
+are update watermarks, and the inclusive second-resolution boundary already
+provides a small replay without consuming the batch with two days of duplicates.
+`LITERATURE__INDEX_OVERLAP_DAYS` remains a deprecated compatibility setting and
+defaults to `0`; use an explicit manual `since` only for a deliberate historical
+replay. Do not increase the health source-lag threshold to make a backlog appear
+healthy: source watermark lag remains the authoritative freshness SLO. If repeated truncated runs do not
+reduce the remaining index span, stop automatic catch-up and investigate
+Crossref errors, worker duration, enrichment throttles, or an abnormal source
+volume increase before changing limits.
+
+### Optional publisher Online First feeds
+
+Crossref remains the primary incremental source. To reduce the Online First
+delay for a small set of journals, set `LITERATURE__PUBLISHER_RSS_ENABLED=true`.
+The only URLs eligible for polling are the HTTPS feeds declared in
+`configs/literature/publisher_feeds.json`; each entry must have a unique
+`feed_id`, a trusted journal/ISSN, and an exact `allowed_hosts` entry. Redirects
+outside that host list are rejected. Treat changes to this file as a source
+allowlist change requiring review—do not accept user-supplied feed URLs.
+
+The poller sends `If-None-Match` and `If-Modified-Since` when a feed supplies
+validators. Per-feed validators and stable entry IDs are committed inside the
+completed literature ingest checkpoint under `checkpoint.rss`. If
+`LITERATURE__MAX_PUBLISHER_RSS_RECORDS` truncates a feed batch, the new validator
+is intentionally withheld until the remaining stable IDs have been consumed;
+this prevents a later `304 Not Modified` from skipping entries. Feed failures
+are isolated and recorded in the run counts/checkpoint, while the last committed
+validator remains available for recovery.
+
+RSS records pass through the same DOI/PMID/PMCID/OpenAlex/article-ID
+deduplication, classification, integrity, editorial-review, and publication
+gates as Crossref records. RSS does not assert open-access rights and cannot by
+itself make a record public. Relevant bounds are:
+
+- `LITERATURE__MAX_PUBLISHER_RSS_RECORDS` (default `50`)
+- `LITERATURE__PUBLISHER_RSS_CONCURRENCY` (default `3`)
+- `LITERATURE__PUBLISHER_RSS_MAX_FEED_BYTES` (default `2000000`)
+- `LITERATURE__PUBLISHER_RSS_SEEN_ID_LIMIT` (default `2000`)
+
+Optional metadata enrichment is fail-open to the editorial-safe boundary.
+Europe PMC, Unpaywall, and OpenAlex failures are isolated per provider so a
+successful Crossref batch can still be normalized and stored; later providers
+continue even if an earlier one fails. Run counts always include the integer
+`enrichment_errors`, provider-specific error counters, and the bounded
+`enrichment_failed_providers` name list. They never include request URLs,
+exception text, or response payloads. A record that otherwise qualifies for
+automatic publication is held in `review` when the enrichment set is degraded,
+while an existing current record keeps its editorial publication state.
+Integrity exclusions still take precedence. Crossref failure remains fatal for
+the ingest run because it is the primary incremental source.
+
+### Official public-health guidance metadata
+
+`LITERATURE__OFFICIAL_GUIDANCE_ENABLED=true` enables bounded discovery from
+the WHO Institutional Repository for Information Sharing at the pinned
+`https://iris.who.int/server/oai/request` endpoint. Only OAI headers and Dublin
+Core fields are parsed. The client does not download PDFs or follow landing-page
+links. Descriptive metadata is treated as an abstract source only when the
+record declares a recognized open licence; otherwise it remains private source
+metadata. Capped pages resume with the same request token plus consumed record
+IDs, and the committed state is stored at `checkpoint.official_guidance`.
+
+WHO records use the same classifier, DOI-first deduplication, bilingual-summary,
+integrity, editorial, and public release gates as journal articles. An OAI
+record therefore cannot become public merely because WHO supplied it. The
+default per-run cap is controlled by `LITERATURE__MAX_OFFICIAL_GUIDANCE_RECORDS`
+(`60`).
+
+### Controlled high-recall discovery
+
+`LITERATURE__CONTROLLED_DISCOVERY_ENABLED=true` rotates a deterministic query
+plan across disease aliases, controlled pathogen names, MeSH expressions,
+vaccines, vaccine safety, and AMR. Query strings, plan fingerprint, selected
+batch IDs, retries, and next offset are retained in
+`checkpoint.controlled_discovery`. Per-run query and record caps prevent this
+high-recall path from replacing the curated core-journal path with an unbounded
+search. Results from both providers enter the same exact-identifier deduplication
+and semantic classification pipeline.
+
+### Existing-library metadata backfill
+
+The OpenAlex/Unpaywall backfill command is dry-run by default. It reads only
+DOI-bearing records and reports prospective changes without writing the
+database or checkpoint:
+
+```bash
+PYTHONPATH=. venv/bin/python scripts/backfill_literature_metadata.py --limit 100
+```
+
+Use a small explicit apply canary before a controlled full run. Apply mode
+commits one batch at a time and records its last committed database ID in
+`data/cache/literature_metadata_backfill.json`; rerunning the same command
+resumes automatically. A provider failure exits non-zero and leaves the
+watermark before the affected batch so it is retried rather than skipped.
+Run only one apply process per checkpoint/database at a time.
+
+```bash
+PYTHONPATH=. venv/bin/python scripts/backfill_literature_metadata.py \
+  --apply --limit 100 --batch-size 25 --concurrency 2 --min-interval-seconds 0.1
+PYTHONPATH=. venv/bin/python scripts/backfill_literature_metadata.py \
+  --apply --batch-size 50 --concurrency 2 --min-interval-seconds 0.1
+```
+
+Use `--providers openalex` or `--providers unpaywall` for an isolated provider
+run. Provider selections are part of the checkpoint identity; use a separate
+`--checkpoint-file` or `--no-resume` when changing that selection. The command
+preserves publication status, featured state, classifier links, summaries, and
+editorial metadata. It updates only stable OpenAlex ID, lawful OA evidence,
+source URLs, and bounded internal provider metadata. OpenAlex persistence is
+allowlisted to topics, institutions, author country codes, citation counts, and
+bounded referenced/related work IDs; abstract indexes, full text, and unbounded
+provider payloads are discarded.
 
 Model enrichment additionally requires a tested Model Center route and
 `LITERATURE__AI_ENRICHMENT_ENABLED=true`. Set
@@ -207,3 +417,11 @@ The data release mechanism already includes the generated Research Radar files.
 Literature task completion joins the same automatic release trigger when a
 public decision actually changes. A no-op scheduled enrichment run does not
 cause a release. No separate publishing command is needed.
+
+For a local release rehearsal, regenerate the projection and run the fail-closed
+validator before the Astro build:
+
+```bash
+PYTHONPATH=. venv/bin/python scripts/export_literature_site_data.py
+PYTHONPATH=. venv/bin/python scripts/validate_research_release.py
+```

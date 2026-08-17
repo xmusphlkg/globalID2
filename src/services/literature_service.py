@@ -8,12 +8,19 @@ from datetime import datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select, union
 
 from src.control_plane.schedule_state import schedule_state_repository
 from src.core import get_config, get_database, get_logger
 from src.core.task_manager import task_manager
-from src.domain import Task, TaskPriority, TaskStatus, TaskType
+from src.domain import (
+    LiteratureArticle,
+    LiteratureSummary,
+    Task,
+    TaskPriority,
+    TaskStatus,
+    TaskType,
+)
 from src.literature import LiteraturePipeline
 from src.literature.enrichment import LiteratureEnrichmentPipeline
 
@@ -30,6 +37,41 @@ def _value(value: Any) -> str:
 
 
 _ACTIVE_STATUSES = {"pending", "queued", "running", "retrying"}
+
+
+async def _count_catch_up_exception_backlog() -> int:
+    """Count distinct articles with a current article or summary review exception.
+
+    This deliberately avoids historical autopilot counters. An article in
+    publication review with one or two review summaries is one editorial work
+    item, not two or three. Explicit ``defer``/``archive`` decisions are
+    inactive; missing or unknown decision metadata stays active fail-safe.
+    """
+
+    article_decision = LiteratureArticle.metadata_["autopilot"]["decision"].as_string()
+    summary_decision = LiteratureSummary.generation_metadata["autopilot"]["decision"].as_string()
+    article_reviews = select(LiteratureArticle.article_id.label("article_id")).where(
+        LiteratureArticle.publication_status == "review",
+        or_(
+            article_decision.is_(None),
+            article_decision.not_in(("defer", "archive")),
+        ),
+    )
+    summary_reviews = select(LiteratureSummary.article_id.label("article_id")).where(
+        LiteratureSummary.status == "review",
+        or_(
+            summary_decision.is_(None),
+            summary_decision.not_in(("defer", "archive")),
+        ),
+    )
+    distinct_review_articles = union(article_reviews, summary_reviews).subquery()
+    async with get_database() as db:
+        value = (
+            await db.execute(
+                select(func.count()).select_from(distinct_review_articles)
+            )
+        ).scalar_one()
+    return int(value or 0)
 
 
 def _roll_forward_stale_next_run(
@@ -123,6 +165,16 @@ class LiteratureService:
         assert self._stop_event is not None
         cfg = self._config()
         while not self._stop_event.is_set():
+            # A worker can pull the next core run forward after committing a
+            # truncated checkpoint. Refresh that one persisted timestamp so a
+            # six-hour-old in-memory cadence cannot suppress catch-up work.
+            if cfg.schedule_enabled and getattr(cfg, "catch_up_enabled", False):
+                persisted = (await schedule_state_repository.load("literature")).get(
+                    self.JOB_ID,
+                    {},
+                )
+                if persisted.get("next_run_at") is not None:
+                    self._state.next_run_at = persisted["next_run_at"]
             now = datetime.now(ZoneInfo(cfg.timezone))
             if self._state.next_run_at is None:
                 self._state.next_run_at = self._next_run(now)
@@ -221,7 +273,66 @@ class LiteratureService:
                 await schedule_state_repository.save("literature", self.JOB_ID, self._state)
 
     async def execute_task(self, task: Task) -> dict[str, Any]:
-        return await LiteraturePipeline(self._config()).execute(task)
+        cfg = self._config()
+        result = await LiteraturePipeline(cfg).execute(task)
+        result["catch_up_scheduled"] = 0
+        result["catch_up_paused_backpressure"] = 0
+        result["catch_up_backlog_observed_count"] = None
+        result["catch_up_backlog_limit"] = int(
+            getattr(cfg, "catch_up_max_exception_backlog", 500)
+        )
+        scheduled_trigger = bool((task.input_data or {}).get("scheduled_trigger"))
+        if (
+            scheduled_trigger
+            and cfg.schedule_enabled
+            and getattr(cfg, "catch_up_enabled", False)
+            and bool(result.get("source_truncated"))
+        ):
+            backlog_limit = result["catch_up_backlog_limit"]
+            try:
+                backlog_count = await _count_catch_up_exception_backlog()
+            except Exception as exc:
+                result["catch_up_paused_backpressure"] = 1
+                result["catch_up_backpressure_reason"] = "backlog_measurement_unavailable"
+                logger.warning(
+                    "Research Radar catch-up paused because backlog measurement failed error_type={}",
+                    type(exc).__name__ or "Exception",
+                )
+                return result
+            result["catch_up_backlog_observed_count"] = backlog_count
+            projected_upper_bound = backlog_count + int(
+                getattr(cfg, "max_records_per_run", 300)
+            )
+            result["catch_up_backlog_projected_upper_bound"] = projected_upper_bound
+            if projected_upper_bound >= backlog_limit:
+                result["catch_up_paused_backpressure"] = 1
+                result["catch_up_backpressure_reason"] = "exception_backlog_headroom_exhausted"
+                logger.info(
+                    "Research Radar catch-up paused by backpressure backlog_count={} projected_upper_bound={} limit={}",
+                    backlog_count,
+                    projected_upper_bound,
+                    backlog_limit,
+                )
+                return result
+            now = datetime.now(ZoneInfo(cfg.timezone))
+            next_run_at = now + timedelta(
+                minutes=getattr(cfg, "catch_up_interval_minutes", 5)
+            )
+            advanced = await schedule_state_repository.schedule_earlier(
+                "literature",
+                self.JOB_ID,
+                next_run_at,
+            )
+            if advanced:
+                self._state.next_run_at = next_run_at
+                logger.info(
+                    "Research Radar catch-up scheduled next_run_at={} remaining_index_span_seconds={}",
+                    next_run_at.isoformat(),
+                    int(result.get("source_remaining_index_span_seconds") or 0),
+                )
+            result["catch_up_scheduled"] = int(advanced)
+            result["catch_up_next_run_at"] = _iso(next_run_at) if advanced else None
+        return result
 
     async def trigger_enrichment(
         self,
@@ -478,6 +589,13 @@ class LiteratureService:
                 "schedule_enabled": cfg.schedule_enabled,
                 "source": "Crossref + Europe PMC" if cfg.europe_pmc_enabled else "Crossref",
                 "max_records_per_run": cfg.max_records_per_run,
+                "catch_up_enabled": getattr(cfg, "catch_up_enabled", False),
+                "catch_up_interval_minutes": getattr(cfg, "catch_up_interval_minutes", None),
+                "catch_up_max_exception_backlog": getattr(
+                    cfg,
+                    "catch_up_max_exception_backlog",
+                    None,
+                ),
                 "ai_enrichment_enabled": cfg.ai_enrichment_enabled,
                 "ai_enrichment_languages": cfg.ai_enrichment_languages,
                 "ai_enrichment_batch_size": cfg.ai_enrichment_batch_size,

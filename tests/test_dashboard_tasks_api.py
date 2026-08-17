@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from dashboard.api.routers.tasks import list_tasks
-from src.core.database import get_engine, get_session_maker
+from src.core.database import dispose_database, get_session_maker
 from src.domain.task import Task, TaskPriority, TaskType
 
 
@@ -56,4 +56,4 @@ async def test_list_tasks_search_matches_disease_id_in_input_data():
             assert int(response.headers["X-Total-Count"]) >= 1
             await db.rollback()
     finally:
-        await get_engine().dispose()
+        await dispose_database()

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "feeds": [
+    {
+      "feed_id": "nature-medicine-online",
+      "publisher": "Springer Nature",
+      "journal": "Nature Medicine",
+      "issn": ["1078-8956"],
+      "url": "https://www.nature.com/nm.rss",
+      "allowed_hosts": ["www.nature.com"],
+      "enabled": true
+    },
+    {
+      "feed_id": "nature-communications-online",
+      "publisher": "Springer Nature",
+      "journal": "Nature Communications",
+      "issn": ["2041-1723"],
+      "url": "https://www.nature.com/ncomms.rss",
+      "allowed_hosts": ["www.nature.com"],
+      "enabled": true
+    },
+    {
+      "feed_id": "bmj-recent",
+      "publisher": "BMJ Publishing Group",
+      "journal": "BMJ",
+      "issn": ["0959-8138"],
+      "url": "https://www.bmj.com/rss/recent.xml",
+      "allowed_hosts": ["www.bmj.com"],
+      "enabled": false,
+      "disabled_reason": "The publisher endpoint currently redirects from HTTPS to an HTTP-only feed; keep disabled until a reviewed HTTPS endpoint is available."
+    }
+  ]
+}

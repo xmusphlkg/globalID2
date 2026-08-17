@@ -10,6 +10,29 @@ from typing import Any, Awaitable, Callable
 from zoneinfo import ZoneInfo
 
 
+class ReleasePreflightError(RuntimeError):
+    """A release preflight failure retaining integration diagnostics."""
+
+    release_stage = "release_preflight"
+
+    def __init__(self, checks: dict[str, Any]) -> None:
+        self.checks = checks
+        diagnostics = [str(item) for item in checks.get("blockers") or []]
+        for section in ("cloudflare", "git", "raw_archive"):
+            payload = checks.get(section) or {}
+            for key in ("error", "read_check_output", "write_check_output"):
+                value = str(payload.get(key) or "").strip()
+                if value:
+                    diagnostics.append(value)
+        super().__init__("Release preflight failed: " + "; ".join(diagnostics))
+
+
+class ReleaseVerificationError(RuntimeError):
+    """Cloudflare production verification failure with stage context."""
+
+    release_stage = "cloudflare_production_verification"
+
+
 @dataclass(frozen=True)
 class ReleasePipelineRuntime:
     """External collaborators and stable release constants for one execution."""
@@ -74,7 +97,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         metadata={"event": "release_preflight", "release_job_id": job.job_id},
     )
     if not checks["overall_ready"]:
-        raise RuntimeError("Release preflight failed: " + "; ".join(checks["blockers"]))
+        raise ReleasePreflightError(checks)
 
     tz = ZoneInfo(job.timezone or service._config().timezone)
     # Keep generation, publishing, and the release record on the exact same
@@ -98,7 +121,15 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         or job.github_branch
         or await service._current_git_branch()
     ).strip()
-    release_identity = await service._site_release_identity(deployment_branch)
+    identity_loader = getattr(service, "_release_identity_for_task", None)
+    if identity_loader is None:  # Compatibility for lightweight integrations/tests.
+        release_identity = await service._site_release_identity(deployment_branch)
+        release_checkpoints: dict[str, Any] = {}
+    else:
+        release_identity, release_checkpoints = await identity_loader(
+            task,
+            deployment_branch,
+        )
 
     await runtime.task_manager.update_task_progress(task.task_uuid, 5)
     raw_archive_cfg = getattr(service, "_raw_archive_runtime", lambda: runtime.get_config().raw_archive)()
@@ -148,6 +179,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     downloads_published = False
     raw_archive_published = False
     pages_deployed = False
+    situation_alert_dispatch_attempted = False
     cloudflare_deployment = None
     repository_publications: list[tuple[str, Awaitable[None]]] = []
 
@@ -271,35 +303,68 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     if job.include_cloudflare_deploy:
         if not deployment_branch:
             raise RuntimeError("Cloudflare production branch could not be resolved.")
-        await service._run_logged_command(
-            task.task_uuid,
-            title="Deploy Cloudflare Pages",
-            cmd=service._cloudflare_deploy_command(
+        deploy_checkpoint = dict(release_checkpoints.get("cloudflare_deploy") or {})
+        if deploy_checkpoint.get("release_id") == release_identity["release_id"]:
+            await runtime.task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Cloudflare Deploy Reused",
+                content=(
+                    "The prior attempt completed the Cloudflare deploy command for "
+                    f"{release_identity['release_id']}; retrying verification only."
+                ),
+                content_type="text",
+                metadata={
+                    "event": "cloudflare_pages_deploy_reused",
+                    "release_job_id": job.job_id,
+                    "release_id": release_identity["release_id"],
+                },
+            )
+        else:
+            await service._run_logged_command(
+                task.task_uuid,
+                title="Deploy Cloudflare Pages",
+                cmd=service._cloudflare_deploy_command(
+                    project_name=project_name,
+                    branch=deployment_branch,
+                    source_commit=release_identity["source_commit"],
+                    commit_message=publish_commit_message,
+                    commit_dirty=release_identity["commit_dirty"],
+                ),
+                cwd=runtime.astro_dir,
+                env={
+                    "CI": "1",
+                    "CLOUDFLARE_API_TOKEN": service._cloudflare_api_token(),
+                    "CLOUDFLARE_ACCOUNT_ID": service._cloudflare_account_id(),
+                },
+                metadata={
+                    "event": "cloudflare_pages_deploy",
+                    "release_job_id": job.job_id,
+                    "release_id": release_identity["release_id"],
+                    "deployment_branch": deployment_branch,
+                },
+                timeout_seconds=runtime.cloudflare_deploy_timeout_seconds,
+            )
+            # This checkpoint is committed before production verification.  A
+            # transient fetch failure can therefore retry verification without
+            # creating a second Pages deployment.
+            await service._record_release_checkpoint(
+                task.task_uuid,
+                "cloudflare_deploy",
+                {
+                    "release_id": release_identity["release_id"],
+                    "source_commit": release_identity["source_commit"],
+                    "deployment_branch": deployment_branch,
+                },
+            )
+        try:
+            cloudflare_deployment = await service._verify_cloudflare_production_release(
                 project_name=project_name,
-                branch=deployment_branch,
-                source_commit=release_identity["source_commit"],
-                commit_message=publish_commit_message,
-                commit_dirty=release_identity["commit_dirty"],
-            ),
-            cwd=runtime.astro_dir,
-            env={
-                "CI": "1",
-                "CLOUDFLARE_API_TOKEN": service._cloudflare_api_token(),
-                "CLOUDFLARE_ACCOUNT_ID": service._cloudflare_account_id(),
-            },
-            metadata={
-                "event": "cloudflare_pages_deploy",
-                "release_job_id": job.job_id,
-                "release_id": release_identity["release_id"],
-                "deployment_branch": deployment_branch,
-            },
-            timeout_seconds=runtime.cloudflare_deploy_timeout_seconds,
-        )
-        cloudflare_deployment = await service._verify_cloudflare_production_release(
-            project_name=project_name,
-            subdomain=str(cloudflare_check.get("subdomain") or "").strip(),
-            release_identity=release_identity,
-        )
+                subdomain=str(cloudflare_check.get("subdomain") or "").strip(),
+                release_identity=release_identity,
+            )
+        except RuntimeError as exc:
+            raise ReleaseVerificationError(str(exc)) from exc
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid,
             entry_type="success",
@@ -313,6 +378,41 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             },
         )
         pages_deployed = True
+        # Subscriber mail is downstream of a verified production deployment.
+        # The dispatcher itself accepts analyst-reviewed signals only, is
+        # idempotent per report/signal, and skips cleanly when optional runtime
+        # configuration is absent. Secrets are child-environment values only;
+        # they never enter command arguments or workbook metadata.
+        alert_env_names = (
+            "SITUATION_ALERT_WORKER_URL",
+            "SITUATION_PUBLIC_REPORT_URL",
+            "SITUATION_ALERT_INGEST_TOKEN",
+            "SITUATION_ALERT_DISPATCH_STRICT",
+            "SITUATION_ALERT_TIMEOUT_SECONDS",
+        )
+        env_value = getattr(service, "_env_value", lambda _name, _default="": "")
+        await service._run_logged_command(
+            task.task_uuid,
+            title="Dispatch Reviewed Situation Alerts",
+            cmd=[
+                str(python_path),
+                "scripts/automation/dispatch_situation_alerts.py",
+                "--report",
+                "astro-site/dist/site-data/situation/v3/latest.json",
+            ],
+            cwd=runtime.root_dir,
+            env={
+                "CI": "1",
+                **{name: env_value(name) for name in alert_env_names},
+            },
+            metadata={
+                "event": "situation_alert_dispatch",
+                "release_job_id": job.job_id,
+                "release_id": release_identity["release_id"],
+            },
+            timeout_seconds=10 * 60,
+        )
+        situation_alert_dispatch_attempted = True
     else:
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid,
@@ -343,6 +443,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         "raw_archive_branch": raw_archive_branch if raw_archive_cfg.enabled else None,
         "pages_deployed": pages_deployed,
         "subscription_options_synced": subscription_options_synced,
+        "situation_alert_dispatch_attempted": situation_alert_dispatch_attempted,
         "preflight": checks,
     }
 
@@ -365,6 +466,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             f"Site release: {release_identity['release_id']}\n"
             f"Production URL: {cloudflare_deployment.get('production_url') if cloudflare_deployment else '-'}\n"
             f"Subscription options synced: {'yes' if subscription_options_synced else 'no'}\n"
+            f"Reviewed Situation alerts dispatched: {'yes' if situation_alert_dispatch_attempted else 'no'}\n"
             f"Download repo: {download_repo_url or '-'}"
         ),
         content_type="text",

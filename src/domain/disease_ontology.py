@@ -603,6 +603,13 @@ class DiseaseSeriesObservation(BaseModel):
             "time",
         ),
         Index(
+            "idx_disease_series_observation_identity_time",
+            "series_code",
+            "geography_key",
+            "dimension_key",
+            "time",
+        ),
+        Index(
             "idx_disease_series_observation_quality",
             "quality_status",
             "suppressed",

@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_database, get_logger
@@ -484,6 +485,60 @@ class CrawlService:
             save_raw=save_raw,
             fill_missing=fill_missing,
         )
+
+    async def fail_current_run(
+        self,
+        *,
+        country_code: str,
+        source: str,
+        started_after: datetime,
+        error: BaseException,
+        status: str = "failed",
+    ) -> Optional[int]:
+        """Finalize the run opened by a failed task invocation.
+
+        Pipelines create their audit row before external I/O.  This bounded
+        lookup is safe because crawl tasks are serialized per country and the
+        timestamp fence prevents an older orphan from being rewritten when the
+        current run failed before it could create its own audit row.
+        """
+
+        if status not in {"failed", "cancelled"}:
+            raise ValueError(f"Unsupported CrawlRun terminal status: {status}")
+        normalized_country = str(country_code or "").strip().upper()
+        normalized_source = str(source or "all").strip().lower()
+        fence = started_after
+        if fence.tzinfo is None:
+            fence = fence.replace(tzinfo=timezone.utc)
+        else:
+            fence = fence.astimezone(timezone.utc)
+        async with get_database() as db:
+            run = (
+                await db.execute(
+                    select(CrawlRun)
+                    .where(
+                        CrawlRun.country_code == normalized_country,
+                        CrawlRun.source == normalized_source,
+                        CrawlRun.status == "running",
+                        CrawlRun.started_at >= fence,
+                    )
+                    .order_by(CrawlRun.started_at.desc())
+                    .with_for_update(skip_locked=True)
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            if run is None:
+                return None
+            run.status = status
+            run.finished_at = datetime.now(timezone.utc)
+            run.error_message = str(error)[-12000:]
+            metadata = dict(run.metadata_ or {})
+            metadata["failed_closed"] = status == "failed"
+            metadata["terminal_status"] = status
+            run.metadata_ = metadata
+            run_id = run.id
+            await db.commit()
+        return run_id
 
     @staticmethod
     def _configure_monthly_runtime_policy(

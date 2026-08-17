@@ -1,4 +1,4 @@
-"""Official event and CDC respiratory data adapters for Situation Room v2."""
+"""Official event and CDC respiratory adapters shared by Situation pipelines."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from src.domain import (
     DiseaseSeriesObservation,
     DiseaseSurveillanceSeries,
     PublicHealthEvent,
+    SituationOverride,
 )
 
 
@@ -32,7 +33,10 @@ EVENT_SOURCE_URLS = {
     "who_don": WHO_DON_API_URL,
     "ecdc_cdtr": "https://www.ecdc.europa.eu/en/publications-and-data/monitoring/weekly-threats-reports",
     "africa_cdc_ebs": "https://africacdc.org/document-tag/ebs-weekly-report/",
-    "paho_alerts": "https://www.paho.org/en/epidemiological-alerts-and-updates",
+    # The rendered alerts landing page currently rejects non-browser clients.
+    # PAHO's official DVA documents archive exposes the same alert/update
+    # records as stable document metadata and is suitable for unattended reads.
+    "paho_alerts": "https://www.paho.org/en/documents/subsite/detection-verification-and-risk-assessment-dva",
 }
 CDC_DATASETS = {
     "positivity": "https://data.cdc.gov/resource/seuz-s2cv.json",
@@ -171,7 +175,10 @@ def _parse_official_index(source: str, html: str, base_url: str, required_path: 
     soup = BeautifulSoup(html, "html.parser")
     records: list[dict[str, Any]] = []
     seen: set[str] = set()
-    for link in soup.select("article a[href], h2 a[href], h3 a[href], .card a[href], .views-row a[href]"):
+    for link in soup.select(
+        "article a[href], h2 a[href], h3 a[href], .card a[href], "
+        ".views-row a[href], .views-field-title a[href]"
+    ):
         title = link.get_text(" ", strip=True)
         href = urljoin(base_url, str(link.get("href") or ""))
         if len(title) < 8 or not href.startswith("http") or href in seen:
@@ -179,7 +186,24 @@ def _parse_official_index(source: str, html: str, base_url: str, required_path: 
         if required_path and required_path not in href:
             continue
         seen.add(href)
-        parent_text = link.parent.get_text(" ", strip=True) if link.parent else ""
+        container = None
+        for parent in link.parents:
+            classes = {
+                str(value) for value in (parent.get("class") or [])
+            } if hasattr(parent, "get") else set()
+            if (
+                getattr(parent, "name", None) == "article"
+                or "card" in classes
+                or "views-row" in classes
+                or (
+                    "col" in classes
+                    and any(value.startswith("col-") for value in classes)
+                )
+            ):
+                container = parent
+                break
+        text_node = container or link.parent
+        parent_text = text_node.get_text(" ", strip=True) if text_node else ""
         risk_match = re.search(r"\brisk(?:\s+(?:is|level|assessment)?\s*(?:of|:)?\s*)(low|moderate|high|very high)\b", parent_text, re.IGNORECASE)
         records.append(
             {
@@ -204,7 +228,21 @@ def parse_africa_cdc_ebs(html: str, base_url: str = EVENT_SOURCE_URLS["africa_cd
 
 
 def parse_paho_alerts(html: str, base_url: str = EVENT_SOURCE_URLS["paho_alerts"]) -> list[dict[str, Any]]:
-    return _parse_official_index("paho_alerts", html, base_url)
+    records = _parse_official_index(
+        "paho_alerts",
+        html,
+        base_url,
+        required_path="/en/documents/",
+    )
+    return [
+        item
+        for item in records
+        if re.search(
+            r"\bepidemiological\s+(?:alert|update)\b",
+            str(item.get("title") or ""),
+            re.IGNORECASE,
+        )
+    ]
 
 
 DISEASE_ALIASES: dict[str, list[str]] = {
@@ -316,31 +354,93 @@ def normalize_event(item: dict[str, Any], catalogue: Iterable[dict[str, Any]]) -
     }
 
 
+def _retryable_event_source_error(exc: Exception) -> bool:
+    """Retry only transient transport and upstream availability failures."""
+
+    if isinstance(exc, (httpx.TimeoutException, httpx.NetworkError)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code == 429 or exc.response.status_code >= 500
+    return False
+
+
+def _event_source_error_summary(exc: Exception) -> str:
+    """Keep health diagnostics useful even for exceptions with an empty string."""
+
+    message = str(exc).strip()
+    summary = type(exc).__name__ if not message else f"{type(exc).__name__}: {message}"
+    return summary[:240]
+
+
 async def fetch_external_events(config: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
     catalogue = load_disease_catalogue()
+    headers = {"User-Agent": "GIDS Situation Room/2.0 (+https://globalinfectiousdisease.com/situation/methodology/)"}
+    semaphore = asyncio.Semaphore(4)
+
+    async def fetch_one(client: httpx.AsyncClient, source: str) -> tuple[str, list[dict[str, Any]], dict[str, Any]]:
+        url = EVENT_SOURCE_URLS.get(source)
+        if not url:
+            return source, [], {"status": "not_checked", "checked_at": utc_now().isoformat()}
+        checked_at = utc_now().isoformat()
+        async with semaphore:
+            last_error: Exception | None = None
+            maximum_attempts = 3
+            for attempt in range(1, maximum_attempts + 1):
+                try:
+                    if source == "who_don":
+                        response = await client.get(
+                            url,
+                            params={"$top": 50, "$orderby": "PublicationDate desc"},
+                        )
+                        response.raise_for_status()
+                        candidates = parse_who_don(response.json())
+                    else:
+                        response = await client.get(url)
+                        response.raise_for_status()
+                        parser = {
+                            "ecdc_cdtr": parse_ecdc_cdtr,
+                            "africa_cdc_ebs": parse_africa_cdc_ebs,
+                            "paho_alerts": parse_paho_alerts,
+                        }[source]
+                        candidates = parser(response.text, url)
+                    normalized = [normalize_event(item, catalogue) for item in candidates]
+                    return source, normalized, {
+                        "status": "fresh",
+                        "checked_at": checked_at,
+                        "last_success_at": checked_at,
+                        "url": url,
+                        "item_count": len(candidates),
+                        "attempts": attempt,
+                    }
+                except Exception as exc:  # A failed event source does not hide numerical surveillance.
+                    last_error = exc
+                    if (
+                        attempt >= maximum_attempts
+                        or not _retryable_event_source_error(exc)
+                    ):
+                        break
+                    await asyncio.sleep(0.25 * (2 ** (attempt - 1)))
+
+            assert last_error is not None
+            return source, [], {
+                "status": "failed",
+                "checked_at": checked_at,
+                "url": url,
+                "error": _event_source_error_summary(last_error),
+                "attempts": attempt,
+                "retryable": _retryable_event_source_error(last_error),
+                "stale_after_hours": int(config.get("event_stale_hours", 72)),
+            }
+
+    async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers=headers) as client:
+        responses = await asyncio.gather(
+            *(fetch_one(client, str(source)) for source in config.get("event_sources", EVENT_SOURCE_URLS))
+        )
     results: list[dict[str, Any]] = []
     health: dict[str, dict[str, Any]] = {}
-    headers = {"User-Agent": "GIDS Situation Room/2.0 (+https://globalinfectiousdisease.com/situation/methodology/)"}
-    async with httpx.AsyncClient(timeout=20, follow_redirects=True, headers=headers) as client:
-        for source in config.get("event_sources", EVENT_SOURCE_URLS):
-            url = EVENT_SOURCE_URLS.get(source)
-            if not url:
-                continue
-            checked_at = utc_now().isoformat()
-            try:
-                if source == "who_don":
-                    response = await client.get(url, params={"$top": 50, "$orderby": "PublicationDate desc"})
-                    response.raise_for_status()
-                    candidates = parse_who_don(response.json())
-                else:
-                    response = await client.get(url)
-                    response.raise_for_status()
-                    parser = {"ecdc_cdtr": parse_ecdc_cdtr, "africa_cdc_ebs": parse_africa_cdc_ebs, "paho_alerts": parse_paho_alerts}[source]
-                    candidates = parser(response.text, url)
-                health[source] = {"status": "fresh", "checked_at": checked_at, "url": url, "item_count": len(candidates)}
-                results.extend(normalize_event(item, catalogue) for item in candidates)
-            except Exception as exc:  # One source never blocks numerical surveillance.
-                health[source] = {"status": "failed", "checked_at": checked_at, "url": url, "error": str(exc)[:240], "stale_after_hours": int(config.get("event_stale_hours", 72))}
+    for source, rows, details in responses:
+        results.extend(rows)
+        health[source] = details
     return results, health
 
 
@@ -364,6 +464,24 @@ async def persist_events(events: list[dict[str, Any]]) -> None:
                     content_hash=item["content_hash"],
                 )
                 db.add(row)
+            prior_metadata = dict(row.metadata_ or {})
+            stable_target_id = f"{item['source']}:{item['external_id']}"
+            override_target_ids = {
+                stable_target_id,
+                str(row.content_hash),
+                str(item["content_hash"]),
+            }
+            latest_override = (
+                await db.execute(
+                    select(SituationOverride)
+                    .where(
+                        SituationOverride.target_type == "event",
+                        SituationOverride.target_id.in_(override_target_ids),
+                    )
+                    .order_by(SituationOverride.created_at.desc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
             row.source_url = item["source_url"]
             row.title = item["title"]
             row.published_at = item.get("published_at")
@@ -372,11 +490,34 @@ async def persist_events(events: list[dict[str, Any]]) -> None:
             row.disease_name = item.get("disease_name")
             row.geographies = item.get("geographies") or []
             row.agency_risk = item.get("agency_risk")
-            row.status = item.get("status") or "candidate"
+            source_status = item.get("status") or "candidate"
+            manual_action = (
+                latest_override.action
+                if latest_override is not None
+                else prior_metadata.get("manual_review_action")
+            )
+            if manual_action:
+                row.status = {
+                    "publish": "published",
+                    "suppress": "suppressed",
+                    "merge": "merged",
+                    "correct": "candidate",
+                }.get(str(manual_action), row.status)
+            else:
+                row.status = source_status
             row.confidence = item.get("confidence") or "low"
             row.event_key = item.get("event_key")
             row.content_hash = item["content_hash"]
-            row.metadata_ = {"source_url": item["source_url"], "checked_at": utc_now().isoformat()}
+            row.metadata_ = {
+                "source_url": item["source_url"],
+                "checked_at": utc_now().isoformat(),
+                "stable_review_target_id": stable_target_id,
+                **(
+                    {"manual_review_action": str(manual_action)}
+                    if manual_action
+                    else {}
+                ),
+            }
 
 
 async def published_events(

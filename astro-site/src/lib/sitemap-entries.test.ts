@@ -106,24 +106,24 @@ test('publishes latest, methodology, weekly and monthly situation URLs only afte
   };
   const hidden = buildSitemapEntries({
     ...base,
-    situation: { latest: { public_enabled: false, content_updated_at: '2026-08-13T02:00:00Z' } },
+    situation: { latest: { public_enabled: false, report: { as_of: '2026-08-13T02:00:00Z' } } },
   });
   assert.equal(hidden.some(entry => entry.path.startsWith('/situation/')), false);
 
   const visible = buildSitemapEntries({
     ...base,
     situation: {
-      latest: { public_enabled: true, content_updated_at: '2026-08-13T02:00:00Z' },
-      weeks: [{ period_key: '2026-W33', content_updated_at: '2026-08-13T02:00:00Z' }],
-      months: [{ period_key: '2026-08', content_updated_at: '2026-08-13T02:00:00Z' }],
+      latest: { public_enabled: true, report: { as_of: '2026-08-13T02:00:00Z' } },
+      weeks: [{ report: { period_key: '2026-W33', as_of: '2026-08-13T02:00:00Z' } }],
+      months: [{ report: { period_key: '2026-08', as_of: '2026-08-13T02:00:00Z' } }],
     },
   });
   const paths = new Set(visible.map(entry => entry.path));
-  for (const path of ['/situation/', '/situation/methodology/', '/situation/2026-W33/', '/situation/2026-08/']) {
+  for (const path of ['/situation/', '/situation/methodology/', '/situation/weekly/', '/situation/monthly/', '/situation/weekly/2026-W33/', '/situation/monthly/2026-08/']) {
     assert.equal(paths.has(path), true);
     assert.equal(paths.has(`/zh${path}`), true);
   }
-  assert.equal(visible.find(entry => entry.path === '/situation/2026-08/')?.lastmod, '2026-08-13T02:00:00.000Z');
+  assert.equal(visible.find(entry => entry.path === '/situation/monthly/2026-08/')?.lastmod, '2026-08-13T02:00:00.000Z');
 });
 
 test('publishes Research Radar articles, collections, weekly briefs, and RSS', () => {
@@ -134,11 +134,40 @@ test('publishes Research Radar articles, collections, weekly briefs, and RSS', (
     loadReport: () => null,
     research: {
       last_updated: '2026-08-13T01:00:00Z',
-      articles: [{ slug: 'dengue-study', updated_at: '2026-08-12T00:00:00Z' }],
+      articles: [{
+        slug: 'dengue-study',
+        title: 'A dengue modelling study',
+        updated_at: '2026-08-12T00:00:00Z',
+        study_type: 'Mathematical modelling',
+        peer_review_status: 'peer_reviewed',
+        diseases: [{ slug: 'dengue', name_en: 'Dengue' }],
+        countries: [{ code: 'BR', name_en: 'Brazil' }],
+        topics: [{ name: 'Vaccination' }],
+        indexable: true,
+      }, {
+        slug: 'metadata-only-study',
+        title: 'Metadata-only study',
+        updated_at: '2026-08-11T00:00:00Z',
+        indexable: false,
+      }],
+      preprints: [{
+        slug: 'published-preprint',
+        title: 'A published preprint',
+        updated_at: '2026-08-13T00:00:00Z',
+        peer_review_status: 'preprint',
+        editorial_status: 'published',
+        indexable: true,
+      }, {
+        slug: 'held-preprint',
+        title: 'A held preprint',
+        peer_review_status: 'preprint',
+        editorial_status: 'review',
+        indexable: true,
+      }],
       facets: {
-        diseases: [{ slug: 'dengue' }],
-        countries: [{ slug: 'br' }],
-        topics: [{ slug: 'vaccination' }],
+        diseases: [{ slug: 'dengue', name_en: 'Dengue' }],
+        countries: [{ slug: 'br', name_en: 'Brazil' }],
+        topics: [{ slug: 'vaccination', name: 'Vaccination' }],
         weeks: [{ week: '2026-W33' }, { week: 'bad-week' }],
       },
     },
@@ -146,13 +175,27 @@ test('publishes Research Radar articles, collections, weekly briefs, and RSS', (
   const paths = new Set(entries.map(entry => entry.path));
   for (const path of [
     '/research/',
+    '/research/ask/',
+    '/research/graph/',
+    '/research/integrity/',
+    '/research/preprints/',
     '/research/rss.xml',
     '/research/articles/dengue-study/',
+    '/research/articles/published-preprint/',
     '/research/diseases/dengue/',
     '/research/countries/br/',
     '/research/topics/vaccination/',
     '/research/weekly/2026-W33/',
+    '/research/rss/diseases/dengue.xml',
+    '/research/rss/countries/br.xml',
+    '/research/rss/topics/vaccination.xml',
+    '/research/rss/study-types/mathematical-modelling.xml',
+    '/research/rss/collections/reviews-and-guidelines.xml',
+    '/research/rss/peer-review/peer-reviewed.xml',
+    '/research/rss/peer-review/preprint.xml',
   ]) assert.equal(paths.has(path), true);
+  assert.equal(paths.has('/research/articles/metadata-only-study/'), false);
+  assert.equal(paths.has('/research/articles/held-preprint/'), false);
   assert.equal(paths.has('/research/weekly/bad-week/'), false);
 });
 

@@ -1,0 +1,1698 @@
+{
+  "$defs": {
+    "AnomalyAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "detector_tier": {
+          "default": "common_count",
+          "enum": [
+            "common_count",
+            "rare_count",
+            "rate",
+            "context_only"
+          ],
+          "title": "Detector Tier",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "routine",
+            "watch",
+            "alert",
+            "strong",
+            "not_modeled"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "raw_p_value": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raw P Value"
+        },
+        "q_value": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Q Value"
+        },
+        "standardized_exceedance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Standardized Exceedance"
+        },
+        "dispersion": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dispersion"
+        },
+        "fit_status": {
+          "title": "Fit Status",
+          "type": "string"
+        },
+        "effect_threshold_passed": {
+          "title": "Effect Threshold Passed",
+          "type": "boolean"
+        },
+        "diagnostics": {
+          "additionalProperties": true,
+          "title": "Diagnostics",
+          "type": "object"
+        }
+      },
+      "required": [
+        "model",
+        "state",
+        "fit_status",
+        "effect_threshold_passed"
+      ],
+      "title": "AnomalyAssessment",
+      "type": "object"
+    },
+    "ContextMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "metric_type": {
+          "title": "Metric Type",
+          "type": "string"
+        },
+        "label": {
+          "$ref": "#/$defs/LocalizedText"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "data_through": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data Through"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Url"
+        }
+      },
+      "required": [
+        "metric_type",
+        "label",
+        "value",
+        "unit"
+      ],
+      "title": "ContextMetric",
+      "type": "object"
+    },
+    "ContextPanel": {
+      "additionalProperties": false,
+      "properties": {
+        "panel_id": {
+          "title": "Panel Id",
+          "type": "string"
+        },
+        "topic": {
+          "title": "Topic",
+          "type": "string"
+        },
+        "disease_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Disease Id"
+        },
+        "disease_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Disease Name"
+        },
+        "geography": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Geography"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/ContextMetric"
+          },
+          "title": "Metrics",
+          "type": "array"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LocalizedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "panel_id",
+        "topic",
+        "metrics"
+      ],
+      "title": "ContextPanel",
+      "type": "object"
+    },
+    "Coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "registered_series_count": {
+          "minimum": 0,
+          "title": "Registered Series Count",
+          "type": "integer"
+        },
+        "evaluated_series_count": {
+          "minimum": 0,
+          "title": "Evaluated Series Count",
+          "type": "integer"
+        },
+        "modeled_series_count": {
+          "minimum": 0,
+          "title": "Modeled Series Count",
+          "type": "integer"
+        },
+        "rejected_series_count": {
+          "minimum": 0,
+          "title": "Rejected Series Count",
+          "type": "integer"
+        },
+        "published_signal_count": {
+          "minimum": 0,
+          "title": "Published Signal Count",
+          "type": "integer"
+        },
+        "jurisdiction_count": {
+          "minimum": 0,
+          "title": "Jurisdiction Count",
+          "type": "integer"
+        },
+        "disease_count": {
+          "minimum": 0,
+          "title": "Disease Count",
+          "type": "integer"
+        },
+        "rejection_reasons": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Rejection Reasons",
+          "type": "object"
+        },
+        "note": {
+          "$ref": "#/$defs/LocalizedText"
+        }
+      },
+      "required": [
+        "registered_series_count",
+        "evaluated_series_count",
+        "modeled_series_count",
+        "rejected_series_count",
+        "published_signal_count",
+        "jurisdiction_count",
+        "disease_count",
+        "note"
+      ],
+      "title": "Coverage",
+      "type": "object"
+    },
+    "CurrencySlice": {
+      "additionalProperties": false,
+      "properties": {
+        "source_system": {
+          "title": "Source System",
+          "type": "string"
+        },
+        "cadence": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cadence"
+        },
+        "earliest_data_through": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Earliest Data Through"
+        },
+        "latest_data_through": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latest Data Through"
+        },
+        "comparable_through": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comparable Through"
+        },
+        "latest_available_through": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latest Available Through"
+        },
+        "analyzed_series_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Analyzed Series Count",
+          "type": "integer"
+        },
+        "delayed_series_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Delayed Series Count",
+          "type": "integer"
+        },
+        "held_back_series_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Held Back Series Count",
+          "type": "integer"
+        },
+        "readiness_ratio": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Readiness Ratio"
+        },
+        "status": {
+          "enum": [
+            "fresh",
+            "partial",
+            "stale",
+            "failed",
+            "not_checked"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_system",
+        "status"
+      ],
+      "title": "CurrencySlice",
+      "type": "object"
+    },
+    "DataCurrency": {
+      "additionalProperties": false,
+      "properties": {
+        "earliest_data_through": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Earliest Data Through"
+        },
+        "latest_data_through": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latest Data Through"
+        },
+        "by_source": {
+          "items": {
+            "$ref": "#/$defs/CurrencySlice"
+          },
+          "title": "By Source",
+          "type": "array"
+        }
+      },
+      "title": "DataCurrency",
+      "type": "object"
+    },
+    "EventUpdate": {
+      "additionalProperties": false,
+      "properties": {
+        "update_id": {
+          "title": "Update Id",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "published_at": {
+          "format": "date",
+          "title": "Published At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "update_id",
+        "source",
+        "title",
+        "url",
+        "published_at"
+      ],
+      "title": "EventUpdate",
+      "type": "object"
+    },
+    "EvidenceLink": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        }
+      },
+      "required": [
+        "title",
+        "url"
+      ],
+      "title": "EvidenceLink",
+      "type": "object"
+    },
+    "LocalizedText": {
+      "additionalProperties": false,
+      "properties": {
+        "en": {
+          "title": "En",
+          "type": "string"
+        },
+        "zh": {
+          "title": "Zh",
+          "type": "string"
+        }
+      },
+      "required": [
+        "en",
+        "zh"
+      ],
+      "title": "LocalizedText",
+      "type": "object"
+    },
+    "MethodMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "model": {
+          "const": "robust_quasi_poisson_v1",
+          "title": "Model",
+          "type": "string"
+        },
+        "config_hash": {
+          "title": "Config Hash",
+          "type": "string"
+        },
+        "code_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Code Version"
+        },
+        "fdr_method": {
+          "const": "benjamini_hochberg",
+          "default": "benjamini_hochberg",
+          "title": "Fdr Method",
+          "type": "string"
+        },
+        "fdr_family": {
+          "default": "detector_tier_metric_type_cadence",
+          "enum": [
+            "metric_type_cadence",
+            "detector_tier_metric_type_cadence"
+          ],
+          "title": "Fdr Family",
+          "type": "string"
+        },
+        "alert_q": {
+          "default": 0.05,
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Alert Q",
+          "type": "number"
+        },
+        "strong_q": {
+          "default": 0.01,
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Strong Q",
+          "type": "number"
+        },
+        "parameters": {
+          "additionalProperties": true,
+          "title": "Parameters",
+          "type": "object"
+        }
+      },
+      "required": [
+        "version",
+        "model",
+        "config_hash"
+      ],
+      "title": "MethodMetadata",
+      "type": "object"
+    },
+    "ObservationComparison": {
+      "additionalProperties": false,
+      "properties": {
+        "window_label": {
+          "title": "Window Label",
+          "type": "string"
+        },
+        "window_periods": {
+          "minimum": 1,
+          "title": "Window Periods",
+          "type": "integer"
+        },
+        "data_through": {
+          "format": "date",
+          "title": "Data Through",
+          "type": "string"
+        },
+        "latest_available_period": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latest Available Period"
+        },
+        "data_status": {
+          "default": "current",
+          "enum": [
+            "current",
+            "held_back",
+            "delayed"
+          ],
+          "title": "Data Status",
+          "type": "string"
+        },
+        "reporting_lag_days": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Reporting Lag Days",
+          "type": "integer"
+        },
+        "analysis_lag_days": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Analysis Lag Days",
+          "type": "integer"
+        },
+        "current": {
+          "title": "Current",
+          "type": "number"
+        },
+        "previous": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Previous"
+        },
+        "expected": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected"
+        },
+        "predictive_upper_95": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predictive Upper 95"
+        },
+        "absolute_change": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Absolute Change"
+        },
+        "relative_change_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relative Change Pct"
+        },
+        "completeness": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Completeness",
+          "type": "number"
+        }
+      },
+      "required": [
+        "window_label",
+        "window_periods",
+        "data_through",
+        "current",
+        "completeness"
+      ],
+      "title": "ObservationComparison",
+      "type": "object"
+    },
+    "PublicHealthRisk": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "default": "not_assessed",
+          "enum": [
+            "not_assessed",
+            "assessed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "enum": [
+                "low",
+                "moderate",
+                "high",
+                "very_high"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Level"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "enum": [
+                "official_agency",
+                "audited_expert"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rationale"
+        },
+        "evidence_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Url"
+        }
+      },
+      "title": "PublicHealthRisk",
+      "type": "object"
+    },
+    "QualityCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "severity": {
+          "default": "blocking",
+          "enum": [
+            "blocking",
+            "warning"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": true,
+          "title": "Details",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "passed"
+      ],
+      "title": "QualityCheck",
+      "type": "object"
+    },
+    "QualityGate": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "passed",
+            "degraded",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "failed_checks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failed Checks",
+          "type": "array"
+        },
+        "warning_checks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warning Checks",
+          "type": "array"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/QualityCheck"
+          },
+          "title": "Checks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "passed",
+        "failed_checks",
+        "checks"
+      ],
+      "title": "QualityGate",
+      "type": "object"
+    },
+    "RecentPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "period": {
+          "format": "date",
+          "title": "Period",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "expected": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected"
+        },
+        "predictive_upper_95": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predictive Upper 95"
+        }
+      },
+      "required": [
+        "period",
+        "value"
+      ],
+      "title": "RecentPoint",
+      "type": "object"
+    },
+    "ReportMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "report_id": {
+          "title": "Report Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "daily",
+            "weekly",
+            "monthly"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "period_key": {
+          "title": "Period Key",
+          "type": "string"
+        },
+        "period_start": {
+          "format": "date",
+          "title": "Period Start",
+          "type": "string"
+        },
+        "period_end": {
+          "format": "date",
+          "title": "Period End",
+          "type": "string"
+        },
+        "as_of": {
+          "format": "date-time",
+          "title": "As Of",
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 1,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "gate_failed",
+            "published",
+            "suppressed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "supersedes_report_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Supersedes Report Id"
+        }
+      },
+      "required": [
+        "report_id",
+        "kind",
+        "period_key",
+        "period_start",
+        "period_end",
+        "as_of",
+        "revision",
+        "status"
+      ],
+      "title": "ReportMetadata",
+      "type": "object"
+    },
+    "ReportSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "unique_signal_count": {
+          "minimum": 0,
+          "title": "Unique Signal Count",
+          "type": "integer"
+        },
+        "alert_count": {
+          "minimum": 0,
+          "title": "Alert Count",
+          "type": "integer"
+        },
+        "strong_count": {
+          "minimum": 0,
+          "title": "Strong Count",
+          "type": "integer"
+        },
+        "official_event_count": {
+          "minimum": 0,
+          "title": "Official Event Count",
+          "type": "integer"
+        },
+        "new_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "New Count",
+          "type": "integer"
+        },
+        "persistent_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Persistent Count",
+          "type": "integer"
+        },
+        "resolved_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Resolved Count",
+          "type": "integer"
+        },
+        "active_at_period_end_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Active At Period End Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "unique_signal_count",
+        "alert_count",
+        "strong_count",
+        "official_event_count"
+      ],
+      "title": "ReportSummary",
+      "type": "object"
+    },
+    "SignalAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "review_priority": {
+          "enum": [
+            "routine",
+            "standard",
+            "high"
+          ],
+          "title": "Review Priority",
+          "type": "string"
+        },
+        "signal_type": {
+          "default": "statistical_signal",
+          "enum": [
+            "statistical_signal",
+            "officially_correlated_signal"
+          ],
+          "title": "Signal Type",
+          "type": "string"
+        },
+        "temporal_relevance": {
+          "default": "current",
+          "enum": [
+            "current",
+            "lagged",
+            "historical"
+          ],
+          "title": "Temporal Relevance",
+          "type": "string"
+        },
+        "verification_status": {
+          "default": "unreviewed",
+          "enum": [
+            "unreviewed",
+            "under_review",
+            "verified",
+            "rejected"
+          ],
+          "title": "Verification Status",
+          "type": "string"
+        },
+        "verification_basis": {
+          "default": "not_verified",
+          "enum": [
+            "not_verified",
+            "automated_policy",
+            "analyst_review"
+          ],
+          "title": "Verification Basis",
+          "type": "string"
+        },
+        "verification_policy_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verification Policy Version"
+        },
+        "verification_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verification Note"
+        },
+        "verified_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verified By"
+        },
+        "verified_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verified At"
+        },
+        "evidence_gaps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Gaps",
+          "type": "array"
+        },
+        "public_health_risk": {
+          "$ref": "#/$defs/PublicHealthRisk"
+        }
+      },
+      "required": [
+        "review_priority"
+      ],
+      "title": "SignalAssessment",
+      "type": "object"
+    },
+    "SignalIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "signal_id": {
+          "title": "Signal Id",
+          "type": "string"
+        },
+        "disease_id": {
+          "title": "Disease Id",
+          "type": "string"
+        },
+        "disease_name": {
+          "title": "Disease Name",
+          "type": "string"
+        },
+        "disease_slug": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Disease Slug"
+        },
+        "country_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Country Code"
+        },
+        "country_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Country Name"
+        },
+        "canonical_geography_key": {
+          "title": "Canonical Geography Key",
+          "type": "string"
+        },
+        "source_geography_keys": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Geography Keys",
+          "type": "array"
+        },
+        "dimension_key": {
+          "title": "Dimension Key",
+          "type": "string"
+        },
+        "dimensions": {
+          "additionalProperties": true,
+          "title": "Dimensions",
+          "type": "object"
+        },
+        "series_code": {
+          "title": "Series Code",
+          "type": "string"
+        },
+        "source_system": {
+          "title": "Source System",
+          "type": "string"
+        },
+        "source_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Label"
+        },
+        "metric_type": {
+          "title": "Metric Type",
+          "type": "string"
+        },
+        "metric_label": {
+          "title": "Metric Label",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "cadence": {
+          "enum": [
+            "daily",
+            "weekly",
+            "monthly"
+          ],
+          "title": "Cadence",
+          "type": "string"
+        }
+      },
+      "required": [
+        "signal_id",
+        "disease_id",
+        "disease_name",
+        "canonical_geography_key",
+        "source_geography_keys",
+        "dimension_key",
+        "series_code",
+        "source_system",
+        "metric_type",
+        "metric_label",
+        "unit",
+        "cadence"
+      ],
+      "title": "SignalIdentity",
+      "type": "object"
+    },
+    "SignalLifecycle": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "default": "routine",
+          "enum": [
+            "new",
+            "persistent",
+            "resolved",
+            "active",
+            "routine"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "first_seen_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First Seen At"
+        },
+        "last_seen_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Seen At"
+        },
+        "active_run_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Active Run Count",
+          "type": "integer"
+        },
+        "peak_q_value": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peak Q Value"
+        }
+      },
+      "title": "SignalLifecycle",
+      "type": "object"
+    },
+    "SituationEventClusterV3": {
+      "additionalProperties": false,
+      "properties": {
+        "cluster_id": {
+          "title": "Cluster Id",
+          "type": "string"
+        },
+        "disease_id": {
+          "title": "Disease Id",
+          "type": "string"
+        },
+        "disease_name": {
+          "title": "Disease Name",
+          "type": "string"
+        },
+        "geographies": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Geographies",
+          "type": "array"
+        },
+        "first_published_at": {
+          "format": "date",
+          "title": "First Published At",
+          "type": "string"
+        },
+        "last_published_at": {
+          "format": "date",
+          "title": "Last Published At",
+          "type": "string"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "suppressed",
+            "corrected",
+            "merged"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "updates": {
+          "items": {
+            "$ref": "#/$defs/EventUpdate"
+          },
+          "title": "Updates",
+          "type": "array"
+        },
+        "matched_signal_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Matched Signal Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "cluster_id",
+        "disease_id",
+        "disease_name",
+        "geographies",
+        "first_published_at",
+        "last_published_at",
+        "updates"
+      ],
+      "title": "SituationEventClusterV3",
+      "type": "object"
+    },
+    "SituationSignalV3": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/SignalIdentity"
+        },
+        "observation": {
+          "$ref": "#/$defs/ObservationComparison"
+        },
+        "anomaly": {
+          "$ref": "#/$defs/AnomalyAssessment"
+        },
+        "assessment": {
+          "$ref": "#/$defs/SignalAssessment"
+        },
+        "tags": {
+          "items": {
+            "enum": [
+              "increasing",
+              "unusual",
+              "respiratory",
+              "severity",
+              "official_match"
+            ],
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "recent_points": {
+          "items": {
+            "$ref": "#/$defs/RecentPoint"
+          },
+          "title": "Recent Points",
+          "type": "array"
+        },
+        "evidence_links": {
+          "items": {
+            "$ref": "#/$defs/EvidenceLink"
+          },
+          "title": "Evidence Links",
+          "type": "array"
+        },
+        "lifecycle": {
+          "$ref": "#/$defs/SignalLifecycle"
+        }
+      },
+      "required": [
+        "identity",
+        "observation",
+        "anomaly",
+        "assessment",
+        "tags"
+      ],
+      "title": "SituationSignalV3",
+      "type": "object"
+    },
+    "SourceStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "title": "Source Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "fresh",
+            "partial",
+            "stale",
+            "failed",
+            "not_checked"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "checked_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checked At"
+        },
+        "last_success_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Success At"
+        },
+        "item_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Count"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "source_id",
+        "label",
+        "status"
+      ],
+      "title": "SourceStatus",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "situation_room.v3",
+      "default": "situation_room.v3",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "public_enabled": {
+      "title": "Public Enabled",
+      "type": "boolean"
+    },
+    "report": {
+      "$ref": "#/$defs/ReportMetadata"
+    },
+    "method": {
+      "$ref": "#/$defs/MethodMetadata"
+    },
+    "data_currency": {
+      "$ref": "#/$defs/DataCurrency"
+    },
+    "coverage": {
+      "$ref": "#/$defs/Coverage"
+    },
+    "summary": {
+      "$ref": "#/$defs/ReportSummary"
+    },
+    "signals": {
+      "items": {
+        "$ref": "#/$defs/SituationSignalV3"
+      },
+      "title": "Signals",
+      "type": "array"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/SituationEventClusterV3"
+      },
+      "title": "Events",
+      "type": "array"
+    },
+    "context_panels": {
+      "items": {
+        "$ref": "#/$defs/ContextPanel"
+      },
+      "title": "Context Panels",
+      "type": "array"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceStatus"
+      },
+      "title": "Sources",
+      "type": "array"
+    },
+    "narrative": {
+      "$ref": "#/$defs/LocalizedText"
+    },
+    "limitations": {
+      "$ref": "#/$defs/LocalizedText"
+    },
+    "quality_gate": {
+      "$ref": "#/$defs/QualityGate"
+    }
+  },
+  "required": [
+    "public_enabled",
+    "report",
+    "method",
+    "data_currency",
+    "coverage",
+    "summary",
+    "signals",
+    "events",
+    "context_panels",
+    "sources",
+    "narrative",
+    "limitations",
+    "quality_gate"
+  ],
+  "title": "GIDS Situation Room v3 report",
+  "type": "object",
+  "$id": "https://globalinfectiousdisease.com/schemas/situation-room-v3.json"
+}

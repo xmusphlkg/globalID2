@@ -1,0 +1,6 @@
+---
+import SituationArchive from '../../../components/SituationArchive.astro';
+import { listSituationReports } from '../../../lib/situation-data';
+const reports = listSituationReports('monthly');
+---
+<SituationArchive kind="monthly" reports={reports} />

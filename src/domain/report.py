@@ -12,7 +12,7 @@ from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Index, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import BaseModel
+from .base import BaseModel, utc_now
 
 
 class ReportStatus(str, PyEnum):
@@ -291,7 +291,9 @@ class AIConversation(BaseModel):
     )
     agent: Mapped[str] = mapped_column(String(50), nullable=False, comment="代理类型")
     role: Mapped[Optional[str]] = mapped_column(String(50), comment="角色/阶段")
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
     prompt: Mapped[Optional[str]] = mapped_column(Text, comment="用户提示")
     system_prompt: Mapped[Optional[str]] = mapped_column(Text, comment="系统提示")
     response: Mapped[Optional[str]] = mapped_column(Text, comment="模型回复")

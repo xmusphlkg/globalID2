@@ -9,7 +9,7 @@ import pandas as pd
 from src.generation.evidence import EvidenceAnalyzer
 
 from .dataset import SourcePolicy
-from .models import DeathReporting
+from .models import METHOD_VERSION, DeathReporting
 
 
 def build_evidence_packet(
@@ -41,7 +41,7 @@ def build_evidence_packet(
     summary_metrics["total_deaths"] = death_reporting.total_deaths
     packet["summary_metrics"] = summary_metrics
     packet["death_reporting"] = death_reporting.to_dict()
-    packet["method_version"] = "report_v4.0"
+    packet["method_version"] = METHOD_VERSION
     return packet
 
 

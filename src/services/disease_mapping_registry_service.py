@@ -383,7 +383,7 @@ class DiseaseMappingRegistryService:
                 attempts=0,
                 metadata_={"category_id": category.id, "category_key": category.category_key},
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.utcnow(),
+                updated_at=datetime.now(timezone.utc),
             )
             .on_conflict_do_nothing(index_elements=[MappingNotificationOutbox.event_key])
         )
@@ -580,7 +580,7 @@ class DiseaseMappingRegistryService:
                     DiseaseMappingCandidate.category_id == category.id,
                     DiseaseMappingCandidate.status == "proposed",
                 )
-                .values(status="stale", updated_at=datetime.utcnow())
+                .values(status="stale", updated_at=datetime.now(timezone.utc))
             )
             retired += 1
         return retired
@@ -661,7 +661,9 @@ class DiseaseMappingRegistryService:
                             DiseaseMappingCandidate.category_id == category.id,
                             DiseaseMappingCandidate.status == "proposed",
                         )
-                        .values(status="stale", updated_at=datetime.utcnow())
+                        .values(
+                            status="stale", updated_at=datetime.now(timezone.utc)
+                        )
                     )
                     continue
                 if assertions:
@@ -744,7 +746,7 @@ class DiseaseMappingRegistryService:
                 DiseaseMappingCandidate.category_id.in_(category_ids),
                 DiseaseMappingCandidate.status == "proposed",
             )
-            .values(status="stale", updated_at=datetime.utcnow())
+            .values(status="stale", updated_at=datetime.now(timezone.utc))
         )
         await db.execute(
             update(SourceDiseaseCategory)
@@ -754,7 +756,7 @@ class DiseaseMappingRegistryService:
                 ai_attempts=0,
                 ai_next_attempt_at=None,
                 ai_last_error=f"Requeued after mapping prompt upgrade to {PROMPT_VERSION}",
-                updated_at=datetime.utcnow(),
+                updated_at=datetime.now(timezone.utc),
             )
         )
         return len(category_ids)
@@ -914,7 +916,7 @@ class DiseaseMappingRegistryService:
                 DiseaseMappingCandidate.category_id == category_id,
                 DiseaseMappingCandidate.status == "proposed",
             )
-            .values(status="stale", updated_at=datetime.utcnow())
+            .values(status="stale", updated_at=datetime.now(timezone.utc))
         )
         await db.flush()
         return assertion
@@ -1032,7 +1034,7 @@ class DiseaseMappingRegistryService:
                 DiseaseMappingCandidate.id != candidate.id,
                 DiseaseMappingCandidate.status == "proposed",
             )
-            .values(status="stale", updated_at=datetime.utcnow())
+            .values(status="stale", updated_at=datetime.now(timezone.utc))
         )
         category.status = "active"
         await db.flush()
@@ -1323,7 +1325,7 @@ class DiseaseMappingRegistryService:
                     DiseaseMappingCandidate.category_id == target.id,
                     DiseaseMappingCandidate.status == "proposed",
                 )
-                .values(status="stale", updated_at=datetime.utcnow())
+                .values(status="stale", updated_at=datetime.now(timezone.utc))
             )
             stale_candidate_count += int(stale_result.rowcount or 0)
             reconciled_ids.append(target.id)

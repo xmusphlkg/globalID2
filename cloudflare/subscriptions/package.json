@@ -4,9 +4,15 @@
   "type": "module",
   "scripts": {
     "test": "node --test --experimental-strip-types tests/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "wrangler:types": "wrangler types worker-configuration.d.ts --config wrangler.types.jsonc --env-interface CloudflareBindings --include-runtime=false --strict-vars=false",
+    "wrangler:types:check": "wrangler types worker-configuration.d.ts --config wrangler.types.jsonc --env-interface CloudflareBindings --include-runtime=false --strict-vars=false --check",
+    "production:check": "node scripts/check-production-readiness.mjs",
+    "verify": "npm test && npm run typecheck && npm run wrangler:types:check && npm run production:check"
   },
   "devDependencies": {
-    "typescript": "5.9.3"
+    "@cloudflare/workers-types": "5.20260817.1",
+    "typescript": "5.9.3",
+    "wrangler": "4.123.0"
   }
 }

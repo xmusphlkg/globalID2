@@ -4,7 +4,9 @@ from types import SimpleNamespace
 
 from src.generation.site_data_literature import (
     append_historical_seed_articles,
+    apply_public_summary_gate,
     attach_surveillance_evidence,
+    build_disease_evidence_events,
     build_pipeline_funnel,
     build_hotspot_visualizations,
     build_publication_pulse,
@@ -13,6 +15,9 @@ from src.generation.site_data_literature import (
     build_surveillance_evidence,
     empty_literature_export,
     load_historical_seed_articles,
+    partition_public_literature_articles,
+    project_public_integrity_alerts,
+    write_literature_artifacts,
 )
 from src.literature.classification import classify_candidate
 from src.literature.clients.crossref import CrossrefClient
@@ -30,6 +35,39 @@ from dashboard.api.routers.literature import _publication_blockers
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_disease_evidence_events_separate_guidance_from_vaccine_policy_evidence():
+    events = build_disease_evidence_events([
+        {
+            "slug": "who-guidance",
+            "title": "WHO guideline for dengue vaccination",
+            "published_at": "2026-08-15T00:00:00+00:00",
+            "study_type": "Guideline",
+            "topics": [{"name": "Vaccination"}, {"name": "Health policy"}],
+            "publisher": "World Health Organization",
+        },
+        {
+            "slug": "policy-study",
+            "title": "Evaluation of national vaccine policy",
+            "published_at": "2026-07-01T00:00:00+00:00",
+            "study_type": "Ecological study",
+            "topics": [{"name": "Vaccination"}, {"name": "Health policy"}],
+        },
+        {
+            "slug": "ordinary-vaccine-study",
+            "title": "Vaccine effectiveness in adults",
+            "published_at": "2026-06-01T00:00:00+00:00",
+            "study_type": "Cohort study",
+            "topics": [{"name": "Vaccination"}],
+        },
+    ])
+
+    assert [event["event_type"] for event in events] == [
+        "guideline_publication",
+        "vaccine_policy_evidence",
+    ]
+    assert events[0]["date"] == "2026-08-15"
 
 
 def _crossref_payload() -> dict:
@@ -59,6 +97,70 @@ def test_crossref_normalization_is_stable_and_strips_markup():
     assert first.abstract_text == "A surveillance study of dengue vaccination and outbreak response."
     assert first.authors == [{"name": "Ada Lovelace", "orcid": "0000-0001"}]
     assert first.open_access_status == "open"
+
+
+def test_crossref_tdm_terms_do_not_claim_open_access():
+    candidate = normalize_crossref({
+        "DOI": "10.1000/tdm-only",
+        "title": ["TDM terms are not an open-access license"],
+        "URL": "https://publisher.example.test/article",
+        "license": [{"URL": "https://publisher.example.test/tdm-terms"}],
+        "published": {"date-parts": [[2026, 8, 1]]},
+    })
+    assert candidate is not None
+    assert candidate.license_url == "https://publisher.example.test/tdm-terms"
+    assert candidate.open_access_status == "unknown"
+    assert candidate.open_access_url is None
+
+
+def test_crossref_preprint_relation_is_normalized_to_canonical_doi_mapping():
+    candidate = normalize_crossref({
+        "DOI": "https://doi.org/10.1101/2026.01.02.123456",
+        "title": ["A dengue surveillance preprint"],
+        "type": "posted-content",
+        "subtype": "preprint",
+        "relation": {
+            "is-preprint-of": [
+                {
+                    "id-type": "doi",
+                    "id": "https://doi.org/10.1000/PEER.REVIEWED",
+                    "asserted-by": "subject",
+                },
+                {"id-type": "pmid", "id": "123456"},
+            ],
+        },
+    })
+
+    assert candidate is not None
+    assert candidate.article_type == "preprint"
+    assert candidate.peer_review_status == "preprint"
+    assert candidate.version_relations == [{
+        "relation_type": "preprint_to_peer_reviewed",
+        "preprint_doi": "10.1101/2026.01.02.123456",
+        "peer_reviewed_doi": "10.1000/peer.reviewed",
+        "source": "crossref",
+        "asserted_by": "subject",
+    }]
+
+
+def test_crossref_published_has_preprint_relation_maps_to_the_same_direction():
+    candidate = normalize_crossref({
+        "DOI": "10.1000/PEER.REVIEWED",
+        "title": ["Peer-reviewed dengue surveillance"],
+        "type": "journal-article",
+        "relation": {
+            "has-preprint": [{
+                "id-type": "doi",
+                "id": "doi:10.1101/2026.01.02.123456",
+                "asserted-by": "object",
+            }],
+        },
+    })
+
+    assert candidate is not None
+    assert candidate.peer_review_status == "peer_reviewed"
+    assert candidate.version_relations[0]["preprint_doi"] == "10.1101/2026.01.02.123456"
+    assert candidate.version_relations[0]["peer_reviewed_doi"] == "10.1000/peer.reviewed"
 
 
 def test_europe_pmc_search_result_normalization_preserves_dates_and_identifiers():
@@ -98,10 +200,12 @@ class _FakeCrossrefClient(CrossrefClient):
                 {"DOI": "10.1000/mid", "indexed": {"date-time": "2026-08-13T00:00:00Z"}},
             ],
         }[issn]
+        offset = 0 if params["cursor"] == "*" else int(params["cursor"])
+        page = items[offset : offset + int(params["rows"])]
         return {
             "message": {
-                "items": items[: int(params["rows"])],
-                "next-cursor": "done",
+                "items": page,
+                "next-cursor": str(offset + len(page)),
                 "total-results": len(items),
             }
         }
@@ -165,7 +269,8 @@ def test_classifier_links_disease_country_topics_and_study_type():
     assert {item.key for item in result.topics} == {"Surveillance", "Vaccination", "Outbreak investigation"}
     assert result.study_type == "Outbreak investigation"
     assert result.publication_status == "published"
-    assert result.discovery_score >= 0.89
+    assert 0.75 <= result.discovery_score <= 0.85
+    assert result.surveillance_relation_score == 0.0
 
 
 def test_short_terms_do_not_create_substring_false_positives():
@@ -217,6 +322,11 @@ def test_empty_public_export_has_a_stable_contract():
     payload = empty_literature_export()
     assert payload["schema_version"] == 1
     assert payload["articles"] == []
+    assert payload["preprints"] == []
+    assert payload["integrity_alerts"] == []
+    assert payload["metrics"]["preprints_total"] == 0
+    assert payload["metrics"]["integrity_alerts_total"] == 0
+    assert payload["metrics"]["withheld_metadata_only"] == 0
     assert payload["metrics"]["public_article_limit"] is None
     assert payload["metrics"]["historical_baseline_articles"] == 0
     assert payload["metrics"]["papers_last_7_days"] == 0
@@ -224,7 +334,247 @@ def test_empty_public_export_has_a_stable_contract():
     assert payload["visualizations"]["pipeline_funnel"][0]["stage"] == "indexed"
     assert payload["visualizations"]["completeness"] == []
     assert payload["visualizations"]["hotspots"]["schema_version"] == "research_hotspots.v1"
-    assert payload["knowledge_graph"]["stats"] == {"nodes": 0, "edges": 0, "articles": 0}
+    assert payload["knowledge_graph"]["stats"] == {
+        "nodes": 0, "edges": 0, "articles": 0, "by_type": {},
+    }
+
+
+def test_public_preprints_require_published_editorial_status_and_stay_separate():
+    peer_reviewed, preprints = partition_public_literature_articles([
+        {
+            "slug": "published-paper",
+            "peer_review_status": "peer_reviewed",
+            "editorial_status": "published",
+        },
+        {
+            "slug": "published-preprint",
+            "peer_review_status": "preprint",
+            "editorial_status": "published",
+        },
+        {
+            "slug": "held-preprint",
+            "peer_review_status": "preprint",
+            "editorial_status": "review",
+        },
+        {
+            "slug": "excluded-preprint",
+            "peer_review_status": "preprint",
+            "editorial_status": "excluded",
+        },
+    ])
+
+    assert [article["slug"] for article in peer_reviewed] == ["published-paper"]
+    assert [article["slug"] for article in preprints] == ["published-preprint"]
+
+
+def test_public_summary_gate_withholds_metadata_only_peer_reviewed_and_preprint_records():
+    peer_reviewed, preprints, withheld = apply_public_summary_gate(
+        [
+            {"slug": "complete-paper", "indexable": True},
+            {"slug": "thin-paper", "indexable": False},
+        ],
+        [
+            {"slug": "complete-preprint", "indexable": True},
+            {"slug": "thin-preprint", "indexable": False},
+        ],
+    )
+    assert [article["slug"] for article in peer_reviewed] == ["complete-paper"]
+    assert [article["slug"] for article in preprints] == ["complete-preprint"]
+    assert withheld == 2
+
+
+def test_literature_artifacts_write_preprints_outside_the_main_catalogue(tmp_path):
+    preprint = {
+        "article_id": "preprint-1",
+        "slug": "published-preprint",
+        "title": "Published preprint",
+        "peer_review_status": "preprint",
+        "editorial_status": "published",
+        "diseases": [],
+        "countries": [],
+        "topics": [],
+    }
+    payload = {
+        **empty_literature_export(),
+        "preprints": [preprint],
+        "metrics": {**empty_literature_export()["metrics"], "preprints_total": 1},
+    }
+
+    write_literature_artifacts(payload, tmp_path)
+
+    index = (tmp_path / "research/index.json").read_text(encoding="utf-8")
+    catalogue = (tmp_path / "research/catalogue.json").read_text(encoding="utf-8")
+    assert '"preprints"' in index
+    assert '"published-preprint"' in index
+    assert '"published-preprint"' not in catalogue
+    assert (tmp_path / "research/articles/published-preprint.json").exists()
+
+
+def test_integrity_alert_projection_is_publication_gated_and_metadata_only():
+    articles = [
+        SimpleNamespace(
+            article_id="corrected-public",
+            slug="corrected-public-record",
+            title="Corrected public record",
+            doi="10.1000/corrected",
+            journal="Example Journal",
+            published_at=datetime(2026, 7, 1, tzinfo=timezone.utc),
+            publication_status="published",
+            source_urls={"doi": "https://doi.org/10.1000/corrected"},
+            abstract_text="must never be exported",
+            source_payload={"raw": "must never be exported"},
+        ),
+        SimpleNamespace(
+            article_id="retracted-formerly-public",
+            slug="retracted-record",
+            title="Retracted record",
+            doi="10.1000/retracted",
+            journal="Example Journal",
+            published_at=datetime(2026, 6, 1, tzinfo=timezone.utc),
+            publication_status="excluded",
+            source_urls={},
+        ),
+        SimpleNamespace(
+            article_id="private-record",
+            slug="private-record",
+            title="Never-public record",
+            doi="10.1000/private",
+            journal="Example Journal",
+            published_at=datetime(2026, 5, 1, tzinfo=timezone.utc),
+            publication_status="review",
+            source_urls={},
+        ),
+    ]
+    events = [
+        SimpleNamespace(
+            id=11,
+            article_id="corrected-public",
+            current_status="corrected",
+            previous_status="current",
+            effective_at=datetime(2026, 8, 3, tzinfo=timezone.utc),
+            created_at=datetime(2026, 8, 3, tzinfo=timezone.utc),
+            source="crossref",
+            metadata_={"raw_notice": "must never be exported"},
+        ),
+        SimpleNamespace(
+            id=12,
+            article_id="retracted-formerly-public",
+            current_status="retracted",
+            previous_status="current",
+            effective_at=datetime(2026, 8, 4, tzinfo=timezone.utc),
+            created_at=datetime(2026, 8, 4, tzinfo=timezone.utc),
+            source="crossref",
+            metadata_={"raw_notice": "must never be exported"},
+        ),
+        SimpleNamespace(
+            id=13,
+            article_id="private-record",
+            current_status="expression_of_concern",
+            previous_status="current",
+            effective_at=datetime(2026, 8, 5, tzinfo=timezone.utc),
+            created_at=datetime(2026, 8, 5, tzinfo=timezone.utc),
+            source="crossref",
+            metadata_={"raw_notice": "must never be exported"},
+        ),
+        SimpleNamespace(
+            id=14,
+            article_id="corrected-public",
+            current_status="current",
+            previous_status="corrected",
+            effective_at=datetime(2026, 8, 6, tzinfo=timezone.utc),
+            created_at=datetime(2026, 8, 6, tzinfo=timezone.utc),
+            source="crossref",
+            metadata_={},
+        ),
+    ]
+
+    alerts = project_public_integrity_alerts(
+        events,
+        articles,
+        ever_public_article_ids={"retracted-formerly-public"},
+        currently_public_article_ids={"corrected-public"},
+    )
+
+    assert [alert["event_type"] for alert in alerts] == ["retraction", "correction"]
+    assert alerts[0]["article_url"] is None
+    assert alerts[1]["article_url"] == "/research/articles/corrected-public-record/"
+    assert alerts[1]["source_url"] == "https://doi.org/10.1000/corrected"
+    assert not ({"metadata", "metadata_", "abstract", "abstract_text", "source_payload", "summary"} & alerts[1].keys())
+    assert "private-record" not in {alert["article_id"] for alert in alerts}
+
+
+def test_literature_artifacts_keep_corrected_article_event_history(tmp_path):
+    integrity_event = {
+        "alert_id": "integrity-11",
+        "article_id": "corrected-public",
+        "article_slug": "corrected-public-record",
+        "article_title": "Corrected public record",
+        "event_type": "correction",
+        "previous_status": "current",
+        "current_status": "corrected",
+        "effective_at": "2026-08-03T00:00:00+00:00",
+        "source": "crossref",
+        "source_url": "https://doi.org/10.1000/corrected",
+        "article_url": "/research/articles/corrected-public-record/",
+    }
+    article = {
+        "article_id": "corrected-public",
+        "slug": "corrected-public-record",
+        "title": "Corrected public record",
+        "peer_review_status": "peer_reviewed",
+        "editorial_status": "published",
+        "integrity_status": "corrected",
+        "indexable": True,
+        "diseases": [],
+        "countries": [],
+        "topics": [],
+        "integrity_events": [integrity_event],
+    }
+    payload = {
+        **empty_literature_export(),
+        "articles": [article],
+        "integrity_alerts": [integrity_event],
+        "metrics": {**empty_literature_export()["metrics"], "integrity_alerts_total": 1},
+    }
+
+    write_literature_artifacts(payload, tmp_path)
+
+    detail = (tmp_path / "research/articles/corrected-public-record.json").read_text(encoding="utf-8")
+    index = (tmp_path / "research/index.json").read_text(encoding="utf-8")
+    assert '"event_type": "correction"' in detail
+    assert '"integrity_alerts"' in index
+    assert "must never be exported" not in detail
+
+
+def test_integrity_alert_does_not_link_a_non_indexable_published_record():
+    article = SimpleNamespace(
+        article_id="metadata-only",
+        slug="metadata-only",
+        title="Metadata-only corrected record",
+        doi="10.1000/metadata-only",
+        journal="Example Journal",
+        published_at=datetime(2026, 7, 1, tzinfo=timezone.utc),
+        publication_status="published",
+        source_urls={},
+    )
+    event = SimpleNamespace(
+        id=21,
+        article_id="metadata-only",
+        current_status="corrected",
+        previous_status="current",
+        effective_at=datetime(2026, 8, 7, tzinfo=timezone.utc),
+        created_at=datetime(2026, 8, 7, tzinfo=timezone.utc),
+        source="crossref",
+    )
+
+    [alert] = project_public_integrity_alerts(
+        [event],
+        [article],
+        currently_public_article_ids=set(),
+    )
+
+    assert alert["is_currently_public"] is False
+    assert alert["article_url"] is None
 
 
 def test_historical_seed_articles_append_with_labels_and_deduplicate():
@@ -301,7 +651,12 @@ def test_public_knowledge_graph_is_deterministic_and_uses_classifier_relations_o
     first = build_knowledge_graph([article])
     second = build_knowledge_graph([article])
     assert first == second
-    assert first["stats"] == {"nodes": 5, "edges": 4, "articles": 1}
+    assert first["stats"] == {
+        "nodes": 5,
+        "edges": 4,
+        "articles": 1,
+        "by_type": {"article": 1, "country": 1, "disease": 1, "study_type": 1, "topic": 1},
+    }
     assert {edge["relation"] for edge in first["edges"]} == {
         "ABOUT_DISEASE", "STUDIED_IN", "ADDRESSES_TOPIC", "USES_STUDY_DESIGN",
     }
@@ -324,6 +679,34 @@ def test_public_knowledge_graph_filters_low_confidence_classifier_edges():
     assert graph["thresholds"] == {"disease": 0.78, "country": 0.78, "topic": 0.66}
     assert graph["min_relation_confidence"] == 0.66
     assert graph["quality"]["skipped_low_confidence_edges"] == 2
+
+
+def test_public_knowledge_graph_links_interventions_policy_population_and_pathogens_with_provenance():
+    article = {
+        "article_id": "lit_policy",
+        "slug": "policy-evidence",
+        "title": "Vaccination policy evidence",
+        "topics": [
+            {"name": "Vaccination", "confidence": 0.82},
+            {"name": "Health policy", "confidence": 0.79},
+        ],
+        "pathogens": [{"id": "ncbi:11320", "name": "Influenza A virus", "confidence": 0.9}],
+        "summary": {
+            "en": {"population_setting": "Adults in community settings."},
+            "zh": {"population_setting": "社区环境中的成年人。"},
+        },
+    }
+    graph = build_knowledge_graph([article])
+    relations = {edge["relation"] for edge in graph["edges"]}
+    assert {
+        "EVALUATES_INTERVENTION",
+        "INFORMS_POLICY_DOMAIN",
+        "STUDIES_PATHOGEN",
+        "STUDIED_POPULATION_SETTING",
+    }.issubset(relations)
+    population = next(node for node in graph["nodes"] if node["type"] == "population_setting")
+    assert population["provenance"] == "quality_gated_bilingual_summary"
+    assert graph["schema_version"] == 2
 
 
 def test_publication_pulse_ignores_future_publication_dates():
@@ -498,6 +881,38 @@ def test_signal_evidence_separates_exact_context_and_catalogue_gaps():
     assert result["evidence_gaps"][0]["gap_type"] == "catalogue_coverage_gap"
 
 
+def test_historical_geography_match_cannot_close_a_current_signal_gap():
+    articles = [{
+        "article_id": "historical-ebola",
+        "slug": "ebola-zaire-1976",
+        "title": "Ebola haemorrhagic fever in Zaire, 1976",
+        "published_at": "1978-01-01T00:00:00+00:00",
+        "diseases": [{"disease_id": "D050", "confidence": 0.95}],
+        "countries": [{"code": "CD", "confidence": 0.95}],
+    }]
+    snapshot = {
+        "snapshot_id": "current-ebola-snapshot",
+        "generated_at": "2026-08-17T00:00:00+00:00",
+        "public_enabled": True,
+        "emerging": [{
+            "id": "event:ebola-cd-2026",
+            "kind": "official_event",
+            "disease_id": "D050",
+            "disease_name": "Ebola",
+            "published_at": "2026-08-16",
+            "geographies": [{"code": "CD", "name": "Democratic Republic of the Congo"}],
+        }],
+    }
+    result = build_surveillance_evidence(articles, snapshot)
+    signal = result["signals"][0]
+    assert signal["exact_article_count"] == 0
+    assert signal["historical_context_article_count"] == 1
+    assert signal["context_articles"][0]["relation_level"] == "historical_disease_geography_context"
+    assert signal["context_articles"][0]["recency_status"] == "outside_exact_window"
+    assert result["metrics"]["evidence_gaps"] == 1
+    assert result["evidence_gaps"][0]["gap_type"] == "geography_coverage_gap"
+
+
 def test_signal_evidence_backlinks_are_attached_without_mutating_articles():
     payload = {
         **empty_literature_export(),
@@ -581,6 +996,28 @@ def test_editor_relationship_decisions_override_or_suppress_classifier_links():
     }])
     assert rejected["signals"][0]["context_article_count"] == 0
     assert rejected["metrics"]["evidence_gaps"] == 1
+
+
+def test_editor_confirmation_cannot_close_a_dated_signal_without_article_date():
+    result = build_surveillance_evidence(
+        [{
+            "article_id": "undated", "slug": "undated", "title": "Undated article",
+            "diseases": [{"disease_id": "D021", "confidence": 0.9}], "countries": [],
+        }],
+        {
+            "snapshot_id": "snapshot-dated", "generated_at": "2026-08-17T00:00:00+00:00",
+            "public_enabled": True,
+            "increasing": [{"id": "signal-dated", "disease_id": "D021", "country_code": "JP"}],
+        },
+        relation_decisions=[{
+            "signal_id": "signal-dated", "article_id": "undated", "status": "confirmed",
+            "relation_level": "exact_disease_geography",
+        }],
+    )
+    signal = result["signals"][0]
+    assert signal["exact_article_count"] == 0
+    assert signal["context_articles"][0]["recency_status"] == "date_unverifiable"
+    assert result["metrics"]["evidence_gaps"] == 1
 
 
 class _FakeLiteratureAgent:
@@ -700,6 +1137,157 @@ def test_autopilot_holds_preprints_and_rejects_weak_relationships():
     now = datetime(2026, 8, 13, tzinfo=timezone.utc)
     assert decide_evidence_link(exact, article, _autopilot_config(), now=now).action == "reject"
     assert decide_evidence_link(weak, article, _autopilot_config(), now=now).action == "reject"
+
+
+def test_autopilot_defers_future_only_records_and_re_evaluates_after_publication_date():
+    article = _autopilot_article(published_at=datetime(2026, 9, 1, tzinfo=timezone.utc))
+
+    deferred = decide_article(
+        article,
+        _autopilot_config(),
+        max_disease_confidence=0.90,
+        confirmed_relation_levels=set(),
+        now=datetime(2026, 8, 17, tzinfo=timezone.utc),
+    )
+    eligible = decide_article(
+        article,
+        _autopilot_config(),
+        max_disease_confidence=0.90,
+        confirmed_relation_levels=set(),
+        now=datetime(2026, 9, 1, tzinfo=timezone.utc),
+    )
+
+    assert deferred.action == "defer"
+    assert "scheduled for automatic re-evaluation" in deferred.reasons[0]
+    assert eligible.action == "publish"
+
+
+def test_future_date_does_not_hide_an_independent_incomplete_record_exclusion():
+    article = _autopilot_article(
+        published_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
+        authors=[],
+    )
+
+    decision = decide_article(
+        article,
+        _autopilot_config(),
+        max_disease_confidence=0.90,
+        confirmed_relation_levels=set(),
+        now=datetime(2026, 8, 17, tzinfo=timezone.utc),
+    )
+
+    assert decision.action == "exclude"
+    assert "authors are missing" in decision.reasons
+
+
+def test_correction_notice_requires_both_title_marker_and_explicit_parent_relation():
+    parent_relation = [{"type": "erratum", "DOI": "10.1000/parent"}]
+    correction = _autopilot_article(
+        title="Corrigendum to an infectious-disease cohort study",
+        integrity_status="corrected",
+        source_payload={"update-to": parent_relation},
+    )
+    correction_colon = _autopilot_article(
+        title="Correction: an infectious-disease cohort study",
+        integrity_status="corrected",
+        source_payload={"update-to": [{"type": "correction", "DOI": "10.1000/parent"}]},
+    )
+    missing_parent = _autopilot_article(
+        title="Corrigendum to an infectious-disease cohort study",
+        integrity_status="corrected",
+        source_payload={},
+    )
+    corrected_primary = _autopilot_article(
+        title="An infectious-disease cohort study",
+        integrity_status="corrected",
+        source_payload={"relation": {"correction": [{"id": "10.1000/notice"}]}},
+    )
+
+    def decision(article):
+        return decide_article(
+            article,
+            _autopilot_config(),
+            max_disease_confidence=0.90,
+            confirmed_relation_levels=set(),
+            now=datetime(2026, 8, 17, tzinfo=timezone.utc),
+        )
+
+    assert decision(correction).action == "exclude"
+    assert decision(correction_colon).action == "exclude"
+    assert "explicit parent DOI" in decision(correction).reasons[0]
+    assert decision(missing_parent).action == "hold"
+    assert decision(corrected_primary).action == "hold"
+
+
+def test_animal_only_exclusion_requires_no_disease_link_and_extremely_low_score():
+    metadata = {"classification_evidence": {"research_domain": {"value": "animal_only"}}}
+
+    def decision(*, score, disease_confidence):
+        return decide_article(
+            _autopilot_article(
+                integrity_status="corrected",
+                discovery_score=score,
+                metadata_=metadata,
+            ),
+            _autopilot_config(),
+            max_disease_confidence=disease_confidence,
+            confirmed_relation_levels=set(),
+            now=datetime(2026, 8, 17, tzinfo=timezone.utc),
+        )
+
+    assert decision(score=0.15, disease_confidence=0.0).action == "exclude"
+    assert decision(score=0.15, disease_confidence=0.80).action == "hold"
+    assert decision(score=0.30, disease_confidence=0.0).action == "hold"
+
+
+def test_relevance_exception_band_remains_fail_closed_for_human_health_research():
+    article = _autopilot_article(
+        discovery_score=0.65,
+        metadata_={"classification_evidence": {"research_domain": {"value": "human_health"}}},
+    )
+
+    decision = decide_article(
+        article,
+        _autopilot_config(),
+        max_disease_confidence=0.95,
+        confirmed_relation_levels=set(),
+        now=datetime(2026, 8, 17, tzinfo=timezone.utc),
+    )
+
+    assert decision.action == "hold"
+    assert decision.reasons == ("article relevance is inside the exception-review band",)
+
+
+def test_non_public_summary_review_is_deferred_or_archived_by_article_state():
+    summary = SimpleNamespace(status="review", generation_metadata={})
+    archived = SimpleNamespace(
+        status="archived",
+        generation_metadata={"autopilot": {"decision": "archive"}},
+    )
+
+    excluded = decide_summary(
+        summary,
+        _autopilot_article(publication_status="excluded"),
+        _autopilot_config(),
+    )
+    pending = decide_summary(
+        summary,
+        _autopilot_article(publication_status="review"),
+        _autopilot_config(),
+    )
+
+    assert excluded.action == "archive"
+    assert pending.action == "defer"
+    assert decide_summary(
+        archived,
+        _autopilot_article(publication_status="excluded"),
+        _autopilot_config(),
+    ).action == "archive"
+    assert decide_summary(
+        archived,
+        _autopilot_article(publication_status="review"),
+        _autopilot_config(),
+    ).action == "defer"
 
 
 def test_autopilot_publishes_only_current_well_grounded_model_summaries():

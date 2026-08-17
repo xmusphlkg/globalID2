@@ -260,7 +260,7 @@ class DiseaseMappingAIService:
                     DiseaseMappingCandidate.category_id == category.id,
                     DiseaseMappingCandidate.status == "proposed",
                 )
-                .values(status="stale", updated_at=datetime.utcnow())
+                .values(status="stale", updated_at=datetime.now(timezone.utc))
             )
             created = await self._save_ai_candidates(
                 db, category, output, standards, route, source_language=source_language
@@ -339,7 +339,7 @@ class DiseaseMappingAIService:
                     ai_attempts=func.greatest(SourceDiseaseCategory.ai_attempts - 1, 0),
                     ai_last_error="AI mapping attempt interrupted by service shutdown",
                     ai_next_attempt_at=datetime.now(timezone.utc),
-                    updated_at=datetime.utcnow(),
+                    updated_at=datetime.now(timezone.utc),
                 )
             )
             await recovery_db.commit()
@@ -567,14 +567,14 @@ class DiseaseMappingAIService:
                     "multi_model_review": "+" in str(route.get("model_key") or ""),
                 },
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.utcnow(),
+                updated_at=datetime.now(timezone.utc),
             ).on_conflict_do_update(
                 index_elements=[DiseaseMappingCandidate.candidate_key],
                 set_={
                     "confidence_score": confidence,
                     "reasoning": str(raw.get("reasoning") or "").strip() or None,
                     "evidence": raw.get("evidence") if isinstance(raw.get("evidence"), list) else [],
-                    "updated_at": datetime.utcnow(),
+                    "updated_at": datetime.now(timezone.utc),
                 },
             )
             await db.execute(statement)
@@ -762,7 +762,7 @@ class DiseaseMappingAIService:
                     status="proposed",
                     metadata_={},
                     created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.utcnow(),
+                    updated_at=datetime.now(timezone.utc),
                 )
                 .on_conflict_do_nothing(index_elements=[DiseaseMappingCandidate.candidate_key])
             )
@@ -812,7 +812,7 @@ class DiseaseMappingAIService:
                 attempts=0,
                 metadata_={"category_id": category.id, "candidate_count": created},
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.utcnow(),
+                updated_at=datetime.now(timezone.utc),
             )
             .on_conflict_do_nothing(index_elements=[MappingNotificationOutbox.event_key])
         )

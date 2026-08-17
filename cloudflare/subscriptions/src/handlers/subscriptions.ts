@@ -26,7 +26,9 @@ export async function listSubscriptionOptions(request: Request, env: Env): Promi
   const options = await env.DB.prepare(
     `SELECT filter_type, filter_value, label_en, label_zh, description_en, description_zh
      FROM subscription_filter_options
-     WHERE is_public = 1 AND filter_type IN ('country', 'disease')
+     WHERE is_public = 1 AND filter_type IN (
+       'country', 'disease', 'research_topic', 'study_type', 'peer_review_status'
+     )
      ORDER BY filter_type ASC, sort_order ASC, label_en ASC`
   ).all<{
     filter_type: string;
@@ -40,6 +42,9 @@ export async function listSubscriptionOptions(request: Request, env: Env): Promi
   const filters: Record<string, JsonValue[]> = {
     country: [],
     disease: [],
+    research_topic: [],
+    study_type: [],
+    peer_review_status: [],
   };
 
   for (const option of options.results || []) {
@@ -50,11 +55,7 @@ export async function listSubscriptionOptions(request: Request, env: Env): Promi
       description_en: option.description_en || "",
       description_zh: option.description_zh || "",
     };
-    if (option.filter_type === "country") {
-      filters.country.push(item);
-    } else if (option.filter_type === "disease") {
-      filters.disease.push(item);
-    }
+    filters[option.filter_type]?.push(item);
   }
 
   return json({
@@ -85,6 +86,9 @@ export async function listAudience(request: Request, env: Env, deps: Subscriptio
   requireAdmin(request, env);
   const payload = await deps.readPayload(request);
   const listCode = normalizeCode(valueAsString(payload.list_code) || "reports");
+  if (listCode === "alerts") {
+    throw new HttpError(422, "verified_situation_alert_endpoint_required");
+  }
   const publicList = await env.DB.prepare(
     "SELECT id FROM subscription_lists WHERE code = ? AND is_public = 1"
   ).bind(listCode).first<{ id: string }>();
@@ -96,6 +100,9 @@ export async function listAudience(request: Request, env: Env, deps: Subscriptio
   const disease = normalizeFilter("disease", valueAsString(payload.disease));
   const reportType = normalizeFilter("report_type", valueAsString(payload.report_type));
   const severity = normalizeFilter("severity", valueAsString(payload.severity));
+  const researchTopic = normalizeFilter("research_topic", valueAsString(payload.research_topic));
+  const studyType = normalizeFilter("study_type", valueAsString(payload.study_type));
+  const peerReviewStatus = normalizeFilter("peer_review_status", valueAsString(payload.peer_review_status));
   const requestedLimit = Number(payload.limit ?? 500);
   const limit = Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 500, 1), 1000);
 
@@ -112,6 +119,9 @@ export async function listAudience(request: Request, env: Env, deps: Subscriptio
     { type: "disease", value: disease },
     { type: "report_type", value: reportType },
     { type: "severity", value: severity },
+    { type: "research_topic", value: researchTopic },
+    { type: "study_type", value: studyType },
+    { type: "peer_review_status", value: peerReviewStatus },
   ]) {
     if (!filter.value) continue;
     clauses.push(
