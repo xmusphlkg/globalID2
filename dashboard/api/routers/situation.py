@@ -39,6 +39,17 @@ from src.services.situation_history_service import (
 router = APIRouter()
 
 
+def _history_is_disabled(health: dict) -> bool:
+    return health.get("enabled") is False or health.get("status") == "disabled"
+
+
+async def _require_history_enabled() -> dict:
+    health = await history_health()
+    if _history_is_disabled(health):
+        raise HTTPException(503, "Situation history database is disabled")
+    return health
+
+
 class EventDecision(BaseModel):
     action: Literal["publish", "suppress", "merge", "correct"]
     note: str | None = Field(default=None, max_length=4000)
@@ -258,16 +269,18 @@ async def situation_sources() -> list[dict]:
     for source, status, count in event_status_rows:
         event_counts.setdefault(str(source), {})[str(status)] = int(count)
     emerging = (latest.payload or {}).get("emerging") or [] if latest else []
-    await history_health()
-    async with get_history_db() as history_db:
-        source_rows = (
-            await history_db.execute(
-                select(SituationHistorySourceCheck).order_by(
-                    SituationHistorySourceCheck.checked_at.desc(),
-                    SituationHistorySourceCheck.id.desc(),
+    history = await history_health()
+    source_rows = []
+    if not _history_is_disabled(history):
+        async with get_history_db() as history_db:
+            source_rows = (
+                await history_db.execute(
+                    select(SituationHistorySourceCheck).order_by(
+                        SituationHistorySourceCheck.checked_at.desc(),
+                        SituationHistorySourceCheck.id.desc(),
+                    )
                 )
-            )
-        ).scalars().all()
+            ).scalars().all()
     latest_by_source: dict[str, SituationHistorySourceCheck] = {}
     last_success: dict[str, str | None] = {}
     for row in source_rows:
@@ -516,7 +529,7 @@ async def history_snapshots(
     page: int = Query(1, ge=1),
     page_size: int = Query(30, ge=1, le=100),
 ) -> list[dict]:
-    await history_health()  # Initializes a newly configured empty schema safely.
+    await _require_history_enabled()  # Initializes a newly configured empty schema safely.
     query = select(SituationHistorySnapshot).options(
         selectinload(SituationHistorySnapshot.signals)
     )
@@ -566,6 +579,7 @@ async def history_snapshots(
 
 @router.get("/overview/events/history/snapshots/{snapshot_id}")
 async def history_snapshot_detail(snapshot_id: str) -> dict:
+    await _require_history_enabled()
     async with get_history_db() as db:
         row = (
             await db.execute(
@@ -645,6 +659,7 @@ async def compare_history_snapshots(
     left: str = Query(min_length=1, max_length=120),
     right: str = Query(min_length=1, max_length=120),
 ) -> dict:
+    await _require_history_enabled()
     async with get_history_db() as db:
         rows = (
             await db.execute(
@@ -732,6 +747,7 @@ async def compare_history_snapshots(
 async def history_audit(
     page: int = Query(1, ge=1), page_size: int = Query(50, ge=1, le=200)
 ) -> list[dict]:
+    await _require_history_enabled()
     async with get_history_db() as db:
         rows = (
             await db.execute(

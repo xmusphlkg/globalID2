@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.core.database import dispose_database, get_engine
+from src.core.situation_history_database import dispose_history_database
 from src.core.logging import get_logger
 from .deps import require_dashboard_api_key
 from .http import install_http_contract
@@ -65,6 +66,7 @@ async def lifespan(app: FastAPI):
         await control_plane_events.publish("runtime.stopped", resource_type="runtime", resource_id=instance_id)
         await runtime_registry.close()
         await control_plane_events.close()
+        await dispose_history_database()
         await dispose_database()
         logger.info("API shutting down")
 
