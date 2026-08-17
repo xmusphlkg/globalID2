@@ -339,10 +339,14 @@ def test_project_quality_workflow_covers_backend_frontends_worker_and_migrations
     assert "scripts/automation/smoke_migrations.py" in text
     assert "postgres:15-alpine" in text
     assert "python -m src.cli.main init-db" in text
-    assert "full_rebuild_database.py --mode full --yes" in text
+    assert "full_rebuild_database.py --mode mappings --yes" in text
+    assert "seed_ci_database_fixtures.py" in text
     assert "init_situation_history_database.py --backfill" in text
     assert text.index("python -m src.cli.main init-db") < text.index(
-        "full_rebuild_database.py --mode full --yes"
+        "full_rebuild_database.py --mode mappings --yes"
+    )
+    assert text.index("seed_ci_database_fixtures.py") < text.index(
+        "init_situation_history_database.py --backfill"
     )
     assert "npm run check" in text
     assert "prepare_site_build_fixture.py" in text
