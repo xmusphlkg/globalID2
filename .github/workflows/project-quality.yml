@@ -64,6 +64,7 @@ jobs:
         run: venv/bin/python scripts/automation/prepare_site_build_fixture.py
       - name: Initialize deterministic database fixtures
         run: |
+          venv/bin/python -m src.cli.main init-db
           venv/bin/python scripts/full_rebuild_database.py --mode full --yes --checkpoint-file /tmp/globalid-ci-rebuild.json
           venv/bin/python scripts/init_situation_history_database.py --backfill
       - name: Run complete offline Python suite
