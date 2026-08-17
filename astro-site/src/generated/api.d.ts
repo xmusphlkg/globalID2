@@ -3297,6 +3297,10 @@ export interface components {
         };
         /** AutomationJobOut */
         AutomationJobOut: {
+            /** Automatic Retry */
+            automatic_retry?: {
+                [key: string]: unknown;
+            };
             /** Country Code */
             country_code: string;
             /** Daily Time */
@@ -3307,6 +3311,17 @@ export interface components {
             fill_missing: boolean;
             /** Force */
             force: boolean;
+            /**
+             * Health Reason
+             * @default health has not been evaluated
+             */
+            health_reason: string;
+            /**
+             * Health Status
+             * @default unknown
+             * @enum {string}
+             */
+            health_status: "healthy" | "active" | "recovering" | "failed" | "stale" | "never_run" | "disabled" | "unknown";
             /** Include Current Month */
             include_current_month: boolean;
             /** Interval Minutes */
@@ -3321,6 +3336,10 @@ export interface components {
             last_started_at?: string | null;
             /** Last Status */
             last_status: string;
+            /** Last Success Age Minutes */
+            last_success_age_minutes?: number | null;
+            /** Last Success At */
+            last_success_at?: string | null;
             /** Last Task Uuid */
             last_task_uuid?: string | null;
             /** Name */
@@ -3351,6 +3370,11 @@ export interface components {
             skipped_count: number;
             /** Source */
             source: string;
+            /**
+             * Stale After Minutes
+             * @default 2880
+             */
+            stale_after_minutes: number;
             /** Timezone */
             timezone?: string | null;
         };

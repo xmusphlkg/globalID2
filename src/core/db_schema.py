@@ -418,6 +418,24 @@ async def ensure_disease_learning_suggestions_schema(db: AsyncSession) -> None:
     for statement in alter_statements:
         await db.execute(text(statement))
 
+    await db.execute(
+        text(
+            """
+            ALTER TABLE disease_learning_suggestions
+                ALTER COLUMN status SET DEFAULT 'pending'
+            """
+        )
+    )
+    await db.execute(
+        text(
+            """
+            UPDATE disease_learning_suggestions
+            SET status = 'pending'
+            WHERE status IS NULL
+            """
+        )
+    )
+
     # Add FK only when countries table is present (helps fresh/partial databases).
     await db.execute(text("""
         DO $$

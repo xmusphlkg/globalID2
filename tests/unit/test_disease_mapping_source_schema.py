@@ -49,3 +49,5 @@ async def test_learning_suggestion_schema_evolution_restores_usage_timestamps() 
         in sql
     )
     assert "ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP WITH TIME ZONE" in sql
+    assert "ALTER COLUMN status SET DEFAULT 'pending'" in sql
+    assert "SET status = 'pending' WHERE status IS NULL" in sql
