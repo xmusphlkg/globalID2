@@ -88,7 +88,10 @@ def long_to_wide(
         cols = [c for c in df.columns if c not in (time_col, "disease_id") and df[c].dtype in ("int64", "float64")]
 
     df = normalize_rate_columns(df)
-    df[time_col] = pd.to_datetime(df[time_col])
+    # Report periods are UTC-defined. Normalizing here also handles mixed
+    # offset inputs deterministically instead of leaving an object-dtype
+    # series whose ``.dt`` operations fail or depend on local time.
+    df[time_col] = pd.to_datetime(df[time_col], utc=True)
 
     def _sum_preserve_missing(series: pd.Series) -> float:
         numeric = pd.to_numeric(series, errors="coerce")
@@ -102,7 +105,13 @@ def long_to_wide(
         return pd.DataFrame()
 
     if freq == "monthly":
-        df["_period"] = df[time_col].dt.to_period("M").dt.to_timestamp()
+        monthly_time = df[time_col]
+        if isinstance(monthly_time.dtype, pd.DatetimeTZDtype):
+            # Month boundaries are defined in UTC for the report pipeline.
+            # Convert explicitly before removing the timezone so pandas does
+            # not silently drop timezone information inside ``to_period``.
+            monthly_time = monthly_time.dt.tz_convert("UTC").dt.tz_localize(None)
+        df["_period"] = monthly_time.dt.to_period("M").dt.to_timestamp()
         wide = df.groupby("_period", as_index=True).agg(agg_dict).reset_index()
     elif freq == "weekly":
         # W-MON: 周一起始，符合 ISO 周习惯

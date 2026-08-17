@@ -1,6 +1,6 @@
 """Sources / Data Flow schemas."""
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
 from ..location_codes import COUNTRY_REGION_CODE_MAX_LENGTH
@@ -119,6 +119,21 @@ class AutomationJobOut(BaseModel):
     last_task_uuid: Optional[str] = None
     run_count: int = 0
     skipped_count: int = 0
+    health_status: Literal[
+        "healthy",
+        "active",
+        "recovering",
+        "failed",
+        "stale",
+        "never_run",
+        "disabled",
+        "unknown",
+    ] = "unknown"
+    health_reason: str = "health has not been evaluated"
+    last_success_at: Optional[str] = None
+    last_success_age_minutes: Optional[int] = None
+    stale_after_minutes: int = 2880
+    automatic_retry: Dict[str, object] = Field(default_factory=dict)
 
 
 class AutomationConfigOut(BaseModel):

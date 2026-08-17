@@ -1,0 +1,15 @@
+---
+import { listSituationReports } from '../../lib/situation-data';
+
+export function getStaticPaths() {
+  return (['weekly', 'monthly'] as const).flatMap(kind =>
+    listSituationReports(kind).map(report => ({
+      params: { period: report.report.period_key },
+      props: { target: `/situation/${kind}/${report.report.period_key}/` },
+    })),
+  );
+}
+
+const { target } = Astro.props as { target: string };
+return Astro.redirect(target, 301);
+---

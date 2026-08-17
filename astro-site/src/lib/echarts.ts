@@ -1,29 +1,32 @@
 // src/lib/echarts.ts
-// Tree-shakable ECharts core – only registers chart types actually used.
-import * as echarts from 'echarts/core';
-
-import { LineChart, BarChart, HeatmapChart, MapChart, ScatterChart } from 'echarts/charts';
+// Default registry for the common time-series and bar-chart islands.
+import echarts from './echartsCore';
 
 import {
-  AriaComponent,
-  TitleComponent,
-  TooltipComponent,
+  LineChart,
+  BarChart,
+} from 'echarts/charts';
+
+import {
+  DataZoomComponent,
   GridComponent,
   LegendComponent,
-  DataZoomComponent,
-  VisualMapComponent,
-  GeoComponent,
+  MarkAreaComponent,
   MarkLineComponent,
+  TitleComponent,
+  TooltipComponent,
 } from 'echarts/components';
 
-import { CanvasRenderer } from 'echarts/renderers';
-
 echarts.use([
-  LineChart, BarChart, HeatmapChart, MapChart, ScatterChart,
-  AriaComponent, TitleComponent, TooltipComponent, GridComponent,
-  LegendComponent, DataZoomComponent, VisualMapComponent, GeoComponent,
+  LineChart,
+  BarChart,
+  DataZoomComponent,
+  GridComponent,
+  LegendComponent,
+  MarkAreaComponent,
   MarkLineComponent,
-  CanvasRenderer,
+  TitleComponent,
+  TooltipComponent,
 ]);
 
 export default echarts;

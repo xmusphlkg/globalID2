@@ -6,6 +6,7 @@ and workbook error logging — eliminating boilerplate from every CLI command.
 """
 import signal
 import sys
+import re
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -21,6 +22,21 @@ from src.services.exceptions import TaskCancelledError
 from src.services.task_alert_service import task_alert_service
 
 logger = get_logger(__name__)
+_URL_RE = re.compile(r"(?:https?|ftp)://\S+", re.IGNORECASE)
+_SECRET_RE = re.compile(
+    r"(?i)\b(api[_-]?key|access[_-]?token|token|password|secret)=([^\s&,;]+)"
+)
+
+
+def safe_exception_summary(exc: BaseException) -> str:
+    """Return a non-empty bounded task error without URLs or inline secrets."""
+    error_type = type(exc).__name__ or "Exception"
+    message = str(exc).strip()
+    if not message:
+        return error_type
+    message = _URL_RE.sub("[redacted-url]", message)
+    message = _SECRET_RE.sub(lambda match: f"{match.group(1)}=[redacted]", message)
+    return f"{error_type}: {message}"[:1000]
 
 
 @asynccontextmanager
@@ -62,6 +78,17 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
         if await task_manager.is_cancel_requested(task.task_uuid):
             raise TaskCancelledError("Cancellation requested by user")
         await task_manager.update_task_status(task.task_uuid, TaskStatus.COMPLETED)
+        if task.task_type == TaskType.CRAWL_DATA:
+            try:
+                await automation_service.mark_automatic_retry_succeeded(
+                    task.task_uuid
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to finalize ingestion retry metadata for %s: %s",
+                    task.task_uuid,
+                    exc,
+                )
         try:
             await data_release_service.maybe_trigger_after_task_completion(task.task_uuid, task.task_type)
         except Exception as exc:
@@ -78,13 +105,14 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
             sys.exit(130)
 
     except Exception as exc:
-        logger.error(f"Task {task.task_uuid} failed: {exc}")
+        error_summary = safe_exception_summary(exc)
+        logger.error(f"Task {task.task_uuid} failed: {error_summary}")
         try:
             await task_manager.add_workbook_entry(
                 task.task_uuid,
                 entry_type="error",
                 title="Task Failed",
-                content=f"Error: {exc}",
+                content=f"Error: {error_summary}",
                 content_type="text",
             )
         except Exception as log_exc:
@@ -92,14 +120,44 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
         await task_manager.update_task_status(
             task.task_uuid,
             TaskStatus.FAILED,
-            error_message=str(exc),
+            error_message=error_summary,
         )
-        try:
-            await task_alert_service.send_task_alert(task.task_uuid, TaskStatus.FAILED)
-        except Exception as notify_exc:
-            logger.warning(f"Failure alert skipped for {task.task_uuid}: {notify_exc}")
-        await _mark_report(report_id_ref, "failed", str(exc))
-        await _mark_agent_workflow(task, "failed", str(exc))
+        automatic_retry_scheduled = False
+        if task.task_type == TaskType.EXPORT_DATA:
+            try:
+                automatic_retry_scheduled = (
+                    await data_release_service.schedule_automatic_retry_after_failure(
+                        task.task_uuid,
+                        exc,
+                    )
+                )
+            except Exception as retry_exc:
+                logger.warning(
+                    "Failed to evaluate automatic release retry for %s: %s",
+                    task.task_uuid,
+                    retry_exc,
+                )
+        elif task.task_type == TaskType.CRAWL_DATA:
+            try:
+                automatic_retry_scheduled = (
+                    await automation_service.schedule_automatic_retry_after_failure(
+                        task.task_uuid,
+                        exc,
+                    )
+                )
+            except Exception as retry_exc:
+                logger.warning(
+                    "Failed to evaluate automatic ingestion retry for %s: %s",
+                    task.task_uuid,
+                    retry_exc,
+                )
+        if not automatic_retry_scheduled:
+            try:
+                await task_alert_service.send_task_alert(task.task_uuid, TaskStatus.FAILED)
+            except Exception as notify_exc:
+                logger.warning(f"Failure alert skipped for {task.task_uuid}: {notify_exc}")
+        await _mark_report(report_id_ref, "failed", error_summary)
+        await _mark_agent_workflow(task, "failed", error_summary)
         raise
 
     finally:

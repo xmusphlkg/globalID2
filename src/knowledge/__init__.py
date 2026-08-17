@@ -1,6 +1,13 @@
 """Knowledge-base ingestion and source-grounded brief generation."""
 
-from .evidence import EvidenceFragment, EvidenceManifest, build_evidence_manifest
+from .evidence import (
+    EvidenceFragment,
+    EvidenceManifest,
+    EvidencePacket,
+    MAX_EVIDENCE_MANIFEST_CHARACTERS,
+    build_evidence_manifest,
+    prepare_evidence_packet,
+)
 from .catalogue import (
     knowledge_brief_block_reason,
     knowledge_brief_publication_tier,
@@ -18,6 +25,8 @@ from .profile_schema import (
 )
 from .quality import (
     KNOWLEDGE_TEXT_FIELDS,
+    KNOWLEDGE_SCHEMA_VERSION,
+    EVIDENCE_POLICY_VERSION,
     PROFILE_SECTION_FIELDS,
     apply_knowledge_quality_gate,
     assess_knowledge_evidence,
@@ -27,7 +36,7 @@ from .quality import (
     sanitize_knowledge_brief,
     strip_unavailable_knowledge_sentences,
 )
-from .sources import DiseaseKnowledgeFetcher, SourceCandidate
+from .sources import DiseaseKnowledgeFetcher, SourceCandidate, SourceFetchReport
 
 __all__ = [
     "AIDiseaseBriefGenerator",
@@ -35,8 +44,13 @@ __all__ = [
     "DiseaseKnowledgeFetcher",
     "EvidenceFragment",
     "EvidenceManifest",
+    "EvidencePacket",
+    "MAX_EVIDENCE_MANIFEST_CHARACTERS",
     "SourceCandidate",
+    "SourceFetchReport",
     "KNOWLEDGE_TEXT_FIELDS",
+    "KNOWLEDGE_SCHEMA_VERSION",
+    "EVIDENCE_POLICY_VERSION",
     "KnowledgeProfileSchema",
     "PROFILE_SECTION_FIELDS",
     "apply_knowledge_quality_gate",
@@ -45,6 +59,7 @@ __all__ = [
     "assess_knowledge_brief",
     "assess_knowledge_field",
     "build_evidence_manifest",
+    "prepare_evidence_packet",
     "knowledge_brief_block_reason",
     "knowledge_brief_publication_tier",
     "public_disease_page_exclusion_reason",

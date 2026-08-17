@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -30,6 +31,43 @@ DEFAULT_REPO_BRANCH = get_data_share_repo_branch()
 MANAGED_PATHS = ("countries", "diseases", "manifest.json")
 GITHUB_MAX_FILE_BYTES = 100 * 1024 * 1024
 ASSET_DIRECTORIES = ("countries", "diseases")
+GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
+NETWORK_ATTEMPTS = 4
+NETWORK_RETRY_DELAY_SECONDS = 2.0
+TRANSIENT_GIT_ERROR_MARKERS = (
+    "gnutls",
+    "tls connection",
+    "connection reset",
+    "connection timed out",
+    "could not resolve host",
+    "failed to connect",
+    "connection closed",
+    "remote end hung up unexpectedly",
+    "unexpected disconnect",
+    "http/2 stream",
+    "the requested url returned error: 502",
+    "the requested url returned error: 503",
+    "the requested url returned error: 504",
+)
+
+
+def summarize_git_status(status: str, *, max_paths: int = 8) -> str:
+    """Summarize a porcelain status without flooding task logs with every path."""
+
+    lines = [line for line in status.splitlines() if line.strip()]
+    if not lines:
+        return "No changes to publish."
+    counts = Counter((line[:2].strip() or "changed") for line in lines)
+    count_summary = ", ".join(
+        f"{status_code}: {count}" for status_code, count in sorted(counts.items())
+    )
+    displayed = lines[:max_paths]
+    summary = [f"Git changes ready: {len(lines)} paths ({count_summary})"]
+    summary.extend(f"  {line}" for line in displayed)
+    omitted = len(lines) - len(displayed)
+    if omitted:
+        summary.append(f"  ... {omitted} additional paths omitted")
+    return "\n".join(summary)
 
 
 def files_match(source_path: Path, target_path: Path) -> bool:
@@ -63,6 +101,64 @@ def run_git(args: list[str], cwd: Path) -> str:
     return completed.stdout.strip()
 
 
+def _is_github_ssh_repo(repo_url: str) -> bool:
+    normalized = (repo_url or "").strip().casefold()
+    return any(normalized.startswith(prefix) for prefix in GITHUB_SSH_PREFIXES)
+
+
+def configure_github_ssh_transport(repo_url: str) -> bool:
+    """Route GitHub SSH traffic over port 443 for restricted networks.
+
+    The release preflight can briefly succeed on port 22 and the later fetch
+    can still time out. Configuring the publisher process itself avoids that
+    race while retaining any identity/proxy options supplied by its parent.
+    """
+
+    if not _is_github_ssh_repo(repo_url):
+        return False
+    current = str(os.environ.get("GIT_SSH_COMMAND") or "ssh").strip()
+    if "Hostname=ssh.github.com" not in current:
+        current += " -o Hostname=ssh.github.com"
+    if " -p 443" not in current and "Port=443" not in current:
+        current += " -p 443"
+    os.environ["GIT_SSH_COMMAND"] = current
+    os.environ["GIT_TERMINAL_PROMPT"] = "0"
+    return True
+
+
+def _is_transient_git_error(exc: RuntimeError) -> bool:
+    detail = str(exc).casefold()
+    return any(marker in detail for marker in TRANSIENT_GIT_ERROR_MARKERS)
+
+
+def run_git_with_retry(
+    args: list[str],
+    cwd: Path,
+    *,
+    attempts: int = NETWORK_ATTEMPTS,
+    retry_delay_seconds: float = NETWORK_RETRY_DELAY_SECONDS,
+) -> str:
+    """Retry a Git network operation only for transient transport failures."""
+
+    if attempts < 1:
+        raise ValueError("Git attempts must be at least 1")
+    for attempt in range(1, attempts + 1):
+        try:
+            return run_git(args, cwd)
+        except RuntimeError as exc:
+            if attempt == attempts or not _is_transient_git_error(exc):
+                raise
+            delay = retry_delay_seconds * (2 ** (attempt - 1))
+            print(
+                f"Git network attempt {attempt}/{attempts} failed with a "
+                f"transient error; retrying in {delay:g} seconds.\n{exc}",
+                file=sys.stderr,
+                flush=True,
+            )
+            time.sleep(delay)
+    raise AssertionError("unreachable Git retry state")
+
+
 def push_branch(
     workdir: Path,
     branch: str,
@@ -72,36 +168,21 @@ def push_branch(
 ) -> None:
     """Retry bounded push failures while keeping Git's fast-forward safety intact."""
 
-    if attempts < 1:
-        raise ValueError("Push attempts must be at least 1")
-    last_error: RuntimeError | None = None
-    for attempt in range(1, attempts + 1):
-        try:
-            run_git(["push", "origin", branch], workdir)
-            return
-        except RuntimeError as exc:
-            last_error = exc
-            if attempt == attempts:
-                break
-            print(
-                f"Git push attempt {attempt}/{attempts} failed; "
-                f"retrying in {retry_delay_seconds:g} seconds.\n{exc}",
-                file=sys.stderr,
-            )
-            time.sleep(retry_delay_seconds)
-    raise RuntimeError(
-        f"Git push failed after {attempts} attempts. Latest error:\n{last_error}"
-    ) from last_error
+    run_git_with_retry(
+        ["push", "origin", branch],
+        workdir,
+        attempts=attempts,
+        retry_delay_seconds=retry_delay_seconds,
+    )
 
 
 def remote_branch_exists(repo_url: str, branch: str) -> bool:
-    completed = subprocess.run(
-        ["git", "ls-remote", "--heads", repo_url, branch],
-        check=True,
-        text=True,
-        capture_output=True,
+    configure_github_ssh_transport(repo_url)
+    output = run_git_with_retry(
+        ["ls-remote", "--heads", repo_url, branch],
+        ROOT,
     )
-    return bool(completed.stdout.strip())
+    return bool(output.strip())
 
 
 def _asset_relative_path(relative_path: str) -> Path:
@@ -194,6 +275,7 @@ def validate_source(source_dir: Path, branch: str) -> dict:
 
 
 def ensure_repo(repo_url: str, branch: str, workdir: Path) -> None:
+    configure_github_ssh_transport(repo_url)
     checkout_ready = False
     if (workdir / ".git").exists():
         completed = subprocess.run(
@@ -222,7 +304,10 @@ def ensure_repo(repo_url: str, branch: str, workdir: Path) -> None:
         # the requested branch from the fetched remote ref avoids an
         # impossible fast-forward when those histories diverge.
         remote_ref = f"refs/remotes/origin/{branch}"
-        run_git(["fetch", "origin", f"{branch}:{remote_ref}", "--depth", "1"], workdir)
+        run_git_with_retry(
+            ["fetch", "origin", f"{branch}:{remote_ref}", "--depth", "1"],
+            workdir,
+        )
         run_git(["checkout", "-B", branch, f"origin/{branch}"], workdir)
     else:
         run_git(["checkout", "-B", branch], workdir)
@@ -357,7 +442,7 @@ def commit_and_push(
     if not status:
         print("No changes to publish.")
         return False
-    print(status)
+    print(summarize_git_status(status))
     if not push:
         print("Validation complete. Pass --push to commit and publish these changes.")
         return False

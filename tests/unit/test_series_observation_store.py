@@ -12,6 +12,7 @@ from src.data.storage.series_observation_store import (
     SeriesObservationStore,
     _quality_status,
 )
+from src.domain import DiseaseSurveillanceSeries, SourceDiseaseCategory
 
 
 @pytest.fixture(autouse=True)
@@ -43,6 +44,153 @@ def _quality_observation(
         "suppressed": False,
         "metadata": {"frequency": frequency},
     }
+
+
+def test_registry_selection_forwards_nonblank_unknown_rows_to_holding() -> None:
+    row = {
+        "Date": "2026-08-01",
+        "SourceDiseaseCode": "NEW-001",
+        "RawDiseaseLabel": "Newly reported condition",
+        "Cases": "7",
+    }
+
+    result = SeriesObservationStore().select_registry_rows(
+        [row],
+        "ZZ",
+        source_id="SRC_ZZ_TEST",
+    )
+
+    assert result.rows == []
+    assert result.skipped_unregistered == 1
+    assert result.skipped_missing == 0
+    assert result.unregistered_rows == (row,)
+
+
+def test_registry_identity_enrichment_uses_reviewed_code_and_version() -> None:
+    row = {
+        "Date": "2026-07-01",
+        "DiseaseCode": "2801",
+        "RawDiseaseLabel": "Coronavirus SARS-CoV-2",
+        "Cases": "7",
+    }
+
+    enriched = SeriesObservationStore().enrich_registry_identities(
+        [row],
+        "FI",
+        source_id="SRC_FI_THL_TTR",
+    )
+
+    assert enriched[0]["SourceDiseaseCode"] == "2801"
+    assert enriched[0]["DefinitionVersion"] == "FI_THL_TTR_reporting_group"
+    assert "DefinitionVersion" not in row
+
+
+def test_registry_identity_enrichment_resolves_label_only_series() -> None:
+    enriched = SeriesObservationStore().enrich_registry_identities(
+        [
+            {
+                "Date": "2026-07-01",
+                "Diseases": "COVID-19",
+                "Cases": "3",
+            }
+        ],
+        "NZ",
+        source_id="SRC_NZ_PHS",
+    )
+
+    assert enriched[0]["SourceDiseaseCode"] == "SER_NZ_COVID19_MONTHLY"
+    assert enriched[0]["DefinitionVersion"] == "NZ_PHS_current"
+
+
+def test_registry_identity_enrichment_leaves_unknown_category_unversioned() -> None:
+    row = {
+        "Date": "2026-07-01",
+        "RawDiseaseLabel": "Newly reported condition",
+        "Cases": "2",
+    }
+
+    enriched = SeriesObservationStore().enrich_registry_identities(
+        [row],
+        "ZZ",
+        source_id="SRC_ZZ_TEST",
+    )
+
+    assert enriched == [row]
+
+
+@pytest.mark.asyncio
+async def test_unknown_category_builds_nonprojectable_holding_observation() -> None:
+    now = datetime.now(timezone.utc)
+    category = SourceDiseaseCategory(
+        id=41,
+        category_key="CAT_SRC_ZZ_TEST_NEW_001",
+        country_code="ZZ",
+        source_id="SRC_ZZ_TEST",
+        source_code="NEW-001",
+        canonical_source_label="Newly reported condition",
+        normalized_label="newly reported condition",
+        definition_version="source-current",
+        status="discovered",
+        first_seen_at=now,
+        last_seen_at=now,
+        occurrence_count=1,
+        ai_status="pending",
+        metadata_={},
+        is_active=True,
+    )
+
+    class ScalarResult:
+        def __init__(self, value):
+            self.value = value
+
+        def scalar_one_or_none(self):
+            return self.value
+
+    class FakeDB:
+        def __init__(self):
+            self.results = iter((category, None))
+            self.added = []
+
+        async def execute(self, _statement):
+            return ScalarResult(next(self.results))
+
+        def add(self, value):
+            self.added.append(value)
+
+        async def flush(self):
+            return None
+
+    db = FakeDB()
+    rows = [
+        {
+            "Date": "2026-08-01",
+            "SourceDiseaseCode": "NEW-001",
+            "RawDiseaseLabel": "Newly reported condition",
+            "Cases": "7",
+            "Frequency": "monthly",
+        }
+    ]
+
+    observations, handled = await SeriesObservationStore()._build_holding_observations(
+        db,
+        rows,
+        "ZZ",
+        source_id="SRC_ZZ_TEST",
+        value_field="Cases",
+        geography_key=None,
+    )
+
+    assert handled == 1
+    assert len(observations) == 1
+    assert observations[0]["value"] == 7
+    assert observations[0]["metadata"]["dynamic_holding"] is True
+    assert observations[0]["metadata"]["local_code"] == "NEW-001"
+    holding_series = next(
+        item for item in db.added if isinstance(item, DiseaseSurveillanceSeries)
+    )
+    assert holding_series.target_group_code == "G_UNMAPPED_SOURCE_CATEGORIES"
+    assert holding_series.mapping_relation == "unmapped"
+    assert holding_series.comparability == "not_comparable"
 
 
 def test_quality_guard_keeps_an_isolated_reported_zero() -> None:

@@ -74,7 +74,11 @@ function useTheme() {
 
 function useLang() {
   const [lang, setLang] = useState<'en' | 'zh'>(() => {
-    if (typeof document === 'undefined') return 'zh';
+    // This island is server-rendered inside an English-first ReportLayout.
+    // Match that deterministic SSR value, then follow the document preference
+    // after hydration. A Chinese fallback here forced React to discard and
+    // rebuild the complete report on every initial English visit.
+    if (typeof document === 'undefined') return 'en';
     return document.documentElement.getAttribute('data-lang') === 'en' ? 'en' : 'zh';
   });
   useEffect(() => {

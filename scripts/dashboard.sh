@@ -114,12 +114,30 @@ is_managed_web_pid() {
     ) ]]
 }
 
+find_python_module_pid() {
+  local module="$1"
+  local cmdline
+  local pid
+  for cmdline in /proc/[0-9]*/cmdline; do
+    [[ -r "$cmdline" ]] || continue
+    # Match an exact argv item. Searching the rendered ps command line can
+    # mistake status/diagnostic shells containing the module text for the
+    # actual Python process and overwrite the service PID file.
+    if tr '\0' '\n' < "$cmdline" 2>/dev/null | grep -Fxq -- "$module"; then
+      pid="${cmdline#/proc/}"
+      pid="${pid%/cmdline}"
+      echo "$pid"
+      return
+    fi
+  done
+}
+
 find_worker_pid() {
-  ps -eo pid=,args= 2>/dev/null | awk '/src\.services\.task_worker/ && !/awk/ {print $1; exit}'
+  find_python_module_pid "src.services.task_worker"
 }
 
 find_scheduler_pid() {
-  ps -eo pid=,args= 2>/dev/null | awk '/src\.control_plane\.scheduler/ && !/awk/ {print $1; exit}'
+  find_python_module_pid "src.control_plane.scheduler"
 }
 
 find_web_pid() {
@@ -303,8 +321,17 @@ start_api() {
     echo "Starting API on http://localhost:8000"
   fi
 
-  nohup "$uvicorn_bin" "${uvicorn_args[@]}" > "$API_LOG" 2>&1 &
-  echo $! > "$API_PID_FILE"
+  (
+    cd "$ROOT_DIR"
+    if have_command setsid; then
+      nohup setsid "$uvicorn_bin" "${uvicorn_args[@]}" \
+        </dev/null > "$API_LOG" 2>&1 &
+    else
+      nohup "$uvicorn_bin" "${uvicorn_args[@]}" \
+        </dev/null > "$API_LOG" 2>&1 &
+    fi
+    echo $! > "$API_PID_FILE"
+  )
   sleep 2
 
   pid="$(read_pid "$API_PID_FILE")"
@@ -396,7 +423,13 @@ start_worker() {
   echo "Starting task worker"
   (
     cd "$ROOT_DIR"
-    nohup "$python_bin" -m src.services.task_worker > "$WORKER_LOG" 2>&1 &
+    if have_command setsid; then
+      nohup setsid "$python_bin" -m src.services.task_worker \
+        </dev/null > "$WORKER_LOG" 2>&1 &
+    else
+      nohup "$python_bin" -m src.services.task_worker \
+        </dev/null > "$WORKER_LOG" 2>&1 &
+    fi
     echo $! > "$WORKER_PID_FILE"
   )
   sleep 2
@@ -426,7 +459,13 @@ start_scheduler() {
   echo "Starting control-plane scheduler"
   (
     cd "$ROOT_DIR"
-    nohup "$python_bin" -m src.control_plane.scheduler > "$SCHEDULER_LOG" 2>&1 &
+    if have_command setsid; then
+      nohup setsid "$python_bin" -m src.control_plane.scheduler \
+        </dev/null > "$SCHEDULER_LOG" 2>&1 &
+    else
+      nohup "$python_bin" -m src.control_plane.scheduler \
+        </dev/null > "$SCHEDULER_LOG" 2>&1 &
+    fi
     echo $! > "$SCHEDULER_PID_FILE"
   )
   sleep 2

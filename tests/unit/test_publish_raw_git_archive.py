@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import subprocess
 
+import pytest
+
 from scripts import publish_raw_git_archive as archive
 from scripts.verify_raw_git_archive import verify_raw_archive
 
@@ -249,6 +251,56 @@ def test_existing_unpushed_commit_is_resumed_before_sync(tmp_path: Path) -> None
         text=True,
     ).stdout.strip()
     assert remote_head == local_head
+
+
+def test_push_branch_retries_transient_tls_failure(monkeypatch, tmp_path: Path) -> None:
+    attempts = []
+    delays = []
+
+    def flaky_run_git(args, cwd, **kwargs):
+        attempts.append((args, cwd, kwargs))
+        if len(attempts) < 3:
+            raise archive.RawArchiveError(
+                "git push failed: GnuTLS, handshake failed: "
+                "The TLS connection was non-properly terminated"
+            )
+        return subprocess.CompletedProcess(["git", *args], 0, "", "")
+
+    monkeypatch.setattr(archive, "run_git", flaky_run_git)
+    monkeypatch.setattr(archive.time, "sleep", delays.append)
+
+    archive._push_branch(
+        tmp_path,
+        timeout_seconds=30,
+        attempts=4,
+        retry_delay_seconds=0.5,
+    )
+
+    assert len(attempts) == 3
+    assert delays == [0.5, 1.0]
+    assert attempts[0][0] == ["push", "origin", "HEAD:refs/heads/main"]
+
+
+def test_push_branch_does_not_retry_permanent_git_failure(
+    monkeypatch, tmp_path: Path
+) -> None:
+    attempts = []
+    delays = []
+
+    def rejected_run_git(args, cwd, **kwargs):
+        attempts.append((args, cwd, kwargs))
+        raise archive.RawArchiveError(
+            "git push failed: remote rejected (non-fast-forward)"
+        )
+
+    monkeypatch.setattr(archive, "run_git", rejected_run_git)
+    monkeypatch.setattr(archive.time, "sleep", delays.append)
+
+    with pytest.raises(archive.RawArchiveError, match="non-fast-forward"):
+        archive._push_branch(tmp_path, timeout_seconds=30)
+
+    assert len(attempts) == 1
+    assert delays == []
 
 
 def test_obsolete_worker_arguments_are_accepted_during_service_transition() -> None:

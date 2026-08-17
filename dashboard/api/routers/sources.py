@@ -1346,4 +1346,10 @@ def _automation_job_out(job: AutomationJob, state: dict | None) -> AutomationJob
         last_task_uuid=state.get("last_task_uuid"),
         run_count=state.get("run_count", 0),
         skipped_count=state.get("skipped_count", 0),
+        health_status=state.get("health_status", "unknown"),
+        health_reason=state.get("health_reason", "health has not been evaluated"),
+        last_success_at=state.get("last_success_at"),
+        last_success_age_minutes=state.get("last_success_age_minutes"),
+        stale_after_minutes=state.get("stale_after_minutes", 2880),
+        automatic_retry=dict(state.get("automatic_retry") or {}),
     )

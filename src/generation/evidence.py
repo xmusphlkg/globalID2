@@ -23,7 +23,34 @@ from src.generation.v3_historical import build_historical_context
 
 logger = get_logger(__name__)
 
-METHOD_VERSION = "report_v4.0"
+METHOD_VERSION = "report_v4.1"
+
+ATTENTION_SCORE_SEMANTICS: Dict[str, Any] = {
+    "type": "surveillance_attention_priority",
+    "labels": {"zh": "监测关注优先级", "en": "Surveillance attention priority"},
+    "description": {
+        "zh": "用于安排监测信号复核顺序的确定性复合分，不是公共卫生风险估计。",
+        "en": "A deterministic composite used to order surveillance review; it is not a public-health risk estimate.",
+    },
+    "scale": {"minimum": 0, "maximum": 100, "higher_means": "review_sooner"},
+    "inputs": [
+        "reported_case_burden",
+        "reported_mortality_signal_when_available",
+        "short_term_change",
+        "deterministic_anomaly_marker",
+        "historical_position",
+        "data_quality_penalty",
+    ],
+    "limitations": {
+        "zh": "该分值未经校准，不能解释为感染、重症、死亡或暴发的概率，也不能替代流行病学研判。",
+        "en": "The score is uncalibrated and must not be read as the probability of infection, severe disease, death, or an outbreak, nor as a substitute for epidemiological assessment.",
+    },
+    "legacy_aliases": {
+        "risk_score": "attention_score",
+        "risk_level": "attention_level",
+        "risk_ranking": "attention_ranking",
+    },
+}
 
 
 def _json_safe(value: Any) -> Any:
@@ -166,6 +193,7 @@ class EvidenceAnalyzer:
         summary_metrics = self._summary_metrics(df, disease_packets)
         data_quality = self._data_quality(df, period_end)
         sources = self._sources(df, raw_sources or [])
+        attention_ranking = self._attention_ranking(disease_packets)
         packet = {
             "method_version": self.method_version,
             "country": country,
@@ -176,7 +204,11 @@ class EvidenceAnalyzer:
             "reporting_cadence": frequency,
             "data_signature": self._signature(df, country, period_start, period_end),
             "summary_metrics": summary_metrics,
-            "risk_ranking": self._risk_ranking(disease_packets),
+            "score_semantics": ATTENTION_SCORE_SEMANTICS,
+            "attention_ranking": attention_ranking,
+            # Deprecated compatibility alias. New consumers must use
+            # ``attention_ranking`` and the explicit semantics above.
+            "risk_ranking": attention_ranking,
             "diseases": disease_packets,
             "data_quality": data_quality,
             "sources": sources,
@@ -261,7 +293,7 @@ class EvidenceAnalyzer:
             if not historical_wide.empty:
                 historical_wide = historical_wide.sort_values("_period").reset_index(drop=True)
             historical_context = build_historical_context(historical_wide if not historical_wide.empty else wide, frequency)
-            risk_score = self._risk_score(
+            attention_score = self._attention_score(
                 latest_cases=latest_cases,
                 total_cases=total_cases,
                 latest_deaths=_metric_int(latest_deaths),
@@ -320,10 +352,20 @@ class EvidenceAnalyzer:
                     "anomaly": anomaly,
                     "visual_diagnostics": visual_diagnostics,
                     "historical_context": historical_context,
+                    "attention": {
+                        "score": attention_score,
+                        "level": self._attention_level(attention_score),
+                        "semantic_type": "surveillance_attention_priority",
+                        "drivers": self._attention_drivers(latest_cases, _metric_int(latest_deaths), change_pct, anomaly, quality_score, historical_context),
+                    },
+                    # Deprecated compatibility object. This is intentionally an
+                    # alias, not a claim about public-health risk.
                     "risk": {
-                        "score": risk_score,
-                        "level": self._risk_level(risk_score),
-                        "drivers": self._risk_drivers(latest_cases, _metric_int(latest_deaths), change_pct, anomaly, quality_score, historical_context),
+                        "score": attention_score,
+                        "level": self._attention_level(attention_score),
+                        "drivers": self._attention_drivers(latest_cases, _metric_int(latest_deaths), change_pct, anomaly, quality_score, historical_context),
+                        "deprecated": True,
+                        "alias_for": "attention",
                     },
                     "data_quality": {
                         "score": quality_score,
@@ -344,16 +386,17 @@ class EvidenceAnalyzer:
 
     def _rank_diseases(self, packets: List[Dict[str, Any]]) -> None:
         by_burden = sorted(packets, key=lambda p: p["metrics"]["total_cases"], reverse=True)
-        by_risk = sorted(packets, key=lambda p: p["risk"]["score"], reverse=True)
+        by_attention = sorted(packets, key=lambda p: p["attention"]["score"], reverse=True)
         for rank, packet in enumerate(by_burden, 1):
             packet["burden_rank"] = rank
-        for rank, packet in enumerate(by_risk, 1):
-            packet["risk_rank"] = rank
+        for rank, packet in enumerate(by_attention, 1):
+            packet["attention_rank"] = rank
+            packet["risk_rank"] = rank  # Deprecated compatibility alias.
 
     @staticmethod
     def _summary_metrics(df: pd.DataFrame, disease_packets: List[Dict[str, Any]]) -> Dict[str, Any]:
         active_latest = sum(1 for d in disease_packets if _metric_int(d["metrics"].get("latest_cases")) > 0 or _metric_int(d["metrics"].get("latest_deaths")) > 0)
-        high_risk = sum(1 for d in disease_packets if d["risk"]["level"] in {"critical", "high"})
+        high_attention = sum(1 for d in disease_packets if d["attention"]["level"] in {"critical", "high"})
         death_status_counts: Dict[str, int] = {}
         for disease in disease_packets:
             status = str((disease.get("metrics") or {}).get("death_reporting_status") or "unknown")
@@ -372,7 +415,8 @@ class EvidenceAnalyzer:
             "record_count": int(len(df)),
             "disease_count": len(disease_packets),
             "active_latest_diseases": active_latest,
-            "high_risk_diseases": high_risk,
+            "high_attention_diseases": high_attention,
+            "high_risk_diseases": high_attention,  # Deprecated compatibility alias.
             "total_cases": int(sum(_metric_int(d["metrics"].get("total_cases")) for d in disease_packets)),
             "total_deaths": int(sum(_metric_int(d["metrics"].get("total_deaths")) for d in disease_packets)),
             "latest_cases": int(sum(_metric_int(d["metrics"].get("latest_cases")) for d in disease_packets)),
@@ -543,6 +587,7 @@ class EvidenceAnalyzer:
             "summary:total_deaths": summary_metrics.get("total_deaths"),
             "summary:latest_cases": summary_metrics.get("latest_cases"),
             "summary:high_risk_diseases": summary_metrics.get("high_risk_diseases"),
+            "summary:high_attention_diseases": summary_metrics.get("high_attention_diseases"),
             "quality:score": data_quality.get("score"),
         }
         for disease in disease_packets:
@@ -554,7 +599,8 @@ class EvidenceAnalyzer:
             index[f"{prefix}.change_pct"] = disease["metrics"]["change_pct"]
             index[f"{prefix}.latest_incidence_rate_per_100k"] = disease["metrics"].get("latest_incidence_rate_per_100k")
             index[f"{prefix}.period_crude_incidence_per_100k"] = disease["metrics"].get("period_crude_incidence_per_100k")
-            index[f"{prefix}.risk_score"] = disease["risk"]["score"]
+            index[f"{prefix}.attention_score"] = disease["attention"]["score"]
+            index[f"{prefix}.risk_score"] = disease["attention"]["score"]  # Deprecated alias.
             visual = disease.get("visual_diagnostics") or {}
             history = disease.get("historical_context") or {}
             index[f"{prefix}.latest_4_period_cases"] = visual.get("latest_4_period_cases")
@@ -567,10 +613,13 @@ class EvidenceAnalyzer:
 
     @staticmethod
     def _analysis_summary(packet: Dict[str, Any]) -> Dict[str, Any]:
-        ranking = packet.get("risk_ranking") or []
+        ranking = packet.get("attention_ranking") or packet.get("risk_ranking") or []
         return {
+            "top_attention_diseases": ranking[:5],
+            "high_attention_count": packet.get("summary_metrics", {}).get("high_attention_diseases", 0),
+            # Deprecated aliases retained for older prompt/report consumers.
             "top_risk_diseases": ranking[:5],
-            "high_risk_count": packet.get("summary_metrics", {}).get("high_risk_diseases", 0),
+            "high_risk_count": packet.get("summary_metrics", {}).get("high_attention_diseases", 0),
             "data_quality_score": packet.get("data_quality", {}).get("score"),
             "data_signature": packet.get("data_signature"),
         }
@@ -923,7 +972,7 @@ class EvidenceAnalyzer:
         return _pct_change(latest_value, _num(nearest[column].iloc[0]))
 
     @staticmethod
-    def _risk_score(
+    def _attention_score(
         *,
         latest_cases: int,
         total_cases: int,
@@ -959,7 +1008,7 @@ class EvidenceAnalyzer:
         return int(round(max(0.0, min(100.0, burden + mortality + change + anomaly_score + historical_score - quality_penalty))))
 
     @staticmethod
-    def _risk_level(score: int) -> str:
+    def _attention_level(score: int) -> str:
         if score >= 80:
             return "critical"
         if score >= 60:
@@ -969,7 +1018,7 @@ class EvidenceAnalyzer:
         return "low"
 
     @staticmethod
-    def _risk_drivers(
+    def _attention_drivers(
         latest_cases: int,
         latest_deaths: int,
         change_pct: Optional[float],
@@ -1039,19 +1088,23 @@ class EvidenceAnalyzer:
         return limitations or ["No major structural limitation detected in the available time series."]
 
     @staticmethod
-    def _risk_ranking(disease_packets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _attention_ranking(disease_packets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         return [
             {
                 "disease_id": item["disease_id"],
                 "name_en": item["name_en"],
                 "name_zh": item["name_zh"],
-                "risk_score": item["risk"]["score"],
-                "risk_level": item["risk"]["level"],
+                "attention_score": item["attention"]["score"],
+                "attention_level": item["attention"]["level"],
+                "semantic_type": "surveillance_attention_priority",
+                # Deprecated aliases retained for stored report compatibility.
+                "risk_score": item["attention"]["score"],
+                "risk_level": item["attention"]["level"],
                 "latest_cases": item["metrics"]["latest_cases"],
                 "latest_deaths": item["metrics"].get("latest_deaths"),
                 "change_pct": item["metrics"]["change_pct"],
                 "evidence_refs": [
-                    f"disease:{item['disease_id']}.risk_score",
+                    f"disease:{item['disease_id']}.attention_score",
                     f"disease:{item['disease_id']}.latest_cases",
                     f"disease:{item['disease_id']}.change_pct",
                     f"disease:{item['disease_id']}.latest_incidence_rate_per_100k",
@@ -1059,7 +1112,7 @@ class EvidenceAnalyzer:
                     f"disease:{item['disease_id']}.long_window_change_pct",
                 ],
             }
-            for item in sorted(disease_packets, key=lambda packet: packet["risk"]["score"], reverse=True)
+            for item in sorted(disease_packets, key=lambda packet: packet["attention"]["score"], reverse=True)
         ]
 
 
@@ -1228,7 +1281,7 @@ class ReportFactChecker:
                     walk(item)
 
         walk(packet.get("summary_metrics") or {})
-        walk(packet.get("risk_ranking") or [])
+        walk(packet.get("attention_ranking") or packet.get("risk_ranking") or [])
         walk(packet.get("diseases") or [])
         walk(packet.get("data_quality") or {})
         return numbers

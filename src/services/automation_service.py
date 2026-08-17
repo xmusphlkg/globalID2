@@ -15,8 +15,13 @@ from sqlalchemy import select
 
 from src.core import get_config, get_database, get_logger
 from src.core.source_scopes import canonicalize_task_source
-from src.domain import AutomationJob, Country, Task, TaskType, TaskWorkbook
+from src.core.task_manager import task_manager
+from src.domain import AutomationJob, Country, Task, TaskStatus, TaskType, TaskWorkbook
 from src.services.crawl_task_service import crawl_task_service
+from src.services.ingestion_resilience import (
+    automatic_ingestion_trigger_eligible,
+    classify_ingestion_failure,
+)
 from src.services.smtp_email_service import smtp_email_service
 from src.services.settings_service import system_settings_service
 from src.control_plane.schedule_state import schedule_state_repository
@@ -54,6 +59,66 @@ def _iso(value: Optional[datetime]) -> Optional[str]:
 
 def _enum_value(value: Any) -> str:
     return str(value.value if hasattr(value, "value") else value).lower()
+
+
+def _as_aware_utc(value: Optional[datetime]) -> Optional[datetime]:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=ZoneInfo("UTC"))
+    return value.astimezone(ZoneInfo("UTC"))
+
+
+def _ingestion_job_health(
+    job: "AutomationJobConfig",
+    latest_task: Optional[Task],
+    latest_success: Optional[Task],
+    *,
+    now: Optional[datetime] = None,
+) -> dict[str, Any]:
+    """Return an operator-independent health verdict for one source job."""
+
+    current = _as_aware_utc(now) or datetime.now(ZoneInfo("UTC"))
+    success_at = _as_aware_utc(
+        latest_success.completed_at if latest_success is not None else None
+    )
+    expected_minutes = max(1, int(job.interval_minutes or 1440))
+    stale_after_minutes = expected_minutes * 2
+    age_minutes = (
+        max(0, int((current - success_at).total_seconds() // 60))
+        if success_at is not None
+        else None
+    )
+
+    if not job.enabled:
+        status, reason = "disabled", "job is disabled"
+    elif latest_task is None:
+        status, reason = "never_run", "no scheduler-created task has been observed"
+    else:
+        task_status = _enum_value(latest_task.status)
+        if task_status == TaskStatus.RETRYING.value:
+            status, reason = "recovering", "a bounded automatic retry is scheduled"
+        elif task_status in {TaskStatus.PENDING.value, TaskStatus.QUEUED.value, TaskStatus.RUNNING.value}:
+            status, reason = "active", f"latest task is {task_status}"
+        elif task_status in {TaskStatus.FAILED.value, TaskStatus.CANCELLED.value}:
+            status, reason = "failed", f"latest task is {task_status}"
+        elif success_at is None:
+            status, reason = "unknown", "latest task has no completed success timestamp"
+        elif age_minutes is not None and age_minutes > stale_after_minutes:
+            status, reason = (
+                "stale",
+                f"last success is {age_minutes} minutes old; limit is {stale_after_minutes}",
+            )
+        else:
+            status, reason = "healthy", "latest scheduled task completed within cadence"
+
+    return {
+        "health_status": status,
+        "health_reason": reason,
+        "last_success_at": _iso(success_at),
+        "last_success_age_minutes": age_minutes,
+        "stale_after_minutes": stale_after_minutes,
+    }
 
 
 @dataclass
@@ -309,8 +374,9 @@ class AutomationService:
         cfg = self._config()
         assert self._stop_event is not None
         while not self._stop_event.is_set():
-            self._last_tick_at = datetime.utcnow()
+            self._last_tick_at = datetime.now(ZoneInfo("UTC"))
             try:
+                await self.requeue_due_automatic_retries()
                 for job in await self.load_jobs():
                     if not job.enabled:
                         continue
@@ -327,6 +393,297 @@ class AutomationService:
                 )
             except asyncio.TimeoutError:
                 pass
+
+    def _automatic_retry_delays(self) -> tuple[int, int]:
+        cfg = self._config()
+        base_delay = max(
+            5,
+            int(getattr(cfg, "auto_retry_base_delay_seconds", 300) or 300),
+        )
+        max_delay = max(
+            base_delay,
+            int(getattr(cfg, "auto_retry_max_delay_seconds", 3600) or 3600),
+        )
+        return base_delay, max_delay
+
+    async def schedule_automatic_retry_after_failure(
+        self,
+        task_uuid: str,
+        exc: BaseException,
+    ) -> bool:
+        """Park one eligible scheduled crawl until its bounded retry is due."""
+
+        classification = classify_ingestion_failure(exc)
+        base_delay, max_delay = self._automatic_retry_delays()
+        now = datetime.now(ZoneInfo("UTC"))
+        scheduled = False
+        retry_payload: dict[str, Any] = {}
+        job_id = ""
+
+        async with get_database() as db:
+            task = (
+                await db.execute(
+                    select(Task)
+                    .where(Task.task_uuid == task_uuid)
+                    .with_for_update()
+                )
+            ).scalar_one_or_none()
+            if task is None or task.task_type != TaskType.CRAWL_DATA:
+                return False
+            if task.status != TaskStatus.FAILED:
+                return task.status == TaskStatus.RETRYING
+
+            input_data = dict(task.input_data or {})
+            metadata = dict(task.metadata_ or {})
+            retry = dict(metadata.get("ingestion_automatic_retry") or {})
+            job_id = str(input_data.get("automation_job_id") or "").strip()
+            retry_threshold = max(
+                1,
+                int(
+                    input_data.get("retry_threshold")
+                    or self._config().default_retry_threshold
+                ),
+            )
+            max_scheduled_attempts = max(0, retry_threshold - 1)
+            prior_scheduled = max(0, int(retry.get("scheduled_attempts") or 0))
+            failure_count = max(1, int(task.retry_count or 0))
+            eligible_trigger = automatic_ingestion_trigger_eligible(input_data)
+            scheduled = bool(
+                eligible_trigger
+                and classification.retryable
+                and failure_count < retry_threshold
+                and prior_scheduled < max_scheduled_attempts
+            )
+
+            retry_payload = {
+                "policy_version": "ingestion-transient-v1",
+                "eligible_trigger": eligible_trigger,
+                "retryable": classification.retryable,
+                "category": classification.category,
+                "reason": classification.reason,
+                "retry_threshold": retry_threshold,
+                "max_scheduled_attempts": max_scheduled_attempts,
+                "scheduled_attempts": prior_scheduled,
+                "failure_count": failure_count,
+                "last_failure_at": now.isoformat(),
+                "last_error": str(exc)[-4000:],
+            }
+            if scheduled:
+                retry_number = prior_scheduled + 1
+                delay_seconds = min(
+                    max_delay,
+                    base_delay * (2 ** (retry_number - 1)),
+                )
+                next_attempt_at = now + timedelta(seconds=delay_seconds)
+                retry_payload.update(
+                    {
+                        "status": "scheduled",
+                        "scheduled_attempts": retry_number,
+                        "delay_seconds": delay_seconds,
+                        "next_attempt_at": next_attempt_at.isoformat(),
+                        "exhausted": False,
+                    }
+                )
+                task.status = TaskStatus.RETRYING
+            else:
+                retry_payload.update(
+                    {
+                        "status": "terminal",
+                        "next_attempt_at": None,
+                        "exhausted": bool(
+                            eligible_trigger
+                            and classification.retryable
+                            and (
+                                failure_count >= retry_threshold
+                                or prior_scheduled >= max_scheduled_attempts
+                            )
+                        ),
+                    }
+                )
+            metadata["ingestion_automatic_retry"] = retry_payload
+            task.metadata_ = metadata
+            await db.commit()
+
+        if scheduled:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="warning",
+                title="Automatic Ingestion Retry Scheduled",
+                content=(
+                    f"{classification.reason}; retry "
+                    f"{retry_payload['scheduled_attempts']}/{retry_payload['max_scheduled_attempts']} "
+                    f"will be eligible at {retry_payload['next_attempt_at']}."
+                ),
+                content_type="text",
+                metadata={
+                    "event": "ingestion_auto_retry_scheduled",
+                    "automation_job_id": job_id,
+                    **retry_payload,
+                },
+            )
+            logger.warning(
+                "Automatic ingestion retry scheduled task=%s job=%s attempt=%s/%s at=%s",
+                task_uuid,
+                job_id,
+                retry_payload["scheduled_attempts"],
+                retry_payload["max_scheduled_attempts"],
+                retry_payload["next_attempt_at"],
+            )
+        return scheduled
+
+    async def requeue_due_automatic_retries(
+        self,
+        *,
+        now: Optional[datetime] = None,
+    ) -> list[str]:
+        """Atomically expose due ingestion retries to task workers."""
+
+        current = _as_aware_utc(now) or datetime.now(ZoneInfo("UTC"))
+        requeued: list[tuple[str, str, dict[str, Any]]] = []
+        async with get_database() as db:
+            retrying = (
+                await db.execute(
+                    select(Task)
+                    .where(
+                        Task.task_type == TaskType.CRAWL_DATA,
+                        Task.status == TaskStatus.RETRYING,
+                    )
+                    .order_by(Task.created_at.asc())
+                    .with_for_update(skip_locked=True)
+                )
+            ).scalars().all()
+
+            for task in retrying:
+                input_data = dict(task.input_data or {})
+                metadata = dict(task.metadata_ or {})
+                retry = dict(metadata.get("ingestion_automatic_retry") or {})
+                next_attempt_raw = str(retry.get("next_attempt_at") or "").strip()
+                try:
+                    next_attempt = _as_aware_utc(datetime.fromisoformat(next_attempt_raw))
+                except (TypeError, ValueError):
+                    next_attempt = None
+
+                if (
+                    retry.get("status") != "scheduled"
+                    or next_attempt is None
+                    or not automatic_ingestion_trigger_eligible(input_data)
+                ):
+                    retry.update(
+                        {
+                            "status": "terminal",
+                            "next_attempt_at": None,
+                            "reason": "invalid or ineligible persisted automatic retry reservation",
+                        }
+                    )
+                    metadata["ingestion_automatic_retry"] = retry
+                    task.metadata_ = metadata
+                    task.status = TaskStatus.FAILED
+                    continue
+                if next_attempt > current:
+                    continue
+
+                active = (
+                    await db.execute(
+                        select(Task.id)
+                        .where(
+                            Task.id != task.id,
+                            Task.task_type == TaskType.CRAWL_DATA,
+                            Task.country_id == task.country_id,
+                            Task.status.in_(
+                                [TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING]
+                            ),
+                        )
+                        .limit(1)
+                    )
+                ).scalar_one_or_none()
+                if active is not None:
+                    continue
+
+                retry.update(
+                    {
+                        "status": "queued",
+                        "queued_at": current.isoformat(),
+                        "next_attempt_at": None,
+                    }
+                )
+                metadata["ingestion_automatic_retry"] = retry
+                task.metadata_ = metadata
+                task.status = TaskStatus.QUEUED
+                task.progress = 0
+                task.completed_steps = 0
+                task.started_at = None
+                task.completed_at = None
+                task.actual_duration = None
+                requeued.append(
+                    (
+                        task.task_uuid,
+                        str(input_data.get("automation_job_id") or "").strip(),
+                        retry,
+                    )
+                )
+            await db.commit()
+
+        for task_uuid, job_id, retry in requeued:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="info",
+                title="Automatic Ingestion Retry Queued",
+                content=(
+                    f"Retry {retry.get('scheduled_attempts')}/"
+                    f"{retry.get('max_scheduled_attempts')} is now queued for the task worker."
+                ),
+                content_type="text",
+                metadata={
+                    "event": "ingestion_auto_retry_queued",
+                    "automation_job_id": job_id,
+                    **retry,
+                },
+            )
+            await task_manager._broadcast(
+                {
+                    "event": "task_status",
+                    "task_uuid": task_uuid,
+                    "status": TaskStatus.QUEUED.value,
+                    "progress": 0,
+                    "automatic_retry": True,
+                }
+            )
+        return [task_uuid for task_uuid, _job_id, _retry in requeued]
+
+    async def mark_automatic_retry_succeeded(self, task_uuid: str) -> bool:
+        """Close retry metadata after the same crawl task succeeds."""
+
+        changed = False
+        async with get_database() as db:
+            task = (
+                await db.execute(select(Task).where(Task.task_uuid == task_uuid))
+            ).scalar_one_or_none()
+            if task is None or task.task_type != TaskType.CRAWL_DATA:
+                return False
+            metadata = dict(task.metadata_ or {})
+            retry = dict(metadata.get("ingestion_automatic_retry") or {})
+            if retry.get("scheduled_attempts") and retry.get("status") != "succeeded":
+                retry.update(
+                    {
+                        "status": "succeeded",
+                        "succeeded_at": datetime.now(ZoneInfo("UTC")).isoformat(),
+                        "next_attempt_at": None,
+                    }
+                )
+                metadata["ingestion_automatic_retry"] = retry
+                task.metadata_ = metadata
+                await db.commit()
+                changed = True
+        if changed:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="success",
+                title="Automatic Ingestion Retry Recovered",
+                content="The scheduled retry completed without weakening any source or quality gate.",
+                content_type="text",
+                metadata={"event": "ingestion_auto_retry_succeeded"},
+            )
+        return changed
 
     async def trigger_job(self, job_id: str, *, manual: bool) -> dict[str, Any]:
         async with self._lock:
@@ -402,6 +759,7 @@ class AutomationService:
         jobs = await self.load_jobs()
         job_ids = {job.job_id for job in jobs}
         latest_task_by_job_id: dict[str, Task] = {}
+        latest_success_by_job_id: dict[str, Task] = {}
         if job_ids:
             async with get_database() as db:
                 recent_tasks = (
@@ -417,12 +775,19 @@ class AutomationService:
                 job_id = str(inp.get("automation_job_id") or "").strip()
                 if job_id in job_ids and job_id not in latest_task_by_job_id:
                     latest_task_by_job_id[job_id] = task
+                if (
+                    job_id in job_ids
+                    and job_id not in latest_success_by_job_id
+                    and _enum_value(task.status) == TaskStatus.COMPLETED.value
+                ):
+                    latest_success_by_job_id[job_id] = task
 
         jobs_payload: list[dict[str, Any]] = []
         for job in jobs:
             state = self._states.setdefault(job.job_id, AutomationJobState())
             self._sync_state_schedule(job, state, reset=False)
             latest_task = latest_task_by_job_id.get(job.job_id)
+            latest_success = latest_success_by_job_id.get(job.job_id)
             if latest_task is not None:
                 state.last_task_uuid = latest_task.task_uuid
                 state.last_status = _enum_value(latest_task.status)
@@ -432,6 +797,7 @@ class AutomationService:
             jobs_payload.append(
                 {
                     **asdict(job),
+                    **_ingestion_job_health(job, latest_task, latest_success),
                     "next_run_at": _iso(state.next_run_at),
                     "last_started_at": _iso(state.last_started_at),
                     "last_finished_at": _iso(state.last_finished_at),
@@ -440,6 +806,11 @@ class AutomationService:
                     "last_task_uuid": state.last_task_uuid,
                     "run_count": state.run_count,
                     "skipped_count": state.skipped_count,
+                    "automatic_retry": (
+                        dict((latest_task.metadata_ or {}).get("ingestion_automatic_retry") or {})
+                        if latest_task is not None
+                        else {}
+                    ),
                 }
             )
         return {
@@ -571,7 +942,9 @@ class AutomationService:
             if not sent:
                 return
 
-            metadata["failure_notification_sent_at"] = datetime.utcnow().isoformat()
+            metadata["failure_notification_sent_at"] = (
+                datetime.now(ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")
+            )
             task.metadata_ = metadata
             await db.commit()
 

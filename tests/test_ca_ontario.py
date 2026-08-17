@@ -13,6 +13,7 @@ from openpyxl import Workbook
 
 import src.data.crawlers.ca as ca_module
 from src.data.crawlers.ca import (
+    DEFAULT_PAGE_DISPLAY_NAME,
     DEFAULT_REPORT_ID,
     DEFAULT_VISUAL_NAME,
     MONTHS,
@@ -109,6 +110,172 @@ def _powerbi_monthly_response(
     }
 
 
+def _pbir_monthly_metadata() -> dict[str, object]:
+    projections = [
+        {
+            "field": {
+                "Column": {
+                    "Expression": {
+                        "SourceRef": {"Entity": "Monthly Lookup Disease"}
+                    },
+                    "Property": "Disease",
+                }
+            },
+            "queryRef": "Lookup Disease.Disease",
+            "nativeQueryRef": "Disease",
+        },
+        {
+            "field": {
+                "Measure": {
+                    "Expression": {
+                        "SourceRef": {"Entity": "Monthly Data Table Measures"}
+                    },
+                    "Property": "01 Jan",
+                }
+            },
+            "queryRef": "Monthly Data Table Measures.01 Jan",
+            "nativeQueryRef": "Jan",
+        },
+    ]
+    page_filters = {
+        "filters": [
+            {
+                "field": {
+                    "Column": {
+                        "Expression": {"SourceRef": {"Entity": "Lookup PHU"}},
+                        "Property": "phu_code",
+                    }
+                },
+                "filter": {
+                    "Version": 2,
+                    "From": [{"Name": "p", "Entity": "Lookup PHU", "Type": 0}],
+                    "Where": [
+                        {
+                            "Condition": {
+                                "In": {
+                                    "Expressions": [
+                                        {
+                                            "Column": {
+                                                "Expression": {
+                                                    "SourceRef": {"Source": "p"}
+                                                },
+                                                "Property": "phu_code",
+                                            }
+                                        }
+                                    ],
+                                    "Values": [[{"Literal": {"Value": "'35'"}}]],
+                                }
+                            }
+                        }
+                    ],
+                },
+            },
+            {
+                "field": {
+                    "Column": {
+                        "Expression": {
+                            "SourceRef": {"Entity": "Monthly Dates"}
+                        },
+                        "Property": "Date",
+                    }
+                },
+                "filter": {
+                    "Version": 2,
+                    "From": [
+                        {"Name": "m", "Entity": "Monthly Dates", "Type": 0}
+                    ],
+                    "Where": [
+                        {
+                            "Condition": {
+                                "Comparison": {
+                                    "ComparisonKind": 4,
+                                    "Left": {
+                                        "Column": {
+                                            "Expression": {
+                                                "SourceRef": {"Source": "m"}
+                                            },
+                                            "Property": "Date",
+                                        }
+                                    },
+                                    "Right": {
+                                        "DateSpan": {
+                                            "Expression": {
+                                                "Literal": {
+                                                    "Value": "datetime'2026-06-30T00:00:00'"
+                                                }
+                                            },
+                                            "TimeUnit": 5,
+                                        }
+                                    },
+                                }
+                            }
+                        }
+                    ],
+                },
+            },
+        ]
+    }
+    visual = {
+        "name": DEFAULT_VISUAL_NAME,
+        "visual": {
+            "visualType": "tableEx",
+            "query": {"queryState": {"Values": {"projections": projections}}},
+        },
+        # Empty Advanced placeholders are legitimate PBIR metadata and must be
+        # ignored rather than compiled into a bogus query condition.
+        "filterConfig": {
+            "filters": [
+                {
+                    "field": projections[1]["field"],
+                    "type": "Advanced",
+                }
+            ]
+        },
+    }
+    document = {
+        "report": {"filePath": "report.json", "content": {}},
+        "pages": {
+            "pages": [
+                {
+                    "filePath": "monthly/page.json",
+                    "content": {
+                        "name": "monthly",
+                        "displayName": DEFAULT_PAGE_DISPLAY_NAME,
+                        "filterConfig": page_filters,
+                    },
+                    "visualContainers": [
+                        {
+                            "filePath": f"visuals/{DEFAULT_VISUAL_NAME}/visual.json",
+                            "content": visual,
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+    return {
+        "models": [
+            {
+                "id": "4693020",
+                "dbName": "dataset-pbir-ontario",
+                "LastRefreshTime": "2026-08-13T14:21:32.44",
+            }
+        ],
+        "exploration": {
+            # Current Power BI responses retain only positional data here.
+            "sections": [
+                {
+                    "displayName": DEFAULT_PAGE_DISPLAY_NAME,
+                    "visualContainers": [
+                        {"objectName": DEFAULT_VISUAL_NAME, "id": 1530412651}
+                    ],
+                }
+            ],
+            "explorationContent": {
+                "explorationDocument": json.dumps(document),
+            },
+        },
+    }
 def test_extract_embed_context_decodes_and_validates_routing_payload() -> None:
     token = _routing_token(
         {
@@ -204,6 +371,83 @@ def test_discover_monthly_visual_uses_page_type_and_configured_visual_name() -> 
     assert visual.visual_name == DEFAULT_VISUAL_NAME
     assert visual.title == "Disease cases by month 2026"
     assert visual.model_refresh_time == "2026-08-02T07:00:00Z"
+
+
+def test_discover_monthly_visual_compiles_current_pbir_definition() -> None:
+    visual = discover_monthly_visual(_pbir_monthly_metadata())
+
+    assert visual.model_id == 4693020
+    assert visual.dataset_id == "dataset-pbir-ontario"
+    assert visual.page_name == DEFAULT_PAGE_DISPLAY_NAME
+    assert visual.visual_name == DEFAULT_VISUAL_NAME
+    assert visual.title == "Monthly Data Table 2026"
+    command = visual.query["Commands"][0]["SemanticQueryDataShapeCommand"]
+    semantic = command["Query"]
+    assert [item["Entity"] for item in semantic["From"]] == [
+        "Monthly Lookup Disease",
+        "Monthly Data Table Measures",
+        "Lookup PHU",
+        "Monthly Dates",
+    ]
+    assert [item["Name"] for item in semantic["Select"]] == [
+        "Lookup Disease.Disease",
+        "Monthly Data Table Measures.01 Jan",
+    ]
+    assert len(semantic["Where"]) == 2
+    serialized_query = json.dumps(semantic)
+    assert '"Entity"' not in serialized_query.split('"Select"', 1)[1]
+    assert "datetime'2026-06-30T00:00:00'" in serialized_query
+    assert command["Binding"]["Primary"]["Groupings"] == [
+        {"Projections": [0, 1]}
+    ]
+
+
+def test_discover_monthly_visual_rejects_ambiguous_pbir_reporting_year() -> None:
+    metadata = _pbir_monthly_metadata()
+    document = json.loads(
+        metadata["exploration"]["explorationContent"]["explorationDocument"]
+    )
+    page = document["pages"]["pages"][0]["content"]
+    historical = copy.deepcopy(page["filterConfig"]["filters"][1])
+    historical["filter"]["Where"][0]["Condition"]["Comparison"]["Right"][
+        "DateSpan"
+    ]["Expression"]["Literal"]["Value"] = "datetime'2025-12-31T00:00:00'"
+    page["filterConfig"]["filters"].append(historical)
+    metadata["exploration"]["explorationContent"]["explorationDocument"] = (
+        json.dumps(document)
+    )
+
+    with pytest.raises(RuntimeError, match="reporting-year filter is missing or ambiguous"):
+        discover_monthly_visual(metadata)
+
+
+def test_ontario_crawler_reads_subdivision_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    requested: list[str] = []
+
+    def fake_config(code: str) -> dict[str, object]:
+        requested.append(code)
+        return {
+            "crawler_config": {
+                "landing_url": "https://official.example/ontario",
+                "embed_url": "https://official.example/embed/report",
+                "report_id": "report-current",
+                "page_display_name": "Current monthly table",
+                "visual_name": "visual-current",
+                "file_env": "CA_ON_CURRENT_FILE",
+            }
+        }
+
+    monkeypatch.setattr(ca_module, "get_country_bootstrap_config", fake_config)
+    crawler = CanadaOntarioPHOCrawler()
+
+    assert requested == ["CA-ON"]
+    assert crawler.landing_url == "https://official.example/ontario"
+    assert crawler.report_id == "report-current"
+    assert crawler.page_display_name == "Current monthly table"
+    assert crawler.visual_name == "visual-current"
+    assert crawler.file_env == "CA_ON_CURRENT_FILE"
 
 
 def test_decode_powerbi_dm0_expands_repeat_and_null_masks() -> None:
@@ -708,16 +952,15 @@ def test_reviewed_source_labels_partition_registered_and_excluded_diseases() -> 
     assert "Syphilis, Infectious" in registered
 
 
-def test_source_label_contract_rejects_unknown_and_incomplete_live_manifests() -> None:
-    with pytest.raises(ValueError, match="unreviewed disease labels: New Disease"):
-        CAOntarioMonthlyUpdater._validate_source_label_contract(
-            [
-                {
-                    "RawDiseaseLabel": "New Disease",
-                    "AcquisitionMode": "official_export_file",
-                }
-            ]
-        )
+def test_source_label_contract_retains_unknown_but_rejects_incomplete_live_manifests() -> None:
+    CAOntarioMonthlyUpdater._validate_source_label_contract(
+        [
+            {
+                "RawDiseaseLabel": "New Disease",
+                "AcquisitionMode": "official_export_file",
+            }
+        ]
+    )
 
     with pytest.raises(ValueError, match="live disease-label manifest changed"):
         CAOntarioMonthlyUpdater._validate_source_label_contract(

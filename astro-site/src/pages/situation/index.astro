@@ -1,35 +1,122 @@
 ---
-import { existsSync, readFileSync } from 'fs';
-import { resolve } from 'path';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import SituationSummary from '../../components/SituationSummary.astro';
+import SituationDetails from '../../components/SituationDetails.astro';
+import SituationReadiness from '../../components/SituationReadiness.astro';
+import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
+import {
+  formatDate,
+  isSituationReportV3,
+  label,
+  labelZh,
+  sourceEvidenceUrls,
+  type SituationReportV3,
+} from '../../utils/situation';
 
-const latestPath = resolve('./src/data/situation/latest.json');
-const snapshot = existsSync(latestPath) ? JSON.parse(readFileSync(latestPath, 'utf-8')) : null;
-const titleDate = snapshot?.generated_at ? new Date(snapshot.generated_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Latest';
-const sourceUrls = (snapshot?.event_sources ?? []).map((source: any) => source.url).filter(Boolean);
-const structuredData = snapshot ? [{
-  '@type': 'Report', '@id': `${Astro.url.toString()}#report`, name: `Global Infectious Disease Trends – ${titleDate}`,
-  dateModified: snapshot.generated_at, temporalCoverage: snapshot.data_through ? `/${snapshot.data_through}` : undefined,
-  isBasedOn: sourceUrls, mainEntity: { '@type': 'ItemList', numberOfItems: (snapshot.increasing?.length ?? 0) + (snapshot.emerging?.length ?? 0) },
-}] : [];
+const latestPath = resolve('./src/data/situation/v3/latest.json');
+const shadowPath = resolve('./src/data/situation/v3/shadow-latest.json');
+const publicReport = existsSync(latestPath);
+const previewEnabled = import.meta.env.DEV || process.env.SITUATION_SHADOW_PREVIEW === 'true';
+const reportPath = publicReport ? latestPath : previewEnabled && existsSync(shadowPath) ? shadowPath : null;
+const raw: unknown = reportPath ? JSON.parse(readFileSync(reportPath, 'utf-8')) : null;
+const report: SituationReportV3 | null = isSituationReportV3(raw) ? raw : null;
+const periodLabel = report ? `${formatDate(report.report.period_start)} – ${formatDate(report.report.period_end)}` : 'Latest';
+const title = report ? `Global Infectious Disease Situation — ${report.report.period_key}` : 'Global Infectious Disease Situation Room';
+const titleZh = report ? `全球传染病态势 — ${report.report.period_key}` : '全球传染病态势室';
+const description = report?.narrative.en ?? 'A reproducible review queue for GIDS-covered infectious-disease surveillance signals.';
+const canonicalPath = '/situation/';
+const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
+const jsonPath = '/site-data/situation/v3/latest.json';
+const evidenceUrls = report ? sourceEvidenceUrls(report) : [];
+const structuredData = report ? [
+  {
+    '@type': 'Report', '@id': `${new URL(canonicalPath, siteOrigin)}#report`, name: title,
+    datePublished: report.report.as_of, dateModified: report.report.as_of,
+    temporalCoverage: `${report.report.period_start}/${report.report.period_end}`,
+    isBasedOn: evidenceUrls, mainEntity: { '@id': `${new URL(canonicalPath, siteOrigin)}#dataset` },
+  },
+  {
+    '@type': 'Dataset', '@id': `${new URL(canonicalPath, siteOrigin)}#dataset`, name: `${title} data`, description,
+    dateModified: report.report.as_of, temporalCoverage: `${report.report.period_start}/${report.report.period_end}`,
+    isBasedOn: evidenceUrls,
+    distribution: [{ '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: new URL(jsonPath, siteOrigin).toString() }],
+  },
+] : [];
+const seo: SeoDocument = {
+  title: `${title} | GIDS`, description, canonicalPath,
+  alternatePaths: buildAlternatePaths(canonicalPath, 'en'), noindex: !publicReport,
+  pageType: 'Report', datePublished: report?.report.as_of ?? null, dateModified: report?.report.as_of ?? null,
+};
 ---
 
-<ReportLayout title={`Global Infectious Disease Trends – ${titleDate}`} description="Current infectious-disease surveillance signals across GIDS-covered jurisdictions and attributed official event notices." structuredData={structuredData} breadcrumbs={[{ label: 'Situation Room', labelZh: '全球态势室' }]}>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-    {snapshot ? <>
-      <SituationSummary snapshot={snapshot} />
-      <section class="situation-detail-grid">
-        <article class="card p-6"><h2 data-lang-en="Respiratory Watch" data-lang-zh="呼吸道监测">Respiratory Watch</h2>
-          {(snapshot.respiratory ?? []).length ? <ul>{snapshot.respiratory.map((signal: any) => <li><a href={`/diseases/${signal.disease_slug}/`}>{signal.disease_name}</a><span>{signal.country_name} · {signal.window.current_cases.toLocaleString()} cases in latest window</span></li>)}</ul> : <p data-lang-en="No respiratory series met the signal threshold this period." data-lang-zh="本期没有呼吸道序列达到信号阈值。">No respiratory series met the signal threshold this period.</p>}</article>
-        <article class="card p-6"><h2 data-lang-en="Unusual Signals" data-lang-zh="异常信号">Unusual Signals</h2>
-          {(snapshot.unusual ?? []).length ? <ul>{snapshot.unusual.map((signal: any) => <li><a href={`/diseases/${signal.disease_slug}/`}>{signal.disease_name}</a><span>{signal.country_name} · robust z {signal.statistics.robust_z ?? '—'}</span></li>)}</ul> : <p data-lang-en="No statistical signal met the unusual-signal rule." data-lang-zh="没有统计信号达到异常信号规则。">No statistical signal met the unusual-signal rule.</p>}</article>
-      </section>
-      <section class="card p-6 space-y-4"><h2 data-lang-en="Coverage & Method" data-lang-zh="覆盖范围与方法">Coverage & Method</h2><p data-lang-en={snapshot.coverage.note_en} data-lang-zh={snapshot.coverage.note_zh}>{snapshot.coverage.note_en}</p><p data-lang-en={snapshot.methodology.en} data-lang-zh={snapshot.methodology.zh}>{snapshot.methodology.en}</p><p class="situation-note" data-lang-en={snapshot.limitations.en} data-lang-zh={snapshot.limitations.zh}>{snapshot.limitations.en}</p></section>
-    </> : <section class="card p-10 text-center"><h1 data-lang-en="Situation Room is preparing its first snapshot" data-lang-zh="态势室正在生成首个快照">Situation Room is preparing its first snapshot</h1><p data-lang-en="No published snapshot is available yet. Existing country and disease datasets remain available." data-lang-zh="尚无已发布快照；现有国家和疾病数据仍可正常使用。">No published snapshot is available yet. Existing country and disease datasets remain available.</p></section>}
-  </div>
+<ReportLayout title={title} description={description} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: 'Situation Room', labelZh: '全球态势室' }]}>
+  <main class="situation-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {report ? <>
+      <header class="report-hero">
+        <div>
+          <p class="eyebrow" data-lang-en="Global surveillance review queue" data-lang-zh="全球监测复核队列">Global surveillance review queue</p>
+          <h1 data-lang-en={title} data-lang-zh={titleZh}>{title}</h1>
+          <p data-lang-en="A latency-aware view of source-native surveillance. The system analyzes only mature reporting periods and separates statistical review priority from public-health risk." data-lang-zh="按来源发布延迟校准的原生监测视图。系统仅分析成熟报告周期，并将统计复核优先级与公共卫生风险严格分离。">A latency-aware view of source-native surveillance. The system analyzes only mature reporting periods and separates statistical review priority from public-health risk.</p>
+        </div>
+        <dl>
+          <div><dt data-lang-en="Report period" data-lang-zh="报告期间">Report period</dt><dd>{periodLabel}</dd></div>
+          <div><dt data-lang-en="System status" data-lang-zh="系统状态">System status</dt><dd class={report.quality_gate.status} data-lang-en={label(report.quality_gate.status)} data-lang-zh={labelZh(report.quality_gate.status)}>{label(report.quality_gate.status)}</dd></div>
+          <div><dt data-lang-en="Coverage" data-lang-zh="覆盖率">Coverage</dt><dd>{report.coverage.modeled_series_count} / {report.coverage.evaluated_series_count}</dd></div>
+          <div><dt data-lang-en="Revision" data-lang-zh="修订版">Revision</dt><dd>r{report.report.revision}</dd></div>
+        </dl>
+      </header>
+
+      <nav class="period-nav" aria-label="Situation report archives">
+        <a href="/situation/weekly/" data-lang-en="Weekly reports" data-lang-zh="周报">Weekly reports</a>
+        <a href="/situation/monthly/" data-lang-en="Monthly reports" data-lang-zh="月报">Monthly reports</a>
+        <a href="/situation/methodology/" data-lang-en="Methodology" data-lang-zh="方法说明">Methodology</a>
+        {publicReport && <a href={jsonPath} download data-lang-en="Download v3 JSON" data-lang-zh="下载 v3 JSON">Download v3 JSON</a>}
+      </nav>
+
+      <SituationSummary snapshot={report} />
+
+      <SituationReadiness snapshot={report} />
+
+      <SituationDetails snapshot={report} />
+
+      <footer class="report-footer">
+        <p data-lang-en={report.limitations.en} data-lang-zh={report.limitations.zh}>{report.limitations.en}</p>
+        <p><span data-lang-en="Report" data-lang-zh="报告">Report</span> <code>{report.report.report_id}</code> · <span data-lang-en="config" data-lang-zh="配置">config</span> <code>{report.method.config_hash.slice(0, 12)}</code> · <span data-lang-en="as of" data-lang-zh="截至">as of</span> {formatDate(report.report.as_of)}</p>
+      </footer>
+    </> : <section class="placeholder"><p class="eyebrow">Pre-publication</p><h1>Situation Room v3 has no gate-passed public report yet</h1><p>The previous public build remains in place until history archival, contract validation, analysis quality, and static release checks all pass.</p><a href="/diseases/">Browse disease datasets</a></section>}
+  </main>
 </ReportLayout>
 
 <style>
-  h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: 1.45rem; margin: 0 0 .8rem; } p { color: rgb(var(--text-muted)); line-height: 1.7; } .situation-detail-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); } ul { display: grid; gap: .7rem; list-style: none; margin: 0; padding: 0; } li { border-top: 1px solid rgb(var(--border)); display: grid; gap: .2rem; padding-top: .7rem; } li a { color: rgb(var(--text-strong)); font-weight: 600; } li span, .situation-note { color: rgb(var(--text-faint)); font-size: .85rem; } @media (max-width: 640px) { .situation-detail-grid { grid-template-columns: 1fr; } }
+  .situation-page { display: grid; gap: 1.5rem; padding-bottom: 4rem; padding-top: 2rem; }
+  .report-hero { align-items: end; background: linear-gradient(135deg, rgb(9 37 55), rgb(15 62 72)); border: 1px solid rgb(18 70 83); display: grid; gap: 2rem; grid-template-columns: minmax(0, 1fr) minmax(19rem, .42fr); padding: clamp(1.3rem, 3vw, 2.2rem); position: relative; }
+  .report-hero::after { background: rgb(var(--color-accent)); bottom: 0; content: ''; height: 3px; left: 0; position: absolute; width: 9rem; }
+  .report-hero > div { max-width: 55rem; }
+  .eyebrow { color: rgb(var(--color-teal)); font-size: .67rem; font-weight: 800; letter-spacing: .13em; margin: 0 0 .35rem; text-transform: uppercase; }
+  h1, h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; margin: 0; }
+  h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.03; }
+  h2 { font-size: 1.55rem; line-height: 1.1; }
+  .report-hero h1 { color: rgb(241 247 248); }
+  .report-hero p { color: rgb(195 216 219); line-height: 1.65; margin: .7rem 0 0; }
+  .report-hero dl { display: grid; gap: .6rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+  .report-hero dl div { border-left: 1px solid rgb(91 132 140); padding-left: .7rem; }
+  dt { color: rgb(var(--text-faint)); font-size: .6rem; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+  .report-hero dt { color: rgb(158 190 195); }
+  dd { color: rgb(238 246 247); font-family: 'JetBrains Mono', monospace; font-size: .72rem; margin: .15rem 0 0; }
+  dd.passed { color: rgb(31 126 92); }
+  dd.degraded { color: rgb(218 174 76); }
+  dd.failed { color: rgb(174 61 67); }
+  .period-nav { border-bottom: 1px solid rgb(var(--border)); display: flex; flex-wrap: wrap; gap: .5rem; margin-top: -1rem; padding-bottom: 1rem; }
+  .period-nav a { border: 1px solid rgb(var(--border)); color: rgb(var(--color-teal)); font-size: .72rem; font-weight: 750; padding: .42rem .65rem; text-decoration: none; }
+  .period-nav a:hover { background: rgb(var(--surface)); }
+  .report-footer { border-top: 1px solid rgb(var(--border)); color: rgb(var(--text-faint)); display: grid; font-size: .7rem; gap: .45rem; line-height: 1.55; padding-top: 1rem; }
+  .report-footer p { margin: 0; }
+  .report-footer code { font-size: .64rem; }
+  .placeholder { background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); margin: 3rem auto; max-width: 48rem; padding: 2rem; text-align: center; }
+  .placeholder p { color: rgb(var(--text-muted)); line-height: 1.65; }
+  .placeholder a { color: rgb(var(--color-teal)); }
+  @media (max-width: 900px) { .report-hero { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) { .situation-page { padding-top: 1rem; } .report-hero { margin-inline: -.5rem; } .report-hero dl { grid-template-columns: 1fr 1fr; } }
 </style>

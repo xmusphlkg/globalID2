@@ -174,24 +174,29 @@ class ReportFigureLibrary:
             }
 
         ranking_rows = []
-        for row in (packet.get("risk_ranking") or [])[:10]:
+        for row in (packet.get("attention_ranking") or packet.get("risk_ranking") or [])[:10]:
             ranking_rows.append(
                 {
                     "disease_id": row.get("disease_id"),
                     "name": row.get("name_zh") if language == "zh" else row.get("name_en"),
                     "name_en": row.get("name_en"),
                     "name_zh": row.get("name_zh"),
-                    "risk_score": row.get("risk_score"),
-                    "risk_level": row.get("risk_level"),
+                    "attention_score": row.get("attention_score", row.get("risk_score")),
+                    "attention_level": row.get("attention_level", row.get("risk_level")),
+                    "risk_score": row.get("attention_score", row.get("risk_score")),
+                    "risk_level": row.get("attention_level", row.get("risk_level")),
                     "latest_cases": row.get("latest_cases"),
                     "change_pct": row.get("change_pct"),
                 }
             )
 
         return {
-            "version": "report_v4.figure_data.1",
+            "version": "report_v4.figure_data.2",
             "language": language,
             "series": series,
+            "attention_ranking": ranking_rows,
+            "score_semantics": packet.get("score_semantics") or {},
+            # Deprecated compatibility alias for existing renderers.
             "risk_ranking": ranking_rows,
         }
 
@@ -256,10 +261,10 @@ class ReportFigureLibrary:
         top_id = top.get("disease_id")
         series_len = self._series_len(top)
         specs: List[ReportFigureSpec] = []
-        if len(packet.get("risk_ranking") or []) >= 2:
+        if len(packet.get("attention_ranking") or packet.get("risk_ranking") or []) >= 2:
             specs.append(
                 ReportFigureSpec(
-                    figure_type="risk_matrix" if len(packet.get("risk_ranking") or []) >= 5 else "risk_ranking_bar",
+                    figure_type="risk_matrix" if len(packet.get("attention_ranking") or packet.get("risk_ranking") or []) >= 5 else "risk_ranking_bar",
                     section_type="priority_signals",
                     rationale="Multiple diseases are present, so one compact prioritization figure is sufficient.",
                 )
@@ -322,9 +327,9 @@ class ReportFigureLibrary:
 
     def _can_render(self, packet: Dict[str, Any], spec: ReportFigureSpec) -> bool:
         if spec.figure_type == "risk_ranking_bar":
-            return len(packet.get("risk_ranking") or []) >= 2
+            return len(packet.get("attention_ranking") or packet.get("risk_ranking") or []) >= 2
         if spec.figure_type == "risk_matrix":
-            return len(packet.get("risk_ranking") or []) >= 2
+            return len(packet.get("attention_ranking") or packet.get("risk_ranking") or []) >= 2
         disease = self._find_disease(packet, spec.disease_id)
         if not disease:
             return False
@@ -345,7 +350,7 @@ class ReportFigureLibrary:
         if spec.figure_type == "cases_incidence_panel":
             return 500
         if spec.figure_type == "risk_ranking_bar":
-            rows = (packet.get("risk_ranking") or [])[:10]
+            rows = (packet.get("attention_ranking") or packet.get("risk_ranking") or [])[:10]
             return max(280, 120 + len(rows) * 38)
         if spec.figure_type == "risk_matrix":
             return 420
@@ -367,7 +372,7 @@ class ReportFigureLibrary:
     @staticmethod
     def _data_key(spec: ReportFigureSpec) -> str:
         if spec.figure_type in {"risk_ranking_bar", "risk_matrix"}:
-            return "risk_ranking"
+            return "attention_ranking"
         return f"disease:{spec.disease_id}"
 
     @staticmethod
@@ -402,33 +407,33 @@ class ReportFigureLibrary:
         name = self._disease_name(disease or {}, language)
         cadence = packet.get("reporting_cadence") or "reporting-period"
         if spec.figure_type == "risk_ranking_bar":
-            title = "Risk ranking by disease" if language != "zh" else "疾病风险排序"
+            title = "Surveillance attention priority by disease" if language != "zh" else "疾病监测关注优先级"
             caption = (
-                "Deterministic priority scores combine burden, short-term change, mortality signals, anomaly status, and data quality."
+                "This deterministic review-priority score combines reported burden, short-term change, mortality signals when available, anomaly status, historical position, and data quality. It is not a public-health risk estimate."
                 if language != "zh"
-                else "按病例负担、近期变化、死亡线索、异常提示和数据完整性综合排序。"
+                else "按报告病例负担、近期变化、可用死亡线索、异常提示、历史位置和数据完整性安排复核顺序；该分值不是公共卫生风险估计。"
             )
             refs = [
                 ref
-                for item in (packet.get("risk_ranking") or [])[:10]
+                for item in (packet.get("attention_ranking") or packet.get("risk_ranking") or [])[:10]
                 for ref in (item.get("evidence_refs") or [])
             ]
-            legend = ["Bar length = v3 risk score.", "Color encodes risk level."] if language != "zh" else ["条形越长，优先级越高。", "颜色表示关注等级。"]
+            legend = ["Bar length = deterministic attention score.", "Color encodes review-priority band, not disease severity."] if language != "zh" else ["条形越长，监测复核优先级越高。", "颜色表示复核优先级分档，不代表疾病严重程度。"]
             return title, caption, legend, list(dict.fromkeys(refs))[:24]
         if spec.figure_type == "risk_matrix":
-            title = "Risk matrix: burden versus acceleration" if language != "zh" else "关注矩阵：病例数与增长"
+            title = "Attention matrix: burden versus acceleration" if language != "zh" else "监测关注矩阵：病例数与增长"
             caption = (
-                "Diseases are positioned by latest burden and short-term percentage change; color and size encode the deterministic risk score."
+                "Diseases are positioned by latest burden and short-term percentage change; color and size encode deterministic review priority, not public-health risk."
                 if language != "zh"
-                else "按最新病例数和近期变化定位疾病；颜色和点大小表示关注优先级。"
+                else "按最新病例数和近期变化定位疾病；颜色和点大小表示监测复核优先级，不是公共卫生风险。"
             )
             refs = [
                 ref
-                for item in (packet.get("risk_ranking") or [])[:10]
+                for item in (packet.get("attention_ranking") or packet.get("risk_ranking") or [])[:10]
                 for ref in (item.get("evidence_refs") or [])
             ]
             legend = (
-                ["X axis = latest reported cases.", "Y axis = change versus previous observation.", "Bubble size/color = v3 risk score and level."]
+                ["X axis = latest reported cases.", "Y axis = change versus previous observation.", "Bubble size/color = attention score and review-priority band."]
                 if language != "zh"
                 else ["横轴 = 最新报告病例数。", "纵轴 = 较上一期变化。", "气泡越大、颜色越深，优先级越高。"]
             )

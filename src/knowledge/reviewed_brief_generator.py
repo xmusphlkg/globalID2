@@ -7,6 +7,7 @@ from typing import Any
 
 from src.knowledge.brief_generator import DISCLAIMER_EN, DISCLAIMER_ZH
 from src.knowledge.citations import normalize_knowledge_citations
+from src.knowledge.evidence import build_evidence_manifest
 from src.knowledge.llm_brief_generator import AIDiseaseBriefGenerator
 from src.knowledge.profile_schema import resolve_knowledge_profile_schema
 from src.knowledge.quality import apply_knowledge_quality_gate
@@ -72,7 +73,10 @@ class ReviewedDiseaseBriefGenerator:
             if url in sources_by_url
         ]
         if not selected_sources:
-            selected_sources = AIDiseaseBriefGenerator._usable_public_sources(sources)
+            selected_sources = AIDiseaseBriefGenerator._usable_public_sources(
+                sources,
+                disease=disease,
+            )
 
         scaffold = AIDiseaseBriefGenerator._empty_scaffold(
             disease=disease,
@@ -106,6 +110,15 @@ class ReviewedDiseaseBriefGenerator:
             field: profile.get(field) if field in target_sections else None
             for field in section_fields
         }
+        evidence_manifest = build_evidence_manifest(
+            selected_sources,
+            profile_schema,
+            target_sections=(
+                disease.get("evidence_target_sections")
+                or target_sections
+                or profile_schema.required_fields
+            ),
+        )
         payload = {
             **scaffold,
             **values,
@@ -119,12 +132,18 @@ class ReviewedDiseaseBriefGenerator:
                 **(scaffold.get("metadata") or {}),
                 "generator": "ReviewedDiseaseBriefGenerator",
                 "reviewed_profile_version": entry.get("version", 1),
+                "pipeline_version": 2,
                 "profile_schema": profile_schema.to_dict(),
                 "target_sections": target_sections,
                 "source_urls": ordered_urls or [],
+                "evidence_manifest": evidence_manifest.to_dict(),
             },
         }
-        payload = normalize_knowledge_citations(payload, marker_mode="position")
+        payload = normalize_knowledge_citations(
+            payload,
+            marker_mode="position",
+            prune_uncited_sources=True,
+        )
         payload, assessment = apply_knowledge_quality_gate(payload)
         error = None
         if payload.get("status") != "published" or assessment.missing_required_fields:

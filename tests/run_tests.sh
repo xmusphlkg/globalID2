@@ -1,175 +1,126 @@
-#!/bin/bash
-# Quick test runner with country support and AI tests
+#!/usr/bin/env bash
+# Canonical local/CI test runner. Live-network tests remain opt-in via pytest.
 
-set -e
+set -uo pipefail
 
 cd "$(dirname "$0")/.."
 
-# Parse arguments
 COUNTRY="CN"
-VERBOSE=""
-TEST_TYPE="all"  # all, crawlers, ai, integration, email
+TEST_TYPE="all"
+VERBOSE_ARGS=()
 
 while [[ $# -gt 0 ]]; do
-    case $1 in
+    case "$1" in
         --country)
+            if [[ $# -lt 2 || ! "$2" =~ ^[A-Za-z0-9_-]{2,16}$ ]]; then
+                echo "--country requires a short country code" >&2
+                exit 2
+            fi
             COUNTRY="$2"
             shift 2
             ;;
         --verbose|-v)
-            VERBOSE="--verbose"
+            VERBOSE_ARGS=(-vv)
             shift
             ;;
         --type|-t)
+            if [[ $# -lt 2 ]]; then
+                echo "--type requires a value" >&2
+                exit 2
+            fi
             TEST_TYPE="$2"
             shift 2
             ;;
         --help|-h)
-            echo "Usage: $0 [OPTIONS]"
-            echo
-            echo "Options:"
-            echo "  --country COUNTRY   Country code to test (default: CN)"
-            echo "  --type TYPE         Test type: all, crawlers, ai, ai-real, ai-api, integration, email (default: all)"
-            echo "  --verbose, -v       Show detailed output" 
-            echo "  --help, -h          Show this help message"
-            echo
-            echo "Test Types:"
-            echo "  all          Run all tests"
-            echo "  crawlers     Run web crawler tests only"
-            echo "  ai           Run AI report generation tests only"
-            echo "  ai-real      Run AI tests with real database data"
-            echo "  ai-api       Test AI API connections"
-            echo "  integration  Run integration tests only"
-            echo "  email        Validate Microsoft Graph config and send a test email"
-            echo
-            echo "Examples:"
-            echo "  $0                    # Run all tests for CN with minimal output"
-            echo "  $0 --country CN       # Test specific country"
-            echo "  $0 --type ai          # Run only AI tests"
-            echo "  $0 --type ai-real     # Run AI tests with real database data"
-            echo "  $0 --type ai-api      # Test AI API connections"
-            echo "  $0 --verbose          # Show detailed logs"
+            cat <<'EOF'
+Usage: tests/run_tests.sh [OPTIONS]
+
+Options:
+  --country COUNTRY   Country code for the crawler suite (default: CN)
+  --type TYPE         all, unit, integration, crawlers, situation, automation,
+                      or email (default: all)
+  --verbose, -v       Show verbose pytest output
+  --help, -h          Show this help message
+
+The all/unit/integration/situation/automation modes never opt into live-network
+tests. Use pytest --run-network explicitly for a deliberate live-source probe.
+The email mode validates configuration and may send a real test message.
+EOF
             exit 0
             ;;
         *)
-            echo "Unknown option: $1"
-            echo "Use --help for usage information"
-            exit 1
+            echo "Unknown option: $1" >&2
+            echo "Use --help for usage information" >&2
+            exit 2
             ;;
     esac
 done
 
-echo "🚀 GlobalID Test Runner"
-echo "======================"
-echo "Country: $COUNTRY"
-echo "Test Type: $TEST_TYPE"
-echo "Verbose: $([ -n "$VERBOSE" ] && echo "Yes" || echo "No")"
-echo
+PYTHON_BIN="${PYTHON_BIN:-./venv/bin/python}"
+if [[ ! -x "$PYTHON_BIN" ]]; then
+    echo "Python executable is unavailable: $PYTHON_BIN" >&2
+    exit 2
+fi
 
-# Function to run tests with error handling
 run_test() {
     local test_name="$1"
-    local test_command="$2"
-    
-    echo "📋 Running $test_name..."
-    if eval "$test_command"; then
-        echo "✅ $test_name - PASSED"
+    shift
+    echo "Running ${test_name}..."
+    if "$@"; then
+        echo "${test_name}: PASSED"
         return 0
-    else
-        echo "❌ $test_name - FAILED"
-        return 1
     fi
+    echo "${test_name}: FAILED" >&2
+    return 1
 }
 
-# Initialize counters
-TOTAL_TESTS=0
-PASSED_TESTS=0
-
-# Run tests based on type
-case $TEST_TYPE in
-    "crawlers")
-        echo "🕷️ Running Crawler Tests..."
-        TOTAL_TESTS=1
-        if run_test "Web Crawlers" "./venv/bin/python tests/test_crawlers.py --country $COUNTRY $VERBOSE"; then
-            ((PASSED_TESTS++))
-        fi
+case "$TEST_TYPE" in
+    all)
+        run_test "complete offline test suite" \
+            "$PYTHON_BIN" -m pytest -q "${VERBOSE_ARGS[@]}"
         ;;
-        
-    "ai")
-        echo "🧠 Running AI Tests..."
-        TOTAL_TESTS=1
-        if run_test "AI Report Generation" "./venv/bin/python tests/verify_ai_test_setup.py"; then
-            ((PASSED_TESTS++))
-        fi
+    unit)
+        run_test "unit test suite" \
+            "$PYTHON_BIN" -m pytest -q tests/unit "${VERBOSE_ARGS[@]}"
         ;;
-        
-    "ai-real")
-        echo "🔬 Running AI Tests with Real Database Data..."
-        TOTAL_TESTS=1
-        if run_test "AI with Real Data" "./venv/bin/python tests/test_ai_with_real_data.py"; then
-            ((PASSED_TESTS++))
-        fi
+    integration)
+        run_test "integration test suite" \
+            "$PYTHON_BIN" -m pytest -q tests/integration tests/test_integration.py "${VERBOSE_ARGS[@]}"
         ;;
-        
-    "ai-api")
-        echo "🌐 Testing AI API Connections..."
-        TOTAL_TESTS=1
-        if run_test "AI API Connection" "./venv/bin/python src/ai/test_api_connection.py"; then
-            ((PASSED_TESTS++))
-        fi
+    crawlers)
+        run_test "crawler tests (${COUNTRY})" \
+            "$PYTHON_BIN" -m pytest -q tests/test_crawlers.py --country "$COUNTRY" "${VERBOSE_ARGS[@]}"
         ;;
-        
-    "integration")
-        echo "🔄 Running Integration Tests..."
-        TOTAL_TESTS=1
-        if run_test "Integration Tests" "./venv/bin/python tests/test_integration.py"; then
-            ((PASSED_TESTS++))
-        fi
+    situation)
+        run_test "Situation Room tests" \
+            "$PYTHON_BIN" -m pytest -q \
+            tests/unit/test_situation_automation.py \
+            tests/unit/test_situation_alert_dispatch.py \
+            tests/unit/test_situation_v3.py \
+            tests/unit/test_situation_v3_backtest.py \
+            tests/unit/test_situation_v3_review_api.py \
+            tests/unit/test_situation_quality.py \
+            tests/e2e/test_situation_static_build.py \
+            "${VERBOSE_ARGS[@]}"
         ;;
-
-    "email")
-        echo "✉️ Running Microsoft Graph Email Test..."
-        TOTAL_TESTS=1
-        if run_test "Graph Email Configuration" "./venv/bin/python scripts/test_email_config.py"; then
-            ((PASSED_TESTS++))
-        fi
+    automation)
+        run_test "release automation tests" \
+            "$PYTHON_BIN" -m pytest -q \
+            tests/unit/test_situation_automation.py \
+            tests/unit/test_situation_alert_dispatch.py \
+            tests/unit/test_data_release_checks.py \
+            tests/unit/test_data_release_pipeline.py \
+            tests/unit/test_data_release_resilience.py \
+            tests/unit/test_data_release_service.py \
+            "${VERBOSE_ARGS[@]}"
         ;;
-        
-    "all")
-        echo "🎯 Running All Tests..."
-        TOTAL_TESTS=3
-        
-        if run_test "AI Report Generation" "./venv/bin/python tests/verify_ai_test_setup.py"; then
-            ((PASSED_TESTS++))
-        fi
-        
-        if run_test "Web Crawlers" "./venv/bin/python tests/test_crawlers.py --country $COUNTRY $VERBOSE 2>/dev/null"; then
-            ((PASSED_TESTS++))
-        fi
-        
-        if run_test "Integration Tests" "./venv/bin/python tests/test_integration.py 2>/dev/null" || true; then
-            ((PASSED_TESTS++))
-        fi
+    email)
+        run_test "Microsoft Graph email configuration" \
+            "$PYTHON_BIN" scripts/test_email_config.py
         ;;
-        
     *)
-        echo "❌ Unknown test type: $TEST_TYPE"
-        echo "Use --help for valid test types"
-        exit 1
+        echo "Unknown test type: $TEST_TYPE" >&2
+        echo "Use --help for valid test types" >&2
+        exit 2
         ;;
 esac
-
-echo
-echo "📊 Test Summary"
-echo "==============="
-echo "Total Tests: $TOTAL_TESTS"
-echo "Passed: $PASSED_TESTS"
-echo "Failed: $((TOTAL_TESTS - PASSED_TESTS))"
-
-if [ $PASSED_TESTS -eq $TOTAL_TESTS ]; then
-    echo "🎉 All tests passed!"
-    exit 0
-else
-    echo "💥 Some tests failed!"
-    exit 1
-fi

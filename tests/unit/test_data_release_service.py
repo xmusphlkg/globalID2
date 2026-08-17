@@ -269,6 +269,66 @@ async def test_run_logged_command_failure_includes_output_tail(monkeypatch, tmp_
 
 
 @pytest.mark.asyncio
+async def test_run_logged_command_compacts_verbose_output_and_keeps_final_tail(
+    monkeypatch,
+    tmp_path,
+):
+    service = DataReleaseService()
+    entries = []
+
+    class FakeStream:
+        def __init__(self):
+            lines = [f"line {index}\n".encode() for index in range(1, 131)]
+            lines[0] = b"\x1b[32mline 1\x1b[0m\n"
+            self.lines = iter((*lines, b""))
+
+        async def readline(self):
+            return next(self.lines)
+
+    class FakeProcess:
+        pid = 8642
+        returncode = 0
+        stdout = FakeStream()
+
+    async def create_subprocess(*_args, **_kwargs):
+        return FakeProcess()
+
+    async def add_workbook_entry(_task_uuid, **kwargs):
+        entries.append(kwargs)
+
+    async def is_cancel_requested(_task_uuid):
+        return False
+
+    monkeypatch.setattr(release_module.asyncio, "create_subprocess_exec", create_subprocess)
+    monkeypatch.setattr(release_module.task_manager, "add_workbook_entry", add_workbook_entry)
+    monkeypatch.setattr(release_module.task_manager, "is_cancel_requested", is_cancel_requested)
+
+    await service._run_logged_command(
+        "task-verbose",
+        title="Verbose Command",
+        cmd=["command"],
+        cwd=tmp_path,
+    )
+
+    output_entries = [entry for entry in entries if " Output #" in entry["title"]]
+    assert [entry["title"] for entry in output_entries] == [
+        "Verbose Command Output #1",
+        "Verbose Command Output #2",
+    ]
+    assert output_entries[0]["content"].startswith("line 1\n")
+    assert "\x1b" not in output_entries[0]["content"]
+
+    completed = entries[-1]
+    assert completed["title"] == "Verbose Command Completed"
+    assert "130 lines total" in completed["content"]
+    assert "50 lines omitted from chunk records" in completed["content"]
+    assert completed["content"].endswith("line 130")
+    assert completed["metadata"]["stored_output_chunks"] == 2
+    assert completed["metadata"]["suppressed_output_chunks"] == 2
+    assert completed["metadata"]["output_compacted"] is True
+
+
+@pytest.mark.asyncio
 async def test_subscription_options_sync_strict_failure_is_blocking(monkeypatch):
     service = DataReleaseService()
 

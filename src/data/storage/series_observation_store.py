@@ -15,7 +15,11 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
-from src.domain import DiseaseSeriesObservation, DiseaseSurveillanceSeries
+from src.domain import (
+    DiseaseSeriesObservation,
+    DiseaseSurveillanceSeries,
+    SourceDiseaseCategory,
+)
 from src.ontology import DiseaseOntology, load_disease_ontology
 
 _SUPPRESSED_VALUES = {"*", "suppressed", "suppression", "<5", "-"}
@@ -24,6 +28,7 @@ _WRITE_BATCH_SIZE = 500
 _QUALITY_MODES = {"off", "report", "quarantine", "fail_closed"}
 _REGISTRY_COVERAGE_MODES = {"auto", "required", "legacy_only"}
 _SEVERITY_RANK = {"info": 0, "warning": 1, "error": 2, "critical": 3}
+_UNMAPPED_GROUP_CODE = "G_UNMAPPED_SOURCE_CATEGORIES"
 
 
 @dataclass(frozen=True)
@@ -207,6 +212,7 @@ class SeriesObservationSaveResult:
     quality_report: SeriesObservationQualityReport
     skipped_unregistered: int = 0
     skipped_missing: int = 0
+    holding_observations: int = 0
 
 
 @dataclass(frozen=True)
@@ -216,6 +222,7 @@ class RegistryRowSelection:
     rows: list[dict[str, Any]]
     skipped_unregistered: int
     skipped_missing: int
+    unregistered_rows: tuple[dict[str, Any], ...] = ()
 
 
 class SeriesObservationStore:
@@ -223,6 +230,79 @@ class SeriesObservationStore:
 
     def __init__(self, ontology: DiseaseOntology | None = None) -> None:
         self.ontology = ontology or load_disease_ontology()
+
+    def enrich_registry_identities(
+        self,
+        rows: Iterable[Mapping[str, Any]],
+        country_code: str,
+        *,
+        source_id: str | Mapping[str, str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Attach the reviewed source identity before Registry discovery.
+
+        Crawlers commonly publish a label and/or local code but omit the
+        ontology ``definition_version``.  Discovering those rows first creates
+        a second ``source-current`` category beside the reviewed category.  A
+        row is enriched only when its code/label and observation date resolve
+        to exactly one ontology series.  Ambiguous and genuinely new rows are
+        deliberately left unchanged for the holding-series review workflow.
+        """
+
+        enriched: list[dict[str, Any]] = []
+        for raw in rows:
+            row = dict(raw)
+            label = _first_text(
+                row,
+                "RawDiseaseLabel",
+                "Disease",
+                "DiseasesCN",
+                "Diseases",
+                "local_label",
+            )
+            # ``Diseases`` is used as a label by several wide-table crawlers;
+            # treating it as an explicit source code is what previously made
+            # label-only registered series look unregistered.
+            explicit_local_code = _first_text(
+                row,
+                "SourceDiseaseCode",
+                "source_disease_code",
+                "DiseaseCode",
+                "local_code",
+            )
+            resolved_source = _source_id_for_row(row, source_id)
+            matches = self._resolve_series(
+                country_code=country_code,
+                source_id=resolved_source,
+                local_code=explicit_local_code,
+                local_label=label,
+            )
+            report_time = _parse_report_time(row)
+            if report_time is not None:
+                matches = [
+                    series for series in matches if _series_valid_at(series, report_time)
+                ]
+            if len(matches) != 1:
+                enriched.append(row)
+                continue
+
+            series = matches[0]
+            resolved_code = _canonical_source_code(
+                series,
+                explicit_local_code=explicit_local_code,
+                local_label=label,
+            )
+            definition_version = str(series.get("definition_version") or "").strip()
+            if not resolved_code or not definition_version:
+                enriched.append(row)
+                continue
+
+            # Canonical casing is part of the source identity in PostgreSQL.
+            # Use the ontology spelling after a case-insensitive match.
+            row["SourceDiseaseCode"] = resolved_code
+            if not _first_text(row, "DefinitionVersion", "definition_version"):
+                row["DefinitionVersion"] = definition_version
+            enriched.append(row)
+        return enriched
 
     def select_registry_rows(
         self,
@@ -243,6 +323,7 @@ class SeriesObservationStore:
         """
 
         selected: list[dict[str, Any]] = []
+        unregistered_rows: list[dict[str, Any]] = []
         skipped_unregistered = 0
         skipped_missing = 0
         for row in rows:
@@ -254,7 +335,14 @@ class SeriesObservationStore:
                 "Diseases",
                 "local_label",
             )
-            local_code = _first_text(row, "DiseaseCode", "local_code", "Diseases")
+            local_code = _first_text(
+                row,
+                "SourceDiseaseCode",
+                "source_disease_code",
+                "DiseaseCode",
+                "local_code",
+                "Diseases",
+            )
             row_source_id = _source_id_for_row(row, source_id)
             matches = self._resolve_series(
                 country_code=country_code,
@@ -264,6 +352,8 @@ class SeriesObservationStore:
             )
             if not matches:
                 skipped_unregistered += 1
+                if row.get(value_field) is not None and str(row.get(value_field)).strip():
+                    unregistered_rows.append(dict(row))
                 continue
             raw_value = row.get(value_field)
             if raw_value is None or not str(raw_value).strip():
@@ -274,6 +364,7 @@ class SeriesObservationStore:
             rows=selected,
             skipped_unregistered=skipped_unregistered,
             skipped_missing=skipped_missing,
+            unregistered_rows=tuple(unregistered_rows),
         )
 
     def build_observations(
@@ -306,7 +397,14 @@ class SeriesObservationStore:
                 "Diseases",
                 "local_label",
             )
-            local_code = _first_text(row, "DiseaseCode", "local_code", "Diseases")
+            local_code = _first_text(
+                row,
+                "SourceDiseaseCode",
+                "source_disease_code",
+                "DiseaseCode",
+                "local_code",
+                "Diseases",
+            )
             row_source_id = _source_id_for_row(row, source_id)
             matches = self._resolve_series(
                 country_code=country_code,
@@ -448,6 +546,21 @@ class SeriesObservationStore:
             value_field=value_field,
             geography_key=geography_key,
         )
+        holding_observations, holding_handled = await self._build_holding_observations(
+            db,
+            rows,
+            country_code,
+            source_id=source_id,
+            value_field=value_field,
+            geography_key=geography_key,
+        )
+        if holding_observations:
+            built = SeriesObservationBuildResult(
+                observations=[*built.observations, *holding_observations],
+                skipped_unmatched=max(0, built.skipped_unmatched - holding_handled),
+                skipped_ambiguous=built.skipped_ambiguous,
+                skipped_invalid=built.skipped_invalid,
+            )
         if not built.observations:
             quality_report = self.assess_quality(
                 [],
@@ -466,6 +579,7 @@ class SeriesObservationStore:
                 skipped_invalid=built.skipped_invalid,
                 skipped_registry_not_synced=0,
                 quality_report=quality_report,
+                holding_observations=0,
             )
 
         await acquire_disease_data_mutation_lock(db)
@@ -566,7 +680,204 @@ class SeriesObservationStore:
             skipped_invalid=built.skipped_invalid,
             skipped_registry_not_synced=skipped_registry,
             quality_report=quality_report,
+            holding_observations=len(holding_observations),
         )
+
+    async def _build_holding_observations(
+        self,
+        db: AsyncSession,
+        rows: list[dict[str, Any]],
+        country_code: str,
+        *,
+        source_id: str | Mapping[str, str] | None,
+        value_field: str,
+        geography_key: str | None,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Retain valid source facts whose disease category is awaiting review.
+
+        Mapping Registry discovery runs immediately before this method.  A
+        dynamically-created holding series therefore uses the same stable
+        source/category identity and points only at the non-projectable unmapped
+        group.  Review releases can later interpret the already-stored facts;
+        no source re-fetch or destructive observation rewrite is required.
+        """
+
+        observations: list[dict[str, Any]] = []
+        observation_by_key: dict[tuple[object, ...], dict[str, Any]] = {}
+        series_by_category: dict[int, DiseaseSurveillanceSeries] = {}
+        handled = 0
+
+        for row in rows:
+            label = _first_text(
+                row,
+                "RawDiseaseLabel",
+                "Disease",
+                "DiseasesCN",
+                "Diseases",
+                "local_label",
+            )
+            local_code = _first_text(
+                row,
+                "SourceDiseaseCode",
+                "source_disease_code",
+                "DiseaseCode",
+                "local_code",
+                "Diseases",
+            )
+            resolved_source = _source_id_for_row(row, source_id)
+            matches = self._resolve_series(
+                country_code=country_code,
+                source_id=resolved_source,
+                local_code=local_code,
+                local_label=label,
+            )
+            if matches:
+                continue
+
+            report_time = _parse_report_time(row)
+            value, suppressed = _parse_value(row.get(value_field))
+            if report_time is None or (value is None and not suppressed) or not resolved_source:
+                continue
+
+            source_code = local_code or (
+                "label:"
+                + hashlib.sha256(_normalized_identity(label).encode()).hexdigest()[:20]
+            )
+            definition_version = (
+                _first_text(row, "DefinitionVersion", "definition_version")
+                or "source-current"
+            )
+            category = (
+                await db.execute(
+                    select(SourceDiseaseCategory).where(
+                        SourceDiseaseCategory.source_id == resolved_source,
+                        SourceDiseaseCategory.source_code == source_code,
+                        SourceDiseaseCategory.definition_version == definition_version,
+                        SourceDiseaseCategory.is_active.is_(True),
+                    )
+                )
+            ).scalar_one_or_none()
+            if category is None:
+                continue
+
+            series = series_by_category.get(category.id)
+            if series is None:
+                digest = hashlib.sha256(category.category_key.encode()).hexdigest()[:28]
+                series_code = f"HOLD_{country_code.upper().replace('-', '_')}_{digest}"
+                series = (
+                    await db.execute(
+                        select(DiseaseSurveillanceSeries).where(
+                            DiseaseSurveillanceSeries.series_code == series_code
+                        )
+                    )
+                ).scalar_one_or_none()
+                if series is None:
+                    source_series_code = category.source_code
+                    if len(source_series_code) > 240:
+                        source_series_code = (
+                            source_series_code[:210]
+                            + ":"
+                            + hashlib.sha256(source_series_code.encode()).hexdigest()[:24]
+                        )
+                    series = DiseaseSurveillanceSeries(
+                        series_code=series_code,
+                        disease_id=None,
+                        target_group_code=_UNMAPPED_GROUP_CODE,
+                        country_code=country_code.upper(),
+                        source_system=category.source_id,
+                        source_series_code=source_series_code,
+                        source_label=category.canonical_source_label,
+                        definition_version=category.definition_version,
+                        case_definition=category.source_definition,
+                        case_definition_uri=category.source_definition_uri,
+                        metric_type=_first_text(row, "Measure", "measure")
+                        or "case_notifications",
+                        reporting_basis=_first_text(
+                            row, "ReportingBasis", "reporting_basis"
+                        )
+                        or "notification",
+                        temporal_granularity=_first_text(
+                            row, "Frequency", "frequency"
+                        )
+                        or "unknown",
+                        unit=_first_text(row, "Unit", "unit") or "count",
+                        mapping_relation="unmapped",
+                        comparability="not_comparable",
+                        aggregation_policy="non_additive",
+                        availability_status="active",
+                        missing_value_policy="missing_is_unknown",
+                        is_active=True,
+                        metadata_={
+                            "dynamic_holding": True,
+                            "source_category_id": category.id,
+                            "category_key": category.category_key,
+                        },
+                    )
+                    db.add(series)
+                    await db.flush()
+                series_by_category[category.id] = series
+
+            dimensions = _parse_dimensions(row.get("Dimensions") or row.get("dimensions"))
+            if dimensions is None:
+                continue
+            resolved_geography = geography_key or _geography_key(
+                row, country_code, source_id=resolved_source
+            )
+            observation = {
+                "time": report_time,
+                "series_code": series.series_code,
+                "geography_key": resolved_geography,
+                "dimension_key": _dimension_key(dimensions),
+                "dimensions": dimensions,
+                "value": value,
+                "unit": series.unit,
+                "suppressed": suppressed,
+                "suppression_reason": "source_value_suppressed" if suppressed else None,
+                "quality_status": _quality_status(row),
+                "raw_data": _json_safe(dict(row)),
+                "metadata": {
+                    "source_id": resolved_source,
+                    "local_code": source_code,
+                    "local_label": label,
+                    "measure": series.metric_type,
+                    "frequency": series.temporal_granularity,
+                    "rollup_policy": "no_auto_rollup",
+                    "dynamic_holding": True,
+                    "source_category_id": category.id,
+                    "population_scope": _first_text(
+                        row, "PopulationScope", "population_scope"
+                    ),
+                    "authoritative_revision": _allows_authoritative_revision(row),
+                    "allow_equal_quality_overwrite": _allows_equal_quality_overwrite(row),
+                },
+            }
+            identity = (
+                observation["time"],
+                observation["series_code"],
+                observation["geography_key"],
+                observation["dimension_key"],
+            )
+            previous = observation_by_key.get(identity)
+            if previous is not None:
+                comparable = (
+                    "value",
+                    "unit",
+                    "suppressed",
+                    "suppression_reason",
+                    "quality_status",
+                    "dimensions",
+                )
+                if any(previous.get(field) != observation.get(field) for field in comparable):
+                    raise ValueError(
+                        "Conflicting unmapped source rows share a holding-series "
+                        f"observation identity: {identity}"
+                    )
+            else:
+                observation_by_key[identity] = observation
+                observations.append(observation)
+            handled += 1
+
+        return observations, handled
 
     @staticmethod
     def assess_quality(
@@ -1450,6 +1761,12 @@ def _first_text(row: dict[str, Any], *keys: str) -> str | None:
     return None
 
 
+def _normalized_identity(value: object) -> str:
+    """Return a stable, whitespace-insensitive identity for source labels."""
+
+    return " ".join(str(value or "").split()).casefold()
+
+
 def _dimension_key(dimensions: dict[str, Any]) -> str:
     if not dimensions:
         return "all"
@@ -1545,6 +1862,42 @@ def _series_valid_at(series: dict[str, Any], report_time: datetime) -> bool:
         (valid_from and report_date < datetime.fromisoformat(valid_from).date())
         or (valid_to and report_date > datetime.fromisoformat(valid_to).date())
     )
+
+
+def _canonical_source_code(
+    series: Mapping[str, Any],
+    *,
+    explicit_local_code: str | None,
+    local_label: str | None,
+) -> str | None:
+    """Return a unique canonical code for one resolved ontology series."""
+
+    codes = [str(value).strip() for value in series.get("local_codes", []) if str(value).strip()]
+    labels = [str(value).strip() for value in series.get("local_labels", []) if str(value).strip()]
+    if explicit_local_code:
+        normalized_code = explicit_local_code.casefold()
+        canonical_matches = [code for code in codes if code.casefold() == normalized_code]
+        if len(canonical_matches) == 1:
+            return canonical_matches[0]
+        series_id = str(series.get("id") or "").strip()
+        if not codes and series_id.casefold() == normalized_code:
+            return series_id
+        return None
+
+    if len(codes) == 1:
+        return codes[0]
+    if not codes:
+        return str(series.get("id") or "").strip() or None
+    if local_label and len(labels) == len(codes):
+        normalized_label = local_label.casefold()
+        paired_codes = [
+            codes[index]
+            for index, label in enumerate(labels)
+            if label.casefold() == normalized_label
+        ]
+        if len(set(paired_codes)) == 1:
+            return paired_codes[0]
+    return None
 
 
 def _json_safe(value: Any) -> Any:

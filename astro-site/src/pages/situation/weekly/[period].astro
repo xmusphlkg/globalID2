@@ -1,0 +1,28 @@
+---
+import SituationPeriodView from '../../../components/SituationPeriodView.astro';
+import { listSituationReports, loadSituationReport } from '../../../lib/situation-data';
+
+export function getStaticPaths() {
+  const reports = listSituationReports('weekly');
+  return reports.map((report, index) => ({
+    params: { period: report.report.period_key },
+    props: {
+      previous: reports[index - 1]?.report.period_key,
+      next: reports[index + 1]?.report.period_key,
+    },
+  }));
+}
+const { period } = Astro.params;
+const { previous, next } = Astro.props as { previous?: string; next?: string };
+const report = period ? loadSituationReport('weekly', period) : null;
+if (!report || !period) return Astro.redirect('/situation/weekly/', 302);
+---
+
+<SituationPeriodView
+  report={report}
+  jsonPath={`/site-data/situation/v3/weekly/${period}.json`}
+  canonicalPath={`/situation/weekly/${period}/`}
+  archivePath="/situation/weekly/"
+  previousPath={previous ? `/situation/weekly/${previous}/` : undefined}
+  nextPath={next ? `/situation/weekly/${next}/` : undefined}
+/>

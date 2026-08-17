@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 SCHEMA_VERSION = "report_v4.0"
-METHOD_VERSION = "report_v4.0"
+METHOD_VERSION = "report_v4.1"
 SUPPORTED_LOCALES: tuple[str, str] = ("zh", "en")
 DEFAULT_LOCALE = "zh"
 
@@ -82,6 +82,10 @@ class DiseaseDirectoryItem:
     recent_change_pct: float | None
     long_window_change_pct: float | None
     trend: dict[str, Any]
+    attention_score: float | int | None
+    attention_level: str | None
+    # Deprecated aliases retained in serialized v4 documents so existing
+    # readers do not break. They are not public-health risk estimates.
     risk_score: float | int | None
     risk_level: str | None
     current_movement: dict[str, Any] = field(default_factory=dict)
@@ -104,6 +108,9 @@ class ReportDocument:
     death_reporting: DeathReporting
     data_quality: dict[str, Any]
     disease_directory: list[dict[str, Any] | DiseaseDirectoryItem] = field(default_factory=list)
+    attention_ranking: list[dict[str, Any]] = field(default_factory=list)
+    score_semantics: dict[str, Any] = field(default_factory=dict)
+    # Deprecated compatibility alias for attention_ranking.
     risk_ranking: list[dict[str, Any]] = field(default_factory=list)
     figures: list[dict[str, Any]] = field(default_factory=list)
     references: list[dict[str, Any]] = field(default_factory=list)
@@ -128,6 +135,8 @@ class ReportDocument:
                 item.to_dict() if hasattr(item, "to_dict") else dict(item)
                 for item in self.disease_directory
             ],
+            "attention_ranking": self.attention_ranking,
+            "score_semantics": self.score_semantics,
             "risk_ranking": self.risk_ranking,
             "figures": self.figures,
             "references": self.references,

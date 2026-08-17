@@ -325,7 +325,7 @@ function recentWindowHeatmapOption(figure: RecordValue, figureData: RecordValue,
 }
 
 function riskRankingBarOption(figureData: RecordValue, lang: "en" | "zh"): echarts.EChartsCoreOption | null {
-  const rows = asArray(figureData.risk_ranking).map(asRecord).slice(0, 10).reverse();
+  const rows = asArray(figureData.attention_ranking || figureData.risk_ranking).map(asRecord).slice(0, 10).reverse();
   if (rows.length < 2) return null;
 
   return {
@@ -336,24 +336,26 @@ function riskRankingBarOption(figureData: RecordValue, lang: "en" | "zh"): echar
       formatter: (params: { name?: string; data?: unknown }) => {
         const item = asRecord(params.data);
         const change = item.change_pct == null ? "N/A" : `${formatNumber(item.change_pct)}%`;
-        return `${params.name || ""}<br/>Risk: ${formatNumber(item.value)}<br/>Level: ${asString(item.level) || "N/A"}<br/>Latest cases: ${formatNumber(item.latest_cases)}<br/>Change: ${change}`;
+        const scoreLabel = lang === "zh" ? "监测关注分" : "Attention score";
+        const bandLabel = lang === "zh" ? "复核优先级分档" : "Review-priority band";
+        return `${params.name || ""}<br/>${scoreLabel}: ${formatNumber(item.value)}<br/>${bandLabel}: ${asString(item.level) || "N/A"}<br/>Latest cases: ${formatNumber(item.latest_cases)}<br/>Change: ${change}`;
       },
     },
     aria: { enabled: true },
     grid: { left: 150, right: 24, top: 20, bottom: 44 },
-    xAxis: { type: "value", name: lang === "zh" ? "风险分" : "Risk score", min: 0, max: 100, axisLabel: { color: "#5d6978" }, splitLine: { lineStyle: { color: "#e7ebf0", type: "dashed" } } },
+    xAxis: { type: "value", name: lang === "zh" ? "监测关注分" : "Attention score", min: 0, max: 100, axisLabel: { color: "#5d6978" }, splitLine: { lineStyle: { color: "#e7ebf0", type: "dashed" } } },
     yAxis: { type: "category", data: rows.map((row) => asString(row.name) || "Unknown"), axisLabel: { color: "#5d6978" }, axisLine: { lineStyle: { color: "#d7dde5" } } },
     series: [
       {
-        name: lang === "zh" ? "风险分" : "Risk score",
+        name: lang === "zh" ? "监测关注优先级" : "Surveillance attention priority",
         type: "bar",
         barMaxWidth: 18,
         data: rows.map((row) => ({
-          value: Number(row.risk_score || 0),
-          level: row.risk_level || "low",
+          value: Number(row.attention_score ?? row.risk_score ?? 0),
+          level: row.attention_level || row.risk_level || "low",
           latest_cases: Number(row.latest_cases || 0),
           change_pct: row.change_pct,
-          itemStyle: { color: riskColor(row.risk_level) },
+          itemStyle: { color: riskColor(row.attention_level || row.risk_level) },
         })),
       },
     ],
@@ -429,9 +431,9 @@ function anomalyMarkerCurveOption(figure: RecordValue, figureData: RecordValue, 
 }
 
 function riskMatrixOption(figureData: RecordValue, lang: "en" | "zh"): echarts.EChartsCoreOption | null {
-  const rows = asArray(figureData.risk_ranking).map(asRecord).slice(0, 12);
+  const rows = asArray(figureData.attention_ranking || figureData.risk_ranking).map(asRecord).slice(0, 12);
   if (rows.length < 2) return null;
-  const maxScore = rows.reduce((max, row) => Math.max(max, Number(row.risk_score || 0)), 1);
+  const maxScore = rows.reduce((max, row) => Math.max(max, Number(row.attention_score ?? row.risk_score ?? 0)), 1);
   return {
     animation: false,
     tooltip: {
@@ -440,7 +442,7 @@ function riskMatrixOption(figureData: RecordValue, lang: "en" | "zh"): echarts.E
       formatter: (params: { data?: unknown }) => {
         const item = asRecord(params.data);
         const value = Array.isArray(item.value) ? item.value : [];
-        return `${asString(item.name) || "Unknown"}<br/>Latest cases: ${formatNumber(value[0])}<br/>Change: ${formatNumber(value[1])}%<br/>Risk: ${formatNumber(item.risk_score)}`;
+        return `${asString(item.name) || "Unknown"}<br/>Latest cases: ${formatNumber(value[0])}<br/>Change: ${formatNumber(value[1])}%<br/>${lang === "zh" ? "监测关注分" : "Attention score"}: ${formatNumber(item.attention_score)}`;
       },
     },
     aria: { enabled: true },
@@ -450,8 +452,8 @@ function riskMatrixOption(figureData: RecordValue, lang: "en" | "zh"): echarts.E
     series: [{
       name: lang === "zh" ? "疾病" : "Disease",
       type: "scatter",
-      data: rows.map((row) => ({ name: asString(row.name) || "Unknown", value: [Number(row.latest_cases || 0), Number(row.change_pct || 0)], risk_score: Number(row.risk_score || 0), itemStyle: { color: riskColor(row.risk_level) } })),
-      symbolSize: (_value: unknown, params: { data?: unknown }) => 10 + (Number(asRecord(params.data).risk_score || 0) / maxScore) * 28,
+      data: rows.map((row) => ({ name: asString(row.name) || "Unknown", value: [Number(row.latest_cases || 0), Number(row.change_pct || 0)], attention_score: Number(row.attention_score ?? row.risk_score ?? 0), itemStyle: { color: riskColor(row.attention_level || row.risk_level) } })),
+      symbolSize: (_value: unknown, params: { data?: unknown }) => 10 + (Number(asRecord(params.data).attention_score || 0) / maxScore) * 28,
       label: { show: true, formatter: (params: { data?: unknown }) => asString(asRecord(params.data).name), color: "#263647" },
     }],
   };
@@ -480,6 +482,13 @@ function figureHeight(figure: RecordValue): number {
   if (type === "risk_matrix") return 420;
   if (type === "seasonal_baseline_band") return 440;
   return 430;
+}
+
+function figureTypeLabel(figure: RecordValue, lang: "en" | "zh"): string {
+  const type = asString(figure.figure_type);
+  if (type === "risk_ranking_bar") return lang === "zh" ? "监测关注排序" : "attention ranking";
+  if (type === "risk_matrix") return lang === "zh" ? "监测关注矩阵" : "attention matrix";
+  return type.replaceAll("_", " ");
 }
 
 export function ReportFigureList({ figures, figureData, lang, placement }: ReportFigureListProps) {
@@ -515,7 +524,7 @@ export function ReportFigureList({ figures, figureData, lang, placement }: Repor
                 </h4>
               </div>
               <span className="rounded-tremor-small bg-tremor-background-subtle px-2 py-1 text-[11px] font-medium uppercase text-tremor-content-subtle dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-subtle">
-                {asString(figure.figure_type).replaceAll("_", " ")}
+                {figureTypeLabel(figure, lang)}
               </span>
             </div>
             <div className="px-3 py-3">

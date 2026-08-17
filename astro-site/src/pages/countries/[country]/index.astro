@@ -331,11 +331,11 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
     )}
 
     <section class="figure-panel">
-        <h2 class="figure-title" data-lang-en="Case trends by disease" data-lang-zh="疾病病例趋势">
-          Case trends by disease
+        <h2 class="figure-title" data-lang-en="Surveillance trends by disease" data-lang-zh="各疾病监测趋势">
+          Surveillance trends by disease
         </h2>
-        <p class="figure-caption mt-2" data-lang-en="Values are source-period counts. Monthly, quarterly, and annual series use visible point markers; annual series use a dashed line." data-lang-zh="数值为来源期间总量；月度、季度和年度序列显示数据点，年度序列使用虚线。">
-          Values are source-period counts. Monthly, quarterly, and annual series use visible point markers; annual series use a dashed line.
+        <p class="figure-caption mt-2" data-lang-en="Start with one surveillance series and its historical reference. Comparison mode restricts series to their common observed window and separates unlike reporting cadences; outbreak mode is available only for daily or weekly onset-time data." data-lang-zh="默认先查看一条监测序列及其历史参照；比较模式仅显示共同观测时间窗，并分开不同报告频率；暴发模式只适用于按发病时间统计的日度或周度数据。">
+          Start with one surveillance series and its historical reference. Comparison mode restricts series to their common observed window and separates unlike reporting cadences; outbreak mode is available only for daily or weekly onset-time data.
         </p>
       <div class="mt-5">
         {countryData?.disease_series ? (

@@ -533,9 +533,38 @@ class IcelandDOHCrawler(BaseCrawler):
         label = _norm_text(raw_label)
         definition = _SERIES_BY_KEY.get((scope, entity, label))
         if definition is None:
-            raise RuntimeError(
-                "Unregistered Iceland source series; update SERIES_DEFINITIONS before "
-                f"ingestion: scope={scope} entity={entity} label={label!r}"
+            if not label or scope not in SUPPORTED_SOURCE_SCOPES:
+                raise RuntimeError(
+                    "Invalid Iceland source series identity: "
+                    f"scope={scope} entity={entity} label={label!r}"
+                )
+            frequency, period_type = {
+                SOURCE_SCOPE_ANNUAL: ("annual", "year"),
+                SOURCE_SCOPE_STI: ("monthly", "month"),
+                SOURCE_SCOPE_RESPIRATORY: ("weekly", "iso_week"),
+            }[scope]
+            digest = hashlib.sha256(
+                f"{scope}\x1f{entity}\x1f{label}".encode("utf-8")
+            ).hexdigest()[:20]
+            definition = ISSeriesDefinition(
+                source_scope=scope,
+                source_id=SOURCE_IDS[scope],
+                source_name=SOURCE_NAMES[scope],
+                entity=entity,
+                raw_disease_label=label,
+                disease_code=f"source-native:{digest}",
+                frequency=frequency,
+                period_type=period_type,
+                measure="case_notifications",
+                reporting_basis="source_reported_surveillance",
+            )
+            logger.warning(
+                "Iceland source published an unregistered disease category; "
+                "retaining it for mapping review | scope={} entity={} label={} code={}",
+                scope,
+                entity,
+                label,
+                definition.disease_code,
             )
         return definition
 
@@ -719,9 +748,16 @@ class IcelandDOHCrawler(BaseCrawler):
         observed = {str(row.get("DiseaseCode") or "") for row in rows}
         missing = sorted(expected - observed)
         unknown = sorted(observed - expected)
-        if missing or unknown:
+        if missing:
             raise RuntimeError(
                 f"Iceland series coverage drift for {scope}; missing={missing} unknown={unknown}"
+            )
+        if unknown:
+            logger.warning(
+                "Iceland source coverage includes new categories retained for review | "
+                "scope={} codes={}",
+                scope,
+                unknown,
             )
 
         seen: Dict[Tuple[str, str], str] = {}

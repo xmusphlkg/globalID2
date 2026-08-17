@@ -136,6 +136,13 @@ def _is_alias_row(row: Mapping[str, Any]) -> bool:
     return str(row.get("record_type", "") or "").strip().casefold() == "alias"
 
 
+def _is_registry_category_dimension(row: Mapping[str, Any]) -> bool:
+    return (
+        str(row.get("mapping_scope", "") or "").strip().casefold()
+        == "source_category_dimension"
+    )
+
+
 def _location(row: Mapping[str, Any]) -> dict[str, Any] | None:
     path = str(row.get("_source_path", row.get("source_path", "")) or "").strip()
     raw_line = row.get("_row_number", row.get("row_number"))
@@ -175,7 +182,12 @@ def _series_descriptor(
 ) -> tuple[tuple[str, str, str], dict[str, Any]] | None:
     country = _country_code(row)
     disease_id = _disease_id(row)
-    if not country or not disease_id or _is_alias_row(row):
+    if (
+        not country
+        or not disease_id
+        or _is_alias_row(row)
+        or _is_registry_category_dimension(row)
+    ):
         return None
 
     source = _data_source(row)

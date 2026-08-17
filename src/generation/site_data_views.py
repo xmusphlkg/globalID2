@@ -55,11 +55,39 @@ def dominant_value(values: list[str | None]) -> str | None:
     return max(counts.items(), key=lambda item: item[1])[0]
 
 
+def sum_or_none(values: list[int | float | None]) -> int | float | None:
+    """Sum observed values without silently converting all-missing to zero."""
+
+    observed = [value for value in values if value is not None]
+    return sum(observed) if observed else None
+
+
+def latest_or_none(values: list[int | float | None]) -> int | float | None:
+    for value in reversed(values):
+        if value is not None:
+            return value
+    return None
+
+
+def trailing_provisional_from(
+    dates: list[str], quality_statuses: list[str | None]
+) -> str | None:
+    """Return a tail boundary only for publisher-declared preliminary data."""
+
+    provisional = {"provisional", "preliminary"}
+    start: str | None = None
+    for date, status in reversed(list(zip(dates, quality_statuses))):
+        if str(status or "").strip().lower() not in provisional:
+            break
+        start = date
+    return start
+
+
 def calculate_weekly_equivalent(
     dates: list[str],
-    values: list[int | float],
+    values: list[int | float | None],
     temporal_granularity: str | None = None,
-) -> list[float]:
+) -> list[float | None]:
     """Expose weekly counts only when the source explicitly declares weekly grain.
 
     Monthly, quarterly, and annual period totals are not rates. Dividing them by
@@ -70,7 +98,7 @@ def calculate_weekly_equivalent(
         return []
     if str(temporal_granularity or "").strip().lower() != "weekly":
         return []
-    return [float(value) for value in values]
+    return [float(value) if value is not None else None for value in values]
 
 
 def _series_context_for_records(records: list[dict]) -> dict:
@@ -210,7 +238,7 @@ def _data_layer_summary(disease_series: dict[str, dict]) -> dict:
 def _compact_source_series_metadata(source_series: list[dict]) -> list[dict]:
     """Keep definition/projection semantics in chart payloads without facts duplication."""
 
-    omitted = {"dates", "values", "quality_statuses"}
+    omitted = {"dates", "values", "quality_statuses", "point_quality_statuses"}
     return [
         {key: value for key, value in item.items() if key not in omitted}
         for item in source_series
@@ -282,8 +310,8 @@ def build_country_data(
     for rec in filtered_source_records:
         source_by_disease[rec["disease_id"]].append(rec)
 
-    total_cases = sum(r["cases"] for r in records)
-    total_deaths = sum(r["deaths"] for r in records)
+    total_cases = sum(r["cases"] for r in records if r.get("cases") is not None)
+    total_deaths = sum(r["deaths"] for r in records if r.get("deaths") is not None)
     dates = sorted({r["date"] for r in records if r["date"]})
 
     # Build time series per disease
@@ -297,21 +325,25 @@ def build_country_data(
                 continue
             if d not in points:
                 points[d] = {
-                    "cases": 0,
-                    "deaths": 0,
+                    "cases": [],
+                    "deaths": [],
                     "incidence_rates": [],
                     "incidence_sources": [],
                     "mortality_rates": [],
+                    "quality_statuses": [],
                 }
-            points[d]["cases"] += rec.get("cases") or 0
-            points[d]["deaths"] += rec.get("deaths") or 0
+            points[d]["cases"].append(rec.get("cases"))
+            points[d]["deaths"].append(rec.get("deaths"))
             points[d]["incidence_rates"].append(rec.get("incidence_rate"))
             points[d]["incidence_sources"].append(rec.get("incidence_rate_source"))
             points[d]["mortality_rates"].append(rec.get("mortality_rate"))
+            points[d]["quality_statuses"].append(
+                rec.get("quality_status") or rec.get("data_quality")
+            )
 
         series_dates = sorted(points.keys())
-        series_cases = [points[d]["cases"] for d in series_dates]
-        series_deaths = [points[d]["deaths"] for d in series_dates]
+        series_cases = [sum_or_none(points[d]["cases"]) for d in series_dates]
+        series_deaths = [sum_or_none(points[d]["deaths"]) for d in series_dates]
         series_incidence = [
             avg_or_none(points[d]["incidence_rates"]) for d in series_dates
         ]
@@ -320,6 +352,9 @@ def build_country_data(
         ]
         series_mortality = [
             avg_or_none(points[d]["mortality_rates"]) for d in series_dates
+        ]
+        series_quality = [
+            dominant_value(points[d]["quality_statuses"]) for d in series_dates
         ]
         provenance = _provenance_with_source_records(
             recs,
@@ -345,10 +380,25 @@ def build_country_data(
             "incidence_rates": series_incidence,
             "incidence_sources": series_incidence_sources,
             "mortality_rates": series_mortality,
-            "total_cases": sum(series_cases),
-            "total_deaths": sum(series_deaths),
-            "latest_cases": series_cases[-1] if series_cases else 0,
-            "latest_deaths": series_deaths[-1] if series_deaths else 0,
+            "quality_statuses": series_quality,
+            "provisional_from": trailing_provisional_from(
+                series_dates, series_quality
+            ),
+            "total_cases": sum(value for value in series_cases if value is not None),
+            "total_deaths": sum(value for value in series_deaths if value is not None),
+            "latest_cases": latest_or_none(series_cases),
+            "latest_deaths": latest_or_none(series_deaths),
+            "metric_type": dominant_value([rec.get("metric_type") for rec in recs]),
+            "reporting_basis": dominant_value(
+                [rec.get("reporting_basis") for rec in recs]
+            ),
+            "time_basis": dominant_value([rec.get("time_basis") for rec in recs]),
+            "comparability": dominant_value(
+                [rec.get("comparability") for rec in recs]
+            ),
+            "definition_version": dominant_value(
+                [rec.get("definition_version") for rec in recs]
+            ),
             **provenance,
         }
 
@@ -434,8 +484,9 @@ def build_country_data(
             "unit": "per_100k",
             "population_source": "WPP",
             "source_counts": dict(incidence_source_counts),
-            "note_en": "Incidence Rate is computed from WPP population data during site generation; when population is unavailable, original database incidence is shown.",
-            "note_zh": "发病率在网页数据生成阶段按 WPP 人口重算（每10万人）；若缺少人口数据则回退显示数据库原始发病率。",
+            "period_semantics": "per_source_reporting_period",
+            "note_en": "Values are cases per 100,000 population for each source reporting period (for example, per week, month, or year); they are not annualized. When population is unavailable, original database incidence is shown.",
+            "note_zh": "数值表示各来源报告期间内每10万人病例数（如每周、每月或每年），未作年化；若缺少人口数据则回退显示数据库原始发病率。",
         },
         "disease_series": disease_series,
         "data_layer_summary": _data_layer_summary(disease_series),
@@ -507,10 +558,16 @@ def build_country_site_data(country_data: dict) -> dict:
             "td": entry.get("total_deaths", 0),
             "lc": entry.get("latest_cases", 0),
             "ld": entry.get("latest_deaths", 0),
+            "pf": entry.get("provisional_from"),
+            "mt": entry.get("metric_type"),
+            "rb": entry.get("reporting_basis"),
+            "tb": entry.get("time_basis"),
+            "cmp": entry.get("comparability"),
+            "dv": entry.get("definition_version"),
             "x": [date_index[date] for date in dates if date in date_index],
             "c": entry.get("cases") or [],
             "w": [
-                round(float(value), 2)
+                round(float(value), 2) if value is not None else None
                 for value in (entry.get("weekly_equiv_cases") or [])
             ],
             "d": entry.get("deaths") or [],
@@ -622,24 +679,31 @@ def build_disease_data(
                 continue
             if d not in points:
                 points[d] = {
-                    "cases": 0,
-                    "deaths": 0,
+                    "cases": [],
+                    "deaths": [],
                     "incidence_rates": [],
                     "incidence_sources": [],
+                    "quality_statuses": [],
                 }
-            points[d]["cases"] += rec.get("cases") or 0
-            points[d]["deaths"] += rec.get("deaths") or 0
+            points[d]["cases"].append(rec.get("cases"))
+            points[d]["deaths"].append(rec.get("deaths"))
             points[d]["incidence_rates"].append(rec.get("incidence_rate"))
             points[d]["incidence_sources"].append(rec.get("incidence_rate_source"))
+            points[d]["quality_statuses"].append(
+                rec.get("quality_status") or rec.get("data_quality")
+            )
 
         series_dates = sorted(points.keys())
-        series_cases = [points[d]["cases"] for d in series_dates]
-        series_deaths = [points[d]["deaths"] for d in series_dates]
+        series_cases = [sum_or_none(points[d]["cases"]) for d in series_dates]
+        series_deaths = [sum_or_none(points[d]["deaths"]) for d in series_dates]
         series_incidence = [
             avg_or_none(points[d]["incidence_rates"]) for d in series_dates
         ]
         series_incidence_sources = [
             dominant_value(points[d]["incidence_sources"]) for d in series_dates
+        ]
+        series_quality = [
+            dominant_value(points[d]["quality_statuses"]) for d in series_dates
         ]
 
         provenance = _provenance_with_source_records(
@@ -657,8 +721,27 @@ def build_disease_data(
             "deaths": series_deaths,
             "incidence_rates": series_incidence,
             "incidence_sources": series_incidence_sources,
-            "total_cases": sum(series_cases),
-            "total_deaths": sum(series_deaths),
+            "quality_statuses": series_quality,
+            "provisional_from": trailing_provisional_from(
+                series_dates, series_quality
+            ),
+            "total_cases": sum(value for value in series_cases if value is not None),
+            "total_deaths": sum(value for value in series_deaths if value is not None),
+            "metric_type": dominant_value(
+                [rec.get("metric_type") for rec in disease_records]
+            ),
+            "reporting_basis": dominant_value(
+                [rec.get("reporting_basis") for rec in disease_records]
+            ),
+            "time_basis": dominant_value(
+                [rec.get("time_basis") for rec in disease_records]
+            ),
+            "comparability": dominant_value(
+                [rec.get("comparability") for rec in disease_records]
+            ),
+            "definition_version": dominant_value(
+                [rec.get("definition_version") for rec in disease_records]
+            ),
             **provenance,
         }
 
@@ -676,8 +759,10 @@ def build_disease_data(
         if granularity in {"annual", "yearly", "quarterly"}:
             continue
         if r["year_month"]:
-            monthly[r["year_month"]]["cases"] += r["cases"]
-            monthly[r["year_month"]]["deaths"] += r["deaths"]
+            if r.get("cases") is not None:
+                monthly[r["year_month"]]["cases"] += r["cases"]
+            if r.get("deaths") is not None:
+                monthly[r["year_month"]]["deaths"] += r["deaths"]
     months_sorted = sorted(monthly.keys())
 
     return {
@@ -753,10 +838,16 @@ def build_disease_site_data(
             "n_zh": (country_name_zh_by_code or {}).get(country_code) or country_code,
             "tc": entry.get("total_cases", 0),
             "td": entry.get("total_deaths", 0),
+            "pf": entry.get("provisional_from"),
+            "mt": entry.get("metric_type"),
+            "rb": entry.get("reporting_basis"),
+            "tb": entry.get("time_basis"),
+            "cmp": entry.get("comparability"),
+            "dv": entry.get("definition_version"),
             "x": [date_index[date] for date in dates if date in date_index],
             "c": entry.get("cases") or [],
             "w": [
-                round(float(value), 2)
+                round(float(value), 2) if value is not None else None
                 for value in (entry.get("weekly_equiv_cases") or [])
             ],
             "d": entry.get("deaths") or [],

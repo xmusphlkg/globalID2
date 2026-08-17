@@ -30,6 +30,20 @@
         "risk_groups": {"en": "Not applicable", "zh": "不适用"}
       }
     },
+    "surveillance_event": {
+      "required_fields": ["definition", "surveillance_note"],
+      "optional_fields": ["clinical_features", "epidemiology", "transmission", "risk_groups"],
+      "not_applicable_fields": ["prevention"],
+      "labels": {
+        "definition": {"en": "Surveillance entity definition", "zh": "监测实体定义"},
+        "clinical_features": {"en": "Included clinical scope", "zh": "纳入的临床范围"},
+        "epidemiology": {"en": "Reported occurrence", "zh": "报告发生情况"},
+        "transmission": {"en": "Exposure or classification boundary", "zh": "暴露或分类边界"},
+        "prevention": {"en": "Not applicable", "zh": "不适用"},
+        "surveillance_note": {"en": "Surveillance interpretation", "zh": "监测口径说明"},
+        "risk_groups": {"en": "Population under surveillance", "zh": "监测人群"}
+      }
+    },
     "occupational_condition": {
       "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"],
       "optional_fields": [],
@@ -117,9 +131,19 @@
   },
   "rules": [
     {
+      "profile_type": "surveillance_event",
+      "fields": ["name_en", "standard_name_en", "name_zh", "standard_name_zh", "description"],
+      "patterns": ["\\bsurveillance (?:event|reports?|category)\\b", "\\bexposure notification\\b", "\\bevent-based .{0,30}surveillance\\b", "\\bsource-(?:defined|reported).{0,80}surveillance\\b", "监测事件", "暴露通知", "监测报告", "监测类别"]
+    },
+    {
+      "profile_type": "surveillance_event",
+      "fields": ["name_en", "standard_name_en", "name_zh", "standard_name_zh"],
+      "patterns": ["\\bsurveillance\\b", "监测"]
+    },
+    {
       "profile_type": "classification_scope",
       "fields": ["name_en", "standard_name_en", "name_zh", "standard_name_zh"],
-      "patterns": ["^other\\b", "\\bunspecified\\b", "not otherwise specified", "not elsewhere classified", "^其他", "未指定", "未明示"]
+      "patterns": ["^other\\b", "\\bunspecified\\b", "\\ball reported\\b", "not otherwise specified", "not elsewhere classified", "^其他", "未指定", "未明示", "所有报告", "全部报告"]
     },
     {
       "profile_type": "classification_scope",

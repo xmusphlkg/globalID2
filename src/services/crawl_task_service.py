@@ -52,7 +52,9 @@ class CrawlTaskService:
             running_q = select(Task).where(
                 Task.task_type == TaskType.CRAWL_DATA,
                 Task.country_id == country.id,
-                Task.status.in_([TaskStatus.RUNNING, TaskStatus.QUEUED]),
+                Task.status.in_(
+                    [TaskStatus.RUNNING, TaskStatus.QUEUED, TaskStatus.RETRYING]
+                ),
             )
             existing = (await db.execute(running_q)).scalar_one_or_none()
             if existing is not None:

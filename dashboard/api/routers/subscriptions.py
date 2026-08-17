@@ -641,6 +641,18 @@ async def subscription_sync_options():
     if not SUBSCRIPTION_SCRIPT.exists():
         raise HTTPException(404, f"Subscription helper script not found: {SUBSCRIPTION_SCRIPT}")
 
+    target_environment = _env_value("SUBSCRIPTIONS__REMOTE_ENVIRONMENT").lower()
+    if target_environment not in {"staging", "production"}:
+        raise HTTPException(
+            409,
+            "Set SUBSCRIPTIONS__REMOTE_ENVIRONMENT to staging or production before syncing options.",
+        )
+    if _env_value("SUBSCRIPTIONS__ALLOW_REMOTE_OPTION_SYNC") != target_environment:
+        raise HTTPException(
+            409,
+            "SUBSCRIPTIONS__ALLOW_REMOTE_OPTION_SYNC must exactly match the target environment.",
+        )
+
     merged_env = os.environ.copy()
     merged_env.update({key: value for key, value in _dotenv().items() if key not in merged_env})
     cloudflare = system_settings_service.cloudflare_runtime()
@@ -652,6 +664,7 @@ async def subscription_sync_options():
     proc = await asyncio.create_subprocess_exec(
         str(SUBSCRIPTION_SCRIPT),
         "sync-options-remote",
+        target_environment,
         cwd=str(ROOT_DIR),
         env=merged_env,
         stdout=asyncio.subprocess.PIPE,

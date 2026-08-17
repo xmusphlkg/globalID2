@@ -38,14 +38,14 @@ const subscriptionsApiBase = (
           <dl class="subscribe-facts mt-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
             <div>
               <dt data-lang-en="Delivery" data-lang-zh="投递内容">Delivery</dt>
-              <dd data-lang-en="Reports, digests, and priority alerts" data-lang-zh="报告、摘要和重点提醒">
-                Reports, digests, and priority alerts
+              <dd data-lang-en="Reports, Research Radar digests, and priority alerts" data-lang-zh="报告、Research Radar 摘要和重点提醒">
+                Reports, Research Radar digests, and priority alerts
               </dd>
             </div>
             <div>
               <dt data-lang-en="Filters" data-lang-zh="过滤条件">Filters</dt>
-              <dd data-lang-en="Country and disease preferences" data-lang-zh="国家和疾病偏好">
-                Country and disease preferences
+              <dd data-lang-en="Country, disease, topic, and study preferences" data-lang-zh="国家、疾病、主题和研究类型偏好">
+                Country, disease, topic, and study preferences
               </dd>
             </div>
             <div>
@@ -129,6 +129,30 @@ const subscriptionsApiBase = (
             <div class="subscribe-chip-grid mt-3" id="disease-options"></div>
           </fieldset>
 
+          <fieldset class="subscribe-field">
+            <div class="subscribe-field-title">
+              <legend data-lang-en="Research topics" data-lang-zh="研究主题">Research topics</legend>
+              <span data-lang-en="For Research Radar; leave empty for all" data-lang-zh="适用于 Research Radar；留空表示全部">For Research Radar; leave empty for all</span>
+            </div>
+            <div class="subscribe-chip-grid" id="research-topic-options"></div>
+          </fieldset>
+
+          <fieldset class="subscribe-field">
+            <div class="subscribe-field-title">
+              <legend data-lang-en="Study types" data-lang-zh="研究类型">Study types</legend>
+              <span data-lang-en="Leave empty for all" data-lang-zh="留空表示全部">Leave empty for all</span>
+            </div>
+            <div class="subscribe-chip-grid" id="study-type-options"></div>
+          </fieldset>
+
+          <fieldset class="subscribe-field">
+            <div class="subscribe-field-title">
+              <legend data-lang-en="Publication status" data-lang-zh="出版状态">Publication status</legend>
+              <span data-lang-en="Leave empty for all approved research" data-lang-zh="留空表示全部已审核研究">Leave empty for all approved research</span>
+            </div>
+            <div class="subscribe-chip-grid" id="peer-review-status-options"></div>
+          </fieldset>
+
           <label class="subscribe-consent">
             <input type="checkbox" name="consent" required />
             <span>
@@ -204,12 +228,18 @@ const subscriptionsApiBase = (
       const countryOptions = document.getElementById('country-options');
       const diseaseOptions = document.getElementById('disease-options');
       const diseaseSearch = document.getElementById('disease-search');
+      const researchTopicOptions = document.getElementById('research-topic-options');
+      const studyTypeOptions = document.getElementById('study-type-options');
+      const peerReviewStatusOptions = document.getElementById('peer-review-status-options');
       const optionState = {
         locales: [],
         frequencies: [],
         lists: [],
         countries: [],
         diseases: [],
+        researchTopics: [],
+        studyTypes: [],
+        peerReviewStatuses: [],
       };
       let lastSubmittedPayload = null;
 
@@ -392,6 +422,9 @@ const subscriptionsApiBase = (
         renderListOptions();
         renderChipOptions(countryOptions, 'countries', optionState.countries, Boolean(allCountries?.checked));
         renderDiseaseOptions();
+        renderChipOptions(researchTopicOptions, 'research_topics', optionState.researchTopics);
+        renderChipOptions(studyTypeOptions, 'study_types', optionState.studyTypes);
+        renderChipOptions(peerReviewStatusOptions, 'peer_review_statuses', optionState.peerReviewStatuses);
       }
 
       async function loadOptions() {
@@ -411,6 +444,9 @@ const subscriptionsApiBase = (
           optionState.lists = Array.isArray(result.lists) ? result.lists : [];
           optionState.countries = Array.isArray(result.filters?.country) ? result.filters.country : [];
           optionState.diseases = Array.isArray(result.filters?.disease) ? result.filters.disease : [];
+          optionState.researchTopics = Array.isArray(result.filters?.research_topic) ? result.filters.research_topic : [];
+          optionState.studyTypes = Array.isArray(result.filters?.study_type) ? result.filters.study_type : [];
+          optionState.peerReviewStatuses = Array.isArray(result.filters?.peer_review_status) ? result.filters.peer_review_status : [];
           renderAllOptions();
           if (statusEl && statusEl.dataset.type === 'pending') statusEl.hidden = true;
           setSubmitting(false);
@@ -463,6 +499,9 @@ const subscriptionsApiBase = (
           ? []
           : data.getAll('countries').map(String);
         const checkedDiseases = data.getAll('diseases').map(String);
+        const checkedResearchTopics = data.getAll('research_topics').map(String);
+        const checkedStudyTypes = data.getAll('study_types').map(String);
+        const checkedPeerReviewStatuses = data.getAll('peer_review_statuses').map(String);
 
         const payload = {
           email,
@@ -471,6 +510,9 @@ const subscriptionsApiBase = (
           list_codes: listCodes,
           countries: selectedCountries,
           diseases: Array.from(new Set(checkedDiseases)),
+          research_topics: Array.from(new Set(checkedResearchTopics)),
+          study_types: Array.from(new Set(checkedStudyTypes)),
+          peer_review_statuses: Array.from(new Set(checkedPeerReviewStatuses)),
           source: 'website-subscribe-page',
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
         };

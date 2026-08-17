@@ -1,0 +1,189 @@
+---
+import ReportLayout from '../../layouts/ReportLayout.astro';
+import researchData from '../../data/research/index.json';
+
+const graph: any = (researchData as any).knowledge_graph ?? { nodes: [], edges: [], stats: {}, quality: {} };
+const nodes: any[] = graph.nodes ?? [];
+const edges: any[] = graph.edges ?? [];
+const nodeTypes = [...new Set(nodes.map((node: any) => String(node.type || 'unknown')))].sort();
+const graphPayload = JSON.stringify({ nodes, edges }).replaceAll('<', '\\u003c');
+const relationLabels: Record<string, { en: string; zh: string }> = {
+  ABOUT_DISEASE: { en: 'About disease', zh: '涉及疾病' },
+  STUDIED_IN: { en: 'Studied in', zh: '研究地区' },
+  ADDRESSES_TOPIC: { en: 'Addresses topic', zh: '涉及主题' },
+  USES_STUDY_DESIGN: { en: 'Uses study design', zh: '采用研究设计' },
+  STUDIES_PATHOGEN: { en: 'Studies pathogen', zh: '研究病原体' },
+  STUDIED_POPULATION_SETTING: { en: 'Population and setting', zh: '研究人群与场景' },
+  EVALUATES_INTERVENTION: { en: 'Evaluates intervention', zh: '评估干预' },
+  INFORMS_POLICY_DOMAIN: { en: 'Informs policy domain', zh: '关联政策领域' },
+};
+---
+
+<ReportLayout
+  title="Research evidence graph"
+  description="Browse auditable relationships among GIDS Research Radar articles, diseases, places, topics, study designs, pathogens, populations, interventions, and policy domains."
+  seo={{
+    title: 'Research evidence graph | GIDS',
+    description: 'Explore provenance-preserving Research Radar evidence relationships.',
+    locale: 'en',
+    canonicalPath: '/research/graph/',
+    alternatePaths: { en: '/research/graph/' },
+    pageType: 'WebPage',
+  }}
+  breadcrumbs={[
+    { label: 'Research Radar', labelZh: '研究雷达', href: '/research/' },
+    { label: 'Evidence graph', labelZh: '证据图谱' },
+  ]}
+>
+  <main class="graph-page">
+    <header class="academic-hero graph-hero">
+      <p class="academic-kicker" data-lang-en="Auditable relationships" data-lang-zh="可审计关系">Auditable relationships</p>
+      <h1 data-lang-en="Research evidence graph" data-lang-zh="研究证据图谱">Research evidence graph</h1>
+      <p data-lang-en="Browse deterministic classifier links and quality-gated summary relationships. The graph does not infer causality or scientific credibility." data-lang-zh="浏览确定性分类关系与通过质量门控的摘要关系。本图谱不推断因果关系或科学可信度。">Browse deterministic classifier links and quality-gated summary relationships. The graph does not infer causality or scientific credibility.</p>
+      <dl>
+        <div><dt data-lang-en="Nodes" data-lang-zh="节点">Nodes</dt><dd>{graph.stats?.nodes ?? nodes.length}</dd></div>
+        <div><dt data-lang-en="Relationships" data-lang-zh="关系">Relationships</dt><dd>{graph.stats?.edges ?? edges.length}</dd></div>
+        <div><dt data-lang-en="Articles" data-lang-zh="论文">Articles</dt><dd>{graph.stats?.articles ?? 0}</dd></div>
+        <div><dt data-lang-en="Filtered low-confidence links" data-lang-zh="已过滤低置信度关系">Filtered low-confidence links</dt><dd>{graph.quality?.skipped_low_confidence_edges ?? 0}</dd></div>
+      </dl>
+    </header>
+
+    <section class="card graph-workspace" data-evidence-graph>
+      <div class="graph-controls">
+        <label>
+          <span data-lang-en="Search nodes" data-lang-zh="搜索节点">Search nodes</span>
+          <input class="site-control-input" type="search" data-graph-search placeholder="Search articles, diseases, places, or topics" data-lang-en-placeholder="Search articles, diseases, places, or topics" data-lang-zh-placeholder="搜索论文、疾病、地区或主题" />
+        </label>
+        <label>
+          <span data-lang-en="Node type" data-lang-zh="节点类型">Node type</span>
+          <select class="site-control-input" data-graph-type>
+            <option value="" data-lang-en="All node types" data-lang-zh="全部节点类型">All node types</option>
+            {nodeTypes.map(type => <option value={type}>{type.replaceAll('_', ' ')}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <div class="graph-columns">
+        <section aria-labelledby="graph-node-heading">
+          <div class="graph-section-heading"><h2 id="graph-node-heading" data-lang-en="Entities" data-lang-zh="实体">Entities</h2><span data-graph-count>{nodes.length}</span></div>
+          <div class="graph-node-list" data-graph-node-list>
+            {nodes.map(node => (
+              <button type="button" data-node-id={node.id} data-node-type={node.type} data-node-label={String(node.label || '').toLowerCase()}>
+                <span>{node.label}</span><small>{String(node.type || '').replaceAll('_', ' ')}</small>
+              </button>
+            ))}
+          </div>
+          <button class="graph-more" type="button" data-graph-more data-lang-en="Show more entities" data-lang-zh="显示更多实体">Show more entities</button>
+        </section>
+        <section aria-labelledby="graph-relation-heading" class="graph-detail">
+          <div class="graph-section-heading"><h2 id="graph-relation-heading" data-lang-en="Selected relationships" data-lang-zh="所选关系">Selected relationships</h2></div>
+          <div data-graph-detail>
+            <p data-lang-en="Choose an entity to inspect every public relationship attached to it." data-lang-zh="选择一个实体，查看与其关联的全部公开关系。">Choose an entity to inspect every public relationship attached to it.</p>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="graph-method card">
+      <h2 data-lang-en="Provenance and limits" data-lang-zh="来源与限制">Provenance and limits</h2>
+      <p data-lang-en="Disease, country, topic, pathogen, and study-design edges retain classifier confidence. Population-setting edges copy only a bilingual, quality-gated structured-summary field. Intervention and policy edges use a small published topic mapping. No raw abstracts, PDFs, or private source payloads are exported." data-lang-zh="疾病、国家、主题、病原体和研究设计关系保留分类置信度；人群与场景关系仅来自通过质量门控的双语结构化摘要；干预和政策关系使用小型公开主题映射。系统不会导出原始摘要、PDF 或私有来源负载。">Disease, country, topic, pathogen, and study-design edges retain classifier confidence. Population-setting edges copy only a bilingual, quality-gated structured-summary field. Intervention and policy edges use a small published topic mapping. No raw abstracts, PDFs, or private source payloads are exported.</p>
+    </section>
+  </main>
+
+  <script is:inline type="application/json" id="research-graph-data" set:html={graphPayload}></script>
+  <script is:inline define:vars={{ relationLabels }}>
+    (() => {
+      const root = document.querySelector('[data-evidence-graph]');
+      const payloadElement = document.getElementById('research-graph-data');
+      if (!root || !payloadElement) return;
+      const graph = JSON.parse(payloadElement.textContent || '{"nodes":[],"edges":[]}');
+      const nodes = new Map((graph.nodes || []).map((node) => [node.id, node]));
+      const search = root.querySelector('[data-graph-search]');
+      const type = root.querySelector('[data-graph-type]');
+      const count = root.querySelector('[data-graph-count]');
+      const more = root.querySelector('[data-graph-more]');
+      const detail = root.querySelector('[data-graph-detail]');
+      const buttons = Array.from(root.querySelectorAll('[data-node-id]'));
+      let visibleLimit = 80;
+
+      const lang = () => document.documentElement.getAttribute('data-lang') === 'zh' || localStorage.getItem('lang') === 'zh' ? 'zh' : 'en';
+      const refresh = () => {
+        const query = String(search?.value || '').trim().toLowerCase();
+        const selectedType = String(type?.value || '');
+        const matching = buttons.filter((button) => (!selectedType || button.dataset.nodeType === selectedType)
+          && (!query || String(button.dataset.nodeLabel || '').includes(query)));
+        buttons.forEach((button) => { button.hidden = true; });
+        matching.slice(0, visibleLimit).forEach((button) => { button.hidden = false; });
+        if (count) count.textContent = `${Math.min(matching.length, visibleLimit)} / ${matching.length}`;
+        if (more) more.hidden = matching.length <= visibleLimit;
+      };
+      const showNode = (nodeId) => {
+        const node = nodes.get(nodeId);
+        if (!node || !detail) return;
+        buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.nodeId === nodeId)));
+        const linked = (graph.edges || []).filter((edge) => edge.source === nodeId || edge.target === nodeId);
+        const title = document.createElement('h3');
+        title.textContent = node.label;
+        const meta = document.createElement('p');
+        meta.textContent = `${String(node.type || '').replaceAll('_', ' ')} · ${linked.length} ${lang() === 'zh' ? '条关系' : 'relationships'}`;
+        const list = document.createElement('ul');
+        linked.forEach((edge) => {
+          const outbound = edge.source === nodeId;
+          const other = nodes.get(outbound ? edge.target : edge.source);
+          const item = document.createElement('li');
+          const relation = relationLabels[edge.relation] || { en: String(edge.relation).replaceAll('_', ' '), zh: String(edge.relation).replaceAll('_', ' ') };
+          const label = document.createElement('span');
+          label.textContent = `${outbound ? '→' : '←'} ${relation[lang()]}`;
+          const target = other?.url ? document.createElement('a') : document.createElement('strong');
+          target.textContent = other?.label || (outbound ? edge.target : edge.source);
+          if (other?.url) target.href = other.url;
+          const confidence = document.createElement('small');
+          confidence.textContent = edge.confidence == null ? (edge.provenance || '') : `${Math.round(Number(edge.confidence) * 100)}%`;
+          item.append(label, target, confidence);
+          list.append(item);
+        });
+        detail.replaceChildren(title, meta, list);
+      };
+
+      search?.addEventListener('input', () => { visibleLimit = 80; refresh(); });
+      type?.addEventListener('change', () => { visibleLimit = 80; refresh(); });
+      more?.addEventListener('click', () => { visibleLimit += 80; refresh(); });
+      buttons.forEach((button) => button.addEventListener('click', () => showNode(button.dataset.nodeId)));
+      refresh();
+    })();
+  </script>
+</ReportLayout>
+
+<style>
+  .graph-page { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 2rem 0 4rem; }
+  .graph-hero { padding: clamp(1.5rem, 4vw, 3.5rem); }
+  .graph-hero h1 { margin-top: .75rem; color: rgb(var(--text-strong)); font: 600 clamp(2.2rem, 5vw, 4.3rem)/1 'Source Serif 4', serif; }
+  .graph-hero > p:last-of-type { max-width: 52rem; margin-top: 1rem; color: rgb(var(--text-muted)); line-height: 1.7; }
+  .graph-hero dl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem; padding-top: 1.4rem; border-top: 1px solid rgb(var(--border)); }
+  .graph-hero dt { color: rgb(var(--text-faint)); font-size: .68rem; }
+  .graph-hero dd { margin-top: .25rem; color: rgb(var(--text-strong)); font: 600 1.6rem/1 'Source Serif 4', serif; }
+  .graph-workspace, .graph-method { margin-top: 1.5rem; padding: clamp(1.25rem, 3vw, 2rem); }
+  .graph-controls { display: grid; grid-template-columns: minmax(0, 2fr) minmax(14rem, 1fr); gap: 1rem; }
+  .graph-controls label > span { display: block; margin-bottom: .4rem; color: rgb(var(--text-muted)); font-size: .72rem; font-weight: 700; }
+  .graph-controls input, .graph-controls select { width: 100%; padding: .72rem .8rem; }
+  .graph-columns { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 1.5rem; margin-top: 1.5rem; }
+  .graph-section-heading { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: .8rem; border-bottom: 1px solid rgb(var(--border)); }
+  .graph-section-heading h2, .graph-method h2 { color: rgb(var(--text-strong)); font: 600 1.35rem/1.2 'Source Serif 4', serif; }
+  .graph-section-heading span { color: rgb(var(--text-faint)); font: 500 .7rem/1 'JetBrains Mono', monospace; }
+  .graph-node-list { display: grid; gap: .4rem; max-height: 36rem; margin-top: .8rem; overflow-y: auto; }
+  .graph-node-list button { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; border: 1px solid rgb(var(--border) / .7); background: rgb(var(--surface-raised) / .35); padding: .65rem .75rem; text-align: left; }
+  .graph-node-list button:hover, .graph-node-list button[aria-pressed="true"] { border-color: rgb(var(--color-brand) / .7); background: rgb(var(--color-brand) / .08); }
+  .graph-node-list span { color: rgb(var(--text)); font-size: .78rem; line-height: 1.35; }
+  .graph-node-list small { flex: 0 0 auto; color: rgb(var(--text-faint)); font-size: .6rem; text-transform: uppercase; }
+  .graph-more { width: 100%; margin-top: .7rem; border: 1px solid rgb(var(--border)); padding: .65rem; color: rgb(var(--text-muted)); font-size: .72rem; }
+  .graph-detail { border-left: 1px solid rgb(var(--border)); padding-left: 1.5rem; }
+  .graph-detail [data-graph-detail] > p { margin-top: 1rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.6; }
+  .graph-detail h3 { margin-top: 1rem; color: rgb(var(--text-strong)); font: 600 1.25rem/1.25 'Source Serif 4', serif; }
+  .graph-detail ul { display: grid; gap: .45rem; margin-top: 1rem; max-height: 34rem; overflow-y: auto; }
+  .graph-detail li { display: grid; grid-template-columns: minmax(8rem, .7fr) minmax(0, 1fr) auto; gap: .7rem; align-items: center; border-bottom: 1px solid rgb(var(--border) / .55); padding: .55rem 0; }
+  .graph-detail li span, .graph-detail li small { color: rgb(var(--text-faint)); font-size: .65rem; }
+  .graph-detail li strong, .graph-detail li a { color: rgb(var(--text)); font-size: .75rem; }
+  .graph-detail li a:hover { color: rgb(var(--color-brand)); }
+  .graph-method p { margin-top: .75rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.7; }
+  @media (max-width: 760px) { .graph-hero dl { grid-template-columns: repeat(2, 1fr); } .graph-controls, .graph-columns { grid-template-columns: 1fr; } .graph-detail { border-left: 0; border-top: 1px solid rgb(var(--border)); padding: 1.5rem 0 0; } }
+</style>

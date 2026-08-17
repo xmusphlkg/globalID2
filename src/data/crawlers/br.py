@@ -847,17 +847,22 @@ class BrazilSINANCrawler(BaseCrawler):
             set(months) if months is not None else _last_n_months(self.refresh_recent_months)
         )
         target_years = {year for year, _month in target_months}
+        index = _deduplicate_sinan_file_aliases(
+            file_index if file_index is not None else self.fetch_file_index()
+        )
+        # Explicit prefix requests stay bounded. Normal all-source runs follow
+        # the official listing so a newly published SINAN prefix is discovered
+        # and retained for semantic review instead of being silently ignored.
         requested_prefixes = {
             str(prefix).strip().upper()
-            for prefix in (prefixes if prefixes is not None else self.default_prefixes)
+            for prefix in (
+                prefixes if prefixes is not None else (item.prefix for item in index)
+            )
             if str(prefix).strip()
         }
         if "LER" in requested_prefixes:
             requested_prefixes.add("LERD")
 
-        index = _deduplicate_sinan_file_aliases(
-            file_index if file_index is not None else self.fetch_file_index()
-        )
         candidate_files = [
             item
             for item in index

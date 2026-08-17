@@ -27,6 +27,7 @@ def normalize_knowledge_citations(
     payload: dict[str, Any],
     *,
     marker_mode: MarkerMode = "auto",
+    prune_uncited_sources: bool = False,
 ) -> dict[str, Any]:
     """Return a copy of a brief payload with sequential citation markers.
 
@@ -36,13 +37,18 @@ def normalize_knowledge_citations(
     `source_attribution` list use a single 1-based `citation_index`.
     """
 
-    return normalize_knowledge_citation_group([payload], marker_mode=marker_mode)[0]
+    return normalize_knowledge_citation_group(
+        [payload],
+        marker_mode=marker_mode,
+        prune_uncited_sources=prune_uncited_sources,
+    )[0]
 
 
 def normalize_knowledge_citation_group(
     payloads: list[dict[str, Any]],
     *,
     marker_mode: MarkerMode = "auto",
+    prune_uncited_sources: bool = False,
 ) -> list[dict[str, Any]]:
     """Normalize several language payloads against one shared reference order."""
 
@@ -81,9 +87,10 @@ def normalize_knowledge_citation_group(
         for marker in _extract_markers([value]):
             remember_marker(marker)
 
-    for entry in source_entries:
-        if entry["_key"] not in ordered_keys:
-            ordered_keys.append(entry["_key"])
+    if not prune_uncited_sources:
+        for entry in source_entries:
+            if entry["_key"] not in ordered_keys:
+                ordered_keys.append(entry["_key"])
 
     citation_index_by_key = {key: index + 1 for index, key in enumerate(ordered_keys)}
     entry_by_key = {entry["_key"]: entry for entry in source_entries}
@@ -123,6 +130,64 @@ def normalize_knowledge_citation_group(
             "citation_unknown_markers": sorted(unknown_markers),
         }
     return normalized_payloads
+
+
+def validate_knowledge_citations(
+    payload: dict[str, Any],
+    *,
+    fields: list[str] | tuple[str, ...] | None = None,
+) -> list[str]:
+    """Validate inline references against the persisted evidence manifest."""
+    failures: list[str] = []
+    requested_fields = (
+        KNOWLEDGE_CITATION_FIELDS if fields is None else tuple(fields)
+    )
+    attribution = _normalize_source_entries(payload.get("source_attribution") or [])
+    source_id_by_marker: dict[int, int] = {}
+    for entry in attribution:
+        marker = entry.get("citation_index") or entry.get("position")
+        source_id = entry.get("source_id")
+        if isinstance(marker, int) and isinstance(source_id, int):
+            source_id_by_marker[marker] = source_id
+
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    manifest = metadata.get("evidence_manifest") if isinstance(metadata.get("evidence_manifest"), dict) else {}
+    fragments = manifest.get("fragments") if isinstance(manifest.get("fragments"), list) else []
+    supported_by_source: dict[str, set[str]] = {}
+    for fragment in fragments:
+        if not isinstance(fragment, dict):
+            continue
+        source_id = fragment.get("source_id")
+        if source_id in (None, ""):
+            continue
+        supported_by_source.setdefault(str(source_id), set()).update(
+            str(field) for field in fragment.get("supported_sections") or []
+        )
+
+    for field in requested_fields:
+        value = payload.get(field)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        markers = _extract_markers([value])
+        if not markers:
+            failures.append(f"{field}: missing inline citation")
+            continue
+        for marker in markers:
+            source_id = source_id_by_marker.get(marker)
+            if source_id is None:
+                failures.append(f"{field}: unknown citation marker [{marker}]")
+                continue
+            if supported_by_source and field not in supported_by_source.get(str(source_id), set()):
+                failures.append(
+                    f"{field}: citation [{marker}] does not support this section"
+                )
+    unknown_markers = metadata.get("citation_unknown_markers")
+    if isinstance(unknown_markers, list) and unknown_markers:
+        failures.append(
+            "unknown citation markers: "
+            + ", ".join(str(marker) for marker in unknown_markers)
+        )
+    return list(dict.fromkeys(failures))
 
 
 def _normalize_source_entries(sources: Any) -> list[dict[str, Any]]:

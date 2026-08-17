@@ -3,7 +3,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import EChartsReact from '../../lib/echartsReact';
-import echarts from '../../lib/echarts';
+import echarts from '../../lib/echartsHeatmap';
 import ChartFrame from './ChartFrame';
 import type { ChartSourceMeta } from '../../utils/chartMeta';
 import {

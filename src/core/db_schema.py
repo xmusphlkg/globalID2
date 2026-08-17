@@ -125,6 +125,14 @@ async def ensure_disease_mapping_source_schema(db: AsyncSession) -> None:
             """
         )
     )
+    await db.execute(
+        text(
+            """
+            ALTER TABLE disease_mappings
+                ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMP WITH TIME ZONE
+            """
+        )
+    )
     await db.execute(text("DROP INDEX IF EXISTS idx_mapping_unique"))
     await db.execute(
         text(
@@ -390,11 +398,18 @@ async def ensure_disease_learning_suggestions_schema(db: AsyncSession) -> None:
     """))
 
     alter_statements = [
+        "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS occurrence_count INTEGER DEFAULT 1",
+        "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS first_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+        "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
         "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS source_url TEXT",
         "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS context TEXT",
+        "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS suggested_disease_id VARCHAR(100)",
         "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS suggested_standard_name VARCHAR(200)",
         "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS ai_confidence FLOAT",
         "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS ai_reasoning TEXT",
+        "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'",
+        "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR(100)",
+        "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP WITH TIME ZONE",
         "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS review_notes TEXT",
         "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS final_disease_id VARCHAR(100)",
         "ALTER TABLE disease_learning_suggestions ADD COLUMN IF NOT EXISTS final_mapping_id INTEGER",
@@ -402,6 +417,24 @@ async def ensure_disease_learning_suggestions_schema(db: AsyncSession) -> None:
 
     for statement in alter_statements:
         await db.execute(text(statement))
+
+    await db.execute(
+        text(
+            """
+            ALTER TABLE disease_learning_suggestions
+                ALTER COLUMN status SET DEFAULT 'pending'
+            """
+        )
+    )
+    await db.execute(
+        text(
+            """
+            UPDATE disease_learning_suggestions
+            SET status = 'pending'
+            WHERE status IS NULL
+            """
+        )
+    )
 
     # Add FK only when countries table is present (helps fresh/partial databases).
     await db.execute(text("""

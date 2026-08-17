@@ -3,12 +3,21 @@ import test from 'node:test';
 import {
   DEFAULT_METRIC,
   INITIAL_CURVE_VIEW_STATE,
+  buildStableSeriesColorMap,
+  assessComparison,
+  buildHistoricalReference,
+  calculateIncidenceFromReferencePopulation,
   dateWindowFromZoom,
   epidemicCurveViewReducer,
+  formatIncidenceMetricLabel,
+  getEffectiveProvisionalFrom,
+  getOutbreakEligibility,
   getSelectableSourceSeries,
   getSeriesGranularity,
   hasMixedSourceGranularities,
   hasPublicProjection,
+  insertMissingPeriodBreaks,
+  normalizeTrendIndex,
   reconcileDateWindow,
   selectSourceSeries,
   supportsWeeklyEquivalent,
@@ -44,6 +53,129 @@ test('weekly values are exposed only for explicitly weekly series', () => {
   assert.equal(supportsWeeklyEquivalent(series('monthly', [10, 20])), false);
   assert.equal(supportsWeeklyEquivalent(series('annual', [10, 20])), false);
   assert.equal(supportsWeeklyEquivalent(series('weekly', [10, 20])), true);
+});
+
+test('trend index compares shape without inventing weekly counts', () => {
+  assert.deepEqual(normalizeTrendIndex([10, 20, null, 5]), [50, 100, null, 25]);
+  assert.deepEqual(normalizeTrendIndex([0, 0]), [0, 0]);
+});
+
+test('historical reference uses prior matching seasons without future leakage', () => {
+  const reference = buildHistoricalReference(
+    [
+      '2020-01-01',
+      '2021-01-01',
+      '2022-01-01',
+      '2023-01-01',
+      '2024-01-01',
+      '2025-01-01',
+    ],
+    [1, 2, 3, 4, 5, 6],
+    'monthly'
+  );
+
+  assert.deepEqual(reference.expected, [null, null, null, null, null, 3]);
+  assert.deepEqual(reference.lower, [null, null, null, null, null, 2]);
+  assert.deepEqual(reference.upper, [null, null, null, null, null, 4]);
+  assert.deepEqual(reference.index, [null, null, null, null, null, 200]);
+  assert.equal(reference.eligiblePointCount, 1);
+});
+
+test('missing reporting periods break lines instead of becoming implicit zeroes', () => {
+  const broken = insertMissingPeriodBreaks(
+    ['2024-01-01', '2024-03-01'],
+    [5, 7],
+    'monthly'
+  );
+
+  assert.equal(broken.dates.length, 3);
+  assert.deepEqual(broken.values, [5, null, 7]);
+});
+
+test('incidence labels retain the source-period denominator', () => {
+  assert.equal(
+    formatIncidenceMetricLabel(['weekly'], 'en'),
+    'Cases per 100k per week'
+  );
+  assert.equal(
+    formatIncidenceMetricLabel(['weekly', 'annual'], 'en'),
+    'Cases per 100k per respective source period'
+  );
+});
+
+test('selected source cases retain incidence calculation using reference population', () => {
+  const reference = {
+    ...series('monthly'),
+    dates: ['2023-01-01', '2024-01-01'],
+    cases: [1_000, 2_000],
+    incidence_rates: [1, 2],
+  };
+  assert.deepEqual(
+    calculateIncidenceFromReferencePopulation(
+      reference,
+      ['2024-02-01', '2024-03-01'],
+      [500, 0]
+    ),
+    [0.5, 0]
+  );
+});
+
+test('comparison blocks explicitly non-comparable sources and enforces overlap', () => {
+  const left = {
+    ...series('monthly'),
+    dates: ['2024-01-01', '2024-02-01'],
+    source_series: [{
+      series_code: 'left',
+      comparability: 'direct',
+      metric_type: 'case_notifications',
+      reporting_basis: 'notification',
+      time_basis: 'report date',
+      definition_version: '1',
+    }],
+  };
+  const right = {
+    ...series('monthly'),
+    dates: ['2024-02-01', '2024-03-01'],
+    source_series: [{
+      series_code: 'right',
+      comparability: 'not_comparable',
+      metric_type: 'case_notifications',
+      reporting_basis: 'notification',
+      time_basis: 'report date',
+      definition_version: '1',
+    }],
+  };
+
+  const assessment = assessComparison([left, right]);
+  assert.equal(assessment.level, 'blocked');
+  assert.ok(assessment.reasons.includes('source_not_comparable'));
+  assert.deepEqual(assessment.commonWindow, {
+    startDate: '2024-02-01',
+    endDate: '2024-02-01',
+  });
+});
+
+test('outbreak mode requires fine-grained onset-time observations', () => {
+  const eligible = {
+    ...series('weekly', [10, 20]),
+    source_series: [{
+      series_code: 'onset-weekly',
+      temporal_granularity: 'weekly',
+      time_basis: 'symptom onset date',
+    }],
+  };
+  assert.equal(getOutbreakEligibility(eligible).eligible, true);
+  assert.equal(getOutbreakEligibility(series('annual')).eligible, false);
+});
+
+test('series colors are keyed by identity rather than current selection order', () => {
+  const colors = ['blue', 'orange', 'green'];
+  const complete = buildStableSeriesColorMap(['US', 'BR', 'JP'], colors);
+  const reordered = buildStableSeriesColorMap(['JP', 'US', 'BR'], colors);
+
+  assert.equal(complete.get('BR'), reordered.get('BR'));
+  assert.equal(complete.get('JP'), reordered.get('JP'));
+  assert.equal(complete.get('US'), reordered.get('US'));
 });
 
 test('selected source metadata supplies a missing display granularity', () => {
@@ -97,6 +229,84 @@ test('a concrete source selection uses its original dates, values, and grain', (
   assert.deepEqual(selected.selected_series_codes, ['annual-current']);
   assert.equal(hasMixedSourceGranularities(value), true);
   assert.equal(getSelectableSourceSeries(value).length, 2);
+});
+
+test('a selected native weekly source restores the weekly reported cases view', () => {
+  const value = {
+    ...series('monthly'),
+    source_series: [
+      {
+        series_code: 'weekly-current',
+        temporal_granularity: 'weekly',
+        dates: ['2024-01-07', '2024-01-14'],
+        values: [4, 7],
+      },
+    ],
+  };
+
+  const selected = selectSourceSeries(value, 'weekly-current');
+  assert.deepEqual(selected.weekly_equiv_cases, [4, 7]);
+  assert.equal(supportsWeeklyEquivalent(selected), true);
+});
+
+test('a selected source preserves missing values and provisional metadata', () => {
+  const value = {
+    ...series('monthly'),
+    source_series: [{
+      series_code: 'weekly-provisional',
+      temporal_granularity: 'weekly',
+      dates: ['2024-01-07', '2024-01-14'],
+      values: [4, null],
+      provisional_from: '2024-01-14',
+    }],
+  };
+
+  const selected = selectSourceSeries(value, 'weekly-provisional');
+  assert.deepEqual(selected.cases, [4, null]);
+  assert.deepEqual(selected.weekly_equiv_cases, [4, null]);
+  assert.equal(selected.total_cases, 4);
+  assert.equal(selected.provisional_from, '2024-01-14');
+});
+
+test('raw point metadata never expands a provisional boundary', () => {
+  const value = {
+    ...series('monthly'),
+    provisional_from: '2024-01-01',
+    selected_series_codes: ['monthly-current'],
+    source_series: [{
+      series_code: 'monthly-current',
+      temporal_granularity: 'monthly',
+      dates: ['2024-01-01', '2024-02-01', '2024-03-01'],
+      values: [4, 5, 6],
+      point_quality_statuses: ['raw', 'raw', 'provisional'],
+      provisional_from: '2024-01-01',
+    }],
+  };
+
+  assert.equal(getEffectiveProvisionalFrom(value), '2024-03-01');
+  assert.equal(
+    selectSourceSeries(value, 'monthly-current').provisional_from,
+    '2024-03-01',
+  );
+});
+
+test('an all-raw source does not inherit a stale provisional marker', () => {
+  const value = {
+    ...series('monthly'),
+    provisional_from: '2024-01-01',
+    selected_series_codes: ['monthly-current'],
+    source_series: [{
+      series_code: 'monthly-current',
+      temporal_granularity: 'monthly',
+      dates: ['2024-01-01', '2024-02-01'],
+      values: [4, 5],
+      point_quality_statuses: ['raw', 'raw'],
+      provisional_from: '2024-01-01',
+    }],
+  };
+
+  assert.equal(getEffectiveProvisionalFrom(value), null);
+  assert.equal(selectSourceSeries(value, 'monthly-current').provisional_from, null);
 });
 
 test('source-only entries are not mistaken for a public projection', () => {

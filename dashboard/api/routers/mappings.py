@@ -38,6 +38,7 @@ def _row(instance: Any) -> dict[str, Any]:
 class CandidateReviewRequest(BaseModel):
     reviewer: str = Field(..., min_length=1, max_length=160)
     notes: str = Field("", max_length=4000)
+    publish: bool = True
 
 
 class ReleaseCreateRequest(BaseModel):
@@ -50,7 +51,7 @@ class ReleaseCreateRequest(BaseModel):
 async def mapping_v3_summary(db: AsyncSession = Depends(get_db)):
     return {
         **(await disease_mapping_registry_service.stats(db)),
-        "automation": disease_mapping_automation_service.snapshot(),
+        "automation": await disease_mapping_automation_service.snapshot_for_db(db),
     }
 
 
@@ -136,11 +137,28 @@ async def accept_mapping_v3_candidate(
     if candidate_id is None:
         raise HTTPException(404, "Mapping candidate not found")
     try:
-        assertion = await disease_mapping_registry_service.accept_candidate(
-            db, candidate_id=candidate_id, reviewer=body.reviewer, notes=body.notes
-        )
+        if body.publish:
+            assertion, release = (
+                await disease_mapping_registry_service.accept_and_publish_candidate(
+                    db,
+                    candidate_id=candidate_id,
+                    reviewer=body.reviewer,
+                    notes=body.notes,
+                )
+            )
+        else:
+            assertion = await disease_mapping_registry_service.accept_candidate(
+                db,
+                candidate_id=candidate_id,
+                reviewer=body.reviewer,
+                notes=body.notes,
+            )
+            release = None
         await db.commit()
-        return _row(assertion)
+        return {
+            **_row(assertion),
+            "published_release": _row(release) if release is not None else None,
+        }
     except ValueError as exc:
         await db.rollback()
         raise HTTPException(409, str(exc)) from exc

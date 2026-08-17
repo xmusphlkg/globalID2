@@ -18,7 +18,9 @@ import os
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
+import sys
 import tempfile
+import time
 from typing import BinaryIO, Iterator
 
 
@@ -40,6 +42,29 @@ PART_BYTES = 48 * 1024 * 1024
 # are implementation details rather than user-facing tuning knobs.
 COMMIT_BATCH_BYTES = 96 * 1024 * 1024
 DEFAULT_GIT_TIMEOUT_SECONDS = 30 * 60
+PUSH_ATTEMPTS = 4
+PUSH_RETRY_DELAY_SECONDS = 2.0
+
+# These messages describe transport failures for which retrying the exact same
+# fast-forward push is safe. Authentication, authorization and non-fast-forward
+# failures are deliberately absent so operators receive those errors at once.
+TRANSIENT_PUSH_ERROR_MARKERS = (
+    "gnutls",
+    "tls connection",
+    "connection reset",
+    "connection timed out",
+    "could not resolve host",
+    "failed to connect",
+    "remote end hung up unexpectedly",
+    "unexpected disconnect",
+    "http/2 stream",
+    "http 502",
+    "http 503",
+    "http 504",
+    "the requested url returned error: 502",
+    "the requested url returned error: 503",
+    "the requested url returned error: 504",
+)
 
 
 class RawArchiveError(RuntimeError):
@@ -158,6 +183,53 @@ def run_git(
             f"git {' '.join(args)} failed with exit code {result.returncode}: {detail}"
         )
     return result
+
+
+def _is_transient_push_error(exc: RawArchiveError) -> bool:
+    detail = str(exc).casefold()
+    return any(marker in detail for marker in TRANSIENT_PUSH_ERROR_MARKERS)
+
+
+def _push_branch(
+    repository_dir: Path,
+    *,
+    timeout_seconds: float,
+    attempts: int = PUSH_ATTEMPTS,
+    retry_delay_seconds: float = PUSH_RETRY_DELAY_SECONDS,
+) -> None:
+    """Push the archive branch with bounded retries for transport failures.
+
+    Commits remain in the isolated archive checkout when all attempts fail.
+    The next publication run detects and pushes those pending commits before
+    scanning source files, so no generated archive work is lost.
+    """
+
+    if attempts < 1:
+        raise ValueError("Push attempts must be at least 1")
+    last_error: RawArchiveError | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            run_git(
+                ["push", "origin", f"HEAD:refs/heads/{TARGET_BRANCH}"],
+                repository_dir,
+                timeout_seconds=timeout_seconds,
+            )
+            return
+        except RawArchiveError as exc:
+            last_error = exc
+            if attempt == attempts or not _is_transient_push_error(exc):
+                raise
+            delay = retry_delay_seconds * (2 ** (attempt - 1))
+            print(
+                f"Raw archive push attempt {attempt}/{attempts} failed with a "
+                f"transient transport error; retrying in {delay:g} seconds.\n{exc}",
+                file=sys.stderr,
+                flush=True,
+            )
+            time.sleep(delay)
+    # The loop either returns or raises. Keep the guard explicit for type
+    # checkers and for safety if its control flow changes later.
+    raise RawArchiveError(f"Raw archive push failed: {last_error}")
 
 
 def _configure_git(repository_dir: Path, timeout_seconds: float) -> None:
@@ -282,8 +354,7 @@ def _push_pending_commits(repository_dir: Path, timeout_seconds: float) -> None:
         timeout_seconds=timeout_seconds,
     )
     if int(pending.stdout.strip() or "0") > 0:
-        run_git(
-            ["push", "origin", f"HEAD:refs/heads/{TARGET_BRANCH}"],
+        _push_branch(
             repository_dir,
             timeout_seconds=timeout_seconds,
         )
@@ -658,8 +729,7 @@ def _commit_paths(
         timeout_seconds=timeout_seconds,
     )
     if push:
-        run_git(
-            ["push", "origin", f"HEAD:refs/heads/{TARGET_BRANCH}"],
+        _push_branch(
             repository_dir,
             timeout_seconds=timeout_seconds,
         )
@@ -748,6 +818,17 @@ def publish_raw_archive(
         source_bytes = 0
         added = 0
         updated = 0
+        changed_progress_events = 0
+
+        def report_change(action: str, index: int, relative: PurePosixPath, size: int) -> None:
+            nonlocal changed_progress_events
+            changed_progress_events += 1
+            if changed_progress_events <= 3 or changed_progress_events % 100 == 0:
+                print(
+                    f"{action} change {changed_progress_events} "
+                    f"(source {index}/{len(source_entries)}): {relative} ({size} bytes)",
+                    flush=True,
+                )
 
         for index, (relative_path, source_path) in enumerate(source_entries, start=1):
             relative = PurePosixPath(relative_path.as_posix())
@@ -766,7 +847,7 @@ def publish_raw_archive(
                     and _sha256_file(direct_destination) == digest
                 )
                 if not current:
-                    print(f"copy {index}/{len(source_entries)}: {relative} ({size} bytes)", flush=True)
+                    report_change("copy", index, relative, size)
                     _atomic_copy(source_path, direct_destination, size=size, sha256=digest)
                     if existed:
                         updated += 1
@@ -795,7 +876,7 @@ def publish_raw_archive(
             if current:
                 record = previous
             else:
-                print(f"split {index}/{len(source_entries)}: {relative} ({size} bytes)", flush=True)
+                report_change("split", index, relative, size)
                 record = _split_file(
                     source_path,
                     repository_root,

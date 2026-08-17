@@ -180,7 +180,7 @@ async def test_frequency_metadata_does_not_misclassify_annual_january_rows() -> 
 
 
 @pytest.mark.asyncio
-async def test_direct_disease_rows_keep_site_facing_normalization() -> None:
+async def test_direct_disease_rows_preserve_missing_counts() -> None:
     session = FakeSession(
         FakeRows(
             [
@@ -209,8 +209,8 @@ async def test_direct_disease_rows_keep_site_facing_normalization() -> None:
             "date": "2026-02-01",
             "year_month": "2026-02",
             "disease_id": "D001",
-            "cases": 0,
-            "deaths": 0,
+            "cases": None,
+            "deaths": None,
             "recoveries": 0,
             "incidence_rate": None,
             "incidence_rate_source": "missing_population",
@@ -223,6 +223,9 @@ async def test_direct_disease_rows_keep_site_facing_normalization() -> None:
     assert "ORDER BY timezone('UTC', dr.time)::date ASC, d.name" in sql
     assert "population_records" not in sql
     assert "raw_data::jsonb ->> 'Frequency'" in sql
+    assert "dr.cases::bigint AS cases" in sql
+    assert "COALESCE(dr.cases, 0)" not in sql
+    assert "metadata::jsonb ->> 'time_basis'" in sql
     assert "national_registry_notifications" in sql
     assert params == {"code": "CN"}
 
@@ -259,6 +262,7 @@ async def test_series_query_exports_inactive_history_with_active_selection_flag(
     assert records[0]["date"] == "2020-01-01"
     sql, params = session.calls[0]
     assert "dss.is_active AS series_is_active" in sql
+    assert "metadata::jsonb ->> 'time_basis'" in sql
     assert "dss.is_active IS TRUE" not in sql
     assert params == {
         "code": "IS",

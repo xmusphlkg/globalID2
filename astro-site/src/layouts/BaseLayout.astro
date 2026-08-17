@@ -1,14 +1,6 @@
 ---
 // src/layouts/BaseLayout.astro
-import '@fontsource/source-sans-3/400.css';
-import '@fontsource/source-sans-3/500.css';
-import '@fontsource/source-sans-3/600.css';
-import '@fontsource/source-sans-3/700.css';
-import '@fontsource/source-serif-4/400.css';
-import '@fontsource/source-serif-4/600.css';
-import '@fontsource/source-serif-4/700.css';
-import '@fontsource/jetbrains-mono/400.css';
-import '@fontsource/jetbrains-mono/500.css';
+import '../styles/fonts.css';
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -57,7 +49,7 @@ const alternateUrls = Object.entries(alternatePaths).map(([locale, path]) => ({
   url: new URL(path, siteBase).toString(),
 }));
 const pageType = seo?.pageType ?? 'WebPage';
-const ogType = pageType === 'Report' ? 'article' : 'website';
+const ogType = ['Report', 'Article', 'MedicalWebPage'].includes(pageType) ? 'article' : 'website';
 const gaMeasurementId = import.meta.env.PUBLIC_GA4_MEASUREMENT_ID?.trim();
 const validGaMeasurementId = gaMeasurementId && /^G-[A-Z0-9]+$/i.test(gaMeasurementId)
   ? gaMeasurementId
@@ -158,11 +150,10 @@ const structuredData = {
     <meta name="twitter:description" content={pageDescription} />
     <meta name="twitter:image" content={new URL(pageImage, siteBase)} />
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
-    {validGaMeasurementId && <script async src={`https://www.googletagmanager.com/gtag/js?id=${validGaMeasurementId}`} />}
-    {validGaMeasurementId && <script is:inline set:html={`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${validGaMeasurementId}');document.addEventListener('click',function(event){const target=event.target instanceof Element?event.target.closest('[data-seo-event],[data-file-download]'):null;if(!target)return;gtag('event',target.getAttribute('data-seo-event')||'dataset_download');});`} />}
+    {validGaMeasurementId && <script is:inline set:html={`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config','${validGaMeasurementId}');document.addEventListener('click',function(event){const target=event.target instanceof Element?event.target.closest('[data-seo-event],[data-file-download]'):null;if(!target)return;gtag('event',target.getAttribute('data-seo-event')||'dataset_download');});(function(){let started=false;function loadAnalytics(){if(started)return;started=true;const script=document.createElement('script');script.async=true;script.src='https://www.googletagmanager.com/gtag/js?id=${validGaMeasurementId}';document.head.appendChild(script)}function deferAnalytics(){window.setTimeout(function(){if('requestIdleCallback'in window){window.requestIdleCallback(loadAnalytics,{timeout:2000})}else{loadAnalytics()}},2000)}if(document.readyState==='complete'){deferAnalytics()}else{window.addEventListener('load',deferAnalytics,{once:true})}})();`} />}
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/logo.png" />
 
     <!-- Apply theme before first paint to avoid flashing -->

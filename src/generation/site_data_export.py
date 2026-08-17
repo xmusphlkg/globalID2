@@ -9,6 +9,7 @@ from src.core.data_share import (
     get_data_share_repo_url,
 )
 from src.core.database import get_db
+from src.core.config import get_config
 from src.generation.direct_download_files import (
     DEFAULT_TARGET_FILE_BYTES,
     build_direct_download_files,
@@ -55,9 +56,14 @@ from src.generation.site_data_writer import (
     write_compact_json,
     write_pretty_json,
 )
+from src.generation.site_data_literature import (
+    attach_surveillance_evidence,
+    collect_literature_export,
+    write_literature_artifacts,
+)
 from src.knowledge.catalogue import should_generate_public_disease_page
 from src.ontology import load_disease_ontology
-from src.services.situation_room import latest_snapshot, weekly_snapshots
+from src.services.situation_v3.persistence import latest_report_v3, reports_v3
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "astro-site" / "src" / "data"
@@ -176,6 +182,7 @@ async def collect_site_export_context(
     disease_exports: list[dict] = []
     reports: list[dict] = []
     report_details: dict[int, dict] = {}
+    literature_export: dict = {}
 
     async with get_db() as session:
         population_enabled = await has_population_table(session)
@@ -418,8 +425,24 @@ async def collect_site_export_context(
             if detail:
                 report_details[rep["id"]] = detail
 
-    situation_latest = await latest_snapshot()
-    situation_weekly = await weekly_snapshots()
+        literature_export = await collect_literature_export(
+            session,
+            diseases_by_id=diseases_by_id,
+            surveillance_coverage={
+                item["disease_id"]: set((item["disease_data"].get("country_series") or {}).keys())
+                for item in disease_exports
+            },
+            limit=get_config().literature.public_article_limit,
+        )
+
+    situation_latest = await latest_report_v3()
+    situation_weekly = await reports_v3("weekly")
+    situation_monthly = await reports_v3("monthly")
+    literature_export = attach_surveillance_evidence(
+        literature_export,
+        situation_latest,
+        diseases_by_id=diseases_by_id,
+    )
 
     return {
         "all_records_by_country": all_records_by_country,
@@ -438,7 +461,9 @@ async def collect_site_export_context(
         "ontology_document": ontology_document,
         "report_details": report_details,
         "reports": reports,
+        "literature_export": literature_export,
         "situation_latest": situation_latest,
+        "situation_monthly": situation_monthly,
         "situation_weekly": situation_weekly,
     }
 
@@ -463,7 +488,9 @@ def write_site_export_artifacts(
     ontology_document = context["ontology_document"]
     report_details = context["report_details"]
     reports = context["reports"]
+    literature_export = context.get("literature_export") or {}
     situation_latest = context.get("situation_latest")
+    situation_monthly = context.get("situation_monthly") or []
     situation_weekly = context.get("situation_weekly") or []
 
     prepare_site_output_dirs(output_dir, public_site_data_dir)
@@ -553,6 +580,9 @@ def write_site_export_artifacts(
         write_pretty_json(output_dir / "reports" / f"{report_id}.json", detail)
     print(f"  ✓ reports/<id>.json ({len(report_details)} files)")
 
+    write_literature_artifacts(literature_export, output_dir)
+    print(f"  ✓ research/index.json ({len(literature_export.get('articles') or [])} published articles)")
+
     # ── Meta ──
     meta = {
         "generated_at": generated_at,
@@ -603,15 +633,30 @@ def write_site_export_artifacts(
     # public-site copy is compact; build-time pages retain readable JSON.
     situation_public = bool(situation_latest and situation_latest.get("public_enabled"))
     if situation_public:
+        # Canonical v3 paths. The legacy latest.json alias remains for one
+        # release cycle but intentionally carries the v3 contract unchanged.
+        write_pretty_json(output_dir / "situation" / "v3" / "latest.json", situation_latest)
+        write_compact_json(public_site_data_dir / "situation" / "v3" / "latest.json", situation_latest)
         write_pretty_json(output_dir / "situation" / "latest.json", situation_latest)
         write_compact_json(public_site_data_dir / "situation" / "latest.json", situation_latest)
         for snapshot in situation_weekly:
-            iso_week = str(snapshot.get("iso_week") or "")
+            iso_week = str((snapshot.get("report") or {}).get("period_key") or "")
             if not iso_week:
                 continue
-            write_pretty_json(output_dir / "situation" / "archive" / f"{iso_week}.json", snapshot)
-            write_compact_json(public_site_data_dir / "situation" / "archive" / f"{iso_week}.json", snapshot)
-        print(f"  ✓ situation snapshots (latest + {len(situation_weekly)} weekly archives)")
+            write_pretty_json(output_dir / "situation" / "v3" / "weekly" / f"{iso_week}.json", snapshot)
+            write_compact_json(public_site_data_dir / "situation" / "v3" / "weekly" / f"{iso_week}.json", snapshot)
+        for snapshot in situation_monthly:
+            month = str((snapshot.get("report") or {}).get("period_key") or "")
+            if not month:
+                continue
+            write_pretty_json(output_dir / "situation" / "v3" / "monthly" / f"{month}.json", snapshot)
+            write_compact_json(public_site_data_dir / "situation" / "v3" / "monthly" / f"{month}.json", snapshot)
+        print(f"  ✓ situation snapshots (latest + {len(situation_weekly)} weekly + {len(situation_monthly)} monthly)")
+    elif situation_latest:
+        # Dev preview only: this file is consumed at Astro build time and is
+        # never copied to public/site-data, indexed, or included in sitemaps.
+        write_pretty_json(output_dir / "situation" / "v3" / "shadow-latest.json", situation_latest)
+        print("  ✓ situation shadow preview (build-time only)")
 
     # Reconcile stale artifacts only after every new artifact is safely on disk.
     # This keeps unchanged files intact throughout export and prevents a failed
@@ -643,9 +688,40 @@ def write_site_export_artifacts(
         disease_json_names,
     )
     if situation_public:
-        week_names = {f"{snapshot['iso_week']}.json" for snapshot in situation_weekly if snapshot.get("iso_week")}
-        remove_stale_json_files(output_dir / "situation" / "archive", week_names)
-        remove_stale_json_files(public_site_data_dir / "situation" / "archive", week_names)
+        remove_stale_json_files(output_dir / "situation", {"latest.json"})
+        remove_stale_json_files(public_site_data_dir / "situation", {"latest.json"})
+        remove_stale_json_files(output_dir / "situation" / "v3", {"latest.json"})
+        remove_stale_json_files(public_site_data_dir / "situation" / "v3", {"latest.json"})
+        week_names = {f"{(snapshot.get('report') or {}).get('period_key')}.json" for snapshot in situation_weekly if (snapshot.get("report") or {}).get("period_key")}
+        month_names = {f"{(snapshot.get('report') or {}).get('period_key')}.json" for snapshot in situation_monthly if (snapshot.get("report") or {}).get("period_key")}
+        remove_stale_json_files(output_dir / "situation" / "v3" / "weekly", week_names)
+        remove_stale_json_files(public_site_data_dir / "situation" / "v3" / "weekly", week_names)
+        remove_stale_json_files(output_dir / "situation" / "v3" / "monthly", month_names)
+        remove_stale_json_files(public_site_data_dir / "situation" / "v3" / "monthly", month_names)
+        # v2 period artifacts are no longer canonical.
+        remove_stale_json_files(output_dir / "situation" / "weeks", set())
+        remove_stale_json_files(public_site_data_dir / "situation" / "weeks", set())
+        remove_stale_json_files(output_dir / "situation" / "months", set())
+        remove_stale_json_files(public_site_data_dir / "situation" / "months", set())
+    else:
+        remove_stale_json_files(
+            output_dir / "situation",
+            set(),
+        )
+        remove_stale_json_files(
+            output_dir / "situation" / "v3",
+            {"shadow-latest.json"} if situation_latest else set(),
+        )
+        remove_stale_json_files(public_site_data_dir / "situation", set())
+        remove_stale_json_files(public_site_data_dir / "situation" / "v3", set())
+        remove_stale_json_files(output_dir / "situation" / "weeks", set())
+        remove_stale_json_files(output_dir / "situation" / "months", set())
+        remove_stale_json_files(public_site_data_dir / "situation" / "weeks", set())
+        remove_stale_json_files(public_site_data_dir / "situation" / "months", set())
+        remove_stale_json_files(output_dir / "situation" / "v3" / "weekly", set())
+        remove_stale_json_files(output_dir / "situation" / "v3" / "monthly", set())
+        remove_stale_json_files(public_site_data_dir / "situation" / "v3" / "weekly", set())
+        remove_stale_json_files(public_site_data_dir / "situation" / "v3" / "monthly", set())
 
 
 async def export(

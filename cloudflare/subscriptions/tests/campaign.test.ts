@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  campaignContentFingerprint,
   campaignProgressFromRows,
   campaignStatusFromProgress,
   localizedNotificationContent,
   normalizeCampaignListCodes,
+  normalizeCampaignIdempotencyKey,
   normalizeNotificationContents,
   normalizeTargetLocales,
   notificationCampaignDeliveryProjection,
@@ -13,6 +15,20 @@ import {
   notificationCampaignSummaryProjection,
   parseNotificationMetadata,
 } from "../src/lib/campaign.ts";
+
+test("validates campaign idempotency keys and fingerprints canonical content", async () => {
+  assert.equal(normalizeCampaignIdempotencyKey(" research-digest:2026-W33:r1 "), "research-digest:2026-W33:r1");
+  assert.equal(normalizeCampaignIdempotencyKey("bad key"), "");
+  assert.equal(normalizeCampaignIdempotencyKey(""), "");
+  assert.equal(
+    await campaignContentFingerprint({ b: [2, { y: true, x: "value" }], a: 1 }),
+    await campaignContentFingerprint({ a: 1, b: [2, { x: "value", y: true }] }),
+  );
+  assert.notEqual(
+    await campaignContentFingerprint({ subject: "First" }),
+    await campaignContentFingerprint({ subject: "Changed" }),
+  );
+});
 
 test("normalizes campaign contents without changing top-level override rules", () => {
   assert.deepEqual(normalizeNotificationContents({
@@ -174,6 +190,10 @@ test("projects detail metadata and delivery fields with established defaults", (
     template_version: "admin-notification-v1",
     created_by: "dashboard",
     ai: null,
+    audience_filters: [],
+    idempotency_key: null,
+    source_ref: null,
+    frequency: null,
   });
 
   assert.deepEqual(notificationCampaignDeliveryProjection({

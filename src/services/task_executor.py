@@ -8,7 +8,7 @@ task_manager → optional broadcast hook → WebSocket clients.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Coroutine, Dict, Optional
 
 from sqlalchemy import select
@@ -42,6 +42,7 @@ async def recover_interrupted_tasks_on_startup() -> int:
     )
     now = datetime.now(timezone.utc)
     recovered: list[tuple[str, int]] = []
+    recovered_crawls: list[tuple[str, str, datetime]] = []
 
     async with get_database() as db:
         tasks = (
@@ -49,10 +50,29 @@ async def recover_interrupted_tasks_on_startup() -> int:
         ).scalars().all()
 
         for task in tasks:
+            if task.task_type == TaskType.CRAWL_DATA:
+                crawl_input = dict(task.input_data or {})
+                crawl_country = str(
+                    crawl_input.get("country")
+                    or crawl_input.get("country_code")
+                    or ""
+                ).strip()
+                if crawl_country:
+                    crawl_started = task.started_at or (now - timedelta(minutes=5))
+                    recovered_crawls.append(
+                        (
+                            crawl_country,
+                            str(crawl_input.get("source") or "all"),
+                            crawl_started - timedelta(minutes=1),
+                        )
+                    )
             task.status = TaskStatus.CANCELLED
             task.completed_at = now
             if task.started_at:
-                task.actual_duration = int((now - task.started_at).total_seconds())
+                started_at = task.started_at
+                if started_at.tzinfo is None:
+                    started_at = started_at.replace(tzinfo=timezone.utc)
+                task.actual_duration = int((now - started_at).total_seconds())
             task.last_error = message
 
             report_id = task.report_id
@@ -114,6 +134,27 @@ async def recover_interrupted_tasks_on_startup() -> int:
             recovered.append((task.task_uuid, task.progress or 0))
 
         await db.commit()
+
+    if recovered_crawls:
+        from src.services.crawl_service import CrawlService
+
+        crawl_service = CrawlService()
+        for country_code, source, started_after in recovered_crawls:
+            try:
+                await crawl_service.fail_current_run(
+                    country_code=country_code,
+                    source=source,
+                    started_after=started_after,
+                    error=RuntimeError(message),
+                    status="cancelled",
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to finalize interrupted CrawlRun country=%s source=%s: %s",
+                    country_code,
+                    source,
+                    exc,
+                )
 
     for task_uuid, progress in recovered:
         await task_manager.add_workbook_entry(
@@ -232,6 +273,16 @@ async def _dispatch(task: Task) -> Dict[str, Any]:
         return await _run_export(task)
     elif task_type == TaskType.AGENT_WORKFLOW:
         return await _run_agent_workflow(task)
+    elif task_type == TaskType.SYNC_SITUATION_HISTORY:
+        return await _run_situation_history_sync(task)
+    elif task_type == TaskType.REFRESH_SITUATION_SOURCES:
+        return await _run_situation_sources_refresh(task)
+    elif task_type == TaskType.SYNC_LITERATURE:
+        return await _run_literature_sync(task)
+    elif task_type == TaskType.ENRICH_LITERATURE:
+        return await _run_literature_enrichment(task)
+    elif task_type == TaskType.DISCOVER_LITERATURE_GAPS:
+        return await _run_literature_gap_discovery(task)
     else:
         raise ValueError(f"Unsupported task type for execution: {task_type}")
 
@@ -254,17 +305,34 @@ async def _run_crawl(task: Task) -> Dict[str, Any]:
 
     async with task_lifecycle(task, exit_on_cancel=False):
         service = CrawlService()
-        result = await service.execute(
-            task=task,
-            country_code=country_code,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
-            include_current_month=include_current_month,
-            revision_window_months=revision_window_months,
-        )
+        execution_started = datetime.now(timezone.utc)
+        try:
+            result = await service.execute(
+                task=task,
+                country_code=country_code,
+                source=source,
+                force=force,
+                process=process,
+                save_raw=save_raw,
+                fill_missing=fill_missing,
+                include_current_month=include_current_month,
+                revision_window_months=revision_window_months,
+            )
+        except Exception as exc:
+            try:
+                await service.fail_current_run(
+                    country_code=country_code,
+                    source=source,
+                    started_after=execution_started,
+                    error=exc,
+                )
+            except Exception as audit_exc:
+                logger.warning(
+                    "Failed to finalize CrawlRun for task %s: %s",
+                    task.task_uuid,
+                    audit_exc,
+                )
+            raise
 
         output = {
             "new_reports": result.new_reports,
@@ -355,6 +423,96 @@ async def _run_export(task: Task) -> Dict[str, Any]:
 
     async with task_lifecycle(task, exit_on_cancel=False):
         return await data_release_service.execute_release_task(task)
+
+
+async def _run_situation_history_sync(task: Task) -> Dict[str, Any]:
+    """Reconcile primary Situation snapshots into the history database."""
+    from src.services.situation_history_service import sync_history
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        await task_manager.update_task_progress(task.task_uuid, 10)
+        result = await sync_history(mode=str((task.input_data or {}).get("mode") or "reconcile"))
+        await task_manager.update_task_progress(task.task_uuid, 100)
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+        return result
+
+
+async def _run_situation_sources_refresh(task: Task) -> Dict[str, Any]:
+    """Fetch configured Situation adapters and publish a v3 analysis run."""
+    from src.services.situation_v3.pipeline import refresh_situation_v3
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        fetch_events = bool((task.input_data or {}).get("fetch_events", True))
+        await task_manager.update_task_progress(task.task_uuid, 10)
+        refresh = await refresh_situation_v3(fetch_events=fetch_events)
+        payload = refresh["report"]
+        report = payload.get("report") or {}
+        await task_manager.update_task_progress(task.task_uuid, 100)
+        result = {
+            "schema_version": payload.get("schema_version"),
+            "report_id": report.get("report_id"),
+            "run_id": refresh.get("run_id"),
+            "checked_at": report.get("as_of"),
+            "data_through": (payload.get("data_currency") or {}).get("latest_data_through"),
+            "revision": report.get("revision"),
+            "quality_gate_status": (payload.get("quality_gate") or {}).get("status"),
+            "source_health": payload.get("sources") or [],
+            "coverage": payload.get("coverage") or {},
+            "timings": refresh.get("timings") or {},
+            "fetch_events": fetch_events,
+        }
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+        return result
+
+
+async def _run_literature_sync(task: Task) -> Dict[str, Any]:
+    """Incrementally update the Research Radar literature catalogue."""
+    from src.services.literature_service import literature_service
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        result = await literature_service.execute_task(task)
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+        return result
+
+
+async def _run_literature_enrichment(task: Task) -> Dict[str, Any]:
+    """Generate review-only Research Radar evidence drafts via the model center."""
+    from src.services.literature_service import literature_service
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        result = await literature_service.execute_enrichment_task(task)
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+        return result
+
+
+async def _run_literature_gap_discovery(task: Task) -> Dict[str, Any]:
+    """Discover review-only literature candidates for active evidence gaps."""
+    from src.services.literature_service import literature_service
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        result = await literature_service.execute_gap_discovery_task(task)
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+        return result
 
 
 # ── Agent workflow handler ───────────────────────────────────────────────────

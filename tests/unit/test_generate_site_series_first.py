@@ -72,6 +72,7 @@ def _series(
     incidence_rate: float | None = None,
     temporal_granularity: str = "monthly",
     reporting_basis: str = "notification",
+    time_basis: str = "report_date",
     series_is_active: bool | None = None,
     mapping_relation: str = "exact",
 ) -> dict:
@@ -98,6 +99,7 @@ def _series(
         "case_definition_uri": None,
         "metric_type": metric_type,
         "reporting_basis": reporting_basis,
+        "time_basis": time_basis,
         "temporal_granularity": temporal_granularity,
         "series_unit": "count",
         "mapping_relation": mapping_relation,
@@ -117,6 +119,71 @@ def _series(
 
 def _by_disease(records: list[dict], disease_id: str) -> list[dict]:
     return [record for record in records if record["disease_id"] == disease_id]
+
+
+def test_source_series_metadata_retains_time_basis_and_provisional_tail() -> None:
+    rows = [
+        _series(
+            "D001",
+            "SER_ONE",
+            "2024-01-01",
+            4,
+            temporal_granularity="weekly",
+            time_basis="symptom_onset_date",
+        ),
+        _series(
+            "D001",
+            "SER_ONE",
+            "2024-01-08",
+            5,
+            temporal_granularity="weekly",
+            time_basis="symptom_onset_date",
+        ),
+    ]
+    rows[1]["quality_status"] = "provisional"
+    rows[1]["data_quality"] = "provisional"
+
+    projected = apply_series_first_projection([], rows)
+    source = projected[0]["_series_context"]["source_series"][0]
+
+    assert source["time_basis"] == "symptom_onset_date"
+    assert source["point_quality_statuses"] == ["validated", "provisional"]
+    assert source["provisional_from"] == "2024-01-08"
+    assert source["latest_quality_status"] == "provisional"
+
+
+def test_raw_history_does_not_expand_a_provisional_tail() -> None:
+    rows = [
+        _series("D001", "SER_ONE", "2024-01-01", 4),
+        _series("D001", "SER_ONE", "2024-02-01", 5),
+        _series("D001", "SER_ONE", "2024-03-01", 6),
+    ]
+    for row in rows[:2]:
+        row["quality_status"] = "raw"
+        row["data_quality"] = "raw"
+    rows[2]["quality_status"] = "provisional"
+    rows[2]["data_quality"] = "provisional"
+
+    projected = apply_series_first_projection([], rows)
+    source = projected[0]["_series_context"]["source_series"][0]
+
+    assert source["point_quality_statuses"] == ["raw", "raw", "provisional"]
+    assert source["provisional_from"] == "2024-03-01"
+
+
+def test_all_raw_series_has_no_provisional_boundary() -> None:
+    rows = [
+        _series("D001", "SER_ONE", "2024-01-01", 4),
+        _series("D001", "SER_ONE", "2024-02-01", 5),
+    ]
+    for row in rows:
+        row["quality_status"] = "raw"
+        row["data_quality"] = "raw"
+
+    projected = apply_series_first_projection([], rows)
+    source = projected[0]["_series_context"]["source_series"][0]
+
+    assert source["provisional_from"] is None
 
 
 def test_partial_registry_history_replaces_overlap_and_gap_fills_legacy() -> None:
@@ -285,7 +352,7 @@ def test_non_additive_series_are_exposed_but_never_silently_summed() -> None:
     projected = apply_series_first_projection(legacy, series)
 
     assert [row["cases"] for row in projected] == [5, 6]
-    assert [row["deaths"] for row in projected] == [0, 0]
+    assert [row["deaths"] for row in projected] == [None, None]
     context = projected[0]["_series_context"]
     assert context["projection_policy"] == "representative_series"
     assert context["selected_series_codes"] == ["SER_A"]

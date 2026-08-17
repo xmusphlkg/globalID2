@@ -1,24 +1,24 @@
-import type { D1Database } from "./lib/db.ts";
+import type { SituationAlertJob } from "./lib/situation-alert.ts";
 
-export interface Env {
-  DB: D1Database;
-  PUBLIC_BASE_URL?: string;
-  ALLOWED_ORIGINS?: string;
-  DEBUG_RETURN_TOKENS?: string;
+type OptionalGeneratedBindings = Omit<
+  Partial<CloudflareBindings>,
+  "DB" | "SITUATION_ALERT_QUEUE"
+>;
+
+/**
+ * Runtime bindings come from `wrangler types`. Secrets remain explicit because
+ * Wrangler intentionally does not write secret names or values into config.
+ * Optional non-secret vars preserve the Worker's defensive runtime defaults.
+ */
+export interface Env extends OptionalGeneratedBindings {
+  DB: CloudflareBindings["DB"];
+  SITUATION_ALERT_QUEUE?: Queue<SituationAlertJob>;
   TURNSTILE_SECRET_KEY?: string;
   TOKEN_SIGNING_SECRET?: string;
   ADMIN_API_TOKEN?: string;
-  SMTP_HOST?: string;
-  SMTP_PORT?: string;
   SMTP_USERNAME?: string;
   SMTP_PASSWORD?: string;
-  SMTP_FROM_EMAIL?: string;
-  SMTP_FROM_NAME?: string;
-  SMTP_USE_TLS?: string;
-  PENDING_EXPIRY_DAYS?: string;
-  SUBMISSION_RATE_LIMIT_PER_HOUR?: string;
-  CONFIRMATION_EMAIL_LIMIT_PER_10_MINUTES?: string;
-  NOTIFICATION_BATCH_SIZE?: string;
+  SITUATION_ALERT_INGEST_TOKEN?: string;
 }
 
 export type Payload = Record<string, unknown>;
