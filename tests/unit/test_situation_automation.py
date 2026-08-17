@@ -337,6 +337,9 @@ def test_project_quality_workflow_covers_backend_frontends_worker_and_migrations
     assert "./tests/run_tests.sh --type all" in text
     assert "check_contract_drift.py" in text
     assert "scripts/automation/smoke_migrations.py" in text
+    assert "postgres:15-alpine" in text
+    assert "full_rebuild_database.py --mode full --yes" in text
+    assert "init_situation_history_database.py --backfill" in text
     assert "npm run check" in text
     assert "prepare_site_build_fixture.py" in text
     assert "npm run test:perf" in text
@@ -376,12 +379,13 @@ def test_ci_site_fixture_is_guarded_missing_only_and_supplies_required_inputs(tm
     research = json.loads(
         (site / "src" / "data" / "research" / "index.json").read_text(encoding="utf-8")
     )
-    assert research["articles"] == []
-    assert research["facets"] == {
-        "countries": [],
-        "diseases": [],
-        "topics": [],
-        "weeks": [],
-    }
+    assert len(research["articles"]) == 1
+    assert len(research["reviews_and_guidelines"]) == 1
+    assert len(research["emerging_topics"]) == 1
+    assert research["surveillance_evidence"]["available"] is True
+    assert research["surveillance_evidence"]["visibility"] == "public"
+    assert research["facets"]["diseases"][0]["slug"] == "influenza"
+    assert research["facets"]["countries"][0]["slug"] == "united-states"
+    assert research["facets"]["topics"][0]["slug"] == "surveillance"
     latest = site / "public" / "site-data" / "situation" / "v3" / "latest.json"
     assert json.loads(latest.read_text(encoding="utf-8"))["schema_version"] == "situation_room.v3"
