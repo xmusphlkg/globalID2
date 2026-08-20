@@ -15,9 +15,12 @@ from sqlalchemy.orm import selectinload
 from src.core.database import get_db
 from src.domain import (
     SituationAnalysisRunV3,
+    SituationCalibrationRunV3,
     SituationEventClusterV3,
+    SituationEventLabelV3,
     SituationPeriodReportV3,
     SituationPublicationPointerV3,
+    SituationPolicyDecisionV3,
     SituationReviewDecisionV3,
     SituationSignalResultV3,
 )
@@ -80,6 +83,163 @@ def _page_headers(response: Response, total: int, page: int, page_size: int) -> 
     response.headers["X-Total-Count"] = str(total)
     response.headers["X-Limit"] = str(page_size)
     response.headers["X-Offset"] = str((page - 1) * page_size)
+
+
+def _calibration_payload(row: SituationCalibrationRunV3) -> dict[str, Any]:
+    return {
+        "calibration_id": row.calibration_id,
+        "method_version": row.method_version,
+        "config_hash": row.config_hash,
+        "artifact_hash": row.artifact_hash,
+        "artifact_uri": row.artifact_uri,
+        "status": row.status,
+        "calibrated_at": row.calibrated_at,
+        "window_start": row.window_start,
+        "window_end": row.window_end,
+        "summary": dict(row.summary or {}),
+        "group_results": dict(row.group_results or {}),
+    }
+
+
+@router.get("/calibration/latest")
+async def latest_calibration_v3() -> dict[str, Any]:
+    async with get_db() as db:
+        row = (
+            await db.execute(
+                select(SituationCalibrationRunV3)
+                .order_by(SituationCalibrationRunV3.calibrated_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+    if row is None:
+        return {
+            "status": "not_available",
+            "automation_supported": False,
+            "reason": "No registered Situation v3.2 calibration artifact",
+        }
+    payload = _calibration_payload(row)
+    payload["automation_supported"] = row.status == "supported"
+    return payload
+
+
+@router.get("/calibration")
+async def calibration_runs_v3(
+    response: Response,
+    status: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=250),
+) -> list[dict[str, Any]]:
+    filters = []
+    if status:
+        filters.append(SituationCalibrationRunV3.status == status)
+    offset = (page - 1) * page_size
+    async with get_db() as db:
+        total = int(
+            (
+                await db.execute(
+                    select(func.count())
+                    .select_from(SituationCalibrationRunV3)
+                    .where(*filters)
+                )
+            ).scalar_one()
+            or 0
+        )
+        rows = (
+            await db.execute(
+                select(SituationCalibrationRunV3)
+                .where(*filters)
+                .order_by(SituationCalibrationRunV3.calibrated_at.desc())
+                .offset(offset)
+                .limit(page_size)
+            )
+        ).scalars().all()
+    _page_headers(response, total, page, page_size)
+    return [_calibration_payload(row) for row in rows]
+
+
+@router.get("/event-labels")
+async def event_labels_v3(
+    response: Response,
+    disease_id: str | None = None,
+    adjudication: str | None = None,
+    split: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=250),
+) -> list[dict[str, Any]]:
+    filters = []
+    if disease_id:
+        filters.append(SituationEventLabelV3.disease_id == disease_id)
+    if adjudication:
+        filters.append(SituationEventLabelV3.adjudication == adjudication)
+    if split:
+        filters.append(SituationEventLabelV3.split == split)
+    offset = (page - 1) * page_size
+    async with get_db() as db:
+        total = int(
+            (
+                await db.execute(
+                    select(func.count())
+                    .select_from(SituationEventLabelV3)
+                    .where(*filters)
+                )
+            ).scalar_one()
+            or 0
+        )
+        rows = (
+            await db.execute(
+                select(SituationEventLabelV3)
+                .where(*filters)
+                .order_by(
+                    SituationEventLabelV3.first_official_published_at.desc(),
+                    SituationEventLabelV3.label_id,
+                )
+                .offset(offset)
+                .limit(page_size)
+            )
+        ).scalars().all()
+    _page_headers(response, total, page, page_size)
+    return [row.to_dict() for row in rows]
+
+
+@router.get("/policy-decisions")
+async def policy_decisions_v3(
+    response: Response,
+    run_id: str | None = None,
+    signal_id: str | None = None,
+    status: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=250),
+) -> list[dict[str, Any]]:
+    filters = []
+    if run_id:
+        filters.append(SituationPolicyDecisionV3.run_id == run_id)
+    if signal_id:
+        filters.append(SituationPolicyDecisionV3.signal_id == signal_id)
+    if status:
+        filters.append(SituationPolicyDecisionV3.status == status)
+    offset = (page - 1) * page_size
+    async with get_db() as db:
+        total = int(
+            (
+                await db.execute(
+                    select(func.count())
+                    .select_from(SituationPolicyDecisionV3)
+                    .where(*filters)
+                )
+            ).scalar_one()
+            or 0
+        )
+        rows = (
+            await db.execute(
+                select(SituationPolicyDecisionV3)
+                .where(*filters)
+                .order_by(SituationPolicyDecisionV3.created_at.desc())
+                .offset(offset)
+                .limit(page_size)
+            )
+        ).scalars().all()
+    _page_headers(response, total, page, page_size)
+    return [row.to_dict() for row in rows]
 
 
 @router.get("/overview")

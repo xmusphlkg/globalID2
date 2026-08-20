@@ -6,9 +6,13 @@ interface Props {
   stream?: boolean;
   index?: number;
   initialVisible?: number;
+  locale?: 'en' | 'zh';
 }
 
-const { article, compact = false, featured = false, stream = false, index, initialVisible } = Astro.props;
+const { article, compact = false, featured = false, stream = false, index, initialVisible, locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const localeHref = (href: string | null) => href && zh && href.startsWith('/') ? `${prefix}${href}` : href;
 const initiallyHidden = typeof index === 'number' && typeof initialVisible === 'number' && index >= initialVisible;
 const publicationDate = article.publication_date_label_en ?? (article.published_at
   ? new Date(article.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -73,44 +77,44 @@ const surveillanceLabelZh = surveillanceLink
 >
   <div class="research-card-topline">
     <div class="research-card-badges">
-      <span class="research-badge research-badge-peer" data-lang-en={article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint'} data-lang-zh={article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本'}>
-        {article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint'}
+      <span class="research-badge research-badge-peer">
+        {article.peer_review_status === 'peer_reviewed' ? (zh ? '同行评议' : 'Peer reviewed') : (zh ? '预印本' : 'Preprint')}
       </span>
-      {isHistoricalBaseline && <span class="research-badge research-badge-history" data-lang-en="Historical baseline" data-lang-zh="历史基线">Historical baseline</span>}
-      {article.open_access_status === 'open' && <span class="research-badge research-badge-oa" data-lang-en="Open access" data-lang-zh="开放获取">Open access</span>}
+      {isHistoricalBaseline && <span class="research-badge research-badge-history">{zh ? '历史基线' : 'Historical baseline'}</span>}
+      {article.open_access_status === 'open' && <span class="research-badge research-badge-oa">{zh ? '开放获取' : 'Open access'}</span>}
       {(article.diseases ?? []).slice(0, compact ? 1 : 2).map((disease: any) => (
-        <span class="research-badge" data-lang-en={disease.name_en} data-lang-zh={disease.name_zh ?? disease.name_en}>{disease.name_en}</span>
+        <span class="research-badge">{zh ? disease.name_zh ?? disease.name_en : disease.name_en}</span>
       ))}
       {visibleTopics.map((topic: any) => (
-        <a class="research-badge research-badge-topic" href={`/research/topics/${String(topic.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}/`}>{topic.name}</a>
+        <a class="research-badge research-badge-topic" href={`${prefix}/research/topics/${String(topic.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}/`}>{topic.name}</a>
       ))}
     </div>
     {article.doi && <a class="research-card-doi" href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer">DOI {article.doi} ↗</a>}
   </div>
 
-  <h3 class="research-card-title"><a href={`/research/articles/${article.slug}/`}>{article.title}</a></h3>
-  {authorLineEn && <p class="research-card-authors" data-lang-en={authorLineEn} data-lang-zh={authorLineZh}>{authorLineEn}</p>}
+  <h3 class="research-card-title"><a href={`${prefix}/research/articles/${article.slug}/`}>{article.title}</a></h3>
+  {authorLineEn && <p class="research-card-authors">{zh ? authorLineZh : authorLineEn}</p>}
   <p class="research-card-source">
-    <span>{article.journal ?? 'Journal unavailable'}</span>
+    <span>{article.journal ?? (zh ? '期刊信息暂缺' : 'Journal unavailable')}</span>
     <span aria-hidden="true">·</span>
-    <time datetime={article.published_at} data-lang-en={publicationDate} data-lang-zh={publicationDateZh}>{publicationDate}</time>
+    <time datetime={article.published_at}>{zh ? publicationDateZh : publicationDate}</time>
   </p>
   {(openAccessUrl || surveillanceUrl) && (
     <div class="research-card-actions">
-      {openAccessUrl && <a class="research-card-action research-card-action-oa" href={openAccessUrl} target="_blank" rel="noopener noreferrer" data-lang-en="Open article ↗" data-lang-zh="打开全文 ↗">Open article ↗</a>}
-      {surveillanceUrl && <a class="research-card-action" href={surveillanceUrl} data-lang-en={`${surveillanceLabelEn} →`} data-lang-zh={`${surveillanceLabelZh} →`}>{surveillanceLabelEn} →</a>}
+      {openAccessUrl && <a class="research-card-action research-card-action-oa" href={openAccessUrl} target="_blank" rel="noopener noreferrer">{zh ? '打开全文 ↗' : 'Open article ↗'}</a>}
+      {surveillanceUrl && <a class="research-card-action" href={localeHref(surveillanceUrl)}>{zh ? surveillanceLabelZh : surveillanceLabelEn} →</a>}
     </div>
   )}
 
   {!compact && (
     <>
       <dl class="research-card-facts">
-        <div><dt data-lang-en="Type" data-lang-zh="类型">Type</dt><dd>{article.study_type ?? 'Journal article'}</dd></div>
-        <div><dt data-lang-en="Scope" data-lang-zh="范围">Scope</dt><dd>{(article.countries ?? []).length > 0 ? article.countries.slice(0, 3).map((item: any) => item.name_en).join(', ') : 'Not classified'}</dd></div>
+        <div><dt>{zh ? '类型' : 'Type'}</dt><dd>{article.study_type ?? (zh ? '期刊论文' : 'Journal article')}</dd></div>
+        <div><dt>{zh ? '范围' : 'Scope'}</dt><dd>{(article.countries ?? []).length > 0 ? article.countries.slice(0, 3).map((item: any) => zh ? item.name_zh ?? item.name_en : item.name_en).join(zh ? '、' : ', ') : (zh ? '未分类' : 'Not classified')}</dd></div>
       </dl>
       <p class="research-context">
-        <strong data-lang-en="Why it matters now" data-lang-zh="为何现在值得关注">Why it matters now</strong>
-        <span data-lang-en={article.why_it_matters_en} data-lang-zh={article.why_it_matters_zh}>{article.why_it_matters_en}</span>
+        <strong>{zh ? '为何现在值得关注' : 'Why it matters now'}</strong>
+        <span>{zh ? article.why_it_matters_zh ?? article.why_it_matters_en : article.why_it_matters_en}</span>
       </p>
     </>
   )}

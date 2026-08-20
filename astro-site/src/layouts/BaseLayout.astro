@@ -110,7 +110,7 @@ const structuredData = {
 <!doctype html>
 <html
   lang={documentLocale === 'zh' ? 'zh-CN' : 'en'}
-  data-initial-lang={documentLocale}
+  data-lang={documentLocale}
   data-release-id={siteReleaseId}
 >
   <head>
@@ -130,7 +130,7 @@ const structuredData = {
     ))}
     {alternatePaths.en && <link rel="alternate" hreflang="x-default" href={new URL(alternatePaths.en, siteBase)} />}
     <meta name="robots" content={robotsContent} />
-    <meta name="theme-color" content="#f4f7fb" />
+    <meta name="theme-color" content="#102A43" />
 
     <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
@@ -149,7 +149,7 @@ const structuredData = {
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={pageDescription} />
     <meta name="twitter:image" content={new URL(pageImage, siteBase)} />
-    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
     {validGaMeasurementId && <script is:inline set:html={`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config','${validGaMeasurementId}');document.addEventListener('click',function(event){const target=event.target instanceof Element?event.target.closest('[data-seo-event],[data-file-download]'):null;if(!target)return;gtag('event',target.getAttribute('data-seo-event')||'dataset_download');});(function(){let started=false;function loadAnalytics(){if(started)return;started=true;const script=document.createElement('script');script.async=true;script.src='https://www.googletagmanager.com/gtag/js?id=${validGaMeasurementId}';document.head.appendChild(script)}function deferAnalytics(){window.setTimeout(function(){if('requestIdleCallback'in window){window.requestIdleCallback(loadAnalytics,{timeout:2000})}else{loadAnalytics()}},2000)}if(document.readyState==='complete'){deferAnalytics()}else{window.addEventListener('load',deferAnalytics,{once:true})}})();`} />}
 
     <!-- Favicon -->
@@ -161,33 +161,24 @@ const structuredData = {
       (() => {
         const storedTheme = localStorage.getItem('theme');
         const theme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'light';
-        const storedLang = localStorage.getItem('lang');
-        const initialLang = document.documentElement.getAttribute('data-initial-lang');
-        const lang = storedLang === 'zh' || storedLang === 'en'
-          ? storedLang
-          : (initialLang === 'zh' ? 'zh' : 'en');
         document.documentElement.setAttribute('data-theme', theme);
-        document.documentElement.setAttribute('data-lang', lang);
-        document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : 'en');
         document.documentElement.classList.toggle('dark', theme === 'dark');
       })();
     </script>
   </head>
   <body class="min-h-screen flex flex-col">
+    <a class="skip-link" href="#main-content">{documentLocale === 'zh' ? '跳到主要内容' : 'Skip to main content'}</a>
     <Header initialLanguage={initialLanguage} />
     {maintenanceMessage && <div class="site-update-banner border-b" role="status" aria-live="polite">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 text-sm font-medium text-center">
-        <span
-          data-lang-en={maintenanceMessage}
-          data-lang-zh="网站正在维护，部分功能可能暂时不可用。"
-        >
+        <span>
           {initialLanguage === 'zh'
             ? '网站正在维护，部分功能可能暂时不可用。'
             : maintenanceMessage}
         </span>
       </div>
     </div>}
-    <main class="flex-1 academic-shell">
+    <main id="main-content" tabindex="-1" class="flex-1 academic-shell">
       <slot />
     </main>
     <Footer initialLanguage={initialLanguage} />

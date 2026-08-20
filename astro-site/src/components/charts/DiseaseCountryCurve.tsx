@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import EpidemicCurve from './EpidemicCurve';
 import type { ChartSourceMeta } from '../../utils/chartMeta';
 import { loadDiseaseDataset, type DiseaseDatasetSeriesEntry } from './diseaseDataset';
@@ -8,15 +8,13 @@ interface Props {
   topN?: number;
   height?: number;
   sourceMeta?: ChartSourceMeta | null;
+  initialLanguage?: 'en' | 'zh';
 }
 
-export default function DiseaseCountryCurve({ dataUrl, topN = 10, height = 380, sourceMeta = null }: Props) {
+export default function DiseaseCountryCurve({ dataUrl, topN = 10, height = 380, sourceMeta = null, initialLanguage = 'en' }: Props) {
   const [series, setSeries] = useState<Record<string, DiseaseDatasetSeriesEntry>>({});
   const [loadError, setLoadError] = useState(false);
-  const [lang] = useState<'en' | 'zh'>(() => {
-    if (typeof window !== 'undefined') return (localStorage.getItem('lang') as 'en' | 'zh') || 'en';
-    return 'en';
-  });
+  const lang = initialLanguage;
 
   useEffect(() => {
     if (!dataUrl) return;
@@ -40,7 +38,7 @@ export default function DiseaseCountryCurve({ dataUrl, topN = 10, height = 380, 
 
   if (loadError) {
     return (
-      <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
+      <div className="chart-shell flex items-center justify-center text-[rgb(var(--text-muted))] text-sm min-h-[160px]">
         {lang === 'zh' ? '图表数据加载失败' : 'Failed to load chart data'}
       </div>
     );
@@ -48,7 +46,7 @@ export default function DiseaseCountryCurve({ dataUrl, topN = 10, height = 380, 
 
   if (Object.keys(series).length === 0) {
     return (
-      <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
+      <div className="chart-shell flex items-center justify-center text-[rgb(var(--text-muted))] text-sm min-h-[160px]">
         {lang === 'zh' ? '图表数据加载中' : 'Loading chart data'}
       </div>
     );
@@ -61,6 +59,7 @@ export default function DiseaseCountryCurve({ dataUrl, topN = 10, height = 380, 
       height={height}
       entityType="country"
       sourceMeta={sourceMeta}
+      initialLanguage={initialLanguage}
     />
   );
 }

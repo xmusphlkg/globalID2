@@ -137,6 +137,7 @@ def test_guarded_auto_gate_excludes_fallback_and_requires_strict_q_and_evidence(
         anomaly=SimpleNamespace(
             fit_status="completed",
             model="robust_quasi_poisson_v1",
+            detector_tier="common_count",
             effect_threshold_passed=True,
             q_value=0.01,
         ),
@@ -170,18 +171,31 @@ def test_stratified_report_exposes_scenarios_precision_and_correct_null_denomina
         minimum_complete_null_families=8,
     )
 
-    assert result["scenario_count"] == 4
+    assert result["scenario_count"] == 7
     assert set(result["scenarios"]) == {
-        "common_sustained_2x",
-        "common_subtle_1_5x",
-        "common_single_cycle_2x",
-        "rare_sustained_4x",
+        "weekly_common_sustained_2x",
+        "weekly_common_subtle_1_5x",
+        "weekly_common_single_cycle_2x",
+        "weekly_rare_sustained_4x",
+        "monthly_common_sustained_2x",
+        "monthly_common_subtle_1_5x",
+        "monthly_common_single_cycle_2x",
     }
-    assert result["precision"]["complete_null_family_trials"] == 8
-    assert result["precision"]["minimum_nonzero_empirical_fdr_step"] == 0.125
+    assert result["precision"]["complete_null_family_trials"] == 14
+    assert result["precision"]["minimum_nonzero_empirical_fdr_step"] == round(1 / 14, 6)
+    assert result["precision"]["complete_null_family_trials_by_automation_group"] == {
+        "weekly.common_count": 6,
+        "monthly.common_count": 6,
+    }
+    for group in result["calibration_groups"].values():
+        assert set(group["null_stress_strata"]) == set(backtest.NULL_STRESS_STRATA)
+        assert sum(
+            row["family_trials"]
+            for row in group["null_stress_strata"].values()
+        ) == 6
     # Each complete-null frame contains both the N and future-A arms.
-    assert result["total_complete_null_series"] == 16
-    assert result["v3"]["false_positive_rate_ci_95"]["trials"] == 16
+    assert result["total_complete_null_series"] == 28
+    assert result["v3"]["false_positive_rate_ci_95"]["trials"] == 28
     assert result["precision"]["sufficient_family_trials"] is True
     assert result["acceptance"]["empirical_fdr_upper_95_lte_5pct"] is False
     assert result["fdr_assessment"]["point_estimate_decision"] == "passed"
@@ -191,12 +205,24 @@ def test_stratified_report_exposes_scenarios_precision_and_correct_null_denomina
 
 
 def test_default_protocol_has_enough_trials_to_resolve_zero_fdr_below_five_percent() -> None:
-    family_trials = 20 * len(backtest.DEFAULT_SCENARIOS)
+    batches = 128
+    family_trials = batches * len(backtest.DEFAULT_SCENARIOS)
     interval = backtest.wilson_interval(0, family_trials)
 
-    assert family_trials == 80
+    assert family_trials == 896
+    assert batches * 3 == 384  # three common-count strata per cadence
     assert 1 / family_trials < 0.05
-    assert interval["upper"] < 0.05
+    assert interval["upper"] < 0.025
+
+
+def test_automation_precision_requirement_cannot_be_lowered() -> None:
+    with pytest.raises(ValueError, match="cannot be below 384"):
+        backtest.run_backtest(
+            {},
+            batches=1,
+            series_per_class=1,
+            minimum_complete_null_families_per_cadence=383,
+        )
 
 
 def test_projected_trials_use_conservative_discovery_rounding() -> None:

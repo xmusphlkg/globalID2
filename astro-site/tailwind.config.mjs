@@ -8,9 +8,9 @@ export default {
     extend: {
       fontFamily: {
         sans: [
-          '"Source Sans 3"',
-          'Inter',
-          '"Noto Sans SC"',
+          '"IBM Plex Sans"',
+          '"IBM Plex Sans Fallback"',
+          '"Noto Sans CJK SC"',
           'system-ui',
           '-apple-system',
           'BlinkMacSystemFont',
@@ -21,14 +21,14 @@ export default {
           'sans-serif',
         ],
         serif: [
-          '"Source Serif 4"',
-          '"Noto Serif SC"',
-          'Georgia',
-          '"Times New Roman"',
-          'serif',
+          '"IBM Plex Sans"',
+          '"IBM Plex Sans Fallback"',
+          '"Noto Sans CJK SC"',
+          'system-ui',
+          'sans-serif',
         ],
         mono: [
-          '"JetBrains Mono"',
+          'ui-monospace',
           '"SFMono-Regular"',
           'Consolas',
           '"Liberation Mono"',

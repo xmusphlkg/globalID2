@@ -106,9 +106,8 @@ export function createSituationAlertHandlers(deps: Dependencies) {
       alert.signal.verification_basis === "automated_policy"
       && env.SITUATION_ALERT_AUTOMATED_POLICY_ENABLED?.trim().toLowerCase() !== "true"
     ) {
-      // The parser retains the versioned contract for a future, separately
-      // calibrated rollout. Production persistence and delivery stay disabled
-      // unless the Worker is also explicitly enabled.
+      // Keep a second deployment-level kill switch after the report's
+      // structured v3.2 policy decision has passed contract validation.
       throw new HttpError(422, "automated_policy_dispatch_disabled");
     }
     if (!isAllowedSituationPublicUrl(alert.report.public_url, env.SITUATION_PUBLIC_ORIGINS)) {

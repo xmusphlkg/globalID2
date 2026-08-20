@@ -1,5 +1,7 @@
 ---
-import { resolveFlagIso2, toFlagEmoji } from '../lib/country-flag';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { getFlagAssetPath, resolveFlagIso2, toFlagEmoji } from '../lib/country-flag';
 
 interface Props {
   code: string;
@@ -10,21 +12,19 @@ interface Props {
 const { code, name = 'Country flag', sizeClass = 'w-9 h-7' } = Astro.props;
 
 const flagIso2 = resolveFlagIso2(code);
-const cdnCode = flagIso2.toLowerCase();
-
 const fallbackEmoji = toFlagEmoji(flagIso2);
+const flagPath = getFlagAssetPath(flagIso2);
+const hasLocalFlag = existsSync(resolve('./public', flagPath.slice(1)));
 ---
 
-<span class={`inline-flex items-center justify-center overflow-hidden rounded-none ring-1 ring-slate-700/60 bg-slate-800/30 ${sizeClass}`}>
-  <img
-    src={`https://flagcdn.com/w80/${cdnCode}.png`}
-    alt={name}
-    width="80"
-    height="60"
-    loading="lazy"
-    decoding="async"
-    class="w-full h-full object-cover"
-    onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';"
-  />
-  <span class="hidden text-base leading-none" role="img" aria-label={name}>{fallbackEmoji}</span>
+<span class={`country-flag inline-flex items-center justify-center overflow-hidden border border-[rgb(var(--border))] bg-[rgb(var(--surface-raised))] ${sizeClass}`}>
+  {hasLocalFlag
+    ? <img src={flagPath} alt={name} width="48" height="36" loading="lazy" decoding="async" />
+    : <span class="country-flag-fallback" role="img" aria-label={name}>{fallbackEmoji}</span>}
 </span>
+
+<style>
+  .country-flag { position: relative; flex: 0 0 auto; border-radius: 2px; box-shadow: 0 1px 2px rgb(16 42 67 / .12); }
+  .country-flag img { width: 100%; height: 100%; object-fit: cover; }
+  .country-flag-fallback { display: grid; width: 100%; height: 100%; place-items: center; font-size: 1rem; line-height: 1; }
+</style>

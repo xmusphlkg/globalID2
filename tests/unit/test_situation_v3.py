@@ -93,7 +93,12 @@ def test_production_config_keeps_statistical_auto_publication_disabled() -> None
         "fallback_requires_official_match_for_queue"
     ] is True
     assert publication["auto_verification"]["enabled"] is False
-    assert publication["auto_verification"]["calibration_decision"] == "not_yet_supported"
+    assert publication["auto_verification"]["mode"] == "off"
+    assert publication["auto_verification"]["kill_switch"] is True
+    assert all(
+        not group["enabled"]
+        for group in publication["auto_verification"]["groups"].values()
+    )
 
 
 def _exception_review_config() -> dict:
@@ -541,6 +546,13 @@ def test_rare_count_tier_uses_exact_tail_and_supporting_cusum() -> None:
     assert signal.anomaly.diagnostics["supporting_cusum"]["decision_role"] == (
         "supporting_only"
     )
+    comparison = signal.anomaly.diagnostics["rare_model_comparison"]
+    assert comparison["automation_eligible"] is False
+    assert comparison["primary"]["decision_role"] == "review_signal"
+    assert comparison["hurdle_negative_binomial_v1"]["decision_role"] == (
+        "shadow_only"
+    )
+    assert comparison["seasonal_empirical_v1"]["decision_role"] == "shadow_only"
     assert signal.anomaly.effect_threshold_passed is True
 
 

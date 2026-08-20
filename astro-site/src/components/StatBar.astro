@@ -10,9 +10,11 @@ interface Stat {
 
 interface Props {
   stats: Stat[];
+  locale?: 'en' | 'zh';
 }
 
-const { stats } = Astro.props;
+const { stats, locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
 
 const accentColor: Record<string, string> = {
   blue: 'text-brand-400',
@@ -26,7 +28,7 @@ const accentColor: Record<string, string> = {
   {stats.map(({ label, labelZh, value, accent = 'blue' }) => (
     <div class="site-stat-item px-6 py-6 text-center">
       <div class="academic-kicker mb-2">
-        <span data-lang-en={label} data-lang-zh={labelZh}>{label}</span>
+        <span>{zh ? labelZh : label}</span>
       </div>
       <div class={`font-serif text-3xl font-semibold tabular-nums ${accentColor[accent] ?? 'text-brand-400'}`}>
         {value}

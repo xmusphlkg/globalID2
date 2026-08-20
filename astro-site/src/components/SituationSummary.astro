@@ -2,9 +2,12 @@
 import type { SituationReportV3 } from '../utils/situation';
 import { diseaseHref, formatNumber, geographyLabel, label, labelZh } from '../utils/situation';
 
-interface Props { snapshot: SituationReportV3; compact?: boolean; }
+interface Props { snapshot: SituationReportV3; compact?: boolean; locale?: 'en' | 'zh'; }
 
-const { snapshot, compact = false } = Astro.props;
+const { snapshot, compact = false, locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 const signals = snapshot.signals.slice(0, compact ? 3 : 5);
 const currency = snapshot.data_currency.by_source ?? [];
 const staleSources = currency.filter(source => source.status === 'stale' || source.status === 'failed').length;
@@ -13,12 +16,7 @@ const delayed = currency.reduce((sum, source) => sum + (source.delayed_series_co
 const publication = (snapshot.method.parameters?.publication ?? {}) as {
   mode?: string;
   shadow_weeks?: number;
-  auto_verification?: {
-    enabled?: boolean;
-    policy_version?: string;
-    calibration_decision?: string;
-  };
-  automatic_triage?: { policy_version?: string };
+  auto_verification?: { enabled?: boolean; calibration_decision?: string };
 };
 const shadowMode = publication.mode === 'shadow';
 const guardedAutoMode = publication.mode === 'guarded_auto'
@@ -46,32 +44,32 @@ const metricCards = snapshot.report.kind === 'daily'
     <p class="shadow" role="status"><b>Shadow preview</b> · Development-only report</p>
   )}
   {shadowMode && (
-    <p class="shadow" role="status" data-lang-en={`Shadow calibration · Numerical signals require analyst verification during the ${publication.shadow_weeks ?? 8}-week observation window.`} data-lang-zh={`影子校准期 · 在 ${publication.shadow_weeks ?? 8} 周观察窗口内，数值信号须经分析员验证后方可公开。`}>Shadow calibration · Numerical signals require analyst verification during the {publication.shadow_weeks ?? 8}-week observation window.</p>
+    <p class="shadow" role="status">{pick(`Shadow calibration · Numerical signals require analyst verification during the ${publication.shadow_weeks ?? 8}-week observation window.`, `影子校准期 · 在 ${publication.shadow_weeks ?? 8} 周观察窗口内，数值信号须经分析员验证后方可公开。`)}</p>
   )}
   {guardedAutoMode && (
-    <p class="automation" role="status" data-lang-en={`Guarded automation · ${publication.auto_verification?.policy_version ?? 'guarded_auto_v1'} publishes only current, primary-fit, evidence-linked strong signals. Exceptions go to analyst review.`} data-lang-zh={`受控自动化 · ${publication.auto_verification?.policy_version ?? 'guarded_auto_v1'} 仅自动发布数据新鲜、主模型稳定、证据完整的强信号；例外项才进入人工复核。`}>Guarded automation · {publication.auto_verification?.policy_version ?? 'guarded_auto_v1'} publishes only current, primary-fit, evidence-linked strong signals. Exceptions go to analyst review.</p>
+    <p class="automation" role="status">{pick('Publication safeguard · Only current, evidence-linked strong signals can be published automatically. Exceptions go to analyst review.', '发布保障 · 仅数据新鲜、证据完整的强信号可自动发布；例外项进入分析员复核。')}</p>
   )}
   {exceptionReviewMode && (
-    <p class="calibrated" role="status" data-lang-en={`Calibrated automation · ${publication.automatic_triage?.policy_version ?? 'exception_review_v1'} automates collection, modeling, deduplication, and queueing. Statistical candidates remain private until independently verified; rare-count and fallback candidates enter the analyst queue only with an independent official match.`} data-lang-zh={`校准约束自动化 · ${publication.automatic_triage?.policy_version ?? 'exception_review_v1'} 自动完成采集、建模、去重和分流；统计候选在独立验证前保持非公开，稀有计数与回退模型候选只有匹配独立官方证据才进入人工队列。`}>Calibrated automation · {publication.automatic_triage?.policy_version ?? 'exception_review_v1'} automates collection, modeling, deduplication, and queueing. Statistical candidates remain private until independently verified; rare-count and fallback candidates enter the analyst queue only with an independent official match.</p>
+    <p class="calibrated" role="status">{pick('Independent verification required · Statistical candidates remain private until supported by an independent official source.', '需要独立核验 · 统计候选在获得独立官方来源支持前保持非公开。')}</p>
   )}
   <header>
     <div>
-      <p class="eyebrow" data-lang-en="Situation Room v3" data-lang-zh="全球态势室 v3">Situation Room v3</p>
-      <h2 id={`situation-summary-${snapshot.report.report_id}`} data-lang-en="Today's review brief" data-lang-zh="今日复核简报">Today's review brief</h2>
-      {!compact && <p class="narrative" data-lang-en={snapshot.narrative.en} data-lang-zh={snapshot.narrative.zh}>{snapshot.narrative.en}</p>}
+      <p class="eyebrow">{pick('Situation review', '全球态势复核')}</p>
+      <h2 id={`situation-summary-${snapshot.report.report_id}`}>{pick("Today's review brief", '今日复核简报')}</h2>
+      {!compact && <p class="narrative">{pick(snapshot.narrative.en, snapshot.narrative.zh)}</p>}
     </div>
     <dl class="summary-meta">
-      <div><dt data-lang-en="Provisional periods excluded" data-lang-zh="已排除暂定周期">Provisional periods excluded</dt><dd>{heldBack}</dd></div>
-      <div><dt data-lang-en="Delayed series isolated" data-lang-zh="已隔离延迟序列">Delayed series isolated</dt><dd>{delayed}</dd></div>
-      <div><dt data-lang-en="Attributed risk assessments" data-lang-zh="可归因风险评估">Attributed risk assessments</dt><dd>{assessedRisks}</dd></div>
-      {staleSources > 0 && <div><dt data-lang-en="Unavailable feeds" data-lang-zh="不可用来源">Unavailable feeds</dt><dd>{staleSources}</dd></div>}
+      <div><dt>{pick('Provisional periods excluded', '已排除暂定周期')}</dt><dd>{heldBack}</dd></div>
+      <div><dt>{pick('Delayed series isolated', '已隔离延迟序列')}</dt><dd>{delayed}</dd></div>
+      <div><dt>{pick('Attributed risk assessments', '可归因风险评估')}</dt><dd>{assessedRisks}</dd></div>
+      {staleSources > 0 && <div><dt>{pick('Unavailable feeds', '不可用来源')}</dt><dd>{staleSources}</dd></div>}
     </dl>
   </header>
 
   <dl class="scoreboard">
     {metricCards.map(([title, titleZh, value]) => (
       <div>
-        <dt data-lang-en={String(title)} data-lang-zh={String(titleZh)}>{title}</dt>
+        <dt>{pick(String(title), String(titleZh))}</dt>
         <dd>{formatNumber(Number(value), 0)}</dd>
       </div>
     ))}
@@ -81,17 +79,17 @@ const metricCards = snapshot.report.kind === 'daily'
     <ol class="signal-list">
       {signals.map(signal => (
         <li>
-          <a href={diseaseHref(signal)}>{signal.identity.disease_name}</a>
+          <a href={`${prefix}${diseaseHref(signal)}`}>{signal.identity.disease_name}</a>
           <span>{geographyLabel(signal)} · {signal.identity.metric_label}</span>
-          <b class={`state-${signal.anomaly.state}`} data-lang-en={label(signal.anomaly.state)} data-lang-zh={labelZh(signal.anomaly.state)}>{label(signal.anomaly.state)}</b>
-          <small>q {formatNumber(signal.anomaly.q_value, 4)} · <span data-lang-en={label(signal.assessment.verification_status)} data-lang-zh={labelZh(signal.assessment.verification_status)}>{label(signal.assessment.verification_status)}</span></small>
+          <b class={`state-${signal.anomaly.state}`}>{pick(label(signal.anomaly.state), labelZh(signal.anomaly.state))}</b>
+          <small>q {formatNumber(signal.anomaly.q_value, 4)} · <span>{pick(label(signal.assessment.verification_status), labelZh(signal.assessment.verification_status))}</span></small>
         </li>
       ))}
     </ol>
   ) : (
-    <p class="empty" data-lang-en="No alert-level numerical signal passed this report's quality and effect gates." data-lang-zh="本报告没有数值信号同时通过异常、效应和质量门。">No alert-level numerical signal passed this report's quality and effect gates.</p>
+    <p class="empty">{pick("No alert-level numerical signal passed this report's quality and effect gates.", '本报告没有数值信号同时通过异常、效应和质量门。')}</p>
   )}
-  {compact && <a class="open-report" href="/situation/" data-lang-en="Open full analysis" data-lang-zh="打开完整分析">Open full analysis →</a>}
+  {compact && <a class="open-report" href={`${prefix}/situation/`}>{pick('Open full analysis →', '打开完整分析 →')}</a>}
 </section>
 
 <style>
@@ -101,14 +99,14 @@ const metricCards = snapshot.report.kind === 'daily'
   .calibrated { background: rgb(244 242 255); border: 1px solid rgb(126 111 181); color: rgb(70 54 126); font-size: .72rem; margin: 0; padding: .6rem .75rem; }
   header { align-items: end; border-bottom: 1px solid rgb(var(--border)); display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr) minmax(18rem, .55fr); padding-bottom: 1rem; }
   .eyebrow { color: rgb(var(--color-teal)); font-size: .68rem; font-weight: 800; letter-spacing: .13em; margin: 0 0 .3rem; text-transform: uppercase; }
-  h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: clamp(1.45rem, 3vw, 2rem); line-height: 1.08; margin: 0; }
+  h2 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: clamp(1.45rem, 3vw, 2rem); line-height: 1.08; margin: 0; }
   .compact h2 { font-size: 1.5rem; }
   .narrative { color: rgb(var(--text-muted)); line-height: 1.65; margin: .6rem 0 0; max-width: 58rem; }
   .summary-meta { display: grid; gap: .5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; min-width: 15rem; }
   .summary-meta div { border-left: 2px solid rgb(var(--border)); padding-left: .65rem; }
   dt { color: rgb(var(--text-faint)); font-size: .61rem; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
   .scoreboard dt { color: rgb(var(--text-muted)); }
-  dd { color: rgb(var(--text-strong)); font-family: 'JetBrains Mono', monospace; font-size: .78rem; margin: .14rem 0 0; }
+  dd { color: rgb(var(--text-strong)); font-family: ui-monospace, monospace; font-size: .78rem; margin: .14rem 0 0; }
   .scoreboard { display: grid; gap: .65rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
   .scoreboard div { background: rgb(var(--surface-raised)); border: 1px solid rgb(var(--border)); border-top: 3px solid rgb(var(--color-teal)); padding: .85rem; }
   .scoreboard dd { font-size: 1.55rem; }
@@ -119,7 +117,7 @@ const metricCards = snapshot.report.kind === 'daily'
   .signal-list a { color: rgb(var(--text-strong)); font-size: .9rem; font-weight: 720; text-decoration: none; }
   .signal-list a:hover, .open-report:hover { color: rgb(var(--color-teal)); text-decoration: underline; }
   .signal-list span, .signal-list small { color: rgb(var(--text-faint)); font-size: .68rem; }
-  .signal-list b { border: 1px solid currentColor; font-family: 'JetBrains Mono', monospace; font-size: .62rem; padding: .18rem .4rem; text-transform: uppercase; }
+  .signal-list b { border: 1px solid currentColor; font-family: ui-monospace, monospace; font-size: .62rem; padding: .18rem .4rem; text-transform: uppercase; }
   .state-strong { color: rgb(174 61 67); }
   .state-alert { color: rgb(198 104 44); }
   .state-watch { color: rgb(176 132 30); }

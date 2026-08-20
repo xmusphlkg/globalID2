@@ -3,6 +3,7 @@
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import CountryFlag from '../../components/CountryFlag.astro';
 import DownloadPanel from '../../components/DownloadPanel.astro';
+import PageAnchorNav from '../../components/PageAnchorNav.astro';
 import DiseaseResearchPanel from '../../components/research/DiseaseResearchPanel.astro';
 import DiseaseMonthlyBar from '../../components/charts/DiseaseMonthlyBar';
 import DiseaseCountryCurve from '../../components/charts/DiseaseCountryCurve';
@@ -36,14 +37,20 @@ export async function getStaticPaths() {
   const diseasesPath = resolve('./src/data/diseases/index.json');
   if (!existsSync(diseasesPath)) return [];
   const diseases = JSON.parse(readFileSync(diseasesPath, 'utf-8')) as any[];
-  return diseases.map(d => ({
-    params: { disease: toSeoSlug(d.slug) || d.slug },
-    props: { diseaseId: d.disease_id },
-  }));
+  return diseases.map(d => {
+    const disease = toSeoSlug(d.slug) || d.slug;
+    return {
+      params: { disease },
+      props: { diseaseId: d.disease_id, diseaseSlug: disease, locale: 'en' as 'en' | 'zh' },
+    };
+  });
 }
 
-const { disease } = Astro.params;
-const { diseaseId } = Astro.props as { diseaseId: string };
+interface Props { diseaseId: string; diseaseSlug: string; locale?: 'en' | 'zh'; }
+const { diseaseId, diseaseSlug: disease, locale = 'en' } = Astro.props as Props;
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const localeHref = (path: string) => `${prefix}${path}`;
 
 const dataPath = resolve(`./src/data/diseases/${diseaseId.toLowerCase()}.json`);
 const knowledgePath = resolve(`./src/data/disease-knowledge/${diseaseId.toLowerCase()}.json`);
@@ -231,14 +238,19 @@ const chartSourceMeta = buildChartSourceMeta(
   `${diseaseData?.name_en ?? disease} surveillance dataset`
 );
 const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/${diseaseId.toLowerCase()}.json`;
-const diseaseName = diseaseData?.name_en ?? disease ?? 'Disease';
-const diseaseMetaDescription = buildDiseaseMetaDescription({
-  name: diseaseName,
+const diseaseNameEn = diseaseData?.name_en ?? disease ?? 'Disease';
+const diseaseNameZh = diseaseData?.name_zh ?? diseaseNameEn;
+const diseaseName = zh ? diseaseNameZh : diseaseNameEn;
+const diseaseMetaDescriptionEn = buildDiseaseMetaDescription({
+  name: diseaseNameEn,
   category: diseaseData?.category,
   countryCount,
   start: coverageStart,
   end: coverageEnd,
 });
+const diseaseMetaDescription = zh
+  ? `${diseaseNameZh}全球监测数据，覆盖${countryCount}个报告国家和地区，包含趋势、国家比较、来源与下载。`
+  : diseaseMetaDescriptionEn;
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
 const diseasePageUrl = new URL(Astro.url.pathname, siteOrigin).toString();
 const diseaseSourceUrls = [
@@ -249,13 +261,13 @@ const diseaseSourceUrls = [
 const diseaseDatasetStructuredData = buildDatasetStructuredData({
   id: `${diseasePageUrl}#dataset`,
   url: diseasePageUrl,
-  name: `${diseaseName} infectious disease surveillance dataset`,
+  name: zh ? `${diseaseNameZh}全球监测数据集` : `${diseaseNameEn} infectious disease surveillance dataset`,
   description: diseaseMetaDescription,
   siteOrigin,
   dateModified: diseaseDownload?.generated_at ?? knowledgeUpdatedAt,
   start: coverageStart,
   end: coverageEnd,
-  keywords: [diseaseName, diseaseData?.category, 'infectious disease surveillance', 'public health data']
+  keywords: (zh ? [diseaseNameZh, diseaseData?.category, '传染病监测', '公共卫生数据'] : [diseaseNameEn, diseaseData?.category, 'infectious disease surveillance', 'public health data'])
     .filter((keyword): keyword is string => typeof keyword === 'string' && keyword.length > 0),
   distributions: buildDatasetDistributions({
     entry: diseaseDownload,
@@ -300,7 +312,7 @@ const diseaseIndexable = isIndexableDisease({
   knowledgeSources,
 });
 const diseaseSeo = {
-  title: buildSeoTitle(diseaseName, 'surveillance data', diseaseCoverage),
+  title: zh ? `${diseaseNameZh}监测数据 ${diseaseCoverage} | GIDS` : buildSeoTitle(diseaseNameEn, 'surveillance data', diseaseCoverage),
   description: diseaseMetaDescription,
   canonicalPath: Astro.url.pathname,
   alternatePaths: buildAlternatePaths(Astro.url.pathname, 'en'),
@@ -316,26 +328,27 @@ const diseaseSeo = {
   description={diseaseMetaDescription}
   structuredData={[diseaseMedicalPageStructuredData, diseaseConditionStructuredData, diseaseDatasetStructuredData]}
   seo={diseaseSeo}
+  initialLanguage={locale}
   breadcrumbs={[
-    { label: 'Diseases', href: '/diseases/' },
-    { label: diseaseData?.name_en ?? disease },
+    { label: 'Diseases', labelZh: '疾病', href: localeHref('/diseases/') },
+    { label: diseaseData?.name_en ?? disease, labelZh: diseaseData?.name_zh ?? diseaseData?.name_en ?? disease },
   ]}
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
     {!diseaseData ? (
       <div class="card p-10 sm:p-12 text-center text-[rgb(var(--text-muted))]">
-        Disease data not found. <a href="/diseases/" class="text-brand-400 hover:underline">← Back to directory</a>
+        {zh ? '未找到疾病数据。' : 'Disease data not found.'} <a href={localeHref('/diseases/')} class="text-brand-400 hover:underline">{zh ? '← 返回疾病目录' : '← Back to directory'}</a>
       </div>
     ) : (
       <>
-        <section class="academic-hero">
+        <section id="overview" class="academic-hero scroll-mt-24">
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[rgb(var(--border))/0.68] pb-3">
-            <p class="academic-kicker" data-lang-en="Disease overview" data-lang-zh="疾病概览">
-              Disease overview
+            <p class="academic-kicker">
+              {zh ? '疾病概览' : 'Disease overview'}
             </p>
             <span class={`inline-flex items-center rounded-none px-2.5 py-0.5 text-xs font-semibold ${badgeClass}`}>
-              <span data-lang-en={diseaseData.category} data-lang-zh={categoryZh[diseaseData.category] ?? diseaseData.category}>
-                {diseaseData.category}
+              <span>
+                {zh ? categoryZh[diseaseData.category] ?? diseaseData.category : diseaseData.category}
               </span>
             </span>
           </div>
@@ -344,13 +357,13 @@ const diseaseSeo = {
             <div class="space-y-4">
               <div>
                 <h1 class="academic-title leading-tight">
-                  <span data-lang-en={diseaseData.name_en} data-lang-zh={diseaseData.name_zh}>
-                    {diseaseData.name_en}
+                  <span>
+                    {zh ? diseaseData.name_zh : diseaseData.name_en}
                   </span>
                 </h1>
                 <p class="academic-subtitle mt-2">
-                  <span data-lang-en={diseaseData.name_zh} data-lang-zh={diseaseData.name_en}>
-                    {diseaseData.name_zh}
+                  <span>
+                    {zh ? diseaseData.name_en : diseaseData.name_zh}
                   </span>
                 </p>
               </div>
@@ -360,69 +373,62 @@ const diseaseSeo = {
                   <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-[rgb(var(--border))/0.5] py-2 text-xs text-[rgb(var(--text-faint))]">
                     <span
                       class="font-semibold uppercase tracking-[0.1em]"
-                      data-lang-en="Evidence-backed information"
-                      data-lang-zh="有证据支持的资料"
                     >
-                      Evidence-backed information
+                      {zh ? '有证据支持的资料' : 'Evidence-backed information'}
                     </span>
-                    <span data-lang-en={`EN ${enAvailableSectionCount}/${applicableSectionCount} applicable sections · ZH ${zhAvailableSectionCount}/${applicableSectionCount} applicable sections`} data-lang-zh={`英文 ${enAvailableSectionCount}/${applicableSectionCount} 个适用章节 · 中文 ${zhAvailableSectionCount}/${applicableSectionCount} 个适用章节`}>
-                      EN {enAvailableSectionCount}/{applicableSectionCount} applicable sections · ZH {zhAvailableSectionCount}/{applicableSectionCount} applicable sections
+                    <span>
+                      {zh ? `英文 ${enAvailableSectionCount}/${applicableSectionCount} 个适用章节 · 中文 ${zhAvailableSectionCount}/${applicableSectionCount} 个适用章节` : `EN ${enAvailableSectionCount}/${applicableSectionCount} applicable sections · ZH ${zhAvailableSectionCount}/${applicableSectionCount} applicable sections`}
                     </span>
                     {knowledgeUpdatedAt && (
-                      <span data-lang-en={`Updated ${knowledgeUpdatedEn}`} data-lang-zh={`更新于 ${knowledgeUpdatedZh}`}>
-                        Updated {knowledgeUpdatedEn}
-                      </span>
+                      <span>{zh ? `更新于 ${knowledgeUpdatedZh}` : `Updated ${knowledgeUpdatedEn}`}</span>
                     )}
                   </div>
 
                   {knowledgeDisplayMode === 'partial' && (
                     <p
                       class="academic-note"
-                      data-lang-en="Only information supported by available sources is shown."
-                      data-lang-zh="仅展示有可用来源支持的信息。"
                     >
-                      Only information supported by available sources is shown.
+                      {zh ? '仅展示有可用来源支持的信息。' : 'Only information supported by available sources is shown.'}
                     </p>
                   )}
 
                   {(officialSummaryEn || officialSummaryZh) && (
                     hasCitations(displaySummaryEn) || hasCitations(displaySummaryZh) ? (
                       <p class="max-w-4xl text-sm leading-6 text-[rgb(var(--text))] citation-text"
-                        data-lang-en-html={renderCitations(displaySummaryEn, knowledgeSourceEntries)}
-                        data-lang-zh-html={renderCitations(displaySummaryZh, knowledgeSourceEntries)}
-                        set:html={renderCitations(displaySummaryEn, knowledgeSourceEntries)}
+                        set:html={renderCitations(zh ? displaySummaryZh : displaySummaryEn, knowledgeSourceEntries)}
                       />
                     ) : (
-                      <p class="max-w-4xl text-sm leading-6 text-[rgb(var(--text))]" data-lang-en={displaySummaryEn} data-lang-zh={displaySummaryZh}>
-                        {displaySummaryEn}
+                      <p class="max-w-4xl text-sm leading-6 text-[rgb(var(--text))]">
+                        {zh ? displaySummaryZh : displaySummaryEn}
                       </p>
                     )
                   )}
 
+                  <details class="disease-profile-details">
+                    <summary>
+                      <span>{zh ? '阅读完整临床与流行病学资料' : 'Read the full clinical and epidemiological profile'}</span>
+                      <span>{briefSections.length + (knowledgeSourceEntries.length > 0 ? 1 : 0)}</span>
+                    </summary>
                   <div class="profile-flow">
                     {briefSections.map((section) => (
                       <article class="profile-flow-item">
-                        <div class="academic-meta-label" data-lang-en={section.labelEn} data-lang-zh={section.labelZh}>
-                          {section.labelEn}
+                        <div class="academic-meta-label">
+                          {zh ? section.labelZh : section.labelEn}
                         </div>
                         {section.availableEn !== section.availableZh && (
                           <div
                             class="mt-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-500"
-                            data-lang-en={section.availableEn ? 'English source text only' : 'Chinese source text only'}
-                            data-lang-zh={section.availableZh ? '仅有中文来源内容' : '仅有英文来源内容'}
                           >
-                            {section.availableEn ? 'English source text only' : 'Chinese source text only'}
+                            {zh ? (section.availableZh ? '仅有中文来源内容' : '仅有英文来源内容') : (section.availableEn ? 'English source text only' : 'Chinese source text only')}
                           </div>
                         )}
                         {hasCitations(section.en) || hasCitations(section.zh) ? (
                           <p class="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))] citation-text"
-                            data-lang-en-html={renderCitations(section.en, knowledgeSourceEntries)}
-                            data-lang-zh-html={renderCitations(section.zh, knowledgeSourceEntries)}
-                            set:html={renderCitations(section.en, knowledgeSourceEntries)}
+                            set:html={renderCitations(zh ? section.zh : section.en, knowledgeSourceEntries)}
                           />
                         ) : (
-                          <p class="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={section.en} data-lang-zh={section.zh}>
-                            {section.en}
+                          <p class="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))]">
+                            {zh ? section.zh : section.en}
                           </p>
                         )}
                       </article>
@@ -430,7 +436,7 @@ const diseaseSeo = {
 
                     {knowledgeSourceEntries.length > 0 && (
                     <article class="profile-flow-item">
-                      <div class="academic-meta-label" data-lang-en="References" data-lang-zh="参考文献">References</div>
+                      <div class="academic-meta-label">{zh ? '参考文献' : 'References'}</div>
                       <ol class="mt-3 space-y-2">
                         {knowledgeSourceEntries.map((source: any, index: number) => {
                           const citationIndex = Number(source.citation_index ?? index + 1);
@@ -470,21 +476,22 @@ const diseaseSeo = {
                     </article>
                     )}
                   </div>
+                  </details>
                 </div>
               ) : (
                 <div class="space-y-3">
-                  <p class="academic-kicker" data-lang-en="Background information" data-lang-zh="背景资料">
-                    Background information
+                  <p class="academic-kicker">
+                    {zh ? '背景资料' : 'Background information'}
                   </p>
-                  <p class="max-w-none text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={profileUnavailableMessageEn} data-lang-zh={profileUnavailableMessageZh}>
-                    {profileUnavailableMessageEn}
+                  <p class="max-w-none text-sm leading-6 text-[rgb(var(--text-muted))]">
+                    {zh ? profileUnavailableMessageZh : profileUnavailableMessageEn}
                   </p>
                 </div>
               )}
 
               <div class="grid gap-5 border-t border-[rgb(var(--border))/0.58] pt-5 lg:grid-cols-2">
                 <article class="academic-note bg-transparent">
-                  <div class="academic-meta-label" data-lang-en="Coding Register" data-lang-zh="编码登记">Coding Register</div>
+                  <div class="academic-meta-label">{zh ? '编码登记' : 'Coding Register'}</div>
                   <dl class="mt-3 grid gap-4 sm:grid-cols-2">
                     <div>
                       <dt class="academic-meta-label">ICD-10</dt>
@@ -498,30 +505,28 @@ const diseaseSeo = {
                 </article>
 
                 <article class="academic-note bg-transparent">
-                  <div class="academic-meta-label" data-lang-en="Key Statistics" data-lang-zh="核心统计">Key Statistics</div>
+                  <div class="academic-meta-label">{zh ? '核心统计' : 'Key Statistics'}</div>
                   <dl class="mt-3 grid gap-4 sm:grid-cols-2">
                     <div>
-                      <dt class="academic-meta-label" data-lang-en="Total cases" data-lang-zh="累计病例">Total cases</dt>
+                      <dt class="academic-meta-label">{zh ? '累计病例' : 'Total cases'}</dt>
                       <dd class="academic-meta-value font-serif">{fmtNum(diseaseData.total_cases)}</dd>
                     </div>
                     {hasDeathsData && (
                       <div>
-                        <dt class="academic-meta-label" data-lang-en="Total deaths" data-lang-zh="累计死亡">Total deaths</dt>
+                        <dt class="academic-meta-label">{zh ? '累计死亡' : 'Total deaths'}</dt>
                         <dd class="academic-meta-value font-serif text-red-400">{fmtNum(diseaseData.total_deaths)}</dd>
                       </div>
                     )}
                     <div>
-                      <dt class="academic-meta-label" data-lang-en="Peak month" data-lang-zh="峰值月份">Peak month</dt>
+                      <dt class="academic-meta-label">{zh ? '峰值月份' : 'Peak month'}</dt>
                       <dd class="academic-meta-value font-serif text-amber-400">{peakMonth}</dd>
                     </div>
                     <div>
-                      <dt class="academic-meta-label" data-lang-en="Coverage" data-lang-zh="覆盖区间">Coverage</dt>
+                      <dt class="academic-meta-label">{zh ? '覆盖区间' : 'Coverage'}</dt>
                       <dd
                         class="academic-meta-value text-sm font-medium"
-                        data-lang-en={`${countryCount} reporting countries · ${coverageLabel}`}
-                        data-lang-zh={`${countryCount} 个报告国家 · ${coverageLabel}`}
                       >
-                        {countryCount} reporting countries · {coverageLabel}
+                        {zh ? `${countryCount} 个报告国家 · ${coverageLabel}` : `${countryCount} reporting countries · ${coverageLabel}`}
                       </dd>
                     </div>
                   </dl>
@@ -531,46 +536,47 @@ const diseaseSeo = {
           </div>
         </section>
 
+        <PageAnchorNav locale={locale} items={[
+          { href: '#coverage', label: 'Coverage', labelZh: '覆盖范围' },
+          { href: '#trends', label: 'Trends & comparison', labelZh: '趋势与比较' },
+          { href: '#research', label: 'Research', labelZh: '研究证据' },
+          { href: '#downloads', label: 'Download & methods', labelZh: '下载与方法' },
+        ]} />
+
         {countryCount > 0 && (
-          <section class="figure-panel">
+          <section id="coverage" class="figure-panel scroll-mt-24">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p class="figure-kicker" data-lang-en="Coverage" data-lang-zh="数据覆盖">Coverage</p>
-                <h2 class="figure-title" data-lang-en="Reporting countries and regions" data-lang-zh="报告国家和地区">
-                  Reporting countries and regions
+                <p class="figure-kicker">{zh ? '数据覆盖' : 'Coverage'}</p>
+                <h2 class="figure-title">
+                  {zh ? '报告国家和地区' : 'Reporting countries and regions'}
                 </h2>
                 <p
                   class="figure-caption"
-                  data-lang-en="Select a country or region to view its complete surveillance profile."
-                  data-lang-zh="选择国家或地区，查看完整的监测资料。"
                 >
-                  Select a country or region to view its complete surveillance profile.
+                  {zh ? '选择国家或地区，查看完整的监测资料。' : 'Select a country or region to view its complete surveillance profile.'}
                 </p>
               </div>
               <span
                 class="site-control-pill inline-flex w-fit items-center border px-3 py-1.5 text-xs"
-                data-lang-en={`${countryCount} ${countryCount === 1 ? 'location' : 'locations'}`}
-                data-lang-zh={`${countryCount} 个国家/地区`}
               >
-                {countryCount} {countryCount === 1 ? 'location' : 'locations'}
+                {zh ? `${countryCount} 个国家/地区` : `${countryCount} ${countryCount === 1 ? 'location' : 'locations'}`}
               </span>
             </div>
             <ul class="reporting-country-grid">
               {reportingCountries.map(({ code, nameEn, nameZh }) => (
                 <li>
                   <a
-                    href={`/countries/${code.toLowerCase()}/`}
+                    href={localeHref(`/countries/${code.toLowerCase()}/`)}
                     class="reporting-country-link focus-ring group"
-                    aria-label={`${nameEn} surveillance profile`}
+                    aria-label={zh ? `${nameZh}监测资料` : `${nameEn} surveillance profile`}
                   >
                     <CountryFlag code={code} name={`${nameEn} flag`} sizeClass="h-8 w-11 shrink-0" />
                     <span class="min-w-0 flex-1">
                       <span
                         class="reporting-country-name"
-                        data-lang-en={nameEn}
-                        data-lang-zh={nameZh}
                       >
-                        {nameEn}
+                        {zh ? nameZh : nameEn}
                       </span>
                       <span class="reporting-country-code">{code}</span>
                     </span>
@@ -585,12 +591,12 @@ const diseaseSeo = {
         )}
 
         {countryCount > 0 && (
-          <section class="figure-panel">
-              <h2 class="figure-title" data-lang-en="Trends by reporting country" data-lang-zh="各报告国家的趋势">
-                Trends by reporting country
+          <section id="trends" class="figure-panel scroll-mt-24">
+              <h2 class="figure-title">
+                {zh ? '各报告国家的趋势' : 'Trends by reporting country'}
               </h2>
-              <p class="figure-caption mt-2" data-lang-en="Inspect one country first, or select any number of reporting countries for comparison. The chart automatically handles common time windows and separates incompatible reporting frequencies." data-lang-zh="默认先查看一个国家；需要时可选择任意数量的报告国家进行比较。图表会自动处理共同时间窗，并将不兼容的报告频率分开显示。">
-                Inspect one country first, or select any number of reporting countries for comparison. The chart automatically handles common time windows and separates incompatible reporting frequencies.
+              <p class="figure-caption mt-2">
+                {zh ? '默认先查看一个国家；需要时可选择任意数量的报告国家进行比较。图表会自动处理共同时间窗，并将不兼容的报告频率分开显示。' : 'Inspect one country first, or select any number of reporting countries for comparison. The chart automatically handles common time windows and separates incompatible reporting frequencies.'}
               </p>
               <div class="mt-5">
               <DiseaseCountryCurve
@@ -599,6 +605,7 @@ const diseaseSeo = {
                 topN={countryCount}
                 height={380}
                 sourceMeta={chartSourceMeta}
+                initialLanguage={locale}
               />
             </div>
           </section>
@@ -606,8 +613,8 @@ const diseaseSeo = {
 
         {diseaseData.global_monthly?.months?.length > 0 && (
           <section class="figure-panel">
-              <h2 class="figure-title" data-lang-en="Monthly patterns over time" data-lang-zh="月度变化趋势">
-                Monthly patterns over time
+              <h2 class="figure-title">
+                {zh ? '月度变化趋势' : 'Monthly patterns over time'}
               </h2>
               <div class="mt-5">
               <DiseaseMonthlyBar
@@ -615,31 +622,53 @@ const diseaseSeo = {
                 dataUrl={diseaseDataUrl}
                 height={360}
                 sourceMeta={chartSourceMeta}
+                initialLanguage={locale}
               />
             </div>
           </section>
         )}
 
-        <DiseaseResearchPanel diseaseId={diseaseId} />
+        <div id="research" class="scroll-mt-24"><DiseaseResearchPanel diseaseId={diseaseId} locale={locale} /></div>
 
         {diseaseDownload && (
-          <DownloadPanel
+          <div id="downloads" class="scroll-mt-24"><DownloadPanel
             entry={{ ...diseaseDownload, source_info: diseaseData?.source_info }}
             title="Download data"
+            initialLanguage={locale}
             descriptionEn="Download the data index used for this page, including source links and update information."
             descriptionZh="下载本页面使用的数据索引，包含来源链接和更新时间。"
-          />
+          /></div>
         )}
 
         <div class="border-t border-[rgb(var(--border))/0.72] pt-4">
-          <a href="/diseases/" class="flex items-center gap-2 text-sm text-[rgb(var(--text-muted))] transition-colors hover:text-brand-500">
+          <a href={localeHref('/diseases/')} class="flex items-center gap-2 text-sm text-[rgb(var(--text-muted))] transition-colors hover:text-brand-500">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
-            <span data-lang-en="Back to Disease Directory" data-lang-zh="返回疾病目录">Back to Disease Directory</span>
+            <span>{zh ? '返回疾病目录' : 'Back to Disease Directory'}</span>
           </a>
         </div>
       </>
     )}
   </div>
 </ReportLayout>
+
+<style>
+  .reporting-country-grid { display: grid; grid-template-columns: 1fr; gap: .75rem; margin-top: 1.25rem; }
+  .reporting-country-link { display: flex; min-height: 3.5rem; align-items: center; gap: .75rem; padding: .5rem .75rem; color: rgb(var(--text-strong)); background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); transition: border-color .18s ease, background-color .18s ease; }
+  .reporting-country-link:hover { background: rgb(var(--bg-soft)); border-color: rgb(var(--border-soft)); }
+  .reporting-country-name { display: block; overflow: hidden; font-size: .875rem; font-weight: 600; line-height: 1.25rem; text-overflow: ellipsis; white-space: nowrap; }
+  .reporting-country-code { display: block; margin-top: .125rem; color: rgb(var(--text-faint)); font-family: ui-monospace, monospace; font-size: .625rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
+  .reporting-country-arrow { width: 1rem; height: 1rem; flex: 0 0 auto; color: rgb(var(--text-faint)); transition: color .18s ease, transform .18s ease; }
+  .reporting-country-link:hover .reporting-country-arrow { color: rgb(var(--color-brand)); transform: translateX(2px); }
+  .profile-flow { column-count: 1; column-gap: 2rem; }
+  .profile-flow-item { display: inline-block; width: 100%; margin: 0 0 1.25rem; padding-left: 1rem; border-left: 2px solid rgb(var(--border) / .56); break-inside: avoid; }
+  .disease-profile-details { border-top: 1px solid rgb(var(--border)); }
+  .disease-profile-details > summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 0; color: rgb(var(--color-teal)); cursor: pointer; font-size: .78rem; font-weight: 650; list-style: none; }
+  .disease-profile-details > summary::-webkit-details-marker { display: none; }
+  .disease-profile-details > summary span:last-child { display: grid; min-width: 1.8rem; height: 1.8rem; place-items: center; color: rgb(var(--text-muted)); border: 1px solid rgb(var(--border)); font-family: ui-monospace, monospace; font-size: .64rem; }
+  .disease-profile-details .profile-flow { padding-top: .75rem; }
+  @media (min-width: 640px) { .reporting-country-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+  @media (min-width: 1024px) { .reporting-country-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } .profile-flow { column-count: 2; column-gap: 2.5rem; column-rule: 1px solid rgb(var(--border) / .5); } }
+  @media (min-width: 1280px) { .reporting-country-grid { grid-template-columns: repeat(4,minmax(0,1fr)); } }
+</style>

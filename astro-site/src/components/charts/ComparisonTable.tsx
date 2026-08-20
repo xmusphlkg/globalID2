@@ -1,7 +1,7 @@
 // src/components/charts/ComparisonTable.tsx
 // Sortable, filterable disease comparison table with optional deaths/CFR columns.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CountryDatasetSeriesEntry } from './countryDataset';
 import { useChartLanguage } from './chartPreferences';
 import { useCountryDataset } from './useCountryDataset';
@@ -26,6 +26,7 @@ interface Props {
   countryCode?: string;
   series?: Record<string, CountryDatasetSeriesEntry>;
   dataUrl?: string;
+  initialLanguage?: 'en' | 'zh';
 }
 
 type SortKey = 'name_en' | 'total_cases' | 'total_deaths' | 'latest_cases' | 'category';
@@ -41,10 +42,19 @@ const CATEGORY_STYLES: Record<string, string> = {
   Fungal: 'bg-violet-600/10 text-violet-700 ring-1 ring-violet-600/20 dark:bg-violet-500/12 dark:text-violet-300 dark:ring-violet-500/20',
 };
 
-function Badge({ category }: { category: string }) {
+const CATEGORY_LABEL_ZH: Record<string, string> = {
+  All: '全部',
+  Viral: '病毒性',
+  Bacterial: '细菌性',
+  Parasitic: '寄生虫性',
+  Fungal: '真菌性',
+  Other: '其他',
+};
+
+function Badge({ category, lang }: { category: string; lang: 'en' | 'zh' }) {
   return (
-    <span className={`inline-flex items-center rounded-none px-2 py-0.5 text-xs font-medium ${CATEGORY_STYLES[category] ?? 'bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30'}`}>
-      {category}
+    <span className={`inline-flex items-center rounded-none px-2 py-0.5 text-xs font-medium ${CATEGORY_STYLES[category] ?? 'bg-[rgb(var(--surface))] text-[rgb(var(--text))] ring-1 ring-[rgb(var(--border))]'}`}>
+      {lang === 'zh' ? CATEGORY_LABEL_ZH[category] ?? category : category}
     </span>
   );
 }
@@ -128,7 +138,8 @@ function Sparkline({
   );
 }
 
-export default function ComparisonTable({ rows, countryCode, series: initialSeries, dataUrl }: Props) {
+export default function ComparisonTable({ rows, countryCode, series: initialSeries, dataUrl, initialLanguage = 'en' }: Props) {
+  void countryCode;
   const hasInitialSeries = Boolean(initialSeries && Object.keys(initialSeries).length > 0);
   const remoteDataset = useCountryDataset(dataUrl, !hasInitialSeries);
   const series = initialSeries ?? remoteDataset.data?.disease_series;
@@ -138,7 +149,7 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
   const [search, setSearch] = useState('');
   const [visibleRowCount, setVisibleRowCount] = useState(INITIAL_VISIBLE_ROWS);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const lang = useChartLanguage();
+  const lang = useChartLanguage(initialLanguage);
   const shellRef = useRef<HTMLDivElement>(null);
 
   const hasDeathsData = useMemo(
@@ -211,7 +222,7 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
     sortKey === col ? (
       <span className="ml-1 text-brand-400">{sortDir === 'asc' ? '↑' : '↓'}</span>
     ) : (
-      <span className="ml-1 text-slate-600">↕</span>
+      <span className="ml-1 text-[rgb(var(--text-muted))]">↕</span>
     );
 
   async function toggleFullscreen() {
@@ -233,7 +244,10 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
       {/* Toolbar */}
       <div className="comparison-toolbar">
         <input
+          id="comparison-disease-search"
+          name="comparison-disease-search"
           type="search"
+          aria-label={lang === 'zh' ? '搜索疾病' : 'Search diseases'}
           placeholder={lang === 'zh' ? '搜索疾病…' : 'Search diseases…'}
           value={search}
           onChange={e => {
@@ -257,7 +271,7 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
                   : ''
               }`}
             >
-              {cat}
+              {lang === 'zh' ? CATEGORY_LABEL_ZH[cat] ?? cat : cat}
             </button>
           ))}
         </div>
@@ -307,9 +321,9 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
       <div className="comparison-table-wrap">
         <table id="disease-comparison-table" className="comparison-table text-sm">
           <thead>
-            <tr className="site-table-head border-b border-slate-700/60 text-left">
+            <tr className="site-table-head border-b border-[rgb(var(--border))] text-left">
               <th
-                className="site-table-head-cell comparison-head-sticky px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-slate-300"
+                className="site-table-head-cell comparison-head-sticky px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-[rgb(var(--text))]"
                 onClick={() => handleSort('name_en')}
               >
                 {lang === 'zh' ? '疾病' : 'Disease'} <SortIcon col="name_en" />
@@ -318,26 +332,26 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
                 {lang === 'zh' ? '趋势' : 'Trend'}
               </th>
               <th
-                className="site-table-head-cell px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-slate-300"
+                className="site-table-head-cell px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-[rgb(var(--text))]"
                 onClick={() => handleSort('category')}
               >
                 {lang === 'zh' ? '分类' : 'Category'} <SortIcon col="category" />
               </th>
               <th
-                className="site-table-head-cell px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-slate-300 text-right"
+                className="site-table-head-cell px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-[rgb(var(--text))] text-right"
                 onClick={() => handleSort('total_cases')}
               >
                 {lang === 'zh' ? '累计病例' : 'Total Cases'} <SortIcon col="total_cases" />
               </th>
               <th
-                className="site-table-head-cell px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-slate-300 text-right"
+                className="site-table-head-cell px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-[rgb(var(--text))] text-right"
                 onClick={() => handleSort('latest_cases')}
               >
                 {lang === 'zh' ? '最新病例' : 'Latest Cases'} <SortIcon col="latest_cases" />
               </th>
               {showDeaths && (
                 <th
-                  className="site-table-head-cell px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-slate-300 text-right"
+                  className="site-table-head-cell px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-[rgb(var(--text))] text-right"
                   onClick={() => handleSort('total_deaths')}
                 >
                   {lang === 'zh' ? '累计死亡' : 'Total Deaths'} <SortIcon col="total_deaths" />
@@ -350,10 +364,10 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800">
+          <tbody className="divide-y divide-[rgb(var(--border))]">
             {visibleRows.map(row => {
               const cfr = row.total_cases > 0 ? (row.total_deaths / row.total_cases) * 100 : null;
-              const diseasePath = `/diseases/${toSeoSlug(row.slug)}/`;
+              const diseasePath = `${lang === 'zh' ? '/zh' : ''}/diseases/${toSeoSlug(row.slug)}/`;
               return (
                 <tr key={row.disease_id} className="site-table-row-hover transition-colors group">
                   <td className="comparison-cell-sticky px-4 py-3">
@@ -375,7 +389,7 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <Badge category={row.category} />
+                    <Badge category={row.category} lang={lang} />
                   </td>
                   <td className="comparison-cell-number px-4 py-3 text-right tabular-nums">
                     {fmtNum(row.total_cases)}
@@ -456,7 +470,7 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
         </table>
       </div>
       {visibleRows.length < displayed.length && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[rgb(var(--border))] px-4 py-3 text-sm">
           <span className="comparison-cell-secondary" aria-live="polite">
             {lang === 'zh'
               ? `已显示 ${visibleRows.length} / ${displayed.length} 种疾病`

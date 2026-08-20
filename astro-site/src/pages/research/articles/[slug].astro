@@ -4,20 +4,27 @@ import { resolve } from 'node:path';
 import ReportLayout from '../../../layouts/ReportLayout.astro';
 import researchData from '../../../data/research/index.json';
 import { integrityAlertLabel, normalizeIntegrityAlerts } from '../../../lib/research-integrity';
+import { buildAlternatePaths } from '../../../lib/seo';
 
 export function getStaticPaths() {
   const data: any = researchData;
   return [...(data.articles ?? []), ...(data.preprints ?? [])]
-    .map((article: any) => ({ params: { slug: article.slug } }));
+    .map((article: any) => ({ params: { slug: article.slug }, props: { articleSlug: article.slug, locale: 'en' } }));
 }
 
-const { slug } = Astro.params;
+interface Props { articleSlug?: string; locale?: 'en' | 'zh' }
+const { articleSlug = '', locale = 'en' } = Astro.props as Props;
+const slug = articleSlug;
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const localeHref = (href: string) => zh && href.startsWith('/') ? `${prefix}${href}` : href;
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 const file = resolve(`./src/data/research/articles/${slug}.json`);
 const article: any = existsSync(file)
   ? JSON.parse(readFileSync(file, 'utf-8'))
   : [...((researchData as any).articles ?? []), ...((researchData as any).preprints ?? [])]
     .find((item: any) => item.slug === slug);
-if (!article) return Astro.redirect('/research/');
+if (!article) return Astro.redirect(localeHref('/research/'));
 const isPreprint = article.peer_review_status === 'preprint';
 const versionRelation = (article.version_relations ?? []).find((relation: any) => (
   isPreprint
@@ -63,6 +70,7 @@ const structuredArticle = {
   identifier: article.doi ? `https://doi.org/${article.doi}` : article.pmid ? `PMID:${article.pmid}` : article.article_id,
   sameAs: originalUrl,
   about: (article.diseases ?? []).map((disease: any) => ({ '@type': 'MedicalCondition', name: disease.name_en })),
+  inLanguage: zh ? 'zh-CN' : 'en',
 };
 const graph = article.knowledge_graph ?? { stats: {}, edges: [] };
 const summaryProvenance = summaryEn.provenance ?? summaryZh.provenance ?? null;
@@ -78,17 +86,20 @@ const relatedArticles = article.related_articles ?? [];
 const isIndexableEvidencePage = article.indexable !== false
   && Boolean(article.summary?.en)
   && Boolean(article.summary?.zh);
+const canonicalPath = localeHref(`/research/articles/${article.slug}/`);
+const pageDescription = pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en);
 ---
 
 <ReportLayout
   title={article.title}
-  description={article.why_it_matters_en}
+  description={pageDescription}
+  initialLanguage={locale}
   seo={{
     title: `${article.title} | GIDS`,
-    description: article.why_it_matters_en,
-    locale: 'en',
-    canonicalPath: `/research/articles/${article.slug}/`,
-    alternatePaths: { en: `/research/articles/${article.slug}/` },
+    description: pageDescription,
+    locale,
+    canonicalPath,
+    alternatePaths: buildAlternatePaths(canonicalPath, locale),
     pageType: 'MedicalWebPage',
     image: `/research/cards/${article.slug}.png`,
     noindex: !isIndexableEvidencePage,
@@ -97,67 +108,67 @@ const isIndexableEvidencePage = article.indexable !== false
   }}
   structuredData={structuredArticle}
   breadcrumbs={[
-    { label: 'Research Radar', labelZh: '研究雷达', href: '/research/' },
-    ...(isPreprint ? [{ label: 'Preprints', labelZh: '预印本', href: '/research/preprints/' }] : []),
+    { label: 'Research Radar', labelZh: '研究雷达', href: localeHref('/research/') },
+    ...(isPreprint ? [{ label: 'Preprints', labelZh: '预印本', href: localeHref('/research/preprints/') }] : []),
     { label: 'Evidence summary', labelZh: '证据摘要' },
   ]}
 >
   <article class="evidence-page">
     <header class="academic-hero evidence-header">
       <div class="evidence-badges">
-        <span data-lang-en={article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint'} data-lang-zh={article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本'}>{article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint'}</span>
-        {isPreprint && versionRelation && <span class="version-available" data-lang-en="Peer-reviewed version available" data-lang-zh="已有同行评议版本">Peer-reviewed version available</span>}
-        {showCorrectionHistory && <span class="integrity-corrected" data-lang-en="Correction recorded" data-lang-zh="已记录更正">Correction recorded</span>}
-        {isHistoricalBaseline && <span class="history" data-lang-en="Historical baseline" data-lang-zh="历史基线">Historical baseline</span>}
-        {article.open_access_status === 'open' && <span class="oa" data-lang-en="Open access" data-lang-zh="开放获取">Open access</span>}
-        {(article.diseases ?? []).map((disease: any) => <span data-lang-en={disease.name_en} data-lang-zh={disease.name_zh ?? disease.name_en}>{disease.name_en}</span>)}
+        <span>{article.peer_review_status === 'peer_reviewed' ? pick('Peer reviewed', '同行评议') : pick('Preprint', '预印本')}</span>
+        {isPreprint && versionRelation && <span class="version-available">{pick('Peer-reviewed version available', '已有同行评议版本')}</span>}
+        {showCorrectionHistory && <span class="integrity-corrected">{pick('Correction recorded', '已记录更正')}</span>}
+        {isHistoricalBaseline && <span class="history">{pick('Historical baseline', '历史基线')}</span>}
+        {article.open_access_status === 'open' && <span class="oa">{pick('Open access', '开放获取')}</span>}
+        {(article.diseases ?? []).map((disease: any) => <span>{pick(disease.name_en, disease.name_zh ?? disease.name_en)}</span>)}
       </div>
       <h1>{article.title}</h1>
-      <p class="evidence-citation"><span>{article.journal ?? 'Journal unavailable'}</span><span>·</span><time datetime={article.published_at} data-lang-en={publicationDateEn} data-lang-zh={publicationDateZh}>{publicationDateEn}</time></p>
+      <p class="evidence-citation"><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')}</span><span>·</span><time datetime={article.published_at}>{pick(publicationDateEn, publicationDateZh)}</time></p>
       {authorLine && <p class="evidence-authors">{authorLine}</p>}
       <dl class="evidence-register">
         <div><dt>DOI</dt><dd>{article.doi ?? '—'}</dd></div>
         <div><dt>PMID</dt><dd>{article.pmid ?? '—'}</dd></div>
         <div><dt>PMCID</dt><dd>{article.pmcid ?? '—'}</dd></div>
         <div><dt>OpenAlex</dt><dd>{article.openalex_id ?? '—'}</dd></div>
-        <div><dt data-lang-en="Study type" data-lang-zh="研究类型">Study type</dt><dd>{article.study_type ?? 'Journal article'}</dd></div>
-        <div><dt data-lang-en="Publisher" data-lang-zh="出版商">Publisher</dt><dd data-lang-en={article.publisher ?? 'Publisher unavailable'} data-lang-zh={article.publisher ?? '出版商暂缺'}>{article.publisher ?? 'Publisher unavailable'}</dd></div>
-        <div><dt data-lang-en="Article type" data-lang-zh="文章类型">Article type</dt><dd>{article.article_type ?? 'journal-article'}</dd></div>
-        <div><dt data-lang-en="Integrity" data-lang-zh="完整性状态">Integrity</dt><dd data-lang-en={article.integrity_status === 'corrected' ? 'Corrected' : article.integrity_status} data-lang-zh={article.integrity_status === 'corrected' ? '已更正' : article.integrity_status}>{article.integrity_status === 'corrected' ? 'Corrected' : article.integrity_status}</dd></div>
+        <div><dt>{pick('Study type', '研究类型')}</dt><dd>{article.study_type ?? pick('Journal article', '期刊论文')}</dd></div>
+        <div><dt>{pick('Publisher', '出版商')}</dt><dd>{article.publisher ?? pick('Publisher unavailable', '出版商暂缺')}</dd></div>
+        <div><dt>{pick('Article type', '文章类型')}</dt><dd>{article.article_type ?? 'journal-article'}</dd></div>
+        <div><dt>{pick('Integrity', '完整性状态')}</dt><dd>{article.integrity_status === 'corrected' ? pick('Corrected', '已更正') : article.integrity_status}</dd></div>
       </dl>
     </header>
 
     {showCorrectionHistory && (
       <section class="integrity-correction-notice" aria-labelledby="correction-notice-title">
         <div>
-          <p class="evidence-kicker" data-lang-en="Integrity update" data-lang-zh="完整性更新">Integrity update</p>
-          <h2 id="correction-notice-title" data-lang-en="This public record has a correction history" data-lang-zh="此公开记录存在更正历史">This public record has a correction history</h2>
+          <p class="evidence-kicker">{pick('Integrity update', '完整性更新')}</p>
+          <h2 id="correction-notice-title">{pick('This public record has a correction history', '此公开记录存在更正历史')}</h2>
         </div>
-        <p data-lang-en="Review the dated events and verify the linked source record before using the findings." data-lang-zh="使用研究结论前，请查看带日期的事件并核对所链接的来源记录。">Review the dated events and verify the linked source record before using the findings.</p>
-        <a href="/research/integrity/" data-lang-en="All integrity alerts →" data-lang-zh="查看全部完整性通知 →">All integrity alerts →</a>
+        <p>{pick('Review the dated events and verify the linked source record before using the findings.', '使用研究结论前，请查看带日期的事件并核对所链接的来源记录。')}</p>
+        <a href={localeHref('/research/integrity/')}>{pick('All integrity alerts →', '查看全部完整性通知 →')}</a>
       </section>
     )}
 
     {versionRelation && versionTargetUrl && (
       <section class="version-link-notice" aria-labelledby="version-link-title">
         <div>
-          <p class="evidence-kicker" data-lang-en="Publication version" data-lang-zh="发表版本">Publication version</p>
-          <h2 id="version-link-title" data-lang-en={isPreprint ? 'A peer-reviewed version is available' : 'This article has a linked preprint'} data-lang-zh={isPreprint ? '已有同行评议版本' : '本文关联一个预印本版本'}>{isPreprint ? 'A peer-reviewed version is available' : 'This article has a linked preprint'}</h2>
+          <p class="evidence-kicker">{pick('Publication version', '发表版本')}</p>
+          <h2 id="version-link-title">{isPreprint ? pick('A peer-reviewed version is available', '已有同行评议版本') : pick('This article has a linked preprint', '本文关联一个预印本版本')}</h2>
         </div>
-        <p data-lang-en="The relationship comes from Crossref version metadata. Compare both records because findings and wording may have changed between versions." data-lang-zh="该关系来自 Crossref 版本元数据。不同版本之间的结果与表述可能变化，请对照核验。">The relationship comes from Crossref version metadata. Compare both records because findings and wording may have changed between versions.</p>
-        <a href={versionTargetUrl} target={versionTargetUrl.startsWith('http') ? '_blank' : undefined} rel={versionTargetUrl.startsWith('http') ? 'noopener noreferrer' : undefined} data-lang-en={isPreprint ? 'Open peer-reviewed version →' : 'Open linked preprint →'} data-lang-zh={isPreprint ? '查看同行评议版本 →' : '查看关联预印本 →'}>{isPreprint ? 'Open peer-reviewed version →' : 'Open linked preprint →'}</a>
+        <p>{pick('The relationship comes from Crossref version metadata. Compare both records because findings and wording may have changed between versions.', '该关系来自 Crossref 版本元数据。不同版本之间的结果与表述可能变化，请对照核验。')}</p>
+        <a href={versionTargetUrl} target={versionTargetUrl.startsWith('http') ? '_blank' : undefined} rel={versionTargetUrl.startsWith('http') ? 'noopener noreferrer' : undefined}>{isPreprint ? pick('Open peer-reviewed version →', '查看同行评议版本 →') : pick('Open linked preprint →', '查看关联预印本 →')}</a>
       </section>
     )}
 
     <div class="evidence-layout">
       <main>
         <section class="evidence-context">
-          <p class="evidence-kicker" data-lang-en="Why this research matters now" data-lang-zh="为何这项研究现在值得关注">Why this research matters now</p>
-          <p data-lang-en={article.why_it_matters_en} data-lang-zh={article.why_it_matters_zh}>{article.why_it_matters_en}</p>
+          <p class="evidence-kicker">{pick('Why this research matters now', '为何这项研究现在值得关注')}</p>
+          <p>{pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en)}</p>
         </section>
         {showCorrectionHistory && (
           <section class="evidence-surveillance article-integrity-history" aria-labelledby="article-integrity-title">
-            <div class="section-title"><span>!</span><h2 id="article-integrity-title" data-lang-en="Correction event history" data-lang-zh="更正事件历史">Correction event history</h2></div>
+            <div class="section-title"><span>!</span><h2 id="article-integrity-title">{pick('Correction event history', '更正事件历史')}</h2></div>
             <ol>
               {integrityEvents.map(event => {
                 const labelEn = integrityAlertLabel(event.event_type);
@@ -171,16 +182,16 @@ const isIndexableEvidencePage = article.indexable !== false
                   ? parsedDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
                   : '日期暂缺';
                 return <li>
-                  <div><strong data-lang-en={labelEn} data-lang-zh={labelZh}>{labelEn}</strong><time datetime={dateValue} data-lang-en={dateEn} data-lang-zh={dateZh}>{dateEn}</time></div>
+                  <div><strong>{pick(labelEn, labelZh)}</strong><time datetime={dateValue}>{pick(dateEn, dateZh)}</time></div>
                   <span>{event.source}</span>
-                  {event.source_url && <a href={event.source_url} target="_blank" rel="noopener noreferrer" data-lang-en="Verify source record ↗" data-lang-zh="核对来源记录 ↗">Verify source record ↗</a>}
+                  {event.source_url && <a href={event.source_url} target="_blank" rel="noopener noreferrer">{pick('Verify source record ↗', '核对来源记录 ↗')}</a>}
                 </li>;
               })}
             </ol>
           </section>
         )}
         <section class="evidence-sections">
-          <div class="section-title"><span>01</span><h2 data-lang-en="Structured evidence summary" data-lang-zh="结构化证据摘要">Structured evidence summary</h2></div>
+          <div class="section-title"><span>01</span><h2>{pick('Structured evidence summary', '结构化证据摘要')}</h2></div>
           {evidenceSections.map(([labelEn, labelZh, key]) => {
             const valueEn = summaryEn[key];
             const valueZh = summaryZh[key];
@@ -190,49 +201,49 @@ const isIndexableEvidencePage = article.indexable !== false
             const fallbackZh = key === 'limitations'
               ? '根据现有元数据，尚无法充分评估研究局限。'
               : '该字段尚无通过质量门控的证据摘要，请查阅原始文献。';
-            return <div class:list={['evidence-section', !valueEn && !valueZh && 'evidence-section-pending']}><h3 data-lang-en={labelEn} data-lang-zh={labelZh}>{labelEn}</h3><p data-lang-en={valueEn ?? fallbackEn} data-lang-zh={valueZh ?? fallbackZh}>{valueEn ?? fallbackEn}</p></div>;
+            return <div class:list={['evidence-section', !valueEn && !valueZh && 'evidence-section-pending']}><h3>{pick(labelEn, labelZh)}</h3><p>{pick(valueEn ?? fallbackEn, valueZh ?? fallbackZh)}</p></div>;
           })}
         </section>
 
         {(article.diseases ?? []).length > 0 && (
           <section class="evidence-surveillance">
-            <div class="section-title"><span>02</span><h2 data-lang-en="Related GIDS surveillance" data-lang-zh="相关 GIDS 监测">Related GIDS surveillance</h2></div>
+            <div class="section-title"><span>02</span><h2>{pick('Related GIDS surveillance', '相关 GIDS 监测')}</h2></div>
             {relatedSignals.length > 0 && <div class="related-signal-context">
-              <p class="evidence-kicker" data-lang-en="Active Situation Room context" data-lang-zh="当前全球态势室背景">Active Situation Room context</p>
+              <p class="evidence-kicker">{pick('Active Situation Room context', '当前全球态势室背景')}</p>
               <div class="related-signal-list">{relatedSignals.map((signal: any) => {
-                const places = (signal.geographies ?? []).map((item: any) => item.name_en).join(' · ') || 'Geography unavailable';
+                const places = (signal.geographies ?? []).map((item: any) => pick(item.name_en, item.name_zh ?? item.name_en)).join(' · ') || pick('Geography unavailable', '地理范围暂缺');
                 const relationEn = signal.relation_level === 'exact_disease_geography' ? 'Exact disease + geography match' : 'Disease context only';
                 const relationZh = signal.relation_level === 'exact_disease_geography' ? '疾病 + 地区精确匹配' : '仅疾病背景';
-                return <a href={signal.situation_url}>
-                  <div><span data-lang-en={signal.disease_name_en} data-lang-zh={signal.disease_name_zh ?? signal.disease_name_en}>{signal.disease_name_en}</span><small>{places} · {signal.data_through ?? '—'}</small></div>
+                return <a href={localeHref(signal.situation_url)}>
+                  <div><span>{pick(signal.disease_name_en, signal.disease_name_zh ?? signal.disease_name_en)}</span><small>{places} · {signal.data_through ?? '—'}</small></div>
                   {signal.window?.change_pct != null && <strong>{signal.window.change_pct > 0 ? '+' : ''}{signal.window.change_pct}%</strong>}
-                  <em data-lang-en={relationEn} data-lang-zh={relationZh}>{relationEn}</em>
+                  <em>{pick(relationEn, relationZh)}</em>
                 </a>;
               })}</div>
-              <p class="signal-context-note" data-lang-en="A disease-only match provides background reading; it is not evidence about the signal geography or cause." data-lang-zh="仅疾病匹配只提供背景阅读，并不是关于信号地区或成因的证据。">A disease-only match provides background reading; it is not evidence about the signal geography or cause.</p>
+              <p class="signal-context-note">{pick('A disease-only match provides background reading; it is not evidence about the signal geography or cause.', '仅疾病匹配只提供背景阅读，并不是关于信号地区或成因的证据。')}</p>
             </div>}
             <div class="surveillance-links">
               {relatedSurveillance.length > 0
-                ? relatedSurveillance.map((link: any) => <a href={link.url}><span data-lang-en={`${link.disease_name_en} · ${link.country_name_en}`} data-lang-zh={`${link.disease_name_zh ?? link.disease_name_en} · ${link.country_name_en}`}>{link.disease_name_en} · {link.country_name_en}</span><small data-lang-en="High-confidence geography · GIDS series available" data-lang-zh="高置信度地理关联 · GIDS 有监测序列">High-confidence geography · GIDS series available</small><i>→</i></a>)
-                : article.diseases.map((disease: any) => <a href={`/diseases/${disease.slug}/`}><span data-lang-en={disease.name_en} data-lang-zh={disease.name_zh ?? disease.name_en}>{disease.name_en}</span><small data-lang-en="View available GIDS surveillance" data-lang-zh="查看可用的 GIDS 监测">View available GIDS surveillance</small><i>→</i></a>)}
+                ? relatedSurveillance.map((link: any) => <a href={localeHref(link.url)}><span>{pick(`${link.disease_name_en} · ${link.country_name_en}`, `${link.disease_name_zh ?? link.disease_name_en} · ${link.country_name_zh ?? link.country_name_en}`)}</span><small>{pick('High-confidence geography · GIDS series available', '高置信度地理关联 · GIDS 有监测序列')}</small><i>→</i></a>)
+                : article.diseases.map((disease: any) => <a href={localeHref(`/diseases/${disease.slug}/`)}><span>{pick(disease.name_en, disease.name_zh ?? disease.name_en)}</span><small>{pick('View available GIDS surveillance', '查看可用的 GIDS 监测')}</small><i>→</i></a>)}
             </div>
-            <p class="evidence-disclaimer" data-lang-en="Literature context does not validate, explain, or change a surveillance signal. Exact and contextual relationships are shown separately." data-lang-zh="文献背景不会验证、解释或改变监测信号；精确关系与背景关系会分开展示。">Literature context does not validate, explain, or change a surveillance signal. Exact and contextual relationships are shown separately.</p>
+            <p class="evidence-disclaimer">{pick('Literature context does not validate, explain, or change a surveillance signal. Exact and contextual relationships are shown separately.', '文献背景不会验证、解释或改变监测信号；精确关系与背景关系会分开展示。')}</p>
           </section>
         )}
         <section class="evidence-surveillance evidence-graph">
-          <div class="section-title"><span>03</span><h2 data-lang-en="Evidence relationships" data-lang-zh="证据关系">Evidence relationships</h2></div>
-          <p data-lang-en={`This article has ${graph.stats?.edges ?? 0} auditable classifier relationships to diseases, places, topics, and study design.`} data-lang-zh={`本文与疾病、地区、主题及研究设计之间有 ${graph.stats?.edges ?? 0} 条可审计分类关系。`}>This article has {graph.stats?.edges ?? 0} auditable classifier relationships to diseases, places, topics, and study design.</p>
+          <div class="section-title"><span>03</span><h2>{pick('Evidence relationships', '证据关系')}</h2></div>
+          <p>{pick(`This article has ${graph.stats?.edges ?? 0} auditable classifier relationships to diseases, places, topics, and study design.`, `本文与疾病、地区、主题及研究设计之间有 ${graph.stats?.edges ?? 0} 条可审计分类关系。`)}</p>
           <div class="relationship-list">{(graph.edges ?? []).map((edge: any) => <span>{String(edge.relation).replaceAll('_', ' ').toLowerCase()}</span>)}</div>
         </section>
         {relatedArticles.length > 0 && (
           <section class="evidence-surveillance related-research" aria-labelledby="related-research-title">
-            <div class="section-title"><span>04</span><h2 id="related-research-title" data-lang-en="Related research" data-lang-zh="相关文章">Related research</h2></div>
-            <p class="related-research-method" data-lang-en="Ranked deterministically by shared disease, geography, topic, study design, and publication proximity. This is a discovery aid, not a quality judgment." data-lang-zh="根据相同疾病、地区、主题、研究设计和发表时间邻近性进行确定性排序。该功能仅用于文献发现，不代表质量判断。">Ranked deterministically by shared disease, geography, topic, study design, and publication proximity. This is a discovery aid, not a quality judgment.</p>
+            <div class="section-title"><span>04</span><h2 id="related-research-title">{pick('Related research', '相关文章')}</h2></div>
+            <p class="related-research-method">{pick('Ranked deterministically by shared disease, geography, topic, study design, and publication proximity. This is a discovery aid, not a quality judgment.', '根据相同疾病、地区、主题、研究设计和发表时间邻近性进行确定性排序。该功能仅用于文献发现，不代表质量判断。')}</p>
             <ol>
               {relatedArticles.map((related: any) => (
                 <li>
-                  <a href={`/research/articles/${related.slug}/`}><strong>{related.title}</strong><span>{related.journal ?? 'Journal unavailable'} · {related.study_type ?? 'Journal article'}</span></a>
-                  <p data-lang-en={(related.reasons_en ?? []).join(' · ')} data-lang-zh={(related.reasons_zh ?? related.reasons_en ?? []).join(' · ')}>{(related.reasons_en ?? []).join(' · ')}</p>
+                  <a href={localeHref(`/research/articles/${related.slug}/`)}><strong>{related.title}</strong><span>{related.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {related.study_type ?? pick('Journal article', '期刊论文')}</span></a>
+                  <p>{pick((related.reasons_en ?? []).join(' · '), (related.reasons_zh ?? related.reasons_en ?? []).join(' · '))}</p>
                 </li>
               ))}
             </ol>
@@ -241,13 +252,13 @@ const isIndexableEvidencePage = article.indexable !== false
       </main>
 
       <aside>
-        <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Topics" data-lang-zh="主题">Topics</p><div class="topic-tags">{(article.topics ?? []).map((topic: any) => <a href={`/research/topics/${String(topic.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}/`}>{topic.name}</a>)}</div></div>
-        {(article.pathogens ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Pathogens" data-lang-zh="病原体">Pathogens</p><ul>{article.pathogens.map((pathogen: any) => <li>{pathogen.name}</li>)}</ul></div>}
-        {(article.populations ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Populations" data-lang-zh="研究人群">Populations</p><ul>{article.populations.map((population: any) => <li>{population.name}</li>)}</ul></div>}
-        {(article.countries ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Geographic scope" data-lang-zh="地理范围">Geographic scope</p><ul>{article.countries.map((country: any) => <li><a href={`/research/countries/${country.code.toLowerCase()}/`}>{country.name_en} <span>→</span></a></li>)}</ul></div>}
-        <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Original sources" data-lang-zh="原始来源">Original sources</p><div class="source-links">{article.doi && <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer">DOI record ↗</a>}{article.source_urls?.pubmed && <a href={article.source_urls.pubmed} target="_blank" rel="noopener noreferrer">PubMed ↗</a>}{article.open_access_url && <a href={article.open_access_url} target="_blank" rel="noopener noreferrer">Open access ↗</a>}</div></div>
-        <div class="evidence-aside-block evidence-score"><p class="evidence-kicker">GIDS Discovery Score</p><strong>{Math.round((article.discovery_score ?? 0) * 100)}</strong><p data-lang-en="A transparent discovery ranking, not a scientific quality or credibility score." data-lang-zh="这是透明的发现排序，并非科学质量或可信度评分。">A transparent discovery ranking, not a scientific quality or credibility score.</p></div>
-        {summaryProvenance && <div class="evidence-aside-block evidence-provenance"><p class="evidence-kicker" data-lang-en="AI-assisted summary provenance" data-lang-zh="AI 辅助摘要来源">AI-assisted summary provenance</p><p data-lang-en={provenanceDisclosureEn} data-lang-zh={provenanceDisclosureZh}>{provenanceDisclosureEn}</p><dl><div><dt data-lang-en="Generator" data-lang-zh="生成器">Generator</dt><dd>{summaryProvenance.generated_by ?? 'AI evidence pipeline'}</dd></div>{(summaryProvenance.provider || summaryProvenance.model) && <div><dt data-lang-en="Provider / model" data-lang-zh="提供商 / 模型">Provider / model</dt><dd>{[summaryProvenance.provider, summaryProvenance.model].filter(Boolean).join(' · ')}</dd></div>}{summaryProvenance.quality_score != null && <div><dt data-lang-en="Quality score" data-lang-zh="质量分">Quality score</dt><dd>{Math.round(summaryProvenance.quality_score * 100)} / 100</dd></div>}{summaryProvenance.publication_gate && <div><dt data-lang-en="Publication gate" data-lang-zh="发布门控">Publication gate</dt><dd>{summaryProvenance.publication_gate}</dd></div>}{summaryProvenance.automation_policy_version && <div><dt data-lang-en="Policy" data-lang-zh="策略">Policy</dt><dd>{summaryProvenance.automation_policy_version}</dd></div>}</dl></div>}
+        <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Topics', '主题')}</p><div class="topic-tags">{(article.topics ?? []).map((topic: any) => <a href={localeHref(`/research/topics/${String(topic.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}/`)}>{topic.name}</a>)}</div></div>
+        {(article.pathogens ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Pathogens', '病原体')}</p><ul>{article.pathogens.map((pathogen: any) => <li>{pathogen.name}</li>)}</ul></div>}
+        {(article.populations ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Populations', '研究人群')}</p><ul>{article.populations.map((population: any) => <li>{population.name}</li>)}</ul></div>}
+        {(article.countries ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Geographic scope', '地理范围')}</p><ul>{article.countries.map((country: any) => <li><a href={localeHref(`/research/countries/${country.code.toLowerCase()}/`)}>{pick(country.name_en, country.name_zh ?? country.name_en)} <span>→</span></a></li>)}</ul></div>}
+        <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Original sources', '原始来源')}</p><div class="source-links">{article.doi && <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer">{pick('DOI record ↗', 'DOI 记录 ↗')}</a>}{article.source_urls?.pubmed && <a href={article.source_urls.pubmed} target="_blank" rel="noopener noreferrer">PubMed ↗</a>}{article.open_access_url && <a href={article.open_access_url} target="_blank" rel="noopener noreferrer">{pick('Open access ↗', '开放获取 ↗')}</a>}</div></div>
+        <div class="evidence-aside-block evidence-score"><p class="evidence-kicker">{pick('GIDS Discovery Score', 'GIDS 发现分数')}</p><strong>{Math.round((article.discovery_score ?? 0) * 100)}</strong><p>{pick('A transparent discovery ranking, not a scientific quality or credibility score.', '这是透明的发现排序，并非科学质量或可信度评分。')}</p></div>
+        {summaryProvenance && <div class="evidence-aside-block evidence-provenance"><p class="evidence-kicker">{pick('Summary transparency', '摘要透明度')}</p><p>{pick(provenanceDisclosureEn, provenanceDisclosureZh)}</p>{summaryProvenance.quality_score != null && <p>{pick('Automated quality checks passed before publication.', '发布前已通过自动质量检查。')}</p>}</div>}
       </aside>
     </div>
   </article>
@@ -262,23 +273,23 @@ const isIndexableEvidencePage = article.indexable !== false
   .evidence-badges .oa { border-color: rgb(var(--color-teal) / .55); color: rgb(var(--color-teal)); }
   .evidence-badges .integrity-corrected { border-color: rgb(var(--color-teal) / .58); color: rgb(var(--color-teal)); background: rgb(var(--color-teal) / .08); }
   .evidence-badges .version-available { border-color: rgb(var(--color-brand) / .58); color: rgb(var(--color-brand)); background: rgb(var(--color-brand) / .08); }
-  .evidence-header h1 { max-width: 55rem; margin-top: 1.2rem; font: 600 clamp(2rem, 5vw, 3.9rem)/1.04 'Source Serif 4', serif; letter-spacing: -.035em; color: rgb(var(--text-strong)); }
+  .evidence-header h1 { max-width: 55rem; margin-top: 1.2rem; font: 600 clamp(2rem, 5vw, 3.9rem)/1.04 'IBM Plex Sans', sans-serif; letter-spacing: -.035em; color: rgb(var(--text-strong)); }
   .evidence-citation { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.15rem; color: rgb(var(--text-muted)); font-size: .85rem; }
   .evidence-authors { max-width: 52rem; margin-top: .8rem; color: rgb(var(--text-faint)); font-size: .76rem; line-height: 1.6; }
   .evidence-register { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid rgb(var(--border) / .72); }
   .evidence-register dt, .evidence-kicker { color: rgb(var(--color-accent)); font-size: .64rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
-  .evidence-register dd { margin-top: .32rem; overflow-wrap: anywhere; color: rgb(var(--text)); font: 500 .72rem/1.4 'JetBrains Mono', monospace; }
+  .evidence-register dd { margin-top: .32rem; overflow-wrap: anywhere; color: rgb(var(--text)); font: 500 .72rem/1.4 ui-monospace, monospace; }
   .evidence-layout { display: grid; grid-template-columns: minmax(0, 1fr) 18rem; gap: 1.5rem; margin-top: 1.5rem; }
   .evidence-layout main, .evidence-layout aside { min-width: 0; }
   .evidence-context, .evidence-sections, .evidence-surveillance, .evidence-aside-block { border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface)); }
   .evidence-context { padding: 1.5rem; border-left: 3px solid rgb(var(--color-accent)); }
   .evidence-context > p:last-child { margin-top: .65rem; color: rgb(var(--text)); font-size: .94rem; line-height: 1.7; }
   .integrity-correction-notice { display: grid; grid-template-columns: minmax(15rem, .65fr) minmax(0, 1fr) auto; gap: 1.25rem; align-items: center; margin-top: 1.5rem; padding: 1.1rem 1.25rem; border: 1px solid rgb(var(--color-teal) / .38); border-left: 3px solid rgb(var(--color-teal)); background: rgb(var(--color-teal) / .045); }
-  .integrity-correction-notice h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 1.15rem/1.2 'Source Serif 4', serif; }
+  .integrity-correction-notice h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 1.15rem/1.2 'IBM Plex Sans', sans-serif; }
   .integrity-correction-notice > p { color: rgb(var(--text-muted)); font-size: .76rem; line-height: 1.6; }
   .integrity-correction-notice > a { color: rgb(var(--color-teal)); font-size: .7rem; font-weight: 700; white-space: nowrap; }
   .version-link-notice { display: grid; grid-template-columns: minmax(15rem, .65fr) minmax(0, 1fr) auto; gap: 1.25rem; align-items: center; margin-top: 1.5rem; padding: 1.1rem 1.25rem; border: 1px solid rgb(var(--color-brand) / .38); border-left: 3px solid rgb(var(--color-brand)); background: rgb(var(--color-brand) / .045); }
-  .version-link-notice h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 1.15rem/1.2 'Source Serif 4', serif; }
+  .version-link-notice h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 1.15rem/1.2 'IBM Plex Sans', sans-serif; }
   .version-link-notice > p { color: rgb(var(--text-muted)); font-size: .76rem; line-height: 1.6; }
   .version-link-notice > a { color: rgb(var(--color-brand)); font-size: .7rem; font-weight: 700; white-space: nowrap; }
   .article-integrity-history ol { list-style: none; margin: 1rem 0 0; padding: 0; }
@@ -290,11 +301,11 @@ const isIndexableEvidencePage = article.indexable !== false
   .article-integrity-history a { color: rgb(var(--color-brand)); font-size: .68rem; font-weight: 700; }
   .evidence-sections, .evidence-surveillance { margin-top: 1.5rem; padding: clamp(1.35rem, 3vw, 2.2rem); }
   .section-title { display: flex; align-items: baseline; gap: .9rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .7); }
-  .section-title span { color: rgb(var(--color-accent)); font: 500 .65rem/1 'JetBrains Mono', monospace; }
-  .section-title h2 { font: 600 1.6rem/1.1 'Source Serif 4', serif; color: rgb(var(--text-strong)); }
+  .section-title span { color: rgb(var(--color-accent)); font: 500 .65rem/1 ui-monospace, monospace; }
+  .section-title h2 { font: 600 1.6rem/1.1 'IBM Plex Sans', sans-serif; color: rgb(var(--text-strong)); }
   .evidence-section { display: grid; grid-template-columns: 12rem 1fr; gap: 1.4rem; padding: 1.25rem 0; border-top: 1px solid rgb(var(--border) / .55); }
   .section-title + .evidence-section { border-top: 0; }
-  .evidence-section h3 { color: rgb(var(--text-strong)); font: 600 .95rem/1.3 'Source Serif 4', serif; }
+  .evidence-section h3 { color: rgb(var(--text-strong)); font: 600 .95rem/1.3 'IBM Plex Sans', sans-serif; }
   .evidence-section p { color: rgb(var(--text-muted)); font-size: .86rem; line-height: 1.68; }
   .evidence-section-pending p { color: rgb(var(--text-faint)); font-style: italic; }
   .surveillance-links { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; margin-top: 1.2rem; }
@@ -302,14 +313,14 @@ const isIndexableEvidencePage = article.indexable !== false
   .related-signal-list { display: grid; gap: .5rem; margin-top: .7rem; }
   .related-signal-list a { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .75rem; align-items: center; padding: .75rem; border: 1px solid rgb(var(--border) / .58); background: rgb(var(--surface)); }
   .related-signal-list a:hover { border-color: rgb(var(--color-brand) / .6); }
-  .related-signal-list span { display: block; color: rgb(var(--text-strong)); font: 600 .95rem/1.2 'Source Serif 4', serif; }
+  .related-signal-list span { display: block; color: rgb(var(--text-strong)); font: 600 .95rem/1.2 'IBM Plex Sans', sans-serif; }
   .related-signal-list small { display: block; margin-top: .25rem; color: rgb(var(--text-faint)); font-size: .64rem; }
-  .related-signal-list strong { color: rgb(var(--color-accent)); font: 600 .78rem/1 'JetBrains Mono', monospace; }
+  .related-signal-list strong { color: rgb(var(--color-accent)); font: 600 .78rem/1 ui-monospace, monospace; }
   .related-signal-list em { border: 1px solid rgb(var(--border)); padding: .22rem .45rem; color: rgb(var(--text-muted)); font-size: .62rem; font-style: normal; }
   .signal-context-note { margin-top: .7rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.5; }
   .surveillance-links a { position: relative; padding: 1rem 2.4rem 1rem 1rem; border: 1px solid rgb(var(--border) / .68); }
   .surveillance-links a:hover { border-color: rgb(var(--color-brand) / .7); }
-  .surveillance-links span { display: block; color: rgb(var(--text-strong)); font: 600 1rem/1.2 'Source Serif 4', serif; }
+  .surveillance-links span { display: block; color: rgb(var(--text-strong)); font: 600 1rem/1.2 'IBM Plex Sans', sans-serif; }
   .surveillance-links small { display: block; margin-top: .35rem; color: rgb(var(--text-faint)); font-size: .68rem; }
   .surveillance-links i { position: absolute; right: 1rem; top: 50%; color: rgb(var(--color-brand)); transform: translateY(-50%); }
   .evidence-disclaimer { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .7rem; line-height: 1.5; }
@@ -319,7 +330,7 @@ const isIndexableEvidencePage = article.indexable !== false
   .related-research-method { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .7rem; line-height: 1.55; }
   .related-research ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin-top: 1rem; }
   .related-research li { border: 1px solid rgb(var(--border) / .68); background: rgb(var(--surface-raised) / .28); padding: .9rem; }
-  .related-research strong { display: block; color: rgb(var(--text-strong)); font: 600 .95rem/1.3 'Source Serif 4', serif; }
+  .related-research strong { display: block; color: rgb(var(--text-strong)); font: 600 .95rem/1.3 'IBM Plex Sans', sans-serif; }
   .related-research a:hover strong { color: rgb(var(--color-brand)); }
   .related-research a span, .related-research li > p { display: block; margin-top: .4rem; color: rgb(var(--text-faint)); font-size: .64rem; line-height: 1.45; }
   .evidence-layout aside { display: flex; flex-direction: column; gap: 1rem; }
@@ -329,7 +340,7 @@ const isIndexableEvidencePage = article.indexable !== false
   .evidence-aside-block ul, .source-links { display: grid; gap: .55rem; margin-top: .75rem; }
   .evidence-aside-block li a, .source-links a { color: rgb(var(--text)); font-size: .75rem; }
   .evidence-aside-block a:hover { color: rgb(var(--color-brand)); }
-  .evidence-score strong { display: block; margin-top: .65rem; font: 600 3rem/1 'Source Serif 4', serif; color: rgb(var(--text-strong)); }
+  .evidence-score strong { display: block; margin-top: .65rem; font: 600 3rem/1 'IBM Plex Sans', sans-serif; color: rgb(var(--text-strong)); }
   .evidence-score > p:last-child { margin-top: .65rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.55; }
   .evidence-provenance > p { margin-top: .7rem; color: rgb(var(--text-muted)); font-size: .72rem; line-height: 1.55; }
   .evidence-provenance dl { display: grid; gap: .58rem; margin-top: .85rem; }

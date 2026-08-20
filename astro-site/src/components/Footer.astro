@@ -2,6 +2,7 @@
 // src/components/Footer.astro
 import BrandLogo from './BrandLogo.astro';
 import metaData from '../data/meta.json';
+import sitePackage from '../../package.json';
 
 interface Props {
   initialLanguage?: 'en' | 'zh';
@@ -9,6 +10,7 @@ interface Props {
 
 const { initialLanguage = 'en' } = Astro.props;
 const year = new Date().getFullYear();
+const siteVersion = sitePackage.version;
 const siteUpdatedAt = import.meta.env.PUBLIC_GIDS_BUILT_AT?.trim() || new Date().toISOString();
 const databaseLatestAt = metaData?.generated_at;
 const formatDate = (value: string | undefined, locale: 'en-US' | 'zh-CN', fallback: string) => {
@@ -28,15 +30,17 @@ const databaseLatestEn = formatDate(databaseLatestAt, 'en-US', 'Unknown');
 const databaseLatestZh = formatDate(databaseLatestAt, 'zh-CN', '未知');
 
 const links = [
-  { href: '/', label: 'Home', labelZh: '首页' },
+  { href: '/situation/', label: 'Situation', labelZh: '全球态势' },
   { href: '/countries/', label: 'Countries', labelZh: '国家/地区' },
   { href: '/diseases/', label: 'Disease Directory', labelZh: '疾病目录' },
+  { href: '/downloads/', label: 'Downloads', labelZh: '数据下载' },
   { href: '/research/', label: 'Research Radar', labelZh: '研究雷达' },
-  { href: '/changelog/', label: 'Changelog', labelZh: '版本更新' },
   { href: '/about/', label: 'About', labelZh: '关于' },
   { href: '/subscribe/', label: 'Subscribe', labelZh: '订阅' },
-  { href: '/terms/', label: 'Service Terms', labelZh: '服务条款' },
+  { href: '/copyright/', label: 'Copyright & Reuse', labelZh: '版权与复用' },
+  { href: '/terms/', label: 'Terms & Privacy', labelZh: '条款与隐私' },
 ];
+const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/' ? '/zh/' : `/zh${href}`) : href;
 ---
 
 <footer class="site-footer border-t mt-20">
@@ -66,7 +70,7 @@ const links = [
         <ul class="space-y-2">
           {links.map(({ href, label, labelZh }) => (
             <li>
-              <a href={href} class="site-footer-link text-sm transition-colors" data-lang-en={label} data-lang-zh={labelZh}>
+              <a href={localizedHref(href)} class="site-footer-link text-sm transition-colors">
                 {initialLanguage === 'zh' ? labelZh : label}
               </a>
             </li>
@@ -81,46 +85,37 @@ const links = [
         </h3>
         <ul class="site-footer-meta space-y-1.5 text-sm">
           <li>
-            <span data-lang-en="Website updated" data-lang-zh="网站更新">
+            <span>
               {initialLanguage === 'zh' ? '网站更新' : 'Website updated'}
             </span>:
             {' '}
-            <span
-              class="site-footer-meta-value"
-              data-lang-en={siteUpdatedEn}
-              data-lang-zh={siteUpdatedZh}
-            >
+            <span class="site-footer-meta-value">
               {initialLanguage === 'zh' ? siteUpdatedZh : siteUpdatedEn}
             </span>
           </li>
           <li>
-            <span data-lang-en="Latest database date" data-lang-zh="数据库最新日期">
+            <span>
               {initialLanguage === 'zh' ? '数据库最新日期' : 'Latest database date'}
             </span>:
             {' '}
-            <span
-              class="site-footer-meta-value"
-              data-lang-en={databaseLatestEn}
-              data-lang-zh={databaseLatestZh}
-            >
+            <span class="site-footer-meta-value">
               {initialLanguage === 'zh' ? databaseLatestZh : databaseLatestEn}
             </span>
           </li>
-          <li><a class="site-footer-link" href="/about/">{initialLanguage === 'zh' ? '数据来源与方法' : 'Sources and methods'}</a></li>
-          <li><a class="site-footer-link" href="/terms/">{initialLanguage === 'zh' ? '数据使用提示' : 'Data-use guidance'}</a></li>
+          <li><a class="site-footer-link" href={localizedHref('/about/')}>{initialLanguage === 'zh' ? '数据来源与方法' : 'Sources and methods'}</a></li>
+          <li><a class="site-footer-link" href={localizedHref('/copyright/')}>{initialLanguage === 'zh' ? '版权、许可与署名' : 'Copyright, licensing & attribution'}</a></li>
         </ul>
       </div>
     </div>
 
     <div class="site-footer-divider border-t mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p
-        class="site-footer-legal text-xs"
-        data-lang-en={`© ${year} GIDS. Website updated ${siteUpdatedEn}.`}
-        data-lang-zh={`© ${year} GIDS。网站更新于 ${siteUpdatedZh}。`}
-      >
-        {initialLanguage === 'zh'
-          ? `© ${year} GIDS。网站更新于 ${siteUpdatedZh}。`
-          : `© ${year} GIDS. Website updated ${siteUpdatedEn}.`}
+      <p class="site-footer-legal text-xs">
+        <a class="site-footer-link" href={localizedHref('/copyright/')}>© {year} GIDS</a>
+        <span aria-hidden="true"> · </span>
+        <a
+          class="site-footer-link"
+          href={localizedHref('/changelog/')}
+        >v{siteVersion} · {initialLanguage === 'zh' ? '更新记录' : 'Changelog'}</a>
       </p>
       <p class="site-footer-legal-note text-xs">
         {initialLanguage === 'zh'

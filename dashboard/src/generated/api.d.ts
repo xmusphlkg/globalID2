@@ -2063,6 +2063,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/situation/v3/calibration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Calibration Runs V3 */
+        get: operations["calibration_runs_v3_api_v1_situation_v3_calibration_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/situation/v3/calibration/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest Calibration V3 */
+        get: operations["latest_calibration_v3_api_v1_situation_v3_calibration_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/situation/v3/event-labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Event Labels V3 */
+        get: operations["event_labels_v3_api_v1_situation_v3_event_labels_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/situation/v3/events": {
         parameters: {
             query?: never;
@@ -2089,6 +2140,23 @@ export interface paths {
         };
         /** Overview V3 */
         get: operations["overview_v3_api_v1_situation_v3_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/situation/v3/policy-decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Policy Decisions V3 */
+        get: operations["policy_decisions_v3_api_v1_situation_v3_policy_decisions_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3230,6 +3298,34 @@ export interface components {
             poll_interval_seconds: number;
             /** Timezone */
             timezone: string;
+        };
+        /**
+         * AutomationDecision
+         * @description Fail-closed, auditable publication-policy result for one run signal.
+         */
+        AutomationDecision: {
+            /**
+             * Basis
+             * @default not_applicable
+             * @enum {string}
+             */
+            basis: "not_applicable" | "calibrated_statistical" | "official_corroboration";
+            /** Calibration Hash */
+            calibration_hash?: string | null;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Gate Reasons */
+            gate_reasons?: string[];
+            /** Matched Event Ids */
+            matched_event_ids?: string[];
+            /** Policy Version */
+            policy_version?: string | null;
+            /**
+             * Status
+             * @default not_evaluated
+             * @enum {string}
+             */
+            status: "not_evaluated" | "blocked" | "shadow" | "eligible" | "auto_verified";
         };
         /** AutomationJobCreate */
         AutomationJobCreate: {
@@ -5119,9 +5215,9 @@ export interface components {
             fdr_method: "benjamini_hochberg";
             /**
              * Model
-             * @constant
+             * @enum {string}
              */
-            model: "robust_quasi_poisson_v1";
+            model: "robust_quasi_poisson_v1" | "multi_horizon_gamma_poisson_v1";
             /** Parameters */
             parameters?: {
                 [key: string]: unknown;
@@ -6179,6 +6275,7 @@ export interface components {
         };
         /** SignalAssessment */
         SignalAssessment: {
+            automation_decision?: components["schemas"]["AutomationDecision"];
             /** Evidence Gaps */
             evidence_gaps?: string[];
             public_health_risk?: components["schemas"]["PublicHealthRisk"];
@@ -17290,6 +17387,256 @@ export interface operations {
             };
         };
     };
+    calibration_runs_v3_api_v1_situation_v3_calibration_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Response Calibration Runs V3 Api V1 Situation V3 Calibration Get */
+                        data: {
+                            [key: string]: unknown;
+                        }[];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    latest_calibration_v3_api_v1_situation_v3_calibration_latest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Response Latest Calibration V3 Api V1 Situation V3 Calibration Latest Get */
+                        data: {
+                            [key: string]: unknown;
+                        };
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    event_labels_v3_api_v1_situation_v3_event_labels_get: {
+        parameters: {
+            query?: {
+                disease_id?: string | null;
+                adjudication?: string | null;
+                split?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Response Event Labels V3 Api V1 Situation V3 Event Labels Get */
+                        data: {
+                            [key: string]: unknown;
+                        }[];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     events_v3_api_v1_situation_v3_events_get: {
         parameters: {
             query?: {
@@ -17441,6 +17788,92 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    policy_decisions_v3_api_v1_situation_v3_policy_decisions_get: {
+        parameters: {
+            query?: {
+                run_id?: string | null;
+                signal_id?: string | null;
+                status?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Response Policy Decisions V3 Api V1 Situation V3 Policy Decisions Get */
+                        data: {
+                            [key: string]: unknown;
+                        }[];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description Problem detail */

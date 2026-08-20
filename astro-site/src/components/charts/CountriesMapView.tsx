@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import ReactEChartsCore from '../../lib/echartsReact';
 import echarts from '../../lib/echartsMap';
-import { resolveFlagIso2 } from '../../lib/country-flag';
+import { getFlagAssetPath } from '../../lib/country-flag';
 import {
   COUNTRY_COVERAGE,
   getCoverageDisplayName,
@@ -19,7 +19,6 @@ import {
 
 const MAP_NAME = 'world-countries-lnglat';
 const LOCAL_WORLD_MAP_URL = '/data/world.json';
-const WORLD_MAP_FALLBACK_URL = 'https://registry.npmmirror.com/echarts/4.9.0/files/map/json/world.json';
 const BOX_W = 138;
 const BOX_H = 42;
 
@@ -61,7 +60,7 @@ function isLngLatWorldGeoJson(geoJson: any) {
 async function fetchLngLatWorldGeoJson() {
   let lastError: unknown;
 
-  for (const url of [LOCAL_WORLD_MAP_URL, WORLD_MAP_FALLBACK_URL]) {
+  for (const url of [LOCAL_WORLD_MAP_URL]) {
     try {
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -102,16 +101,17 @@ interface DotPos {
 interface Props {
   metaCountries?: MetaCountry[];
   height?: number;
+  initialLanguage?: 'en' | 'zh';
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function CountriesMapView({ metaCountries = [], height = 450 }: Props) {
+export default function CountriesMapView({ metaCountries = [], height = 450, initialLanguage = 'en' }: Props) {
   const chartRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [lang, setLang] = useState<'en' | 'zh'>('en');
+  const [lang] = useState<'en' | 'zh'>(initialLanguage);
   const [mapReady, setMapReady] = useState(false);
   const [dotPositions, setDotPositions] = useState<DotPos[]>([]);
 
@@ -139,17 +139,16 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
     [lang, metaByCode],
   );
 
-  // Theme/language detection ────────────────────────────────────────────────
+  // Theme detection ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
     const update = () => {
       setTheme(root.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
-      setLang(root.getAttribute('data-lang') === 'zh' ? 'zh' : 'en');
     };
     update();
     const obs = new MutationObserver(update);
-    obs.observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-lang'] });
+    obs.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     return () => obs.disconnect();
   }, []);
 
@@ -318,7 +317,11 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
         backgroundColor: palette.tooltipBg,
         borderColor: palette.tooltipBorder,
         textStyle: { color: palette.tooltipText, fontSize: 12 },
-        formatter: (p: any) => `<b>${p.data.name}</b><br/>${p.data.statusLabel ?? p.data.status}`,
+        formatter: (p: any) => `
+          <div style="display:flex;align-items:center;gap:7px">
+            <img src="${getFlagAssetPath(p.data?.iso2)}" alt="" width="24" height="18" style="width:24px;height:18px;object-fit:cover;border:1px solid ${palette.tooltipBorder}" />
+            <span><b>${p.data.name}</b><br/>${p.data.statusLabel ?? p.data.status}</span>
+          </div>`,
       },
     };
   }, [mapReady, countriesWithStatus, palette]);
@@ -341,7 +344,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          <span data-lang-en="Loading map…" data-lang-zh="正在加载地图…">Loading map…</span>
+          <span>{lang === 'zh' ? '正在加载地图…' : 'Loading map…'}</span>
         </span>
       </div>
     );
@@ -428,8 +431,8 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
         const isSupported = d.status === 'Supported';
         const accentColor = isSupported ? palette.supported : palette.scheduled;
         const borderColor = isSupported ? palette.boxSupportedBorder : palette.boxScheduledBorder;
-        const href = isSupported ? `/countries/${d.iso2.toLowerCase()}/` : undefined;
-        const flagCode = resolveFlagIso2(d.iso2).toLowerCase();
+        const href = isSupported ? `${lang === 'zh' ? '/zh' : ''}/countries/${d.iso2.toLowerCase()}/` : undefined;
+        const flagPath = getFlagAssetPath(d.iso2);
 
         const boxStyles: React.CSSProperties = {
           position: 'absolute',
@@ -464,9 +467,12 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
               color: palette.boxText,
             }}>
               <img
-                src={`https://flagcdn.com/w40/${flagCode}.png`}
-                alt={d.name}
-                style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 0, flexShrink: 0 }}
+                src={flagPath}
+                alt=""
+                aria-hidden="true"
+                width={20}
+                height={15}
+                style={{ width: 20, height: 15, objectFit: 'cover', border: `1px solid ${borderColor}`, flexShrink: 0 }}
               />
               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {d.name}

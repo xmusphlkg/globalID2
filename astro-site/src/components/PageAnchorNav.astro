@@ -1,0 +1,39 @@
+---
+interface AnchorItem {
+  href: string;
+  label: string;
+  labelZh: string;
+}
+
+interface Props {
+  items: AnchorItem[];
+  locale?: 'en' | 'zh';
+}
+
+const { items, locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
+---
+
+<nav class="page-anchor-nav" aria-label={zh ? '本页导航' : 'On this page'}>
+  <span>{zh ? '本页导航' : 'On this page'}</span>
+  {items.map(item => <a href={item.href}>{zh ? item.labelZh : item.label}</a>)}
+</nav>
+
+<style>
+  .page-anchor-nav {
+    position: sticky;
+    top: 68px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    overflow-x: auto;
+    padding: .55rem;
+    background: rgb(var(--bg) / .96);
+    border-block: 1px solid rgb(var(--border));
+    backdrop-filter: blur(12px);
+  }
+  span { padding: .45rem .6rem; color: rgb(var(--text-muted)); font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+  a { padding: .45rem .65rem; color: rgb(var(--text-strong)); border-left: 1px solid rgb(var(--border)); font-size: .8rem; font-weight: 650; text-decoration: none; white-space: nowrap; }
+  a:hover { color: rgb(var(--color-teal)); text-decoration: underline; text-underline-offset: 3px; }
+</style>

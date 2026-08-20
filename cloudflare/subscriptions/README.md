@@ -379,12 +379,16 @@ degraded gate and an analyzed `alert`/`strong` signal. A verified signal must
 use one of two auditable paths:
 
 - `verification_basis=automated_policy` is accepted only for
-  `verification_policy_version=guarded_auto_v1`, `q_value <= 0.01`, current
-  data, the completed primary `robust_quasi_poisson_v1` fit, a common/rare
-  count detector, a passed effect threshold, completeness of at least 0.95,
-  and at least one HTTPS evidence link. `verified_by` must be exactly
-  `policy:guarded_auto_v1`. The parser retains this contract for forward
-  compatibility, but the ingest handler returns `422` before any D1 access
+  `verification_policy_version=tiered_auto_v3.2`, current data, a passed effect
+  threshold, completeness of at least 0.95, and at least one HTTPS evidence
+  link. It also requires a structured `automation_decision` with status
+  `auto_verified`, an artifact hash, no failed gate reasons, and a decision
+  timestamp. `calibrated_statistical` requires a completed common-count
+  `multi_horizon_gamma_poisson_v1` fit and `q_value <= 0.025` (the upstream
+  group's calibrated threshold can be stricter). `official_corroboration`
+  requires at least one matched official-event ID and the review gate
+  `q_value <= 0.05`. `verified_by` must be exactly
+  `policy:tiered_auto_v3.2`. The ingest handler returns `422` before D1 access
   unless `SITUATION_ALERT_AUTOMATED_POLICY_ENABLED=true` is also configured.
 - `verification_basis=analyst_review` accepts current or lagged publishable
   data, including a transparently identified fallback fit. Its policy version
@@ -413,19 +417,28 @@ curl -X POST "$WORKER_URL/api/internal/situation-alerts" \
       "temporal_relevance": "current",
       "data_status": "current",
       "completeness": 0.98,
-      "q_value": 0.008,
-      "model": "robust_quasi_poisson_v1",
+      "q_value": 0.005,
+      "model": "multi_horizon_gamma_poisson_v1",
       "fit_status": "completed",
       "detector_tier": "common_count",
       "effect_threshold_passed": true,
       "verification_status": "verified",
       "verification_basis": "automated_policy",
-      "verification_policy_version": "guarded_auto_v1",
-      "verified_by": "policy:guarded_auto_v1",
+      "verification_policy_version": "tiered_auto_v3.2",
+      "automation_decision": {
+        "status": "auto_verified",
+        "basis": "calibrated_statistical",
+        "policy_version": "tiered_auto_v3.2",
+        "calibration_hash": "sha256-calibration-artifact",
+        "gate_reasons": [],
+        "matched_event_ids": [],
+        "decided_at": "2026-08-17T11:55:00Z"
+      },
+      "verified_by": "policy:tiered_auto_v3.2",
       "verified_at": "2026-08-17T11:55:00Z",
       "observed_at": "2026-08-16T00:00:00Z",
       "title": "Influenza surveillance signal",
-      "summary": "A guarded-policy eligible increase was observed.",
+      "summary": "A calibrated-policy eligible increase was observed.",
       "countries": ["US"],
       "diseases": ["influenza"],
       "evidence_urls": ["https://www.cdc.gov/example"]
@@ -451,17 +464,12 @@ the published/analyzed/verified Situation contract; use `reports` or
 #### Production dispatch boundary
 
 The upstream release dispatcher is
-`scripts/automation/dispatch_situation_alerts.py`. Despite the webhook's
-forward-compatible validation support for `guarded_auto_v1`, the production
-dispatcher currently sends **only** signals whose verification basis is
-`analyst_review`. Calibration found that the guarded automatic threshold does
-not yet support unattended publication or email: a verified
-`automated_policy` signal is counted as `blocked_automatic` and no request is
-made for it. Unknown verification bases fail the run before any request is
-sent. Do not add an automatic-policy bypass until a separately reviewed policy
-and calibration decision explicitly authorize it. The Worker-side
-`SITUATION_ALERT_AUTOMATED_POLICY_ENABLED` flag must remain false as an
-independent second gate; a future rollout requires enabling both sides.
+`scripts/automation/dispatch_situation_alerts.py`. It sends analyst-reviewed
+signals and fully structured `tiered_auto_v3.2` decisions. Legacy or malformed
+automated policies fail before any request is sent. The Worker-side
+`SITUATION_ALERT_AUTOMATED_POLICY_ENABLED` flag is an independent deployment
+kill switch and must remain false until the corresponding canary/live rollout
+is approved; enabling either side alone is insufficient.
 
 Configure the upstream release environment, not browser-visible build
 variables:
@@ -570,4 +578,4 @@ country and disease options when the subscription D1 settings are present.
   default).
 - Situation alert wording deliberately describes verified statistical
   surveillance signals, states whether verification came from analyst review
-  or `guarded_auto_v1`, and does not infer a public-health risk rating.
+  or `tiered_auto_v3.2`, and does not infer a public-health risk rating.
