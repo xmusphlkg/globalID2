@@ -2,5 +2,6 @@
 import SituationArchive from '../../../components/SituationArchive.astro';
 import { listSituationReports } from '../../../lib/situation-data';
 const reports = listSituationReports('weekly');
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
 ---
-<SituationArchive kind="weekly" reports={reports} />
+<SituationArchive kind="weekly" reports={reports} locale={locale} />

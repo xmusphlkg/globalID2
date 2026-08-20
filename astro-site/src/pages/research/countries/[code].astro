@@ -5,10 +5,13 @@ import ResearchCollectionPage from '../../../components/research/ResearchCollect
 import researchData from '../../../data/research/index.json';
 
 export function getStaticPaths() {
-  return ((researchData as any).facets?.countries ?? []).map((facet: any) => ({ params: { code: facet.slug }, props: { facet } }));
+  return ((researchData as any).facets?.countries ?? []).map((facet: any) => ({ params: { code: facet.slug }, props: { facet, code: facet.slug, locale: 'en' } }));
 }
 
-const { facet } = Astro.props as { facet: any };
+interface Props { facet?: any; code?: string; locale?: 'en' | 'zh' }
+const { locale = 'en' } = Astro.props as Props;
+const code = (Astro.props as Props).code ?? '';
+const facet = (Astro.props as Props).facet ?? ((researchData as any).facets?.countries ?? []).find((item: any) => item.slug === code || String(item.code).toLowerCase() === code);
 const file = resolve(`./src/data/research/countries/${facet.slug}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [] };
 const description = `Published infectious-disease research classified with a high-confidence geographic relationship to ${facet.name_en}.`;
@@ -24,4 +27,5 @@ const descriptionZh = `与${facet.name_zh ?? facet.name_en}形成高置信度地
   descriptionZh={descriptionZh}
   canonicalPath={`/research/countries/${facet.slug}/`}
   articles={payload.articles ?? []}
+  locale={locale}
 />

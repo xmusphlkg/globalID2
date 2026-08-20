@@ -105,6 +105,87 @@
       "title": "AnomalyAssessment",
       "type": "object"
     },
+    "AutomationDecision": {
+      "additionalProperties": false,
+      "description": "Fail-closed, auditable publication-policy result for one run signal.",
+      "properties": {
+        "status": {
+          "default": "not_evaluated",
+          "enum": [
+            "not_evaluated",
+            "blocked",
+            "shadow",
+            "eligible",
+            "auto_verified"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "basis": {
+          "default": "not_applicable",
+          "enum": [
+            "not_applicable",
+            "calibrated_statistical",
+            "official_corroboration"
+          ],
+          "title": "Basis",
+          "type": "string"
+        },
+        "policy_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Policy Version"
+        },
+        "calibration_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calibration Hash"
+        },
+        "gate_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Gate Reasons",
+          "type": "array"
+        },
+        "matched_event_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Matched Event Ids",
+          "type": "array"
+        },
+        "decided_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decided At"
+        }
+      },
+      "title": "AutomationDecision",
+      "type": "object"
+    },
     "ContextMetric": {
       "additionalProperties": false,
       "properties": {
@@ -559,7 +640,10 @@
           "type": "string"
         },
         "model": {
-          "const": "robust_quasi_poisson_v1",
+          "enum": [
+            "robust_quasi_poisson_v1",
+            "multi_horizon_gamma_poisson_v1"
+          ],
           "title": "Model",
           "type": "string"
         },
@@ -1193,6 +1277,9 @@
           },
           "title": "Evidence Gaps",
           "type": "array"
+        },
+        "automation_decision": {
+          "$ref": "#/$defs/AutomationDecision"
         },
         "public_health_risk": {
           "$ref": "#/$defs/PublicHealthRisk"

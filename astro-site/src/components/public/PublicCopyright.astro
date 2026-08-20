@@ -1,0 +1,387 @@
+---
+import metaData from '../../data/meta.json';
+
+interface Props { locale?: 'en' | 'zh'; }
+
+const { locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const updatedIso = '2026-08-18';
+const updatedLabel = zh ? '2026 年 8 月 18 日' : '18 August 2026';
+const currentYear = new Date().getUTCFullYear();
+const countryCount = Number(metaData?.total_countries ?? 0);
+
+const layers = zh ? [
+  {
+    marker: '01',
+    title: 'GIDS 原创内容与页面编排',
+    status: '保留权利 · 有限许可',
+    body: '原创文字、双语摘要、图表表达、页面设计、数据选择编排和文档在可受保护的范围内由相应权利人保留权利。服务条款明确允许的非商业使用除外。',
+  },
+  {
+    marker: '02',
+    title: '公共卫生事实与第三方材料',
+    status: '来源规则优先',
+    body: '病例数、日期等事实本身与来源机构发布的材料不是 GIDS 的原创财产。其版权、数据库权、政府信息规则、开放许可和署名要求仍由原始来源决定。',
+  },
+  {
+    marker: '03',
+    title: '代码与仓库内容',
+    status: '源码可见 · 未作通用开源许可',
+    body: '截至本说明更新日，项目仓库未发布适用于全部代码的 LICENSE 文件。公开可查看或可 fork 不等于获得复制、分发、修改或商用许可。',
+  },
+  {
+    marker: '04',
+    title: '名称、标识与品牌外观',
+    status: '不授予品牌许可',
+    body: 'GIDS 名称、标识和识别性页面外观不得被用于暗示官方身份、合作、赞助、认证或背书。品牌使用通常需要事先书面许可。',
+  },
+] : [
+  {
+    marker: '01',
+    title: 'GIDS original content and presentation',
+    status: 'Rights reserved · limited permission',
+    body: 'Rights are reserved, where protectable, in original writing, bilingual summaries, chart expression, page design, selection and arrangement, and documentation, except for non-commercial uses expressly permitted by the Service Terms.',
+  },
+  {
+    marker: '02',
+    title: 'Public-health facts and third-party material',
+    status: 'Source terms control',
+    body: 'Facts such as counts and dates, and materials published by source authorities, are not claimed as original GIDS property. Copyright, database rights, public-sector information rules, open licences, and attribution duties remain source-specific.',
+  },
+  {
+    marker: '03',
+    title: 'Code and repository content',
+    status: 'Source visible · no general open-source licence',
+    body: 'As of this notice date, the repository does not publish a LICENSE file covering all code. Public visibility or the ability to fork does not itself grant permission to copy, distribute, modify, or commercialise the code.',
+  },
+  {
+    marker: '04',
+    title: 'Names, marks, and trade dress',
+    status: 'No brand licence granted',
+    body: 'The GIDS name, logos, and distinctive presentation must not be used to imply official status, partnership, sponsorship, certification, or endorsement. Brand use normally requires prior written permission.',
+  },
+];
+
+const uses = zh ? [
+  ['链接至页面或作规范引文', '通常可以', '保留页面标题、GIDS、URL、访问日期和原始来源；不得暗示背书。', 'allow'],
+  ['个人学习、课堂教学或非商业研究中的有限引用', '通常可以', '遵守合理引用范围、完整署名、来源条款和适用法律；不应整站复制。', 'allow'],
+  ['下载、分析或再发布监测数据', '先查来源', '逐项核对国家页、下载文件和原始机构条款。仅在明确标注时适用 CC 等开放许可。', 'check'],
+  ['新闻报道或公共利益说明', '通常可以', '清楚区分 GIDS 处理结果与官方原始发布，注明任何删改、筛选或重新制图。', 'allow'],
+  ['商业产品、付费监测、转售、广告或获客', '需要授权', '除原始来源许可另有允许外，GIDS 原创内容与服务的商业利用须取得事先书面授权。', 'permission'],
+  ['模型训练、批量镜像、自动化商业抓取', '需要授权', '不得把公开可访问或未设置技术阻断理解为许可；还须遵守 robots、速率限制和来源规则。', 'permission'],
+  ['使用 GIDS 标识或宣称合作、认证、官方批准', '需要授权', '须取得明确书面品牌许可；普通署名不得设计成赞助或背书。', 'permission'],
+] : [
+  ['Linking to a page or making a formal citation', 'Usually permitted', 'Keep the page title, GIDS, URL, access date, and primary source; do not imply endorsement.', 'allow'],
+  ['Limited quotation for personal study, teaching, or non-commercial research', 'Usually permitted', 'Use a reasonable excerpt, give full attribution, follow source terms and applicable law, and do not reproduce the site wholesale.', 'allow'],
+  ['Downloading, analysing, or republishing surveillance data', 'Check the source', 'Review the country page, download file, and original authority terms item by item. An open licence applies only where it is expressly marked.', 'check'],
+  ['Journalism or public-interest explanation', 'Usually permitted', 'Distinguish GIDS processing from the official publication and identify any editing, filtering, or redrawing.', 'allow'],
+  ['Commercial products, paid monitoring, resale, advertising, or lead generation', 'Permission required', 'Unless an original source licence independently permits the source material, commercial use of GIDS-created content or services requires prior written permission.', 'permission'],
+  ['Model training, bulk mirroring, or automated commercial scraping', 'Permission required', 'Do not treat public access or the absence of a technical block as permission; robots directives, rate limits, and source rules also apply.', 'permission'],
+  ['Using GIDS marks or claiming partnership, certification, or official approval', 'Permission required', 'Obtain express written brand permission. Ordinary attribution must not be styled as sponsorship or endorsement.', 'permission'],
+];
+
+const noticeSteps = zh ? [
+  ['1', '说明权利基础', '说明你是权利人、被授权代表或受影响来源机构，并指出相关权利或许可条款。'],
+  ['2', '准确定位材料', '提供 GIDS 页面 URL、具体图表或文件、原始材料链接，以及足以识别问题的截图或时间范围。'],
+  ['3', '提出处理请求', '说明希望补充署名、更正许可、限制下载、替换链接或移除内容，并留下可验证的联系方式。'],
+  ['4', '复核与留痕', '项目将核对来源和权利链，必要时临时限制访问，并记录更正、恢复或移除决定。'],
+] : [
+  ['1', 'State the rights basis', 'Explain whether you are the rights holder, an authorised representative, or an affected source authority, and identify the relevant right or licence term.'],
+  ['2', 'Locate the material precisely', 'Provide the GIDS page URL, chart or file, original-material link, and a screenshot or date range sufficient to identify the issue.'],
+  ['3', 'Describe the requested remedy', 'Say whether you seek attribution, a licence correction, download restriction, link replacement, or removal, and provide verifiable contact details.'],
+  ['4', 'Review and record', 'The project will check provenance and the rights chain, restrict access temporarily where appropriate, and record the correction, restoration, or removal decision.'],
+];
+
+const citation = zh
+  ? 'Global Infectious Disease Surveillance（GIDS）：“[页面或数据集标题]”，原始来源：[机构名称与链接]，访问日期：[YYYY-MM-DD]，[页面 URL]。如有修改，请注明“由使用者重新筛选/制图，不代表 GIDS 或来源机构背书”。'
+  : 'Global Infectious Disease Surveillance (GIDS), “[page or dataset title],” primary source: [authority and link], accessed [YYYY-MM-DD], [page URL]. If modified, add: “Filtered/redrawn by the user; no endorsement by GIDS or the source authority is implied.”';
+---
+
+<section class="copyright-page">
+  <header class="copyright-hero">
+    <div class="copyright-hero-inner">
+      <nav class="copyright-breadcrumb" aria-label={zh ? '面包屑' : 'Breadcrumb'}>
+        <a href={`${prefix}/`}>{zh ? '首页' : 'Home'}</a><span aria-hidden="true">/</span><span>{zh ? '版权与复用' : 'Copyright & reuse'}</span>
+      </nav>
+      <div class="copyright-hero-grid">
+        <div>
+          <p class="copyright-kicker">{zh ? '权利透明度' : 'Rights transparency'}</p>
+          <h1>{zh ? '版权、数据许可与复用说明' : 'Copyright, data licensing & reuse'}</h1>
+          <p class="copyright-lead">
+            {zh
+              ? `GIDS 当前公开目录整合 ${countryCount} 个国家和地区的官方来源数据。这里不使用“一揽子版权声明”，而是说明原创内容、第三方数据、代码和品牌各自适用的规则。`
+              : `The current GIDS public catalogue brings together official-source data for ${countryCount} countries and regions. This notice avoids a blanket ownership claim and explains the separate rules for original content, third-party data, code, and branding.`}
+          </p>
+        </div>
+        <aside class="copyright-status" aria-label={zh ? '说明状态' : 'Notice status'}>
+          <span class="copyright-status-dot" aria-hidden="true"></span>
+          <div>
+            <p>{zh ? '当前公开立场' : 'Current public position'}</p>
+            <strong>{zh ? '按权利层分别判断' : 'Assess each rights layer'}</strong>
+            <small>{zh ? `更新于 ${updatedLabel}` : `Updated ${updatedLabel}`}</small>
+          </div>
+        </aside>
+      </div>
+      <div class="copyright-principle">
+        <span aria-hidden="true">i</span>
+        <p>{zh ? '公开可访问不等于进入公有领域；同一页面也可能同时包含 GIDS 原创表达、第三方数据和不同来源许可。' : 'Publicly accessible does not mean public domain. A single page may contain GIDS-authored expression, third-party data, and several source-specific licences.'}</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="copyright-shell">
+    <aside class="copyright-toc">
+      <p>{zh ? '本页目录' : 'On this page'}</p>
+      <nav aria-label={zh ? '本页目录' : 'On this page'}>
+        <a href="#rights-layers">{zh ? '权利分层' : 'Rights layers'}</a>
+        <a href="#reuse-checker">{zh ? '复用判断表' : 'Reuse checker'}</a>
+        <a href="#attribution">{zh ? '如何署名' : 'How to attribute'}</a>
+        <a href="#source-licences">{zh ? '来源许可' : 'Source licences'}</a>
+        <a href="#rights-notice">{zh ? '权利通知' : 'Rights notice'}</a>
+      </nav>
+      <a class="copyright-terms-link" href={`${prefix}/terms/`}>{zh ? '查看完整服务条款与隐私说明' : 'Read the full Service Terms & Privacy Notice'} <span aria-hidden="true">→</span></a>
+    </aside>
+
+    <div class="copyright-content">
+      <section id="rights-layers" class="copyright-section copyright-section-first">
+        <p class="copyright-section-index">01</p>
+        <div class="copyright-section-heading">
+          <p>{zh ? '不要把事实、数据库和页面设计混为一谈' : 'Do not conflate facts, databases, and page design'}</p>
+          <h2>{zh ? '四层权利结构' : 'Four rights layers'}</h2>
+        </div>
+        <div class="copyright-layer-grid">
+          {layers.map(layer => (
+            <article>
+              <div class="copyright-layer-top"><span>{layer.marker}</span><small>{layer.status}</small></div>
+              <h3>{layer.title}</h3>
+              <p>{layer.body}</p>
+            </article>
+          ))}
+        </div>
+        <p class="copyright-legal-note">
+          {zh ? '本说明不主张对不受版权保护的事实、思想、方法或依法属于公有领域的材料享有专有权，也不限制适用法律中不可排除的合理使用、合理处理或其他法定例外。' : 'This notice does not claim exclusive rights in uncopyrightable facts, ideas, methods, or public-domain material, and it does not restrict fair use, fair dealing, or other non-waivable exceptions under applicable law.'}
+        </p>
+      </section>
+
+      <section id="reuse-checker" class="copyright-section">
+        <p class="copyright-section-index">02</p>
+        <div class="copyright-section-heading">
+          <p>{zh ? '从使用场景出发' : 'Start with the intended use'}</p>
+          <h2>{zh ? '复用前快速判断' : 'Quick reuse checker'}</h2>
+        </div>
+        <div class="copyright-table-wrap" role="region" tabindex="0" aria-label={zh ? '复用方式与许可判断表，可横向滚动' : 'Reuse and permission decision table; scroll horizontally'}>
+          <table>
+            <thead><tr><th>{zh ? '使用方式' : 'Intended use'}</th><th>{zh ? '当前立场' : 'Current position'}</th><th>{zh ? '你需要做什么' : 'What you need to do'}</th></tr></thead>
+            <tbody>
+              {uses.map(([use, label, guidance, tone]) => (
+                <tr>
+                  <th scope="row">{use}</th>
+                  <td><span class:list={['copyright-decision', `copyright-decision-${tone}`]}>{label}</span></td>
+                  <td>{guidance}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="copyright-table-footnote">{zh ? '“通常可以”不是对第三方材料的一揽子再许可。若页面、下载文件或来源机构给出更具体的条款，以该具体条款为准。' : '“Usually permitted” is not a blanket sublicence of third-party material. More specific terms on a page, download, or source-authority site take priority.'}</p>
+      </section>
+
+      <section id="attribution" class="copyright-section">
+        <p class="copyright-section-index">03</p>
+        <div class="copyright-section-heading">
+          <p>{zh ? '署名应保留证据链，而不只是写一个网址' : 'Attribution should preserve provenance, not merely a URL'}</p>
+          <h2>{zh ? '推荐署名格式' : 'Recommended attribution'}</h2>
+        </div>
+        <div class="copyright-attribution-grid">
+          <div class="copyright-recipe">
+            <ol>
+              <li><span>1</span><div><strong>{zh ? '标明作品' : 'Identify the item'}</strong><p>{zh ? '页面、图表、报告或数据集的完整标题。' : 'Use the full title of the page, chart, report, or dataset.'}</p></div></li>
+              <li><span>2</span><div><strong>{zh ? '同时标明两级来源' : 'Credit both provenance levels'}</strong><p>{zh ? '写明 GIDS 的整理或呈现，并保留原始卫生机构名称与链接。' : 'Name GIDS for the compilation or presentation and retain the original health authority and link.'}</p></div></li>
+              <li><span>3</span><div><strong>{zh ? '记录版本' : 'Record the version'}</strong><p>{zh ? '附页面 URL、访问或下载日期；如文件提供发布日期或版本号，一并保留。' : 'Include the page URL and access or download date, plus any published release date or version.'}</p></div></li>
+              <li><span>4</span><div><strong>{zh ? '披露改动' : 'Disclose changes'}</strong><p>{zh ? '对筛选、翻译、聚合、重新制图或口径变化作显著说明。' : 'Clearly identify filtering, translation, aggregation, redrawing, or changes in definition.'}</p></div></li>
+            </ol>
+          </div>
+          <div class="copyright-citation-card">
+            <div class="copyright-citation-card-top"><span>{zh ? '可复制模板' : 'Copy-ready template'}</span><button id="copy-copyright-citation" type="button" data-copied={zh ? '已复制' : 'Copied'}>{zh ? '复制' : 'Copy'}</button></div>
+            <blockquote id="copyright-citation-text">{citation}</blockquote>
+          </div>
+        </div>
+      </section>
+
+      <section id="source-licences" class="copyright-section">
+        <p class="copyright-section-index">04</p>
+        <div class="copyright-section-heading">
+          <p>{zh ? '许可跟随具体材料，不跟随网站域名' : 'Licences travel with the material, not the domain name'}</p>
+          <h2>{zh ? '来源许可与开放数据' : 'Source licences and open data'}</h2>
+        </div>
+        <div class="copyright-source-panel">
+          <div>
+            <h3>{zh ? '只相信明确标注' : 'Rely only on an express label'}</h3>
+            <p>{zh ? '当前目录中的来源由不同国家和机构发布，其规则并不统一。部分来源在项目配置或来源页明确记录开放许可，例如标明 CC BY 4.0 的材料；该许可允许在遵守署名、许可链接、改动说明及其他条件的前提下共享和改编。该许可不会自动扩展到其他国家、其他来源、GIDS 品牌或未标注材料。' : 'Sources in the current catalogue are published by different countries and authorities under non-uniform rules. Some materials have an express open-licence record in project metadata or on the source page, including material marked CC BY 4.0. That licence permits sharing and adaptation subject to attribution, a licence link, change marking, and its other terms. It does not automatically extend to another country, source, the GIDS brand, or unmarked material.'}</p>
+          </div>
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">
+            <span>CC BY 4.0</span>
+            <small>{zh ? '查看许可原文摘要' : 'Read the official licence deed'} <b aria-hidden="true">↗</b></small>
+          </a>
+        </div>
+        <div class="copyright-source-checklist">
+          <h3>{zh ? '下载或再发布前检查' : 'Check before downloading or republishing'}</h3>
+          <ul>
+            <li>{zh ? '国家/疾病页面列出的原始机构和来源链接' : 'The original authority and source link shown on the country or disease page'}</li>
+            <li>{zh ? '下载包中的 README、字段说明、来源列和许可字段' : 'README, field guide, source columns, and licence field in the download package'}</li>
+            <li>{zh ? '原始机构当前有效的开放数据、版权或再利用政策' : 'The source authority’s current open-data, copyright, or reuse policy'}</li>
+            <li>{zh ? '是否包含第三方图片、报告版式、徽标或受限数据库内容' : 'Whether third-party images, report layouts, logos, or restricted database content are included'}</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="rights-notice" class="copyright-section">
+        <p class="copyright-section-index">05</p>
+        <div class="copyright-section-heading">
+          <p>{zh ? '优先纠正署名和权利状态，必要时限制或移除' : 'Correct attribution and rights status first; restrict or remove where needed'}</p>
+          <h2>{zh ? '提交版权或许可问题' : 'Submit a copyright or licensing concern'}</h2>
+        </div>
+        <div class="copyright-notice-steps">
+          {noticeSteps.map(([number, title, body]) => <article><span>{number}</span><div><h3>{title}</h3><p>{body}</p></div></article>)}
+        </div>
+        <div class="copyright-contact-panel">
+          <div>
+            <h3>{zh ? '公开问题反馈渠道' : 'Public issue channel'}</h3>
+            <p>{zh ? '可通过项目 issue tracker 报告不含保密信息的来源、署名或许可问题。请勿在公开 issue 中上传身份证件、未公开联系方式、授权书原件或其他敏感材料；如需私密提交，可先创建不含敏感信息的最小问题，请求提供非公开联系路径。' : 'Use the project issue tracker for source, attribution, or licensing concerns that contain no confidential information. Do not upload identity documents, unpublished contact details, original authorisation documents, or other sensitive material to a public issue. If a private submission is necessary, open a minimal non-sensitive issue requesting a non-public contact route.'}</p>
+          </div>
+          <a href="https://github.com/xmusphlkg/globalID2/issues/new" target="_blank" rel="noopener noreferrer">{zh ? '提交权利问题' : 'Open a rights issue'} <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+
+      <footer class="copyright-document-footer">
+        <p>© {currentYear} GIDS. {zh ? '除非另有明确标注，保留对 GIDS 原创内容的权利。' : 'Rights in GIDS-created content are reserved unless expressly stated otherwise.'}</p>
+        <p>{zh ? '本页是网站的权利与复用说明，不替代针对具体使用场景的法律意见。' : 'This page states the website’s rights and reuse position; it is not a substitute for legal advice on a specific use.'}</p>
+        <time datetime={updatedIso}>{zh ? `版本日期：${updatedLabel}` : `Version date: ${updatedLabel}`}</time>
+      </footer>
+    </div>
+  </div>
+</section>
+
+<script is:inline>
+  document.querySelector('#copy-copyright-citation')?.addEventListener('click', async event => {
+    const button = event.currentTarget;
+    const text = document.querySelector('#copyright-citation-text')?.textContent?.trim();
+    if (!(button instanceof HTMLButtonElement) || !text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      const original = button.textContent;
+      button.textContent = button.dataset.copied || 'Copied';
+      window.setTimeout(() => { button.textContent = original; }, 1600);
+    } catch {
+      const citation = document.querySelector('#copyright-citation-text');
+      if (citation) document.getSelection()?.selectAllChildren(citation);
+    }
+  });
+</script>
+
+<style>
+  .copyright-page { --legal-accent: 10 126 118; --legal-ink: 14 42 63; min-height: 100%; }
+  .copyright-hero { color: white; background: rgb(var(--color-brand)); border-bottom: 1px solid rgb(var(--border)); }
+  .copyright-hero-inner { width: min(74rem, calc(100% - 2rem)); margin-inline: auto; padding: 2rem 0 2.4rem; }
+  .copyright-breadcrumb { display: flex; gap: .55rem; align-items: center; color: rgb(203 224 232); font-size: .76rem; }
+  .copyright-breadcrumb a { color: inherit; text-decoration: none; }
+  .copyright-breadcrumb a:hover { color: white; text-decoration: underline; }
+  .copyright-hero-grid { display: grid; gap: 1.8rem; margin-top: 2.2rem; align-items: end; }
+  .copyright-kicker, .copyright-section-heading > p { color: rgb(94 234 212); font-size: .72rem; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+  .copyright-hero h1 { max-width: 53rem; margin-top: .65rem; color: white; font-family: var(--font-serif, Georgia, serif); font-size: clamp(2.3rem, 7vw, 4.65rem); font-weight: 640; letter-spacing: -.035em; line-height: 1.02; text-wrap: balance; }
+  .copyright-lead { max-width: 48rem; margin-top: 1.2rem; color: rgb(210 230 236); font-size: 1.02rem; line-height: 1.75; }
+  .copyright-status { display: grid; grid-template-columns: auto 1fr; gap: .8rem; min-width: min(100%, 18rem); padding: 1rem; border: 1px solid rgb(148 195 203 / .35); background: rgb(255 255 255 / .06); }
+  .copyright-status-dot { width: .65rem; height: .65rem; margin-top: .32rem; border-radius: 999px; background: rgb(45 212 191); box-shadow: 0 0 0 5px rgb(45 212 191 / .12); }
+  .copyright-status p { color: rgb(174 208 217); font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .copyright-status strong, .copyright-status small { display: block; }
+  .copyright-status strong { margin-top: .2rem; color: white; font-size: .92rem; }
+  .copyright-status small { margin-top: .35rem; color: rgb(174 208 217); }
+  .copyright-principle { display: grid; grid-template-columns: auto 1fr; gap: .65rem; max-width: 58rem; margin-top: 2rem; padding-top: 1.1rem; border-top: 1px solid rgb(148 195 203 / .28); color: rgb(201 224 231); font-size: .83rem; line-height: 1.6; }
+  .copyright-principle span { display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; margin-top: .05rem; border: 1px solid rgb(94 234 212 / .65); border-radius: 50%; color: rgb(94 234 212); font-family: Georgia, serif; font-weight: 700; }
+  .copyright-shell { display: grid; width: min(74rem, calc(100% - 2rem)); margin-inline: auto; }
+  .copyright-toc { display: none; }
+  .copyright-content { min-width: 0; }
+  .copyright-section { position: relative; padding: 3.8rem 0; border-top: 1px solid rgb(var(--border)); scroll-margin-top: 6rem; }
+  .copyright-section-first { border-top: 0; }
+  .copyright-section-index { color: rgb(var(--text-faint)); font-family: Georgia, serif; font-size: .78rem; font-style: italic; }
+  .copyright-section-heading { max-width: 48rem; margin-top: .45rem; }
+  .copyright-section-heading > p { color: rgb(var(--color-teal)); letter-spacing: .08em; line-height: 1.5; }
+  .copyright-section h2 { margin-top: .45rem; color: rgb(var(--text-strong)); font-family: var(--font-serif, Georgia, serif); font-size: clamp(1.8rem, 5vw, 2.55rem); font-weight: 640; letter-spacing: -.02em; line-height: 1.14; }
+  .copyright-layer-grid { display: grid; gap: .9rem; margin-top: 2rem; }
+  .copyright-layer-grid article { padding: 1.2rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+  .copyright-layer-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .copyright-layer-top span { color: rgb(var(--color-teal)); font-family: Georgia, serif; font-size: .82rem; font-style: italic; }
+  .copyright-layer-top small { color: rgb(var(--text-faint)); font-size: .66rem; font-weight: 750; letter-spacing: .055em; text-align: right; text-transform: uppercase; }
+  .copyright-layer-grid h3, .copyright-source-panel h3, .copyright-source-checklist h3, .copyright-contact-panel h3 { margin-top: 1.1rem; color: rgb(var(--text-strong)); font-size: 1rem; line-height: 1.4; }
+  .copyright-layer-grid p, .copyright-source-panel p, .copyright-contact-panel p { margin-top: .55rem; color: rgb(var(--text-muted)); font-size: .88rem; line-height: 1.72; }
+  .copyright-legal-note, .copyright-table-footnote { margin-top: 1.2rem; padding-left: 1rem; border-left: 2px solid rgb(var(--color-teal)); color: rgb(var(--text-muted)); font-size: .82rem; line-height: 1.65; }
+  .copyright-table-wrap { overflow-x: auto; margin-top: 2rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+  .copyright-table-wrap table { width: 100%; min-width: 46rem; border-collapse: collapse; text-align: left; }
+  .copyright-table-wrap th, .copyright-table-wrap td { padding: .95rem 1rem; border-bottom: 1px solid rgb(var(--border)); vertical-align: top; }
+  .copyright-table-wrap thead th { color: rgb(var(--text-faint)); background: rgb(var(--bg-soft)); font-size: .66rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+  .copyright-table-wrap tbody th { width: 31%; color: rgb(var(--text-strong)); font-size: .86rem; font-weight: 650; line-height: 1.5; }
+  .copyright-table-wrap tbody td { color: rgb(var(--text-muted)); font-size: .83rem; line-height: 1.62; }
+  .copyright-table-wrap tr:last-child th, .copyright-table-wrap tr:last-child td { border-bottom: 0; }
+  .copyright-decision { display: inline-flex; white-space: nowrap; padding: .25rem .5rem; border: 1px solid; border-radius: 999px; font-size: .68rem; font-weight: 750; }
+  .copyright-decision-allow { color: rgb(5 122 85); border-color: rgb(16 185 129 / .3); background: rgb(16 185 129 / .08); }
+  .copyright-decision-check { color: rgb(161 98 7); border-color: rgb(245 158 11 / .35); background: rgb(245 158 11 / .09); }
+  .copyright-decision-permission { color: rgb(190 24 93); border-color: rgb(236 72 153 / .3); background: rgb(236 72 153 / .08); }
+  :global(.dark) .copyright-decision-allow { color: rgb(110 231 183); }
+  :global(.dark) .copyright-decision-check { color: rgb(252 211 77); }
+  :global(.dark) .copyright-decision-permission { color: rgb(249 168 212); }
+  .copyright-attribution-grid { display: grid; gap: 1rem; margin-top: 2rem; }
+  .copyright-recipe { padding: 1.2rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+  .copyright-recipe ol { display: grid; gap: 1rem; }
+  .copyright-recipe li { display: grid; grid-template-columns: 1.65rem 1fr; gap: .7rem; }
+  .copyright-recipe li > span { display: grid; place-items: center; width: 1.65rem; height: 1.65rem; border: 1px solid rgb(var(--color-teal) / .42); color: rgb(var(--color-teal)); font-family: Georgia, serif; font-size: .76rem; }
+  .copyright-recipe strong { color: rgb(var(--text-strong)); font-size: .87rem; }
+  .copyright-recipe p { margin-top: .2rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.55; }
+  .copyright-citation-card { align-self: stretch; color: rgb(223 239 242); background: rgb(var(--color-brand)); }
+  .copyright-citation-card-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; border-bottom: 1px solid rgb(148 195 203 / .25); color: rgb(174 208 217); font-size: .68rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+  .copyright-citation-card button { min-height: 2rem; padding: .3rem .65rem; color: white; border: 1px solid rgb(94 234 212 / .5); background: transparent; font: inherit; cursor: pointer; }
+  .copyright-citation-card button:hover { background: rgb(94 234 212 / .12); }
+  .copyright-citation-card blockquote { padding: 1.3rem; font-family: Georgia, 'Times New Roman', serif; font-size: .96rem; line-height: 1.75; }
+  .copyright-source-panel { display: grid; gap: 1.2rem; margin-top: 2rem; padding: 1.25rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+  .copyright-source-panel h3 { margin-top: 0; }
+  .copyright-source-panel > a { display: flex; min-height: 8rem; flex-direction: column; justify-content: space-between; padding: 1rem; color: white; background: rgb(var(--color-teal)); text-decoration: none; }
+  .copyright-source-panel > a span { font-family: Georgia, serif; font-size: 1.55rem; }
+  .copyright-source-panel > a small { font-size: .72rem; font-weight: 700; }
+  .copyright-source-panel > a:hover { filter: brightness(1.05); }
+  .copyright-source-checklist { margin-top: 1rem; padding: 1.2rem; border: 1px solid rgb(var(--border)); background: rgb(var(--bg-soft)); }
+  .copyright-source-checklist h3 { margin-top: 0; }
+  .copyright-source-checklist ul { display: grid; gap: .65rem; margin-top: .8rem; }
+  .copyright-source-checklist li { position: relative; padding-left: 1.15rem; color: rgb(var(--text-muted)); font-size: .83rem; line-height: 1.55; }
+  .copyright-source-checklist li::before { position: absolute; top: .55em; left: 0; width: .35rem; height: .35rem; border-radius: 50%; background: rgb(var(--color-teal)); content: ''; }
+  .copyright-notice-steps { display: grid; gap: 0; margin-top: 2rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+  .copyright-notice-steps article { display: grid; grid-template-columns: 2rem 1fr; gap: .8rem; padding: 1.1rem; border-bottom: 1px solid rgb(var(--border)); }
+  .copyright-notice-steps article:last-child { border-bottom: 0; }
+  .copyright-notice-steps article > span { color: rgb(var(--color-teal)); font-family: Georgia, serif; font-style: italic; }
+  .copyright-notice-steps h3 { color: rgb(var(--text-strong)); font-size: .9rem; }
+  .copyright-notice-steps p { margin-top: .28rem; color: rgb(var(--text-muted)); font-size: .82rem; line-height: 1.58; }
+  .copyright-contact-panel { display: grid; gap: 1.2rem; margin-top: 1rem; padding: 1.25rem; border: 1px solid rgb(var(--color-teal) / .32); background: rgb(var(--color-teal) / .055); }
+  .copyright-contact-panel h3 { margin-top: 0; }
+  .copyright-contact-panel > a { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; align-self: center; gap: .45rem; padding: .65rem .9rem; color: white; background: rgb(var(--color-teal)); font-size: .8rem; font-weight: 750; text-decoration: none; }
+  .copyright-contact-panel > a:hover { filter: brightness(1.06); }
+  .copyright-document-footer { display: grid; gap: .35rem; padding: 1.4rem 0 2.5rem; border-top: 1px solid rgb(var(--border)); color: rgb(var(--text-faint)); font-size: .72rem; line-height: 1.55; }
+
+  @media (min-width: 640px) {
+    .copyright-hero-inner, .copyright-shell { width: min(74rem, calc(100% - 3rem)); }
+    .copyright-layer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .copyright-source-panel, .copyright-contact-panel { grid-template-columns: 1fr minmax(12rem, 15rem); align-items: center; }
+  }
+  @media (min-width: 900px) {
+    .copyright-hero-grid { grid-template-columns: minmax(0, 1fr) 18rem; }
+    .copyright-shell { grid-template-columns: 13rem minmax(0, 1fr); gap: 3.5rem; }
+    .copyright-toc { position: sticky; top: 6rem; display: block; align-self: start; padding: 3.8rem 0; }
+    .copyright-toc > p { color: rgb(var(--text-faint)); font-size: .66rem; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+    .copyright-toc nav { display: grid; gap: .15rem; margin-top: .75rem; }
+    .copyright-toc nav a { padding: .42rem 0 .42rem .7rem; color: rgb(var(--text-muted)); border-left: 1px solid rgb(var(--border)); font-size: .78rem; text-decoration: none; }
+    .copyright-toc nav a:hover { color: rgb(var(--color-teal)); border-color: rgb(var(--color-teal)); }
+    .copyright-terms-link { display: block; margin-top: 1.4rem; color: rgb(var(--color-teal)); font-size: .72rem; font-weight: 700; line-height: 1.5; text-decoration: none; }
+    .copyright-attribution-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  }
+  @media (min-width: 1180px) {
+    .copyright-shell { grid-template-columns: 14rem minmax(0, 1fr); gap: 5rem; }
+  }
+</style>

@@ -76,6 +76,8 @@ export default function YearSelector({
       </div>
 
       <input
+        id="curve-year-search"
+        name="curve-year-search"
         type="search"
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
@@ -162,6 +164,8 @@ export default function YearSelector({
               >
                 <div className="chart-sidebar-item-inner flex items-start gap-3">
                   <input
+                    name="curve-year-selection"
+                    value={summary.year}
                     type="checkbox"
                     checked={isActive}
                     onChange={() => onToggleYear(summary.year)}

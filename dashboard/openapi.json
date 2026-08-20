@@ -1984,6 +1984,84 @@
         "title": "AutomationConfigOut",
         "type": "object"
       },
+      "AutomationDecision": {
+        "additionalProperties": false,
+        "description": "Fail-closed, auditable publication-policy result for one run signal.",
+        "properties": {
+          "basis": {
+            "default": "not_applicable",
+            "enum": [
+              "not_applicable",
+              "calibrated_statistical",
+              "official_corroboration"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "calibration_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Hash"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "gate_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Gate Reasons",
+            "type": "array"
+          },
+          "matched_event_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Matched Event Ids",
+            "type": "array"
+          },
+          "policy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Version"
+          },
+          "status": {
+            "default": "not_evaluated",
+            "enum": [
+              "not_evaluated",
+              "blocked",
+              "shadow",
+              "eligible",
+              "auto_verified"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "AutomationDecision",
+        "type": "object"
+      },
       "AutomationJobCreate": {
         "properties": {
           "country_code": {
@@ -7526,7 +7604,10 @@
             "type": "string"
           },
           "model": {
-            "const": "robust_quasi_poisson_v1",
+            "enum": [
+              "robust_quasi_poisson_v1",
+              "multi_horizon_gamma_poisson_v1"
+            ],
             "title": "Model",
             "type": "string"
           },
@@ -10393,6 +10474,9 @@
       "SignalAssessment": {
         "additionalProperties": false,
         "properties": {
+          "automation_decision": {
+            "$ref": "#/components/schemas/AutomationDecision"
+          },
           "evidence_gaps": {
             "items": {
               "type": "string"
@@ -26902,6 +26986,411 @@
         ]
       }
     },
+    "/api/v1/situation/v3/calibration": {
+      "get": {
+        "operationId": "calibration_runs_v3_api_v1_situation_v3_calibration_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 250,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": true,
+                        "type": "object"
+                      },
+                      "title": "Response Calibration Runs V3 Api V1 Situation V3 Calibration Get",
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Calibration Runs V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/calibration/latest": {
+      "get": {
+        "operationId": "latest_calibration_v3_api_v1_situation_v3_calibration_latest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "additionalProperties": true,
+                      "title": "Response Latest Calibration V3 Api V1 Situation V3 Calibration Latest Get",
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Latest Calibration V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/event-labels": {
+      "get": {
+        "operationId": "event_labels_v3_api_v1_situation_v3_event_labels_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "disease_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Disease Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "adjudication",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Adjudication"
+            }
+          },
+          {
+            "in": "query",
+            "name": "split",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Split"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 250,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": true,
+                        "type": "object"
+                      },
+                      "title": "Response Event Labels V3 Api V1 Situation V3 Event Labels Get",
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Event Labels V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
     "/api/v1/situation/v3/events": {
       "get": {
         "operationId": "events_v3_api_v1_situation_v3_events_get",
@@ -27131,6 +27620,177 @@
           }
         },
         "summary": "Overview V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/policy-decisions": {
+      "get": {
+        "operationId": "policy_decisions_v3_api_v1_situation_v3_policy_decisions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "signal_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 250,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": true,
+                        "type": "object"
+                      },
+                      "title": "Response Policy Decisions V3 Api V1 Situation V3 Policy Decisions Get",
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Policy Decisions V3",
         "tags": [
           "Situation Room v3"
         ]

@@ -94,6 +94,8 @@ export default function CurveEntitySelector({
       </div>
 
       <input
+        id={`curve-${entityType}-search`}
+        name={`curve-${entityType}-search`}
         type="search"
         value={query}
         onChange={(event) => onQueryChange(event.target.value)}
@@ -147,6 +149,8 @@ export default function CurveEntitySelector({
               >
                 <div className="chart-sidebar-item-inner flex items-start gap-3">
                   <input
+                    name={`curve-${entityType}-selection`}
+                    value={id}
                     type={selectionMode === 'single' ? 'radio' : 'checkbox'}
                     checked={isActive}
                     onChange={() => onToggle(id)}

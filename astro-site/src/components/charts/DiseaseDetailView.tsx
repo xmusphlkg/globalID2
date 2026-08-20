@@ -51,6 +51,7 @@ interface Props {
   sections: DiseaseSection[];
   series: DiseaseSeries | null;
   reportMeta: ReportMeta;
+  initialLanguage?: 'en' | 'zh';
 }
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
@@ -72,31 +73,8 @@ function useTheme() {
   return theme;
 }
 
-function useLang() {
-  const [lang, setLang] = useState<'en' | 'zh'>(() => {
-    // This island is server-rendered inside an English-first ReportLayout.
-    // Match that deterministic SSR value, then follow the document preference
-    // after hydration. A Chinese fallback here forced React to discard and
-    // rebuild the complete report on every initial English visit.
-    if (typeof document === 'undefined') return 'en';
-    return document.documentElement.getAttribute('data-lang') === 'en' ? 'en' : 'zh';
-  });
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const root = document.documentElement;
-    const update = () => setLang(root.getAttribute('data-lang') === 'en' ? 'en' : 'zh');
-    update();
-    const observer = new MutationObserver(update);
-    observer.observe(root, { attributes: true, attributeFilter: ['data-lang'] });
-    document.addEventListener('globalid:language-change', update);
-    window.addEventListener('storage', update);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener('globalid:language-change', update);
-      window.removeEventListener('storage', update);
-    };
-  }, []);
-  return lang;
+function useLang(initialLanguage: 'en' | 'zh') {
+  return initialLanguage;
 }
 
 // ─── Chart color tokens ───────────────────────────────────────────────────────
@@ -545,9 +523,10 @@ function categoryLabel(value: string, lang: 'en' | 'zh') {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function DiseaseDetailView({ diseaseMeta, sections, series, reportMeta }: Props) {
+export default function DiseaseDetailView({ diseaseMeta, sections, series, reportMeta, initialLanguage = 'en' }: Props) {
   const theme = useTheme();
-  const lang = useLang();
+  const lang = useLang(initialLanguage);
+  const localePrefix = lang === 'zh' ? '/zh' : '';
   const isLight = theme === 'light';
 
   const bgPage   = isLight ? '#f8fafc' : '#060d1b';
@@ -620,7 +599,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
               </span>
             </div>
             <a
-              href={`/countries/${reportMeta.country_code}/reports/${reportMeta.id}/`}
+              href={`${localePrefix}/countries/${reportMeta.country_code}/reports/${reportMeta.id}/`}
               style={{ color: textMute }}
               className="text-xs hover:text-brand-400 transition-colors flex items-center gap-1.5"
             >
@@ -808,7 +787,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
           className="flex items-center justify-between flex-wrap gap-4"
         >
           <a
-            href={`/countries/${reportMeta.country_code}/reports/${reportMeta.id}/`}
+            href={`${localePrefix}/countries/${reportMeta.country_code}/reports/${reportMeta.id}/`}
             style={{ color: textBody }}
             className="flex items-center gap-2 text-sm hover:text-brand-400 transition-colors"
           >
@@ -818,7 +797,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
             {lang === 'zh' ? '← 返回国家总览' : '← Back to overview'}
           </a>
           <a
-            href={`/diseases/${diseaseMeta.slug}/`}
+            href={`${localePrefix}/diseases/${diseaseMeta.slug}/`}
             style={{ color: textBody }}
             className="flex items-center gap-2 text-sm hover:text-brand-400 transition-colors"
           >

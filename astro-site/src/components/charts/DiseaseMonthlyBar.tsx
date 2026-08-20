@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import MonthlyBar from './MonthlyBar';
 import type { ChartSourceMeta } from '../../utils/chartMeta';
 import { loadDiseaseDataset, type DiseaseDatasetMonthlyData } from './diseaseDataset';
@@ -7,15 +7,13 @@ interface Props {
   dataUrl?: string;
   height?: number;
   sourceMeta?: ChartSourceMeta | null;
+  initialLanguage?: 'en' | 'zh';
 }
 
-export default function DiseaseMonthlyBar({ dataUrl, height = 360, sourceMeta = null }: Props) {
+export default function DiseaseMonthlyBar({ dataUrl, height = 360, sourceMeta = null, initialLanguage = 'en' }: Props) {
   const [monthlyData, setMonthlyData] = useState<DiseaseDatasetMonthlyData | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [lang] = useState<'en' | 'zh'>(() => {
-    if (typeof window !== 'undefined') return (localStorage.getItem('lang') as 'en' | 'zh') || 'en';
-    return 'en';
-  });
+  const lang = initialLanguage;
 
   useEffect(() => {
     if (!dataUrl) return;
@@ -39,7 +37,7 @@ export default function DiseaseMonthlyBar({ dataUrl, height = 360, sourceMeta = 
 
   if (loadError) {
     return (
-      <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
+      <div className="chart-shell flex items-center justify-center text-[rgb(var(--text-muted))] text-sm min-h-[160px]">
         {lang === 'zh' ? '月度数据加载失败' : 'Failed to load monthly data'}
       </div>
     );
@@ -47,7 +45,7 @@ export default function DiseaseMonthlyBar({ dataUrl, height = 360, sourceMeta = 
 
   if (!monthlyData?.months?.length) {
     return (
-      <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
+      <div className="chart-shell flex items-center justify-center text-[rgb(var(--text-muted))] text-sm min-h-[160px]">
         {lang === 'zh' ? '月度数据加载中' : 'Loading monthly data'}
       </div>
     );
@@ -58,6 +56,7 @@ export default function DiseaseMonthlyBar({ dataUrl, height = 360, sourceMeta = 
       data={monthlyData}
       height={height}
       sourceMeta={sourceMeta}
+      initialLanguage={initialLanguage}
     />
   );
 }

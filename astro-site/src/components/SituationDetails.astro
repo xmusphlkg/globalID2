@@ -12,54 +12,57 @@ import {
   unitSuffix,
 } from '../utils/situation';
 
-interface Props { snapshot: SituationReportV3; }
-const { snapshot } = Astro.props;
+interface Props { snapshot: SituationReportV3; locale?: 'en' | 'zh'; }
+const { snapshot, locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 const sourceOptions = [...new Set(snapshot.signals.map(signal => signal.identity.source_system))].sort();
 const stateOptions = [...new Set(snapshot.signals.map(signal => signal.anomaly.state))].sort();
 const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observation.data_status))].sort();
 ---
 
-<section class="analysis" aria-labelledby="signal-table-title">
+<section class="analysis" aria-labelledby="signal-table-title" data-locale={locale}>
   <header class="section-heading">
     <div>
-      <p data-lang-en="Signal analysis" data-lang-zh="信号分析">Signal analysis</p>
-      <h2 id="signal-table-title" data-lang-en="One row per source-native identity" data-lang-zh="每个来源原生 identity 仅一行">One row per source-native identity</h2>
+      <p>{pick('Signal analysis', '信号分析')}</p>
+      <h2 id="signal-table-title">{pick('One row per source-native identity', '每个来源原生 identity 仅一行')}</h2>
     </div>
-    <a href="/situation/methodology/" data-lang-en="Read methodology" data-lang-zh="查看方法">Read methodology</a>
+    <a href={`${prefix}/situation/methodology/`}>{pick('Read methodology', '查看方法')}</a>
   </header>
 
-  <form class="filters" id="situation-filters" aria-label="Signal filters">
+  <form class="filters" id="situation-filters" aria-label={pick('Signal filters', '信号筛选器')}>
     <label>
-      <span data-lang-en="Search" data-lang-zh="搜索">Search</span>
-      <input id="signal-query" type="search" placeholder="Disease, geography, series…" />
+      <span>{pick('Search', '搜索')}</span>
+      <input id="signal-query" type="search" placeholder={pick('Disease, geography, series…', '疾病、地区、序列…')} />
     </label>
     <label>
-      <span data-lang-en="State" data-lang-zh="异常状态">State</span>
-      <select id="signal-state"><option value="" data-lang-en="All states" data-lang-zh="全部状态">All states</option>{stateOptions.map(state => <option value={state} data-lang-en={label(state)} data-lang-zh={labelZh(state)}>{label(state)}</option>)}</select>
+      <span>{pick('State', '异常状态')}</span>
+      <select id="signal-state"><option value="">{pick('All states', '全部状态')}</option>{stateOptions.map(state => <option value={state}>{pick(label(state), labelZh(state))}</option>)}</select>
     </label>
     <label>
-      <span data-lang-en="Source" data-lang-zh="来源">Source</span>
-      <select id="signal-source"><option value="" data-lang-en="All sources" data-lang-zh="全部来源">All sources</option>{sourceOptions.map(source => <option value={source}>{source}</option>)}</select>
+      <span>{pick('Source', '来源')}</span>
+      <select id="signal-source"><option value="">{pick('All sources', '全部来源')}</option>{sourceOptions.map(source => <option value={source}>{source}</option>)}</select>
     </label>
     <label>
-      <span data-lang-en="Tag" data-lang-zh="标签">Tag</span>
+      <span>{pick('Tag', '标签')}</span>
       <select id="signal-tag">
-        <option value="" data-lang-en="All tags" data-lang-zh="全部标签">All tags</option>
-        <option value="increasing" data-lang-en="Increasing" data-lang-zh="上升">Increasing</option>
-        <option value="unusual" data-lang-en="Unusual" data-lang-zh="异常">Unusual</option>
-        <option value="respiratory" data-lang-en="Respiratory" data-lang-zh="呼吸道">Respiratory</option>
-        <option value="official_match" data-lang-en="Official match" data-lang-zh="匹配官方事件">Official match</option>
+        <option value="">{pick('All tags', '全部标签')}</option>
+        <option value="increasing">{pick('Increasing', '上升')}</option>
+        <option value="unusual">{pick('Unusual', '异常')}</option>
+        <option value="respiratory">{pick('Respiratory', '呼吸道')}</option>
+        <option value="official_match">{pick('Official match', '匹配官方事件')}</option>
       </select>
     </label>
     <label>
-      <span data-lang-en="Data status" data-lang-zh="数据状态">Data status</span>
-      <select id="signal-data"><option value="" data-lang-en="All data states" data-lang-zh="全部数据状态">All data states</option>{dataOptions.map(state => <option value={state} data-lang-en={label(state)} data-lang-zh={labelZh(state)}>{label(state)}</option>)}</select>
+      <span>{pick('Data status', '数据状态')}</span>
+      <select id="signal-data"><option value="">{pick('All data states', '全部数据状态')}</option>{dataOptions.map(state => <option value={state}>{pick(label(state), labelZh(state))}</option>)}</select>
     </label>
-    <button type="reset" data-lang-en="Reset" data-lang-zh="重置">Reset</button>
+    <button type="reset">{pick('Reset', '重置')}</button>
   </form>
 
   <div class="column-guide" aria-hidden="true">
-    <span data-lang-en="Signal" data-lang-zh="信号">Signal</span><span data-lang-en="Observed vs expected" data-lang-zh="实际值与期望值">Observed vs expected</span><span data-lang-en="Statistical evidence" data-lang-zh="统计证据">Statistical evidence</span><span data-lang-en="Data readiness" data-lang-zh="数据就绪度">Data readiness</span>
+    <span>{pick('Signal', '信号')}</span><span>{pick('Observed vs expected', '实际值与期望值')}</span><span>{pick('Statistical evidence', '统计证据')}</span><span>{pick('Data readiness', '数据就绪度')}</span>
   </div>
   <div class="signal-records" id="signal-records">
     {snapshot.signals.map(signal => {
@@ -89,15 +92,15 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
           data-tags={signal.tags.join(' ')}
           data-search={search}
         >
-          <summary>
-            <span class="identity"><span><i class={`state-pill state-${signal.anomaly.state}`} data-lang-en={label(signal.anomaly.state)} data-lang-zh={labelZh(signal.anomaly.state)}>{label(signal.anomaly.state)}</i><span class="disease-name">{signal.identity.disease_name}</span></span><small>{geographyLabel(signal)} · {signal.identity.metric_label}</small></span>
-            <span class="measure"><b>{formatNumber(signal.observation.current)}{unitSuffix(signal.identity.unit)}</b><small><i data-lang-en="expected" data-lang-zh="期望">expected</i> {formatNumber(signal.observation.expected)} · <i data-lang-en="upper" data-lang-zh="上限">upper</i> {formatNumber(signal.observation.predictive_upper_95)}</small></span>
-            <span class="evidence"><b>{formatPercent(signal.observation.relative_change_pct)}</b><small>q {formatNumber(signal.anomaly.q_value, 4)} · <i data-lang-en={label(signal.assessment.review_priority)} data-lang-zh={labelZh(signal.assessment.review_priority)}>{label(signal.assessment.review_priority)}</i></small></span>
-            <span class="data-state"><b data-lang-en={label(signal.observation.data_status)} data-lang-zh={labelZh(signal.observation.data_status)}>{label(signal.observation.data_status)}</b><small><i data-lang-en="analyzed through" data-lang-zh="分析截至">analyzed through</i> {formatDate(signal.observation.data_through)}</small></span>
+          <summary data-expand={pick('Expand', '展开')}>
+            <span class="identity"><span><i class={`state-pill state-${signal.anomaly.state}`}>{pick(label(signal.anomaly.state), labelZh(signal.anomaly.state))}</i><span class="disease-name">{signal.identity.disease_name}</span></span><small>{geographyLabel(signal)} · {signal.identity.metric_label}</small></span>
+            <span class="measure"><b>{formatNumber(signal.observation.current)}{unitSuffix(signal.identity.unit)}</b><small><i>{pick('expected', '期望')}</i> {formatNumber(signal.observation.expected)} · <i>{pick('upper', '上限')}</i> {formatNumber(signal.observation.predictive_upper_95)}</small></span>
+            <span class="evidence"><b>{formatPercent(signal.observation.relative_change_pct)}</b><small>q {formatNumber(signal.anomaly.q_value, 4)} · <i>{pick(label(signal.assessment.review_priority), labelZh(signal.assessment.review_priority))}</i></small></span>
+            <span class="data-state"><b>{pick(label(signal.observation.data_status), labelZh(signal.observation.data_status))}</b><small><i>{pick('analyzed through', '分析截至')}</i> {formatDate(signal.observation.data_through)}</small></span>
           </summary>
           <div class="signal-detail">
             <div class="trend-panel">
-              <div class="trend-heading"><b data-lang-en="Observed vs expected" data-lang-zh="实际值与期望值">Observed vs expected</b><span>{formatDate(points[0]?.period)} – {formatDate(points.at(-1)?.period)}</span></div>
+              <div class="trend-heading"><b>{pick('Observed vs expected', '实际值与期望值')}</b><span>{formatDate(points[0]?.period)} – {formatDate(points.at(-1)?.period)}</span></div>
               {points.length > 1 ? (
                 <svg viewBox="0 0 520 150" role="img" aria-label={`Observed and expected trend for ${signal.identity.disease_name}`}>
                   <path class="gridline" d="M0,144 H520 M0,75 H520 M0,6 H520" />
@@ -105,32 +108,32 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
                   {geometry.expected && <path class="expected" d={geometry.expected} />}
                   <path class="actual" d={geometry.actual} />
                 </svg>
-              ) : <p data-lang-en="No trend points available." data-lang-zh="暂无趋势数据点。">No trend points available.</p>}
-              <div class="legend"><span class="actual-key" data-lang-en="Observed" data-lang-zh="实际值">Observed</span><span class="expected-key" data-lang-en="Expected" data-lang-zh="期望值">Expected</span><span class="upper-key" data-lang-en="95% upper" data-lang-zh="95% 上限">95% upper</span><small>{formatNumber(geometry.min)}–{formatNumber(geometry.max)}</small></div>
+              ) : <p>{pick('No trend points available.', '暂无趋势数据点。')}</p>}
+              <div class="legend"><span class="actual-key">{pick('Observed', '实际值')}</span><span class="expected-key">{pick('Expected', '期望值')}</span><span class="upper-key">{pick('95% upper', '95% 上限')}</span><small>{formatNumber(geometry.min)}–{formatNumber(geometry.max)}</small></div>
             </div>
             <dl class="model-facts">
-              <div><dt data-lang-en="Model" data-lang-zh="模型">Model</dt><dd>{signal.anomaly.model}</dd></div>
-              <div><dt data-lang-en="Detector tier" data-lang-zh="检测分层">Detector tier</dt><dd data-lang-en={label(signal.anomaly.detector_tier)} data-lang-zh={labelZh(signal.anomaly.detector_tier)}>{label(signal.anomaly.detector_tier)}</dd></div>
-              <div><dt data-lang-en="Raw p" data-lang-zh="原始 p 值">Raw p</dt><dd>{formatNumber(signal.anomaly.raw_p_value, 5)}</dd></div>
-              <div><dt data-lang-en="Dispersion" data-lang-zh="离散度">Dispersion</dt><dd>{formatNumber(signal.anomaly.dispersion, 2)}</dd></div>
-              <div><dt data-lang-en="Completeness" data-lang-zh="完整度">Completeness</dt><dd>{formatPercent(signal.observation.completeness * 100, 0)}</dd></div>
-              <div><dt data-lang-en="Data through" data-lang-zh="数据截至">Data through</dt><dd>{formatDate(signal.observation.data_through)}</dd></div>
-              <div><dt data-lang-en="Latest received" data-lang-zh="最新收到">Latest received</dt><dd>{formatDate(signal.observation.latest_available_period)}</dd></div>
-              <div><dt data-lang-en="Data status" data-lang-zh="数据状态">Data status</dt><dd data-lang-en={label(signal.observation.data_status)} data-lang-zh={labelZh(signal.observation.data_status)}>{label(signal.observation.data_status)}</dd></div>
-              <div><dt data-lang-en="Temporal relevance" data-lang-zh="时间相关性">Temporal relevance</dt><dd data-lang-en={label(signal.assessment.temporal_relevance)} data-lang-zh={labelZh(signal.assessment.temporal_relevance)}>{label(signal.assessment.temporal_relevance)}</dd></div>
-              <div><dt data-lang-en="Verification" data-lang-zh="验证状态">Verification</dt><dd data-lang-en={label(signal.assessment.verification_status)} data-lang-zh={labelZh(signal.assessment.verification_status)}>{label(signal.assessment.verification_status)}</dd></div>
-              <div><dt data-lang-en="Verification basis" data-lang-zh="验证依据">Verification basis</dt><dd data-lang-en={label(signal.assessment.verification_basis)} data-lang-zh={labelZh(signal.assessment.verification_basis)}>{label(signal.assessment.verification_basis)}</dd></div>
-              <div><dt data-lang-en="Reporting lag" data-lang-zh="报告延迟">Reporting lag</dt><dd>{signal.observation.reporting_lag_days} <i data-lang-en="days" data-lang-zh="天">days</i></dd></div>
-              <div><dt data-lang-en="Fit" data-lang-zh="拟合状态">Fit</dt><dd data-lang-en={label(signal.anomaly.fit_status)} data-lang-zh={labelZh(signal.anomaly.fit_status)}>{label(signal.anomaly.fit_status)}</dd></div>
+              <div><dt>{pick('Model', '模型')}</dt><dd>{signal.anomaly.model}</dd></div>
+              <div><dt>{pick('Detector tier', '检测分层')}</dt><dd>{pick(label(signal.anomaly.detector_tier), labelZh(signal.anomaly.detector_tier))}</dd></div>
+              <div><dt>{pick('Raw p', '原始 p 值')}</dt><dd>{formatNumber(signal.anomaly.raw_p_value, 5)}</dd></div>
+              <div><dt>{pick('Dispersion', '离散度')}</dt><dd>{formatNumber(signal.anomaly.dispersion, 2)}</dd></div>
+              <div><dt>{pick('Completeness', '完整度')}</dt><dd>{formatPercent(signal.observation.completeness * 100, 0)}</dd></div>
+              <div><dt>{pick('Data through', '数据截至')}</dt><dd>{formatDate(signal.observation.data_through)}</dd></div>
+              <div><dt>{pick('Latest received', '最新收到')}</dt><dd>{formatDate(signal.observation.latest_available_period)}</dd></div>
+              <div><dt>{pick('Data status', '数据状态')}</dt><dd>{pick(label(signal.observation.data_status), labelZh(signal.observation.data_status))}</dd></div>
+              <div><dt>{pick('Temporal relevance', '时间相关性')}</dt><dd>{pick(label(signal.assessment.temporal_relevance), labelZh(signal.assessment.temporal_relevance))}</dd></div>
+              <div><dt>{pick('Verification', '验证状态')}</dt><dd>{pick(label(signal.assessment.verification_status), labelZh(signal.assessment.verification_status))}</dd></div>
+              <div><dt>{pick('Verification basis', '验证依据')}</dt><dd>{pick(label(signal.assessment.verification_basis), labelZh(signal.assessment.verification_basis))}</dd></div>
+              <div><dt>{pick('Reporting lag', '报告延迟')}</dt><dd>{signal.observation.reporting_lag_days} <i>{pick('days', '天')}</i></dd></div>
+              <div><dt>{pick('Fit', '拟合状态')}</dt><dd>{pick(label(signal.anomaly.fit_status), labelZh(signal.anomaly.fit_status))}</dd></div>
             </dl>
             <div class="explanation">
-              <p><b data-lang-en="Interpretation" data-lang-zh="解释">Interpretation</b></p>
-              <p data-lang-en={`The ${signal.observation.window_label.toLowerCase()} observed value was ${formatNumber(signal.observation.current)}, compared with an expected ${formatNumber(signal.observation.expected)} and a one-sided 95% predictive upper bound of ${formatNumber(signal.observation.predictive_upper_95)}. The FDR-adjusted q value is ${formatNumber(signal.anomaly.q_value, 4)}.`} data-lang-zh={`${signal.observation.window_label}实际值为 ${formatNumber(signal.observation.current)}，模型期望值为 ${formatNumber(signal.observation.expected)}，单侧 95% 预测上限为 ${formatNumber(signal.observation.predictive_upper_95)}，FDR 校正后的 q 值为 ${formatNumber(signal.anomaly.q_value, 4)}。`}>The {signal.observation.window_label.toLowerCase()} observed value was {formatNumber(signal.observation.current)}, compared with an expected {formatNumber(signal.observation.expected)} and a one-sided 95% predictive upper bound of {formatNumber(signal.observation.predictive_upper_95)}. The FDR-adjusted q value is {formatNumber(signal.anomaly.q_value, 4)}.</p>
-              <p class="risk-note" data-lang-en={riskTextEn} data-lang-zh={riskTextZh}>{riskTextEn}</p>
-              <a class="disease-link" href={diseaseHref(signal)} data-lang-en="Open disease profile" data-lang-zh="打开疾病档案">Open disease profile</a>
+              <p><b>{pick('Interpretation', '解释')}</b></p>
+              <p>{pick(`The ${signal.observation.window_label.toLowerCase()} observed value was ${formatNumber(signal.observation.current)}, compared with an expected ${formatNumber(signal.observation.expected)} and a one-sided 95% predictive upper bound of ${formatNumber(signal.observation.predictive_upper_95)}. The FDR-adjusted q value is ${formatNumber(signal.anomaly.q_value, 4)}.`, `${signal.observation.window_label}实际值为 ${formatNumber(signal.observation.current)}，模型期望值为 ${formatNumber(signal.observation.expected)}，单侧 95% 预测上限为 ${formatNumber(signal.observation.predictive_upper_95)}，FDR 校正后的 q 值为 ${formatNumber(signal.anomaly.q_value, 4)}。`)}</p>
+              <p class="risk-note">{pick(riskTextEn, riskTextZh)}</p>
+              <a class="disease-link" href={`${prefix}${diseaseHref(signal)}`}>{pick('Open disease profile', '打开疾病档案')}</a>
             </div>
             <details class="provenance">
-              <summary data-lang-en="Raw identity and evidence" data-lang-zh="原始 identity 与证据">Raw identity and evidence</summary>
+              <summary>{pick('Raw identity and evidence', '原始 identity 与证据')}</summary>
               <p>Series <code>{signal.identity.series_code}</code> · canonical geography <code>{signal.identity.canonical_geography_key}</code> · raw geography <code>{signal.identity.source_geography_keys.join(', ')}</code> · dimension <code>{signal.identity.dimension_key}</code></p>
               <ul>{evidenceLinks.map(link => <li><a href={link.url} target="_blank" rel="noreferrer">{link.title}</a></li>)}</ul>
             </details>
@@ -139,12 +142,12 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
       );
     })}
   </div>
-  <p id="signal-empty" class="empty" hidden data-lang-en="No signals match the current filters." data-lang-zh="没有信号符合当前筛选条件。">No signals match the current filters.</p>
+  <p id="signal-empty" class="empty" hidden>{pick('No signals match the current filters.', '没有信号符合当前筛选条件。')}</p>
 </section>
 
 {snapshot.events.length > 0 && (
   <section class="event-section" aria-labelledby="event-title">
-    <header class="section-heading"><div><p data-lang-en="Official evidence" data-lang-zh="官方证据">Official evidence</p><h2 id="event-title" data-lang-en="Clustered event timelines" data-lang-zh="聚类事件时间线">Clustered event timelines</h2></div></header>
+    <header class="section-heading"><div><p>{pick('Official evidence', '官方证据')}</p><h2 id="event-title">{pick('Clustered event timelines', '聚类事件时间线')}</h2></div></header>
     <div class="events">
       {snapshot.events.map(event => (
         <article>
@@ -158,8 +161,8 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
 
 {snapshot.context_panels.length > 0 && (
   <section class="context-section" aria-labelledby="context-title">
-    <header class="section-heading"><div><p data-lang-en="Context only" data-lang-zh="背景指标">Context only</p><h2 id="context-title" data-lang-en="Respiratory indicators remain separate" data-lang-zh="呼吸道指标保持分列">Respiratory indicators remain separate</h2></div></header>
-    <div class="context-grid">{snapshot.context_panels.map(panel => <article><h3>{panel.disease_name || panel.topic}</h3><p>{panel.geography}</p><dl>{panel.metrics.map(metric => <div><dt data-lang-en={metric.label.en} data-lang-zh={metric.label.zh}>{metric.label.en}</dt><dd>{typeof metric.value === 'number' ? formatNumber(metric.value) : metric.value || '—'}{unitSuffix(metric.unit)}<small>{formatDate(metric.data_through)}</small></dd></div>)}</dl></article>)}</div>
+    <header class="section-heading"><div><p>{pick('Context only', '背景指标')}</p><h2 id="context-title">{pick('Respiratory indicators remain separate', '呼吸道指标保持分列')}</h2></div></header>
+    <div class="context-grid">{snapshot.context_panels.map(panel => <article><h3>{panel.disease_name || panel.topic}</h3><p>{panel.geography}</p><dl>{panel.metrics.map(metric => <div><dt>{pick(metric.label.en, metric.label.zh)}</dt><dd>{typeof metric.value === 'number' ? formatNumber(metric.value) : metric.value || '—'}{unitSuffix(metric.unit)}<small>{formatDate(metric.data_through)}</small></dd></div>)}</dl></article>)}</div>
   </section>
 )}
 
@@ -193,7 +196,7 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
   .analysis, .event-section, .context-section { display: grid; gap: 1rem; }
   .section-heading { align-items: end; border-bottom: 1px solid rgb(var(--border)); display: flex; gap: 1rem; justify-content: space-between; padding-bottom: .85rem; }
   .section-heading p { color: rgb(var(--color-teal)); font-size: .65rem; font-weight: 800; letter-spacing: .12em; margin: 0 0 .24rem; text-transform: uppercase; }
-  h2, h3 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; margin: 0; }
+  h2, h3 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; margin: 0; }
   h2 { font-size: 1.65rem; line-height: 1.1; }
   h3 { font-size: 1.15rem; }
   .section-heading a { color: rgb(var(--color-teal)); font-size: .75rem; font-weight: 700; }
@@ -209,7 +212,7 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
   .signal-record.state-alert { border-left-color: rgb(198 104 44); }
   .signal-record > summary { align-items: center; cursor: pointer; list-style: none; padding: .9rem; }
   .signal-record > summary::-webkit-details-marker { display: none; }
-  .signal-record > summary > span, .signal-record > summary > b { color: rgb(var(--text-muted)); font-family: 'JetBrains Mono', monospace; font-size: .7rem; font-weight: 550; overflow-wrap: anywhere; }
+  .signal-record > summary > span, .signal-record > summary > b { color: rgb(var(--text-muted)); font-family: ui-monospace, monospace; font-size: .7rem; font-weight: 550; overflow-wrap: anywhere; }
   .signal-record .identity { display: grid; gap: .14rem; }
   .identity > span { align-items: center; display: flex; flex-wrap: wrap; gap: .5rem; }
   .identity .disease-name { color: rgb(var(--text-strong)); font-family: inherit; font-size: .95rem; font-weight: 750; }
@@ -238,7 +241,7 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
   .model-facts { display: grid; gap: .55rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
   .model-facts div { border-left: 2px solid rgb(var(--border)); padding-left: .55rem; }
   dt { color: rgb(var(--text-faint)); font-size: .58rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
-  dd { color: rgb(var(--text)); font-family: 'JetBrains Mono', monospace; font-size: .67rem; margin: .12rem 0 0; overflow-wrap: anywhere; }
+  dd { color: rgb(var(--text)); font-family: ui-monospace, monospace; font-size: .67rem; margin: .12rem 0 0; overflow-wrap: anywhere; }
   .explanation, .provenance { grid-column: 1 / -1; }
   .explanation p, .provenance p { color: rgb(var(--text-muted)); font-size: .75rem; line-height: 1.55; margin: .25rem 0 0; }
   .risk-note { border-left: 3px solid rgb(var(--color-teal)); padding-left: .65rem; }
@@ -253,7 +256,7 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
   .events article > header { align-items: start; border-bottom: 1px solid rgb(var(--border)); display: flex; gap: 1rem; justify-content: space-between; padding-bottom: .6rem; }
   .context-grid dd small { color: rgb(var(--text-faint)); display: block; font-family: inherit; font-size: .6rem; margin-top: .18rem; }
   .events header p, .context-grid article > p { color: rgb(var(--text-faint)); font-size: .68rem; margin: .2rem 0 0; }
-  .events header span { color: rgb(var(--text-faint)); font-family: 'JetBrains Mono', monospace; font-size: .62rem; }
+  .events header span { color: rgb(var(--text-faint)); font-family: ui-monospace, monospace; font-size: .62rem; }
   .events ol { list-style: none; margin: .7rem 0 0; padding: 0; }
   .events li { border-left: 2px solid rgb(var(--border)); display: grid; gap: .15rem; grid-template-columns: 6rem minmax(0, 1fr) auto; padding: .35rem 0 .55rem .65rem; }
   .events time, .events small { color: rgb(var(--text-faint)); font-size: .62rem; }
@@ -272,7 +275,7 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
     .signal-record > summary { align-items: start; grid-template-columns: minmax(0, 1fr) auto; }
     .signal-record > summary > .evidence { display: none; }
     .signal-record > summary > .measure, .signal-record > summary > .data-state { grid-column: 1 / -1; }
-    .signal-record > summary::after { color: rgb(var(--text-faint)); content: 'Expand'; font-size: .62rem; grid-column: 2; grid-row: 1; }
+    .signal-record > summary::after { color: rgb(var(--text-faint)); content: attr(data-expand); font-size: .62rem; grid-column: 2; grid-row: 1; }
     .model-facts { grid-template-columns: 1fr; }
     .events li { grid-template-columns: 1fr; }
     .context-grid dl { grid-template-columns: 1fr; }

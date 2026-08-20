@@ -40,24 +40,22 @@ events, separate context panels, source health, and the quality gate. Duplicate
 3. Geography aliases collapse to one source-native identity. The eligible
    frame is converted once and split deterministically across at most four
    model processes.
-4. Common and rare count series use robust quasi-Poisson regression with
-   cadence-specific seasonality, optional trend, daily weekday effects,
-   overdispersion, robust historical weights, and a one-sided predictive
-   limit. Rare-count series replace the normal tail approximation with a
-   Poisson/Gamma-Poisson predictive upper tail. Its process dispersion is the
-   unweighted Pearson estimate (the robust fit weights are not reused to trim
-   the tail), and its aggregate variance adds fitted-coefficient uncertainty
-   by the delta method before matching the first two moments to a negative
-   binomial. The coefficient covariance is rescaled from the robust process
-   dispersion to the unweighted rare-tail dispersion, so parameter uncertainty
-   is not left on the smaller trimmed scale. This rare-only correction does not
-   change the established common-count path and does not apply the configurable
-   normal-tail variance multiplier. If IRLS does not converge, count series may
-   use the explicitly identified
-   `seasonal_empirical_fallback_v1`; its seasonal sample counts and primary fit
-   failure remain in diagnostics. An unavailable fallback produces no p/q
-   value. CUSUM is recorded as supporting evidence only and never supplies a
-   second decision vote.
+4. v3.2 keeps robust quasi-Poisson fitting as the parameter-estimation layer,
+   then generates a deterministic Gamma-Poisson/negative-binomial predictive
+   simulation. Weekly common-count series are evaluated over 1, 2, and 4 weeks;
+   monthly series use 1 and 2 months. All horizons in a series share the same
+   coefficient draws and process draws. The maximum standardized exceedance is
+   calibrated against that joint simulation, producing one series-level p value
+   rather than multiple independent votes. The seed includes stable series
+   identity, analysis date, and detector version, so retries are reproducible.
+   Common-count inference no longer uses the old fixed `2.0` variance multiplier.
+
+   Expected counts at or below 20 remain in the rare-count tier. Its existing
+   Poisson/Gamma-Poisson predictive tail remains the review model, while
+   `hurdle_negative_binomial_v1` and `seasonal_empirical_v1` are recorded as
+   shadow-only comparisons. Rare counts, fallback fits, daily data, rates, and
+   data without a denominator cannot enter pure statistical auto-publication.
+   CUSUM remains supporting evidence only.
 5. Delayed feeds retain auditable model output as `watch`, receive q=1, and are
    isolated from the contemporary multiple-testing family. Remaining p values
    are adjusted with Benjamini–Hochberg within
@@ -67,128 +65,120 @@ events, separate context panels, source health, and the quality gate. Duplicate
    model and still require a metric-specific effect gate; those without both
    components remain context-only. Disease/source-specific effect overrides are
    explicit configuration and replace any generic reappearance rule.
-6. Automatic triage queues, deduplicates, and prepares evidence for eligible
-   alert-level candidates, but the checked calibration does not yet support
-   unattended statistical publication. Candidates remain private until
-   independently verified. Rare-count and fallback candidates without an
-   independent official match remain visible in the internal ledger but are
-   held out of the analyst queue; an official match queues them for review.
-   Delayed periods, incomplete evidence, or failed quality gates remain
-   blocked. Verification and rejection are immutable audit decisions. An
-   optional public-health risk level still needs an attributable rationale and
-   evidence URL.
-   `public_health_risk` otherwise remains `not_assessed`. Cached official
-   events are attached before the latest operator decision so acquisition
-   order cannot overwrite an audited expert conclusion.
+6. The v3.2 publication policy is fail-closed and supports `off`, `shadow`,
+   `canary`, and `live`. Pure statistical automation is limited to calibrated
+   weekly/monthly common counts with a completed primary model, current data,
+   completeness at least 0.95, a source whitelist entry, the configured
+   canonical source-data URL, an effect pass, and the calibrated group q gate.
+   Rare counts, fallback models, and non-whitelisted sources require a matching
+   authoritative official event within two source periods. Official matching
+   verifies domain, exact disease, overlapping geography, and time, and records
+   `lead`, `concurrent`, or `lag`; a historical event cannot validate a current
+   signal. A detector/source-definition hash invalidates the calibration after
+   any relevant configuration drift.
 
-The calibration harness is deterministic:
+   Every signal receives a structured `automation_decision`, and every run
+   persists that decision independently. Human reject, suppress, and correction
+   decisions take precedence. Publication creates a new immutable revision;
+   history is never deleted. Public language remains “statistical anomaly” or
+   “officially correlated signal”. `public_health_risk` stays `not_assessed`
+   unless an official agency or audited expert provides an attributable rating.
+
+## Calibration and gold-standard events
+
+The joint weekly/monthly calibration harness is deterministic:
 
 ```bash
 venv/bin/python scripts/backtest_situation_v3.py
 ```
 
-Its checked result is `docs/validation/situation-v3-backtest.json`. The suite
-uses four pre-registered weekly strata: a common-count sustained 2x outbreak,
-a common-count sustained 1.5x increase, a common-count one-cycle 2x spike, and
-a rare/low-count sustained 4x cluster. Each stratum retains seasonality, trend,
-negative-binomial overdispersion, and a documented structural-zero component.
-The common sustained 2x scenario is the primary sensitivity and v2-comparison
-endpoint; the other strata disclose detector operating characteristics without
-silently redefining the primary acceptance threshold.
+Its checked result is `docs/validation/situation-v3-backtest.json`. Seven
+pre-registered scenarios cover weekly and monthly sustained 2x, sustained 1.5x,
+and one-period 2x changes, plus a weekly rare-count 4x scenario. The default 128
+batches yield 384 independent common-count complete-null families per cadence.
+The automation threshold is selected from
+`{0.0025, 0.005, 0.01, 0.015, 0.025}` only when its Wilson 95% false-publication
+upper bound is at most 2.5%, sustained-2x sensitivity is at least 80%, median
+delay is at most one period, and both weak-signal scenarios improve on v3.1 by
+at least 15 percentage points. The minimum of 384 cannot be lowered by a CLI
+flag.
 
-The default protocol runs 20 independent batches in each of the four strata,
-with 16 null and 16 anomaly-arm series per batch. This creates 80 independent
-complete-null family trials instead of the former 10. Binary rates report 95%
-Wilson score intervals. At zero complete-null discoveries, 80 trials put the
-upper 95% bound below 5%; the report also records the minimum non-zero FDR step,
-sample counts, seed, scenario manifest, and a hash of the complete simulation
-protocol. A run is inconclusive (and the command exits non-zero) when its
-complete-null family count is below the configured precision minimum, even if
-the point estimate is zero.
+Complete-null families rotate through separately reported zero-inflation,
+cross-series correlation, missing-period, revision, structural-break, and
+delayed-data stresses. Each artifact includes the config hash, calibration
+definition hash, simulation protocol hash, seed, per-stratum Wilson intervals,
+and weekly/monthly threshold tables. The `q <= 0.05` review gate is unchanged.
 
 For a quick diagnostic that intentionally does not claim calibration precision:
 
 ```bash
 venv/bin/python scripts/backtest_situation_v3.py \
   --batches 1 --series-per-class 2 \
-  --minimum-complete-null-families 4 \
-  --output /tmp/situation-v3-smoke.json
+  --minimum-complete-null-families 7 \
+  --output /tmp/situation-v32-smoke.json
 ```
 
-The full report separately exposes complete-null family FDR, per-series false
-positive rate, mixed-family descriptive FDR, sensitivity by scenario,
-first-cycle sensitivity, detection delay, latency guards, and the primary
-scenario's v2 comparison. This separation prevents the family-level FDR trial
-count from being confused with the per-series false-positive denominator.
+The smoke command still fails automation precision by design; it is only an
+execution check. Formal artifacts also remain `not_supported` until a locked
+real-event evaluation is supplied. Real labels use exact disease mapping,
+overlapping geography, first official publication time, authoritative source,
+confidence, and adjudication. Absence of an official record is not a negative;
+uncertain cases remain `indeterminate`, and a negative label requires an
+existing review decision or two distinct adjudicators. Chronological
+development/tuning/locked-test assignment is 70/15/15 with a two-period embargo
+at both boundaries.
 
-### Current calibration diagnosis
+Preview/import official positive labels and register a calibration artifact:
 
-The null generator applies structural-zero replacement uniformly through the
-endpoint window. An earlier harness version suppressed structural zeros in the
-last eight periods, which made the recent low-count window systematically
-higher than its history and therefore was not a valid complete null. Correcting
-that simulation defect is a stricter test; no detector threshold was relaxed.
+```bash
+venv/bin/python scripts/import_situation_v3_event_labels.py events.json \
+  --cadence weekly
+venv/bin/python scripts/import_situation_v3_event_labels.py events.json \
+  --cadence weekly --apply
+venv/bin/python scripts/register_situation_v3_calibration.py \
+  docs/validation/situation-v3-backtest.json
+```
 
-The checked run has three families with a review discovery among 80
-complete-null families: 3.75%, with a 95% Wilson interval of 1.28%–10.45%.
-The point estimate passes the nominal 5% criterion, but the confidence-bound
-decision remains inconclusive and the overall calibration remains failed. One
-family is `common_count` and two are `rare_count`; all use a converged primary
-fit rather than the empirical fallback.
+Both commands are read-only unless `--apply` is supplied. Registration
+recomputes artifact/config/definition hashes and every numerical acceptance
+gate rather than trusting an artifact's declared status.
 
-The rare-only correction removes one identified source of anti-conservatism:
-the robustly trimmed process dispersion is no longer reused as a predictive
-tail dispersion, and fitted-mean parameter uncertainty is kept on the same
-untrimmed Pearson scale. The paired no-structural-zero control now has 3/292
-rare-tier raw p values at or below 0.01 (1.027%; Wilson 95% interval
-0.350%–2.977%), compatible with a super-uniform 1% null under the harness
-criterion.
+### Current v3.2 calibration status
 
-The structural-zero stress still fails. It has 9/330 rare-tier raw p values at
-or below 0.01 (2.727%; 1.441%–5.101%), so the implementation is not described as
-calibrated and rare-count signals are not eligible for unattended statistical
-publication. A historical excess-zero ZINB convolution was evaluated and
-rejected: it changed 9/330 to only 8/330, left the rare null-family count at
-2/20, reduced review and guarded sensitivity by 0.625 and 0.312 percentage
-points respectively, and increased the full harness runtime from about 160 to
-216 seconds. The simpler predictive correction is retained; the unresolved
-structural-zero mismatch remains explicit.
+The checked offline artifact uses 128 batches and two null/two anomaly series
+per batch. It provides 384 complete-null common-count families for each
+cadence. Weekly simulation supports at most `q <= 0.0025` (3/384 automatic
+false-publication families; Wilson upper 95% bound 2.27%; sustained-2x
+sensitivity 95.31%), but the weekly group remains closed because no locked
+real-event evaluation has been supplied. Monthly simulation also has 3/384 at
+`q <= 0.0025` and sustained-2x sensitivity 84.77%, but it remains closed because
+the one-period 2x improvement is -7.42 percentage points versus v3.1 and the
+locked real-event evaluation is missing.
 
-### Guarded automation candidate
-
-The report also evaluates a separate fail-closed automation candidate. It
-requires current data, a stable completed primary fit (empirical fallback is
-excluded), a passed effect threshold, a syntactically valid HTTP(S) evidence
-link, and `q <= 0.01`. This does not change the `q <= 0.05` review-signal gate.
-
-The guarded gate produces zero candidates among 80 complete-null families, but
-the Wilson upper 95% bound is still 4.58%, above its nominal 1% target. Common
-sustained-2x sensitivity is 75.31%, down 10.94 percentage points from review
-sensitivity; rare sustained-4x sensitivity is 79.38%, down 6.56 points. The
-strict gate therefore lacks evidence for unattended public release.
-
-Until both conditions pass, guarded candidates may automate queueing,
-deduplication, evidence collection, and review-form preparation only. Public
-release must remain fail-closed. A rare-count candidate should enter the human
-queue only when independently attributable official evidence is present;
-otherwise it remains an internal `watch`/blocked item. Fallback fits, delayed
-data, missing evidence, and failed quality gates remain blocked from automatic
-publication.
+At the broader `q <= 0.05` review threshold, 58/896 stressed complete-null
+families contain a discovery (6.47%; Wilson 95% interval 5.04%–8.28%). The
+structural-break and correlated-series strata account for most of that excess,
+so review-level calibration also remains failed. Production configuration is
+therefore still `mode=off`, with the global kill switch active and both source
+groups disabled. These results are evidence for further model work, not an
+authorization to relax a gate.
 
 ## Storage and publication
 
 Migration `0009_situation_v3` adds normalized analysis runs, signal results,
 event clusters/items, period reports/members, review decisions, and publication
-pointers. The dedicated history database stores the immutable report and signal
-archive.
+pointers. Migration `0010_situation_v32` adds the gold-standard event-label
+library, immutable calibration registry, and run-level policy-decision ledger.
+The dedicated history database stores the immutable report and signal archive.
 
 Publication order is invariant:
 
 1. stage the immutable analysis run and full ledger;
-2. pass the report quality gate;
-3. commit the report to the history database;
-4. commit the normalized primary rows;
-5. atomically move the publication pointer.
+2. stage every structured automation decision;
+3. pass the report quality gate;
+4. commit the report to the history database;
+5. commit the normalized primary rows;
+6. atomically move the publication pointer.
 
 An archive or primary transaction failure leaves the previous pointer public.
 A retry reuses an identical history-only archive revision and safely completes

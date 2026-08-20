@@ -1,6 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { changelogReleases, type ChangeKind } from '../data/changelog';
+import { buildAlternatePaths } from '../lib/seo';
+
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 
 const latestRelease = changelogReleases[0];
 const changeCount = changelogReleases.reduce(
@@ -25,101 +31,94 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
 ---
 
 <BaseLayout
-  title="Changelog"
-  description="Follow every GIDS release, including new capabilities, improvements, fixes, and release dates."
+  title={pick('Changelog', '更新记录')}
+  description={pick('Follow every GIDS release, including new capabilities, improvements, fixes, and release dates.', '查看每个 GIDS 公开版本的新增能力、改进、修复和发布日期。')}
+  initialLanguage={locale}
+  seo={{ title: pick('Changelog | GIDS', '更新记录 | GIDS'), description: pick('Follow every GIDS release, including new capabilities, improvements, fixes, and release dates.', '查看每个 GIDS 公开版本的新增能力、改进、修复和发布日期。'), locale, canonicalPath: `${prefix}/changelog/`, alternatePaths: buildAlternatePaths(`${prefix}/changelog/`, locale), pageType: 'WebPage' }}
 >
   <div class="changelog-page">
     <section class="changelog-hero">
-      <div class="changelog-hero-glow" aria-hidden="true"></div>
       <div class="changelog-shell changelog-hero-inner">
         <div class="changelog-eyebrow">
           <span class="changelog-eyebrow-dot" aria-hidden="true"></span>
-          <span data-lang-en="Product updates" data-lang-zh="产品更新">Product updates</span>
+          <span>{pick('Product updates', '产品更新')}</span>
         </div>
-        <h1 data-lang-en="What’s new in GIDS" data-lang-zh="GIDS 版本更新">What’s new in GIDS</h1>
-        <p
-          class="changelog-hero-copy"
-          data-lang-en="A complete record of new capabilities, refinements, and fixes across every public release."
-          data-lang-zh="完整记录每个公开版本中的新增能力、体验优化与问题修复。"
-        >
-          A complete record of new capabilities, refinements, and fixes across every public release.
-        </p>
-        <div class="changelog-summary" aria-label="Changelog summary">
+        <h1>{pick('What’s new in GIDS', 'GIDS 版本更新')}</h1>
+        <p class="changelog-hero-copy">{pick('A complete record of new capabilities, refinements, and fixes across every public release.', '完整记录每个公开版本中的新增能力、体验优化与问题修复。')}</p>
+        <div class="changelog-summary" aria-label={pick('Changelog summary', '更新记录摘要')}>
           <div>
             <strong>{changelogReleases.length}</strong>
-            <span data-lang-en="releases" data-lang-zh="个版本">releases</span>
+            <span>{pick('releases', '个版本')}</span>
           </div>
           <span class="changelog-summary-divider" aria-hidden="true"></span>
           <div>
             <strong>{changeCount}</strong>
-            <span data-lang-en="documented changes" data-lang-zh="项更新记录">documented changes</span>
+            <span>{pick('documented changes', '项更新记录')}</span>
           </div>
           <span class="changelog-summary-divider" aria-hidden="true"></span>
           <div>
             <strong>2026</strong>
-            <span data-lang-en="first published" data-lang-zh="首次发布">first published</span>
+            <span>{pick('first published', '首次发布')}</span>
           </div>
         </div>
       </div>
     </section>
 
     <div class="changelog-shell changelog-layout">
-      <aside class="changelog-sidebar" aria-label="Release navigation">
+      <aside class="changelog-sidebar" aria-label={pick('Release navigation', '版本导航')}>
         <div class="changelog-latest-card">
-          <span class="changelog-card-kicker" data-lang-en="Current release" data-lang-zh="当前版本">Current release</span>
+          <span class="changelog-card-kicker">{pick('Current release', '当前版本')}</span>
           <strong>v{latestRelease.version}</strong>
           <time datetime={latestRelease.date}>
-            <span data-lang-en={formatDate(latestRelease.date, 'en-US')} data-lang-zh={formatDate(latestRelease.date, 'zh-CN')}>
-              {formatDate(latestRelease.date, 'en-US')}
-            </span>
+            <span>{formatDate(latestRelease.date, zh ? 'zh-CN' : 'en-US')}</span>
           </time>
         </div>
 
         <nav class="changelog-jump" aria-labelledby="changelog-jump-title">
-          <p id="changelog-jump-title" data-lang-en="Jump to a version" data-lang-zh="跳转至版本">Jump to a version</p>
+          <p id="changelog-jump-title">{pick('Jump to a version', '跳转至版本')}</p>
           <div class="changelog-jump-list">
             {changelogReleases.map((release, index) => (
               <a href={`#v${release.version}`}>
                 <span>v{release.version}</span>
-                {index === 0 && <small data-lang-en="Latest" data-lang-zh="最新">Latest</small>}
+                {index === 0 && <small>{pick('Latest', '最新')}</small>}
               </a>
             ))}
           </div>
         </nav>
 
-        <a class="changelog-subscribe-link" href="/subscribe/">
+        <a class="changelog-subscribe-link" href={`${prefix}/subscribe/`}>
           <span>
-            <strong data-lang-en="Get future updates" data-lang-zh="订阅后续更新">Get future updates</strong>
-            <small data-lang-en="Choose the topics you care about." data-lang-zh="只接收你关注的主题。">Choose the topics you care about.</small>
+            <strong>{pick('Get future updates', '订阅后续更新')}</strong>
+            <small>{pick('Choose the topics you care about.', '只接收你关注的主题。')}</small>
           </span>
           <span aria-hidden="true">→</span>
         </a>
       </aside>
 
-      <section class="changelog-timeline" aria-label="Release history">
+      <section class="changelog-timeline" aria-label={pick('Release history', '版本历史')}>
         {changelogReleases.map((release, index) => (
           <article class="changelog-release" id={`v${release.version}`}>
             <div class="changelog-rail" aria-hidden="true">
               <span class:list={['changelog-node', index === 0 && 'changelog-node-latest']}></span>
             </div>
 
-            <div class="changelog-release-body">
+            <details class="changelog-release-body" open={index < 3}>
+              <summary class="changelog-release-summary-row">
+                <span><strong>v{release.version}</strong><span>{pick(release.titleEn, release.titleZh)}</span></span>
+                <time datetime={release.date}><span>{formatDate(release.date, zh ? 'zh-CN' : 'en-US')}</span></time>
+              </summary>
               <header class="changelog-release-header">
                 <div class="changelog-release-version-row">
                   <span class="changelog-version">v{release.version}</span>
-                  {index === 0 && <span class="changelog-latest-pill" data-lang-en="Latest" data-lang-zh="最新版本">Latest</span>}
+                  {index === 0 && <span class="changelog-latest-pill">{pick('Latest', '最新版本')}</span>}
                 </div>
                 <time datetime={release.date}>
-                  <span data-lang-en={formatDate(release.date, 'en-US')} data-lang-zh={formatDate(release.date, 'zh-CN')}>
-                    {formatDate(release.date, 'en-US')}
-                  </span>
+                  <span>{formatDate(release.date, zh ? 'zh-CN' : 'en-US')}</span>
                 </time>
               </header>
 
-              <h2 data-lang-en={release.titleEn} data-lang-zh={release.titleZh}>{release.titleEn}</h2>
-              <p class="changelog-release-summary" data-lang-en={release.summaryEn} data-lang-zh={release.summaryZh}>
-                {release.summaryEn}
-              </p>
+              <h2>{pick(release.titleEn, release.titleZh)}</h2>
+              <p class="changelog-release-summary">{pick(release.summaryEn, release.summaryZh)}</p>
 
               <div class="changelog-change-groups">
                 {release.sections.map((section) => {
@@ -128,11 +127,11 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
                     <section class="changelog-change-group">
                       <div class:list={['changelog-kind', meta.className]}>
                         <span class="changelog-kind-marker" aria-hidden="true">{meta.marker}</span>
-                        <h3 data-lang-en={section.labelEn} data-lang-zh={section.labelZh}>{section.labelEn}</h3>
+                        <h3>{pick(section.labelEn, section.labelZh)}</h3>
                       </div>
                       <ul>
                         {section.items.map((item) => (
-                          <li data-lang-en={item.en} data-lang-zh={item.zh}>{item.en}</li>
+                          <li>{pick(item.en, item.zh)}</li>
                         ))}
                       </ul>
                     </section>
@@ -140,17 +139,28 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
                 })}
               </div>
 
-              <a class="changelog-release-anchor" href={`#v${release.version}`} aria-label={`Link to version ${release.version}`}>
+              <a class="changelog-release-anchor" href={`#v${release.version}`} aria-label={pick(`Link to version ${release.version}`, `链接到版本 ${release.version}`)}>
                 <span aria-hidden="true">#</span>
-                <span data-lang-en="Link to this release" data-lang-zh="链接到此版本">Link to this release</span>
+                <span>{pick('Link to this release', '链接到此版本')}</span>
               </a>
-            </div>
+            </details>
           </article>
         ))}
       </section>
     </div>
   </div>
 </BaseLayout>
+
+<script>
+  const openTargetRelease = () => {
+    if (!window.location.hash) return;
+    const release = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+    const details = release?.querySelector('details');
+    if (details instanceof HTMLDetailsElement) details.open = true;
+  };
+  openTargetRelease();
+  window.addEventListener('hashchange', openTargetRelease);
+</script>
 
 <style>
   .changelog-page {
@@ -170,34 +180,8 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
   }
 
   .changelog-hero {
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
+    background: rgb(var(--surface));
     border-bottom: 1px solid rgb(var(--border) / 0.8);
-  }
-
-  .changelog-hero::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -2;
-    background:
-      linear-gradient(110deg, rgb(var(--surface) / 0.84), transparent 62%),
-      radial-gradient(circle at 78% 12%, rgb(var(--changelog-accent) / 0.15), transparent 28%);
-  }
-
-  .changelog-hero-glow {
-    position: absolute;
-    top: -9rem;
-    left: 54%;
-    z-index: -1;
-    width: 32rem;
-    height: 32rem;
-    border: 1px solid rgb(var(--changelog-accent) / 0.16);
-    border-radius: 999px;
-    box-shadow:
-      0 0 0 4rem rgb(var(--changelog-accent) / 0.025),
-      0 0 0 9rem rgb(var(--changelog-accent) / 0.018);
   }
 
   .changelog-hero-inner {
@@ -226,7 +210,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
   .changelog-hero h1 {
     max-width: 54rem;
     color: rgb(var(--text-strong));
-    font-family: 'Source Serif 4', serif;
+    font-family: 'IBM Plex Sans', sans-serif;
     font-size: clamp(2.65rem, 7vw, 5.35rem);
     font-weight: 600;
     letter-spacing: -0.045em;
@@ -250,9 +234,8 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
     margin-top: 2.5rem;
     padding: 1rem 1.2rem;
     border: 1px solid rgb(var(--border) / 0.76);
-    background: rgb(var(--surface) / 0.7);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
-    backdrop-filter: blur(12px);
+    background: rgb(var(--bg));
+    box-shadow: none;
   }
 
   .changelog-summary > div {
@@ -263,7 +246,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
 
   .changelog-summary strong {
     color: rgb(var(--text-strong));
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, monospace;
     font-size: 1rem;
   }
 
@@ -298,8 +281,8 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
     padding: 1.2rem;
     border: 1px solid rgb(var(--border));
     border-top: 3px solid rgb(var(--changelog-accent));
-    background: linear-gradient(145deg, rgb(var(--surface)), rgb(var(--surface-raised) / 0.72));
-    box-shadow: var(--paper-shadow);
+    background: rgb(var(--surface));
+    box-shadow: none;
   }
 
   .changelog-card-kicker,
@@ -313,7 +296,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
 
   .changelog-latest-card strong {
     color: rgb(var(--text-strong));
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, monospace;
     font-size: 1.65rem;
   }
 
@@ -342,7 +325,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
     padding: 0.6rem 0.2rem;
     border-bottom: 1px solid rgb(var(--border) / 0.45);
     color: rgb(var(--text-muted));
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, monospace;
     font-size: 0.78rem;
     transition: color 150ms ease, padding 150ms ease;
   }
@@ -359,7 +342,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
 
   .changelog-jump-list small {
     color: rgb(var(--changelog-accent));
-    font-family: 'Source Sans 3', sans-serif;
+    font-family: 'IBM Plex Sans', sans-serif;
     font-size: 0.66rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -449,6 +432,24 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
     padding-bottom: clamp(3.75rem, 8vw, 6rem);
   }
 
+  .changelog-release-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .85rem 0;
+    color: rgb(var(--text-strong));
+    border-block: 1px solid rgb(var(--border));
+    cursor: pointer;
+    list-style: none;
+  }
+  .changelog-release-summary-row::-webkit-details-marker { display: none; }
+  .changelog-release-summary-row > span { display: flex; min-width: 0; align-items: baseline; gap: .75rem; }
+  .changelog-release-summary-row strong { color: rgb(var(--changelog-accent)); font-family: ui-monospace, monospace; font-size: .72rem; }
+  .changelog-release-summary-row span span { overflow: hidden; font-size: .82rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+  .changelog-release-summary-row time { flex: 0 0 auto; color: rgb(var(--text-faint)); font-family: ui-monospace, monospace; font-size: .66rem; }
+  .changelog-release-body[open] .changelog-release-summary-row { margin-bottom: 1.25rem; border-top-color: rgb(var(--changelog-accent)); }
+
   .changelog-release-header {
     display: flex;
     align-items: center;
@@ -464,7 +465,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
 
   .changelog-version {
     color: rgb(var(--text-strong));
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, monospace;
     font-size: 0.9rem;
     font-weight: 500;
   }
@@ -482,7 +483,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
 
   .changelog-release-header time {
     color: rgb(var(--text-faint));
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, monospace;
     font-size: 0.72rem;
   }
 
@@ -490,7 +491,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
     max-width: 44rem;
     margin-top: 1.2rem;
     color: rgb(var(--text-strong));
-    font-family: 'Source Serif 4', serif;
+    font-family: 'IBM Plex Sans', sans-serif;
     font-size: clamp(1.8rem, 4vw, 2.8rem);
     font-weight: 600;
     letter-spacing: -0.03em;
@@ -519,8 +520,8 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
     gap: 1.2rem;
     padding: 1.2rem;
     border: 1px solid rgb(var(--border) / 0.75);
-    background: linear-gradient(135deg, rgb(var(--surface) / 0.72), rgb(var(--surface-raised) / 0.38));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.13);
+    background: rgb(var(--surface));
+    box-shadow: none;
   }
 
   .changelog-kind {
@@ -535,7 +536,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
     width: 1.45rem;
     height: 1.45rem;
     flex: 0 0 auto;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, monospace;
     font-size: 0.76rem;
     font-weight: 700;
   }

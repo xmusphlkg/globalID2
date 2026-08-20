@@ -17,6 +17,15 @@ class _ScalarResult:
     def scalar_one_or_none(self):
         return self.value
 
+    def scalar_one(self):
+        return self.value
+
+    def scalars(self):
+        return self
+
+    def all(self):
+        return self.value
+
 
 class _DB:
     def __init__(self, results):
@@ -49,6 +58,18 @@ def test_signal_review_requires_existing_signal(monkeypatch) -> None:
     )
     assert response.status_code == 404
     assert response.json()["detail"] == "Situation v3 signal not found"
+
+
+def test_missing_calibration_summary_is_explicitly_fail_closed(monkeypatch) -> None:
+    response = _client(monkeypatch, _DB([None])).get(
+        "/situation/v3/calibration/latest"
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "not_available",
+        "automation_supported": False,
+        "reason": "No registered Situation v3.2 calibration artifact",
+    }
 
 
 def test_signal_verified_risk_requires_attribution_and_http_evidence(monkeypatch) -> None:

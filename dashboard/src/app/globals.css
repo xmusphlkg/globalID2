@@ -1,24 +1,51 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2-variations");
+}
+
+:root {
+  --cc-brand: #b54708;
+  --cc-brand-strong: #93370d;
+  --cc-brand-soft: #fff1e8;
+  --cc-charcoal: #1f2933;
+  --cc-workspace: #f4f5f6;
+  --cc-surface: #ffffff;
+  --cc-surface-muted: #eef0f2;
+  --cc-border: #cfd5da;
+  --cc-text: #3e4c59;
+  --cc-text-muted: #52606f;
+  --cc-text-strong: #1f2933;
+  --cc-link: #175cd3;
+  --cc-success: #157f3c;
+  --cc-warning: #a15c07;
+  --cc-danger: #b42318;
+  --cc-focus: #175cd3;
+}
+
 @theme {
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --color-tremor-brand: #c2410c;
-  --color-tremor-brand-muted: #ffedd5;
-  --color-tremor-brand-subtle: #fb923c;
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --color-tremor-brand: #b54708;
+  --color-tremor-brand-muted: #fff1e8;
+  --color-tremor-brand-subtle: #d96818;
   --color-tremor-brand-inverted: #ffffff;
 
   --color-tremor-background: #ffffff;
-  --color-tremor-background-subtle: #f7f7f5;
-  --color-tremor-background-muted: #ececea;
-  --color-tremor-background-emphasis: #1d1d1f;
+  --color-tremor-background-subtle: #f4f5f6;
+  --color-tremor-background-muted: #eef0f2;
+  --color-tremor-background-emphasis: #1f2933;
 
-  --color-tremor-border: #d9d9d6;
-  --color-tremor-ring: #fb923c;
+  --color-tremor-border: #cfd5da;
+  --color-tremor-ring: #175cd3;
 
-  --color-tremor-content: #4b5563;
-  --color-tremor-content-subtle: #6b7280;
-  --color-tremor-content-emphasis: #374151;
-  --color-tremor-content-strong: #1d1d1f;
+  --color-tremor-content: #3e4c59;
+  --color-tremor-content-subtle: #52606f;
+  --color-tremor-content-emphasis: #334e68;
+  --color-tremor-content-strong: #1f2933;
   --color-tremor-content-inverted: #ffffff;
 
   --color-dark-tremor-brand: #3b82f6;
@@ -73,8 +100,20 @@ a {
 }
 
 ::selection {
-  background: rgba(244, 129, 32, 0.18);
+  background: rgba(181, 71, 8, 0.18);
 }
+
+.control-shell { background: var(--cc-workspace); color: var(--cc-text-strong); }
+.control-center-mark { position: relative; display: grid; width: 2.25rem; height: 2.25rem; flex: none; place-items: center; overflow: hidden; border-radius: .3rem; background: var(--cc-brand); }
+.control-center-mark::before, .control-center-mark::after { content: ""; position: absolute; width: 1.55rem; height: 1.55rem; border: 1.5px solid rgb(255 255 255 / .72); border-radius: 50%; }
+.control-center-mark::before { left: -.7rem; }
+.control-center-mark::after { right: -.7rem; }
+.control-center-mark > span { width: .42rem; height: .42rem; border: 2px solid #fff; background: transparent; transform: rotate(45deg); }
+
+:focus-visible { outline: 3px solid var(--cc-focus); outline-offset: 2px; }
+
+/* Normalize the legacy neutral utility while feature views migrate to semantic tokens. */
+.text-\[\#6B7280\] { color: var(--cc-text-muted); }
 
 .glass-panel {
   background: rgba(255, 255, 255, 0.9);
@@ -111,7 +150,7 @@ a {
   }
 
   .workspace-description {
-    @apply mt-1 max-w-3xl text-sm leading-6 text-[#6B7280];
+    @apply mt-1 max-w-3xl text-sm leading-6 text-[var(--cc-text-muted)];
   }
 
   .metric-strip {

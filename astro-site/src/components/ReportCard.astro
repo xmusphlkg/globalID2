@@ -13,6 +13,7 @@ interface Props {
   countryName?: string;
   qualityScore?: number | null;
   summary?: string | null;
+  locale?: 'en' | 'zh';
 }
 
 const {
@@ -24,18 +25,22 @@ const {
   createdAt,
   countryCode,
   countryName,
-  qualityScore,
   summary,
+  locale = 'en',
 } = Astro.props;
 
-const href = `/countries/${(countryCode ?? 'cn').toLowerCase()}/reports/${id}/`;
+const prefix = locale === 'zh' ? '/zh' : '';
+const href = `${prefix}/countries/${(countryCode ?? 'cn').toLowerCase()}/reports/${id}/`;
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 const typeLabels: Record<string, string> = {
   DAILY: 'Daily', WEEKLY: 'Weekly', MONTHLY: 'Monthly', SPECIAL: 'Special',
+};
+const typeLabelsZh: Record<string, string> = {
+  DAILY: '日报', WEEKLY: '周报', MONTHLY: '月报', SPECIAL: '专题',
 };
 ---
 
@@ -48,7 +53,7 @@ const typeLabels: Record<string, string> = {
   <div class="flex items-center justify-between gap-3 mb-3">
     <div class="flex items-center gap-2">
       <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20">
-        {typeLabels[reportType] ?? reportType}
+        {locale === 'zh' ? (typeLabelsZh[reportType] ?? reportType) : (typeLabels[reportType] ?? reportType)}
       </span>
       {countryName && (
         <span class="inline-flex items-center gap-1.5 text-xs text-[rgb(var(--text-muted))]">

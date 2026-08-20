@@ -15,9 +15,12 @@ from src.core.database import get_db
 from src.core.situation_history_database import get_history_db, init_history_database
 from src.domain import (
     SituationAnalysisRunV3,
+    SituationCalibrationRunV3,
     SituationEventClusterItemV3,
     SituationEventClusterV3,
+    SituationEventLabelV3,
     SituationPeriodReportV3,
+    SituationPolicyDecisionV3,
     SituationPublicationPointerV3,
     SituationReportMemberV3,
     SituationReviewDecisionV3,
@@ -126,6 +129,175 @@ async def stage_analysis_run_v3(
             )
         await db.flush()
         return run
+
+
+async def stage_policy_decisions_v3(
+    *,
+    run_id: str,
+    signals: Iterable[SituationSignalV3],
+) -> None:
+    """Persist one immutable automation decision per evaluated run signal."""
+
+    async with get_db() as db:
+        existing = {
+            row.signal_id
+            for row in (
+                await db.execute(
+                    select(SituationPolicyDecisionV3).where(
+                        SituationPolicyDecisionV3.run_id == run_id
+                    )
+                )
+            ).scalars()
+        }
+        for signal in signals:
+            if signal.identity.signal_id in existing:
+                continue
+            decision = signal.assessment.automation_decision
+            seed = (
+                f"{run_id}|{signal.identity.signal_id}|"
+                f"{decision.policy_version or 'none'}"
+            )
+            db.add(
+                SituationPolicyDecisionV3(
+                    decision_id=(
+                        "policy-decision-v3:"
+                        + hashlib.sha256(seed.encode()).hexdigest()[:24]
+                    ),
+                    run_id=run_id,
+                    signal_id=signal.identity.signal_id,
+                    status=decision.status,
+                    basis=decision.basis,
+                    policy_version=decision.policy_version or "not_configured",
+                    calibration_hash=decision.calibration_hash,
+                    gate_reasons=list(decision.gate_reasons),
+                    matched_event_ids=list(decision.matched_event_ids),
+                    decided_at=decision.decided_at or utc_now(),
+                    payload=decision.model_dump(mode="json"),
+                )
+            )
+
+
+async def record_calibration_run_v3(
+    *,
+    calibration_id: str,
+    method_version: str,
+    config_hash: str,
+    artifact_hash: str,
+    status: str,
+    calibrated_at: datetime,
+    summary: dict[str, Any],
+    group_results: dict[str, Any],
+    artifact_uri: str | None = None,
+    window_start: date | None = None,
+    window_end: date | None = None,
+) -> SituationCalibrationRunV3:
+    """Register a calibration artifact idempotently by calibration id."""
+
+    async with get_db() as db:
+        existing = (
+            await db.execute(
+                select(SituationCalibrationRunV3).where(
+                    SituationCalibrationRunV3.calibration_id == calibration_id
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            if existing.artifact_hash != artifact_hash:
+                raise RuntimeError("Calibration id already has a different artifact hash")
+            return existing
+        row = SituationCalibrationRunV3(
+            calibration_id=calibration_id,
+            method_version=method_version,
+            config_hash=config_hash,
+            artifact_hash=artifact_hash,
+            artifact_uri=artifact_uri,
+            status=status,
+            calibrated_at=calibrated_at,
+            window_start=window_start,
+            window_end=window_end,
+            summary=summary,
+            group_results=group_results,
+        )
+        db.add(row)
+        await db.flush()
+        return row
+
+
+async def latest_calibration_run_v3(
+    *,
+    supported_only: bool = False,
+) -> SituationCalibrationRunV3 | None:
+    query = select(SituationCalibrationRunV3)
+    if supported_only:
+        query = query.where(SituationCalibrationRunV3.status == "supported")
+    query = query.order_by(SituationCalibrationRunV3.calibrated_at.desc()).limit(1)
+    async with get_db() as db:
+        return (await db.execute(query)).scalar_one_or_none()
+
+
+async def upsert_event_label_v3(
+    *,
+    label_id: str,
+    disease_id: str,
+    geographies: list[dict[str, str]],
+    first_official_published_at: date,
+    authoritative_source: str,
+    source_url: str,
+    confidence: str,
+    adjudication: str = "indeterminate",
+    split: str = "unassigned",
+    event_started_at: date | None = None,
+    created_by: str | None = None,
+    evidence: dict[str, Any] | None = None,
+) -> SituationEventLabelV3:
+    """Create or update an auditable real-world event label."""
+
+    if adjudication not in {"positive", "negative", "indeterminate"}:
+        raise ValueError("adjudication must be positive, negative, or indeterminate")
+    if split not in {"unassigned", "development", "tuning", "locked_test"}:
+        raise ValueError("split is invalid")
+    if confidence not in {"low", "medium", "high"}:
+        raise ValueError("confidence must be low, medium, or high")
+    evidence_payload = evidence or {}
+    if adjudication == "negative":
+        adjudicators = {
+            str(actor).strip()
+            for actor in evidence_payload.get("adjudicators", [])
+            if str(actor).strip()
+        }
+        if not evidence_payload.get("review_decision_id") and len(adjudicators) < 2:
+            raise ValueError(
+                "negative labels require a review_decision_id or two distinct adjudicators"
+            )
+    async with get_db() as db:
+        row = (
+            await db.execute(
+                select(SituationEventLabelV3).where(
+                    SituationEventLabelV3.label_id == label_id
+                )
+            )
+        ).scalar_one_or_none()
+        values = {
+            "disease_id": disease_id,
+            "geographies": geographies,
+            "event_started_at": event_started_at,
+            "first_official_published_at": first_official_published_at,
+            "authoritative_source": authoritative_source,
+            "source_url": source_url,
+            "confidence": confidence,
+            "adjudication": adjudication,
+            "split": split,
+            "created_by": created_by,
+            "evidence": evidence_payload,
+        }
+        if row is None:
+            row = SituationEventLabelV3(label_id=label_id, **values)
+            db.add(row)
+        else:
+            for key, value in values.items():
+                setattr(row, key, value)
+        await db.flush()
+        return row
 
 
 async def mark_analysis_run_failed_v3(run_id: str, error: BaseException | str) -> None:
@@ -607,10 +779,14 @@ __all__ = [
     "signal_review_states_v3",
     "stable_event_cluster_ids_v3",
     "latest_report_v3",
+    "latest_calibration_run_v3",
     "mark_analysis_run_failed_v3",
     "prepare_report_revision_v3",
     "publish_report_v3",
     "report_content_hash",
     "reports_v3",
+    "record_calibration_run_v3",
     "stage_analysis_run_v3",
+    "stage_policy_decisions_v3",
+    "upsert_event_label_v3",
 ]

@@ -31,6 +31,9 @@ jobs:
       SITUATION_HISTORY_DATABASE_URL: ${{ secrets.SITUATION_HISTORY_DATABASE_URL }}
       PUBLIC_GA4_MEASUREMENT_ID: ${{ vars.PUBLIC_GA4_MEASUREMENT_ID }}
       PUBLIC_SUBSCRIPTIONS_API_BASE: ${{ vars.PUBLIC_SUBSCRIPTIONS_API_BASE }}
+      PUBLIC_GIDS_SOURCE_COMMIT: ${{ github.sha }}
+      PUBLIC_GIDS_DEPLOY_BRANCH: ${{ github.ref_name }}
+      PUBLIC_GIDS_RELEASE_ID: ${{ github.run_id }}-${{ github.run_attempt }}
       AUTOMATION_ARTIFACT_ROOT: ${{ runner.temp }}/situation-release
 
     steps:
@@ -122,6 +125,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_PROJECT_NAME: ${{ vars.CLOUDFLARE_PROJECT_NAME }}
       SITUATION_PUBLIC_DATA_URL: ${{ vars.SITUATION_PUBLIC_DATA_URL }}
+      SITUATION_PUBLIC_SITE_URL: ${{ vars.SITUATION_PUBLIC_SITE_URL }}
 
     steps:
       - name: Check out deployment tooling
@@ -163,7 +167,7 @@ jobs:
       - name: Require production deployment configuration
         shell: bash
         run: |
-          if [[ -z "${CLOUDFLARE_API_TOKEN}" || -z "${CLOUDFLARE_ACCOUNT_ID}" || -z "${CLOUDFLARE_PROJECT_NAME}" || -z "${SITUATION_PUBLIC_DATA_URL}" ]]; then
+          if [[ -z "${CLOUDFLARE_API_TOKEN}" || -z "${CLOUDFLARE_ACCOUNT_ID}" || -z "${CLOUDFLARE_PROJECT_NAME}" || -z "${SITUATION_PUBLIC_DATA_URL}" || -z "${SITUATION_PUBLIC_SITE_URL}" ]]; then
             echo "Cloudflare production credentials, project, or public verification URL are missing." >&2
             exit 2
           fi
@@ -183,6 +187,16 @@ jobs:
           python scripts/automation/verify_situation_deployment.py
           --artifact "${RUNNER_TEMP}/situation-dist/site-data/situation/v3/latest.json"
           --public-data-url "${SITUATION_PUBLIC_DATA_URL}"
+          --attempts 12
+          --timeout-seconds 10
+          --initial-delay-seconds 2
+          --maximum-delay-seconds 20
+
+      - name: Verify production serves the released source commit
+        run: >-
+          python scripts/automation/verify_site_commit.py
+          --public-site-url "${SITUATION_PUBLIC_SITE_URL}"
+          --expected-source-commit "${GITHUB_SHA}"
           --attempts 12
           --timeout-seconds 10
           --initial-delay-seconds 2

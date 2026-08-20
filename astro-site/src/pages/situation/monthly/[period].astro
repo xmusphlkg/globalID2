@@ -7,13 +7,20 @@ export function getStaticPaths() {
   return reports.map((report, index) => ({
     params: { period: report.report.period_key },
     props: {
+      reportPeriod: report.report.period_key,
+      locale: 'en',
       previous: reports[index - 1]?.report.period_key,
       next: reports[index + 1]?.report.period_key,
     },
   }));
 }
-const { period } = Astro.params;
-const { previous, next } = Astro.props as { previous?: string; next?: string };
+const { reportPeriod, previous: previousProp, next: nextProp, locale = 'en' } = Astro.props as { reportPeriod?: string; previous?: string; next?: string; locale?: 'en' | 'zh' };
+const period = reportPeriod ?? Astro.params.period;
+const prefix = locale === 'zh' ? '/zh' : '';
+const reports = listSituationReports('monthly');
+const reportIndex = reports.findIndex(item => item.report.period_key === period);
+const previous = previousProp ?? (reportIndex > 0 ? reports[reportIndex - 1]?.report.period_key : undefined);
+const next = nextProp ?? (reportIndex >= 0 ? reports[reportIndex + 1]?.report.period_key : undefined);
 const report = period ? loadSituationReport('monthly', period) : null;
 if (!report || !period) return Astro.redirect('/situation/monthly/', 302);
 ---
@@ -21,8 +28,9 @@ if (!report || !period) return Astro.redirect('/situation/monthly/', 302);
 <SituationPeriodView
   report={report}
   jsonPath={`/site-data/situation/v3/monthly/${period}.json`}
-  canonicalPath={`/situation/monthly/${period}/`}
-  archivePath="/situation/monthly/"
-  previousPath={previous ? `/situation/monthly/${previous}/` : undefined}
-  nextPath={next ? `/situation/monthly/${next}/` : undefined}
+  canonicalPath={`${prefix}/situation/monthly/${period}/`}
+  archivePath={`${prefix}/situation/monthly/`}
+  previousPath={previous ? `${prefix}/situation/monthly/${previous}/` : undefined}
+  nextPath={next ? `${prefix}/situation/monthly/${next}/` : undefined}
+  locale={locale}
 />

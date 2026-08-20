@@ -171,11 +171,11 @@ const formatCards = [
   <section class="figure-panel space-y-6">
     <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
       <div class="space-y-3">
-        <p class="figure-kicker" data-lang-en="Data access" data-lang-zh="数据获取">{pick('Data access', '数据获取')}</p>
-        <h2 class="figure-title" data-lang-en={title} data-lang-zh="下载数据">{pick(title, '下载数据')}</h2>
-        <p class="figure-caption" data-lang-en={descriptionEn} data-lang-zh={descriptionZh}>{pick(descriptionEn, descriptionZh)}</p>
+        <p class="figure-kicker">{pick('Data access', '数据获取')}</p>
+        <h2 class="figure-title">{pick(title, '下载数据')}</h2>
+        <p class="figure-caption">{pick(descriptionEn, descriptionZh)}</p>
         {entry.includes_series_provenance && (
-          <p class="figure-caption" data-lang-en="Files distinguish source_series_observation rows from the public_projection and retain series definitions and provenance columns." data-lang-zh="文件区分来源序列观测（source_series_observation）与公开投影（public_projection），并保留序列定义和溯源字段。">
+          <p class="figure-caption">
             {pick('Files distinguish source_series_observation rows from the public_projection and retain series definitions and provenance columns.', '文件区分来源序列观测（source_series_observation）与公开投影（public_projection），并保留序列定义和溯源字段。')}
           </p>
         )}
@@ -185,31 +185,31 @@ const formatCards = [
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
           </svg>
-          <span data-lang-en="Download data" data-lang-zh="下载数据">{pick('Download data', '下载数据')}</span>
+          <span>{pick('Download data', '下载数据')}</span>
         </button>
       )}
     </div>
 
     <div class="academic-meta-grid">
       <div class="academic-meta-item">
-        <div class="academic-meta-label" data-lang-en="Download rows" data-lang-zh="下载行数">{pick('Download rows', '下载行数')}</div>
+        <div class="academic-meta-label">{pick('Download rows', '下载行数')}</div>
         <div class="academic-meta-value font-serif">{formatCount(entry.record_count)}</div>
       </div>
       <div class="academic-meta-item">
-        <div class="academic-meta-label" data-lang-en="Updated" data-lang-zh="数据更新时间">{pick('Updated', '数据更新时间')}</div>
+        <div class="academic-meta-label">{pick('Updated', '数据更新时间')}</div>
         <div class="academic-meta-value font-serif">{formatDate(entry.generated_at)}</div>
       </div>
       <div class="academic-meta-item">
-        <div class="academic-meta-label" data-lang-en="Coverage" data-lang-zh="覆盖区间">{pick('Coverage', '覆盖区间')}</div>
+        <div class="academic-meta-label">{pick('Coverage', '覆盖区间')}</div>
         <div class="academic-meta-value text-sm font-medium">{coverageLabel}</div>
       </div>
       <div class="academic-meta-item">
-        <div class="academic-meta-label" data-lang-en="Download partitions" data-lang-zh="下载分块">{pick('Download partitions', '下载分块')}</div>
+        <div class="academic-meta-label">{pick('Download partitions', '下载分块')}</div>
         <div class="academic-meta-value text-sm font-medium">{formatCount(downloadParts.length)}</div>
       </div>
       {entry.includes_series_provenance && (
         <div class="academic-meta-item">
-          <div class="academic-meta-label" data-lang-en="Source series" data-lang-zh="来源序列">{pick('Source series', '来源序列')}</div>
+          <div class="academic-meta-label">{pick('Source series', '来源序列')}</div>
           <div class="academic-meta-value text-sm font-medium">{formatCount(entry.source_series_count)}</div>
           <div class="mt-1 text-xs text-[rgb(var(--text-muted))]">{formatCount(entry.source_observation_count)} {pick('source observations', '条来源观测')}</div>
         </div>
@@ -217,19 +217,19 @@ const formatCards = [
     </div>
 
     {sourceEntries.length > 0 && (
-      <div class="space-y-4 border-t border-slate-800 pt-5">
-        <div>
-          <h3 class="academic-kicker" data-lang-en="Sources" data-lang-zh="数据来源">{pick('Sources', '数据来源')}</h3>
-          <p class="source-register-intro mt-2 text-sm leading-6" data-lang-en="Official sources and update schedules for this dataset." data-lang-zh="本数据集使用的官方来源及其更新频率。">{pick('Official sources and update schedules for this dataset.', '本数据集使用的官方来源及其更新频率。')}</p>
-        </div>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <details class="source-register" open={sourceEntries.length <= 6}>
+        <summary>
+          <span><strong>{pick('Official sources', '官方数据来源')}</strong><small>{pick('Reporting authority, cadence, and source notes', '报告机构、更新频率与来源说明')}</small></span>
+          <b>{sourceEntries.length}</b>
+        </summary>
+        <div class="source-register-grid">
           {sourceEntries.map((source) => (
             <article class="source-register-card">
               <div class="source-register-card__header">
                 <div class="source-register-card__identity">
                   {source.country_code && <CountryFlag code={source.country_code} name={source.country_name ?? source.country_code} sizeClass="h-6 w-8 shrink-0" />}
                   <div class="min-w-0">
-                    <h4 class="source-register-title" data-lang-en={source.label ?? source.scope ?? 'Unknown Source'} data-lang-zh={sourceZhLabel(source)}>{pick(source.label ?? source.scope ?? 'Unknown Source', sourceZhLabel(source))}</h4>
+                    <h4 class="source-register-title">{pick(source.label ?? source.scope ?? 'Unknown Source', sourceZhLabel(source))}</h4>
                     {source.country_name && <p class="source-register-country">{source.country_name}</p>}
                   </div>
                 </div>
@@ -242,48 +242,48 @@ const formatCards = [
                     aria-label={pick('Open official source', '打开官方来源')}
                     title={pick('Official source', '官方来源')}
                   >
-                    <span data-lang-en="Source" data-lang-zh="来源">{pick('Source', '来源')}</span>
+                    <span>{pick('Source', '来源')}</span>
                     <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5h5m0 0v5m0-5L10 14m-3 5h11a2 2 0 002-2V9m-5 10H6a2 2 0 01-2-2h5" /></svg>
                   </a>
                 )}
               </div>
               {(source.cadence || source.type) && (
                 <div class="source-register-tags">
-                  {source.cadence && <span class="source-register-cadence" data-lang-en={source.cadence} data-lang-zh={CADENCE_ZH[source.cadence] ?? source.cadence}>{pick(source.cadence, CADENCE_ZH[source.cadence] ?? source.cadence)}</span>}
-                  {source.type && <span class="source-register-type" data-lang-en={source.type} data-lang-zh={TYPE_ZH[source.type] ?? source.type}>{pick(source.type, TYPE_ZH[source.type] ?? source.type)}</span>}
+                  {source.cadence && <span class="source-register-cadence">{pick(source.cadence, CADENCE_ZH[source.cadence] ?? source.cadence)}</span>}
+                  {source.type && <span class="source-register-type">{pick(source.type, TYPE_ZH[source.type] ?? source.type)}</span>}
                 </div>
               )}
-              {source.description && <p class="source-register-description" data-lang-en={source.description} data-lang-zh={sourceZhDescription(source)}>{pick(source.description, sourceZhDescription(source))}</p>}
+              {source.description && <p class="source-register-description">{pick(source.description, sourceZhDescription(source))}</p>}
             </article>
           ))}
         </div>
-      </div>
+      </details>
     )}
 
     {downloadParts.length > 0 && (
-      <dialog class="download-dialog" data-download-confirm-dialog aria-label="Choose data download">
+      <dialog class="download-dialog" data-download-confirm-dialog aria-label={pick('Choose data download', '选择数据下载')}>
         <div class="download-dialog__toolbar">
           <div class="download-dialog__header">
             <div>
-              <p class="figure-kicker" data-lang-en="Partitioned public data" data-lang-zh="分块公开数据">{pick('Partitioned public data', '分块公开数据')}</p>
-              <h2 class="download-dialog__title" data-lang-en="Choose a time range and format" data-lang-zh="选择时间范围和格式">{pick('Choose a time range and format', '选择时间范围和格式')}</h2>
+              <p class="figure-kicker">{pick('Partitioned public data', '分块公开数据')}</p>
+              <h2 class="download-dialog__title">{pick('Choose a time range and format', '选择时间范围和格式')}</h2>
             </div>
-            <button class="download-dialog__close" type="button" data-download-modal-close aria-label="Close">×</button>
+            <button class="download-dialog__close" type="button" data-download-modal-close aria-label={pick('Close', '关闭')}>×</button>
           </div>
-          <div class="download-dialog__filters" aria-label="Download filters">
+          <div class="download-dialog__filters" aria-label={pick('Download filters', '下载筛选')}>
             <label class="download-filter">
-              <span data-lang-en="Time range" data-lang-zh="时间范围">{pick('Time range', '时间范围')}</span>
+              <span>{pick('Time range', '时间范围')}</span>
               <select data-download-time-filter>
-                <option value="all" data-lang-en="All time ranges" data-lang-zh="全部时间范围">{pick('All time ranges', '全部时间范围')}</option>
+                <option value="all">{pick('All time ranges', '全部时间范围')}</option>
                 {downloadParts.map((part) => (
                   <option value={part.id}>{part.label ?? part.id}{part.is_current ? ` · ${pick('Current', '当前')}` : ''}</option>
                 ))}
               </select>
             </label>
             <label class="download-filter">
-              <span data-lang-en="File format" data-lang-zh="文件格式">{pick('File format', '文件格式')}</span>
+              <span>{pick('File format', '文件格式')}</span>
               <select data-download-format-filter>
-                <option value="all" data-lang-en="All formats" data-lang-zh="全部格式">{pick('All formats', '全部格式')}</option>
+                <option value="all">{pick('All formats', '全部格式')}</option>
                 {formatCards.map((format) => <option value={format.key}>{format.label}</option>)}
               </select>
             </label>
@@ -306,7 +306,7 @@ const formatCards = [
                     <div class="min-w-0">
                       <div class="flex flex-wrap items-center gap-2">
                         <h3>{part.label ?? part.id}</h3>
-                        {part.is_current && <span class="download-file-item__current" data-lang-en="Current" data-lang-zh="当前">{pick('Current', '当前')}</span>}
+                        {part.is_current && <span class="download-file-item__current">{pick('Current', '当前')}</span>}
                       </div>
                       <p>{part.date_range?.start ?? '—'} → {part.date_range?.end ?? '—'}</p>
                     </div>
@@ -314,13 +314,13 @@ const formatCards = [
                       <svg class="download-file-item__action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
                       </svg>
-                      <span data-lang-en={`Download ${format.label}`} data-lang-zh={`下载 ${format.label}`}>{pick(`Download ${format.label}`, `下载 ${format.label}`)}</span>
+                      <span>{pick(`Download ${format.label}`, `下载 ${format.label}`)}</span>
                     </button>
                   </div>
                   <div class="download-file-item__meta">
                     <span>{formatCount(part.record_count)} {pick('records', '条记录')}</span>
                     <span>{formatBytes(file.bytes)}</span>
-                    <span data-lang-en={format.en} data-lang-zh={format.zh}>{pick(format.en, format.zh)}</span>
+                    <span>{pick(format.en, format.zh)}</span>
                   </div>
                   <a class="download-file-item__raw" href={file.url} target="_blank" rel="noopener noreferrer" title={file.url} data-file-download><code>{file.url}</code></a>
                   <p class="download-file-item__status" data-download-status aria-live="polite"></p>
@@ -328,7 +328,7 @@ const formatCards = [
               );
             }))}
           </div>
-          <p class="download-dialog__empty" data-download-empty hidden data-lang-en="No files match these filters." data-lang-zh="没有符合筛选条件的文件。">{pick('No files match these filters.', '没有符合筛选条件的文件。')}</p>
+          <p class="download-dialog__empty" data-download-empty hidden>{pick('No files match these filters.', '没有符合筛选条件的文件。')}</p>
         </div>
       </dialog>
     )}
@@ -405,6 +405,26 @@ const formatCards = [
 </script>
 
 <style>
+  .source-register { border-top: 1px solid rgb(var(--border)); }
+  .source-register > summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 0; color: rgb(var(--text-strong)); cursor: pointer; list-style: none; }
+  .source-register > summary::-webkit-details-marker { display: none; }
+  .source-register > summary > span { display: grid; gap: .12rem; }
+  .source-register > summary strong { font-size: .8rem; }
+  .source-register > summary small { color: rgb(var(--text-muted)); font-size: .68rem; font-weight: 400; }
+  .source-register > summary b { display: grid; min-width: 1.8rem; height: 1.8rem; place-items: center; color: rgb(var(--color-teal)); border: 1px solid rgb(var(--border)); font-family: ui-monospace, monospace; font-size: .68rem; }
+  .source-register-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .55rem; padding-bottom: .5rem; }
+  .source-register-card { display: flex; min-width: 0; flex-direction: column; gap: .45rem; padding: .7rem; background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); }
+  .source-register-title { display: -webkit-box; overflow: hidden; color: rgb(var(--text-strong)); font-size: .76rem; font-weight: 650; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .source-register-card__header,.source-register-card__identity,.source-register-tags { display: flex; gap: .45rem; }
+  .source-register-card__header { min-width: 0; align-items: flex-start; justify-content: space-between; }
+  .source-register-card__identity { min-width: 0; flex: 1; align-items: flex-start; }
+  .source-register-tags { flex-wrap: wrap; }
+  .source-register-cadence,.source-register-type { padding: .12rem .3rem; color: rgb(var(--text-muted)); background: rgb(var(--bg-soft)); font-size: .55rem; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
+  .source-register-country { margin-top: .08rem; color: rgb(var(--text-faint)); font-size: .58rem; text-transform: uppercase; }
+  .source-register-description { display: -webkit-box; overflow: hidden; color: rgb(var(--text-muted)); font-size: .66rem; line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .source-register-link { display: inline-flex; min-height: 1.65rem; flex: 0 0 auto; align-items: center; gap: .22rem; padding: .2rem .35rem; color: rgb(var(--color-teal)); border: 1px solid rgb(var(--border)); font-size: .58rem; font-weight: 700; text-decoration: none; }
+  .source-register-link svg { width: .7rem; height: .7rem; }
+  .source-register-link:hover { background: rgb(var(--bg-soft)); border-color: rgb(var(--color-teal)); }
   .download-dialog {
     position: fixed;
     top: 50%;
@@ -427,7 +447,7 @@ const formatCards = [
   .download-dialog__toolbar { position: sticky; top: 0; z-index: 2; border-bottom: 1px solid rgb(var(--border) / .72); background: linear-gradient(180deg, rgb(var(--surface) / 1), rgb(var(--surface-raised) / .92)); padding: 1rem 1.15rem .85rem; }
   .download-dialog__toolbar::before { content: ''; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, rgb(var(--color-brand) / .85), rgb(var(--color-accent) / .4), transparent 78%); pointer-events: none; }
   .download-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-  .download-dialog__title { margin-top: .15rem; color: rgb(var(--text-strong)); font-family: 'Source Serif 4', ui-serif, Georgia, serif; font-size: 1.2rem; font-weight: 600; letter-spacing: -.015em; line-height: 1.25; }
+  .download-dialog__title { margin-top: .15rem; color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: 1.2rem; font-weight: 600; letter-spacing: -.015em; line-height: 1.25; }
   .download-dialog__close { display: grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface-raised) / .48); color: rgb(var(--text-muted)); cursor: pointer; font-size: 1.25rem; line-height: 1; transition: border-color .18s ease, background-color .18s ease, color .18s ease; }
   .download-dialog__close:hover { border-color: rgb(var(--color-brand) / .72); background: rgb(var(--bg-soft) / .82); color: rgb(var(--text-strong)); }
   .download-dialog__close:focus-visible { outline: 2px solid rgb(var(--color-brand)); outline-offset: 2px; }
@@ -454,7 +474,7 @@ const formatCards = [
   .download-file-item__status:empty { display: none; }
   .download-file-item__status { min-width: 0; color: rgb(var(--text-muted)); font-size: .65rem; }
   .download-dialog__empty { padding: 2rem; text-align: center; color: rgb(var(--text-muted)); font-size: .85rem; }
-  [data-download-file][hidden], [data-download-empty][hidden] { display: none !important; }
+  [data-download-file][hidden], [data-download-empty][hidden] { display: none; }
   @media (max-width: 800px) {
     .download-dialog__filters { grid-template-columns: 1fr 1fr; }
   }

@@ -9,9 +9,11 @@ interface Props {
   icd10?: string;
   description?: string;
   slug: string;
+  locale?: 'en' | 'zh';
 }
 
-const { diseaseId, nameEn, nameZh, category, icd10, description, slug } = Astro.props;
+const { nameEn, nameZh, category, icd10, description, slug, locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
 
 const categoryStyles: Record<string, string> = {
   Viral: 'badge-viral',
@@ -28,12 +30,12 @@ const categoryZh: Record<string, string> = {
 ---
 
 <a
-  href={`/diseases/${seoSlug}/`}
+  href={`${zh ? '/zh' : ''}/diseases/${seoSlug}/`}
   class="card site-card-link p-5 block group h-full flex flex-col"
 >
   <div class="flex items-start justify-between mb-3">
     <span class={`inline-flex items-center rounded-none px-2.5 py-0.5 text-xs font-medium ${badgeClass}`}>
-      <span data-lang-en={category} data-lang-zh={categoryZh[category] ?? category}>{category}</span>
+      <span>{zh ? categoryZh[category] ?? category : category}</span>
     </span>
     {icd10 && (
       <span class="text-xs font-mono text-[rgb(var(--text-faint))]">{icd10}</span>
@@ -41,10 +43,10 @@ const categoryZh: Record<string, string> = {
   </div>
 
   <h3 class="text-[rgb(var(--text-strong))] font-semibold text-base mb-1 group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors leading-tight">
-    <span data-lang-en={nameEn} data-lang-zh={nameZh}>{nameEn}</span>
+    <span>{zh ? nameZh : nameEn}</span>
   </h3>
   <p class="text-[rgb(var(--text-muted))] text-sm mb-3">
-    <span data-lang-en={nameZh} data-lang-zh={nameEn}>{nameZh}</span>
+    <span>{zh ? nameEn : nameZh}</span>
   </p>
 
   {description && (

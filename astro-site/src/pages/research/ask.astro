@@ -1,62 +1,69 @@
 ---
 import ReportLayout from '../../layouts/ReportLayout.astro';
+import { buildAlternatePaths } from '../../lib/seo';
+
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 ---
 
 <ReportLayout
-  title="Ask GIDS Research"
-  description="Search published Research Radar evidence and its public surveillance links with source-level citations."
+  title={pick('Ask GIDS Research', '问研究雷达')}
+  description={pick('Search published Research Radar evidence and its public surveillance links with source-level citations.', '检索研究雷达已发表证据及其公开监测关联，并核对来源级引用。')}
+  initialLanguage={locale}
   seo={{
-    title: 'Ask GIDS Research | GIDS',
-    description: 'Search published Research Radar evidence and its public surveillance links with source-level citations.',
-    locale: 'en',
-    canonicalPath: '/research/ask/',
-    alternatePaths: { en: '/research/ask/' },
+    title: pick('Ask GIDS Research | GIDS', '问研究雷达 | GIDS'),
+    description: pick('Search published Research Radar evidence and its public surveillance links with source-level citations.', '检索研究雷达已发表证据及其公开监测关联，并核对来源级引用。'),
+    locale,
+    canonicalPath: `${prefix}/research/ask/`,
+    alternatePaths: buildAlternatePaths(`${prefix}/research/ask/`, locale),
     pageType: 'WebPage',
   }}
   breadcrumbs={[
-    { label: 'Research Radar', labelZh: '研究雷达', href: '/research/' },
-    { label: 'Ask GIDS Research', labelZh: '问研究雷达' },
+    { label: pick('Research Radar', '研究雷达'), href: `${prefix}/research/` },
+    { label: pick('Ask GIDS Research', '问研究雷达') },
   ]}
 >
   <main class="ask-page">
     <header class="academic-hero ask-hero">
-      <p class="academic-kicker" data-lang-en="Evidence-grounded retrieval" data-lang-zh="基于证据的检索">Evidence-grounded retrieval</p>
-      <h1 data-lang-en="Ask GIDS Research" data-lang-zh="问研究雷达">Ask GIDS Research</h1>
-      <p class="ask-lede" data-lang-en="Ask about a disease, country, study design, or public-health topic. Results come only from published Research Radar records and their verified public surveillance links." data-lang-zh="可询问疾病、国家、研究设计或公共卫生主题。结果仅来自研究雷达已发布记录及其已核验的公开监测关联。">Ask about a disease, country, study design, or public-health topic. Results come only from published Research Radar records and their verified public surveillance links.</p>
-      <form id="research-question-form" class="ask-form" role="search">
-        <label for="research-question" data-lang-en="Research question" data-lang-zh="研究问题">Research question</label>
+      <p class="academic-kicker">{pick('Evidence-grounded retrieval', '基于证据的检索')}</p>
+      <h1>{pick('Ask GIDS Research', '问研究雷达')}</h1>
+      <p class="ask-lede">{pick('Ask about a disease, country, study design, or public-health topic. Results come only from published Research Radar records and their verified public surveillance links.', '可询问疾病、国家、研究设计或公共卫生主题。结果仅来自研究雷达已发布记录及其已核验的公开监测关联。')}</p>
+      <form id="research-question-form" class="ask-form" role="search" data-research-locale={locale}>
+        <label for="research-question">{pick('Research question', '研究问题')}</label>
         <div class="ask-input-row">
-          <input id="research-question" class="site-control-input" type="search" autocomplete="off" required minlength="2" maxlength="240" data-lang-en-placeholder="What does recent evidence say about pertussis resurgence?" data-lang-zh-placeholder="近期证据如何解释百日咳回升？" placeholder="What does recent evidence say about pertussis resurgence?" />
-          <button type="submit" data-lang-en="Find evidence" data-lang-zh="查找证据">Find evidence</button>
+          <input id="research-question" class="site-control-input" type="search" autocomplete="off" required minlength="2" maxlength="240" placeholder={pick('What does recent evidence say about pertussis resurgence?', '近期证据如何解释百日咳回升？')} />
+          <button type="submit">{pick('Find evidence', '查找证据')}</button>
         </div>
       </form>
-      <div class="ask-examples" aria-label="Example questions">
-        <span data-lang-en="Try:" data-lang-zh="例如：">Try:</span>
-        <button type="button" data-question-en="pertussis resurgence and vaccination" data-question-zh="百日咳回升与疫苗接种">Pertussis resurgence</button>
-        <button type="button" data-question-en="dengue surveillance in Brazil" data-question-zh="巴西登革热监测">Dengue in Brazil</button>
-        <button type="button" data-question-en="antimicrobial resistance systematic reviews" data-question-zh="抗菌药物耐药系统综述">AMR reviews</button>
+      <div class="ask-examples" aria-label={pick('Example questions', '问题示例')}>
+        <span>{pick('Try:', '例如：')}</span>
+        <button type="button" data-question={pick('pertussis resurgence and vaccination', '百日咳回升与疫苗接种')}>{pick('Pertussis resurgence', '百日咳回升')}</button>
+        <button type="button" data-question={pick('dengue surveillance in Brazil', '巴西登革热监测')}>{pick('Dengue in Brazil', '巴西登革热')}</button>
+        <button type="button" data-question={pick('antimicrobial resistance systematic reviews', '抗菌药物耐药系统综述')}>{pick('AMR reviews', '耐药性综述')}</button>
       </div>
-      <p class="ask-privacy" data-lang-en="Your question is processed in this browser and is not sent to a model or stored by this page." data-lang-zh="你的问题只在当前浏览器中处理，本页面不会将其发送给模型或保存。">Your question is processed in this browser and is not sent to a model or stored by this page.</p>
+      <p class="ask-privacy">{pick('Your question is processed in this browser and is not sent to a model or stored by this page.', '你的问题只在当前浏览器中处理，本页面不会将其发送给模型或保存。')}</p>
     </header>
 
     <section id="ask-status" class="card ask-status" role="status" aria-live="polite" hidden></section>
     <section id="ask-answer" class="ask-answer" aria-live="polite" hidden>
       <article class="card answer-summary">
-        <div class="answer-heading"><div><p class="academic-kicker" data-lang-en="Catalogue answer" data-lang-zh="目录回答">Catalogue answer</p><h2 data-lang-en="What the indexed evidence shows" data-lang-zh="索引证据显示什么">What the indexed evidence shows</h2></div><a href="/research/" data-lang-en="Browse Research Radar →" data-lang-zh="浏览研究雷达 →">Browse Research Radar →</a></div>
+        <div class="answer-heading"><div><p class="academic-kicker">{pick('Catalogue answer', '目录回答')}</p><h2>{pick('What the indexed evidence shows', '索引证据显示什么')}</h2></div><a href={`${prefix}/research/`}>{pick('Browse Research Radar →', '浏览研究雷达 →')}</a></div>
         <p id="answer-summary-text"></p>
         <div id="answer-themes" class="answer-themes"></div>
         <p id="answer-limitations" class="answer-limitations"></p>
       </article>
 
       <article id="answer-signals-card" class="card answer-section" hidden>
-        <p class="academic-kicker" data-lang-en="Current GIDS context" data-lang-zh="当前 GIDS 背景">Current GIDS context</p>
-        <h2 data-lang-en="Linked public surveillance signals" data-lang-zh="已关联的公开监测信号">Linked public surveillance signals</h2>
+        <p class="academic-kicker">{pick('Current GIDS context', '当前 GIDS 背景')}</p>
+        <h2>{pick('Linked public surveillance signals', '已关联的公开监测信号')}</h2>
         <div id="answer-signals" class="signal-list"></div>
       </article>
 
       <article class="card answer-section">
-        <p class="academic-kicker" data-lang-en="Cited evidence" data-lang-zh="引用证据">Cited evidence</p>
-        <h2 data-lang-en="Relevant Research Radar records" data-lang-zh="相关研究雷达记录">Relevant Research Radar records</h2>
+        <p class="academic-kicker">{pick('Cited evidence', '引用证据')}</p>
+        <h2>{pick('Relevant Research Radar records', '相关研究雷达记录')}</h2>
         <div id="answer-evidence" class="evidence-list"></div>
       </article>
     </section>
@@ -77,9 +84,8 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
   const signals = document.querySelector<HTMLElement>('#answer-signals');
   const evidence = document.querySelector<HTMLElement>('#answer-evidence');
   let cataloguePromise: Promise<any[]> | null = null;
-  let lastAnswer: ReturnType<typeof answerResearchQuestion> | null = null;
-
-  const isZh = () => document.documentElement.getAttribute('data-lang') === 'zh';
+  const isZh = () => form?.dataset.researchLocale === 'zh';
+  const routePrefix = isZh() ? '/zh' : '';
   const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
     const element = document.createElement(tag);
     if (className) element.className = className;
@@ -106,7 +112,6 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
   };
 
   const render = (result: ReturnType<typeof answerResearchQuestion>) => {
-    lastAnswer = result;
     if (!answer || !summary || !themes || !limitations || !signals || !signalsCard || !evidence || !status) return;
     status.hidden = true;
     answer.hidden = false;
@@ -121,7 +126,8 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
     signalsCard.hidden = result.signals.length === 0;
     signals.replaceChildren(...result.signals.map((signal) => {
       const link = make('a');
-      link.href = signal.situation_url || '/situation/';
+      const signalPath = signal.situation_url || '/situation/';
+      link.href = routePrefix && signalPath.startsWith('/') ? `${routePrefix}${signalPath}` : signalPath;
       const title = make('strong');
       title.textContent = isZh() ? (signal.disease_name_zh || signal.disease_name_en || signal.title || '监测信号') : (signal.disease_name_en || signal.title || 'Surveillance signal');
       const detail = make('span');
@@ -145,7 +151,7 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
       const body = make('div');
       const heading = make('h3');
       const internal = make('a');
-      internal.href = `/research/articles/${article.slug}/`;
+      internal.href = `${routePrefix}/research/articles/${article.slug}/`;
       internal.textContent = article.title || (isZh() ? '未命名研究' : 'Untitled research');
       heading.append(internal);
       const meta = make('p', 'evidence-meta');
@@ -154,7 +160,7 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
       finding.textContent = (isZh() ? item.findingZh : item.findingEn) || (isZh() ? '该记录尚无已发布的结构化结果摘要；请查看原文。' : 'No published structured finding is available for this record; consult the source.');
       const citations = make('div', 'evidence-citations');
       const radar = make('a');
-      radar.href = `/research/articles/${article.slug}/`;
+      radar.href = `${routePrefix}/research/articles/${article.slug}/`;
       radar.textContent = isZh() ? '证据摘要' : 'Evidence summary';
       citations.append(radar);
       if (article.doi) {
@@ -207,17 +213,13 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
     event.preventDefault();
     void ask(input?.value ?? '');
   });
-  document.querySelectorAll<HTMLButtonElement>('[data-question-en]').forEach((button) => {
+  document.querySelectorAll<HTMLButtonElement>('[data-question]').forEach((button) => {
     button.addEventListener('click', () => {
       if (!input) return;
-      input.value = isZh() ? (button.dataset.questionZh || '') : (button.dataset.questionEn || '');
+      input.value = button.dataset.question || '';
       void ask(input.value);
     });
   });
-  new MutationObserver(() => {
-    if (input) input.placeholder = isZh() ? '近期证据如何解释百日咳回升？' : 'What does recent evidence say about pertussis resurgence?';
-    if (lastAnswer) render(lastAnswer);
-  }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-lang'] });
   const preset = new URLSearchParams(location.search).get('q');
   if (preset && input) {
     input.value = preset.slice(0, 240);
@@ -228,7 +230,7 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
 <style>
   .ask-page { width: min(74rem, calc(100% - 2rem)); margin: 0 auto; padding: 2.5rem 0 3rem; }
   .ask-hero { padding: clamp(1.5rem, 4vw, 3rem); }
-  .ask-hero h1 { max-width: 62rem; margin-top: .7rem; color: rgb(var(--text-strong)); font: 600 clamp(2.4rem, 7vw, 5rem)/.98 'Source Serif 4', serif; letter-spacing: -.045em; }
+  .ask-hero h1 { max-width: 62rem; margin-top: .7rem; color: rgb(var(--text-strong)); font: 600 clamp(2.4rem, 7vw, 5rem)/.98 'IBM Plex Sans', sans-serif; letter-spacing: -.045em; }
   .ask-lede { max-width: 52rem; margin-top: 1rem; color: rgb(var(--text-muted)); font-size: clamp(.92rem, 1.8vw, 1.08rem); line-height: 1.72; }
   .ask-form { margin-top: 2rem; }
   .ask-form > label { display: block; margin-bottom: .55rem; color: rgb(var(--text-strong)); font-size: .72rem; font-weight: 700; }
@@ -245,7 +247,7 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
   .ask-answer { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
   .answer-summary, .answer-section { padding: clamp(1.25rem, 3vw, 2rem); }
   .answer-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .7); }
-  .answer-heading h2, .answer-section h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 clamp(1.35rem, 3vw, 1.85rem)/1.12 'Source Serif 4', serif; }
+  .answer-heading h2, .answer-section h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 clamp(1.35rem, 3vw, 1.85rem)/1.12 'IBM Plex Sans', sans-serif; }
   .answer-heading a { flex: none; color: rgb(var(--color-brand)); font-size: .7rem; font-weight: 650; }
   #answer-summary-text { margin-top: 1.1rem; color: rgb(var(--text)); font-size: .9rem; line-height: 1.65; }
   .answer-themes { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
@@ -254,13 +256,13 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
   .signal-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: .65rem; margin-top: 1rem; }
   .signal-list a { padding: .8rem; border: 1px solid rgb(var(--border) / .7); }
   .signal-list strong, .signal-list span { display: block; }
-  .signal-list strong { color: rgb(var(--text-strong)); font: 600 .9rem/1.25 'Source Serif 4', serif; }
+  .signal-list strong { color: rgb(var(--text-strong)); font: 600 .9rem/1.25 'IBM Plex Sans', sans-serif; }
   .signal-list span { margin-top: .3rem; color: rgb(var(--text-faint)); font-size: .64rem; line-height: 1.4; }
   .evidence-list { margin-top: 1rem; }
   .evidence-row { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: .8rem; padding: 1.1rem 0; border-top: 1px solid rgb(var(--border) / .6); }
   .evidence-row:first-child { border-top: 0; }
-  .evidence-number { color: rgb(var(--border-soft)); font: 600 .66rem/1 'JetBrains Mono', monospace; }
-  .evidence-row h3 a { color: rgb(var(--text-strong)); font: 600 1.05rem/1.3 'Source Serif 4', serif; }
+  .evidence-number { color: rgb(var(--border-soft)); font: 600 .66rem/1 ui-monospace, monospace; }
+  .evidence-row h3 a { color: rgb(var(--text-strong)); font: 600 1.05rem/1.3 'IBM Plex Sans', sans-serif; }
   .evidence-row h3 a:hover { color: rgb(var(--color-brand)); }
   .evidence-meta { margin-top: .35rem; color: rgb(var(--text-faint)); font-size: .66rem; line-height: 1.45; }
   .evidence-finding { margin-top: .7rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.62; }

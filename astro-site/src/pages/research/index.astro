@@ -5,6 +5,17 @@ import ResearchHotspotCharts from '../../components/research/ResearchHotspotChar
 import researchData from '../../data/research/index.json';
 import researchHotspotsData from '../../data/research/hotspots.json';
 import { buildResearchFeedDefinitions, filterResearchFeedArticles, type ResearchFeedScope } from '../../lib/research-feed';
+import { buildAlternatePaths } from '../../lib/seo';
+
+interface Props {
+  locale?: 'en' | 'zh';
+}
+
+const { locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const localeHref = (href: string | null | undefined) => href && zh && href.startsWith('/') ? `${prefix}${href}` : href;
 
 const data: any = researchData;
 const articles = (data.articles ?? []).filter((article: any) => (
@@ -28,10 +39,10 @@ const surveillanceSignals = surveillanceEvidence.available === true && surveilla
   : [];
 const historicalBaselineAll = data.historical_baseline ?? articles.filter((article: any) => article.source_kind === 'historical_seed' || article.historical_baseline);
 const historicalBaseline = historicalBaselineAll.slice(0, 8);
-const initialVisibleArticles = 24;
+const initialVisibleArticles = 8;
 const initialResultCount = articles.length > initialVisibleArticles
-  ? `${initialVisibleArticles} of ${articles.length} publications shown`
-  : `${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}`;
+  ? pick(`${initialVisibleArticles} of ${articles.length} publications shown`, `已显示 ${initialVisibleArticles} / ${articles.length} 篇文献`)
+  : pick(`${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}`, `${articles.length} 篇文献`);
 const diseases = [...new Map(articles.flatMap((article: any) => article.diseases ?? []).map((item: any) => [item.disease_id, item])).values()] as any[];
 const countries = [...new Map(articles.flatMap((article: any) => article.countries ?? []).map((item: any) => [item.code, item])).values()] as any[];
 const studyTypes = [...new Set(articles.map((article: any) => article.study_type).filter(Boolean))] as string[];
@@ -74,15 +85,15 @@ const lastUpdatedZh = data.last_updated
   : '等待首次同步';
 const itemList = {
   '@type': 'CollectionPage',
-  name: 'GIDS Research Radar',
-  description: 'New infectious disease research connected to disease and country surveillance context.',
+  name: pick('GIDS Research Radar', 'GIDS 研究雷达'),
+  description: pick('New infectious disease research connected to disease and country surveillance context.', '与疾病和国家监测背景关联的传染病研究。'),
   mainEntity: {
     '@type': 'ItemList',
     numberOfItems: articles.length,
     itemListElement: articles.slice(0, 100).map((article: any, index: number) => ({
       '@type': 'ListItem',
       position: index + 1,
-      url: new URL(`/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
+      url: new URL(`${prefix}/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
       name: article.title,
     })),
   },
@@ -90,78 +101,77 @@ const itemList = {
 ---
 
 <ReportLayout
-  title="Research Radar"
-  description="Track newly published infectious disease research across journals, diseases, countries, and public-health topics."
+  title={pick('Research Radar', '研究雷达')}
+  description={pick('Track newly published infectious disease research across journals, diseases, countries, and public-health topics.', '按期刊、疾病、国家和公共卫生主题追踪最新发表的传染病研究。')}
+  initialLanguage={locale}
   seo={{
-    title: 'Research Radar | GIDS',
-    description: 'Track newly published infectious disease research across journals, diseases, countries, and public-health topics.',
-    locale: 'en',
-    canonicalPath: '/research/',
-    alternatePaths: { en: '/research/' },
+    title: pick('Research Radar | GIDS', '研究雷达 | GIDS'),
+    description: pick('Track newly published infectious disease research across journals, diseases, countries, and public-health topics.', '按期刊、疾病、国家和公共卫生主题追踪最新发表的传染病研究。'),
+    locale,
+    canonicalPath: `${prefix}/research/`,
+    alternatePaths: buildAlternatePaths(`${prefix}/research/`, locale),
     pageType: 'WebPage',
   }}
   structuredData={itemList}
-  breadcrumbs={[{ label: 'Research Radar', labelZh: '研究雷达' }]}
+  breadcrumbs={[{ label: pick('Research Radar', '研究雷达') }]}
 >
   <div class="research-page">
     <section class="academic-hero research-hero">
       <div class="research-hero-grid">
         <div class="research-hero-copy">
-          <p class="academic-kicker" data-lang-en="Literature intelligence" data-lang-zh="文献情报">Literature intelligence</p>
-          <h1 class="academic-title" data-lang-en="Research Radar" data-lang-zh="研究雷达">Research Radar</h1>
-          <p class="academic-lead research-lede" data-lang-en="Find high-signal infectious disease research, organized for quick review across diseases, regions, and public-health topics." data-lang-zh="快速发现高价值的传染病研究，并按疾病、地区和公共卫生主题浏览。">
-            Find high-signal infectious disease research, organized for quick review across diseases, regions, and public-health topics.
-          </p>
+          <p class="academic-kicker">{pick('Literature intelligence', '文献情报')}</p>
+          <h1 class="academic-title">{pick('Research Radar', '研究雷达')}</h1>
+          <p class="academic-lead research-lede">{pick('Find high-signal infectious disease research, organized for quick review across diseases, regions, and public-health topics.', '快速发现高价值的传染病研究，并按疾病、地区和公共卫生主题浏览。')}</p>
           <div class="research-hero-actions">
-            <a class="research-primary-link" href="#latest-publications" data-lang-en="Browse latest publications" data-lang-zh="浏览最新文献">Browse latest publications</a>
-            <a class="research-secondary-link" href="/research/preprints/" data-lang-en={`Browse published preprints (${preprints.length}) →`} data-lang-zh={`浏览已公开预印本（${preprints.length}）→`}>Browse published preprints ({preprints.length}) →</a>
-            <a class="research-secondary-link" href="/research/integrity/" data-lang-en={`Research integrity alerts (${integrityAlerts.length}) →`} data-lang-zh={`研究完整性通知（${integrityAlerts.length}）→`}>Research integrity alerts ({integrityAlerts.length}) →</a>
-            <a class="research-secondary-link" href="/research/ask/" data-lang-en="Ask GIDS with cited evidence →" data-lang-zh="使用有引用证据的 Ask GIDS →">Ask GIDS with cited evidence →</a>
-            <a class="research-secondary-link" href="/research/graph/" data-lang-en="Explore the evidence graph →" data-lang-zh="探索证据图谱 →">Explore the evidence graph →</a>
-            {historicalBaseline.length > 0 && <a class="research-secondary-link" href="#historical-baseline" data-lang-en="Browse historical baseline →" data-lang-zh="浏览历史基线 →">Browse historical baseline →</a>}
-            {latestBrief && <a class="research-secondary-link" href={latestBrief.url} data-lang-en="Read the latest weekly brief →" data-lang-zh="阅读最新每周简报 →">Read the latest weekly brief →</a>}
+            <a class="research-primary-link" href="#latest-publications">{pick('Browse latest publications', '浏览最新文献')}</a>
+            <a class="research-secondary-link" href={`${prefix}/research/preprints/`}>{pick(`Browse published preprints (${preprints.length}) →`, `浏览已公开预印本（${preprints.length}）→`)}</a>
+            <a class="research-secondary-link" href={`${prefix}/research/integrity/`}>{pick(`Research integrity alerts (${integrityAlerts.length}) →`, `研究完整性通知（${integrityAlerts.length}）→`)}</a>
+            <a class="research-secondary-link" href={`${prefix}/research/ask/`}>{pick('Ask GIDS with cited evidence →', '使用有引用证据的 Ask GIDS →')}</a>
+            <a class="research-secondary-link" href={`${prefix}/research/graph/`}>{pick('Explore the evidence graph →', '探索证据图谱 →')}</a>
+            {historicalBaseline.length > 0 && <a class="research-secondary-link" href="#historical-baseline">{pick('Browse historical baseline →', '浏览历史基线 →')}</a>}
+            {latestBrief && <a class="research-secondary-link" href={localeHref(latestBrief.url)}>{pick('Read the latest weekly brief →', '阅读最新每周简报 →')}</a>}
           </div>
           <div class="research-provenance">
-            <span class="research-updated"><i class="research-pulse" aria-hidden="true"></i><span data-lang-en={`Updated ${lastUpdatedEn}`} data-lang-zh={`更新于 ${lastUpdatedZh}`}>Updated {lastUpdatedEn}</span></span>
-            <span data-lang-en="Sources: Crossref · Europe PMC · OpenAlex · Unpaywall · historical seed" data-lang-zh="来源：Crossref · Europe PMC · OpenAlex · Unpaywall · 历史种子">Sources: Crossref · Europe PMC · OpenAlex · Unpaywall · historical seed</span>
+            <span class="research-updated"><i class="research-pulse" aria-hidden="true"></i><span>{pick(`Updated ${lastUpdatedEn}`, `更新于 ${lastUpdatedZh}`)}</span></span>
+            <span>{pick('Sources: Crossref · Europe PMC · OpenAlex · Unpaywall · historical seed', '来源：Crossref · Europe PMC · OpenAlex · Unpaywall · 历史种子')}</span>
           </div>
         </div>
-        <aside class="research-week" aria-label="Research Radar at a glance">
-          <p class="academic-kicker" data-lang-en="At a glance" data-lang-zh="快速概览">At a glance</p>
+        <aside class="research-week" aria-label={pick('Research Radar at a glance', '研究雷达快速概览')}>
+          <p class="academic-kicker">{pick('At a glance', '快速概览')}</p>
           <dl>
-            <div><dt data-lang-en="Public catalogue" data-lang-zh="公开目录">Public catalogue</dt><dd>{metrics.total_public_articles ?? articles.length}</dd></div>
-            <div><dt data-lang-en="Historical baseline" data-lang-zh="历史基线">Historical baseline</dt><dd>{metrics.historical_baseline_articles ?? historicalBaselineAll.length}</dd></div>
-            <div><dt data-lang-en="Papers · 7 days" data-lang-zh="近 7 天论文">Papers · 7 days</dt><dd>{metrics.papers_last_7_days ?? 0}</dd></div>
-            <div><dt data-lang-en="Diseases · 7 days" data-lang-zh="近 7 天疾病">Diseases · 7 days</dt><dd>{metrics.diseases_last_7_days ?? 0}</dd></div>
-            <div><dt data-lang-en="Countries · 7 days" data-lang-zh="近 7 天国家">Countries · 7 days</dt><dd>{metrics.countries_last_7_days ?? 0}</dd></div>
-            <div><dt data-lang-en="Reviews & guidelines · 7 days" data-lang-zh="近 7 天综述与指南">Reviews & guidelines · 7 days</dt><dd>{metrics.reviews_and_guidelines_last_7_days ?? 0}</dd></div>
+            <div><dt>{pick('Public catalogue', '公开目录')}</dt><dd>{metrics.total_public_articles ?? articles.length}</dd></div>
+            <div><dt>{pick('Historical baseline', '历史基线')}</dt><dd>{metrics.historical_baseline_articles ?? historicalBaselineAll.length}</dd></div>
+            <div><dt>{pick('Papers · 7 days', '近 7 天论文')}</dt><dd>{metrics.papers_last_7_days ?? 0}</dd></div>
+            <div><dt>{pick('Diseases · 7 days', '近 7 天疾病')}</dt><dd>{metrics.diseases_last_7_days ?? 0}</dd></div>
+            <div><dt>{pick('Countries · 7 days', '近 7 天国家')}</dt><dd>{metrics.countries_last_7_days ?? 0}</dd></div>
+            <div><dt>{pick('Reviews & guidelines · 7 days', '近 7 天综述与指南')}</dt><dd>{metrics.reviews_and_guidelines_last_7_days ?? 0}</dd></div>
           </dl>
         </aside>
       </div>
     </section>
 
     {(topDiseaseHubs.length > 0 || topTopicHubs.length > 0) && (
-      <nav class="card research-directory" aria-label="Research collections">
+      <nav class="card research-directory" aria-label={pick('Research collections', '研究集合')}>
         <div class="directory-heading">
-          <div><p class="academic-kicker" data-lang-en="Explore" data-lang-zh="探索">Explore</p><h2 data-lang-en="Browse research collections" data-lang-zh="浏览研究集合">Browse research collections</h2></div>
-          <a href="#research-feeds" data-lang-en="RSS feeds & subscriptions →" data-lang-zh="RSS 订阅与筛选 →">RSS feeds & subscriptions →</a>
+          <div><p class="academic-kicker">{pick('Explore', '探索')}</p><h2>{pick('Browse research collections', '浏览研究集合')}</h2></div>
+          <a href="#research-feeds">{pick('RSS feeds & subscriptions →', 'RSS 订阅与筛选 →')}</a>
         </div>
         <div class="directory-rows">
           <section>
-            <h3 data-lang-en="Diseases" data-lang-zh="疾病">Diseases</h3>
-            <ul>{topDiseaseHubs.map((facet: any) => <li><a href={facet.url}><span data-lang-en={facet.name_en} data-lang-zh={facet.name_zh ?? facet.name_en}>{facet.name_en}</span><strong>{facet.count}</strong></a></li>)}</ul>
+            <h3>{pick('Diseases', '疾病')}</h3>
+            <ul>{topDiseaseHubs.map((facet: any) => <li><a href={localeHref(facet.url)}><span>{pick(facet.name_en, facet.name_zh ?? facet.name_en)}</span><strong>{facet.count}</strong></a></li>)}</ul>
           </section>
           <section>
-            <h3 data-lang-en="Topics" data-lang-zh="主题">Topics</h3>
-            <ul>{topTopicHubs.map((facet: any) => <li><a href={facet.url}><span>{facet.name}</span><strong>{facet.count}</strong></a></li>)}</ul>
+            <h3>{pick('Topics', '主题')}</h3>
+            <ul>{topTopicHubs.map((facet: any) => <li><a href={localeHref(facet.url)}><span>{facet.name}</span><strong>{facet.count}</strong></a></li>)}</ul>
           </section>
           <section>
-            <h3 data-lang-en="Status" data-lang-zh="发表状态">Status</h3>
-            <ul><li><a href="/research/preprints/"><span data-lang-en="Published preprints" data-lang-zh="已公开预印本">Published preprints</span><strong>{preprints.length}</strong></a></li><li><a href="/research/integrity/"><span data-lang-en="Integrity alerts" data-lang-zh="完整性通知">Integrity alerts</span><strong>{integrityAlerts.length}</strong></a></li></ul>
+            <h3>{pick('Status', '发表状态')}</h3>
+            <ul><li><a href={`${prefix}/research/preprints/`}><span>{pick('Published preprints', '已公开预印本')}</span><strong>{preprints.length}</strong></a></li><li><a href={`${prefix}/research/integrity/`}><span>{pick('Integrity alerts', '完整性通知')}</span><strong>{integrityAlerts.length}</strong></a></li></ul>
           </section>
           <section>
-            <h3 data-lang-en="Tools" data-lang-zh="工具">Tools</h3>
-            <ul><li><a href="/research/ask/"><span>Ask GIDS</span><strong>→</strong></a></li><li><a href="/research/graph/"><span data-lang-en="Evidence graph" data-lang-zh="证据图谱">Evidence graph</span><strong>→</strong></a></li></ul>
+            <h3>{pick('Tools', '工具')}</h3>
+            <ul><li><a href={`${prefix}/research/ask/`}><span>Ask GIDS</span><strong>→</strong></a></li><li><a href={`${prefix}/research/graph/`}><span>{pick('Evidence graph', '证据图谱')}</span><strong>→</strong></a></li></ul>
           </section>
         </div>
       </nav>
@@ -170,24 +180,24 @@ const itemList = {
     <section id="research-feeds" class="card research-feeds" aria-labelledby="research-feeds-title">
       <div class="feed-heading">
         <div>
-          <p class="academic-kicker" data-lang-en="Stay current" data-lang-zh="持续追踪">Stay current</p>
-          <h2 id="research-feeds-title" data-lang-en="Subscribe to a focused Research Radar feed" data-lang-zh="订阅筛选后的研究雷达">Subscribe to a focused Research Radar feed</h2>
-          <p data-lang-en="Choose a stable RSS address for all research, or narrow it by disease, country, topic, study type, reviews and guidelines, or peer-review status. A count of 0 means no matching public records are available yet; the feed remains active for future releases." data-lang-zh="可订阅全部研究，或按疾病、国家、主题、研究类型、综述与指南以及同行评议状态选择稳定的 RSS 地址。数量为 0 表示目前没有匹配的公开记录；该 feed 仍然有效，可用于接收未来发布。">Choose a stable RSS address for all research, or narrow it by disease, country, topic, study type, reviews and guidelines, or peer-review status. A count of 0 means no matching public records are available yet; the feed remains active for future releases.</p>
+          <p class="academic-kicker">{pick('Stay current', '持续追踪')}</p>
+          <h2 id="research-feeds-title">{pick('Subscribe to a focused Research Radar feed', '订阅筛选后的研究雷达')}</h2>
+          <p>{pick('Choose a stable RSS address for all research, or narrow it by disease, country, topic, study type, reviews and guidelines, or peer-review status. A count of 0 means no matching public records are available yet; the feed remains active for future releases.', '可订阅全部研究，或按疾病、国家、主题、研究类型、综述与指南以及同行评议状态选择稳定的 RSS 地址。数量为 0 表示目前没有匹配的公开记录；该 feed 仍然有效，可用于接收未来发布。')}</p>
         </div>
         <a class="feed-all-link" href="/research/rss.xml" type="application/rss+xml">
-          <span data-lang-en="Subscribe to all research" data-lang-zh="订阅全部研究">Subscribe to all research</span>
+          <span>{pick('Subscribe to all research', '订阅全部研究')}</span>
           <strong>{articles.length}</strong>
         </a>
       </div>
       <div class="feed-groups">
         {feedGroups.filter(group => group.feeds.length > 0).map(group => (
           <details open={group.open}>
-            <summary><span data-lang-en={group.title} data-lang-zh={group.titleZh}>{group.title}</span><strong>{group.feeds.length}</strong></summary>
+            <summary><span>{pick(group.title, group.titleZh)}</span><strong>{group.feeds.length}</strong></summary>
             <ul>
               {group.feeds.map(feed => (
                 <li>
                   <a href={feed.path} type="application/rss+xml">
-                    <span data-lang-en={feed.label} data-lang-zh={feed.labelZh ?? feed.label}>{feed.label}</span>
+                    <span>{pick(feed.label, feed.labelZh ?? feed.label)}</span>
                     <strong>{feed.count}</strong>
                   </a>
                 </li>
@@ -200,8 +210,8 @@ const itemList = {
 
     {featuredArticles.length > 0 && (
       <section id="featured-research" class="card research-section featured-section">
-        <div class="research-heading"><div><p class="academic-kicker" data-lang-en="Editor's selection" data-lang-zh="编辑精选">Editor's selection</p><h2 class="section-heading" data-lang-en="Featured research" data-lang-zh="重点研究">Featured research</h2></div></div>
-        <div class="featured-list">{featuredArticles.map((article: any) => <ResearchArticleCard article={article} featured />)}</div>
+        <div class="research-heading"><div><p class="academic-kicker">{pick("Editor's selection", '编辑精选')}</p><h2 class="section-heading">{pick('Featured research', '重点研究')}</h2></div></div>
+        <div class="featured-list">{featuredArticles.map((article: any) => <ResearchArticleCard article={article} featured locale={locale} />)}</div>
       </section>
     )}
 
@@ -209,62 +219,62 @@ const itemList = {
       <section id="surveillance-linked-research" class="card research-section surveillance-research-section" aria-labelledby="surveillance-research-title">
         <div class="research-heading research-heading-split">
           <div>
-            <p class="academic-kicker" data-lang-en="Monitoring context" data-lang-zh="监测背景">Monitoring context</p>
-            <h2 id="surveillance-research-title" class="section-heading" data-lang-en="Surveillance-linked Research" data-lang-zh="监测关联研究">Surveillance-linked Research</h2>
+            <p class="academic-kicker">{pick('Monitoring context', '监测背景')}</p>
+            <h2 id="surveillance-research-title" class="section-heading">{pick('Surveillance-linked Research', '监测关联研究')}</h2>
           </div>
-          <a href="/situation/" data-lang-en="Open Situation Room →" data-lang-zh="打开全球态势室 →">Open Situation Room →</a>
+          <a href={`${prefix}/situation/`}>{pick('Open Situation Room →', '打开全球态势室 →')}</a>
         </div>
-        <p class="research-section-intro" data-lang-en="Published literature is linked to public monitoring context with exact and disease-only relationships clearly separated. These links provide background and do not validate or explain a signal." data-lang-zh="已发表文献与公开监测背景建立关联，并明确区分精确关系和仅疾病关系。这些链接仅提供背景，不验证或解释监测信号。">Published literature is linked to public monitoring context with exact and disease-only relationships clearly separated. These links provide background and do not validate or explain a signal.</p>
+        <p class="research-section-intro">{pick('Published literature is linked to public monitoring context with exact and disease-only relationships clearly separated. These links provide background and do not validate or explain a signal.', '已发表文献与公开监测背景建立关联，并明确区分精确关系和仅疾病关系。这些链接仅提供背景，不验证或解释监测信号。')}</p>
         <div class="surveillance-research-grid">
           {surveillanceSignals.map((signal: any) => {
             const exact = signal.exact_articles ?? [];
             const linkedArticles = (exact.length > 0 ? exact : signal.context_articles ?? []).slice(0, 3);
             const isExact = exact.length > 0;
-            const geography = (signal.geographies ?? []).map((item: any) => item.name_en).join(' · ') || 'Geography unavailable';
+            const geography = (signal.geographies ?? []).map((item: any) => pick(item.name_en, item.name_zh ?? item.name_en)).join(' · ') || pick('Geography unavailable', '地区信息暂缺');
             return <article class="surveillance-research-card">
               <div class="surveillance-research-status">
-                <span data-lang-en={isExact ? 'Exact disease + geography' : 'Disease context only'} data-lang-zh={isExact ? '疾病 + 地区精确关联' : '仅疾病背景'}>{isExact ? 'Exact disease + geography' : 'Disease context only'}</span>
+                <span>{pick(isExact ? 'Exact disease + geography' : 'Disease context only', isExact ? '疾病 + 地区精确关联' : '仅疾病背景')}</span>
                 <time datetime={signal.data_through}>{signal.data_through ?? '—'}</time>
               </div>
-              <h3><a href={signal.situation_url ?? '/situation/'}>{signal.title}</a></h3>
-              <p class="surveillance-research-meta"><span data-lang-en={signal.disease_name_en} data-lang-zh={signal.disease_name_zh ?? signal.disease_name_en}>{signal.disease_name_en}</span> · {geography}</p>
+              <h3><a href={localeHref(signal.situation_url ?? '/situation/')}>{pick(signal.title, signal.title_zh ?? signal.title)}</a></h3>
+              <p class="surveillance-research-meta"><span>{pick(signal.disease_name_en, signal.disease_name_zh ?? signal.disease_name_en)}</span> · {geography}</p>
               {linkedArticles.length > 0
-                ? <ol>{linkedArticles.map((article: any) => <li><a href={`/research/articles/${article.slug}/`}><strong>{article.title}</strong><span>{article.journal ?? 'Journal unavailable'} · {article.study_type ?? 'Journal article'}</span></a></li>)}</ol>
-                : <p class="surveillance-research-empty" data-lang-en="No public Research Radar article currently meets this relationship threshold." data-lang-zh="目前没有公开的 Research Radar 文献达到此关联阈值。">No public Research Radar article currently meets this relationship threshold.</p>}
+                ? <ol>{linkedArticles.map((article: any) => <li><a href={`${prefix}/research/articles/${article.slug}/`}><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></a></li>)}</ol>
+                : <p class="surveillance-research-empty">{pick('No public Research Radar article currently meets this relationship threshold.', '目前没有公开的 Research Radar 文献达到此关联阈值。')}</p>}
             </article>;
           })}
         </div>
-        {surveillanceEvidence.methodology?.en && <p class="research-method-note" data-lang-en={surveillanceEvidence.methodology.en} data-lang-zh={surveillanceEvidence.methodology.zh ?? surveillanceEvidence.methodology.en}>{surveillanceEvidence.methodology.en}</p>}
+        {surveillanceEvidence.methodology?.en && <p class="research-method-note">{pick(surveillanceEvidence.methodology.en, surveillanceEvidence.methodology.zh ?? surveillanceEvidence.methodology.en)}</p>}
       </section>
     )}
 
     {reviewsAndGuidelines.length > 0 && (
       <section id="new-reviews-guidelines" class="card research-section curated-research-section" aria-labelledby="reviews-guidelines-title">
         <div class="research-heading research-heading-split">
-          <div><p class="academic-kicker" data-lang-en="Evidence synthesis" data-lang-zh="证据综合">Evidence synthesis</p><h2 id="reviews-guidelines-title" class="section-heading" data-lang-en="New Reviews & Guidelines" data-lang-zh="最新综述与指南">New Reviews & Guidelines</h2></div>
-          <a href="/research/rss/collections/reviews-and-guidelines.xml" type="application/rss+xml" data-lang-en="Subscribe to this collection →" data-lang-zh="订阅此集合 →">Subscribe to this collection →</a>
+          <div><p class="academic-kicker">{pick('Evidence synthesis', '证据综合')}</p><h2 id="reviews-guidelines-title" class="section-heading">{pick('New Reviews & Guidelines', '最新综述与指南')}</h2></div>
+          <a href="/research/rss/collections/reviews-and-guidelines.xml" type="application/rss+xml">{pick('Subscribe to this collection →', '订阅此集合 →')}</a>
         </div>
-        <div class="curated-research-grid">{reviewsAndGuidelines.map((article: any) => <ResearchArticleCard article={article} stream />)}</div>
+        <div class="curated-research-grid">{reviewsAndGuidelines.map((article: any) => <ResearchArticleCard article={article} stream locale={locale} />)}</div>
       </section>
     )}
 
     {emergingTopics.length > 0 && (
       <section id="emerging-topics" class="card research-section emerging-topics-section" aria-labelledby="emerging-topics-title">
         <div class="research-heading">
-          <div><p class="academic-kicker" data-lang-en="Literature momentum" data-lang-zh="文献动向">Literature momentum</p><h2 id="emerging-topics-title" class="section-heading" data-lang-en="Emerging Topics" data-lang-zh="新兴主题">Emerging Topics</h2></div>
+          <div><p class="academic-kicker">{pick('Literature momentum', '文献动向')}</p><h2 id="emerging-topics-title" class="section-heading">{pick('Emerging Topics', '新兴主题')}</h2></div>
         </div>
-        <p class="research-section-intro" data-lang-en="Topics with rising publication attention over the latest 28-day window. Increased attention does not mean increased disease risk." data-lang-zh="最近 28 天文献关注度上升的主题。关注度增加并不代表疾病风险上升。">Topics with rising publication attention over the latest 28-day window. Increased attention does not mean increased disease risk.</p>
+        <p class="research-section-intro">{pick('Topics with rising publication attention over the latest 28-day window. Increased attention does not mean increased disease risk.', '最近 28 天文献关注度上升的主题。关注度增加并不代表疾病风险上升。')}</p>
         <div class="emerging-topic-grid">
           {emergingTopics.map((topic: any) => {
             const slug = String(topic.name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
             const shareChange = Math.round(Number(topic.share_delta ?? 0) * 100);
-            return <a class="emerging-topic-card" href={`/research/topics/${slug}/`}>
-              <span data-lang-en="28-day attention" data-lang-zh="28 天关注度">28-day attention</span>
+            return <a class="emerging-topic-card" href={`${prefix}/research/topics/${slug}/`}>
+              <span>{pick('28-day attention', '28 天关注度')}</span>
               <strong>{topic.name}</strong>
               <dl>
-                <div><dt data-lang-en="Papers" data-lang-zh="论文">Papers</dt><dd>{topic.count_28_days ?? 0}</dd></div>
-                <div><dt data-lang-en="Change" data-lang-zh="变化">Change</dt><dd>{Number(topic.growth ?? 0) > 0 ? '+' : ''}{topic.growth ?? 0}</dd></div>
-                <div><dt data-lang-en="Share" data-lang-zh="占比变化">Share</dt><dd>{shareChange > 0 ? '+' : ''}{shareChange} pp</dd></div>
+                <div><dt>{pick('Papers', '论文')}</dt><dd>{topic.count_28_days ?? 0}</dd></div>
+                <div><dt>{pick('Change', '变化')}</dt><dd>{Number(topic.growth ?? 0) > 0 ? '+' : ''}{topic.growth ?? 0}</dd></div>
+                <div><dt>{pick('Share', '占比变化')}</dt><dd>{shareChange > 0 ? '+' : ''}{shareChange} pp</dd></div>
               </dl>
             </a>;
           })}
@@ -276,12 +286,12 @@ const itemList = {
       <section id="historical-baseline" class="card research-section historical-section">
         <div class="research-heading">
           <div>
-            <p class="academic-kicker" data-lang-en="Historical database" data-lang-zh="历史数据库">Historical database</p>
-            <h2 class="section-heading" data-lang-en="Baseline literature across earlier eras" data-lang-zh="跨年代基线文献">Baseline literature across earlier eras</h2>
+            <p class="academic-kicker">{pick('Historical database', '历史数据库')}</p>
+            <h2 class="section-heading">{pick('Baseline literature across earlier eras', '跨年代基线文献')}</h2>
           </div>
         </div>
-        <p class="historical-intro" data-lang-en="Curated historical records supplement the recent literature stream and are labelled separately from newly indexed papers." data-lang-zh="精选历史记录用于补充近期文献流，并与新近索引论文分开标注。">Curated historical records supplement the recent literature stream and are labelled separately from newly indexed papers.</p>
-        <div class="historical-list">{historicalBaseline.map((article: any) => <ResearchArticleCard article={article} compact />)}</div>
+        <p class="historical-intro">{pick('Curated historical records supplement the recent literature stream and are labelled separately from newly indexed papers.', '精选历史记录用于补充近期文献流，并与新近索引论文分开标注。')}</p>
+        <div class="historical-list">{historicalBaseline.map((article: any) => <ResearchArticleCard article={article} compact locale={locale} />)}</div>
       </section>
     )}
 
@@ -289,38 +299,38 @@ const itemList = {
       <section id="research-trends" class="card research-section research-trends-section">
         <div class="research-heading">
           <div>
-            <p class="academic-kicker" data-lang-en="Research trends" data-lang-zh="研究趋势">Research trends</p>
-            <h2 class="section-heading" data-lang-en="How literature attention is changing" data-lang-zh="文献关注如何变化">How literature attention is changing</h2>
+            <p class="academic-kicker">{pick('Research trends', '研究趋势')}</p>
+            <h2 class="section-heading">{pick('How literature attention is changing', '文献关注如何变化')}</h2>
           </div>
         </div>
-        <ResearchHotspotCharts client:visible hotspots={hotspots} />
+        <ResearchHotspotCharts client:visible hotspots={hotspots} initialLanguage={locale} />
       </section>
     )}
 
     <section id="latest-publications" class="card research-section latest-section">
-      <div class="research-heading"><div><p class="academic-kicker" data-lang-en="Evidence library" data-lang-zh="证据库">Evidence library</p><h2 class="section-heading" data-lang-en="Latest publications" data-lang-zh="最新发表">Latest publications</h2></div></div>
-      <form class="research-filters" role="search" aria-label="Filter research articles" data-research-filters>
-        <label class="search-field"><span class="sr-only">Search</span><input class="site-control-input" id="research-search" type="search" data-lang-en-placeholder="Search title, disease, journal, or topic" data-lang-zh-placeholder="搜索标题、疾病、期刊或主题" placeholder="Search title, disease, journal, or topic" /></label>
-        <label><span data-lang-en="Disease" data-lang-zh="疾病">Disease</span><select class="site-control-input" id="research-disease"><option value="" data-lang-en="All diseases" data-lang-zh="全部疾病">All diseases</option>{diseases.map((item: any) => <option value={item.disease_id.toLowerCase()}>{item.name_en}</option>)}</select></label>
-        <label><span data-lang-en="Country" data-lang-zh="国家">Country</span><select class="site-control-input" id="research-country"><option value="" data-lang-en="All countries" data-lang-zh="全部国家">All countries</option>{countries.map((item: any) => <option value={item.code.toLowerCase()}>{item.name_en}</option>)}</select></label>
-        <label><span data-lang-en="Study type" data-lang-zh="研究类型">Study type</span><select class="site-control-input" id="research-study"><option value="" data-lang-en="All study types" data-lang-zh="全部研究类型">All study types</option>{studyTypes.map((item) => <option value={item.toLowerCase()}>{item}</option>)}</select></label>
-        <label><span data-lang-en="Topic" data-lang-zh="主题">Topic</span><select class="site-control-input" id="research-topic"><option value="" data-lang-en="All topics" data-lang-zh="全部主题">All topics</option>{topics.map((item) => <option value={String(item).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}>{item}</option>)}</select></label>
-        <label><span data-lang-en="Pathogen type" data-lang-zh="病原体类型">Pathogen type</span><select class="site-control-input" id="research-pathogen-type"><option value="" data-lang-en="All pathogen types" data-lang-zh="全部病原体类型">All pathogen types</option>{pathogenTypes.map((item: any) => <option value={item.id}>{item.name}</option>)}</select></label>
-        <label><span data-lang-en="Population" data-lang-zh="研究人群">Population</span><select class="site-control-input" id="research-population"><option value="" data-lang-en="All populations" data-lang-zh="全部研究人群">All populations</option>{populations.map((item: any) => <option value={item.id}>{item.name}</option>)}</select></label>
-        <label><span data-lang-en="Journal" data-lang-zh="期刊">Journal</span><select class="site-control-input" id="research-journal"><option value="" data-lang-en="All journals" data-lang-zh="全部期刊">All journals</option>{journals.map((item) => <option value={String(item).toLowerCase()}>{item}</option>)}</select></label>
-        <label><span data-lang-en="Publisher" data-lang-zh="出版商">Publisher</span><select class="site-control-input" id="research-publisher"><option value="" data-lang-en="All publishers" data-lang-zh="全部出版商">All publishers</option>{publishers.map((item) => <option value={String(item).toLowerCase()}>{item}</option>)}</select></label>
-        <label><span data-lang-en="Published from" data-lang-zh="起始日期">Published from</span><input class="site-control-input research-date" id="research-from" type="date" /></label>
-        <label><span data-lang-en="Published to" data-lang-zh="结束日期">Published to</span><input class="site-control-input research-date" id="research-to" type="date" /></label>
-        <label><span data-lang-en="Collection" data-lang-zh="文献集合">Collection</span><select class="site-control-input" id="research-publication-collection"><option value="peer_reviewed" data-lang-en="Peer reviewed" data-lang-zh="同行评议">Peer reviewed</option><option value="preprint" data-lang-en="Approved preprints" data-lang-zh="已审核预印本">Approved preprints</option></select></label>
-        <label class="oa-filter"><input id="research-oa" type="checkbox" /><span data-lang-en="Open access only" data-lang-zh="仅开放获取">Open access only</span></label>
+      <div class="research-heading"><div><p class="academic-kicker">{pick('Evidence library', '证据库')}</p><h2 class="section-heading">{pick('Latest publications', '最新发表')}</h2></div></div>
+      <form class="research-filters" role="search" aria-label={pick('Filter research articles', '筛选研究文献')} data-research-filters data-research-locale={locale}>
+        <label class="search-field"><span class="sr-only">{pick('Search', '搜索')}</span><input class="site-control-input" id="research-search" type="search" placeholder={pick('Search title, disease, journal, or topic', '搜索标题、疾病、期刊或主题')} /></label>
+        <label><span>{pick('Disease', '疾病')}</span><select class="site-control-input" id="research-disease"><option value="">{pick('All diseases', '全部疾病')}</option>{diseases.map((item: any) => <option value={item.disease_id.toLowerCase()}>{pick(item.name_en, item.name_zh ?? item.name_en)}</option>)}</select></label>
+        <label><span>{pick('Country', '国家')}</span><select class="site-control-input" id="research-country"><option value="">{pick('All countries', '全部国家')}</option>{countries.map((item: any) => <option value={item.code.toLowerCase()}>{pick(item.name_en, item.name_zh ?? item.name_en)}</option>)}</select></label>
+        <label><span>{pick('Study type', '研究类型')}</span><select class="site-control-input" id="research-study"><option value="">{pick('All study types', '全部研究类型')}</option>{studyTypes.map((item) => <option value={item.toLowerCase()}>{item}</option>)}</select></label>
+        <label><span>{pick('Topic', '主题')}</span><select class="site-control-input" id="research-topic"><option value="">{pick('All topics', '全部主题')}</option>{topics.map((item) => <option value={String(item).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}>{item}</option>)}</select></label>
+        <label><span>{pick('Pathogen type', '病原体类型')}</span><select class="site-control-input" id="research-pathogen-type"><option value="">{pick('All pathogen types', '全部病原体类型')}</option>{pathogenTypes.map((item: any) => <option value={item.id}>{item.name}</option>)}</select></label>
+        <label><span>{pick('Population', '研究人群')}</span><select class="site-control-input" id="research-population"><option value="">{pick('All populations', '全部研究人群')}</option>{populations.map((item: any) => <option value={item.id}>{item.name}</option>)}</select></label>
+        <label><span>{pick('Journal', '期刊')}</span><select class="site-control-input" id="research-journal"><option value="">{pick('All journals', '全部期刊')}</option>{journals.map((item) => <option value={String(item).toLowerCase()}>{item}</option>)}</select></label>
+        <label><span>{pick('Publisher', '出版商')}</span><select class="site-control-input" id="research-publisher"><option value="">{pick('All publishers', '全部出版商')}</option>{publishers.map((item) => <option value={String(item).toLowerCase()}>{item}</option>)}</select></label>
+        <label><span>{pick('Published from', '起始日期')}</span><input class="site-control-input research-date" id="research-from" type="date" /></label>
+        <label><span>{pick('Published to', '结束日期')}</span><input class="site-control-input research-date" id="research-to" type="date" /></label>
+        <label><span>{pick('Collection', '文献集合')}</span><select class="site-control-input" id="research-publication-collection"><option value="peer_reviewed">{pick('Peer reviewed', '同行评议')}</option><option value="preprint">{pick('Approved preprints', '已审核预印本')}</option></select></label>
+        <label class="oa-filter"><input id="research-oa" type="checkbox" /><span>{pick('Open access only', '仅开放获取')}</span></label>
       </form>
       <p id="research-result-count" class="result-count" data-total={articles.length} aria-live="polite">{initialResultCount}</p>
-      <div id="research-list" class="research-list" data-initial-visible={initialVisibleArticles} data-total={articles.length}>{articles.slice(0, initialVisibleArticles).map((article: any, index: number) => <ResearchArticleCard article={article} stream index={index} initialVisible={initialVisibleArticles} />)}</div>
-      {articles.length > initialVisibleArticles && <button id="research-load-more" class="research-load-more" type="button" aria-controls="research-list" data-load-more-research data-lang-en="Load more publications" data-lang-zh="加载更多论文">Load more publications</button>}
+      <div id="research-list" class="research-list" data-initial-visible={initialVisibleArticles} data-total={articles.length}>{articles.slice(0, initialVisibleArticles).map((article: any, index: number) => <ResearchArticleCard article={article} stream index={index} initialVisible={initialVisibleArticles} locale={locale} />)}</div>
+      {articles.length > initialVisibleArticles && <button id="research-load-more" class="research-load-more" type="button" aria-controls="research-list" data-load-more-research>{pick('Load more publications', '加载更多论文')}</button>}
       <div id="research-empty" class:list={['research-empty', articles.length > 0 && 'hidden']}>
         <div class="empty-orbit" aria-hidden="true"></div>
-        <h3 data-lang-en={articles.length ? 'No matching research' : 'Research Radar is ready'} data-lang-zh={articles.length ? '没有匹配的研究' : '研究雷达已就绪'}>{articles.length ? 'No matching research' : 'Research Radar is ready'}</h3>
-        <p data-lang-en={articles.length ? 'Try broadening one or more filters.' : 'The catalogue will populate after the first scheduled or manual literature synchronization.'} data-lang-zh={articles.length ? '请尝试放宽一个或多个筛选条件。' : '首次计划或手动文献同步完成后，目录将在此显示。'}>{articles.length ? 'Try broadening one or more filters.' : 'The catalogue will populate after the first scheduled or manual literature synchronization.'}</p>
+        <h3>{pick(articles.length ? 'No matching research' : 'Research Radar is ready', articles.length ? '没有匹配的研究' : '研究雷达已就绪')}</h3>
+        <p>{pick(articles.length ? 'Try broadening one or more filters.' : 'The catalogue will populate after the first scheduled or manual literature synchronization.', articles.length ? '请尝试放宽一个或多个筛选条件。' : '首次计划或手动文献同步完成后，目录将在此显示。')}</p>
       </div>
     </section>
 
@@ -353,10 +363,9 @@ const itemList = {
     if (preset && disease && [...disease.options].some(option => option.value === preset)) disease.value = preset;
     const hasToken = (value: string | undefined, token: string) => (value ?? '').split(/\s+/).includes(token);
     const slugifyTopic = (value: string | undefined) => (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const currentLang = () => document.documentElement.getAttribute('data-lang') === 'zh' ? 'zh' : 'en';
+    const currentLang = () => form?.dataset.researchLocale === 'zh' ? 'zh' : 'en';
+    const routePrefix = currentLang() === 'zh' ? '/zh' : '';
     const setLangText = (element: HTMLElement, en: string, zh?: string | null) => {
-      element.dataset.langEn = en;
-      element.dataset.langZh = zh || en;
       element.textContent = currentLang() === 'zh' ? (zh || en) : en;
     };
     const text = (value: unknown) => String(value ?? '');
@@ -409,7 +418,7 @@ const itemList = {
     };
     const makeTopicBadge = (name: string) => {
       const badge = make('a', 'research-badge research-badge-topic');
-      badge.href = `/research/topics/${slugifyTopic(name)}/`;
+      badge.href = `${routePrefix}/research/topics/${slugifyTopic(name)}/`;
       badge.textContent = name;
       return badge;
     };
@@ -454,7 +463,7 @@ const itemList = {
 
       const title = make('h3', 'research-card-title');
       const titleLink = document.createElement('a');
-      titleLink.href = `/research/articles/${article.slug}/`;
+      titleLink.href = `${routePrefix}/research/articles/${article.slug}/`;
       titleLink.textContent = text(article.title);
       title.appendChild(titleLink);
       card.appendChild(title);
@@ -488,7 +497,8 @@ const itemList = {
         : '';
       const surveillance = (article.related_surveillance ?? [])[0];
       const fallbackDisease = (article.diseases ?? [])[0];
-      const surveillanceUrl = surveillance?.url || (fallbackDisease?.slug ? `/diseases/${fallbackDisease.slug}/` : '');
+      const surveillancePath = surveillance?.url || (fallbackDisease?.slug ? `/diseases/${fallbackDisease.slug}/` : '');
+      const surveillanceUrl = surveillancePath && routePrefix && surveillancePath.startsWith('/') ? `${routePrefix}${surveillancePath}` : surveillancePath;
       if (openAccessUrl || surveillanceUrl) {
         const actions = make('div', 'research-card-actions');
         if (openAccessUrl) {
@@ -572,18 +582,17 @@ const itemList = {
       if (!list) return;
       const visible = articles.slice(0, visibleLimit);
       list.replaceChildren(...visible.map(renderArticleCard));
-      if (count) count.textContent = articles.length === visible.length
-        ? `${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}`
-        : `${visible.length} of ${articles.length} publications shown`;
+      if (count) count.textContent = currentLang() === 'zh'
+        ? (articles.length === visible.length ? `${articles.length} 篇文献` : `已显示 ${visible.length} / ${articles.length} 篇文献`)
+        : (articles.length === visible.length ? `${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}` : `${visible.length} of ${articles.length} publications shown`);
       empty?.classList.toggle('hidden', articles.length > 0);
       if (loadMore) loadMore.hidden = articles.length <= visibleLimit;
-      document.dispatchEvent(new CustomEvent('globalid:language-change', { detail: { lang: currentLang() } }));
     };
     const applyFilters = async (requireCatalogue = filtersAreActive() || visibleLimit > initialVisible) => {
       if (!requireCatalogue) {
-        if (count) count.textContent = totalArticles > initialVisible
-          ? `${initialVisible} of ${totalArticles} publications shown`
-          : `${totalArticles} ${totalArticles === 1 ? 'publication' : 'publications'}`;
+        if (count) count.textContent = currentLang() === 'zh'
+          ? (totalArticles > initialVisible ? `已显示 ${initialVisible} / ${totalArticles} 篇文献` : `${totalArticles} 篇文献`)
+          : (totalArticles > initialVisible ? `${initialVisible} of ${totalArticles} publications shown` : `${totalArticles} ${totalArticles === 1 ? 'publication' : 'publications'}`);
         if (loadMore) loadMore.hidden = totalArticles <= initialVisible;
         empty?.classList.toggle('hidden', totalArticles > 0);
         return;
@@ -598,7 +607,7 @@ const itemList = {
     };
     form?.addEventListener('submit', event => event.preventDefault());
     publicationCollection?.addEventListener('change', () => {
-      if (publicationCollection.value === 'preprint') location.href = '/research/preprints/';
+      if (publicationCollection.value === 'preprint') location.href = `${routePrefix}/research/preprints/`;
     });
     [search, disease, country, study, topic, pathogenType, population, journalFilter, publisherFilter, publishedFrom, publishedTo, oa].forEach(control => control?.addEventListener(control instanceof HTMLInputElement && control.type === 'search' ? 'input' : 'change', () => {
       visibleLimit = initialVisible;
@@ -623,7 +632,7 @@ const itemList = {
   .research-primary-link { display: inline-flex; min-height: 2.5rem; align-items: center; justify-content: center; background: rgb(var(--color-brand)); padding: 0 .95rem; color: #fff; font-size: .73rem; font-weight: 700; }
   .research-primary-link:hover { background: rgb(var(--color-brand) / .86); color: #fff; }
   .research-secondary-link { color: rgb(var(--color-brand)); font-size: .72rem; font-weight: 650; }
-  .research-provenance { display: flex; flex-wrap: wrap; gap: .55rem 1.25rem; margin-top: 1rem; color: rgb(var(--text-faint)); font: 500 .64rem/1.4 'JetBrains Mono', monospace; }
+  .research-provenance { display: flex; flex-wrap: wrap; gap: .55rem 1.25rem; margin-top: 1rem; color: rgb(var(--text-faint)); font: 500 .64rem/1.4 ui-monospace, monospace; }
   .research-updated { display: inline-flex; align-items: center; gap: .5rem; }
   .research-pulse { display: inline-block; width: .4rem; height: .4rem; border-radius: 50%; background: rgb(var(--color-teal)); box-shadow: 0 0 0 .22rem rgb(var(--color-teal) / .1); }
   .research-week { padding: 1rem 1.05rem; border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface) / .7); backdrop-filter: blur(4px); }
@@ -632,11 +641,11 @@ const itemList = {
   .research-week dl div:nth-child(odd) { padding-left: 0; border-left: 0; }
   .research-week dl div:nth-child(n+3) { margin-top: .65rem; padding-top: .65rem; border-top: 1px solid rgb(var(--border) / .7); }
   .research-week dt { min-height: 2.4em; color: rgb(var(--text-faint)); font-size: .57rem; font-weight: 700; line-height: 1.2; letter-spacing: .06em; text-transform: uppercase; }
-  .research-week dd { margin-top: .45rem; color: rgb(var(--text-strong)); font: 600 1.55rem/1 'Source Serif 4', serif; }
+  .research-week dd { margin-top: .45rem; color: rgb(var(--text-strong)); font: 600 1.55rem/1 'IBM Plex Sans', sans-serif; }
   .research-section { margin-top: 1.15rem; padding: clamp(1.05rem, 2vw, 1.5rem); }
   .research-directory { margin-top: 1.15rem; padding: 1.05rem clamp(1.05rem, 2vw, 1.5rem); }
   .directory-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: .8rem; border-bottom: 1px solid rgb(var(--border) / .68); }
-  .directory-heading h2 { margin-top: .24rem; color: rgb(var(--text-strong)); font: 600 clamp(1.25rem, 2.3vw, 1.65rem)/1.1 'Source Serif 4', serif; }
+  .directory-heading h2 { margin-top: .24rem; color: rgb(var(--text-strong)); font: 600 clamp(1.25rem, 2.3vw, 1.65rem)/1.1 'IBM Plex Sans', sans-serif; }
   .directory-heading > a { flex: none; color: rgb(var(--color-brand)); font-size: .69rem; font-weight: 650; }
   .directory-rows { display: grid; gap: .58rem; margin-top: .8rem; }
   .directory-rows section { display: grid; grid-template-columns: 5rem minmax(0, 1fr); gap: .75rem; align-items: center; }
@@ -644,22 +653,22 @@ const itemList = {
   .directory-rows ul { display: flex; flex-wrap: wrap; gap: .38rem; }
   .directory-rows a { display: inline-flex; align-items: center; gap: .45rem; min-height: 1.9rem; border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface-raised) / .38); padding: 0 .6rem; color: rgb(var(--text)); font-size: .69rem; }
   .directory-rows a:hover { border-color: rgb(var(--color-brand) / .5); color: rgb(var(--color-brand)); }
-  .directory-rows strong { color: rgb(var(--text-faint)); font: 500 .57rem/1 'JetBrains Mono', monospace; }
+  .directory-rows strong { color: rgb(var(--text-faint)); font: 500 .57rem/1 ui-monospace, monospace; }
   .research-feeds { margin-top: 1.15rem; padding: clamp(1.05rem, 2vw, 1.5rem); }
   .feed-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.25rem; align-items: center; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .7); }
-  .feed-heading h2 { margin-top: .24rem; color: rgb(var(--text-strong)); font: 600 clamp(1.3rem, 2.4vw, 1.7rem)/1.12 'Source Serif 4', serif; }
+  .feed-heading h2 { margin-top: .24rem; color: rgb(var(--text-strong)); font: 600 clamp(1.3rem, 2.4vw, 1.7rem)/1.12 'IBM Plex Sans', sans-serif; }
   .feed-heading p:last-child { max-width: 58rem; margin-top: .55rem; color: rgb(var(--text-muted)); font-size: .76rem; line-height: 1.55; }
   .feed-all-link { display: inline-flex; min-height: 2.6rem; align-items: center; gap: .7rem; border: 1px solid rgb(var(--color-brand) / .42); background: rgb(var(--color-brand) / .06); padding: 0 .85rem; color: rgb(var(--color-brand)); font-size: .72rem; font-weight: 700; white-space: nowrap; }
   .feed-all-link:hover { border-color: rgb(var(--color-brand) / .72); }
-  .feed-all-link strong { border-left: 1px solid rgb(var(--color-brand) / .22); padding-left: .7rem; font: 500 .6rem/1 'JetBrains Mono', monospace; }
+  .feed-all-link strong { border-left: 1px solid rgb(var(--color-brand) / .22); padding-left: .7rem; font: 500 .6rem/1 ui-monospace, monospace; }
   .feed-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; margin-top: .8rem; }
   .feed-groups details { min-width: 0; border: 1px solid rgb(var(--border) / .68); background: rgb(var(--surface-raised) / .25); }
   .feed-groups summary { display: flex; min-height: 2.55rem; align-items: center; justify-content: space-between; gap: .75rem; padding: 0 .75rem; color: rgb(var(--text-strong)); font-size: .7rem; font-weight: 700; cursor: pointer; }
-  .feed-groups summary strong { color: rgb(var(--text-faint)); font: 500 .58rem/1 'JetBrains Mono', monospace; }
+  .feed-groups summary strong { color: rgb(var(--text-faint)); font: 500 .58rem/1 ui-monospace, monospace; }
   .feed-groups ul { display: flex; flex-wrap: wrap; gap: .36rem; max-height: 15rem; overflow-y: auto; padding: .2rem .65rem .7rem; }
   .feed-groups a { display: inline-flex; min-height: 1.85rem; align-items: center; gap: .45rem; border: 1px solid rgb(var(--border) / .7); background: rgb(var(--surface)); padding: 0 .55rem; color: rgb(var(--text)); font-size: .67rem; }
   .feed-groups a:hover { border-color: rgb(var(--color-brand) / .5); color: rgb(var(--color-brand)); }
-  .feed-groups a strong { color: rgb(var(--text-faint)); font: 500 .56rem/1 'JetBrains Mono', monospace; }
+  .feed-groups a strong { color: rgb(var(--text-faint)); font: 500 .56rem/1 ui-monospace, monospace; }
   .research-heading { padding-bottom: .82rem; border-bottom: 1px solid rgb(var(--border) / .7); }
   .research-heading .section-heading { margin-top: .2rem; font-size: clamp(1.35rem, 2.4vw, 1.75rem); }
   .research-heading-split { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
@@ -671,24 +680,24 @@ const itemList = {
   .surveillance-research-card { min-width: 0; border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface-raised) / .28); padding: 1rem; }
   .surveillance-research-status { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
   .surveillance-research-status span { border: 1px solid rgb(var(--color-accent) / .44); background: rgb(var(--color-accent) / .06); padding: .2rem .45rem; color: rgb(var(--color-accent)); font-size: .62rem; font-weight: 700; }
-  .surveillance-research-status time { color: rgb(var(--text-faint)); font: 500 .62rem/1 'JetBrains Mono', monospace; }
-  .surveillance-research-card h3 { margin-top: .75rem; color: rgb(var(--text-strong)); font: 600 1.12rem/1.3 'Source Serif 4', serif; }
+  .surveillance-research-status time { color: rgb(var(--text-faint)); font: 500 .62rem/1 ui-monospace, monospace; }
+  .surveillance-research-card h3 { margin-top: .75rem; color: rgb(var(--text-strong)); font: 600 1.12rem/1.3 'IBM Plex Sans', sans-serif; }
   .surveillance-research-card h3 a:hover { color: rgb(var(--color-brand)); }
   .surveillance-research-meta { margin-top: .42rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.5; }
   .surveillance-research-card ol { display: grid; gap: .45rem; margin-top: .8rem; }
   .surveillance-research-card li { border-top: 1px solid rgb(var(--border) / .55); padding-top: .55rem; }
-  .surveillance-research-card li strong { display: -webkit-box; overflow: hidden; color: rgb(var(--text)); font: 600 .82rem/1.35 'Source Serif 4', serif; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+  .surveillance-research-card li strong { display: -webkit-box; overflow: hidden; color: rgb(var(--text)); font: 600 .82rem/1.35 'IBM Plex Sans', sans-serif; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
   .surveillance-research-card li span { display: block; overflow: hidden; margin-top: .25rem; color: rgb(var(--text-faint)); font-size: .62rem; text-overflow: ellipsis; white-space: nowrap; }
   .surveillance-research-empty { margin-top: .8rem; color: rgb(var(--text-faint)); font-size: .72rem; }
   .research-method-note { margin-top: .7rem; color: rgb(var(--text-faint)); font-size: .66rem; line-height: 1.55; }
   .emerging-topic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .62rem; margin-top: .8rem; }
-  .emerging-topic-card { border: 1px solid rgb(var(--border) / .72); background: linear-gradient(145deg, rgb(var(--surface)), rgb(var(--surface-raised) / .35)); padding: .9rem; }
+  .emerging-topic-card { border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); padding: .9rem; }
   .emerging-topic-card:hover { border-color: rgb(var(--color-brand) / .52); }
   .emerging-topic-card > span { color: rgb(var(--text-faint)); font-size: .58rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-  .emerging-topic-card > strong { display: block; margin-top: .38rem; color: rgb(var(--text-strong)); font: 600 1.2rem/1.2 'Source Serif 4', serif; }
+  .emerging-topic-card > strong { display: block; margin-top: .38rem; color: rgb(var(--text-strong)); font: 600 1.2rem/1.2 'IBM Plex Sans', sans-serif; }
   .emerging-topic-card dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem; margin-top: .8rem; }
   .emerging-topic-card dt { color: rgb(var(--text-faint)); font-size: .57rem; text-transform: uppercase; }
-  .emerging-topic-card dd { margin-top: .2rem; color: rgb(var(--color-brand)); font: 600 .85rem/1 'JetBrains Mono', monospace; }
+  .emerging-topic-card dd { margin-top: .2rem; color: rgb(var(--color-brand)); font: 600 .85rem/1 ui-monospace, monospace; }
   .historical-intro { max-width: 54rem; margin-top: .75rem; color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.55; }
   .historical-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .72rem; margin-top: .72rem; }
   .research-filters { display: grid; grid-template-columns: minmax(18rem, 2fr) repeat(4, minmax(9rem, 1fr)); align-items: stretch; overflow: hidden; margin-top: 1rem; border: 1px solid rgb(var(--border) / .78); background: rgb(var(--surface) / .82); box-shadow: 0 1px 0 rgb(var(--border) / .22); }
@@ -697,26 +706,26 @@ const itemList = {
   .research-filters label > span { display: block; margin-bottom: .2rem; color: rgb(var(--text-faint)); font-size: .58rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
   .research-filters select { width: 100%; height: 1.7rem; border: 0; border-radius: 0; background: transparent; padding: 0 1.6rem 0 0; color: rgb(var(--text-strong)); font-size: .73rem; box-shadow: none; }
   .research-filters .research-date { width: 100%; height: 1.7rem; border: 0; border-radius: 0; background: transparent; padding: 0; color: rgb(var(--text-strong)); font-size: .7rem; box-shadow: none; }
-  .search-field { position: relative; border-left: 0 !important; padding: 0 !important; }
+  .research-filters > .search-field { position: relative; border-left: 0; padding: 0; }
   .search-field::before { content: ''; position: absolute; z-index: 1; left: 1rem; top: 50%; width: .7rem; height: .7rem; border: 1.5px solid rgb(var(--text-faint)); border-radius: 50%; transform: translateY(-60%); pointer-events: none; }
   .search-field::after { content: ''; position: absolute; z-index: 1; left: 1.67rem; top: calc(50% + .25rem); width: .38rem; height: 1.5px; background: rgb(var(--text-faint)); transform: rotate(45deg); transform-origin: left center; pointer-events: none; }
   .research-filters input[type='search'] { width: 100%; height: 100%; min-height: 3.55rem; border: 0; border-radius: 0; background: transparent; padding: 0 1rem 0 2.75rem; color: rgb(var(--text-strong)); font-size: .84rem; box-shadow: none; }
   .research-filters input[type='search']::placeholder { color: rgb(var(--text-faint)); opacity: .92; }
   .research-filters input:focus, .research-filters select:focus { outline: 0; box-shadow: none; }
-  .oa-filter { display: flex; align-items: center; justify-content: center; gap: .48rem; min-height: 3.55rem; padding: 0 .85rem !important; white-space: nowrap; cursor: pointer; }
+  .research-filters > .oa-filter { display: flex; align-items: center; justify-content: center; gap: .48rem; min-height: 3.55rem; padding: 0 .85rem; white-space: nowrap; cursor: pointer; }
   .oa-filter input { width: .9rem; height: .9rem; accent-color: rgb(var(--color-brand)); }
-  .oa-filter > span { margin: 0 !important; color: rgb(var(--text-muted)) !important; letter-spacing: 0 !important; text-transform: none !important; }
-  .result-count { margin-top: .82rem; color: rgb(var(--text-faint)); font: 500 .64rem/1 'JetBrains Mono', monospace; }
+  .research-filters .oa-filter > span { margin: 0; color: rgb(var(--text-muted)); letter-spacing: 0; text-transform: none; }
+  .result-count { margin-top: .82rem; color: rgb(var(--text-faint)); font: 500 .64rem/1 ui-monospace, monospace; }
   .research-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .72rem; margin-top: .72rem; }
   .research-load-more { display: inline-flex; align-items: center; justify-content: center; min-height: 2.5rem; margin-top: 1rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised) / .48); padding: 0 1rem; color: rgb(var(--color-brand)); font-size: .74rem; font-weight: 650; }
   .research-load-more:hover { border-color: rgb(var(--color-brand) / .5); }
   .research-load-more[hidden] { display: none; }
   .research-empty { display: grid; place-items: center; min-height: 16rem; text-align: center; }
   .research-empty.hidden { display: none; }
-  .research-empty h3 { margin-top: 1rem; color: rgb(var(--text-strong)); font: 600 1.3rem/1.1 'Source Serif 4', serif; }
+  .research-empty h3 { margin-top: 1rem; color: rgb(var(--text-strong)); font: 600 1.3rem/1.1 'IBM Plex Sans', sans-serif; }
   .research-empty p { max-width: 30rem; margin-top: .55rem; color: rgb(var(--text-muted)); font-size: .84rem; }
   .empty-orbit { width: 3.5rem; height: 3.5rem; border: 1px solid rgb(var(--color-teal) / .45); box-shadow: inset 0 0 0 .8rem rgb(var(--color-teal) / .05); }
   @media (max-width: 1080px) { .featured-list, .curated-research-grid { grid-template-columns: 1fr; } .historical-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .research-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .search-field { grid-column: 1 / -1; border-bottom: 1px solid rgb(var(--border) / .62); } .research-filters > label:nth-child(even) { border-left: 0; } .research-filters > label:nth-child(n+4) { border-top: 1px solid rgb(var(--border) / .62); } }
   @media (max-width: 900px) { .research-hero-grid { grid-template-columns: 1fr; } .research-week { max-width: 34rem; } .feed-heading { grid-template-columns: 1fr; } .feed-all-link { justify-self: start; } .research-list { grid-template-columns: 1fr; } }
-  @media (max-width: 600px) { .research-page { width: min(100% - 1rem, 88rem); padding-top: 1rem; } .research-hero-grid { padding: 1.2rem; } .research-hero-actions { align-items: flex-start; flex-direction: column; } .research-primary-link { width: 100%; } .research-week dl { grid-template-columns: 1fr; } .research-week dl div, .research-week dl div:nth-child(odd), .research-week dl div:nth-child(n+3) { display: flex; align-items: center; justify-content: space-between; margin-top: 0; padding: .65rem 0; border-top: 1px solid rgb(var(--border) / .65); border-left: 0; } .research-week dl div:first-child { border-top: 0; } .research-week dt { min-height: 0; } .research-week dd { margin-top: 0; } .historical-list { grid-template-columns: 1fr; } .research-heading-split, .directory-heading { align-items: flex-start; flex-direction: column; } .directory-rows section { grid-template-columns: 1fr; gap: .4rem; } .feed-groups { grid-template-columns: 1fr; } .feed-all-link { width: 100%; justify-content: space-between; white-space: normal; } .research-filters { grid-template-columns: 1fr; } .research-filters > label { border-top: 1px solid rgb(var(--border) / .62); border-left: 0; } .search-field { grid-column: auto; border-top: 0 !important; } .oa-filter { min-height: 3rem; justify-content: flex-start; } }
+  @media (max-width: 600px) { .research-page { width: min(100% - 1rem, 88rem); padding-top: 1rem; } .research-hero-grid { padding: 1.2rem; } .research-hero-actions { align-items: flex-start; flex-direction: column; } .research-primary-link { width: 100%; } .research-week dl { grid-template-columns: 1fr; } .research-week dl div, .research-week dl div:nth-child(odd), .research-week dl div:nth-child(n+3) { display: flex; align-items: center; justify-content: space-between; margin-top: 0; padding: .65rem 0; border-top: 1px solid rgb(var(--border) / .65); border-left: 0; } .research-week dl div:first-child { border-top: 0; } .research-week dt { min-height: 0; } .research-week dd { margin-top: 0; } .historical-list { grid-template-columns: 1fr; } .research-heading-split, .directory-heading { align-items: flex-start; flex-direction: column; } .directory-rows section { grid-template-columns: 1fr; gap: .4rem; } .feed-groups { grid-template-columns: 1fr; } .feed-all-link { width: 100%; justify-content: space-between; white-space: normal; } .research-filters { grid-template-columns: 1fr; } .research-filters > label { border-top: 1px solid rgb(var(--border) / .62); border-left: 0; } .research-filters > .search-field { grid-column: auto; border-top: 0; } .research-filters > .oa-filter { min-height: 3rem; justify-content: flex-start; } }
 </style>

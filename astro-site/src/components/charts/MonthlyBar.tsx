@@ -16,6 +16,7 @@ interface Props {
   title?: string;
   height?: number;
   sourceMeta?: ChartSourceMeta | null;
+  initialLanguage?: 'en' | 'zh';
 }
 
 function formatValue(value: number | null | undefined) {
@@ -28,9 +29,10 @@ export default function MonthlyBar({
   title,
   height = 380,
   sourceMeta = null,
+  initialLanguage = 'en',
 }: Props) {
   const theme = useChartTheme();
-  const lang = useChartLanguage();
+  const lang = useChartLanguage(initialLanguage);
   const state = useMonthlyBarState(data);
 
   const colors = useMemo(() => (

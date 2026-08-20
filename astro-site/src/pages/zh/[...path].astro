@@ -1,22 +1,61 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import SituationDetails from '../../components/SituationDetails.astro';
-import SituationReadiness from '../../components/SituationReadiness.astro';
-import SituationSummary from '../../components/SituationSummary.astro';
+import HomePage from '../index.astro';
+import AboutPage from '../about.astro';
+import CopyrightPage from '../copyright.astro';
+import DownloadsPage from '../downloads/index.astro';
+import CountryDetailPage from '../countries/[country]/index.astro';
+import DiseaseDetailPage from '../diseases/[disease].astro';
+import CountryDiseasePage from '../countries/[country]/diseases/[disease].astro';
+import ReportArchivePage from '../countries/[country]/reports/index.astro';
+import ReportDetailPage from '../countries/[country]/reports/[id].astro';
+import ReportDiseasePage from '../countries/[country]/reports/[id]/[disease].astro';
+import ResearchDiseasePage from '../research/diseases/[slug].astro';
+import ResearchCountryPage from '../research/countries/[code].astro';
+import ResearchTopicPage from '../research/topics/[topic].astro';
+import ResearchWeeklyPage from '../research/weekly/[week].astro';
+import ResearchPreprintsPage from '../research/preprints/index.astro';
+import ResearchArticlePage from '../research/articles/[slug].astro';
+import ResearchIndexPage from '../research/index.astro';
+import ResearchAskPage from '../research/ask.astro';
+import ResearchGraphPage from '../research/graph.astro';
+import ResearchIntegrityPage from '../research/integrity/index.astro';
+import SituationIndexPage from '../situation/index.astro';
+import SituationMethodologyPage from '../situation/methodology.astro';
+import SituationWeeklyArchivePage from '../situation/weekly/index.astro';
+import SituationMonthlyArchivePage from '../situation/monthly/index.astro';
+import SituationWeeklyPeriodPage from '../situation/weekly/[period].astro';
+import SituationMonthlyPeriodPage from '../situation/monthly/[period].astro';
+import CountriesIndexPage from '../countries/index.astro';
+import DiseasesIndexPage from '../diseases/index.astro';
+import SubscribePage from '../subscribe.astro';
+import ChangelogPage from '../changelog.astro';
+import TermsPage from '../terms.astro';
 import {
   countryDiseaseCandidates,
   indexableDiseases,
-  loadCountry,
   publishableReports,
   siteMeta,
 } from '../../lib/seo-page-data';
-import { buildAlternatePaths, formatYearRange, toSeoSlug } from '../../lib/seo';
-import { isSituationReportV3, type SituationReportV3 } from '../../utils/situation';
+import { toSeoSlug } from '../../lib/seo';
+import researchRaw from '../../data/research/index.json';
 
 type ZhPage = { path?: string; kind: string; code?: string; slug?: string; id?: string };
-const situationPublic = existsSync(resolve('./src/data/situation/v3/latest.json'));
+// Astro exposes route-only modules with `never` props when their path list is data-derived.
+// Runtime props remain supported when the route module is reused by the locale dispatcher.
+const CountryDetail = CountryDetailPage as any;
+const CountryDiseaseDetail = CountryDiseasePage as any;
+const ReportArchive = ReportArchivePage as any;
+const ReportDetail = ReportDetailPage as any;
+const ReportDiseaseDetail = ReportDiseasePage as any;
+const ResearchDisease = ResearchDiseasePage as any;
+const ResearchCountry = ResearchCountryPage as any;
+const ResearchTopic = ResearchTopicPage as any;
+const ResearchWeekly = ResearchWeeklyPage as any;
+const ResearchArticle = ResearchArticlePage as any;
+const SituationWeeklyPeriod = SituationWeeklyPeriodPage as any;
+const SituationMonthlyPeriod = SituationMonthlyPeriodPage as any;
 
 export function getStaticPaths() {
   const publicSnapshotExists = existsSync(resolve('./src/data/situation/v3/latest.json'));
@@ -35,7 +74,7 @@ export function getStaticPaths() {
     : [];
   const pages: ZhPage[] = [
     { kind: 'static' },
-    ...['about', 'changelog', 'subscribe', 'terms', 'countries', 'diseases'].map(path => ({ path, kind: 'static' })),
+    ...['about', 'changelog', 'subscribe', 'terms', 'copyright', 'countries', 'diseases', 'downloads'].map(path => ({ path, kind: 'static' })),
     ...indexableDiseases().map(disease => ({ path: `diseases/${toSeoSlug(disease.slug)}`, kind: 'disease', id: String(disease.disease_id) })),
     ...(siteMeta.countries ?? [])
       .filter((country: any) => country.data_available || Number(country.record_count ?? 0) > 0)
@@ -53,138 +92,85 @@ export function getStaticPaths() {
     ] : []),
     ...(publicSnapshotExists ? [{ path: 'situation/methodology', kind: 'situation-methodology' }] : []),
     ...situationPaths,
+    { path: 'research', kind: 'research-index' },
+    ...['ask', 'graph', 'integrity', 'preprints'].map(slug => ({ path: `research/${slug}`, kind: 'research-collection', slug })),
+    ...[...((researchRaw as any).articles ?? []), ...((researchRaw as any).preprints ?? [])]
+      .filter((article: any) => article.indexable !== false && article.slug)
+      .map((article: any) => ({ path: `research/articles/${article.slug}`, kind: 'research-article', slug: article.slug })),
+    ...((researchRaw as any).facets?.diseases ?? []).filter((item: any) => item.slug).map((item: any) => ({ path: `research/diseases/${item.slug}`, kind: 'research-facet', slug: item.slug })),
+    ...((researchRaw as any).facets?.countries ?? []).map((item: any) => item.slug ?? item.code).filter(Boolean).map((slug: string) => ({ path: `research/countries/${String(slug).toLowerCase()}`, kind: 'research-facet', slug: String(slug).toLowerCase() })),
+    ...((researchRaw as any).facets?.topics ?? []).filter((item: any) => item.slug).map((item: any) => ({ path: `research/topics/${item.slug}`, kind: 'research-facet', slug: item.slug })),
+    ...((researchRaw as any).facets?.weeks ?? []).filter((item: any) => /^\d{4}-W\d{2}$/.test(item.week)).map((item: any) => ({ path: `research/weekly/${item.week}`, kind: 'research-weekly', slug: item.week })),
   ];
   return pages.map(({ path, ...props }) => ({ params: { path }, props }));
 }
 
 const page = Astro.props as ZhPage;
 const pathParts = String(Astro.params.path ?? '').split('/').filter(Boolean);
-let situationReport: SituationReportV3 | null = null;
-let situationJsonHref = '/site-data/situation/v3/latest.json';
-if (page.kind === 'situation') {
-  let reportFile: string | null = null;
-  if (pathParts.length === 1) {
-    reportFile = resolve('./src/data/situation/v3/latest.json');
-  } else if (
-    pathParts.length === 3
-    && ['weekly', 'monthly'].includes(pathParts[1])
-  ) {
-    reportFile = resolve(`./src/data/situation/v3/${pathParts[1]}/${pathParts[2]}.json`);
-    situationJsonHref = `/site-data/situation/v3/${pathParts[1]}/${pathParts[2]}.json`;
-  }
-  if (reportFile && existsSync(reportFile)) {
-    const candidate: unknown = JSON.parse(readFileSync(reportFile, 'utf-8'));
-    situationReport = isSituationReportV3(candidate) ? candidate : null;
-  }
-}
-const path = Astro.params.path ? `/${Astro.params.path}/` : '/zh/';
-const englishPath = path === '/zh/' ? '/' : path.replace(/^\/zh/, '');
-const canonicalPath = path;
-const staticCopy: Record<string, [string, string]> = {
-  '': ['全球传染病监测数据', '浏览来自官方卫生机构的传染病监测数据、趋势、来源与可下载数据集。'],
-  about: ['关于 GIDS', '了解 GIDS 的数据采集、标准化、发布原则和纠错渠道。'],
-  changelog: ['更新记录', '查看 GIDS 数据和产品更新记录。'],
-  subscribe: ['订阅 GIDS', '订阅传染病监测数据与报告更新。'],
-  terms: ['使用条款', '查看 GIDS 数据和网站使用条款。'],
-  countries: ['国家监测数据', '按国家浏览传染病监测数据、数据覆盖范围与官方来源。'],
-  diseases: ['疾病监测数据', '按疾病浏览全球监测数据、趋势、来源与数据限制。'],
-};
-let title = '全球传染病监测数据';
-let description = '浏览来自官方卫生机构的传染病监测数据、趋势、来源与可下载数据集。';
-let heading = title;
-let coverage = '';
-let facts: Array<[string, string]> = [];
-let sources: string[] = [];
-
-if (page.kind === 'static') {
-  const copy = staticCopy[Astro.params.path ?? ''] ?? staticCopy[''];
-  [title, description] = copy;
-  heading = title;
-} else if (page.kind === 'disease') {
-  const disease = indexableDiseases().find(item => String(item.disease_id) === page.id);
-  const name = disease?.name_zh ?? disease?.name_en ?? disease?.name ?? page.id ?? '';
-  const start = disease?.global_coverage?.start ?? disease?.coverage_start;
-  const end = disease?.global_coverage?.end ?? disease?.coverage_end;
-  coverage = formatYearRange(start, end);
-  title = `${name}监测数据 ${coverage} | 全球传染病监测`;
-  heading = `${name}监测数据`;
-  description = `${name}全球监测数据，覆盖${coverage}，含报告国家、趋势、官方来源和下载入口。`;
-  facts = [['数据覆盖', coverage], ['报告国家/地区', String(disease?.country_count ?? disease?.reporting_countries ?? '—')]];
-} else if (page.kind === 'country' || page.kind === 'country-disease') {
-  const country = loadCountry(page.code ?? '');
-  const countryName = country?.country_name_zh ?? country?.country_name_en ?? String(page.code).toUpperCase();
-  if (page.kind === 'country-disease') {
-    const series = Object.values(country?.disease_series ?? {}).find((item: any) => toSeoSlug(item.slug) === page.slug) as any;
-    const diseaseName = series?.disease_name_zh ?? series?.disease_name_en ?? page.slug;
-    coverage = formatYearRange(series?.dates?.[0], series?.dates?.at(-1));
-    title = `${countryName}${diseaseName}监测 ${coverage} | 全球传染病监测`;
-    heading = `${countryName}${diseaseName}监测`;
-    description = `${countryName}${diseaseName}监测数据，覆盖${coverage}，包含最新报告值、数据粒度、官方来源和下载入口。`;
-    facts = [['数据覆盖', coverage], ['报告粒度', series?.period_granularity ?? '未说明'], ['最新报告值', Number.isFinite(Number(series?.cases?.at(-1))) ? Number(series.cases.at(-1)).toLocaleString() : '暂无']];
-  } else {
-    coverage = formatYearRange(country?.date_range?.start, country?.date_range?.end);
-    title = `${countryName}传染病监测数据 ${coverage} | 全球传染病监测`;
-    heading = `${countryName}传染病监测数据`;
-    description = `${countryName}传染病监测数据，覆盖${coverage}，包含疾病概览、官方来源和可下载数据。`;
-    facts = [['数据覆盖', coverage], ['疾病数量', String(country?.disease_count ?? Object.keys(country?.disease_series ?? {}).length ?? '—')], ['最后更新', country?.generated_at ? new Date(country.generated_at).toLocaleDateString('zh-CN') : '—']];
-  }
-  sources = [country?.source_info?.primary_url, ...(country?.source_info?.sources ?? []).map((source: any) => source?.url)].filter((url): url is string => typeof url === 'string' && url.length > 0);
-} else if (page.kind.startsWith('report')) {
-  const report = publishableReports().find(item => item.id === page.id && item.country === page.code);
-  const document: any = report?.detail?.report_document_v4 ?? report?.detail?.metadata?.report_document_v4 ?? report?.detail;
-  const countryName = document?.country_name_local ?? report?.detail?.country_name_local ?? String(page.code).toUpperCase();
-  title = document?.title?.zh ?? `${countryName}传染病监测报告`;
-  heading = page.kind === 'report-archive' ? `${countryName}监测报告` : title;
-  description = document?.summary?.zh ?? `${countryName}传染病监测报告，提供报告周期、疾病内容、来源与下载入口。`;
-  facts = [['报告国家/地区', countryName], ['发布日期', report?.detail?.created_at ? new Date(String(report.detail.created_at)).toLocaleDateString('zh-CN') : '—']];
-} else if (page.kind === 'situation') {
-  title = page.slug ? `全球传染病态势快照 ${page.slug} | 全球传染病监测` : '全球传染病态势 | 全球传染病监测';
-  heading = page.slug ? `全球传染病态势快照 ${page.slug}` : '全球传染病态势';
-  description = 'GIDS 汇总各覆盖地区的传染病监测信号、官方事件来源、方法和数据限制。';
-  facts = [['快照类型', page.slug ? (/^\d{4}-W/.test(page.slug) ? '周度可复核快照' : '月度趋势记录') : '最新态势快照']];
-} else if (page.kind === 'situation-methodology') {
-  title = '全球传染病态势室方法 | 全球传染病监测';
-  heading = '全球传染病态势室方法';
-  description = '了解 GIDS 的来源原生数据契约、稳健准泊松模型、FDR 控制、可归因风险、质量门和修订规则。';
-  facts = [['方法版本', 'Situation Room v3.1']];
-}
-
-const seo = {
-  title,
-  description,
-  locale: 'zh' as const,
-  canonicalPath,
-  alternatePaths: buildAlternatePaths(englishPath, 'zh'),
-  pageType: page.kind === 'disease' || page.kind === 'report' ? 'MedicalWebPage' : 'WebPage',
-  noindex: (page.kind === 'situation' || page.kind === 'situation-methodology') && !situationPublic,
-};
 ---
 
-<BaseLayout title={title} description={description} initialLanguage="zh" seo={seo}>
-  {situationReport ? <main class="mx-auto grid max-w-7xl gap-6 px-4 py-10 sm:px-6 lg:px-8">
-    <header class="rounded-lg bg-slate-900 p-6 text-white shadow-sm">
-      <p class="text-sm font-semibold tracking-wide text-cyan-300">全球监测复核队列</p>
-      <h1 class="mt-2 text-3xl font-bold tracking-tight">{heading}</h1>
-      <p class="mt-3 max-w-4xl text-slate-300">仅分析达到成熟度要求的来源原生周期。采集、建模、去重和队列分流自动运行；统计候选在独立验证前保持非公开，稀有计数与回退模型候选始终进入复核。统计信号与公共卫生风险分开记录。</p>
-      <nav class="mt-5 flex flex-wrap gap-3 text-sm"><a class="font-semibold text-cyan-300 hover:underline" href="/zh/situation/weekly/">周报归档</a><a class="font-semibold text-cyan-300 hover:underline" href="/zh/situation/monthly/">月报归档</a><a class="font-semibold text-cyan-300 hover:underline" href="/zh/situation/methodology/">方法说明</a><a class="font-semibold text-cyan-300 hover:underline" href={situationJsonHref}>下载 JSON</a></nav>
-    </header>
-    <SituationSummary snapshot={situationReport} />
-    <SituationReadiness snapshot={situationReport} />
-    <SituationDetails snapshot={situationReport} />
-    <footer class="border-t border-slate-200 pt-4 text-sm text-slate-600"><p>{situationReport.limitations.zh}</p><p class="mt-2 font-mono text-xs">{situationReport.report.report_id} · config {situationReport.method.config_hash.slice(0, 12)}</p></footer>
-  </main> : <article class="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
-    <nav aria-label="面包屑" class="mb-6 text-sm text-slate-500"><a href="/zh/">首页</a> / {heading}</nav>
-    <header class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-      <p class="text-sm font-semibold tracking-wide text-sky-700">GIDS 数据档案</p>
-      <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">{heading}</h1>
-      <p class="mt-3 max-w-3xl text-slate-600">{description}</p>
-      {facts.length > 0 && <dl class="mt-6 grid gap-4 sm:grid-cols-3">{facts.map(([label, value]) => <div><dt class="text-sm text-slate-500">{label}</dt><dd class="font-semibold text-slate-900">{value || '—'}</dd></div>)}</dl>}
-    </header>
-    <section class="mt-6 rounded-lg border border-slate-200 bg-white p-6">
-      <h2 class="text-xl font-bold text-slate-900">来源、方法与使用说明</h2>
-      <p class="mt-3 text-slate-600">GIDS 由项目团队维护，整理公开卫生机构来源并标准化为可比较的数据结构。监测数据可能受病例定义、报告完整性和发布时间影响，不应单独作为临床或公共卫生决策依据。</p>
-      {sources.length > 0 && <ul class="mt-4 list-disc space-y-2 pl-5 text-sky-700">{sources.slice(0, 4).map(url => <li><a href={url} target="_blank" rel="nofollow noopener" class="hover:underline">{url}</a></li>)}</ul>}
-      <a href={englishPath} class="mt-5 inline-flex font-semibold text-sky-700 hover:underline">查看英文完整数据页 →</a>
-    </section>
-  </article>}
-</BaseLayout>
+{page.kind === 'country' ? (
+  <CountryDetail countryCode={page.code ?? ''} locale="zh" />
+) : page.kind === 'disease' ? (
+  <DiseaseDetailPage diseaseSlug={pathParts[1]} diseaseId={page.id ?? ''} locale="zh" />
+) : page.kind === 'country-disease' ? (
+  <CountryDiseaseDetail countryCode={page.code ?? ''} diseaseSlug={page.slug ?? ''} locale="zh" />
+) : page.kind === 'report-archive' ? (
+  <ReportArchive countryCode={page.code ?? ''} locale="zh" />
+) : page.kind === 'report' ? (
+  <ReportDetail countryCode={page.code ?? ''} reportId={page.id ?? ''} locale="zh" />
+) : page.kind === 'report-disease' ? (
+  <ReportDiseaseDetail countryCode={page.code ?? ''} reportId={page.id ?? ''} diseaseSlug={page.slug ?? ''} locale="zh" />
+) : page.kind === 'research-facet' && pathParts[1] === 'diseases' ? (
+  <ResearchDisease diseaseSlug={page.slug ?? ''} locale="zh" />
+) : page.kind === 'research-facet' && pathParts[1] === 'countries' ? (
+  <ResearchCountry code={page.slug ?? ''} locale="zh" />
+) : page.kind === 'research-facet' && pathParts[1] === 'topics' ? (
+  <ResearchTopic topic={page.slug ?? ''} locale="zh" />
+) : page.kind === 'research-weekly' ? (
+  <ResearchWeekly week={page.slug ?? ''} locale="zh" />
+) : page.kind === 'research-collection' && page.slug === 'preprints' ? (
+  <ResearchPreprintsPage locale="zh" />
+) : page.kind === 'research-article' ? (
+  <ResearchArticle articleSlug={page.slug ?? ''} locale="zh" />
+) : page.kind === 'research-index' ? (
+  <ResearchIndexPage locale="zh" />
+) : page.kind === 'research-collection' && page.slug === 'ask' ? (
+  <ResearchAskPage locale="zh" />
+) : page.kind === 'research-collection' && page.slug === 'graph' ? (
+  <ResearchGraphPage locale="zh" />
+) : page.kind === 'research-collection' && page.slug === 'integrity' ? (
+  <ResearchIntegrityPage locale="zh" />
+) : page.kind === 'situation' && pathParts.length === 1 ? (
+  <SituationIndexPage locale="zh" />
+) : page.kind === 'situation' && page.slug === 'weekly' ? (
+  <SituationWeeklyArchivePage locale="zh" />
+) : page.kind === 'situation' && page.slug === 'monthly' ? (
+  <SituationMonthlyArchivePage locale="zh" />
+) : page.kind === 'situation' && pathParts[1] === 'weekly' && pathParts.length === 3 ? (
+  <SituationWeeklyPeriod reportPeriod={page.slug ?? ''} locale="zh" />
+) : page.kind === 'situation' && pathParts[1] === 'monthly' && pathParts.length === 3 ? (
+  <SituationMonthlyPeriod reportPeriod={page.slug ?? ''} locale="zh" />
+) : page.kind === 'situation-methodology' ? (
+  <SituationMethodologyPage locale="zh" />
+) : page.kind === 'static' && Astro.params.path === 'countries' ? (
+  <CountriesIndexPage locale="zh" />
+) : page.kind === 'static' && Astro.params.path === 'diseases' ? (
+  <DiseasesIndexPage locale="zh" />
+) : page.kind === 'static' && Astro.params.path === 'subscribe' ? (
+  <SubscribePage locale="zh" />
+) : page.kind === 'static' && Astro.params.path === 'changelog' ? (
+  <ChangelogPage locale="zh" />
+) : page.kind === 'static' && Astro.params.path === 'terms' ? (
+  <TermsPage locale="zh" />
+) : page.kind === 'static' && !Astro.params.path ? (
+  <HomePage locale="zh" />
+) : page.kind === 'static' && Astro.params.path === 'about' ? (
+  <AboutPage locale="zh" />
+) : page.kind === 'static' && Astro.params.path === 'copyright' ? (
+  <CopyrightPage locale="zh" />
+) : page.kind === 'static' && Astro.params.path === 'downloads' ? (
+  <DownloadsPage locale="zh" />
+) : (
+  null
+)}

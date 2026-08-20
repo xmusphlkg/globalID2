@@ -56,13 +56,14 @@ test('static and dynamically rendered research cards expose the same discovery a
   assert.match(catalogue, /related_surveillance: article\.related_surveillance/);
 });
 
-test('article evidence pages disclose publication metadata and AI-assisted provenance', () => {
+test('article evidence pages disclose publication metadata and plain-language summary transparency', () => {
   const detail = readSource('pages/research/articles/[slug].astro');
-  assert.match(detail, /data-lang-en="Publisher"/);
-  assert.match(detail, /data-lang-en="Article type"/);
-  assert.match(detail, /AI-assisted summary provenance/);
+  assert.match(detail, /pick\('Publisher', '出版商'\)/);
+  assert.match(detail, /pick\('Article type', '文章类型'\)/);
+  assert.match(detail, /Summary transparency/);
   assert.match(detail, /has not been editorially approved/);
-  assert.match(detail, /summaryProvenance\.publication_gate/);
+  assert.match(detail, /Automated quality checks passed before publication/);
+  assert.doesNotMatch(detail, /summaryProvenance\.publication_gate/);
 });
 
 test('weekly briefs render a human reviewer only for an explicit reviewed status', () => {
