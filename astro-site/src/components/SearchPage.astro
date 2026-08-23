@@ -1,0 +1,56 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+interface Props { locale?: 'en' | 'zh'; }
+const { locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
+const canonicalPath = zh ? '/zh/search/' : '/search/';
+---
+<BaseLayout title={zh ? '全站检索' : 'Search'} description={zh ? '检索 GIDS 的国家、疾病、态势、报告与研究证据。' : 'Search GIDS countries, diseases, situation reports, and research evidence.'} initialLanguage={locale} noindex seo={{ title: zh ? '全站检索 | GIDS' : 'Search | GIDS', description: zh ? '检索 GIDS 的公开数据与证据。' : 'Search public GIDS data and evidence.', locale, canonicalPath, alternatePaths: { en: '/search/', zh: '/zh/search/' }, noindex: true }}>
+  <section class="search-page max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+    <p class="academic-kicker">{zh ? '证据发现' : 'Evidence discovery'}</p>
+    <h1 class="academic-title">{zh ? '检索 GIDS' : 'Search GIDS'}</h1>
+    <p class="academic-lead">{zh ? '跨国家、疾病、态势、监测报告和研究文献查找公开证据。' : 'Find public evidence across countries, diseases, situation intelligence, surveillance reports, and research.'}</p>
+    <form class="search-page-form" role="search">
+      <label for="search-page-input">{zh ? '搜索词' : 'Search query'}</label>
+      <div><input id="search-page-input" name="q" type="search" autocomplete="off" minlength="2" placeholder={zh ? '例如：登革热、日本、气候…' : 'For example: dengue, Japan, climate…'} /><button type="submit">{zh ? '搜索' : 'Search'}</button></div>
+    </form>
+    <p id="search-page-status" class="search-page-status" role="status" aria-live="polite"></p>
+    <div id="search-page-results" class="search-page-results"></div>
+  </section>
+</BaseLayout>
+
+<script is:inline define:vars={{ zh }}>
+  const form = document.querySelector('.search-page-form');
+  const input = document.querySelector('#search-page-input');
+  const status = document.querySelector('#search-page-status');
+  const root = document.querySelector('#search-page-results');
+  const labels = { country: zh ? '国家与地区' : 'Countries', disease: zh ? '疾病' : 'Diseases', situation: zh ? '态势' : 'Situation', report: zh ? '报告' : 'Reports', research: zh ? '研究' : 'Research', page: zh ? '页面' : 'Pages' };
+  const normalized = value => String(value || '').normalize('NFKD').toLowerCase().trim();
+  let entries = [];
+  function rank(entry, query) {
+    const title = normalized(zh ? (entry.title.zh || entry.title.en) : entry.title.en);
+    const aliases = (entry.aliases || []).map(normalized);
+    const summary = normalized(zh ? (entry.summary?.zh || entry.summary?.en) : entry.summary?.en);
+    if (title === query) return 100; if (title.startsWith(query)) return 80;
+    if (aliases.includes(query)) return 70; if (aliases.some(value => value.startsWith(query))) return 60;
+    if (title.includes(query)) return 50; if (aliases.some(value => value.includes(query))) return 35;
+    if (summary.includes(query)) return 20; return 0;
+  }
+  function render(queryValue) {
+    if (!root || !status) return;
+    const query = normalized(queryValue); root.replaceChildren();
+    if (query.length < 2) { status.textContent = zh ? '请输入至少 2 个字符。' : 'Enter at least 2 characters.'; return; }
+    const matches = entries.map(entry => ({ entry, score: rank(entry, query) })).filter(item => item.score > 0).sort((a,b) => b.score-a.score || String(a.entry.title.en).localeCompare(String(b.entry.title.en))).slice(0, 100);
+    status.textContent = zh ? `找到 ${matches.length} 条结果` : `${matches.length} result${matches.length === 1 ? '' : 's'} found`;
+    const groups = new Map(); for (const item of matches) { const list = groups.get(item.entry.kind) || []; list.push(item.entry); groups.set(item.entry.kind, list); }
+    for (const [kind, list] of groups) {
+      const section=document.createElement('section'); section.className='search-result-group'; const heading=document.createElement('h2'); heading.textContent=`${labels[kind]} · ${list.length}`; section.append(heading);
+      const grid=document.createElement('div'); grid.className='search-result-grid';
+      for (const entry of list) { const link=document.createElement('a'); link.className='search-result-card'; link.href=zh&&entry.href.zh?entry.href.zh:entry.href.en; const title=document.createElement('strong'); title.textContent=zh?(entry.title.zh||entry.title.en):entry.title.en; const summary=document.createElement('span'); summary.textContent=zh?(entry.summary?.zh||entry.summary?.en||''):(entry.summary?.en||''); link.append(title,summary); grid.append(link); }
+      section.append(grid); root.append(section);
+    }
+  }
+  async function initialize() { const params=new URLSearchParams(location.search); const query=params.get('q')||''; if(input instanceof HTMLInputElement) input.value=query; try { const response=await fetch('/site-data/search-index.json'); entries=(await response.json()).entries||[]; render(query); } catch { if(status) status.textContent=zh?'搜索索引暂时不可用。':'Search index is temporarily unavailable.'; } }
+  form?.addEventListener('submit', event => { event.preventDefault(); if (!(input instanceof HTMLInputElement)) return; const url=new URL(location.href); if(input.value.trim()) url.searchParams.set('q',input.value.trim()); else url.searchParams.delete('q'); history.replaceState({},'',url); render(input.value); });
+  initialize();
+</script>

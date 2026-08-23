@@ -20,6 +20,7 @@ from src.services.situation_events import (
 from src.services.situation_room import load_config
 
 from .contracts import SituationReportV3
+from .configuration import validate_v32_config
 from .model import evaluate_frame_v3
 from .persistence import (
     active_signal_ids_before_period_v3,
@@ -28,6 +29,7 @@ from .persistence import (
     mark_analysis_run_failed_v3,
     publish_report_v3,
     stage_analysis_run_v3,
+    stage_policy_decisions_v3,
     signal_review_states_v3,
     stable_event_cluster_ids_v3,
 )
@@ -146,7 +148,7 @@ async def refresh_situation_v3(
     await init_database()
     checked_at = now or utc_now()
     checked_at = checked_at if checked_at.tzinfo else checked_at.replace(tzinfo=timezone.utc)
-    config = load_config()
+    config = validate_v32_config(load_config())
     timings: dict[str, float] = {}
     source_health: dict[str, Any] = {}
     respiratory_cards: list[dict[str, Any]] = []
@@ -234,6 +236,7 @@ async def refresh_situation_v3(
         timings=timings,
         coverage=report.coverage.model_dump(mode="json"),
     )
+    await stage_policy_decisions_v3(run_id=run_id, signals=signals)
     try:
         report, changed = await publish_report_v3(report, run_ids=[run_id], channel="latest")
     except Exception as exc:

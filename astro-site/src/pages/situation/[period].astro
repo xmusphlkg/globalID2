@@ -10,6 +10,5 @@ export function getStaticPaths() {
   );
 }
 
-const { target } = Astro.props as { target: string };
-return Astro.redirect(target, 301);
+return Astro.redirect((Astro.props as { target: string }).target, 301);
 ---

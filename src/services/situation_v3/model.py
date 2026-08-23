@@ -367,6 +367,13 @@ def _fit_robust_quasi_poisson(
         "history_count": int(len(y)),
         "include_trend": include_trend,
         "uses_exposure_offset": exposures is not None,
+        # Private fit state is retained only long enough to build the
+        # deterministic multi-horizon predictive distribution. It is stripped
+        # before diagnostics are serialized into the public contract.
+        "_beta": beta,
+        "_covariance": covariance,
+        "_prediction_design": x_pred,
+        "_prediction_offset": prediction_offset,
     }
 
 
@@ -533,6 +540,188 @@ def _count_upper_tail_probability(
     return min(1.0, max(0.0, total))
 
 
+def _positive_semidefinite(matrix: np.ndarray) -> np.ndarray:
+    """Return a symmetric positive-semidefinite covariance approximation."""
+
+    symmetric = (np.asarray(matrix, dtype=float) + np.asarray(matrix, dtype=float).T) / 2.0
+    values, vectors = np.linalg.eigh(symmetric)
+    return vectors @ np.diag(np.maximum(values, 1e-12)) @ vectors.T
+
+
+def _multi_horizon_predictive_assessment(
+    *,
+    observed_points: np.ndarray,
+    model_result: dict[str, Any],
+    horizons: list[int],
+    seed_text: str,
+    draws: int,
+) -> dict[str, Any] | None:
+    """Calibrate correlated count horizons with one deterministic omnibus p value.
+
+    Coefficient draws are shared by all future points and therefore retain the
+    positive parameter correlation between overlapping windows. Conditional
+    count draws use a Gamma-Poisson representation matched to the untrimmed
+    Pearson dispersion. The maximum standardized exceedance supplies one test
+    per series rather than several uncorrected detector votes.
+    """
+
+    required = {"_beta", "_covariance", "_prediction_design", "_prediction_offset"}
+    if not required.issubset(model_result):
+        return None
+    observed = np.asarray(observed_points, dtype=float)
+    design = np.asarray(model_result["_prediction_design"], dtype=float)
+    offset = np.asarray(model_result["_prediction_offset"], dtype=float)
+    beta = np.asarray(model_result["_beta"], dtype=float)
+    covariance = np.asarray(model_result["_covariance"], dtype=float)
+    if len(observed) != len(design) or len(offset) != len(design):
+        return None
+    valid_horizons = sorted(
+        {int(value) for value in horizons if 1 <= int(value) <= len(observed)}
+    )
+    if not valid_horizons:
+        return None
+    sample_count = max(512, min(65_536, int(draws)))
+    digest = hashlib.sha256(seed_text.encode("utf-8")).digest()
+    rng = np.random.default_rng(int.from_bytes(digest[:8], "big", signed=False))
+    robust_dispersion = max(float(model_result.get("dispersion", 1.0)), 1.0)
+    predictive_dispersion = max(
+        float(model_result.get("rare_tail_dispersion", robust_dispersion)),
+        1.0,
+    )
+    scaled_covariance = _positive_semidefinite(
+        covariance * predictive_dispersion / robust_dispersion
+    )
+    coefficient_draws = rng.multivariate_normal(
+        beta,
+        scaled_covariance,
+        size=sample_count,
+        check_valid="ignore",
+    )
+    means = np.exp(
+        np.clip(coefficient_draws @ design.T + offset[None, :], -20.0, 20.0)
+    )
+    if predictive_dispersion <= 1.000001:
+        simulated = rng.poisson(means).astype(float)
+        tail_model = "poisson_parameter_mixture"
+    else:
+        sizes = np.maximum(means / (predictive_dispersion - 1.0), 1e-8)
+        probability = np.clip(sizes / (sizes + means), 1e-10, 1.0 - 1e-10)
+        simulated = rng.negative_binomial(sizes, probability).astype(float)
+        tail_model = "gamma_poisson_parameter_mixture"
+
+    horizon_rows: list[dict[str, Any]] = []
+    simulated_scores: list[np.ndarray] = []
+    for horizon in valid_horizons:
+        simulated_aggregate = simulated[:, -horizon:].sum(axis=1)
+        observed_aggregate = float(observed[-horizon:].sum())
+        mean = float(np.mean(simulated_aggregate))
+        standard_deviation = max(float(np.std(simulated_aggregate, ddof=1)), 1e-9)
+        observed_score = (observed_aggregate - mean) / standard_deviation
+        score_draws = (simulated_aggregate - mean) / standard_deviation
+        simulated_scores.append(score_draws)
+        horizon_rows.append(
+            {
+                "horizon_periods": horizon,
+                "observed": round(observed_aggregate, 6),
+                "expected": round(mean, 6),
+                "predictive_upper_95": round(
+                    float(np.quantile(simulated_aggregate, 0.95)), 6
+                ),
+                "standardized_exceedance": round(observed_score, 6),
+                "marginal_p_value": round(
+                    (float(np.count_nonzero(simulated_aggregate >= observed_aggregate)) + 1.0)
+                    / (sample_count + 1.0),
+                    8,
+                ),
+            }
+        )
+    observed_scores = np.asarray(
+        [float(row["standardized_exceedance"]) for row in horizon_rows],
+        dtype=float,
+    )
+    selected_index = int(np.argmax(observed_scores))
+    omnibus_draws = np.max(np.column_stack(simulated_scores), axis=1)
+    omnibus_observed = float(observed_scores[selected_index])
+    omnibus_p = (
+        float(np.count_nonzero(omnibus_draws >= omnibus_observed)) + 1.0
+    ) / (sample_count + 1.0)
+    selected = horizon_rows[selected_index]
+    return {
+        "selected_horizon_periods": int(selected["horizon_periods"]),
+        "observed": float(selected["observed"]),
+        "expected": float(selected["expected"]),
+        "predictive_upper_95": float(selected["predictive_upper_95"]),
+        "standardized_exceedance": omnibus_observed,
+        "raw_p_value": float(omnibus_p),
+        "draws": sample_count,
+        "tail_model": tail_model,
+        "dispersion": predictive_dispersion,
+        "horizons": horizon_rows,
+        "decision_role": "single_correlated_omnibus_test",
+    }
+
+
+def _hurdle_negative_binomial_tail(
+    *,
+    history_values: np.ndarray,
+    observed: float,
+    horizon: int,
+    seed_text: str,
+    draws: int,
+) -> dict[str, Any] | None:
+    """Return a deterministic shadow p value for a hurdle count model."""
+
+    history = np.asarray(history_values, dtype=float)
+    history = history[np.isfinite(history) & (history >= 0)]
+    positive = history[history > 0]
+    if len(history) < 24 or len(positive) < 8 or horizon < 1:
+        return None
+    positive_probability = float(len(positive) / len(history))
+    positive_mean = float(np.mean(positive))
+    positive_variance = (
+        float(np.var(positive, ddof=1)) if len(positive) > 1 else positive_mean
+    )
+    sample_count = max(512, min(65_536, int(draws)))
+    digest = hashlib.sha256(seed_text.encode("utf-8")).digest()
+    rng = np.random.default_rng(int.from_bytes(digest[:8], "big", signed=False))
+    active = rng.random((sample_count, horizon)) < positive_probability
+    if positive_variance <= positive_mean * 1.000001:
+        positive_draws = rng.poisson(max(positive_mean, 1e-8), size=active.shape)
+        distribution = "zero_truncated_poisson"
+    else:
+        size = positive_mean**2 / max(positive_variance - positive_mean, 1e-8)
+        probability = size / (size + positive_mean)
+        positive_draws = rng.negative_binomial(size, probability, size=active.shape)
+        distribution = "zero_truncated_negative_binomial"
+    zero_positive = active & (positive_draws == 0)
+    while bool(np.any(zero_positive)):
+        if distribution == "zero_truncated_poisson":
+            replacements = rng.poisson(
+                max(positive_mean, 1e-8), size=int(np.count_nonzero(zero_positive))
+            )
+        else:
+            replacements = rng.negative_binomial(
+                size, probability, size=int(np.count_nonzero(zero_positive))
+            )
+        positive_draws[zero_positive] = replacements
+        zero_positive = active & (positive_draws == 0)
+    simulated = np.where(active, positive_draws, 0).sum(axis=1)
+    p_value = (
+        float(np.count_nonzero(simulated >= observed)) + 1.0
+    ) / (sample_count + 1.0)
+    return {
+        "raw_p_value": round(float(p_value), 8),
+        "expected": round(float(np.mean(simulated)), 6),
+        "predictive_upper_95": round(float(np.quantile(simulated, 0.95)), 6),
+        "historical_zero_probability": round(1.0 - positive_probability, 6),
+        "positive_mean": round(positive_mean, 6),
+        "positive_variance": round(positive_variance, 6),
+        "positive_distribution": distribution,
+        "draws": sample_count,
+        "decision_role": "shadow_only",
+    }
+
+
 def _effect_rules(
     config: dict[str, Any],
     identity: pd.Series,
@@ -540,6 +729,8 @@ def _effect_rules(
     *,
     is_count: bool,
     detector_tier: str,
+    cadence: str,
+    expected: float | None,
 ) -> dict[str, Any] | None:
     thresholds = config.get("thresholds", {})
     rules: dict[str, Any] | None = (
@@ -566,6 +757,23 @@ def _effect_rules(
                 "minimum_relative_increase_pct", 100
             ),
         }
+    cadence_gates = (
+        config.get("v3", {})
+        .get("effect_gates", {})
+        .get(cadence, {})
+        .get(detector_tier, [])
+    )
+    if isinstance(cadence_gates, list) and expected is not None:
+        for gate in cadence_gates:
+            if not isinstance(gate, dict):
+                continue
+            minimum_expected = float(gate.get("minimum_expected", -math.inf))
+            maximum_expected = float(gate.get("maximum_expected", math.inf))
+            if minimum_expected <= expected < maximum_expected:
+                effect = gate.get("effect") or {}
+                if isinstance(effect, dict):
+                    rules = {**(rules or {}), **effect}
+                break
     for special in thresholds.get("special_thresholds") or []:
         if not isinstance(special, dict):
             continue
@@ -662,13 +870,53 @@ def evaluate_series_v3(
                 },
             )
         first = work.iloc[-1]
+    if cadence in {"daily", "weekly"}:
+        as_of_cutoff = pd.Timestamp(as_of, tz="UTC") + pd.Timedelta(days=1)
+        work = work[work["time"] < as_of_cutoff]
+        if work.empty:
+            return SeriesV3Evaluation(
+                None,
+                "no_observations_on_or_before_as_of",
+                {
+                    **ledger,
+                    "status": "rejected",
+                    "rejection_reason": "no_observations_on_or_before_as_of",
+                },
+            )
+        first = work.iloc[-1]
     if cadence == "monthly":
         current_month = pd.Period(as_of, freq="M")
         work = work[work["time"].map(lambda stamp: pd.Timestamp(stamp).tz_convert(None).to_period("M") < current_month)]
         if work.empty:
             return SeriesV3Evaluation(None, "no_complete_month", {**ledger, "status": "rejected", "rejection_reason": "no_complete_month"})
         first = work.iloc[-1]
-    window_periods = int(settings["window_periods"])
+    configured_window_periods = int(settings["window_periods"])
+    unit_hint = str(first.get("unit") or "count").strip().lower()
+    multi_horizon_config = (
+        config.get("v3", {}).get("detectors", {}).get("multi_horizon", {})
+    )
+    multi_horizon_enabled = bool(
+        isinstance(multi_horizon_config, dict)
+        and multi_horizon_config.get("enabled", False)
+        and unit_hint == "count"
+        and cadence in {"weekly", "monthly"}
+    )
+    configured_horizons = (
+        multi_horizon_config.get("horizons", {}).get(cadence, [])
+        if multi_horizon_enabled
+        else []
+    )
+    model_horizons = sorted(
+        {
+            configured_window_periods,
+            *(
+                int(value)
+                for value in configured_horizons
+                if isinstance(value, (int, float)) and int(value) >= 1
+            ),
+        }
+    )
+    window_periods = max(model_horizons)
     values, periods, completeness, source_keys = _regular_series(work, cadence, window_periods)
     ledger["source_geography_keys"] = source_keys
     minimum = int(config.get("thresholds", {}).get("minimum_observations", {}).get(cadence, settings["minimum_observations"]))
@@ -754,8 +1002,8 @@ def evaluate_series_v3(
         primary_diagnostics = {
             key: value
             for key, value in model_result.items()
-            if key
-            not in {
+            if not key.startswith("_")
+            and key not in {
                 "expected_points",
                 "predictive_variance",
                 "aggregate_predictive_variance",
@@ -813,8 +1061,8 @@ def evaluate_series_v3(
         diagnostics = {
             key: value
             for key, value in model_result.items()
-            if key
-            not in {
+            if not key.startswith("_")
+            and key not in {
                 "expected_points",
                 "predictive_variance",
                 "aggregate_predictive_variance",
@@ -837,6 +1085,55 @@ def evaluate_series_v3(
         )
         else "common_count"
     )
+    window_label = str(settings["label"])
+    if (
+        detector_tier == "common_count"
+        and multi_horizon_enabled
+        and model_result is not None
+        and fit_status == "completed"
+    ):
+        multi_horizon = _multi_horizon_predictive_assessment(
+            observed_points=values.iloc[-max(model_horizons) :].to_numpy(dtype=float),
+            model_result=model_result,
+            horizons=model_horizons,
+            seed_text="|".join(
+                [
+                    str(first.get("series_code") or ""),
+                    canonical_key,
+                    str(first.get("dimension_key") or "all"),
+                    str(first.get("disease_id") or ""),
+                    str(as_of),
+                    str(multi_horizon_config.get("version") or "v1"),
+                ]
+            ),
+            draws=int(multi_horizon_config.get("production_draws", 2048)),
+        )
+        if multi_horizon is not None:
+            window_periods = int(multi_horizon["selected_horizon_periods"])
+            current_values = values.iloc[-window_periods:].to_numpy(dtype=float)
+            previous_values = values.iloc[
+                -window_periods * 2 : -window_periods
+            ].to_numpy(dtype=float)
+            current = float(multi_horizon["observed"])
+            previous = float(np.sum(previous_values))
+            expected = float(multi_horizon["expected"])
+            upper = float(multi_horizon["predictive_upper_95"])
+            z_value = float(multi_horizon["standardized_exceedance"])
+            raw_p = float(multi_horizon["raw_p_value"])
+            dispersion = float(multi_horizon["dispersion"])
+            absolute_change = current - previous
+            relative_change = (
+                (current - previous) / previous * 100.0 if previous > 0 else None
+            )
+            diagnostics["multi_horizon"] = multi_horizon
+            diagnostics["predictive_variance_inflation"] = 1.0
+            diagnostics["detector_version"] = "multi_horizon_gamma_poisson_v1"
+            variance_inflation = 1.0
+            window_label = (
+                f"Last {window_periods} weeks"
+                if cadence == "weekly"
+                else f"Last {window_periods} complete months"
+            )
     if (
         detector_tier == "rare_count"
         and raw_p is not None
@@ -872,12 +1169,74 @@ def evaluate_series_v3(
             else "seasonal_empirical_sampling_variance"
         )
         diagnostics["rare_tail_variance_inflation"] = 1.0
+        hurdle_result = _hurdle_negative_binomial_tail(
+            history_values=history_values,
+            observed=current,
+            horizon=window_periods,
+            seed_text="|".join(
+                [
+                    str(first.get("series_code") or ""),
+                    canonical_key,
+                    str(first.get("dimension_key") or "all"),
+                    str(as_of),
+                    "hurdle-nb-v1",
+                ]
+            ),
+            draws=int(multi_horizon_config.get("production_draws", 2048)),
+        )
+        empirical_result = _fit_seasonal_empirical_baseline(
+            history_values,
+            history_dates,
+            prediction_dates,
+            cadence,
+        )
+        empirical_shadow = None
+        if empirical_result is not None:
+            empirical_expected = float(
+                np.sum(empirical_result["expected_points"])
+            )
+            empirical_variance = float(
+                empirical_result["aggregate_predictive_variance"]
+            )
+            empirical_shadow = {
+                "raw_p_value": round(
+                    _count_upper_tail_probability(
+                        current,
+                        empirical_expected,
+                        empirical_variance,
+                    ),
+                    8,
+                ),
+                "expected": round(empirical_expected, 6),
+                "predictive_upper_95": round(
+                    max(
+                        0.0,
+                        empirical_expected
+                        + 1.6448536269514722 * math.sqrt(empirical_variance),
+                    ),
+                    6,
+                ),
+                "seasonal_sample_counts": empirical_result.get(
+                    "seasonal_sample_counts", []
+                ),
+                "decision_role": "shadow_only",
+            }
+        diagnostics["rare_model_comparison"] = {
+            "primary": {
+                "model": diagnostics["rare_count_tail"],
+                "raw_p_value": round(raw_p, 8),
+                "decision_role": "review_signal",
+            },
+            "hurdle_negative_binomial_v1": hurdle_result,
+            "seasonal_empirical_v1": empirical_shadow,
+            "automation_eligible": False,
+        }
     if model_result is not None and expected_points is not None:
         point_variance = np.asarray(model_result["predictive_variance"], dtype=float)
         observed_points = (
-            current_values
+            values.iloc[-len(expected_points) :].to_numpy(dtype=float)
             if is_count
-            else numerator_values[-window_periods:]
+            else numerator_values[-len(expected_points) :]
         )
         standardized = (observed_points - expected_points) / np.sqrt(
             np.maximum(point_variance, 1e-9)
@@ -911,6 +1270,8 @@ def evaluate_series_v3(
             metric_type,
             is_count=is_count,
             detector_tier=detector_tier,
+            cadence=cadence,
+            expected=expected,
         ),
     )
     identity_text = "|".join(
@@ -957,13 +1318,15 @@ def evaluate_series_v3(
     expected_by_period: dict[date, tuple[float, float]] = {}
     if model_result is not None and expected_points is not None:
         for point_index, (stamp, mean, variance) in enumerate(zip(
-            periods[-window_periods:],
+            periods[-len(expected_points):],
             expected_points,
             np.asarray(model_result["predictive_variance"], dtype=float),
             strict=True,
         )):
             if has_rate_components:
-                point_scale = scale / float(denominator_values[-window_periods + point_index])
+                point_scale = scale / float(
+                    denominator_values[-len(expected_points) + point_index]
+                )
                 mean = float(mean) * point_scale
                 variance = float(variance) * point_scale**2
             expected_by_period[stamp.date()] = (
@@ -1009,7 +1372,7 @@ def evaluate_series_v3(
             cadence=cadence,
         ),
         observation=ObservationComparison(
-            window_label=str(settings["label"]),
+            window_label=window_label,
             window_periods=window_periods,
             data_through=latest_date,
             latest_available_period=latest_available_date,
@@ -1028,6 +1391,9 @@ def evaluate_series_v3(
             model=(
                 "seasonal_empirical_fallback_v1"
                 if model_result is not None and model_result.get("fallback")
+                else "multi_horizon_gamma_poisson_v1"
+                if diagnostics.get("detector_version")
+                == "multi_horizon_gamma_poisson_v1"
                 else "robust_quasi_poisson_v1"
                 if is_count
                 else "robust_quasi_poisson_offset_v1"

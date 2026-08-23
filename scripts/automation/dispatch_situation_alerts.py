@@ -2,10 +2,9 @@
 """Dispatch verified signals from a published Situation report.
 
 The dispatcher is intentionally a small, dependency-free boundary between the
-static release and the subscription Worker.  Production dispatch currently
-permits analyst-reviewed signals only: calibrated evidence does not yet support
-emailing ``guarded_auto_v1`` signals.  Secrets are read only from the
-environment.
+static release and the subscription Worker.  Automated dispatch requires the
+structured, fail-closed v3.2 policy decision; legacy guarded-auto signals stay
+blocked. Secrets are read only from the environment.
 """
 
 from __future__ import annotations
@@ -39,9 +38,8 @@ DEFAULT_REPORT_PATH = (
 )
 ALERT_ROUTE = "/api/internal/situation-alerts"
 SCHEMA_VERSION = "situation-alert.v1"
-GUARDED_AUTO_POLICY = "guarded_auto_v1"
-GUARDED_AUTO_MODEL = "robust_quasi_poisson_v1"
-GUARDED_AUTO_TIERS = {"common_count", "rare_count"}
+AUTOMATION_POLICY = "tiered_auto_v3.2"
+AUTOMATION_MODEL = "multi_horizon_gamma_poisson_v1"
 QUALITY_GATE_STATUSES = {"passed", "degraded"}
 ANOMALY_STATES = {"alert", "strong"}
 SIGNAL_TYPES = {"statistical_signal", "officially_correlated_signal"}
@@ -314,29 +312,76 @@ def build_alert_payload(
     if verified_time > report_time + timedelta(minutes=5):
         raise DispatchError("verification_after_report_as_of")
     evidence_urls = _evidence_urls(signal.get("evidence_links"))
+    automation_payload: dict[str, Any] | None = None
 
     if basis == "automated_policy":
-        if policy != GUARDED_AUTO_POLICY:
-            raise DispatchError("guarded_auto_policy_required")
-        if verified_by != f"policy:{GUARDED_AUTO_POLICY}":
-            raise DispatchError("guarded_auto_verifier_required")
+        if policy != AUTOMATION_POLICY:
+            raise DispatchError("tiered_auto_policy_required")
+        if verified_by != f"policy:{AUTOMATION_POLICY}":
+            raise DispatchError("tiered_auto_verifier_required")
         if temporal_relevance != "current" or data_status != "current":
-            raise DispatchError("guarded_auto_current_signal_required")
-        if q_value is None or q_value > 0.01:
-            raise DispatchError("guarded_auto_q_threshold_required")
-        if model != GUARDED_AUTO_MODEL or fit_status != "completed":
-            raise DispatchError("guarded_auto_primary_fit_required")
-        if detector_tier not in GUARDED_AUTO_TIERS:
-            raise DispatchError("guarded_auto_detector_tier_required")
+            raise DispatchError("tiered_auto_current_signal_required")
         if not effect_threshold_passed:
-            raise DispatchError("guarded_auto_effect_threshold_required")
+            raise DispatchError("tiered_auto_effect_threshold_required")
         if completeness is None or completeness < 0.95:
-            raise DispatchError("guarded_auto_completeness_required")
-        raise DispatchError("automated_policy_dispatch_disabled")
-    if policy is not None:
-        raise DispatchError("analyst_review_policy_must_be_null")
-    if verified_by.startswith("policy:"):
-        raise DispatchError("analyst_reviewer_required")
+            raise DispatchError("tiered_auto_completeness_required")
+        automation = _record(
+            assessment.get("automation_decision"), "automation_decision"
+        )
+        if automation.get("status") != "auto_verified":
+            raise DispatchError("automation_decision_not_verified")
+        if automation.get("policy_version") != AUTOMATION_POLICY:
+            raise DispatchError("automation_decision_policy_mismatch")
+        _text(
+            automation.get("calibration_hash"),
+            "automation_calibration_hash",
+            maximum=128,
+        )
+        if automation.get("gate_reasons") != []:
+            raise DispatchError("automation_gate_reasons_must_be_empty")
+        decided_at = _iso_datetime(
+            automation.get("decided_at"), "automation_decided_at"
+        )
+        decision_time = datetime.fromisoformat(decided_at.replace("Z", "+00:00"))
+        if decision_time > report_time + timedelta(minutes=5):
+            raise DispatchError("automation_decision_after_report_as_of")
+        automation_basis = str(automation.get("basis") or "")
+        matched_event_ids = automation.get("matched_event_ids")
+        if not isinstance(matched_event_ids, list) or not all(
+            isinstance(event_id, str) and event_id.strip()
+            for event_id in matched_event_ids
+        ):
+            raise DispatchError("invalid_automation_matched_event_ids")
+        if automation_basis == "calibrated_statistical":
+            if q_value is None or q_value > 0.025:
+                raise DispatchError("calibrated_statistical_q_required")
+            if (
+                model != AUTOMATION_MODEL
+                or fit_status != "completed"
+                or detector_tier != "common_count"
+            ):
+                raise DispatchError("calibrated_statistical_primary_fit_required")
+        elif automation_basis == "official_corroboration":
+            if not matched_event_ids:
+                raise DispatchError("official_corroboration_event_required")
+            if q_value is None or q_value > 0.05:
+                raise DispatchError("official_corroboration_review_q_required")
+        else:
+            raise DispatchError("invalid_automation_basis")
+        automation_payload = {
+            "status": "auto_verified",
+            "basis": automation_basis,
+            "policy_version": AUTOMATION_POLICY,
+            "calibration_hash": str(automation["calibration_hash"]).strip(),
+            "gate_reasons": [],
+            "matched_event_ids": list(dict.fromkeys(matched_event_ids)),
+            "decided_at": decided_at,
+        }
+    else:
+        if policy is not None:
+            raise DispatchError("analyst_review_policy_must_be_null")
+        if verified_by.startswith("policy:"):
+            raise DispatchError("analyst_reviewer_required")
 
     disease_name = str(identity.get("disease_name") or identity.get("disease_id") or "Disease")
     geography = str(
@@ -364,6 +409,7 @@ def build_alert_payload(
             "verification_status": "verified",
             "verification_basis": basis,
             "verification_policy_version": policy,
+            "automation_decision": automation_payload,
             "verified_by": verified_by,
             "verified_at": verified_at,
             "observed_at": _observed_datetime(observation.get("data_through")),

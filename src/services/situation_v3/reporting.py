@@ -13,13 +13,16 @@ from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import urlparse
 
+from .configuration import calibration_definition_hash
 from .contracts import (
+    AutomationDecision,
     ContextMetric,
     ContextPanel,
     Coverage,
     CurrencySlice,
     DataCurrency,
     EventUpdate,
+    EvidenceLink,
     LocalizedText,
     MethodMetadata,
     PublicHealthRisk,
@@ -34,7 +37,7 @@ from .contracts import (
 )
 
 
-METHOD_VERSION = "situation_room_v3.1"
+METHOD_VERSION = "situation_room_v3.2"
 
 
 def _hash(value: Any) -> str:
@@ -120,6 +123,30 @@ def _valid_http_url(value: Any) -> str | None:
         return None
     parsed = urlparse(candidate)
     return candidate if parsed.scheme.lower() in {"http", "https"} and parsed.netloc else None
+
+
+def _authoritative_url(value: Any, domains: set[str]) -> str | None:
+    candidate = _valid_http_url(value)
+    if candidate is None:
+        return None
+    if not domains:
+        return candidate
+    hostname = (urlparse(candidate).hostname or "").lower().rstrip(".")
+    return (
+        candidate
+        if any(hostname == domain or hostname.endswith("." + domain) for domain in domains)
+        else None
+    )
+
+
+def _period_distance(signal_date: date, event_date: date, cadence: str) -> int:
+    """Return signal period minus official-event period."""
+
+    if cadence == "monthly":
+        return (signal_date.year - event_date.year) * 12 + signal_date.month - event_date.month
+    if cadence == "weekly":
+        return int(round((signal_date - event_date).days / 7.0))
+    return (signal_date - event_date).days
 
 
 def _geography_codes(event: dict[str, Any]) -> set[str]:
@@ -228,23 +255,77 @@ def _apply_event_evidence(
     signals: list[SituationSignalV3],
     events: list[dict[str, Any]],
     clusters: list[SituationEventClusterV3],
+    config: dict[str, Any],
 ) -> None:
+    evidence_policy = config.get("publication", {}).get("official_evidence", {})
+    authoritative_domains = {
+        str(value).lower().strip().rstrip(".")
+        for value in evidence_policy.get("authoritative_domains", [])
+        if str(value).strip()
+    }
+    match_window = max(0, int(evidence_policy.get("match_window_periods", 2)))
     cluster_by_disease: dict[str, list[SituationEventClusterV3]] = defaultdict(list)
     for cluster in clusters:
         cluster_by_disease[cluster.disease_id].append(cluster)
     for signal in signals:
-        eligible_clusters = [
-            cluster
-            for cluster in cluster_by_disease.get(signal.identity.disease_id, [])
-            if signal.identity.country_code
-            in {place.get("code") for place in cluster.geographies}
-        ]
-        candidates = [
-            event
-            for event in events
-            if event.get("disease_id") == signal.identity.disease_id
-            and signal.identity.country_code in _geography_codes(event)
-        ]
+        matched_clusters: list[tuple[SituationEventClusterV3, int, str]] = []
+        for cluster in cluster_by_disease.get(signal.identity.disease_id, []):
+            if signal.identity.country_code not in {
+                place.get("code") for place in cluster.geographies
+            }:
+                continue
+            authoritative_updates = [
+                update
+                for update in cluster.updates
+                if _authoritative_url(update.url, authoritative_domains)
+            ]
+            if not authoritative_updates:
+                continue
+            distances = [
+                (
+                    _period_distance(
+                        signal.observation.data_through,
+                        update.published_at,
+                        signal.identity.cadence,
+                    ),
+                    update,
+                )
+                for update in authoritative_updates
+            ]
+            distance, update = min(distances, key=lambda item: abs(item[0]))
+            if abs(distance) > match_window:
+                continue
+            role = "lead" if distance < 0 else "lag" if distance > 0 else "concurrent"
+            matched_clusters.append((cluster, distance, role))
+            if all(link.url != update.url for link in signal.evidence_links):
+                signal.evidence_links.append(
+                    EvidenceLink(
+                        title=update.title,
+                        url=update.url,
+                        source=update.source,
+                    )
+                )
+        eligible_clusters = [item[0] for item in matched_clusters]
+        candidates = []
+        for event in events:
+            published = _as_date(event.get("published_at"))
+            if (
+                event.get("disease_id") != signal.identity.disease_id
+                or signal.identity.country_code not in _geography_codes(event)
+                or published is None
+                or abs(
+                    _period_distance(
+                        signal.observation.data_through,
+                        published,
+                        signal.identity.cadence,
+                    )
+                )
+                > match_window
+                or _authoritative_url(event.get("source_url"), authoritative_domains)
+                is None
+            ):
+                continue
+            candidates.append(event)
         if not candidates or not eligible_clusters:
             continue
         if "official_match" not in signal.tags:
@@ -258,6 +339,18 @@ def _apply_event_evidence(
         ]
         for cluster in eligible_clusters:
             cluster.matched_signal_ids.append(signal.identity.signal_id)
+        match_details = [
+            {
+                "event_id": cluster.cluster_id,
+                "period_distance": distance,
+                "role": role,
+            }
+            for cluster, distance, role in matched_clusters
+        ]
+        signal.anomaly.diagnostics["official_event_matches"] = match_details
+        signal.assessment.automation_decision.matched_event_ids = sorted(
+            {cluster.cluster_id for cluster in eligible_clusters}
+        )
         rated = next(((_official_risk(event), event) for event in candidates if _official_risk(event)), None)
         if rated:
             (level, url), event = rated
@@ -286,6 +379,11 @@ def _apply_signal_reviews(
             signal.assessment.verification_status = "verified"
         elif action in {"suppress", "reject"}:
             signal.assessment.verification_status = "rejected"
+            signal.assessment.automation_decision.status = "blocked"
+            if "overridden_by_analyst" not in signal.assessment.automation_decision.gate_reasons:
+                signal.assessment.automation_decision.gate_reasons.append(
+                    "overridden_by_analyst"
+                )
         else:
             signal.assessment.verification_status = "under_review"
         signal.assessment.verification_basis = "analyst_review"
@@ -329,60 +427,234 @@ def _apply_automatic_signal_verification(
     checked_at: datetime,
 ) -> None:
     policy = config.get("publication", {}).get("auto_verification", {})
-    if not isinstance(policy, dict) or not bool(policy.get("enabled", False)):
+    if not isinstance(policy, dict):
         return
-    # Statistical auto-publication stays fail-closed until the checked
-    # calibration protocol explicitly supports it. Merely toggling `enabled`
-    # must not bypass a negative calibration decision.
-    if str(policy.get("calibration_decision") or "") != "supported":
+    policy_version = str(policy.get("policy_version") or "guarded_auto_v2")
+    legacy_policy = "mode" not in policy and "groups" not in policy
+    if legacy_policy:
+        if not bool(policy.get("enabled", False)):
+            return
+        if str(policy.get("calibration_decision") or "") != "supported":
+            return
+        maximum_q = float(policy.get("maximum_q", 0.01))
+        minimum_completeness = float(policy.get("minimum_completeness", 0.95))
+        allowed_fit_statuses = {
+            str(value) for value in policy.get("allowed_fit_statuses", ["completed"])
+        }
+        allowed_tiers = {
+            str(value)
+            for value in policy.get(
+                "allowed_detector_tiers",
+                ["common_count", "rare_count"],
+            )
+        }
+        allowed_sources = {
+            str(value) for value in policy.get("allowed_source_systems", [])
+        }
+        for signal in signals:
+            q_value = signal.anomaly.q_value
+            eligible = (
+                signal.anomaly.state in {"alert", "strong"}
+                and signal.anomaly.effect_threshold_passed
+                and q_value is not None
+                and q_value <= maximum_q
+                and signal.anomaly.fit_status in allowed_fit_statuses
+                and signal.anomaly.detector_tier in allowed_tiers
+                and signal.observation.completeness >= minimum_completeness
+                and (
+                    not bool(policy.get("require_current", True))
+                    or signal.observation.data_status == "current"
+                )
+                and (
+                    not bool(policy.get("require_evidence_link", True))
+                    or bool(signal.evidence_links)
+                )
+                and (
+                    not allowed_sources
+                    or signal.identity.source_system in allowed_sources
+                )
+            )
+            if not eligible:
+                continue
+            signal.assessment.automation_decision = AutomationDecision(
+                status="auto_verified",
+                basis="calibrated_statistical",
+                policy_version=policy_version,
+                calibration_hash=policy.get("calibration_hash"),
+                decided_at=checked_at,
+            )
+            signal.assessment.verification_status = "verified"
+            signal.assessment.verification_basis = "automated_policy"
+            signal.assessment.verification_policy_version = policy_version
+            signal.assessment.verification_note = (
+                f"Automatically verified by {policy_version}: current, stable "
+                f"primary fit, complete evidence, effect gate, q≤{maximum_q:g}."
+            )
+            signal.assessment.verified_by = f"policy:{policy_version}"
+            signal.assessment.verified_at = checked_at
         return
-    policy_version = str(policy.get("policy_version") or "guarded_auto_v1")
-    maximum_q = float(policy.get("maximum_q", 0.01))
+
+    enabled = bool(policy.get("enabled", False))
+    mode = str(policy.get("mode") or "off")
+    kill_switch = bool(policy.get("kill_switch", True))
+    calibration_hash = str(policy.get("calibration_hash") or "") or None
+    expected_definition_hash = str(
+        policy.get("calibration_definition_hash") or ""
+    ) or None
+    current_definition_hash = calibration_definition_hash(config)
+    groups = policy.get("groups") if isinstance(policy.get("groups"), dict) else {}
+    minimum_null_families = int(policy.get("minimum_complete_null_families", 384))
+    maximum_false_upper = float(policy.get("maximum_false_publication_upper_95", 0.025))
+    minimum_sensitivity = float(policy.get("minimum_sensitivity", 0.80))
+    maximum_delay = float(policy.get("maximum_median_delay_periods", 1.0))
     minimum_completeness = float(policy.get("minimum_completeness", 0.95))
-    allowed_fit_statuses = {
-        str(value) for value in policy.get("allowed_fit_statuses", ["completed"])
-    }
-    allowed_tiers = {
-        str(value)
-        for value in policy.get(
-            "allowed_detector_tiers",
-            ["common_count", "rare_count"],
-        )
-    }
-    allowed_sources = {
-        str(value) for value in policy.get("allowed_source_systems", [])
-    }
+    official_policy = policy.get("official_corroboration", {})
+    official_enabled = bool(
+        isinstance(official_policy, dict) and official_policy.get("enabled", False)
+    )
+
     for signal in signals:
-        q_value = signal.anomaly.q_value
-        eligible = (
-            signal.anomaly.state in {"alert", "strong"}
-            and signal.anomaly.effect_threshold_passed
-            and q_value is not None
-            and q_value <= maximum_q
-            and signal.anomaly.fit_status in allowed_fit_statuses
-            and signal.anomaly.detector_tier in allowed_tiers
-            and signal.observation.completeness >= minimum_completeness
-            and (
-                not bool(policy.get("require_current", True))
-                or signal.observation.data_status == "current"
-            )
-            and (
-                not bool(policy.get("require_evidence_link", True))
-                or bool(signal.evidence_links)
-            )
-            and (
-                not allowed_sources
-                or signal.identity.source_system in allowed_sources
-            )
+        matched_event_ids = list(
+            signal.assessment.automation_decision.matched_event_ids
         )
-        if not eligible:
+        reasons: list[str] = []
+        basis = "not_applicable"
+        if not enabled:
+            reasons.append("automation_disabled")
+        if mode not in {"shadow", "canary", "live"}:
+            reasons.append("mode_off")
+        if kill_switch:
+            reasons.append("kill_switch_active")
+        if not expected_definition_hash:
+            reasons.append("calibration_definition_hash_missing")
+        elif expected_definition_hash != current_definition_hash:
+            reasons.append("calibration_definition_hash_mismatch")
+        if signal.anomaly.state not in {"alert", "strong"}:
+            reasons.append("not_alert_level")
+        if not signal.anomaly.effect_threshold_passed:
+            reasons.append("effect_threshold_failed")
+        if signal.observation.data_status != "current":
+            reasons.append("data_not_current")
+        if signal.observation.completeness < minimum_completeness:
+            reasons.append("insufficient_completeness")
+
+        group_key = f"{signal.identity.cadence}.{signal.anomaly.detector_tier}"
+        group = groups.get(group_key) if isinstance(groups, dict) else None
+        calibrated_candidate = (
+            signal.identity.cadence in {"weekly", "monthly"}
+            and signal.anomaly.detector_tier == "common_count"
+            and signal.anomaly.fit_status == "completed"
+            and signal.anomaly.model == "multi_horizon_gamma_poisson_v1"
+        )
+        calibrated_reasons: list[str] = []
+        if calibrated_candidate:
+            basis = "calibrated_statistical"
+            if not isinstance(group, dict) or not bool(group.get("enabled", False)):
+                calibrated_reasons.append("calibration_group_disabled")
+            else:
+                if int(group.get("complete_null_family_trials", 0)) < minimum_null_families:
+                    calibrated_reasons.append("insufficient_null_family_trials")
+                upper = group.get("false_publication_upper_95")
+                if upper is None or float(upper) > maximum_false_upper:
+                    calibrated_reasons.append("false_publication_bound_failed")
+                sensitivity = group.get("sensitivity")
+                if sensitivity is None or float(sensitivity) < minimum_sensitivity:
+                    calibrated_reasons.append("sensitivity_gate_failed")
+                delay = group.get("median_detection_delay_periods")
+                if delay is None or float(delay) > maximum_delay:
+                    calibrated_reasons.append("detection_delay_gate_failed")
+                if not calibration_hash:
+                    calibrated_reasons.append("calibration_hash_missing")
+                q_value = signal.anomaly.q_value
+                maximum_q = float(group.get("maximum_q", 0.0))
+                if q_value is None or maximum_q <= 0.0 or q_value > maximum_q:
+                    calibrated_reasons.append("publication_q_failed")
+                allowed_sources = {
+                    str(value) for value in group.get("allowed_source_systems", [])
+                }
+                if (
+                    not allowed_sources
+                    or signal.identity.source_system not in allowed_sources
+                ):
+                    calibrated_reasons.append("source_not_allowlisted")
+                canary_sources = {
+                    str(value) for value in group.get("canary_source_systems", [])
+                }
+                if mode == "canary" and signal.identity.source_system not in canary_sources:
+                    calibrated_reasons.append("source_not_in_canary")
+                allowed_domains = {
+                    str(value).lower().strip().rstrip(".")
+                    for value in group.get("authoritative_source_domains", [])
+                    if str(value).strip()
+                }
+                configured_source_url = (
+                    config.get("quality", {})
+                    .get("source_evidence_urls", {})
+                    .get(signal.identity.source_system)
+                )
+                source_evidence_valid = bool(
+                    configured_source_url
+                    and _authoritative_url(configured_source_url, allowed_domains)
+                    and any(
+                        link.url.rstrip("/")
+                        == str(configured_source_url).rstrip("/")
+                        for link in signal.evidence_links
+                    )
+                )
+                if not source_evidence_valid:
+                    calibrated_reasons.append("authoritative_source_link_missing")
+
+        group_allowed_sources = {
+            str(value)
+            for value in (
+                group.get("allowed_source_systems", [])
+                if isinstance(group, dict)
+                else []
+            )
+        }
+        requires_official_corroboration = (
+            signal.anomaly.detector_tier == "rare_count"
+            or signal.anomaly.fit_status != "completed"
+            or signal.anomaly.model != "multi_horizon_gamma_poisson_v1"
+            or signal.identity.source_system not in group_allowed_sources
+        )
+        official_candidate = (
+            official_enabled
+            and requires_official_corroboration
+            and bool(matched_event_ids)
+        )
+        if calibrated_reasons and official_candidate:
+            basis = "official_corroboration"
+            calibrated_reasons = []
+        elif not calibrated_candidate and official_candidate:
+            basis = "official_corroboration"
+        elif not calibrated_candidate:
+            reasons.append("not_calibrated_statistical_candidate")
+            if not official_candidate:
+                reasons.append("official_corroboration_missing")
+
+        reasons.extend(calibrated_reasons)
+        decision_status = "blocked" if reasons else "eligible"
+        if not reasons and mode == "shadow":
+            decision_status = "shadow"
+        elif not reasons and mode in {"canary", "live"}:
+            decision_status = "auto_verified"
+        signal.assessment.automation_decision = AutomationDecision(
+            status=decision_status,
+            basis=basis,
+            policy_version=policy_version,
+            calibration_hash=calibration_hash,
+            gate_reasons=sorted(set(reasons)),
+            matched_event_ids=matched_event_ids,
+            decided_at=checked_at,
+        )
+        if decision_status != "auto_verified":
             continue
         signal.assessment.verification_status = "verified"
         signal.assessment.verification_basis = "automated_policy"
         signal.assessment.verification_policy_version = policy_version
         signal.assessment.verification_note = (
-            f"Automatically verified by {policy_version}: current, stable primary "
-            f"fit, complete evidence, effect gate, q≤{maximum_q:g}."
+            f"Automatically verified by {policy_version} using {basis}."
         )
         signal.assessment.verified_by = f"policy:{policy_version}"
         signal.assessment.verified_at = checked_at
@@ -769,7 +1041,7 @@ def build_daily_report_v3(
             cluster.status = "corrected"
         reviewed_clusters.append(cluster)
     clusters = reviewed_clusters
-    _apply_event_evidence(signals, events, clusters)
+    _apply_event_evidence(signals, events, clusters, config)
     _apply_automatic_signal_triage(signals, config)
     _apply_automatic_signal_verification(signals, config, checked_at)
     # Operator review is the final state transition. It may verify, reject, or
@@ -838,7 +1110,7 @@ def build_daily_report_v3(
         ),
         method=MethodMetadata(
             version=METHOD_VERSION,
-            model="robust_quasi_poisson_v1",
+            model="multi_horizon_gamma_poisson_v1",
             config_hash=config_hash,
             code_version=_code_version(),
             fdr_family="detector_tier_metric_type_cadence",
@@ -854,6 +1126,8 @@ def build_daily_report_v3(
                 "detector_tiers": dict(
                     config.get("v3", {}).get("detector_tiers", {})
                 ),
+                "detectors": dict(config.get("v3", {}).get("detectors", {})),
+                "effect_gates": dict(config.get("v3", {}).get("effect_gates", {})),
                 "publication": dict(config.get("publication", {})),
                 "effect_thresholds": {
                     "minimum_current_cases": thresholds.get("minimum_current_cases", 20),

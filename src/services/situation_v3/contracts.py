@@ -36,7 +36,10 @@ class ReportMetadata(ContractModel):
 
 class MethodMetadata(ContractModel):
     version: str
-    model: Literal["robust_quasi_poisson_v1"]
+    model: Literal[
+        "robust_quasi_poisson_v1",
+        "multi_horizon_gamma_poisson_v1",
+    ]
     config_hash: str
     code_version: str | None = None
     fdr_method: Literal["benjamini_hochberg"] = "benjamini_hochberg"
@@ -160,6 +163,28 @@ class PublicHealthRisk(ContractModel):
         return self
 
 
+class AutomationDecision(ContractModel):
+    """Fail-closed, auditable publication-policy result for one run signal."""
+
+    status: Literal[
+        "not_evaluated",
+        "blocked",
+        "shadow",
+        "eligible",
+        "auto_verified",
+    ] = "not_evaluated"
+    basis: Literal[
+        "not_applicable",
+        "calibrated_statistical",
+        "official_corroboration",
+    ] = "not_applicable"
+    policy_version: str | None = None
+    calibration_hash: str | None = None
+    gate_reasons: list[str] = Field(default_factory=list)
+    matched_event_ids: list[str] = Field(default_factory=list)
+    decided_at: datetime | None = None
+
+
 class SignalAssessment(ContractModel):
     review_priority: Literal["routine", "standard", "high"]
     signal_type: Literal["statistical_signal", "officially_correlated_signal"] = (
@@ -182,6 +207,7 @@ class SignalAssessment(ContractModel):
     verified_by: str | None = None
     verified_at: datetime | None = None
     evidence_gaps: list[str] = Field(default_factory=list)
+    automation_decision: AutomationDecision = Field(default_factory=AutomationDecision)
     public_health_risk: PublicHealthRisk = Field(default_factory=PublicHealthRisk)
 
 

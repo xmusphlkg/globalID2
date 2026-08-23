@@ -34,6 +34,8 @@ ASSET_DIRECTORIES = ("countries", "diseases")
 GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
 NETWORK_ATTEMPTS = 4
 NETWORK_RETRY_DELAY_SECONDS = 2.0
+GITHUB_VERIFY_ATTEMPTS = 6
+GITHUB_VERIFY_RETRY_DELAY_SECONDS = 5.0
 TRANSIENT_GIT_ERROR_MARKERS = (
     "gnutls",
     "tls connection",
@@ -457,6 +459,53 @@ def _git_blob_sha(content: bytes) -> str:
     return hashlib.sha1(header + content).hexdigest()
 
 
+def _read_remote_blob_sha(
+    owner: str,
+    repository: str,
+    relative_path: str,
+    commit_sha: str,
+) -> str:
+    command = [
+        "gh",
+        "api",
+        "--method",
+        "GET",
+        f"repos/{owner}/{repository}/contents/{relative_path}",
+        "-f",
+        f"ref={commit_sha}",
+        "--jq",
+        ".sha",
+    ]
+    last_error = ""
+    for attempt in range(1, GITHUB_VERIFY_ATTEMPTS + 1):
+        completed = subprocess.run(
+            command,
+            text=True,
+            capture_output=True,
+        )
+        if completed.returncode == 0:
+            return completed.stdout.strip()
+        last_error = "\n".join(
+            part.strip()
+            for part in (completed.stdout, completed.stderr)
+            if part.strip()
+        )
+        if attempt < GITHUB_VERIFY_ATTEMPTS:
+            print(
+                f"GitHub verification attempt {attempt}/{GITHUB_VERIFY_ATTEMPTS} "
+                f"failed for {relative_path}; retrying in "
+                f"{GITHUB_VERIFY_RETRY_DELAY_SECONDS:g} seconds.",
+                file=sys.stderr,
+                flush=True,
+            )
+            time.sleep(GITHUB_VERIFY_RETRY_DELAY_SECONDS)
+    raise RuntimeError(
+        "GitHub verification failed for "
+        f"{relative_path} at {commit_sha} after {GITHUB_VERIFY_ATTEMPTS} attempts"
+        + (f"\n{last_error}" if last_error else "")
+    )
+
+
 def verify_public_files(source_dir: Path, manifest: dict, commit_sha: str) -> None:
     """Compare representative remote Git blobs with the local generated files."""
 
@@ -487,23 +536,7 @@ def verify_public_files(source_dir: Path, manifest: dict, commit_sha: str) -> No
         relative_path = current_part["files"][format_name]["relative_path"]
         checks.append((source_dir / relative_path, relative_path))
     for local_path, relative_path in checks:
-        completed = subprocess.run(
-            [
-                "gh",
-                "api",
-                "--method",
-                "GET",
-                f"repos/{owner}/{repository}/contents/{relative_path}",
-                "-f",
-                f"ref={commit_sha}",
-                "--jq",
-                ".sha",
-            ],
-            check=True,
-            text=True,
-            capture_output=True,
-        )
-        remote_sha = completed.stdout.strip()
+        remote_sha = _read_remote_blob_sha(owner, repository, relative_path, commit_sha)
         local_sha = _git_blob_sha(local_path.read_bytes())
         if remote_sha != local_sha:
             raise RuntimeError(

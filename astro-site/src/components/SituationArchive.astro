@@ -3,24 +3,27 @@ import ReportLayout from '../layouts/ReportLayout.astro';
 import { buildAlternatePaths, type SeoDocument } from '../lib/seo';
 import { formatDate, type SituationReportV3 } from '../utils/situation';
 
-interface Props { kind: 'weekly' | 'monthly'; reports: SituationReportV3[]; }
-const { kind, reports } = Astro.props;
+interface Props { kind: 'weekly' | 'monthly'; reports: SituationReportV3[]; locale?: 'en' | 'zh'; }
+const { kind, reports, locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 const titleWord = kind === 'weekly' ? 'Weekly' : 'Monthly';
 const titleZh = kind === 'weekly' ? '周报' : '月报';
-const canonicalPath = `/situation/${kind}/`;
+const canonicalPath = `${prefix}/situation/${kind}/`;
 const seo: SeoDocument = {
-  title: `${titleWord} Situation Reports | GIDS`,
-  description: `${titleWord} period reports of new, persistent, resolved, and end-active infectious-disease review signals.`,
+  title: pick(`${titleWord} Situation Reports | GIDS`, `传染病态势${titleZh} | GIDS`),
+  description: pick(`${titleWord} period reports of new, persistent, resolved, and end-active infectious-disease review signals.`, `汇总新增、持续、消退及期末活跃传染病复核信号的${titleZh}。`),
   canonicalPath,
-  alternatePaths: buildAlternatePaths(canonicalPath, 'en'),
+  alternatePaths: buildAlternatePaths(canonicalPath, locale),
   noindex: reports.length === 0,
 };
 ---
 
-<ReportLayout title={`${titleWord} Situation Reports`} description={seo.description} seo={seo} breadcrumbs={[{ label: 'Situation Room', labelZh: '全球态势室', href: '/situation/' }, { label: `${titleWord} reports`, labelZh: titleZh }]}>
+<ReportLayout title={pick(`${titleWord} Situation Reports`, `传染病态势${titleZh}`)} description={seo.description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室'), href: `${prefix}/situation/` }, { label: pick(`${titleWord} reports`, titleZh) }]}>
   <main class="archive max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-    <header><p data-lang-en="Period archive" data-lang-zh="期间报告归档">Period archive</p><h1 data-lang-en={`${titleWord} Situation Reports`} data-lang-zh={`传染病态势${titleZh}`}>{titleWord} Situation Reports</h1><span data-lang-en="Each report aggregates all gate-passed daily runs in the period; later upstream revisions create a new immutable revision." data-lang-zh="每份报告聚合期间内全部通过质量门的日运行；上游修订将生成新的不可变修订版。">Each report aggregates all gate-passed daily runs in the period; later upstream revisions create a new immutable revision.</span></header>
-    {reports.length ? <ol>{[...reports].reverse().map(report => <li><a href={`/situation/${kind}/${report.report.period_key}/`}><b>{report.report.period_key}</b><span>{formatDate(report.report.period_start)} – {formatDate(report.report.period_end)}</span><dl><div><dt data-lang-en="New" data-lang-zh="新增">New</dt><dd>{report.summary.new_count}</dd></div><div><dt data-lang-en="Persistent" data-lang-zh="持续">Persistent</dt><dd>{report.summary.persistent_count}</dd></div><div><dt data-lang-en="Resolved" data-lang-zh="消退">Resolved</dt><dd>{report.summary.resolved_count}</dd></div><div><dt data-lang-en="Active" data-lang-zh="活跃">Active</dt><dd>{report.summary.active_at_period_end_count}</dd></div></dl><small><i data-lang-en="revision" data-lang-zh="修订版">revision</i> {report.report.revision} · {formatDate(report.report.as_of)}</small></a></li>)}</ol> : <p class="empty" data-lang-en={`No gate-passed ${kind} report has been published yet.`} data-lang-zh={`尚无通过质量门的${titleZh}。`}>No gate-passed {kind} report has been published yet.</p>}
+    <header><p>{pick('Period archive', '期间报告归档')}</p><h1>{pick(`${titleWord} Situation Reports`, `传染病态势${titleZh}`)}</h1><span>{pick('Each report aggregates all gate-passed daily runs in the period; later upstream revisions create a new immutable revision.', '每份报告聚合期间内全部通过质量门的日运行；上游修订将生成新的不可变修订版。')}</span></header>
+    {reports.length ? <ol>{[...reports].reverse().map(report => <li><a href={`${prefix}/situation/${kind}/${report.report.period_key}/`}><b>{report.report.period_key}</b><span>{formatDate(report.report.period_start)} – {formatDate(report.report.period_end)}</span><dl><div><dt>{pick('New', '新增')}</dt><dd>{report.summary.new_count}</dd></div><div><dt>{pick('Persistent', '持续')}</dt><dd>{report.summary.persistent_count}</dd></div><div><dt>{pick('Resolved', '消退')}</dt><dd>{report.summary.resolved_count}</dd></div><div><dt>{pick('Active', '活跃')}</dt><dd>{report.summary.active_at_period_end_count}</dd></div></dl><small><i>{pick('revision', '修订版')}</i> {report.report.revision} · {formatDate(report.report.as_of)}</small></a></li>)}</ol> : <p class="empty">{pick(`No gate-passed ${kind} report has been published yet.`, `尚无通过质量门的${titleZh}。`)}</p>}
   </main>
 </ReportLayout>
 
@@ -28,7 +31,7 @@ const seo: SeoDocument = {
   .archive { display: grid; gap: 1.5rem; padding-bottom: 4rem; padding-top: 2.5rem; }
   header { border-bottom: 2px solid rgb(var(--text-strong)); padding-bottom: 1.2rem; }
   header p { color: rgb(var(--color-teal)); font-size: .66rem; font-weight: 800; letter-spacing: .13em; margin: 0 0 .35rem; text-transform: uppercase; }
-  h1 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.04; margin: 0; }
+  h1 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.04; margin: 0; }
   header span { color: rgb(var(--text-muted)); display: block; line-height: 1.6; margin-top: .65rem; max-width: 58rem; }
   ol { display: grid; gap: .7rem; list-style: none; margin: 0; padding: 0; }
   li a { align-items: center; background: rgb(var(--surface) / .55); border: 1px solid rgb(var(--border)); color: inherit; display: grid; gap: .4rem 1rem; grid-template-columns: 8rem minmax(10rem, 1fr) minmax(18rem, 1fr) auto; padding: .85rem; text-decoration: none; }
@@ -39,7 +42,7 @@ const seo: SeoDocument = {
   dl { display: grid; gap: .5rem; grid-template-columns: repeat(4, 1fr); margin: 0; }
   dl div { border-left: 2px solid rgb(var(--border)); padding-left: .45rem; }
   dt { color: rgb(var(--text-faint)); font-size: .55rem; text-transform: uppercase; }
-  dd { color: rgb(var(--text)); font-family: 'JetBrains Mono', monospace; font-size: .72rem; margin: .1rem 0 0; }
+  dd { color: rgb(var(--text)); font-family: ui-monospace, monospace; font-size: .72rem; margin: .1rem 0 0; }
   .empty { color: rgb(var(--text-faint)); }
   @media (max-width: 760px) { li a { grid-template-columns: 1fr; } dl { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 </style>

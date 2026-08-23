@@ -1,7 +1,13 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { buildAlternatePaths } from '../lib/seo';
 
-const updatedAt = 'May 24, 2026';
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+
+const updatedAt = 'August 18, 2026';
 
 const summaryItems = [
   {
@@ -54,8 +60,8 @@ const sections = [
         zh: 'GIDS 是 Global Infectious Disease Surveillance 项目，旨在让不同司法辖区的官方传染病监测数据更易检索、比较、可视化和持续关注。',
       },
       {
-        en: 'The service may include automated data collection, parsing, disease-name normalization, public-health source attribution, AI-assisted bilingual summaries, report generation, alert or digest subscriptions, and open-source project materials.',
-        zh: '服务内容可能包括自动化数据采集、解析、疾病名称标准化、公共卫生来源标注、AI 辅助双语摘要、报告生成、提醒或摘要订阅，以及开源项目资料。',
+        en: 'The service may include automated data collection, parsing, disease-name normalization, public-health source attribution, AI-assisted bilingual summaries, report generation, alert or digest subscriptions, and source-visible project materials.',
+        zh: '服务内容可能包括自动化数据采集、解析、疾病名称标准化、公共卫生来源标注、AI 辅助双语摘要、报告生成、提醒或摘要订阅，以及源码可见的项目资料。',
       },
       {
         en: 'GIDS is provided for research, education, journalism, open-data exploration, and public-interest monitoring. It is not a substitute for official public health systems, clinical judgment, professional epidemiological review, or emergency communications.',
@@ -88,8 +94,8 @@ const sections = [
         zh: '商业授权必须是明确且书面的。沉默、未设置技术阻断、公开可访问、仓库可见或收到订阅邮件，均不构成商业许可。',
       },
       {
-        en: 'This commercial-use restriction applies to the public service and GIDS-created content. It does not override any separate open-source software license published in the project repository; code reuse is governed by the repository license, while third-party source data remains governed by the original providers\' terms.',
-        zh: '本商业使用限制适用于公开服务和 GIDS 创建的内容，不覆盖项目仓库中单独公布的开源软件许可；代码复用以仓库许可为准，第三方来源数据仍以原始提供方条款为准。',
+        en: 'This commercial-use restriction applies to the public service and GIDS-created content. If a separate software licence is published for identified repository files, that licence controls those files. The repository currently publishes no general LICENSE covering all code, and repository visibility alone grants no additional reuse permission. Third-party source data remains governed by the original providers\' terms.',
+        zh: '本商业使用限制适用于公开服务和 GIDS 创建的内容。若仓库对特定文件另行公布软件许可，则该许可适用于相应文件。仓库当前未发布覆盖全部代码的通用 LICENSE，仓库公开可见本身不授予额外复用许可。第三方来源数据仍以原始提供方条款为准。',
       },
     ],
   },
@@ -196,8 +202,8 @@ const sections = [
     titleZh: '9. 知识产权、署名与复用',
     paragraphs: [
       {
-        en: 'The GIDS software project, website design, generated views, documentation, and original text are protected by applicable intellectual property laws and any license published in the project repository.',
-        zh: 'GIDS 软件项目、网站设计、生成视图、文档和原创文本受适用知识产权法律以及项目仓库公布许可的保护。',
+        en: 'Rights are reserved, where protectable, in the GIDS software, website design, generated presentation, documentation, and original text, except to the extent an express permission, file-specific licence, or applicable legal exception provides otherwise. The separate Copyright & Reuse notice explains the current rights layers and attribution practice.',
+        zh: '对于 GIDS 软件、网站设计、生成式呈现、文档和原创文本中依法可受保护的部分，除非明确许可、特定文件许可或适用法律例外另有规定，相关权利予以保留。单独的《版权与复用说明》列明当前权利分层和署名方式。',
       },
       {
         en: 'Public health source data remains subject to the rights, licenses, disclaimers, and attribution requirements of the original source authorities or data providers. GIDS does not claim ownership of third-party source materials.',
@@ -397,41 +403,25 @@ const sections = [
 ---
 
 <BaseLayout
-  title="Service Terms"
-  description="GIDS service terms and privacy notice for public infectious disease surveillance data, AI-assisted reports, and email subscriptions."
+  title={pick('Service Terms', '服务协议')}
+  description={pick('GIDS service terms and privacy notice for public infectious disease surveillance data, AI-assisted reports, and email subscriptions.', '适用于公开传染病监测数据、AI 辅助报告和邮件订阅的 GIDS 服务协议与隐私说明。')}
+  initialLanguage={locale}
+  seo={{ title: pick('Service Terms | GIDS', '服务协议 | GIDS'), description: pick('GIDS service terms and privacy notice for public infectious disease surveillance data, AI-assisted reports, and email subscriptions.', '适用于公开传染病监测数据、AI 辅助报告和邮件订阅的 GIDS 服务协议与隐私说明。'), locale, canonicalPath: `${prefix}/terms/`, alternatePaths: buildAlternatePaths(`${prefix}/terms/`, locale), pageType: 'WebPage' }}
 >
   <section class="terms-page">
     <div class="mx-auto max-w-5xl px-4 py-14 sm:px-6 lg:px-8">
       <div class="terms-hero">
-        <p class="terms-kicker" data-lang-en="Official notice" data-lang-zh="官方说明">Official notice</p>
-        <h1 data-lang-en="GIDS Service Terms and Privacy Notice" data-lang-zh="GIDS 服务协议与隐私说明">
-          GIDS Service Terms and Privacy Notice
-        </h1>
-        <p
-          class="terms-updated"
-          data-lang-en={`Last updated: ${updatedAt}`}
-          data-lang-zh="最后更新：2026 年 5 月 24 日"
-        >
-          Last updated: {updatedAt}
-        </p>
-        <p
-          class="terms-lead"
-          data-lang-en="This page explains the rules for using GIDS, the limits of public infectious disease surveillance information, and how subscription data is handled."
-          data-lang-zh="本页说明 GIDS 的使用规则、公开传染病监测信息的使用边界，以及订阅数据的处理方式。"
-        >
-          This page explains the rules for using GIDS, the limits of public infectious disease surveillance information, and how subscription data is handled.
-        </p>
+        <p class="terms-kicker">{pick('Official notice', '官方说明')}</p>
+        <h1>{pick('GIDS Service Terms and Privacy Notice', 'GIDS 服务协议与隐私说明')}</h1>
+        <p class="terms-updated">{pick(`Last updated: ${updatedAt}`, '最后更新：2026 年 8 月 18 日')}</p>
+        <p class="terms-lead">{pick('This page explains the rules for using GIDS, the limits of public infectious disease surveillance information, and how subscription data is handled.', '本页说明 GIDS 的使用规则、公开传染病监测信息的使用边界，以及订阅数据的处理方式。')}</p>
       </div>
 
-      <div class="terms-summary" aria-label="Terms summary">
+      <div class="terms-summary" aria-label={pick('Terms summary', '协议摘要')}>
         {summaryItems.map((item) => (
           <article>
-            <p class="terms-summary-label" data-lang-en={item.labelEn} data-lang-zh={item.labelZh}>
-              {item.labelEn}
-            </p>
-            <p class="terms-summary-value" data-lang-en={item.valueEn} data-lang-zh={item.valueZh}>
-              {item.valueEn}
-            </p>
+            <p class="terms-summary-label">{pick(item.labelEn, item.labelZh)}</p>
+            <p class="terms-summary-value">{pick(item.valueEn, item.valueZh)}</p>
           </article>
         ))}
       </div>
@@ -439,24 +429,27 @@ const sections = [
       <div class="terms-surface">
         {sections.map((section) => (
           <section>
-            <h2 data-lang-en={section.titleEn} data-lang-zh={section.titleZh}>{section.titleEn}</h2>
+            <h2>{pick(section.titleEn, section.titleZh)}</h2>
             {section.paragraphs.map((paragraph) => (
-              <p data-lang-en={paragraph.en} data-lang-zh={paragraph.zh}>{paragraph.en}</p>
+              <p>{pick(paragraph.en, paragraph.zh)}</p>
             ))}
           </section>
         ))}
 
         <section>
-          <h2 data-lang-en="Project Links" data-lang-zh="项目链接">Project Links</h2>
+          <h2>{pick('Project Links', '项目链接')}</h2>
           <div class="terms-link-list">
+            <a href={`${prefix}/copyright/`}>
+              <span>{pick('Copyright & reuse notice', '版权与复用说明')}</span>
+            </a>
             <a href="https://github.com/xmusphlkg/globalID2" target="_blank" rel="noopener noreferrer">
-              <span data-lang-en="Source repository" data-lang-zh="源码仓库">Source repository</span>
+              <span>{pick('Source repository', '源码仓库')}</span>
             </a>
             <a href="https://github.com/xmusphlkg/globalID2/issues" target="_blank" rel="noopener noreferrer">
-              <span data-lang-en="Issue tracker" data-lang-zh="问题反馈">Issue tracker</span>
+              <span>{pick('Issue tracker', '问题反馈')}</span>
             </a>
-            <a href="/subscribe/">
-              <span data-lang-en="Subscription center" data-lang-zh="订阅中心">Subscription center</span>
+            <a href={`${prefix}/subscribe/`}>
+              <span>{pick('Subscription center', '订阅中心')}</span>
             </a>
           </div>
         </section>

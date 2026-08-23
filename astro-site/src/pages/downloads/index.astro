@@ -1,0 +1,9 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PublicDownloads from '../../components/public/PublicDownloads.astro';
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const zh = locale === 'zh';
+---
+<BaseLayout title={zh ? '数据下载' : 'Data downloads'} description={zh ? '搜索并下载 CSV、JSON 和 XLSX 格式的 GIDS 公开监测数据集。' : 'Search and download GIDS public surveillance datasets in CSV, JSON, and XLSX formats.'} initialLanguage={locale} seo={{ title: zh ? '数据下载 | GIDS' : 'Data downloads | GIDS', description: zh ? '搜索并下载带有覆盖范围和来源说明的公开传染病监测数据集。' : 'Search and download public infectious disease surveillance datasets with coverage and provenance notes.', locale, canonicalPath: zh ? '/zh/downloads/' : '/downloads/', alternatePaths: { en: '/downloads/', zh: '/zh/downloads/' } }}>
+  <PublicDownloads locale={locale} />
+</BaseLayout>

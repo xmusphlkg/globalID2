@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, X } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 import { findSectionByPath, navigationSections } from "@/shared/navigation/route-registry";
@@ -18,16 +19,48 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const activeSection = findSectionByPath(pathname);
+  const mobileDialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    closeButtonRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose?.();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(
+        mobileDialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), select:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => !element.hasAttribute("hidden"));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [mobileOpen, onClose]);
 
   const content = (
     <div className={cn("flex h-full flex-col border-r border-[#D9D9D6] bg-white", collapsed ? "px-2" : "px-3")}>
       <div className={cn("flex h-16 items-center border-b border-[#ECECEA]", collapsed ? "justify-center" : "gap-3 px-2")}>
-        <Link href="/overview" onClick={onClose} className="flex items-center gap-3" aria-label="GIDS Overview">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#F48120] text-sm font-bold text-white shadow-sm">G</span>
+        <Link href="/overview" onClick={onClose} className="flex items-center gap-3" aria-label="GIDS Control Center overview">
+          <span className="control-center-mark" aria-hidden="true"><span /></span>
           {!collapsed ? (
             <span className="min-w-0">
-              <span className="block text-sm font-semibold tracking-tight text-[#1D1D1F]">GIDS</span>
-              <span className="block truncate text-[11px] text-[#6B7280]">Control Center</span>
+              <span className="block text-sm font-semibold tracking-tight text-[var(--cc-text-strong)]">GIDS</span>
+              <span className="block truncate text-[11px] font-medium uppercase tracking-[.08em] text-[var(--cc-text-muted)]">Control Center</span>
             </span>
           ) : null}
         </Link>
@@ -99,10 +132,10 @@ export function Sidebar({
   return (
     <>
       {mobileOpen ? (
-        <div className="relative z-50 lg:hidden" role="dialog" aria-modal="true">
+        <div ref={mobileDialogRef} className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Control center navigation">
           <div className="fixed inset-0 bg-black/35" onClick={onClose} />
           <div className="fixed inset-y-0 left-0 w-[286px] shadow-2xl">
-            <button type="button" onClick={onClose} className="absolute right-3 top-3 z-10 rounded-md p-2 text-[#6B7280] hover:bg-[#F7F7F5]" aria-label="Close navigation">
+            <button ref={closeButtonRef} type="button" onClick={onClose} className="absolute right-3 top-3 z-10 rounded-md p-2 text-[var(--cc-text-muted)] hover:bg-[#F7F7F5]" aria-label="Close navigation">
               <X className="h-5 w-5" />
             </button>
             {content}

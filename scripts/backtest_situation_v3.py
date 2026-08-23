@@ -25,8 +25,8 @@ def main() -> int:
     parser.add_argument(
         "--batches",
         type=int,
-        default=20,
-        help="Independent batches per scenario (default: 20).",
+        default=128,
+        help="Independent batches per scenario (default: 128; 384 common families per cadence).",
     )
     parser.add_argument(
         "--series-per-class",
@@ -44,8 +44,14 @@ def main() -> int:
     parser.add_argument(
         "--minimum-complete-null-families",
         type=int,
-        default=80,
+        default=768,
         help="Minimum independent complete-null families required for a conclusive run.",
+    )
+    parser.add_argument(
+        "--minimum-complete-null-families-per-cadence",
+        type=int,
+        default=384,
+        help="Minimum independent common-count null families per cadence; values below 384 are rejected.",
     )
     parser.add_argument(
         "--output",
@@ -66,11 +72,15 @@ def main() -> int:
         seed=args.seed,
         scenarios=selected_scenarios,
         minimum_complete_null_families=args.minimum_complete_null_families,
+        minimum_complete_null_families_per_cadence=(
+            args.minimum_complete_null_families_per_cadence
+        ),
     )
     elapsed_seconds = time.perf_counter() - started_at
     calls_per_batch = sum(
         (2 if scenario.anomaly_duration_source_periods == 1 else 3)
-        + (2 if scenario.key == selected_scenarios[0].key else 0)
+        + (1 if "common_" in scenario.key else 0)
+        + (2 if scenario.key == "weekly_common_sustained_2x" else 0)
         for scenario in selected_scenarios
     )
     diagnostic_calls = int(result.get("diagnostic_model_evaluation_calls", 0))

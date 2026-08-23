@@ -40,6 +40,7 @@ interface Props {
   height?: number;
   sourceMeta?: ChartSourceMeta | null;
   sourceSeriesUrl?: string;
+  initialLanguage?: 'en' | 'zh';
 }
 
 const SERIES_COLORS = [
@@ -165,6 +166,7 @@ export default function EpidemicCurve({
   height = 420,
   sourceMeta = null,
   sourceSeriesUrl,
+  initialLanguage = 'en',
 }: Props) {
   const hasInitialSeries = Boolean(initialSeries && Object.keys(initialSeries).length > 0);
   const remoteDataset = useCountryDataset(dataUrl, !hasInitialSeries);
@@ -219,7 +221,7 @@ export default function EpidemicCurve({
     [effectiveSourceSelection]
   );
   const theme = useChartTheme();
-  const lang = useChartLanguage();
+  const lang = useChartLanguage(initialLanguage);
   const curveState = useEpidemicCurveState({
     series,
     entityIds,
@@ -451,7 +453,7 @@ export default function EpidemicCurve({
   ));
   if (remoteDataset.loadError && Object.keys(series).length === 0) {
     return (
-      <div className="chart-shell flex min-h-[160px] flex-col items-center justify-center gap-3 text-slate-500 text-sm" role="alert">
+      <div className="chart-shell flex min-h-[160px] flex-col items-center justify-center gap-3 text-[rgb(var(--text-muted))] text-sm" role="alert">
         <span>
           {lang === 'zh'
             ? '图表数据加载失败或请求超时。'
@@ -479,7 +481,7 @@ export default function EpidemicCurve({
       );
     }
     return (
-      <div className="chart-shell flex min-h-[160px] items-center justify-center text-sm text-slate-500">
+      <div className="chart-shell flex min-h-[160px] items-center justify-center text-sm text-[rgb(var(--text-muted))]">
         {lang === 'zh' ? '暂无图表数据' : 'No chart data available'}
       </div>
     );
@@ -617,6 +619,8 @@ export default function EpidemicCurve({
         <label className="chart-metric-select">
           <span>{lang === 'zh' ? '指标' : 'Metric'}</span>
           <select
+            id="epidemic-curve-metric"
+            name="epidemic-curve-metric"
             className="site-control-input rounded-none border px-2 py-1.5 text-xs"
             value={curveState.metric}
             onChange={(event) => curveState.setMetric(event.target.value as typeof curveState.metric)}
@@ -700,6 +704,8 @@ export default function EpidemicCurve({
                         {lang === 'zh' ? control.item.name_zh : control.item.name_en}
                       </span>
                       <select
+                        id={`epidemic-curve-source-${control.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
+                        name={`epidemic-curve-source-${control.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
                         className="site-control-input w-full rounded-none border px-2 py-1.5 text-xs"
                         value={control.selectedCode}
                         onChange={(event) => {

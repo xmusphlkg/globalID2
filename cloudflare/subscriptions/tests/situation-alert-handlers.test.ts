@@ -56,6 +56,15 @@ function validAlert() {
       verification_status: "verified",
       verification_basis: "analyst_review",
       verification_policy_version: null,
+      automation_decision: null as null | {
+        status: string;
+        basis: string;
+        policy_version: string;
+        calibration_hash: string;
+        gate_reasons: string[];
+        matched_event_ids: string[];
+        decided_at: string;
+      },
       verified_by: "analyst:17",
       verified_at: "2026-08-17T11:55:00Z",
       observed_at: "2026-08-16T00:00:00Z",
@@ -68,15 +77,26 @@ function validAlert() {
   };
 }
 
-function guardedAutoAlert() {
+function tieredAutoAlert() {
   const payload = validAlert();
   return {
     ...payload,
     signal: {
       ...payload.signal,
       verification_basis: "automated_policy",
-      verification_policy_version: "guarded_auto_v1",
-      verified_by: "policy:guarded_auto_v1",
+      verification_policy_version: "tiered_auto_v3.2",
+      verified_by: "policy:tiered_auto_v3.2",
+      model: "multi_horizon_gamma_poisson_v1",
+      detector_tier: "common_count",
+      automation_decision: {
+        status: "auto_verified",
+        basis: "calibrated_statistical",
+        policy_version: "tiered_auto_v3.2",
+        calibration_hash: "artifact-hash",
+        gate_reasons: [],
+        matched_event_ids: [],
+        decided_at: "2026-08-17T11:55:00Z",
+      },
     },
   };
 }
@@ -126,12 +146,12 @@ test("ingest rejects an unknown automatic verification policy before writing to 
       body: JSON.stringify(payload),
     }), env),
     (error: unknown) => error instanceof HttpError && error.status === 422 &&
-      error.message === "guarded_auto_policy_required",
+      error.message === "tiered_auto_policy_required",
   );
   assert.equal(queried, false);
 });
 
-test("ingest rejects guarded automatic policy by default before writing to D1", async () => {
+test("ingest rejects tiered automatic policy by default before writing to D1", async () => {
   let queried = false;
   const env: Env = {
     DB: database(() => { queried = true; return null; }),
@@ -142,7 +162,7 @@ test("ingest rejects guarded automatic policy by default before writing to D1", 
     handlers.ingest(new Request("https://worker.example.test/api/internal/situation-alerts", {
       method: "POST",
       headers: { authorization: "Bearer ingest-secret", "content-type": "application/json" },
-      body: JSON.stringify(guardedAutoAlert()),
+      body: JSON.stringify(tieredAutoAlert()),
     }), env),
     (error: unknown) => error instanceof HttpError && error.status === 422
       && error.message === "automated_policy_dispatch_disabled",
@@ -162,7 +182,7 @@ test("an explicit Worker flag lets calibrated automatic policy reach persistence
     handlers.ingest(new Request("https://worker.example.test/api/internal/situation-alerts", {
       method: "POST",
       headers: { authorization: "Bearer ingest-secret", "content-type": "application/json" },
-      body: JSON.stringify(guardedAutoAlert()),
+      body: JSON.stringify(tieredAutoAlert()),
     }), env),
     (error: unknown) => error instanceof HttpError && error.status === 500
       && error.message === "situation_alert_not_persisted",

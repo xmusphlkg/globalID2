@@ -27,6 +27,7 @@ interface Props {
   dataUrl?: string;
   height?: number;
   sourceMeta?: ChartSourceMeta | null;
+  initialLanguage?: 'en' | 'zh';
 }
 
 function fromLogValue(value: number) {
@@ -49,7 +50,7 @@ function isSummaryRow(diseaseId?: string, label?: string) {
   return normalizedId === 'd999' || normalizedLabel === 'total' || normalizedLabel === 'summary' || normalizedLabel === '合计';
 }
 
-export default function DiseaseHeatmap({ data = null, series: initialSeries, dataUrl, height = 600, sourceMeta = null }: Props) {
+export default function DiseaseHeatmap({ data = null, series: initialSeries, dataUrl, height = 600, sourceMeta = null, initialLanguage = 'en' }: Props) {
   const hasInitialData = Boolean(
     (data?.z?.length ?? 0) > 0
     || (initialSeries && Object.keys(initialSeries).length > 0)
@@ -60,7 +61,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     : (remoteDataset.data?.heatmap ?? null);
   const series = initialSeries ?? remoteDataset.data?.disease_series;
   const theme = useChartTheme();
-  const lang = useChartLanguage();
+  const lang = useChartLanguage(initialLanguage);
   const [zoomWindow, setZoomWindow] = useState<ZoomWindow>({ startValue: 0, endValue: 13 });
 
   const chartColors = useMemo(() => (
@@ -518,7 +519,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
 
   if (remoteDataset.loadError && !hasData) {
     return (
-      <div className="chart-shell flex min-h-[160px] flex-col items-center justify-center gap-3 text-slate-500 text-sm" role="alert">
+      <div className="chart-shell flex min-h-[160px] flex-col items-center justify-center gap-3 text-[rgb(var(--text-muted))] text-sm" role="alert">
         <span>{lang === 'zh' ? '热图数据加载失败或请求超时。' : 'Heatmap data failed to load or the request timed out.'}</span>
         <button type="button" className="chart-link-btn" onClick={remoteDataset.retry}>
           {lang === 'zh' ? '重新加载' : 'Try again'}
@@ -542,7 +543,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
       );
     }
     return (
-      <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
+      <div className="chart-shell flex items-center justify-center text-[rgb(var(--text-muted))] text-sm min-h-[160px]">
         {lang === 'zh' ? '暂无数据' : 'No data available'}
       </div>
     );

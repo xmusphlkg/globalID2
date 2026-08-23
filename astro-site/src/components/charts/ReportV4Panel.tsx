@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
 import { loadCountryDataset, type CountryDatasetSeriesEntry } from './countryDataset';
 
@@ -16,30 +16,11 @@ interface Props {
   report: AnyRecord;
   countryDataUrl?: string;
   sparklineSeries?: Record<string, SparklineSeriesEntry>;
+  initialLanguage?: Lang;
 }
 
-function useLang(): Lang {
-  // Report pages are rendered in Chinese first. Keep the server and hydration
-  // renders identical, then sync a previously selected language in the effect.
-  const [lang, setLang] = useState<Lang>('zh');
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const root = document.documentElement;
-    const update = () => setLang(root.getAttribute('data-lang') === 'en' ? 'en' : 'zh');
-    update();
-    const observer = new MutationObserver(update);
-    observer.observe(root, { attributes: true, attributeFilter: ['data-lang'] });
-    document.addEventListener('globalid:language-change', update);
-    window.addEventListener('storage', update);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener('globalid:language-change', update);
-      window.removeEventListener('storage', update);
-    };
-  }, []);
-
-  return lang;
+function useLang(initialLanguage: Lang): Lang {
+  return initialLanguage;
 }
 
 function asRecord(value: unknown): AnyRecord {
@@ -178,16 +159,16 @@ function trendBackgroundClass(row: AnyRecord): string {
   if (direction === 'up') return 'bg-red-500/10';
   if (direction === 'down') return 'bg-emerald-500/10';
   if (direction === 'stable') return 'bg-sky-500/10';
-  return 'bg-slate-500/10';
+  return 'bg-[rgb(var(--surface))]';
 }
 
 function changeClass(value: unknown): string {
   const parsed = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(parsed)) return 'text-slate-500';
+  if (!Number.isFinite(parsed)) return 'text-[rgb(var(--text-muted))]';
   if (parsed >= 50) return 'text-red-700 dark:text-red-300';
   if (parsed > 0) return 'text-orange-700 dark:text-orange-300';
   if (parsed < 0) return 'text-emerald-700 dark:text-emerald-300';
-  return 'text-slate-600 dark:text-slate-400';
+  return 'text-[rgb(var(--text-muted))] dark:text-[rgb(var(--text-muted))]';
 }
 
 function directionFromChange(value: unknown): string {
@@ -266,7 +247,7 @@ function curveColorClass(direction?: string, tone: 'monthly' | 'annual' = 'month
   if (direction === 'down') return 'text-emerald-600 dark:text-emerald-300';
   if (direction === 'stable') return 'text-sky-600 dark:text-sky-300';
   if (direction === 'up') return 'text-red-600 dark:text-red-300';
-  return 'text-slate-500 dark:text-slate-400';
+  return 'text-[rgb(var(--text-muted))] dark:text-[rgb(var(--text-muted))]';
 }
 
 function BackgroundCurve({
@@ -339,7 +320,7 @@ function ChangeCurveCell({
       title={title}
     >
       <BackgroundCurve values={values} direction={direction} tone={tone} />
-      <span className="relative z-10 inline-flex min-w-[4.5rem] justify-end bg-white/65 px-1.5 py-0.5 backdrop-blur-[1px] dark:bg-slate-950/55">
+      <span className="relative z-10 inline-flex min-w-[4.5rem] justify-end bg-[rgb(var(--surface)/.65)] px-1.5 py-0.5 backdrop-blur-[1px]">
         {changePct(value)}
       </span>
     </td>
@@ -367,16 +348,17 @@ function CasesMoMCell({
       title={title}
     >
       <BackgroundCurve values={values} direction={direction} tone="monthly" />
-      <span className="relative z-10 inline-flex max-w-full items-baseline justify-end gap-1.5 bg-white/65 px-1.5 py-0.5 backdrop-blur-[1px] dark:bg-slate-950/55">
-        <span className="font-semibold text-slate-900 dark:text-slate-100">{fmtNumber(cases)}</span>
+      <span className="relative z-10 inline-flex max-w-full items-baseline justify-end gap-1.5 bg-[rgb(var(--surface)/.65)] px-1.5 py-0.5 backdrop-blur-[1px]">
+        <span className="font-semibold text-[rgb(var(--text-strong))]">{fmtNumber(cases)}</span>
         <span className={`text-xs font-medium ${changeClass(change)}`}>{changePct(change)}</span>
       </span>
     </td>
   );
 }
 
-export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries }: Props) {
-  const lang = useLang();
+export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries, initialLanguage = 'en' }: Props) {
+  const lang = useLang(initialLanguage);
+  const localePrefix = lang === 'zh' ? '/zh' : '';
   const document = asRecord(report.report_document_v4 || asRecord(report.metadata).report_document_v4 || report);
   const metrics = asRecord(document.metrics);
   const deathReporting = asRecord(document.death_reporting);
@@ -467,10 +449,10 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
   return (
     <div className="space-y-8">
       <section className="figure-panel">
-        <p className="figure-kicker" data-lang-en="Decision brief" data-lang-zh="决策简报">
+        <p className="figure-kicker">
           {lang === 'zh' ? '决策简报' : 'Decision brief'}
         </p>
-        <h2 className="figure-title" data-lang-en="Current judgement and next actions" data-lang-zh="当前判断与下一步动作">
+        <h2 className="figure-title">
           {lang === 'zh' ? '当前判断与下一步动作' : 'Current judgement and next actions'}
         </h2>
         <div className="mt-5 grid gap-3 sm:grid-cols-4">
@@ -485,7 +467,7 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
         {findings.length > 0 && (
           <ul className="mt-5 space-y-2">
             {findings.map((finding, index) => (
-              <li key={`${index}-${finding}`} className="flex gap-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
+              <li key={`${index}-${finding}`} className="flex gap-3 text-sm leading-6 text-[rgb(var(--text-muted))] dark:text-[rgb(var(--text-muted))]">
                 <span className="mt-0.5 text-brand-500">→</span>
                 <span>{finding}</span>
               </li>
@@ -498,18 +480,18 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
         <section className="figure-panel">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <p className="figure-kicker" data-lang-en="Table of contents" data-lang-zh="报告目录">
+              <p className="figure-kicker">
                 {lang === 'zh' ? '报告目录' : 'Table of contents'}
               </p>
-              <h2 className="figure-title" data-lang-en="Disease table of contents" data-lang-zh="按疾病进入本期研判">
+              <h2 className="figure-title">
                 {lang === 'zh' ? '按疾病进入本期研判' : 'Disease table of contents'}
               </h2>
             </div>
-            <div className="flex w-full flex-wrap items-center justify-between gap-2 border border-slate-200 bg-slate-50/70 px-3 py-2 dark:border-slate-800 dark:bg-slate-950/30 lg:w-auto lg:min-w-[520px]">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+            <div className="flex w-full flex-wrap items-center justify-between gap-2 border border-[rgb(var(--border))] bg-[rgb(var(--surface)/.7)] px-3 py-2 lg:w-auto lg:min-w-[520px]">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[rgb(var(--text-muted))]">
                 {lang === 'zh' ? '目录概览' : 'Snapshot'}
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-[rgb(var(--text-muted))]">
                 <DirectoryStat label={lang === 'zh' ? '当前' : 'Shown'} value={`${visibleDirectoryRows.length}/${directoryRows.length}`} />
                 <DirectoryStat label={lang === 'zh' ? '高关注' : 'High attention+'} value={fmtNumber(directoryStats.elevatedAttention)} tone="risk" />
                 <DirectoryStat label={lang === 'zh' ? '上升' : 'Rising'} value={fmtNumber(directoryStats.rising)} tone="up" />
@@ -521,6 +503,8 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
             <label className="block">
               <span className="sr-only">{lang === 'zh' ? '搜索疾病' : 'Search diseases'}</span>
               <input
+                id="report-directory-search"
+                name="report-directory-search"
                 type="search"
                 value={directoryQuery}
                 onChange={(event) => setDirectoryQuery(event.target.value)}
@@ -531,6 +515,8 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
             <label className="block">
               <span className="sr-only">{lang === 'zh' ? '监测关注优先级筛选' : 'Attention-priority filter'}</span>
               <select
+                id="report-attention-filter"
+                name="report-attention-filter"
                 value={directoryAttentionFilter}
                 onChange={(event) => setDirectoryAttentionFilter(event.target.value)}
                 className="site-control-input w-full rounded-none border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -544,6 +530,8 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
             <label className="block">
               <span className="sr-only">{lang === 'zh' ? '趋势筛选' : 'Trend filter'}</span>
               <select
+                id="report-trend-filter"
+                name="report-trend-filter"
                 value={directoryTrendFilter}
                 onChange={(event) => setDirectoryTrendFilter(event.target.value)}
                 className="site-control-input w-full rounded-none border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -557,13 +545,13 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
             </label>
           </div>
 
-          <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+          <p className="mt-3 text-xs leading-5 text-[rgb(var(--text-muted))] dark:text-[rgb(var(--text-muted))]">
             {lang === 'zh'
               ? '监测关注分（0–100）只用于安排信号复核顺序，由报告病例负担、变化、可用死亡线索、异常标记、历史位置和数据质量组成；未经概率校准，不代表感染、重症、死亡或暴发风险。'
               : 'The 0–100 surveillance attention score only orders signal review. It combines reported burden, change, mortality signals when available, anomaly markers, historical position, and data quality; it is uncalibrated and is not infection, severity, mortality, or outbreak risk.'}
           </p>
 
-          <div className="mt-4 h-[560px] overflow-auto border border-slate-200 dark:border-slate-800">
+          <div className="mt-4 h-[560px] overflow-auto border border-[rgb(var(--border))] dark:border-[rgb(var(--border))]">
             <table className="w-[990px] min-w-[990px] table-fixed text-sm">
               <colgroup>
                 <col className="w-[44px]" />
@@ -574,21 +562,21 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
                 <col className="w-[166px]" />
                 <col className="w-[142px]" />
               </colgroup>
-              <thead className="text-xs text-slate-500 dark:text-slate-400">
+              <thead className="text-xs text-[rgb(var(--text-muted))] dark:text-[rgb(var(--text-muted))]">
                 <tr>
-                  <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-left dark:bg-slate-900">#</th>
-                  <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-left dark:bg-slate-900">{lang === 'zh' ? '疾病目录' : 'Disease'}</th>
-                  <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-left dark:bg-slate-900">{lang === 'zh' ? '监测关注级' : 'Attention band'}</th>
-                  <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-right dark:bg-slate-900">{lang === 'zh' ? '病例（环比）' : 'Cases (MoM)'}</th>
-                  <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-right dark:bg-slate-900">{lang === 'zh' ? '报告期病例' : 'Period cases'}</th>
-                  <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-right dark:bg-slate-900">{lang === 'zh' ? '年累计病例' : 'YTD cumulative'}</th>
-                  <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-right dark:bg-slate-900">{lang === 'zh' ? '同比' : 'YoY'}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-left">#</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-left">{lang === 'zh' ? '疾病目录' : 'Disease'}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-left">{lang === 'zh' ? '监测关注级' : 'Attention band'}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{lang === 'zh' ? '病例（环比）' : 'Cases (MoM)'}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{lang === 'zh' ? '报告期病例' : 'Period cases'}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{lang === 'zh' ? '年累计病例' : 'YTD cumulative'}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{lang === 'zh' ? '同比' : 'YoY'}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 text-slate-700 dark:divide-slate-800 dark:text-slate-300">
+              <tbody className="divide-y divide-[rgb(var(--border))] text-[rgb(var(--text-strong))]">
                 {visibleDirectoryRows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">
+                    <td colSpan={7} className="px-3 py-8 text-center text-sm text-[rgb(var(--text-muted))]">
                       {lang === 'zh' ? '没有匹配的疾病。' : 'No diseases matched the current filters.'}
                     </td>
                   </tr>
@@ -601,13 +589,13 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
                   const ytdCases = currentYearCumulativeCases(rowSeries);
                   const diseaseName = lang === 'zh' ? (row.name_zh || row.name_en) : (row.name_en || row.name_zh);
                   const href = countryCode && reportId && row.slug
-                    ? `/countries/${countryCode}/reports/${reportId}/${row.slug}/`
+                    ? `${localePrefix}/countries/${countryCode}/reports/${reportId}/${row.slug}/`
                     : undefined;
                   return (
-                    <tr key={`${row.disease_id || index}`} className="align-top hover:bg-slate-50/70 dark:hover:bg-slate-900/40">
-                      <td className="px-3 py-3 text-slate-500">{index + 1}</td>
+                    <tr key={`${row.disease_id || index}`} className="align-top hover:bg-[rgb(var(--bg-soft)/.7)]">
+                      <td className="px-3 py-3 text-[rgb(var(--text-muted))]">{index + 1}</td>
                       <td className="w-[228px] px-3 py-3">
-                        <div className="w-[204px] whitespace-normal break-words font-medium leading-5 text-slate-900 dark:text-slate-100">
+                        <div className="w-[204px] whitespace-normal break-words font-medium leading-5 text-[rgb(var(--text-strong))]">
                           {href ? (
                             <a className="text-brand-600 hover:underline dark:text-brand-300" href={href}>
                               {diseaseName}
@@ -616,7 +604,7 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
                             diseaseName
                           )}
                         </div>
-                        <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
+                        <div className="mt-1 flex flex-wrap gap-2 text-xs text-[rgb(var(--text-muted))]">
                           {row.disease_id && <span>{row.disease_id}</span>}
                           <span>{categoryLabel(row.category, lang)}</span>
                         </div>
@@ -640,7 +628,7 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
                       </td>
                       <td className="px-3 py-3 text-right tabular-nums" title={currentYearLabel(rowSeries, lang)}>
                         <div>{fmtNumber(ytdCases)}</div>
-                        <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-slate-400">
+                        <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[rgb(var(--text-muted))]">
                           {currentYearLabel(rowSeries, lang)}
                         </div>
                       </td>
@@ -668,7 +656,7 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
               <p className="figure-kicker">{sectionLabel(section.type, lang)}</p>
               <h2 className="figure-title">{localized(section.title, lang)}</h2>
             </div>
-            <span className="mt-2 text-xs uppercase tracking-[0.14em] text-slate-500">
+            <span className="mt-2 text-xs uppercase tracking-[0.14em] text-[rgb(var(--text-muted))]">
               {section.order ? `${lang === 'zh' ? '第' : 'Section '}${section.order}${lang === 'zh' ? '节' : ''}` : ''}
             </span>
           </div>
@@ -683,9 +671,9 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border border-slate-200 bg-slate-50/70 px-4 py-3 dark:border-slate-700/70 dark:bg-slate-900/30">
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className="mt-1 truncate text-lg font-semibold text-slate-900 dark:text-slate-100">{value}</div>
+    <div className="border border-[rgb(var(--border))] bg-[rgb(var(--surface)/.7)] px-4 py-3">
+      <div className="text-xs text-[rgb(var(--text-muted))]">{label}</div>
+      <div className="mt-1 truncate text-lg font-semibold text-[rgb(var(--text-strong))]">{value}</div>
     </div>
   );
 }
@@ -695,11 +683,11 @@ function DirectoryStat({ label, value, tone = 'default' }: { label: string; valu
     ? 'text-orange-700 dark:text-orange-300'
     : tone === 'up'
       ? 'text-red-700 dark:text-red-300'
-      : 'text-slate-900 dark:text-slate-100';
+      : 'text-[rgb(var(--text-strong))]';
 
   return (
     <div className="flex min-w-0 items-baseline gap-1.5 whitespace-nowrap">
-      <span className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{label}</span>
+      <span className="text-[11px] uppercase tracking-[0.12em] text-[rgb(var(--text-muted))]">{label}</span>
       <span className={`font-serif text-lg font-semibold leading-none tabular-nums ${valueClass}`}>
         {value}
       </span>

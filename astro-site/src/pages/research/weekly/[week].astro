@@ -5,10 +5,16 @@ import ResearchCollectionPage from '../../../components/research/ResearchCollect
 import researchData from '../../../data/research/index.json';
 
 export function getStaticPaths() {
-  return ((researchData as any).facets?.weeks ?? []).map((facet: any) => ({ params: { week: facet.week }, props: { facet } }));
+  return ((researchData as any).facets?.weeks ?? []).map((facet: any) => ({ params: { week: facet.week }, props: { facet, week: facet.week, locale: 'en' } }));
 }
 
-const { facet } = Astro.props as { facet: any };
+interface Props { facet?: any; week?: string; locale?: 'en' | 'zh' }
+const { locale = 'en' } = Astro.props as Props;
+const week = (Astro.props as Props).week ?? '';
+const facet = (Astro.props as Props).facet ?? ((researchData as any).facets?.weeks ?? []).find((item: any) => item.week === week);
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const localeHref = (href: string) => zh && href.startsWith('/') ? `${prefix}${href}` : href;
 const file = resolve(`./src/data/research/weekly/${facet.week}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [], top_topics: [] };
 const description = `A source-grounded weekly Research Radar brief for publications dated ${payload.start_date ?? facet.start_date} through ${payload.end_date ?? facet.end_date}.`;
@@ -37,41 +43,42 @@ const reviewedAtZh = reviewer ? `审核于 ${reviewedDate}` : '';
   articles={payload.articles ?? []}
   contextLabel="Papers this week"
   contextLabelZh="本周论文"
+  locale={locale}
 >
   <section slot="context" class="card weekly-context">
-    <p class="academic-kicker" data-lang-en="Week at a glance" data-lang-zh="本周概览">Week at a glance</p>
-    <div class="weekly-grid"><div><strong>{payload.disease_count ?? 0}</strong><span data-lang-en="diseases" data-lang-zh="种疾病">diseases</span></div><div><strong>{payload.country_count ?? 0}</strong><span data-lang-en="countries & regions" data-lang-zh="个国家和地区">countries & regions</span></div><div class="weekly-topics"><span data-lang-en="Leading topics" data-lang-zh="主要主题">Leading topics</span><p>{(payload.top_topics ?? []).join(' · ') || '—'}</p></div></div>
-    <p class="weekly-note" data-lang-en="This brief summarizes publication metadata and classifier links. It is not a risk assessment or a claim about changes in disease incidence." data-lang-zh="本简报汇总发表元数据和分类关系，不是风险评估，也不代表疾病发病情况发生变化。">This brief summarizes publication metadata and classifier links. It is not a risk assessment or a claim about changes in disease incidence.</p>
+    <p class="academic-kicker">{zh ? '本周概览' : 'Week at a glance'}</p>
+    <div class="weekly-grid"><div><strong>{payload.disease_count ?? 0}</strong><span>{zh ? '种疾病' : 'diseases'}</span></div><div><strong>{payload.country_count ?? 0}</strong><span>{zh ? '个国家和地区' : 'countries & regions'}</span></div><div class="weekly-topics"><span>{zh ? '主要主题' : 'Leading topics'}</span><p>{(payload.top_topics ?? []).join(' · ') || '—'}</p></div></div>
+    <p class="weekly-note">{zh ? '本简报汇总发表元数据和分类关系，不是风险评估，也不代表疾病发病情况发生变化。' : 'This brief summarizes publication metadata and classifier links. It is not a risk assessment or a claim about changes in disease incidence.'}</p>
     <div class="weekly-byline">
-      <span data-lang-en={payload.byline?.name_en ?? 'GIDS Research Radar automated compiler'} data-lang-zh={payload.byline?.name_zh ?? 'GIDS Research Radar 自动编译器'}>{payload.byline?.name_en ?? 'GIDS Research Radar automated compiler'}</span>
+      <span>{zh ? payload.byline?.name_zh ?? 'GIDS Research Radar 自动编译器' : payload.byline?.name_en ?? 'GIDS Research Radar automated compiler'}</span>
       {reviewer ? (
         <div class="weekly-review" data-review-status="editorially-reviewed">
-          <strong data-lang-en={reviewedByEn} data-lang-zh={reviewedByZh}>{reviewedByEn}</strong>
+          <strong>{zh ? reviewedByZh : reviewedByEn}</strong>
           {reviewer.institution && <span>{reviewer.institution}</span>}
-          <time datetime={reviewer.reviewed_at} data-lang-en={reviewedAtEn} data-lang-zh={reviewedAtZh}>{reviewedAtEn}</time>
-          {reviewer.note_en && reviewer.note_zh && <p data-lang-en={reviewer.note_en} data-lang-zh={reviewer.note_zh}>{reviewer.note_en}</p>}
+          <time datetime={reviewer.reviewed_at}>{zh ? reviewedAtZh : reviewedAtEn}</time>
+          {reviewer.note_en && reviewer.note_zh && <p>{zh ? reviewer.note_zh : reviewer.note_en}</p>}
         </div>
       ) : (
-        <strong data-review-status="not-editorially-reviewed" data-lang-en="Automatically compiled · not editorially reviewed" data-lang-zh="自动编译 · 未经编辑审核">Automatically compiled · not editorially reviewed</strong>
+        <strong data-review-status="not-editorially-reviewed">{zh ? '自动编译 · 未经编辑审核' : 'Automatically compiled · not editorially reviewed'}</strong>
       )}
     </div>
   </section>
 
   {citedFindings.length > 0 && (
     <section slot="context" class="card weekly-evidence-section">
-      <p class="academic-kicker" data-lang-en="Cited evidence" data-lang-zh="有引用的证据">Cited evidence</p>
-      <h2 data-lang-en="Source-level findings this week" data-lang-zh="本周来源层面发现">Source-level findings this week</h2>
-      <ol>{citedFindings.map((finding: any) => <li><a href={finding.source_url}><strong>{finding.title}</strong><p data-lang-en={finding.finding_en} data-lang-zh={finding.finding_zh}>{finding.finding_en}</p><span>{finding.doi ? `DOI ${finding.doi}` : 'GIDS evidence record'} →</span></a></li>)}</ol>
+      <p class="academic-kicker">{zh ? '有引用的证据' : 'Cited evidence'}</p>
+      <h2>{zh ? '本周来源层面发现' : 'Source-level findings this week'}</h2>
+      <ol>{citedFindings.map((finding: any) => <li><a href={finding.source_url}><strong>{finding.title}</strong><p>{zh ? finding.finding_zh ?? finding.finding_en : finding.finding_en}</p><span>{finding.doi ? `DOI ${finding.doi}` : (zh ? 'GIDS 证据记录' : 'GIDS evidence record')} →</span></a></li>)}</ol>
     </section>
   )}
 
   {(monitoringContext.length > 0 || evidenceGaps.length > 0) && (
     <section slot="context" class="card weekly-evidence-section">
-      <p class="academic-kicker" data-lang-en="Monitoring context" data-lang-zh="监测背景">Monitoring context</p>
-      <h2 data-lang-en="Signals and catalogue coverage" data-lang-zh="信号与目录覆盖">Signals and catalogue coverage</h2>
-      {monitoringContext.length > 0 && <div class="weekly-monitoring-list">{monitoringContext.map((signal: any) => <a href={signal.situation_url ?? '/situation/'}><strong data-lang-en={signal.title ?? signal.disease_name_en} data-lang-zh={signal.disease_name_zh ?? signal.title ?? signal.disease_name_en}>{signal.title ?? signal.disease_name_en}</strong><span>{(signal.geographies ?? []).map((item: any) => item.name_en).join(' · ') || 'Geography unavailable'} · {signal.data_through ?? '—'}</span><em>{String(signal.relation_level ?? 'context').replaceAll('_', ' ')}</em></a>)}</div>}
-      {evidenceGaps.length > 0 && <div class="weekly-gap-list"><h3 data-lang-en="Open catalogue evidence gaps" data-lang-zh="公开目录证据缺口">Open catalogue evidence gaps</h3>{evidenceGaps.map((gap: any) => <article><strong data-lang-en={gap.disease_name_en} data-lang-zh={gap.disease_name_zh ?? gap.disease_name_en}>{gap.disease_name_en}</strong><p data-lang-en={gap.note_en} data-lang-zh={gap.note_zh}>{gap.note_en}</p></article>)}</div>}
-      <p class="weekly-note" data-lang-en={payload.methodology?.en} data-lang-zh={payload.methodology?.zh}>{payload.methodology?.en}</p>
+      <p class="academic-kicker">{zh ? '监测背景' : 'Monitoring context'}</p>
+      <h2>{zh ? '信号与目录覆盖' : 'Signals and catalogue coverage'}</h2>
+      {monitoringContext.length > 0 && <div class="weekly-monitoring-list">{monitoringContext.map((signal: any) => <a href={localeHref(signal.situation_url ?? '/situation/')}><strong>{zh ? signal.disease_name_zh ?? signal.title ?? signal.disease_name_en : signal.title ?? signal.disease_name_en}</strong><span>{(signal.geographies ?? []).map((item: any) => zh ? item.name_zh ?? item.name_en : item.name_en).join(' · ') || (zh ? '地理范围暂缺' : 'Geography unavailable')} · {signal.data_through ?? '—'}</span><em>{String(signal.relation_level ?? 'context').replaceAll('_', ' ')}</em></a>)}</div>}
+      {evidenceGaps.length > 0 && <div class="weekly-gap-list"><h3>{zh ? '公开目录证据缺口' : 'Open catalogue evidence gaps'}</h3>{evidenceGaps.map((gap: any) => <article><strong>{zh ? gap.disease_name_zh ?? gap.disease_name_en : gap.disease_name_en}</strong><p>{zh ? gap.note_zh ?? gap.note_en : gap.note_en}</p></article>)}</div>}
+      <p class="weekly-note">{zh ? payload.methodology?.zh ?? payload.methodology?.en : payload.methodology?.en}</p>
     </section>
   )}
 </ResearchCollectionPage>
@@ -81,7 +88,7 @@ const reviewedAtZh = reviewer ? `审核于 ${reviewedDate}` : '';
   .weekly-grid { display: grid; grid-template-columns: 8rem 8rem minmax(0, 1fr); gap: 1rem; margin-top: 1rem; }
   .weekly-grid > div { border-left: 1px solid rgb(var(--border)); padding-left: 1rem; }
   .weekly-grid > div:first-child { padding-left: 0; border-left: 0; }
-  .weekly-grid strong { display: block; color: rgb(var(--text-strong)); font: 600 1.75rem/1 'Source Serif 4', serif; }
+  .weekly-grid strong { display: block; color: rgb(var(--text-strong)); font: 600 1.75rem/1 'IBM Plex Sans', sans-serif; }
   .weekly-grid span { display: block; margin-top: .35rem; color: rgb(var(--text-faint)); font-size: .65rem; }
   .weekly-topics p { margin-top: .4rem; color: rgb(var(--text)); font-size: .78rem; line-height: 1.5; }
   .weekly-note { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgb(var(--border) / .64); color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.55; }
@@ -91,17 +98,17 @@ const reviewedAtZh = reviewer ? `审核于 ${reviewedDate}` : '';
   .weekly-review span, .weekly-review time { color: rgb(var(--text-faint)); }
   .weekly-review p { max-width: 46rem; color: rgb(var(--text-muted)); line-height: 1.5; }
   .weekly-evidence-section { margin-top: 1rem; padding: clamp(1.25rem, 3vw, 2rem); }
-  .weekly-evidence-section h2 { margin-top: .35rem; color: rgb(var(--text-strong)); font: 600 1.45rem/1.15 'Source Serif 4', serif; }
+  .weekly-evidence-section h2 { margin-top: .35rem; color: rgb(var(--text-strong)); font: 600 1.45rem/1.15 'IBM Plex Sans', sans-serif; }
   .weekly-evidence-section ol, .weekly-monitoring-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin-top: 1rem; }
   .weekly-evidence-section li, .weekly-monitoring-list a, .weekly-gap-list article { border: 1px solid rgb(var(--border) / .68); background: rgb(var(--surface-raised) / .3); padding: .9rem; }
-  .weekly-evidence-section li strong, .weekly-monitoring-list strong, .weekly-gap-list strong { display: block; color: rgb(var(--text-strong)); font: 600 .95rem/1.3 'Source Serif 4', serif; }
+  .weekly-evidence-section li strong, .weekly-monitoring-list strong, .weekly-gap-list strong { display: block; color: rgb(var(--text-strong)); font: 600 .95rem/1.3 'IBM Plex Sans', sans-serif; }
   .weekly-evidence-section li p, .weekly-gap-list p { margin-top: .5rem; color: rgb(var(--text-muted)); font-size: .74rem; line-height: 1.6; }
   .weekly-evidence-section li span, .weekly-monitoring-list span, .weekly-monitoring-list em { display: block; margin-top: .45rem; color: rgb(var(--text-faint)); font-size: .62rem; font-style: normal; }
   .weekly-monitoring-list em { color: rgb(var(--color-accent)); text-transform: capitalize; }
   .weekly-gap-list { margin-top: 1.2rem; }
   .weekly-gap-list h3 { color: rgb(var(--text-strong)); font-size: .8rem; }
   .weekly-gap-list article { margin-top: .55rem; }
-  @media (max-width: 620px) { .weekly-grid { grid-template-columns: 1fr 1fr; } .weekly-topics { grid-column: 1 / -1; padding-top: 1rem; border-top: 1px solid rgb(var(--border)); border-left: 0 !important; padding-left: 0 !important; } }
+  @media (max-width: 620px) { .weekly-grid { grid-template-columns: 1fr 1fr; } .weekly-grid .weekly-topics { grid-column: 1 / -1; padding-top: 1rem; padding-left: 0; border-top: 1px solid rgb(var(--border)); border-left: 0; } }
   @media (max-width: 620px) { .weekly-review { justify-items: start; text-align: left; } }
   @media (max-width: 620px) { .weekly-evidence-section ol, .weekly-monitoring-list { grid-template-columns: 1fr; } }
 </style>

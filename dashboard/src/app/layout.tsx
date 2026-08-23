@@ -4,19 +4,19 @@ import { Providers } from "@/components/Providers";
 import { AppShell } from "@/shared/layout/AppShell";
 
 export const metadata: Metadata = {
-  applicationName: "GIDS Dashboard",
+  applicationName: "GIDS Control Center",
   title: {
-    default: "GIDS Dashboard",
-    template: "%s | GIDS Dashboard",
+    default: "GIDS Control Center",
+    template: "%s | GIDS Control Center",
   },
-  description: "GIDS disease surveillance dashboard",
+  description: "GIDS operations, data quality, and publication control center",
   manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#F7F7F5",
+  themeColor: "#B54708",
 };
 
 export default function RootLayout({
@@ -26,11 +26,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-      </head>
-      <body className="h-full bg-tremor-background-subtle text-tremor-content-strong antialiased m-0">
+      <body className="m-0 h-full bg-tremor-background-subtle text-tremor-content-strong antialiased">
         <Providers>
           <AppShell>
             {children}

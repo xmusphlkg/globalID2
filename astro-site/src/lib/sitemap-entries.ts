@@ -98,9 +98,11 @@ export const STATIC_SITEMAP_PATHS = [
   '/about/',
   '/changelog/',
   '/subscribe/',
+  '/copyright/',
   '/terms/',
   '/countries/',
   '/diseases/',
+  '/downloads/',
 ] as const;
 
 export const SITEMAP_GROUPS = [
@@ -225,11 +227,11 @@ export function buildSitemapGroups({
 
   if (research) {
     const researchLastmod = normalizeSitemapDate(research.last_updated) ?? siteLastmod;
-    groups.research.push({ path: '/research/', lastmod: researchLastmod });
-    groups.research.push({ path: '/research/ask/', lastmod: researchLastmod });
-    groups.research.push({ path: '/research/graph/', lastmod: researchLastmod });
-    groups.research.push({ path: '/research/integrity/', lastmod: researchLastmod });
-    groups.research.push({ path: '/research/preprints/', lastmod: researchLastmod });
+    groups.research.push(...localizedEntry('/research/', researchLastmod));
+    groups.research.push(...localizedEntry('/research/ask/', researchLastmod));
+    groups.research.push(...localizedEntry('/research/graph/', researchLastmod));
+    groups.research.push(...localizedEntry('/research/integrity/', researchLastmod));
+    groups.research.push(...localizedEntry('/research/preprints/', researchLastmod));
     groups.research.push({ path: '/research/rss.xml', lastmod: researchLastmod });
     for (const feed of buildResearchFeedDefinitions(research as ResearchFeedData)) {
       groups.research.push({ path: feed.path, lastmod: researchLastmod });
@@ -241,26 +243,23 @@ export function buildSitemapGroups({
       if (article.indexable === false) continue;
       const slug = pathSegment(article.slug, true);
       if (!slug) continue;
-      groups.research.push({
-        path: `/research/articles/${slug}/`,
-        lastmod: normalizeSitemapDate(article.updated_at ?? article.published_at) ?? researchLastmod,
-      });
+      groups.research.push(...localizedEntry(`/research/articles/${slug}/`, normalizeSitemapDate(article.updated_at ?? article.published_at) ?? researchLastmod));
     }
     for (const disease of research.facets?.diseases ?? []) {
       const slug = pathSegment(disease.slug, true);
-      if (slug) groups.research.push({ path: `/research/diseases/${slug}/`, lastmod: researchLastmod });
+      if (slug) groups.research.push(...localizedEntry(`/research/diseases/${slug}/`, researchLastmod));
     }
     for (const country of research.facets?.countries ?? []) {
       const slug = pathSegment(country.slug ?? country.code, true);
-      if (slug) groups.research.push({ path: `/research/countries/${slug}/`, lastmod: researchLastmod });
+      if (slug) groups.research.push(...localizedEntry(`/research/countries/${slug}/`, researchLastmod));
     }
     for (const topic of research.facets?.topics ?? []) {
       const slug = pathSegment(topic.slug, true);
-      if (slug) groups.research.push({ path: `/research/topics/${slug}/`, lastmod: researchLastmod });
+      if (slug) groups.research.push(...localizedEntry(`/research/topics/${slug}/`, researchLastmod));
     }
     for (const brief of research.facets?.weeks ?? []) {
       const week = typeof brief.week === 'string' && /^\d{4}-W\d{2}$/.test(brief.week) ? brief.week : null;
-      if (week) groups.research.push({ path: `/research/weekly/${week}/`, lastmod: researchLastmod });
+      if (week) groups.research.push(...localizedEntry(`/research/weekly/${week}/`, researchLastmod));
     }
   }
 

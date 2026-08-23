@@ -19,7 +19,14 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_logger
-from src.data.crawlers.tw import DEFAULT_SOURCE_NAME, TWFetchSummary, TaiwanNIDSSCrawler
+from src.data.crawlers.tw import (
+    DEFAULT_MONTHLY_CSV_TEMPLATE,
+    DEFAULT_SOURCE_NAME,
+    TWDiseaseSource,
+    TWFetchSummary,
+    TaiwanNIDSSCrawler,
+    aggregate_monthly_csv_rows,
+)
 from src.data.processors.mapping_lookup import (
     load_country_mapping_dict,
     normalize_mapping_key,
@@ -198,10 +205,17 @@ class TWMonthlyUpdater:
             if prior_rows and self._rows_cover_months(prior_rows, requested_months)
             else []
         )
+        raw_candidate = self._load_raw_monthly_rows(
+            requested_months,
+            raw_dir=actual_raw_dir,
+            prior_rows=prior_rows,
+        )
 
         candidates: List[Tuple[str, List[Dict[str, str]], int]] = []
         if live_rows:
             candidates.append(("live fetch", live_rows, 1))
+        if raw_candidate:
+            candidates.append(("raw monthly cache", raw_candidate, 0))
         if prior_candidate:
             candidates.append(("previous CSV snapshot", prior_candidate, 0))
 
@@ -213,6 +227,7 @@ class TWMonthlyUpdater:
         selected_label, rows, _ = max(candidates, key=lambda item: (len(item[1]), item[2]))
         if selected_label != "live fetch":
             logs.append(f"[recovery] using {selected_label} with {len(rows)} rows")
+            self._write_rows(self.output_csv, rows)
 
         return TWUpdateFetchResult(
             rows=rows,
@@ -268,6 +283,106 @@ class TWMonthlyUpdater:
 
         rows.sort(key=lambda r: (r["Date"], r["RawDiseaseLabel"]))
         return rows
+
+    def _load_raw_monthly_rows(
+        self,
+        months: List[Tuple[int, int]],
+        *,
+        raw_dir: Path,
+        prior_rows: List[Dict[str, str]],
+    ) -> List[Dict[str, str]]:
+        monthly_dir = raw_dir / "monthly"
+        if not monthly_dir.exists():
+            return []
+
+        labels_by_code = {
+            _norm_text(row.get("DiseaseCode")): _norm_text(row.get("RawDiseaseLabel"))
+            for row in prior_rows
+            if _norm_text(row.get("DiseaseCode")) and _norm_text(row.get("RawDiseaseLabel"))
+        }
+        target_months = set(months)
+        rows: List[Dict[str, str]] = []
+        for path in sorted(monthly_dir.glob("*.csv")):
+            code = path.stem
+            label = labels_by_code.get(code) or code
+            disease = TWDiseaseSource(
+                code=code,
+                name=label,
+                monthly_csv_url=DEFAULT_MONTHLY_CSV_TEMPLATE.format(disease_code=code),
+                weekly_csv_url="",
+            )
+            try:
+                detail_rows = TaiwanNIDSSCrawler._parse_csv_rows(
+                    path.read_text(encoding="utf-8-sig")
+                )
+            except Exception as exc:
+                logger.warning(
+                    "TW raw monthly cache skipped | path={} error={}",
+                    path,
+                    exc,
+                )
+                continue
+            rows.extend(
+                aggregate_monthly_csv_rows(
+                    disease,
+                    detail_rows,
+                    months=target_months,
+                )
+            )
+
+        if not rows:
+            return []
+        rows = self._filter_rows_for_months(rows, months)
+        today = datetime.now(timezone.utc).date()
+        for row in rows:
+            report_date = _parse_date(row)
+            if report_date is None:
+                continue
+            is_open_month = (report_date.year, report_date.month) == (
+                today.year,
+                today.month,
+            )
+            row["DatasetStatus"] = (
+                "provisional" if is_open_month else "closed_revisable"
+            )
+            row["IsProvisional"] = "true" if is_open_month else "false"
+        rows.sort(key=lambda r: (r["Date"], r["RawDiseaseLabel"]))
+        return rows
+
+    def _write_rows(self, csv_path: Path, rows: List[Dict[str, str]]) -> None:
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        fieldnames = [
+            "",
+            "Disease",
+            "DiseaseCode",
+            "Year",
+            "Month",
+            "Date",
+            "Cases",
+            "LocalCases",
+            "ImportedCases",
+            "Source",
+            "SourceURL",
+        ]
+        with csv_path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames)
+            writer.writeheader()
+            for idx, row in enumerate(rows, start=1):
+                writer.writerow(
+                    {
+                        "": str(idx),
+                        "Disease": row.get("RawDiseaseLabel", ""),
+                        "DiseaseCode": row.get("DiseaseCode", ""),
+                        "Year": row.get("Year", ""),
+                        "Month": row.get("Month", ""),
+                        "Date": row.get("Date", ""),
+                        "Cases": row.get("Cases", "0"),
+                        "LocalCases": row.get("LocalCases", "0"),
+                        "ImportedCases": row.get("ImportedCases", "0"),
+                        "Source": row.get("Source", self.source_name),
+                        "SourceURL": row.get("SourceURL", ""),
+                    }
+                )
 
     @staticmethod
     def _latest_row_date(rows: List[Dict[str, str]]) -> Optional[date]:

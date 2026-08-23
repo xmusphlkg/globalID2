@@ -1,16 +1,71 @@
 {
-  "schema_version": "situation_room.v2",
+  "schema_version": "situation_room.v3.2",
   "method_version": "situation_room_v2.0",
   "public_enabled": true,
   "v3": {
-    "method_version": "situation_room_v3.1",
-    "model": "robust_quasi_poisson_v1",
+    "method_version": "situation_room_v3.2",
+    "model": "multi_horizon_gamma_poisson_v1",
     "alert_q": 0.05,
     "strong_q": 0.01,
-    "predictive_variance_inflation": 2.0,
     "fdr_method": "benjamini_hochberg",
     "fdr_family": "detector_tier_metric_type_cadence",
     "maximum_analysis_workers": 4,
+    "detectors": {
+      "multi_horizon": {
+        "enabled": true,
+        "version": "multi_horizon_gamma_poisson_v1",
+        "horizons": {
+          "weekly": [1, 2, 4],
+          "monthly": [1, 2]
+        },
+        "production_draws": 2048,
+        "calibration_draws": 8192
+      }
+    },
+    "effect_gates": {
+      "weekly": {
+        "common_count": [
+          {
+            "minimum_expected": 20,
+            "maximum_expected": 100,
+            "effect": {
+              "minimum_current_cases": 20,
+              "minimum_absolute_increase": 10,
+              "minimum_relative_increase_pct": 25
+            }
+          },
+          {
+            "minimum_expected": 100,
+            "effect": {
+              "minimum_current_cases": 20,
+              "minimum_absolute_increase": 10,
+              "minimum_relative_increase_pct": 20
+            }
+          }
+        ]
+      },
+      "monthly": {
+        "common_count": [
+          {
+            "minimum_expected": 20,
+            "maximum_expected": 100,
+            "effect": {
+              "minimum_current_cases": 20,
+              "minimum_absolute_increase": 10,
+              "minimum_relative_increase_pct": 25
+            }
+          },
+          {
+            "minimum_expected": 100,
+            "effect": {
+              "minimum_current_cases": 20,
+              "minimum_absolute_increase": 10,
+              "minimum_relative_increase_pct": 20
+            }
+          }
+        ]
+      }
+    },
     "detector_tiers": {
       "rare_expected_max": 20,
       "enable_empirical_fallback": true,
@@ -27,14 +82,52 @@
     "require_verified_signals": true,
     "auto_verification": {
       "enabled": false,
-      "policy_version": "guarded_auto_v1",
-      "calibration_decision": "not_yet_supported",
-      "maximum_q": 0.01,
+      "mode": "off",
+      "kill_switch": true,
+      "policy_version": "tiered_auto_v3.2",
+      "calibration_hash": null,
+      "calibration_definition_hash": null,
+      "minimum_complete_null_families": 384,
+      "maximum_false_publication_upper_95": 0.025,
+      "minimum_sensitivity": 0.8,
+      "maximum_median_delay_periods": 1.0,
       "minimum_completeness": 0.95,
-      "require_current": true,
-      "require_evidence_link": true,
-      "allowed_fit_statuses": ["completed"],
-      "allowed_detector_tiers": ["common_count", "rare_count"]
+      "groups": {
+        "weekly.common_count": {
+          "enabled": false,
+          "maximum_q": 0.0,
+          "complete_null_family_trials": 0,
+          "false_publication_upper_95": null,
+          "sensitivity": null,
+          "median_detection_delay_periods": null,
+          "allowed_source_systems": [],
+          "canary_source_systems": [],
+          "authoritative_source_domains": []
+        },
+        "monthly.common_count": {
+          "enabled": false,
+          "maximum_q": 0.0,
+          "complete_null_family_trials": 0,
+          "false_publication_upper_95": null,
+          "sensitivity": null,
+          "median_detection_delay_periods": null,
+          "allowed_source_systems": [],
+          "canary_source_systems": [],
+          "authoritative_source_domains": []
+        }
+      },
+      "official_corroboration": {
+        "enabled": false
+      }
+    },
+    "official_evidence": {
+      "match_window_periods": 2,
+      "authoritative_domains": [
+        "who.int",
+        "ecdc.europa.eu",
+        "africacdc.org",
+        "paho.org"
+      ]
     },
     "automatic_triage": {
       "enabled": true,

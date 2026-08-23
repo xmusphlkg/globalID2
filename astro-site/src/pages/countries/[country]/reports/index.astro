@@ -7,19 +7,49 @@ import {
   reportsForCountry,
 } from '../../../../lib/report-routes';
 import { readPublishableReports } from '../../../../lib/report-data';
+import { loadCountry } from '../../../../lib/seo-page-data';
+import { buildAlternatePaths } from '../../../../lib/seo';
+
+interface Props {
+  countryCode?: string;
+  locale?: 'en' | 'zh';
+}
 
 export async function getStaticPaths() {
   return reportArchiveCountries(readPublishableReports()).map(country => ({
     params: { country },
+    props: { countryCode: country, locale: 'en' },
   }));
 }
 
-const { country } = Astro.params;
+const { countryCode, locale = 'en' } = Astro.props as Props;
+const country = countryCode ?? Astro.params.country;
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const localeHref = (href: string) => `${prefix}${href}`;
 const fallbackCountryCode = String(country ?? '').toUpperCase();
 
 const reports = reportsForCountry(readPublishableReports(), country) as any[];
 
-const countryName = reports[0]?.country_name ?? fallbackCountryCode;
+const countryData = loadCountry(String(country));
+const countryNameEn = reports[0]?.country_name_en ?? reports[0]?.country_name ?? countryData?.country_name_en ?? fallbackCountryCode;
+const countryNameZh = reports[0]?.country_name_local ?? countryData?.country_name_zh ?? countryNameEn;
+const countryName = zh ? countryNameZh : countryNameEn;
+const canonicalPath = localeHref(`/countries/${country}/reports/`);
+const seo = {
+  title: zh ? `${countryNameZh}监测报告 | GIDS` : `${countryNameEn} Surveillance Reports | GIDS`,
+  description: zh ? `浏览${countryNameZh}的全部传染病监测报告。` : `Browse all infectious-disease surveillance reports for ${countryNameEn}.`,
+  locale,
+  canonicalPath,
+  alternatePaths: buildAlternatePaths(canonicalPath, locale),
+  pageType: 'CollectionPage',
+} as const;
+
+const reportTypeLabel = (type: string) => {
+  const key = type.toUpperCase();
+  if (!zh) return `${key.charAt(0)}${key.slice(1).toLowerCase()} Reports`;
+  return ({ DAILY: '日报', WEEKLY: '周报', MONTHLY: '月报', QUARTERLY: '季报', ANNUAL: '年报' } as Record<string, string>)[key] ?? '其他报告';
+};
 
 // Group by report type
 const byType: Record<string, any[]> = {};
@@ -31,30 +61,32 @@ for (const r of reports) {
 ---
 
 <ReportLayout
-  title={`${countryName} Reports`}
-  description={`All surveillance reports for ${countryName}`}
+  title={seo.title}
+  description={seo.description}
+  initialLanguage={locale}
+  seo={seo}
   breadcrumbs={[
-    { label: 'Countries', href: '/countries/' },
-    { label: countryName, href: `/countries/${country}/` },
-    { label: 'Reports' },
+    { label: 'Countries', labelZh: '国家/地区', href: localeHref('/countries/') },
+    { label: countryNameEn, labelZh: countryNameZh, href: localeHref(`/countries/${country}/`) },
+    { label: 'Reports', labelZh: '报告' },
   ]}
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <div class="mb-10">
-      <h1 class="text-3xl font-bold text-slate-100 mb-2">
-        {countryName}&nbsp;<span class="text-slate-500 font-normal" data-lang-en="Reports" data-lang-zh="报告">Reports</span>
+      <h1 class="text-3xl font-bold text-[rgb(var(--text-strong))] mb-2">
+        {countryName}&nbsp;<span class="text-[rgb(var(--text-muted))] font-normal">{zh ? '报告' : 'Reports'}</span>
       </h1>
-      <p class="text-slate-500 text-sm">
-        {reports.length}&nbsp;<span data-lang-en="reports generated" data-lang-zh="份已生成报告">reports generated</span>
+      <p class="text-[rgb(var(--text-muted))] text-sm">
+        {reports.length}&nbsp;<span>{zh ? '份已生成报告' : 'reports generated'}</span>
       </p>
     </div>
 
     {Object.entries(byType).map(([type, reps]) => (
       <div class="mb-12">
-        <h2 class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-5 flex items-center gap-2">
+        <h2 class="text-[rgb(var(--text-muted))] text-xs font-semibold uppercase tracking-widest mb-5 flex items-center gap-2">
           <span class="inline-block w-2 h-2 rounded-full bg-brand-500" />
-          {type.charAt(0) + type.slice(1).toLowerCase()} Reports
-          <span class="text-slate-600 font-normal">({reps.length})</span>
+          {reportTypeLabel(type)}
+          <span class="text-[rgb(var(--text-muted))] font-normal">({reps.length})</span>
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {reps.map((r: any) => (
@@ -66,9 +98,10 @@ for (const r of reports) {
               periodEnd={r.period_end}
               createdAt={r.created_at}
               countryCode={r.country_code}
-              countryName={r.country_name}
+              countryName={zh ? countryNameZh : r.country_name}
               qualityScore={r.quality_score}
               summary={r.summary}
+              locale={locale}
             />
           ))}
         </div>
@@ -76,10 +109,8 @@ for (const r of reports) {
     ))}
 
     {reports.length === 0 && (
-      <div class="text-center py-24 text-slate-500">
-        <p data-lang-en="No reports available for this country." data-lang-zh="该国家暂无报告。">
-          No reports available for this country.
-        </p>
+      <div class="text-center py-24 text-[rgb(var(--text-muted))]">
+        <p>{zh ? '该国家暂无报告。' : 'No reports available for this country.'}</p>
       </div>
     )}
   </div>

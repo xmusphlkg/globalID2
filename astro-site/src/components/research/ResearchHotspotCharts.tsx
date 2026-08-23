@@ -121,6 +121,7 @@ type ChartKey = 'stream' | 'heatmap' | 'burst' | 'migration';
 
 interface Props {
   hotspots: Hotspots;
+  initialLanguage?: 'en' | 'zh';
 }
 
 function escapeHtml(value: unknown) {
@@ -150,8 +151,8 @@ function periodDisplay(value: string, periods: AlluvialPeriod[]) {
   return period?.label ?? periodShort(value);
 }
 
-export default function ResearchHotspotCharts({ hotspots }: Props) {
-  const lang = useChartLanguage();
+export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en' }: Props) {
+  const lang = useChartLanguage(initialLanguage);
   const theme = useChartTheme();
   const [active, setActive] = useState<ChartKey>('stream');
   const [isChartReady, setIsChartReady] = useState(false);
@@ -666,7 +667,7 @@ export default function ResearchHotspotCharts({ hotspots }: Props) {
         .research-chart-switcher .chart-toggle + .chart-toggle { border-left: 0; }
         .research-hotspot-plot { position: relative; width: 100%; min-height: 0; overflow: hidden; }
         .research-flow-axis { position: absolute; z-index: 1; left: 16%; right: 16%; top: .45rem; height: 2.25rem; pointer-events: none; }
-        .research-flow-axis span { position: absolute; top: 0; display: grid; justify-items: center; min-width: 4.8rem; color: rgb(var(--text-muted)); font: 700 .72rem/1.1 'Source Sans 3', sans-serif; }
+        .research-flow-axis span { position: absolute; top: 0; display: grid; justify-items: center; min-width: 4.8rem; color: rgb(var(--text-muted)); font: 700 .72rem/1.1 'IBM Plex Sans', sans-serif; }
         .research-flow-axis i { display: block; width: 1px; height: .62rem; margin-bottom: .32rem; background: rgb(var(--border) / .82); }
         .research-flow-axis b { font-weight: 700; white-space: nowrap; }
         .research-hotspot-loading { position: absolute; z-index: 2; inset: 1rem; display: grid; place-items: center; background: rgb(var(--surface) / .78); color: rgb(var(--text-muted)); font-size: .75rem; pointer-events: none; }
