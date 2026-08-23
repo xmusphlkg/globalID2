@@ -56,12 +56,16 @@ def test_fixture_snapshot_builds_latest_month_week_json_and_seo(tmp_path: Path) 
         sitemap = (ASTRO / "dist" / "sitemaps" / "situation.xml").read_text(encoding="utf-8")
         home = (ASTRO / "dist" / "index.html").read_text(encoding="utf-8")
 
-        assert "Today's review brief" in home and "Example disease" in home
+        assert "Global infectious disease surveillance" in home
+        assert "What needs attention now" in home
+        assert "Official events" in home and "Published signals" in home
+        assert "Open the full situation review" in home
         assert 'rel="canonical" href="https://globalinfectiousdisease.com/situation/"' in latest
         assert 'hreflang="zh-CN"' in latest
         assert '"@type":"Report"' in latest and '"@type":"Dataset"' in latest
         assert "Monthly Infectious Disease Situation — 2026-08" in month
-        assert 'data-lang-zh="修订版"' in month and ">revision</i> 1" in month
+        assert "Aug 1, 2026" in month and "Aug 31, 2026" in month
+        assert "revision</i> 1" in month
         assert "2026-W33" in week
         assert "/situation/weekly/2026-W33/" in legacy_week
         assert "https://globalinfectiousdisease.com/situation/monthly/2026-08/" in sitemap
