@@ -23,6 +23,10 @@ from src.services.situation_v3.configuration import (  # noqa: E402
 from src.services.situation_v3.persistence import record_calibration_run_v3  # noqa: E402
 
 
+EXPECTED_METHOD = "stratified_seasonal_overdispersed_weekly_monthly_simulation_v3_2"
+REQUIRED_GROUPS = {"weekly.common_count", "monthly.common_count"}
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("artifact", type=Path)
@@ -74,6 +78,42 @@ def _group_is_supported(group: dict[str, Any]) -> bool:
     )
 
 
+def _acceptance_failure_reasons(
+    artifact: dict[str, Any],
+    *,
+    current_config_hash: str,
+    current_definition_hash: str,
+) -> list[str]:
+    groups = artifact.get("calibration_groups") or {}
+    missing_groups = sorted(REQUIRED_GROUPS.difference(groups))
+    artifact_config_hash = str(artifact.get("config_hash") or "")
+    artifact_definition_hash = str(
+        artifact.get("calibration_definition_hash") or ""
+    )
+    fdr = artifact.get("fdr_assessment") or {}
+    reasons: list[str] = []
+    if artifact.get("method") != EXPECTED_METHOD:
+        reasons.append("method_mismatch")
+    if not artifact.get("simulation_protocol_hash"):
+        reasons.append("simulation_protocol_hash_missing")
+    if artifact.get("passed") is not True:
+        reasons.append("artifact_failed")
+    if fdr.get("overall_calibration_decision") != "passed":
+        reasons.append("overall_fdr_failed")
+    if artifact_config_hash != current_config_hash:
+        reasons.append("config_hash_mismatch")
+    if artifact_definition_hash != current_definition_hash:
+        reasons.append("calibration_definition_hash_mismatch")
+    if missing_groups:
+        reasons.append("missing_required_groups")
+    reasons.extend(
+        f"{key}:not_supported"
+        for key in sorted(REQUIRED_GROUPS.intersection(groups))
+        if not _group_is_supported(groups[key])
+    )
+    return reasons
+
+
 async def run(args: argparse.Namespace) -> dict[str, Any]:
     raw = args.artifact.read_bytes()
     artifact = json.loads(raw)
@@ -88,29 +128,15 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         artifact.get("calibration_definition_hash") or ""
     )
     groups = artifact.get("calibration_groups") or {}
-    required_groups = {"weekly.common_count", "monthly.common_count"}
-    missing_groups = sorted(required_groups.difference(groups))
-    supported = (
-        not missing_groups
-        and artifact_config_hash == current_config_hash
-        and artifact_definition_hash == current_definition_hash
-        and all(_group_is_supported(groups[key]) for key in required_groups)
+    reasons = _acceptance_failure_reasons(
+        artifact,
+        current_config_hash=current_config_hash,
+        current_definition_hash=current_definition_hash,
     )
+    supported = not reasons
     status = "supported" if supported else "not_supported"
     calibrated_at = datetime.now(timezone.utc).replace(microsecond=0)
     calibration_id = "calibration-v3:" + artifact_hash[:24]
-    reasons = []
-    if artifact_config_hash != current_config_hash:
-        reasons.append("config_hash_mismatch")
-    if artifact_definition_hash != current_definition_hash:
-        reasons.append("calibration_definition_hash_mismatch")
-    if missing_groups:
-        reasons.append("missing_required_groups")
-    reasons.extend(
-        f"{key}:not_supported"
-        for key in sorted(required_groups.intersection(groups))
-        if groups[key].get("status") != "supported"
-    )
     if args.apply:
         await record_calibration_run_v3(
             calibration_id=calibration_id,

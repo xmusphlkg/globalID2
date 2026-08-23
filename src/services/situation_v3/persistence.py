@@ -235,6 +235,34 @@ async def latest_calibration_run_v3(
         return (await db.execute(query)).scalar_one_or_none()
 
 
+async def event_labels_v3() -> list[dict[str, Any]]:
+    """Return all persisted real-world event labels for split rebalancing."""
+
+    query = select(SituationEventLabelV3).order_by(
+        SituationEventLabelV3.first_official_published_at.asc(),
+        SituationEventLabelV3.label_id.asc(),
+    )
+    async with get_db() as db:
+        rows = (await db.execute(query)).scalars().all()
+    return [
+        {
+            "label_id": row.label_id,
+            "disease_id": row.disease_id,
+            "geographies": row.geographies,
+            "event_started_at": row.event_started_at,
+            "first_official_published_at": row.first_official_published_at,
+            "authoritative_source": row.authoritative_source,
+            "source_url": row.source_url,
+            "confidence": row.confidence,
+            "adjudication": row.adjudication,
+            "split": row.split,
+            "created_by": row.created_by,
+            "evidence": row.evidence,
+        }
+        for row in rows
+    ]
+
+
 async def upsert_event_label_v3(
     *,
     label_id: str,
@@ -780,6 +808,7 @@ __all__ = [
     "stable_event_cluster_ids_v3",
     "latest_report_v3",
     "latest_calibration_run_v3",
+    "event_labels_v3",
     "mark_analysis_run_failed_v3",
     "prepare_report_revision_v3",
     "publish_report_v3",
