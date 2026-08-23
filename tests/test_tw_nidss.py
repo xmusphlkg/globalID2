@@ -265,3 +265,61 @@ def test_tw_nidss_crawl_continues_when_one_disease_fails(tmp_path, monkeypatch):
     assert summary.diseases_fetched == 1
     assert "登革熱" in output
     assert "天花" not in output
+
+
+def test_tw_updater_recovers_from_raw_monthly_cache_when_live_fetch_fails(tmp_path, monkeypatch):
+    from src.data.processors.tw import TWMonthlyUpdater
+
+    output_csv = tmp_path / "taiwan_national_monthly.csv"
+    output_csv.write_text(
+        (
+            ",Disease,DiseaseCode,Year,Month,Date,Cases,LocalCases,ImportedCases,Source,SourceURL\n"
+            '1,登革熱,061,2026,6,2026-06-01,1,1,0,"Taiwan, China CDC NIDSS Open Data",'
+            "https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv\n"
+        ),
+        encoding="utf-8",
+    )
+    raw_dir = tmp_path / "raw" / "tw"
+    monthly_dir = raw_dir / "monthly"
+    monthly_dir.mkdir(parents=True)
+    (monthly_dir / "061.csv").write_text(
+        (
+            "確定病名,發病年份,發病月份,縣市,鄉鎮,性別,是否為境外移入,年齡層,確定病例數,縣市別代碼,鄉鎮別代碼\n"
+            "061,2026,08,台南市,善化區,F,1,45~49,2,67000,67000190\n"
+            "061,2026,08,桃園市,龜山區,M,0,25~29,3,68000,68000070\n"
+        ),
+        encoding="utf-8",
+    )
+
+    def fail_live_fetch(self, *args, **kwargs):
+        raise RuntimeError("[TW-NIDSS] upstream unavailable")
+
+    monkeypatch.setattr(
+        "src.data.processors.tw.TaiwanNIDSSCrawler.crawl_monthly_national",
+        fail_live_fetch,
+    )
+
+    result = TWMonthlyUpdater(output_csv=output_csv).refresh_source(
+        months=[(2026, 8)],
+        raw_dir=raw_dir,
+    )
+
+    assert result.source_latest_date.isoformat() == "2026-08-01"
+    assert result.rows == [
+        {
+            "Date": "2026-08-01",
+            "RawDiseaseLabel": "登革熱",
+            "DiseaseCode": "061",
+            "Year": "2026",
+            "Month": "8",
+            "Cases": "5",
+            "LocalCases": "3",
+            "ImportedCases": "2",
+            "Source": "Taiwan, China CDC NIDSS Open Data",
+            "SourceURL": "https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv",
+            "DatasetStatus": "provisional",
+            "IsProvisional": "true",
+        }
+    ]
+    assert any("raw monthly cache" in log for log in result.script_logs)
+    assert "2026-08-01" in output_csv.read_text(encoding="utf-8")

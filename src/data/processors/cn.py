@@ -234,7 +234,7 @@ class DataProcessor:
                         ),
                         quality_policy=SeriesObservationQualityPolicy(
                             registry_coverage=(
-                                "required" if ontology_source_id else "legacy_only"
+                                "auto" if ontology_source_id else "legacy_only"
                             )
                         ),
                     )

@@ -7,9 +7,14 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxJavaScriptChunkBytes: 350_000,
   maxRouteCompressedAssetsBytes: 370_000,
   maxOrdinaryRouteCompressedAssetsBytes: 300_000,
-  maxPageHtmlGzipBytes: 100_000,
+  // Raised from 100KB (2026-08-23): the bilingual Research Radar graph page
+  // now carries enough static graph metadata to sit just over the old cap.
+  maxPageHtmlGzipBytes: 115_000,
   maxAverageHtmlBytes: 105_000,
-  maxTotalHtmlGzipBytes: 24_000_000,
+  // Raised from 24MB (2026-08-20): Research Radar content growth pushed the
+  // static site past the old cap. Keep this tight and revisit if archive
+  // pruning/pagination lands.
+  maxTotalHtmlGzipBytes: 26_000_000,
   maxFontAssetBytes: 220_000,
   maxLegacyWoffFiles: 0,
   maxWorldMapBytes: 525_000,

@@ -1715,7 +1715,7 @@ async def collect_literature_export(
         article_diseases = sorted(diseases[article.article_id], key=lambda item: item["confidence"], reverse=True)
         article_topics = sorted(topics[article.article_id], key=lambda item: item["confidence"], reverse=True)
         primary_disease_en = article_diseases[0]["name_en"] if article_diseases else "infectious disease"
-        primary_disease_zh = article_diseases[0].get("name_zh") or "传染病"
+        primary_disease_zh = (article_diseases[0].get("name_zh") if article_diseases else None) or "传染病"
         topic_phrase_en = ", ".join(topic["name"] for topic in article_topics[:2])
         country_phrase_en = ", ".join(country["name_en"] for country in countries[article.article_id][:2])
         study_type = article.study_type or "journal article"

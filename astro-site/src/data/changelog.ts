@@ -22,6 +22,71 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.7.3',
+    date: '2026-08-23',
+    titleEn: 'Downloads catalogue ergonomics and release-pipeline recovery',
+    titleZh: '下载目录体验与发布流水线恢复能力改进',
+    summaryEn:
+      'This release turns Downloads into a more practical data catalogue with shareable filters, sorting, sticky table context, and mobile cards, while improving Taiwan monthly recovery and hardening automated publication checks.',
+    summaryZh:
+      '本次更新将 Downloads 打磨为更实用的数据目录，新增可分享筛选、排序、吸顶表头和移动端卡片，同时改进台湾月度数据恢复并强化自动发布校验。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added dataset sorting on Downloads by featured order, name, record volume, and dataset type so large catalogues are easier to scan.',
+            zh: 'Downloads 新增按默认顺序、名称、记录量和数据集类型排序，便于浏览大型数据目录。',
+          },
+          {
+            en: 'Added shareable Downloads state in the URL for search text, dataset type, and sort mode, with direct links restoring the same catalogue view.',
+            zh: 'Downloads 的搜索词、数据集类型和排序方式会写入 URL，直接打开链接即可恢复相同目录视图。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Reworked the Downloads table into a stable data-tool layout with fixed format columns, a sticky header on desktop, and a card layout on mobile to avoid horizontal scrolling.',
+            zh: '重构 Downloads 表格为更稳定的数据工具布局：桌面端固定格式列并吸顶表头，移动端改为卡片布局以避免横向滚动。',
+          },
+          {
+            en: 'Raised the public-site HTML performance budget to match the expanded Research graph while keeping the full production build inside the total gzip budget.',
+            zh: '根据扩展后的 Research graph 调整公开站点 HTML 性能预算，同时保持完整生产构建仍在总 gzip 预算内。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Fixed misaligned Downloads rows by restoring native table-cell layout and constraining CSV, JSON, XLSX, and source-note columns.',
+            zh: '修复 Downloads 行列错位：恢复原生 table-cell 布局，并约束 CSV、JSON、XLSX 与来源说明列宽。',
+          },
+          {
+            en: 'Recovered Taiwan NIDSS national monthly updates from cached raw monthly files when live CSV endpoints are temporarily unavailable.',
+            zh: '当台湾 NIDSS 在线 CSV 端点暂时不可用时，可从本地 raw 月度缓存恢复全国月度数据更新。',
+          },
+          {
+            en: 'Made GitHub direct-download verification retry after publication so transient Contents API visibility delays no longer fail an otherwise successful release.',
+            zh: '为 GitHub 直接下载仓库的发布后校验加入重试，避免 Contents API 短暂不可见导致已成功的发布误失败。',
+          },
+          {
+            en: 'Hardened China registry coverage policy and Research export fallback text for edge cases with incomplete disease metadata.',
+            zh: '强化中国数据 registry coverage 策略，并修复研究导出在疾病元数据不完整时的中文 fallback 文案。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.7.2',
     date: '2026-08-19',
     titleEn: 'Calibrated Situation Room controls and public-site reliability',
