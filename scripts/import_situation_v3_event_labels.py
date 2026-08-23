@@ -20,6 +20,7 @@ from src.services.situation_v3.labels import (  # noqa: E402
     label_from_official_event,
 )
 from src.services.situation_v3.persistence import upsert_event_label_v3  # noqa: E402
+from src.services.situation_v3.persistence import event_labels_v3  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,6 +44,53 @@ def _read_events(path: Path) -> list[dict[str, Any]]:
     return values
 
 
+def _labels_by_id(labels: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {str(label["label_id"]): dict(label) for label in labels}
+
+
+def _assign_import_splits(
+    *,
+    imported_labels: list[dict[str, Any]],
+    existing_labels: list[dict[str, Any]],
+    cadence: str,
+    created_by: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Assign splits across the complete label population.
+
+    Imported labels override existing rows with the same id.  Existing labels
+    are still rewritten when their split changes so the persisted population
+    keeps one chronological 70/15/15 partition.
+    """
+
+    merged = _labels_by_id(existing_labels)
+    imported_ids: list[str] = []
+    for label in imported_labels:
+        row = dict(label)
+        row["created_by"] = created_by
+        merged[str(row["label_id"])] = row
+        imported_ids.append(str(row["label_id"]))
+    splits = assign_temporal_splits(
+        merged.values(),
+        cadence=cadence,
+        embargo_periods=2,
+    )
+    for label_id, label in merged.items():
+        label["split"] = splits.get(label_id, "unassigned")
+    ordered = sorted(
+        merged.values(),
+        key=lambda label: (
+            label["first_official_published_at"],
+            str(label["label_id"]),
+        ),
+    )
+    return ordered, [merged[label_id] for label_id in imported_ids]
+
+
+async def _persist_labels(labels: list[dict[str, Any]]) -> None:
+    for label in labels:
+        await upsert_event_label_v3(**label)
+
+
 async def run(args: argparse.Namespace) -> dict[str, Any]:
     config = load_config()
     domains = (
@@ -57,20 +105,24 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
         if (label := label_from_official_event(event, allowed_domains=domains))
         is not None
     ]
-    splits = assign_temporal_splits(labels, cadence=args.cadence, embargo_periods=2)
-    for label in labels:
-        label["split"] = splits[label["label_id"]]
-        label["created_by"] = args.created_by
+    existing_labels = await event_labels_v3() if args.apply else []
+    labels_to_persist, imported_labels = _assign_import_splits(
+        imported_labels=labels,
+        existing_labels=existing_labels,
+        cadence=args.cadence,
+        created_by=args.created_by,
+    )
     if args.apply:
-        for label in labels:
-            await upsert_event_label_v3(**label)
+        await _persist_labels(labels_to_persist)
     return {
         "mode": "applied" if args.apply else "dry_run",
         "input_events": len(events),
         "accepted_authoritative_labels": len(labels),
         "rejected_events": len(events) - len(labels),
+        "existing_labels_rebalanced": len(existing_labels),
+        "persisted_label_count": len(labels_to_persist) if args.apply else 0,
         "split_counts": {
-            split: sum(label["split"] == split for label in labels)
+            split: sum(label["split"] == split for label in labels_to_persist)
             for split in ("development", "tuning", "locked_test", "unassigned")
         },
         "labels": [
@@ -85,7 +137,7 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                     "first_official_published_at"
                 ].isoformat(),
             }
-            for label in labels
+            for label in imported_labels
         ],
     }
 

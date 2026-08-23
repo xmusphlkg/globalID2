@@ -20,6 +20,8 @@ from src.services.situation_v3.labels import (
     match_signal_to_labels,
     summarize_locked_event_replay,
 )
+from scripts import import_situation_v3_event_labels
+from scripts import register_situation_v3_calibration
 
 
 def _monthly_signals():
@@ -198,6 +200,98 @@ def test_temporal_split_has_two_period_embargo_and_locked_summary_excludes_unkno
     assert summary["locked_positive_event_trials"] == 1
     assert summary["event_detection_rate"] == 1.0
     assert summary["leading_at_least_one_period_rate"] == 1.0
+
+
+def test_calibration_registration_rejects_failed_artifact_even_when_groups_pass() -> None:
+    stresses = {
+        key: {"family_trials": 1}
+        for key in (
+            "zero_inflation",
+            "correlated_series",
+            "missing_periods",
+            "revisions",
+            "structural_break",
+            "delayed_data",
+        )
+    }
+    group = {
+        "status": "supported",
+        "maximum_q": 0.01,
+        "thresholds": {
+            "0.01": {
+                "complete_null_family_trials": 384,
+                "false_publication_rate_ci_95": {"upper": 0.02},
+                "sustained_2x_sensitivity": 0.8,
+                "median_detection_delay_periods": 1.0,
+            }
+        },
+        "locked_real_event_metrics": {
+            "event_detection_rate": 0.8,
+            "champion_event_detection_rate": 0.8,
+        },
+        "weak_signal_improvement_vs_champion_pp": {"weekly.common_count": 15.0},
+        "null_stress_strata": stresses,
+    }
+    artifact = {
+        "method": register_situation_v3_calibration.EXPECTED_METHOD,
+        "passed": False,
+        "config_hash": "config-hash",
+        "calibration_definition_hash": "definition-hash",
+        "simulation_protocol_hash": "protocol-hash",
+        "fdr_assessment": {"overall_calibration_decision": "passed"},
+        "calibration_groups": {
+            "weekly.common_count": group,
+            "monthly.common_count": group,
+        },
+    }
+
+    reasons = register_situation_v3_calibration._acceptance_failure_reasons(
+        artifact,
+        current_config_hash="config-hash",
+        current_definition_hash="definition-hash",
+    )
+
+    assert reasons == ["artifact_failed"]
+
+
+def test_event_label_import_recomputes_splits_with_existing_population() -> None:
+    existing = [
+        {
+            "label_id": f"label-{index:02d}",
+            "disease_id": "D_TEST",
+            "geographies": [{"code": "US"}],
+            "event_started_at": None,
+            "first_official_published_at": backtest.date(2025, 1, 6)
+            + timedelta(weeks=index),
+            "authoritative_source": "WHO",
+            "source_url": f"https://www.who.int/event/{index}",
+            "confidence": "medium",
+            "adjudication": "positive",
+            "split": "development",
+            "created_by": "seed",
+            "evidence": {},
+        }
+        for index in range(10)
+    ]
+    incoming = [
+        {
+            **existing[0],
+            "label_id": "label-new",
+            "first_official_published_at": backtest.date(2025, 3, 17),
+            "source_url": "https://www.who.int/event/new",
+        }
+    ]
+
+    all_labels, imported = import_situation_v3_event_labels._assign_import_splits(
+        imported_labels=incoming,
+        existing_labels=existing,
+        cadence="weekly",
+        created_by="importer",
+    )
+
+    assert len(all_labels) == 11
+    assert imported[0]["split"] == "unassigned"
+    assert imported[0]["created_by"] == "importer"
 
 
 @pytest.mark.asyncio
