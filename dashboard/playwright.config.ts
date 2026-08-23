@@ -1,10 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3000";
+const serverPort = new URL(baseURL).port || "3000";
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3000",
+    baseURL,
     trace: "retain-on-failure",
   },
   projects: [
@@ -13,8 +16,8 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["iPhone 15"], browserName: "chromium" } },
   ],
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1 --port 3000",
-    url: "http://127.0.0.1:3000",
+    command: `npm run dev -- --hostname 127.0.0.1 --port ${serverPort}`,
+    url: baseURL,
     reuseExistingServer: true,
     timeout: 120_000,
   },

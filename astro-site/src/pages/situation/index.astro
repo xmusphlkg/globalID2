@@ -15,6 +15,11 @@ import {
   type SituationReportV3,
 } from '../../utils/situation';
 
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+
 const latestPath = resolve('./src/data/situation/v3/latest.json');
 const shadowPath = resolve('./src/data/situation/v3/shadow-latest.json');
 const publicReport = existsSync(latestPath);
@@ -22,70 +27,71 @@ const previewEnabled = import.meta.env.DEV || process.env.SITUATION_SHADOW_PREVI
 const reportPath = publicReport ? latestPath : previewEnabled && existsSync(shadowPath) ? shadowPath : null;
 const raw: unknown = reportPath ? JSON.parse(readFileSync(reportPath, 'utf-8')) : null;
 const report: SituationReportV3 | null = isSituationReportV3(raw) ? raw : null;
-const periodLabel = report ? `${formatDate(report.report.period_start)} – ${formatDate(report.report.period_end)}` : 'Latest';
+const periodLabel = report ? `${formatDate(report.report.period_start)} – ${formatDate(report.report.period_end)}` : pick('Latest', '最新');
 const title = report ? `Global Infectious Disease Situation — ${report.report.period_key}` : 'Global Infectious Disease Situation Room';
 const titleZh = report ? `全球传染病态势 — ${report.report.period_key}` : '全球传染病态势室';
-const description = report?.narrative.en ?? 'A reproducible review queue for GIDS-covered infectious-disease surveillance signals.';
-const canonicalPath = '/situation/';
+const description = report ? pick(report.narrative.en, report.narrative.zh) : pick('A reproducible review queue for GIDS-covered infectious-disease surveillance signals.', '面向 GIDS 覆盖传染病监测信号的可复现复核队列。');
+const canonicalPath = `${prefix}/situation/`;
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
 const jsonPath = '/site-data/situation/v3/latest.json';
 const evidenceUrls = report ? sourceEvidenceUrls(report) : [];
 const structuredData = report ? [
   {
-    '@type': 'Report', '@id': `${new URL(canonicalPath, siteOrigin)}#report`, name: title,
+    '@type': 'Report', '@id': `${new URL(canonicalPath, siteOrigin)}#report`, name: pick(title, titleZh),
     datePublished: report.report.as_of, dateModified: report.report.as_of,
     temporalCoverage: `${report.report.period_start}/${report.report.period_end}`,
     isBasedOn: evidenceUrls, mainEntity: { '@id': `${new URL(canonicalPath, siteOrigin)}#dataset` },
   },
   {
-    '@type': 'Dataset', '@id': `${new URL(canonicalPath, siteOrigin)}#dataset`, name: `${title} data`, description,
+    '@type': 'Dataset', '@id': `${new URL(canonicalPath, siteOrigin)}#dataset`, name: pick(`${title} data`, `${titleZh}数据`), description,
     dateModified: report.report.as_of, temporalCoverage: `${report.report.period_start}/${report.report.period_end}`,
     isBasedOn: evidenceUrls,
     distribution: [{ '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: new URL(jsonPath, siteOrigin).toString() }],
   },
 ] : [];
 const seo: SeoDocument = {
-  title: `${title} | GIDS`, description, canonicalPath,
-  alternatePaths: buildAlternatePaths(canonicalPath, 'en'), noindex: !publicReport,
+  title: `${pick(title, titleZh)} | GIDS`, description, canonicalPath,
+  locale,
+  alternatePaths: buildAlternatePaths(canonicalPath, locale), noindex: !publicReport,
   pageType: 'Report', datePublished: report?.report.as_of ?? null, dateModified: report?.report.as_of ?? null,
 };
 ---
 
-<ReportLayout title={title} description={description} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: 'Situation Room', labelZh: '全球态势室' }]}>
+<ReportLayout title={pick(title, titleZh)} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室') }]}>
   <main class="situation-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     {report ? <>
       <header class="report-hero">
         <div>
-          <p class="eyebrow" data-lang-en="Global surveillance review queue" data-lang-zh="全球监测复核队列">Global surveillance review queue</p>
-          <h1 data-lang-en={title} data-lang-zh={titleZh}>{title}</h1>
-          <p data-lang-en="A latency-aware view of source-native surveillance. The system analyzes only mature reporting periods and separates statistical review priority from public-health risk." data-lang-zh="按来源发布延迟校准的原生监测视图。系统仅分析成熟报告周期，并将统计复核优先级与公共卫生风险严格分离。">A latency-aware view of source-native surveillance. The system analyzes only mature reporting periods and separates statistical review priority from public-health risk.</p>
+          <p class="eyebrow">{pick('Global surveillance review queue', '全球监测复核队列')}</p>
+          <h1>{pick(title, titleZh)}</h1>
+          <p>{pick('A latency-aware view of source-native surveillance. The system analyzes only mature reporting periods and separates statistical review priority from public-health risk.', '按来源发布延迟校准的原生监测视图。系统仅分析成熟报告周期，并将统计复核优先级与公共卫生风险严格分离。')}</p>
         </div>
         <dl>
-          <div><dt data-lang-en="Report period" data-lang-zh="报告期间">Report period</dt><dd>{periodLabel}</dd></div>
-          <div><dt data-lang-en="System status" data-lang-zh="系统状态">System status</dt><dd class={report.quality_gate.status} data-lang-en={label(report.quality_gate.status)} data-lang-zh={labelZh(report.quality_gate.status)}>{label(report.quality_gate.status)}</dd></div>
-          <div><dt data-lang-en="Coverage" data-lang-zh="覆盖率">Coverage</dt><dd>{report.coverage.modeled_series_count} / {report.coverage.evaluated_series_count}</dd></div>
-          <div><dt data-lang-en="Revision" data-lang-zh="修订版">Revision</dt><dd>r{report.report.revision}</dd></div>
+          <div><dt>{pick('Report period', '报告期间')}</dt><dd>{periodLabel}</dd></div>
+          <div><dt>{pick('System status', '系统状态')}</dt><dd class={report.quality_gate.status}>{pick(label(report.quality_gate.status), labelZh(report.quality_gate.status))}</dd></div>
+          <div><dt>{pick('Coverage', '覆盖率')}</dt><dd>{report.coverage.modeled_series_count} / {report.coverage.evaluated_series_count}</dd></div>
+          <div><dt>{pick('Revision', '修订版')}</dt><dd>r{report.report.revision}</dd></div>
         </dl>
       </header>
 
-      <nav class="period-nav" aria-label="Situation report archives">
-        <a href="/situation/weekly/" data-lang-en="Weekly reports" data-lang-zh="周报">Weekly reports</a>
-        <a href="/situation/monthly/" data-lang-en="Monthly reports" data-lang-zh="月报">Monthly reports</a>
-        <a href="/situation/methodology/" data-lang-en="Methodology" data-lang-zh="方法说明">Methodology</a>
-        {publicReport && <a href={jsonPath} download data-lang-en="Download v3 JSON" data-lang-zh="下载 v3 JSON">Download v3 JSON</a>}
+      <nav class="period-nav" aria-label={pick('Situation report archives', '态势报告归档')}>
+        <a href={`${prefix}/situation/weekly/`}>{pick('Weekly reports', '周报')}</a>
+        <a href={`${prefix}/situation/monthly/`}>{pick('Monthly reports', '月报')}</a>
+        <a href={`${prefix}/situation/methodology/`}>{pick('Methodology', '方法说明')}</a>
+        {publicReport && <a href={jsonPath} download>{pick('Download v3 JSON', '下载 v3 JSON')}</a>}
       </nav>
 
-      <SituationSummary snapshot={report} />
+      <SituationSummary snapshot={report} locale={locale} />
 
-      <SituationReadiness snapshot={report} />
+      <SituationReadiness snapshot={report} locale={locale} />
 
-      <SituationDetails snapshot={report} />
+      <SituationDetails snapshot={report} locale={locale} />
 
       <footer class="report-footer">
-        <p data-lang-en={report.limitations.en} data-lang-zh={report.limitations.zh}>{report.limitations.en}</p>
-        <p><span data-lang-en="Report" data-lang-zh="报告">Report</span> <code>{report.report.report_id}</code> · <span data-lang-en="config" data-lang-zh="配置">config</span> <code>{report.method.config_hash.slice(0, 12)}</code> · <span data-lang-en="as of" data-lang-zh="截至">as of</span> {formatDate(report.report.as_of)}</p>
+        <p>{pick(report.limitations.en, report.limitations.zh)}</p>
+        <p><span>{pick('Updated', '更新于')}</span> {formatDate(report.report.as_of)}</p>
       </footer>
-    </> : <section class="placeholder"><p class="eyebrow">Pre-publication</p><h1>Situation Room v3 has no gate-passed public report yet</h1><p>The previous public build remains in place until history archival, contract validation, analysis quality, and static release checks all pass.</p><a href="/diseases/">Browse disease datasets</a></section>}
+    </> : <section class="placeholder"><p class="eyebrow">{pick('Not yet published', '尚未发布')}</p><h1>{pick('No current situation review is available', '当前暂无态势复核')}</h1><p>{pick('A situation review appears here after its sources, analysis, and evidence links pass publication checks.', '来源、分析与证据链接通过发布检查后，态势复核将在此显示。')}</p><a href={`${prefix}/diseases/`}>{pick('Browse disease datasets', '浏览疾病数据')}</a></section>}
   </main>
 </ReportLayout>
 
@@ -95,7 +101,7 @@ const seo: SeoDocument = {
   .report-hero::after { background: rgb(var(--color-accent)); bottom: 0; content: ''; height: 3px; left: 0; position: absolute; width: 9rem; }
   .report-hero > div { max-width: 55rem; }
   .eyebrow { color: rgb(var(--color-teal)); font-size: .67rem; font-weight: 800; letter-spacing: .13em; margin: 0 0 .35rem; text-transform: uppercase; }
-  h1, h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; margin: 0; }
+  h1, h2 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; margin: 0; }
   h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.03; }
   h2 { font-size: 1.55rem; line-height: 1.1; }
   .report-hero h1 { color: rgb(241 247 248); }
@@ -104,7 +110,7 @@ const seo: SeoDocument = {
   .report-hero dl div { border-left: 1px solid rgb(91 132 140); padding-left: .7rem; }
   dt { color: rgb(var(--text-faint)); font-size: .6rem; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
   .report-hero dt { color: rgb(158 190 195); }
-  dd { color: rgb(238 246 247); font-family: 'JetBrains Mono', monospace; font-size: .72rem; margin: .15rem 0 0; }
+  dd { color: rgb(238 246 247); font-family: ui-monospace, monospace; font-size: .72rem; margin: .15rem 0 0; }
   dd.passed { color: rgb(31 126 92); }
   dd.degraded { color: rgb(218 174 76); }
   dd.failed { color: rgb(174 61 67); }

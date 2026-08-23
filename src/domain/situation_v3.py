@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, JSON, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -172,6 +172,85 @@ class SituationReviewDecisionV3(BaseModel):
     __table_args__ = (Index("idx_situation_v3_review_target", "target_type", "target_id", "created_at"),)
 
 
+class SituationEventLabelV3(BaseModel):
+    __tablename__ = "situation_event_labels_v3"
+
+    label_id: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    disease_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    geographies = mapped_column(JSON, nullable=False, default=list)
+    event_started_at: Mapped[Optional[date]] = mapped_column(Date)
+    first_official_published_at: Mapped[date] = mapped_column(Date, nullable=False)
+    authoritative_source: Mapped[str] = mapped_column(String(180), nullable=False)
+    source_url: Mapped[str] = mapped_column(String(1500), nullable=False)
+    confidence: Mapped[str] = mapped_column(String(20), nullable=False)
+    adjudication: Mapped[str] = mapped_column(String(30), nullable=False, default="indeterminate")
+    split: Mapped[str] = mapped_column(String(30), nullable=False, default="unassigned")
+    created_by: Mapped[Optional[str]] = mapped_column(String(160))
+    evidence = mapped_column(JSON, nullable=False, default=dict)
+
+    __table_args__ = (
+        Index(
+            "idx_situation_v3_label_identity",
+            "disease_id",
+            "first_official_published_at",
+        ),
+        Index("idx_situation_v3_label_split", "split", "adjudication"),
+    )
+
+
+class SituationCalibrationRunV3(BaseModel):
+    __tablename__ = "situation_calibration_runs_v3"
+
+    calibration_id: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    method_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    config_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    artifact_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    artifact_uri: Mapped[Optional[str]] = mapped_column(String(1500))
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    calibrated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    window_start: Mapped[Optional[date]] = mapped_column(Date)
+    window_end: Mapped[Optional[date]] = mapped_column(Date)
+    summary = mapped_column(JSON, nullable=False, default=dict)
+    group_results = mapped_column(JSON, nullable=False, default=dict)
+
+    __table_args__ = (
+        Index("idx_situation_v3_calibration_status", "status", "calibrated_at"),
+        Index("idx_situation_v3_calibration_artifact", "artifact_hash"),
+    )
+
+
+class SituationPolicyDecisionV3(BaseModel):
+    __tablename__ = "situation_policy_decisions_v3"
+
+    decision_id: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    run_id: Mapped[str] = mapped_column(
+        String(120),
+        ForeignKey("situation_analysis_runs_v3.run_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    signal_id: Mapped[str] = mapped_column(String(180), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    basis: Mapped[str] = mapped_column(String(40), nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    calibration_hash: Mapped[Optional[str]] = mapped_column(String(128))
+    gate_reasons = mapped_column(JSON, nullable=False, default=list)
+    matched_event_ids = mapped_column(JSON, nullable=False, default=list)
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    payload = mapped_column(JSON, nullable=False, default=dict)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "run_id",
+            "signal_id",
+            name="uq_situation_v3_policy_run_signal",
+        ),
+        Index("idx_situation_v3_policy_run", "run_id", "status"),
+        Index("idx_situation_v3_policy_signal", "signal_id", "created_at"),
+    )
+
+
 class SituationPublicationPointerV3(BaseModel):
     __tablename__ = "situation_publication_pointers_v3"
 
@@ -183,4 +262,3 @@ class SituationPublicationPointerV3(BaseModel):
     previous_report_id: Mapped[Optional[str]] = mapped_column(String(140))
 
     __table_args__ = (Index("idx_situation_v3_pointer_report", "report_id"),)
-

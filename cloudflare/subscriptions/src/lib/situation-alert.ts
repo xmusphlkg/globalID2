@@ -10,9 +10,8 @@ const TEMPORAL_RELEVANCE = new Set(["current", "lagged"]);
 const SIGNAL_TYPES = new Set(["statistical_signal", "officially_correlated_signal"]);
 const DATA_STATUSES = new Set(["current", "held_back"]);
 const DETECTOR_TIERS = new Set(["common_count", "rare_count", "rate", "context_only"]);
-const GUARDED_AUTO_POLICY = "guarded_auto_v1";
-const GUARDED_AUTO_MODEL = "robust_quasi_poisson_v1";
-const GUARDED_AUTO_TIERS = new Set(["common_count", "rare_count"]);
+const AUTOMATION_POLICY = "tiered_auto_v3.2";
+const AUTOMATION_MODEL = "multi_horizon_gamma_poisson_v1";
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,159}$/;
 const OPAQUE_REVIEWER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{2,119}$/;
 
@@ -41,7 +40,16 @@ export interface SituationAlertPayload extends Record<string, JsonValue> {
     effect_threshold_passed: boolean;
     verification_status: "verified";
     verification_basis: "automated_policy" | "analyst_review";
-    verification_policy_version: "guarded_auto_v1" | null;
+    verification_policy_version: "tiered_auto_v3.2" | null;
+    automation_decision: {
+      status: "auto_verified";
+      basis: "calibrated_statistical" | "official_corroboration";
+      policy_version: "tiered_auto_v3.2";
+      calibration_hash: string;
+      gate_reasons: [];
+      matched_event_ids: string[];
+      decided_at: string;
+    } | null;
     verified_by: string;
     verified_at: string;
     observed_at: string;
@@ -144,27 +152,82 @@ export function parseSituationAlertPayload(value: unknown): SituationAlertPayloa
   const evidenceUrls = normalizedHttpsUrls(value.signal.evidence_urls, 20);
   if (evidenceUrls.length === 0) fail("signal_evidence_url_required");
 
+  let automationDecision: SituationAlertPayload["signal"]["automation_decision"] = null;
   if (verificationBasis === "automated_policy") {
-    if (verificationPolicyVersion !== GUARDED_AUTO_POLICY) {
-      fail("guarded_auto_policy_required");
+    if (verificationPolicyVersion !== AUTOMATION_POLICY) {
+      fail("tiered_auto_policy_required");
     }
-    if (verifiedBy !== `policy:${GUARDED_AUTO_POLICY}`) {
-      fail("guarded_auto_verifier_required");
+    if (verifiedBy !== `policy:${AUTOMATION_POLICY}`) {
+      fail("tiered_auto_verifier_required");
     }
     if (temporalRelevance !== "current" || dataStatus !== "current") {
-      fail("guarded_auto_current_signal_required");
+      fail("tiered_auto_current_signal_required");
     }
-    if (qValue === null || qValue > 0.01) fail("guarded_auto_q_threshold_required");
-    if (model !== GUARDED_AUTO_MODEL || fitStatus !== "completed") {
-      fail("guarded_auto_primary_fit_required");
+    if (!effectThresholdPassed) fail("tiered_auto_effect_threshold_required");
+    if (completeness < 0.95) fail("tiered_auto_completeness_required");
+    if (!isRecord(value.signal.automation_decision)) {
+      fail("automation_decision_required");
     }
-    if (!GUARDED_AUTO_TIERS.has(detectorTier)) fail("guarded_auto_detector_tier_required");
-    if (!effectThresholdPassed) fail("guarded_auto_effect_threshold_required");
-    if (completeness < 0.95) fail("guarded_auto_completeness_required");
+    const rawAutomation = value.signal.automation_decision;
+    if (rawAutomation.status !== "auto_verified") fail("automation_decision_not_verified");
+    if (rawAutomation.policy_version !== AUTOMATION_POLICY) {
+      fail("automation_decision_policy_mismatch");
+    }
+    const calibrationHash = requiredText(
+      rawAutomation.calibration_hash,
+      "automation_calibration_hash_required",
+      128,
+    );
+    if (!Array.isArray(rawAutomation.gate_reasons) || rawAutomation.gate_reasons.length !== 0) {
+      fail("automation_gate_reasons_must_be_empty");
+    }
+    const matchedEventIds = normalizedIdentifierArray(
+      rawAutomation.matched_event_ids,
+      "invalid_automation_matched_event_ids",
+      100,
+    );
+    const decidedAt = requiredIsoDate(
+      rawAutomation.decided_at,
+      "invalid_automation_decided_at",
+    );
+    if (Date.parse(decidedAt) > Date.parse(asOf) + 5 * 60 * 1000) {
+      fail("automation_decision_after_report_as_of");
+    }
+    const automationBasis = requiredText(
+      rawAutomation.basis,
+      "automation_basis_required",
+      40,
+    );
+    if (automationBasis === "calibrated_statistical") {
+      if (qValue === null || qValue > 0.025) fail("calibrated_statistical_q_required");
+      if (
+        model !== AUTOMATION_MODEL
+        || fitStatus !== "completed"
+        || detectorTier !== "common_count"
+      ) {
+        fail("calibrated_statistical_primary_fit_required");
+      }
+    } else if (automationBasis === "official_corroboration") {
+      if (matchedEventIds.length === 0) fail("official_corroboration_event_required");
+      if (qValue === null || qValue > 0.05) fail("official_corroboration_review_q_required");
+    } else {
+      fail("invalid_automation_basis");
+    }
+    automationDecision = {
+      status: "auto_verified",
+      basis: automationBasis,
+      policy_version: AUTOMATION_POLICY,
+      calibration_hash: calibrationHash,
+      gate_reasons: [],
+      matched_event_ids: matchedEventIds,
+      decided_at: decidedAt,
+    };
   } else if (verificationPolicyVersion !== null) {
     fail("analyst_review_policy_must_be_null");
   } else if (verifiedBy.startsWith("policy:")) {
     fail("analyst_reviewer_required");
+  } else if (value.signal.automation_decision !== undefined && value.signal.automation_decision !== null) {
+    fail("analyst_automation_decision_must_be_null");
   }
 
   return {
@@ -192,7 +255,8 @@ export function parseSituationAlertPayload(value: unknown): SituationAlertPayloa
       effect_threshold_passed: effectThresholdPassed,
       verification_status: "verified",
       verification_basis: verificationBasis as "automated_policy" | "analyst_review",
-      verification_policy_version: verificationPolicyVersion as "guarded_auto_v1" | null,
+      verification_policy_version: verificationPolicyVersion as "tiered_auto_v3.2" | null,
+      automation_decision: automationDecision,
       verified_by: verifiedBy,
       verified_at: verifiedAt,
       observed_at: observedAt,
@@ -246,7 +310,7 @@ export function situationAlertContent(
   const diseases = alert.signal.diseases.join(", ");
   if (language === "zh") {
     const verification = alert.signal.verification_basis === "automated_policy"
-      ? `受控自动策略（${alert.signal.verification_policy_version}）`
+      ? `分层自动策略（${alert.signal.verification_policy_version}）`
       : "人工分析员复核（无自动策略）";
     const lines = [
       alert.signal.summary,
@@ -267,7 +331,7 @@ export function situationAlertContent(
   }
 
   const verification = alert.signal.verification_basis === "automated_policy"
-    ? `guarded automated policy (${alert.signal.verification_policy_version})`
+    ? `tiered automated policy (${alert.signal.verification_policy_version})`
     : "analyst review (no automated policy)";
   const lines = [
     alert.signal.summary,
@@ -298,6 +362,12 @@ function normalizedStringArray(value: unknown, type: "country" | "disease", limi
     return type === "country" ? code.toUpperCase() : code.toLowerCase();
   });
   return [...new Set(normalized)];
+}
+
+function normalizedIdentifierArray(value: unknown, error: string, limit: number): string[] {
+  if (!Array.isArray(value) || value.length > limit) fail(error);
+  const values = value.map((item) => requiredText(item, error, 180));
+  return [...new Set(values)];
 }
 
 function normalizedHttpsUrls(value: unknown, limit: number): string[] {

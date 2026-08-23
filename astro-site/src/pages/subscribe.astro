@@ -1,6 +1,12 @@
 ---
 // src/pages/subscribe.astro — Subscribe page
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { buildAlternatePaths } from '../lib/seo';
+
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 
 const subscriptionsApiBase = (
   import.meta.env.PUBLIC_SUBSCRIPTIONS_API_BASE ||
@@ -11,8 +17,10 @@ const subscriptionsApiBase = (
 ---
 
 <BaseLayout
-  title="Subscribe"
-  description="Subscribe to GIDS disease surveillance alerts and report updates."
+  title={pick('Subscribe', '订阅')}
+  description={pick('Subscribe to GIDS disease surveillance alerts and report updates.', '订阅 GIDS 疾病监测提醒和报告更新。')}
+  initialLanguage={locale}
+  seo={{ title: pick('Subscribe | GIDS', '订阅 | GIDS'), description: pick('Subscribe to GIDS disease surveillance alerts and report updates.', '订阅 GIDS 疾病监测提醒和报告更新。'), locale, canonicalPath: `${prefix}/subscribe/`, alternatePaths: buildAlternatePaths(`${prefix}/subscribe/`, locale), pageType: 'WebPage' }}
 >
   <section class="subscribe-page">
     <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
@@ -20,39 +28,29 @@ const subscriptionsApiBase = (
         <div class="subscribe-intro">
           <div class="mb-6 inline-flex items-center gap-2 border border-teal-500/25 bg-teal-500/10 px-3 py-1.5 text-xs font-semibold text-teal-400">
             <span class="h-1.5 w-1.5 rounded-full bg-teal-400"></span>
-            <span data-lang-en="GIDS subscription center" data-lang-zh="GIDS 订阅中心">GIDS subscription center</span>
+            <span>{pick('GIDS subscription center', 'GIDS 订阅中心')}</span>
           </div>
 
           <h1 class="font-serif text-4xl font-semibold leading-tight tracking-tight text-[rgb(var(--text-strong))] sm:text-5xl">
-            <span data-lang-en="Follow the surveillance updates that matter to you" data-lang-zh="接收你关注的传染病监测更新">
-              Follow the surveillance updates that matter to you
-            </span>
+            <span>{pick('Follow the surveillance updates that matter to you', '接收你关注的传染病监测更新')}</span>
           </h1>
 
           <p class="mt-5 max-w-2xl text-base leading-7 text-[rgb(var(--text-muted))] sm:text-lg">
-            <span data-lang-en="Choose the countries, diseases, and update frequency you want to follow. You can unsubscribe at any time." data-lang-zh="选择你关注的国家/地区、疾病和更新频率；你可以随时退订。">
-              Choose the countries, diseases, and update frequency you want to follow. You can unsubscribe at any time.
-            </span>
+            <span>{pick('Choose the countries, diseases, and update frequency you want to follow. You can unsubscribe at any time.', '选择你关注的国家/地区、疾病和更新频率；你可以随时退订。')}</span>
           </p>
 
           <dl class="subscribe-facts mt-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
             <div>
-              <dt data-lang-en="Delivery" data-lang-zh="投递内容">Delivery</dt>
-              <dd data-lang-en="Reports, Research Radar digests, and priority alerts" data-lang-zh="报告、Research Radar 摘要和重点提醒">
-                Reports, Research Radar digests, and priority alerts
-              </dd>
+              <dt>{pick('Delivery', '投递内容')}</dt>
+              <dd>{pick('Reports, Research Radar digests, and priority alerts', '报告、Research Radar 摘要和重点提醒')}</dd>
             </div>
             <div>
-              <dt data-lang-en="Filters" data-lang-zh="过滤条件">Filters</dt>
-              <dd data-lang-en="Country, disease, topic, and study preferences" data-lang-zh="国家、疾病、主题和研究类型偏好">
-                Country, disease, topic, and study preferences
-              </dd>
+              <dt>{pick('Filters', '过滤条件')}</dt>
+              <dd>{pick('Country, disease, topic, and study preferences', '国家、疾病、主题和研究类型偏好')}</dd>
             </div>
             <div>
-              <dt data-lang-en="Control" data-lang-zh="控制权">Control</dt>
-              <dd data-lang-en="One-click unsubscribe link" data-lang-zh="一键退订链接">
-                One-click unsubscribe link
-              </dd>
+              <dt>{pick('Control', '控制权')}</dt>
+              <dd>{pick('One-click unsubscribe link', '一键退订链接')}</dd>
             </div>
           </dl>
         </div>
@@ -61,18 +59,19 @@ const subscriptionsApiBase = (
           id="subscription-form"
           class="subscribe-form"
           data-api-base={subscriptionsApiBase}
+          data-page-locale={locale}
           novalidate
         >
           <div class="subscribe-form-header">
             <div>
-              <p class="subscribe-kicker" data-lang-en="Preferences" data-lang-zh="订阅偏好">Preferences</p>
-              <h2 data-lang-en="Create a subscription" data-lang-zh="创建订阅">Create a subscription</h2>
+              <p class="subscribe-kicker">{pick('Preferences', '订阅偏好')}</p>
+              <h2>{pick('Create a subscription', '创建订阅')}</h2>
             </div>
-            <span class="subscribe-service-badge" data-lang-en="Official GIDS service" data-lang-zh="GIDS 官方服务">Official GIDS service</span>
+            <span class="subscribe-service-badge">{pick('Official GIDS service', 'GIDS 官方服务')}</span>
           </div>
 
           <div class="subscribe-field">
-            <label for="subscriber-email" data-lang-en="Email address" data-lang-zh="邮箱地址">Email address</label>
+            <label for="subscriber-email">{pick('Email address', '邮箱地址')}</label>
             <input
               id="subscriber-email"
               class="site-control-input subscribe-input"
@@ -87,27 +86,27 @@ const subscriptionsApiBase = (
 
           <div class="subscribe-grid">
             <fieldset class="subscribe-field">
-              <legend data-lang-en="Language" data-lang-zh="语言">Language</legend>
+              <legend>{pick('Language', '语言')}</legend>
               <div class="subscribe-segmented" id="locale-options"></div>
             </fieldset>
 
             <fieldset class="subscribe-field">
-              <legend data-lang-en="Frequency" data-lang-zh="频率">Frequency</legend>
+              <legend>{pick('Frequency', '频率')}</legend>
               <div class="subscribe-segmented" id="frequency-options"></div>
             </fieldset>
           </div>
 
           <fieldset class="subscribe-field">
-              <legend data-lang-en="Updates to receive" data-lang-zh="接收内容">Updates to receive</legend>
+              <legend>{pick('Updates to receive', '接收内容')}</legend>
             <div class="subscribe-option-grid" id="list-options"></div>
           </fieldset>
 
           <fieldset class="subscribe-field">
             <div class="subscribe-field-title">
-              <legend data-lang-en="Countries" data-lang-zh="国家和地区">Countries</legend>
+              <legend>{pick('Countries', '国家和地区')}</legend>
               <label class="subscribe-inline-check">
                 <input id="all-countries" type="checkbox" checked />
-                <span data-lang-en="All countries" data-lang-zh="全部国家和地区">All countries</span>
+                <span>{pick('All countries', '全部国家和地区')}</span>
               </label>
             </div>
             <div class="subscribe-chip-grid" id="country-options"></div>
@@ -115,40 +114,38 @@ const subscriptionsApiBase = (
 
           <fieldset class="subscribe-field">
             <div class="subscribe-field-title">
-              <legend data-lang-en="Diseases" data-lang-zh="疾病">Diseases</legend>
-              <span data-lang-en="Leave empty for all" data-lang-zh="留空表示全部">Leave empty for all</span>
+              <legend>{pick('Diseases', '疾病')}</legend>
+              <span>{pick('Leave empty for all', '留空表示全部')}</span>
             </div>
             <input
               id="disease-search"
               class="site-control-input subscribe-input mt-3"
               type="text"
-              placeholder="Search diseases"
-              data-lang-en-placeholder="Search diseases"
-              data-lang-zh-placeholder="搜索疾病"
+              placeholder={pick('Search diseases', '搜索疾病')}
             />
             <div class="subscribe-chip-grid mt-3" id="disease-options"></div>
           </fieldset>
 
           <fieldset class="subscribe-field">
             <div class="subscribe-field-title">
-              <legend data-lang-en="Research topics" data-lang-zh="研究主题">Research topics</legend>
-              <span data-lang-en="For Research Radar; leave empty for all" data-lang-zh="适用于 Research Radar；留空表示全部">For Research Radar; leave empty for all</span>
+              <legend>{pick('Research topics', '研究主题')}</legend>
+              <span>{pick('For Research Radar; leave empty for all', '适用于 Research Radar；留空表示全部')}</span>
             </div>
             <div class="subscribe-chip-grid" id="research-topic-options"></div>
           </fieldset>
 
           <fieldset class="subscribe-field">
             <div class="subscribe-field-title">
-              <legend data-lang-en="Study types" data-lang-zh="研究类型">Study types</legend>
-              <span data-lang-en="Leave empty for all" data-lang-zh="留空表示全部">Leave empty for all</span>
+              <legend>{pick('Study types', '研究类型')}</legend>
+              <span>{pick('Leave empty for all', '留空表示全部')}</span>
             </div>
             <div class="subscribe-chip-grid" id="study-type-options"></div>
           </fieldset>
 
           <fieldset class="subscribe-field">
             <div class="subscribe-field-title">
-              <legend data-lang-en="Publication status" data-lang-zh="出版状态">Publication status</legend>
-              <span data-lang-en="Leave empty for all approved research" data-lang-zh="留空表示全部已审核研究">Leave empty for all approved research</span>
+              <legend>{pick('Publication status', '出版状态')}</legend>
+              <span>{pick('Leave empty for all approved research', '留空表示全部已审核研究')}</span>
             </div>
             <div class="subscribe-chip-grid" id="peer-review-status-options"></div>
           </fieldset>
@@ -156,13 +153,9 @@ const subscriptionsApiBase = (
           <label class="subscribe-consent">
             <input type="checkbox" name="consent" required />
             <span>
-              <span data-lang-en="I agree to receive GIDS subscription emails and accept the" data-lang-zh="我同意接收 GIDS 订阅邮件，并接受">
-                I agree to receive GIDS subscription emails and accept the
-              </span>
-              <a href="/terms/" target="_blank" rel="noopener" data-lang-en="Service Terms" data-lang-zh="服务协议">
-                Service Terms
-              </a>
-              <span data-lang-en="." data-lang-zh="。">.</span>
+              <span>{pick('I agree to receive GIDS subscription emails and accept the', '我同意接收 GIDS 订阅邮件，并接受')}</span>
+              <a href={`${prefix}/terms/`} target="_blank" rel="noopener">{pick('Service Terms', '服务协议')}</a>
+              <span>{pick('.', '。')}</span>
             </span>
           </label>
 
@@ -170,11 +163,9 @@ const subscriptionsApiBase = (
 
           <div class="subscribe-actions">
             <button id="subscription-submit" type="submit" class="subscribe-submit">
-              <span data-lang-en="Subscribe" data-lang-zh="提交订阅">Subscribe</span>
+              <span>{pick('Subscribe', '提交订阅')}</span>
             </button>
-            <p data-lang-en="We only send the updates you choose. You can unsubscribe in any email." data-lang-zh="我们只发送你选择的更新；你可以在任意邮件中退订。">
-              We only send the updates you choose. You can unsubscribe in any email.
-            </p>
+            <p>{pick('We only send the updates you choose. You can unsubscribe in any email.', '我们只发送你选择的更新；你可以在任意邮件中退订。')}</p>
           </div>
         </form>
       </div>
@@ -184,25 +175,23 @@ const subscriptionsApiBase = (
   <div id="subscription-modal" class="subscribe-modal" role="dialog" aria-modal="true" aria-labelledby="subscription-modal-title" hidden>
     <div class="subscribe-modal-backdrop" data-modal-close></div>
     <div class="subscribe-modal-panel">
-      <button class="subscribe-modal-close" type="button" aria-label="Close" data-modal-close>
+      <button class="subscribe-modal-close" type="button" aria-label={pick('Close', '关闭')} data-modal-close>
         <span aria-hidden="true">×</span>
       </button>
-      <p class="subscribe-kicker" data-lang-en="Subscription received" data-lang-zh="订阅已收到">Subscription received</p>
-      <h2 id="subscription-modal-title" data-lang-en="Check your inbox" data-lang-zh="请检查你的邮箱">Check your inbox</h2>
+      <p class="subscribe-kicker">{pick('Subscription received', '订阅已收到')}</p>
+      <h2 id="subscription-modal-title">{pick('Check your inbox', '请检查你的邮箱')}</h2>
       <p id="subscription-modal-message" class="subscribe-modal-message"></p>
       <div class="subscribe-trust-note">
-        <strong data-lang-en="Trusted sender" data-lang-zh="可信发件人">Trusted sender</strong>
+        <strong>{pick('Trusted sender', '可信发件人')}</strong>
         <span>GIDS Alerts &lt;noreply@globalinfectiousdisease.com&gt;</span>
       </div>
-      <p class="subscribe-modal-help" data-lang-en="Add this sender to your contacts or allowlist so future GIDS updates are not filtered as spam." data-lang-zh="请将该发件人加入联系人或信任列表，帮助后续 GIDS 更新顺利送达。">
-        Add this sender to your contacts or allowlist so future GIDS updates are not filtered as spam.
-      </p>
+      <p class="subscribe-modal-help">{pick('Add this sender to your contacts or allowlist so future GIDS updates are not filtered as spam.', '请将该发件人加入联系人或信任列表，帮助后续 GIDS 更新顺利送达。')}</p>
       <div class="subscribe-modal-actions">
         <button id="subscription-resend" class="subscribe-modal-secondary" type="button">
-          <span data-lang-en="Resend confirmation" data-lang-zh="再次发送确认邮件">Resend confirmation</span>
+          <span>{pick('Resend confirmation', '再次发送确认邮件')}</span>
         </button>
         <button class="subscribe-modal-primary" type="button" data-modal-close>
-          <span data-lang-en="Done" data-lang-zh="完成">Done</span>
+          <span>{pick('Done', '完成')}</span>
         </button>
       </div>
       <p id="subscription-resend-status" class="subscribe-modal-resend" role="status" aria-live="polite"></p>
@@ -281,9 +270,7 @@ const subscriptionsApiBase = (
       };
 
       function currentLang() {
-        return document.documentElement.getAttribute('data-lang') === 'zh' || localStorage.getItem('lang') === 'zh'
-          ? 'zh'
-          : 'en';
+        return form.getAttribute('data-page-locale') === 'zh' ? 'zh' : 'en';
       }
 
       function setStatus(type, message) {
@@ -467,9 +454,6 @@ const subscriptionsApiBase = (
       allCountries?.addEventListener('change', syncCountryInputs);
       diseaseSearch?.addEventListener('input', renderDiseaseOptions);
       loadOptions();
-
-      const langObserver = new MutationObserver(() => renderAllOptions());
-      langObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-lang'] });
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();

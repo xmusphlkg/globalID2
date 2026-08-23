@@ -32,7 +32,7 @@ def _signal(*, signal_id: str = "signal-reviewed", basis: str = "analyst_review"
             "completeness": 0.99,
         },
         "anomaly": {
-            "model": "robust_quasi_poisson_v1" if automated else "seasonal_robust_z_fallback_v1",
+            "model": "multi_horizon_gamma_poisson_v1" if automated else "seasonal_robust_z_fallback_v1",
             "detector_tier": "common_count",
             "state": "strong",
             "q_value": 0.001,
@@ -44,9 +44,30 @@ def _signal(*, signal_id: str = "signal-reviewed", basis: str = "analyst_review"
             "temporal_relevance": "current" if automated else "lagged",
             "verification_status": "verified",
             "verification_basis": basis,
-            "verification_policy_version": "guarded_auto_v1" if automated else None,
-            "verified_by": "policy:guarded_auto_v1" if automated else "reviewer:17",
+            "verification_policy_version": "tiered_auto_v3.2" if automated else None,
+            "verified_by": "policy:tiered_auto_v3.2" if automated else "reviewer:17",
             "verified_at": "2026-08-17T01:55:00Z",
+            "automation_decision": (
+                {
+                    "status": "auto_verified",
+                    "basis": "calibrated_statistical",
+                    "policy_version": "tiered_auto_v3.2",
+                    "calibration_hash": "artifact-hash",
+                    "gate_reasons": [],
+                    "matched_event_ids": [],
+                    "decided_at": "2026-08-17T01:55:00Z",
+                }
+                if automated
+                else {
+                    "status": "not_evaluated",
+                    "basis": "not_applicable",
+                    "policy_version": None,
+                    "calibration_hash": None,
+                    "gate_reasons": [],
+                    "matched_event_ids": [],
+                    "decided_at": None,
+                }
+            ),
         },
         "evidence_links": [
             {"title": "Official source", "url": "https://example.invalid/evidence"}
@@ -114,6 +135,7 @@ def test_builds_analyst_review_contract_and_stable_per_signal_idempotency():
         "verification_status": "verified",
         "verification_basis": "analyst_review",
         "verification_policy_version": None,
+        "automation_decision": None,
         "verified_by": "reviewer:17",
         "verified_at": "2026-08-17T01:55:00Z",
         "observed_at": "2026-08-16T00:00:00Z",
@@ -134,7 +156,7 @@ def test_builds_analyst_review_contract_and_stable_per_signal_idempotency():
     )
 
 
-def test_production_payload_filter_blocks_guarded_auto_but_keeps_reviewed_signal():
+def test_production_payload_filter_accepts_v32_automatic_and_reviewed_signals():
     report = _report(
         _signal(signal_id="automatic", basis="automated_policy"),
         _signal(signal_id="reviewed"),
@@ -144,15 +166,12 @@ def test_production_payload_filter_blocks_guarded_auto_but_keeps_reviewed_signal
         report, "https://globalinfectiousdisease.com/situation/"
     )
 
-    assert [payload["signal"]["signal_id"] for payload in payloads] == ["reviewed"]
+    assert [payload["signal"]["signal_id"] for payload in payloads] == [
+        "automatic",
+        "reviewed",
+    ]
     assert skipped == 0
-    assert blocked == 1
-    with pytest.raises(dispatcher.DispatchError, match="automated_policy_dispatch_disabled"):
-        dispatcher.build_alert_payload(
-            report,
-            report["signals"][0],
-            "https://globalinfectiousdisease.com/situation/",
-        )
+    assert blocked == 0
 
 
 @pytest.mark.parametrize(
@@ -162,17 +181,17 @@ def test_production_payload_filter_blocks_guarded_auto_but_keeps_reviewed_signal
             lambda signal: signal["assessment"].update(
                 verification_policy_version="future-auto-v2"
             ),
-            "guarded_auto_policy_required",
+            "tiered_auto_policy_required",
         ),
         (
             lambda signal: signal["anomaly"].update(
                 model="seasonal_robust_z_fallback_v1"
             ),
-            "guarded_auto_primary_fit_required",
+            "calibrated_statistical_primary_fit_required",
         ),
         (
             lambda signal: signal["observation"].update(data_status="held_back"),
-            "guarded_auto_current_signal_required",
+            "tiered_auto_current_signal_required",
         ),
     ],
 )
@@ -253,11 +272,13 @@ def test_main_posts_each_reviewed_signal_with_bearer_and_timeout(tmp_path, capsy
     assert '"duplicates": 1' in output.out
 
 
-def test_main_does_not_make_request_for_guarded_auto(tmp_path, capsys):
+def test_main_dispatches_v32_automatic_policy_signal(tmp_path, capsys):
     path = _write_report(tmp_path, _report(_signal(basis="automated_policy")))
+    calls = []
 
-    def opener(*_args, **_kwargs):
-        raise AssertionError("automatic signal must not reach the network")
+    def opener(request, *, timeout):
+        calls.append((request, timeout))
+        return _Response({"ok": True, "duplicate": False})
 
     result = dispatcher.main(
         ["--report", str(path)],
@@ -270,9 +291,10 @@ def test_main_does_not_make_request_for_guarded_auto(tmp_path, capsys):
     )
 
     assert result == 0
+    assert len(calls) == 1
     output = json.loads(capsys.readouterr().out)
-    assert output["eligible"] == 0
-    assert output["blocked_automatic"] == 1
+    assert output["eligible"] == 1
+    assert output["blocked_automatic"] == 0
 
 
 def test_missing_configuration_skips_unless_strict(capsys):

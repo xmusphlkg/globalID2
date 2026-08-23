@@ -4,11 +4,18 @@ import { basename, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
-  maxJavaScriptChunkBytes: 500_000,
+  maxJavaScriptChunkBytes: 350_000,
   maxRouteCompressedAssetsBytes: 370_000,
-  maxTotalHtmlBytes: 120_000_000,
-  maxTotalHtmlGzipBytes: 24_000_000,
-  maxFontAssetBytes: 400_000,
+  maxOrdinaryRouteCompressedAssetsBytes: 300_000,
+  // Raised from 100KB (2026-08-23): the bilingual Research Radar graph page
+  // now carries enough static graph metadata to sit just over the old cap.
+  maxPageHtmlGzipBytes: 115_000,
+  maxAverageHtmlBytes: 105_000,
+  // Raised from 24MB (2026-08-20): Research Radar content growth pushed the
+  // static site past the old cap. Keep this tight and revisit if archive
+  // pruning/pagination lands.
+  maxTotalHtmlGzipBytes: 26_000_000,
+  maxFontAssetBytes: 220_000,
   maxLegacyWoffFiles: 0,
   maxWorldMapBytes: 525_000,
   maxWorldMapBrotliBytes: 140_000,
@@ -107,6 +114,8 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
   const pages = walkHtml(dist);
   if (pages.length === 0) errors.push(`No HTML pages found in ${dist}.`);
   let largestRoute = { path: '', gzipBytes: 0, assetCount: 0 };
+  let largestOrdinaryRoute = { path: '', gzipBytes: 0, assetCount: 0 };
+  let largestPageHtml = { path: '', gzipBytes: 0 };
   let totalHtmlBytes = 0;
   let totalHtmlGzipBytes = 0;
 
@@ -114,7 +123,10 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
     const htmlBytes = readFileSync(page);
     const html = htmlBytes.toString('utf8');
     totalHtmlBytes += htmlBytes.length;
-    totalHtmlGzipBytes += gzipSync(htmlBytes, { level: 9 }).length;
+    const pageHtmlGzipBytes = gzipSync(htmlBytes, { level: 9 }).length;
+    totalHtmlGzipBytes += pageHtmlGzipBytes;
+    const routePath = `/${relative(dist, page).replaceAll('\\', '/')}`;
+    if (pageHtmlGzipBytes > largestPageHtml.gzipBytes) largestPageHtml = { path: routePath, gzipBytes: pageHtmlGzipBytes };
     const selected = new Set();
     for (const match of html.matchAll(/(?:component-url|renderer-url)="\/_astro\/([^"?]+\.js)"/g)) {
       addJavaScriptDependencies(match[1], assets, selected);
@@ -126,10 +138,14 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
     const gzipBytes = [...selected].reduce((sum, name) => sum + (assets.get(name)?.gzipBytes ?? 0), 0);
     if (gzipBytes > largestRoute.gzipBytes) {
       largestRoute = {
-        path: `/${relative(dist, page).replaceAll('\\', '/')}`,
+        path: routePath,
         gzipBytes,
         assetCount: selected.size,
       };
+    }
+    const isDataRoute = /^\/(?:zh\/)?(?:countries|diseases|situation|research)\//.test(routePath);
+    if (!isDataRoute && gzipBytes > largestOrdinaryRoute.gzipBytes) {
+      largestOrdinaryRoute = { path: routePath, gzipBytes, assetCount: selected.size };
     }
   }
 
@@ -139,9 +155,17 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
       + `(budget ${budgets.maxRouteCompressedAssetsBytes}).`,
     );
   }
-  if (totalHtmlBytes > budgets.maxTotalHtmlBytes) {
+  if (largestOrdinaryRoute.gzipBytes > budgets.maxOrdinaryRouteCompressedAssetsBytes) {
+    errors.push(`Largest ordinary route asset graph ${largestOrdinaryRoute.path} is ${largestOrdinaryRoute.gzipBytes} gzip bytes (budget ${budgets.maxOrdinaryRouteCompressedAssetsBytes}).`);
+  }
+  if (largestPageHtml.gzipBytes > budgets.maxPageHtmlGzipBytes) {
+    errors.push(`Largest page HTML ${largestPageHtml.path} is ${largestPageHtml.gzipBytes} gzip bytes (budget ${budgets.maxPageHtmlGzipBytes}).`);
+  }
+  const averageHtmlBytes = pages.length > 0 ? Math.round(totalHtmlBytes / pages.length) : 0;
+  if (averageHtmlBytes > budgets.maxAverageHtmlBytes) {
     errors.push(
-      `Generated HTML totals ${totalHtmlBytes} bytes (budget ${budgets.maxTotalHtmlBytes}).`,
+      `Generated HTML averages ${averageHtmlBytes} bytes per page `
+      + `(budget ${budgets.maxAverageHtmlBytes}).`,
     );
   }
   if (totalHtmlGzipBytes > budgets.maxTotalHtmlGzipBytes) {
@@ -171,9 +195,11 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
     html: {
       rawBytes: totalHtmlBytes,
       gzipBytes: totalHtmlGzipBytes,
-      averageRawBytes: pages.length > 0 ? Math.round(totalHtmlBytes / pages.length) : 0,
+      averageRawBytes: averageHtmlBytes,
+      largestPage: largestPageHtml,
     },
     largestRoute,
+    largestOrdinaryRoute,
   };
 }
 

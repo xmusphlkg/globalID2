@@ -12,7 +12,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const desktopSidebarWidth = sidebarCollapsed ? "lg:pl-[72px]" : "lg:pl-[248px]";
 
   return (
-    <div className="m-0 min-h-screen w-full bg-[#F7F7F5] pt-0 text-[#1D1D1F]">
+    <div className="control-shell m-0 min-h-screen w-full pt-0">
       <Sidebar
         mobileOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -28,7 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           />
         </Suspense>
 
-        <main className="min-w-0 flex-1 pb-10">
+        <main id="main-content" className="min-w-0 flex-1 pb-10">
           <div className="w-full min-w-0 px-4 py-5 sm:px-6 lg:py-6">
             <Suspense fallback={<div className="min-h-48 animate-pulse rounded-md border border-[#E5E5E2] bg-white" />}>
               {children}

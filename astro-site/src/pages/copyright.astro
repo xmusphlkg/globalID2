@@ -1,0 +1,21 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PublicCopyright from '../components/public/PublicCopyright.astro';
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const zh = locale === 'zh';
+---
+
+<BaseLayout
+  title={zh ? '版权与复用' : 'Copyright & Reuse'}
+  description={zh ? '了解适用于 GIDS 材料的版权、数据许可、代码、署名、品牌和权利声明规则。' : 'Understand the separate copyright, data-licensing, code, attribution, brand, and rights-notice rules that apply to GIDS materials.'}
+  initialLanguage={locale}
+  seo={{
+    title: zh ? '版权、数据许可与复用 | GIDS' : 'Copyright, Data Licensing & Reuse | GIDS',
+    description: zh ? '了解适用于 GIDS 材料的版权、数据许可、代码、署名、品牌和权利声明规则。' : 'Understand the separate copyright, data-licensing, code, attribution, brand, and rights-notice rules that apply to GIDS materials.',
+    locale,
+    canonicalPath: zh ? '/zh/copyright/' : '/copyright/',
+    alternatePaths: { en: '/copyright/', zh: '/zh/copyright/' },
+  }}
+>
+  <PublicCopyright locale={locale} />
+</BaseLayout>

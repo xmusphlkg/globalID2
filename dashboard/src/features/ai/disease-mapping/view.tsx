@@ -117,7 +117,7 @@ export default function DiseaseMappingView() {
       <section className="app-panel p-4">
         <h2 className="text-base font-semibold">{copy.countryCoverage}</h2>
         <p className="mt-1 max-w-4xl text-sm leading-6 text-tremor-content-subtle">{copy.coverageNote}</p>
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-4 overflow-x-auto" role="region" aria-label={copy.countryCoverage} tabIndex={0}>
           <table className="w-full min-w-[1040px] text-left text-sm">
             <thead className="text-xs uppercase text-tremor-content-subtle">
               <tr><th className="py-2">{copy.country}</th><th className="text-right">{copy.observations}</th><th className="text-right">{copy.series}</th><th className="text-right">{copy.decided}</th><th className="text-right">{copy.canonical}</th><th className="text-right">{copy.sourceOnly}</th><th className="text-right">{copy.undecided}</th><th className="text-right">{copy.coverage}</th></tr>

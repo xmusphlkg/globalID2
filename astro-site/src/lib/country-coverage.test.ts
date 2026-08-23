@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import test from 'node:test';
 import {
+  COUNTRY_COVERAGE,
   getCountryCoverage,
   hasCountryDataSnapshot,
   resolveCoverageStatus,
 } from './country-coverage.ts';
-import { resolveFlagIso2 } from './country-flag.ts';
+import { getFlagAssetPath, resolveFlagIso2 } from './country-flag.ts';
 
 test('an empty seeded metadata row does not activate a scheduled country', () => {
   const iceland = getCountryCoverage('IS');
@@ -50,4 +52,12 @@ test('Sweden activates as supported when public site data exists', () => {
 test('ISO subdivision locations use their parent country flag', () => {
   assert.equal(resolveFlagIso2('CA-ON'), 'CA');
   assert.equal(resolveFlagIso2('ca-on'), 'CA');
+  assert.equal(getFlagAssetPath('CA-ON'), '/flags/ca.svg');
+});
+
+test('every country coverage marker has a bundled flag asset', () => {
+  for (const country of COUNTRY_COVERAGE) {
+    const flag = new URL(`../../public${getFlagAssetPath(country.code)}`, import.meta.url);
+    assert.equal(existsSync(flag), true, `${country.code} flag asset is missing`);
+  }
 });

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">GIDS evidence aperture</title>
+  <desc id="desc">Four geographic arcs converge on a central surveillance signal.</desc>
+  <rect width="64" height="64" rx="12" fill="#102A43"/>
+  <g fill="none" stroke-linecap="round" stroke-width="3.25">
+    <path d="M31 11C20 12 12 20 11 31" stroke="#5FB8AE"/>
+    <path d="M33 11C44 12 52 20 53 31" stroke="#F7F4ED"/>
+    <path d="M53 33C52 44 44 52 33 53" stroke="#D89078"/>
+    <path d="M31 53C20 52 12 44 11 33" stroke="#D7B85A"/>
+    <path d="M22 15c6 9 6 25 0 34M42 15c-6 9-6 25 0 34M15 22c9 6 25 6 34 0M15 42c9-6 25-6 34 0" stroke="#F7F4ED" stroke-opacity=".44" stroke-width="1.5"/>
+  </g>
+  <circle cx="32" cy="32" r="6.5" fill="#F7F4ED"/>
+  <circle cx="32" cy="32" r="3" fill="#B5472E"/>
+</svg>

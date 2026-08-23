@@ -38,6 +38,15 @@ function validAlert() {
       verification_status: "verified",
       verification_basis: "analyst_review",
       verification_policy_version: null,
+      automation_decision: null as null | {
+        status: string;
+        basis: string;
+        policy_version: string;
+        calibration_hash: string;
+        gate_reasons: string[];
+        matched_event_ids: string[];
+        decided_at: string;
+      },
       verified_by: "analyst:reviewer-17",
       verified_at: "2026-08-17T11:55:00Z",
       observed_at: "2026-08-16T00:00:00Z",
@@ -80,41 +89,65 @@ test("rejects unknown verification bases, unverified, stale, unpublished, and no
   }
 });
 
-test("accepts guarded_auto_v1 only when every policy guard is present", () => {
+function tieredAutoAlert() {
   const payload = validAlert();
   payload.signal.verification_basis = "automated_policy";
-  payload.signal.verification_policy_version = "guarded_auto_v1";
-  payload.signal.verified_by = "policy:guarded_auto_v1";
-  payload.signal.q_value = 0.01;
+  payload.signal.verification_policy_version = "tiered_auto_v3.2";
+  payload.signal.verified_by = "policy:tiered_auto_v3.2";
+  payload.signal.model = "multi_horizon_gamma_poisson_v1";
+  payload.signal.q_value = 0.025;
+  payload.signal.automation_decision = {
+    status: "auto_verified",
+    basis: "calibrated_statistical",
+    policy_version: "tiered_auto_v3.2",
+    calibration_hash: "artifact-hash",
+    gate_reasons: [],
+    matched_event_ids: [],
+    decided_at: "2026-08-17T11:55:00Z",
+  };
+  return payload;
+}
+
+test("accepts tiered_auto_v3.2 only with a structured calibrated decision", () => {
+  const payload = tieredAutoAlert();
   const alert = parseSituationAlertPayload(payload);
   assert.equal(alert.signal.verification_basis, "automated_policy");
-  assert.equal(alert.signal.verification_policy_version, "guarded_auto_v1");
-  assert.equal(alert.signal.q_value, 0.01);
+  assert.equal(alert.signal.verification_policy_version, "tiered_auto_v3.2");
+  assert.equal(alert.signal.q_value, 0.025);
+  assert.equal(alert.signal.automation_decision?.basis, "calibrated_statistical");
+});
+
+test("accepts official corroboration for a review-level rare or fallback signal", () => {
+  const payload = tieredAutoAlert();
+  payload.signal.signal_type = "officially_correlated_signal";
+  payload.signal.model = "seasonal_empirical_fallback_v1";
+  payload.signal.fit_status = "fallback_completed";
+  payload.signal.detector_tier = "rare_count";
+  payload.signal.q_value = 0.05;
+  payload.signal.automation_decision!.basis = "official_corroboration";
+  payload.signal.automation_decision!.matched_event_ids = ["event-cluster:one"];
+  const alert = parseSituationAlertPayload(payload);
+  assert.equal(alert.signal.automation_decision?.basis, "official_corroboration");
+  assert.deepEqual(alert.signal.automation_decision?.matched_event_ids, ["event-cluster:one"]);
 });
 
 test("rejects unknown or weakened automated verification policies", () => {
-  const automaticAlert = () => {
-    const payload = validAlert();
-    payload.signal.verification_basis = "automated_policy";
-    payload.signal.verification_policy_version = "guarded_auto_v1";
-    payload.signal.verified_by = "policy:guarded_auto_v1";
-    return payload;
-  };
   const cases: Array<[string, (payload: ReturnType<typeof validAlert>) => void]> = [
-    ["guarded_auto_policy_required", (payload) => { payload.signal.verification_policy_version = "unknown_auto_v2"; }],
-    ["guarded_auto_verifier_required", (payload) => { payload.signal.verified_by = "policy:unknown"; }],
-    ["guarded_auto_current_signal_required", (payload) => { payload.signal.temporal_relevance = "lagged"; }],
-    ["guarded_auto_current_signal_required", (payload) => { payload.signal.data_status = "held_back"; }],
-    ["guarded_auto_q_threshold_required", (payload) => { payload.signal.q_value = 0.010001; }],
-    ["guarded_auto_q_threshold_required", (payload) => { payload.signal.q_value = null; }],
-    ["guarded_auto_primary_fit_required", (payload) => { payload.signal.model = "seasonal_empirical_fallback_v1"; }],
-    ["guarded_auto_primary_fit_required", (payload) => { payload.signal.fit_status = "fallback_completed"; }],
-    ["guarded_auto_detector_tier_required", (payload) => { payload.signal.detector_tier = "rate"; }],
-    ["guarded_auto_effect_threshold_required", (payload) => { payload.signal.effect_threshold_passed = false; }],
-    ["guarded_auto_completeness_required", (payload) => { payload.signal.completeness = 0.949; }],
+    ["tiered_auto_policy_required", (payload) => { payload.signal.verification_policy_version = "unknown_auto_v2"; }],
+    ["tiered_auto_verifier_required", (payload) => { payload.signal.verified_by = "policy:unknown"; }],
+    ["tiered_auto_current_signal_required", (payload) => { payload.signal.temporal_relevance = "lagged"; }],
+    ["tiered_auto_current_signal_required", (payload) => { payload.signal.data_status = "held_back"; }],
+    ["calibrated_statistical_q_required", (payload) => { payload.signal.q_value = 0.025001; }],
+    ["calibrated_statistical_q_required", (payload) => { payload.signal.q_value = null; }],
+    ["calibrated_statistical_primary_fit_required", (payload) => { payload.signal.model = "seasonal_empirical_fallback_v1"; }],
+    ["calibrated_statistical_primary_fit_required", (payload) => { payload.signal.fit_status = "fallback_completed"; }],
+    ["calibrated_statistical_primary_fit_required", (payload) => { payload.signal.detector_tier = "rate"; }],
+    ["tiered_auto_effect_threshold_required", (payload) => { payload.signal.effect_threshold_passed = false; }],
+    ["tiered_auto_completeness_required", (payload) => { payload.signal.completeness = 0.949; }],
+    ["automation_gate_reasons_must_be_empty", (payload) => { payload.signal.automation_decision!.gate_reasons = ["failed"]; }],
   ];
   for (const [message, mutate] of cases) {
-    const payload = automaticAlert();
+    const payload = tieredAutoAlert();
     mutate(payload);
     assert.throws(
       () => parseSituationAlertPayload(payload),
@@ -159,15 +192,12 @@ test("allows public report links only from explicitly configured origins", () =>
 
 test("builds bilingual wording with an explicit verification basis and policy", () => {
   const analystAlert = parseSituationAlertPayload(validAlert());
-  const automaticPayload = validAlert();
-  automaticPayload.signal.verification_basis = "automated_policy";
-  automaticPayload.signal.verification_policy_version = "guarded_auto_v1";
-  automaticPayload.signal.verified_by = "policy:guarded_auto_v1";
+  const automaticPayload = tieredAutoAlert();
   const automaticAlert = parseSituationAlertPayload(automaticPayload);
   const english = situationAlertContent(automaticAlert, "en-US");
   const chinese = situationAlertContent(analystAlert, "zh-CN");
   assert.match(english.subject, /verified surveillance alert/i);
-  assert.match(english.markdown, /guarded automated policy \(guarded_auto_v1\)/i);
+  assert.match(english.markdown, /tiered automated policy \(tiered_auto_v3.2\)/i);
   assert.match(english.markdown, /not a public-health risk rating/i);
   assert.match(chinese.subject, /已核验监测提醒/);
   assert.match(chinese.markdown, /人工分析员复核（无自动策略）/);

@@ -11,6 +11,12 @@ import {
   type CountryCoverageItem,
 } from '../../lib/country-coverage';
 import metaRaw from '../../data/meta.json';
+import { buildAlternatePaths } from '../../lib/seo';
+
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 
 const meta = metaRaw as any;
 const metaCountries = (meta.countries ?? []) as Array<{
@@ -76,30 +82,28 @@ const TRACK_ZH: Record<string, string> = {
 ---
 
 <ReportLayout
-  title="Countries and Regions"
-  description="Browse countries and regions with available infectious disease surveillance data."
-  breadcrumbs={[{ label: 'Countries', labelZh: '国家' }]}
+  title={pick('Countries and Regions', '国家和地区')}
+  description={pick('Browse countries and regions with available infectious disease surveillance data.', '浏览提供传染病监测数据的国家和地区。')}
+  initialLanguage={locale}
+  seo={{ title: pick('Countries and Regions | GIDS', '国家和地区 | GIDS'), description: pick('Browse countries and regions with available infectious disease surveillance data.', '浏览提供传染病监测数据的国家和地区。'), locale, canonicalPath: `${prefix}/countries/`, alternatePaths: buildAlternatePaths(`${prefix}/countries/`, locale), pageType: 'WebPage' }}
+  breadcrumbs={[{ label: pick('Countries', '国家') }]}
 >
   <div class="coverage-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
     <section class="card coverage-surface p-6 sm:p-8">
       <div class="coverage-section-header flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 class="coverage-section-title"
-              data-lang-en="Data Coverage"
-              data-lang-zh="数据覆盖国家/地区">
-            Data Coverage
-          </h1>
+          <h1 class="coverage-section-title">{pick('Data Coverage', '数据覆盖国家/地区')}</h1>
 
         </div>
 
         <div class="coverage-legend">
           <span class="coverage-legend-item">
             <span class="inline-block h-2.5 w-2.5 rounded-full bg-teal-500"></span>
-            <span data-lang-en="Supported" data-lang-zh="已支持">Supported</span>
+            <span>{pick('Supported', '已支持')}</span>
           </span>
           <span class="coverage-legend-item">
-            <span class="inline-block h-2.5 w-2.5 rounded-full bg-slate-500"></span>
-            <span data-lang-en="Scheduled" data-lang-zh="规划中">Scheduled</span>
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-[rgb(var(--surface))]"></span>
+            <span>{pick('Scheduled', '规划中')}</span>
           </span>
         </div>
       </div>
@@ -109,31 +113,19 @@ const TRACK_ZH: Record<string, string> = {
           client:only="react"
           metaCountries={supportedCountries}
           height={520}
+          initialLanguage={locale}
         />
       </div>
-      <p
-        class="coverage-map-note"
-        data-lang-en="Countries and regions with available data are shown on the map. Select a card below to view sources and coverage."
-        data-lang-zh="地图展示当前可用数据的国家和地区；选择下方卡片可查看来源与覆盖范围。"
-      >
-        Countries and regions with available data are shown on the map. Select a card below to view sources and coverage.
-      </p>
+      <p class="coverage-map-note">{pick('Countries and regions with available data are shown on the map. Select a card below to view sources and coverage.', '地图展示当前可用数据的国家和地区；选择下方卡片可查看来源与覆盖范围。')}</p>
     </section>
 
     <section class="card coverage-surface p-6 sm:p-8">
       <div class="coverage-section-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 class="coverage-section-title"
-              data-lang-en="Countries"
-              data-lang-zh="国家/地区">Countries and regions</h2>
+          <h2 class="coverage-section-title">{pick('Countries and regions', '国家/地区')}</h2>
         </div>
         <span class="coverage-summary-pill">
-          <span
-            data-lang-en={`${supportedCountries.length} active · ${scheduledCount} scheduled`}
-            data-lang-zh={`${supportedCountries.length} 个已支持 · ${scheduledCount} 个规划中`}
-          >
-            {supportedCountries.length} active · {scheduledCount} scheduled
-          </span>
+          <span>{pick(`${supportedCountries.length} active · ${scheduledCount} scheduled`, `${supportedCountries.length} 个已支持 · ${scheduledCount} 个规划中`)}</span>
         </span>
       </div>
 
@@ -154,6 +146,7 @@ const TRACK_ZH: Record<string, string> = {
                 totalDeaths={m.total_deaths}
                 diseaseCount={m.disease_count}
                 dateRange={m.date_range}
+                locale={locale}
               />
             );
           }
@@ -167,6 +160,7 @@ const TRACK_ZH: Record<string, string> = {
                 totalCases={0}
                 totalDeaths={0}
                 diseaseCount={0}
+                locale={locale}
               />
             );
           }
@@ -177,37 +171,19 @@ const TRACK_ZH: Record<string, string> = {
                 <div class="flex items-center gap-3">
                   <CountryFlag code={c.code} name={c.name_en} sizeClass="w-9 h-7" />
                   <div>
-                    <h3
-                      class="text-[rgb(var(--text-strong))] font-semibold text-base"
-                      data-lang-en={c.name_en}
-                      data-lang-zh={c.name_zh}
-                    >
-                      {c.name_en}
-                    </h3>
+                    <h3 class="text-[rgb(var(--text-strong))] font-semibold text-base">{pick(c.name_en, c.name_zh)}</h3>
                     <span class="text-[rgb(var(--text-faint))] text-xs font-mono tracking-[0.12em] uppercase">{c.code}</span>
                   </div>
                 </div>
-                <span class="coverage-scheduled-pill" data-lang-en="Planned" data-lang-zh="规划中">Planned</span>
+                <span class="coverage-scheduled-pill">{pick('Planned', '规划中')}</span>
               </div>
 
               <div class="coverage-source-meta">
                 {c.onboarding_track && (
-                  <span
-                    class="coverage-source-track"
-                    data-lang-en={c.onboarding_track}
-                    data-lang-zh={trackZh}
-                  >
-                    {c.onboarding_track}
-                  </span>
+                  <span class="coverage-source-track">{pick(c.onboarding_track, trackZh)}</span>
                 )}
                 {c.cadence && (
-                  <span
-                    class="coverage-source-cadence"
-                    data-lang-en={`Update: ${c.cadence}`}
-                    data-lang-zh={`更新：${cadenceZh}`}
-                  >
-                    Update: {c.cadence}
-                  </span>
+                  <span class="coverage-source-cadence">{pick(`Update: ${c.cadence}`, `更新：${cadenceZh}`)}</span>
                 )}
               </div>
 
@@ -217,22 +193,14 @@ const TRACK_ZH: Record<string, string> = {
                   href={c.source_url}
                   target="_blank"
                   rel="noreferrer"
-                  aria-label={`${c.name_en} official surveillance source`}
+                  aria-label={pick(`${c.name_en} official surveillance source`, `${c.name_zh}官方监测来源`)}
                 >
-                  <span class="coverage-source-link-label" data-lang-en="Official source" data-lang-zh="官方数据源">
-                    Official source
-                  </span>
+                  <span class="coverage-source-link-label">{pick('Official source', '官方数据源')}</span>
                   <span class="coverage-source-name">{c.source_name}</span>
                   <span aria-hidden="true">↗</span>
                 </a>
               ) : (
-                <p
-                  class="coverage-source-pending"
-                  data-lang-en="Source assessment in progress."
-                  data-lang-zh="数据源评估中。"
-                >
-                  Source assessment in progress.
-                </p>
+                <p class="coverage-source-pending">{pick('Source assessment in progress.', '数据源评估中。')}</p>
               )}
             </div>
           );
@@ -259,7 +227,7 @@ const TRACK_ZH: Record<string, string> = {
 
 .coverage-title {
   color: rgb(var(--text-strong));
-  font-family: 'Source Serif 4', serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: clamp(2rem, 2.8vw, 3rem);
   font-weight: 600;
   letter-spacing: -0.03em;
@@ -296,7 +264,7 @@ const TRACK_ZH: Record<string, string> = {
 .coverage-meta-value {
   margin-top: 0.55rem;
   color: rgb(var(--text-strong));
-  font-family: 'Source Serif 4', serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: 1.9rem;
   font-weight: 600;
   line-height: 1;
@@ -318,7 +286,7 @@ const TRACK_ZH: Record<string, string> = {
 
 .coverage-section-title {
   color: rgb(var(--text-strong));
-  font-family: 'Source Serif 4', serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-size: clamp(1.55rem, 2vw, 2.15rem);
   font-weight: 600;
   letter-spacing: -0.02em;

@@ -5,10 +5,13 @@ import ResearchCollectionPage from '../../../components/research/ResearchCollect
 import researchData from '../../../data/research/index.json';
 
 export function getStaticPaths() {
-  return ((researchData as any).facets?.topics ?? []).map((facet: any) => ({ params: { topic: facet.slug }, props: { facet } }));
+  return ((researchData as any).facets?.topics ?? []).map((facet: any) => ({ params: { topic: facet.slug }, props: { facet, topic: facet.slug, locale: 'en' } }));
 }
 
-const { facet } = Astro.props as { facet: any };
+interface Props { facet?: any; topic?: string; locale?: 'en' | 'zh' }
+const { locale = 'en' } = Astro.props as Props;
+const topic = (Astro.props as Props).topic ?? '';
+const facet = (Astro.props as Props).facet ?? ((researchData as any).facets?.topics ?? []).find((item: any) => item.slug === topic);
 const file = resolve(`./src/data/research/topics/${facet.slug}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [] };
 const description = `Published Research Radar records connected to the ${facet.name} topic through the auditable classification pipeline.`;
@@ -24,4 +27,5 @@ const descriptionZh = `通过可审计分类流程与“${facet.name}”主题�
   descriptionZh={descriptionZh}
   canonicalPath={`/research/topics/${facet.slug}/`}
   articles={payload.articles ?? []}
+  locale={locale}
 />

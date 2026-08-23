@@ -93,7 +93,7 @@ export default function ChartFrame({
     : (lang === 'zh' ? '进入全屏' : 'Enter full-screen');
 
   return (
-    <div ref={shellRef} className={`chart-shell panel-fullscreen ${isFullscreen ? 'chart-shell-fullscreen' : ''}`}>
+    <div ref={shellRef} data-source-label={sourceMeta?.label} className={`chart-shell panel-fullscreen ${isFullscreen ? 'chart-shell-fullscreen' : ''}`}>
       <div className="chart-frame-toolbar">
         <div className="chart-frame-toolbar-left">
           <div className="chart-view-toggle" role="tablist" aria-label={lang === 'zh' ? '切换图表视图' : 'Switch chart view'}>

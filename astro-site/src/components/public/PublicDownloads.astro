@@ -1,0 +1,878 @@
+---
+import CountryFlag from '../CountryFlag.astro';
+import downloadsRaw from '../../data/downloads.json';
+
+interface Props {
+  locale?: 'en' | 'zh';
+}
+
+const { locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const downloads = downloadsRaw as any;
+
+const countries = (downloads.countries ?? [])
+  .filter(
+    (entry: any) =>
+      Number(entry.record_count ?? 0) > 0 &&
+      entry.parts?.some((part: any) =>
+        Object.values(part.files ?? {}).some((file: any) => Boolean((file as any)?.url)),
+      ),
+  )
+  .map((entry: any) => {
+    const part = entry.parts?.find((item: any) => item.is_current) ?? entry.parts?.at(-1);
+    const partsCount = entry.parts?.length ?? 0;
+    const recordCount = Number(entry.record_count ?? 0);
+    return {
+      kind: 'country',
+      id: entry.code,
+      name: zh
+        ? entry.name_zh ?? entry.name_en ?? entry.code
+        : entry.name_en ?? entry.name ?? entry.code,
+      aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''}`,
+      detail: zh
+        ? `${recordCount.toLocaleString('zh-CN')} 条记录 · ${partsCount} 个时间范围`
+        : `${recordCount.toLocaleString('en-US')} records · ${partsCount} time ranges`,
+      files: part?.files ?? {},
+      period: part?.label ?? (zh ? '最新可用' : 'Latest available'),
+      pageHref: `${prefix}/countries/${String(entry.code).toLowerCase()}/#downloads`,
+      count: recordCount,
+    };
+  });
+
+const diseases = (downloads.diseases ?? []).map((entry: any) => {
+  const part = entry.parts?.find((item: any) => item.is_current) ?? entry.parts?.at(-1);
+  const countryCount = entry.country_count ?? entry.countries?.length ?? 0;
+  const recordCount = Number(entry.record_count ?? 0);
+  return {
+    kind: 'disease',
+    id: entry.disease_id ?? entry.id,
+    name: zh
+      ? entry.name_zh ?? entry.name_en ?? entry.slug
+      : entry.name_en ?? entry.slug ?? entry.id,
+    aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''} ${entry.slug ?? ''}`,
+    detail: zh
+      ? `${recordCount.toLocaleString('zh-CN')} 条记录 · ${countryCount} 个国家/地区`
+      : `${recordCount.toLocaleString('en-US')} records · ${countryCount} countries/regions`,
+    files: part?.files ?? {},
+    period: part?.label ?? (zh ? '最新可用' : 'Latest available'),
+    pageHref: `${prefix}/diseases/${entry.slug}/#downloads`,
+    count: recordCount,
+  };
+});
+
+const entries = [...countries, ...diseases];
+const generatedAt = downloads.generated_at
+  ? new Date(downloads.generated_at).toLocaleDateString(zh ? 'zh-CN' : 'en-US', {
+      year: 'numeric',
+      month: zh ? 'numeric' : 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    })
+  : zh
+    ? '暂无'
+    : 'Not available';
+const totalRecords = entries.reduce((sum: number, entry: any) => sum + entry.count, 0);
+const compact = (value: number) =>
+  new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value);
+const bytes = (value?: number) =>
+  !value
+    ? ''
+    : value >= 1_000_000
+      ? `${(value / 1_000_000).toFixed(1)} MB`
+      : `${Math.max(1, Math.round(value / 1000))} KB`;
+const copy = zh
+  ? {
+      kicker: '开放监测数据',
+      title: '数据下载',
+      lead: '查找国家或疾病数据集，并下载最新发布的时间范围。CSV 适合分析，JSON 适合应用程序，XLSX 适合电子表格审阅。',
+      countrySets: '国家数据集',
+      diseaseSets: '疾病数据集',
+      records: '公开记录',
+      date: '快照日期',
+      catalogue: '数据目录',
+      choose: '选择要下载的数据',
+      intro: '下方链接指向最新时间范围。打开数据详情页可以选择历史周期并查看完整来源说明。',
+      search: '搜索数据集',
+      placeholder: '国家、疾病或代码',
+      type: '数据集类型',
+      all: '全部',
+      countries: '国家',
+      diseases: '疾病',
+      sort: '排序',
+      featured: '默认顺序',
+      nameAsc: '名称 A-Z',
+      recordsDesc: '记录数最多',
+      kindSort: '类型与名称',
+      showing: '显示',
+      of: '共',
+      dataset: '个数据集',
+      range: '当前范围',
+      formats: '格式',
+      details: '全部周期与来源说明',
+      empty: '没有匹配的数据集。',
+      more: '再显示',
+      before: '使用数据之前',
+      context: '保留来源背景',
+      guidance:
+        '不同来源的报告频率、病例定义、覆盖人群和修订方式不同。在比较地区或合并时间序列前，请先阅读每个数据集页面的来源说明。',
+      methods: '阅读方法与局限',
+      terms: '阅读数据使用说明',
+      download: '下载',
+    }
+  : {
+      kicker: 'Open surveillance data',
+      title: 'Data downloads',
+      lead: 'Find a country or disease dataset and download its latest published time range. CSV works well for analysis, JSON for applications, and XLSX for spreadsheet review.',
+      countrySets: 'Country datasets',
+      diseaseSets: 'Disease datasets',
+      records: 'Published records',
+      date: 'Snapshot date',
+      catalogue: 'Dataset catalogue',
+      choose: 'Choose data to download',
+      intro:
+        'Latest time-range files are linked below. Open the dataset page to choose historical periods and review detailed provenance.',
+      search: 'Search datasets',
+      placeholder: 'Country, disease, or code',
+      type: 'Dataset type',
+      all: 'All',
+      countries: 'Countries',
+      diseases: 'Diseases',
+      sort: 'Sort',
+      featured: 'Featured',
+      nameAsc: 'Name A-Z',
+      recordsDesc: 'Most records',
+      kindSort: 'Type & name',
+      showing: 'Showing',
+      of: 'of',
+      dataset: 'datasets',
+      range: 'Current range',
+      formats: 'Formats',
+      details: 'All periods & source notes',
+      empty: 'No datasets match this search.',
+      more: 'Show',
+      before: 'Before using the data',
+      context: 'Keep source context attached',
+      guidance:
+        'Reporting cadence, case definitions, population coverage, and revision practices differ by source. Use the source notes on each dataset page before comparing places or combining time series.',
+      methods: 'Read methods and limitations',
+      terms: 'Read data-use guidance',
+      download: 'Download',
+    };
+---
+
+<main class="downloads-page">
+  <header class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">{copy.kicker}</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.lead}</p>
+      </div>
+      <dl>
+        <div>
+          <dt>{copy.countrySets}</dt>
+          <dd>{countries.length}</dd>
+        </div>
+        <div>
+          <dt>{copy.diseaseSets}</dt>
+          <dd>{diseases.length}</dd>
+        </div>
+        <div>
+          <dt>{copy.records}</dt>
+          <dd>{compact(totalRecords)}</dd>
+        </div>
+        <div>
+          <dt>{copy.date}</dt>
+          <dd class="date">{generatedAt}</dd>
+        </div>
+      </dl>
+    </div>
+  </header>
+
+  <section class="catalogue wrap" aria-labelledby="downloads-catalogue">
+    <header class="heading">
+      <div>
+        <p class="eyebrow">{copy.catalogue}</p>
+        <h2 id="downloads-catalogue">{copy.choose}</h2>
+      </div>
+      <p>{copy.intro}</p>
+    </header>
+
+    <div class="toolbar">
+      <div class="search">
+        <label for={`download-search-${locale}`}>{copy.search}</label>
+        <input
+          id={`download-search-${locale}`}
+          name="dataset"
+          type="search"
+          placeholder={copy.placeholder}
+          autocomplete="off"
+        />
+      </div>
+      <div class="sort">
+        <label for={`download-sort-${locale}`}>{copy.sort}</label>
+        <select id={`download-sort-${locale}`} name="sort">
+          <option value="featured">{copy.featured}</option>
+          <option value="name">{copy.nameAsc}</option>
+          <option value="records">{copy.recordsDesc}</option>
+          <option value="kind">{copy.kindSort}</option>
+        </select>
+      </div>
+      <div class="kind" role="group" aria-label={copy.type}>
+        <button type="button" class="is-active" data-download-kind="all" aria-pressed="true">
+          {copy.all} <span>{entries.length}</span>
+        </button>
+        <button type="button" data-download-kind="country" aria-pressed="false">
+          {copy.countries} <span>{countries.length}</span>
+        </button>
+        <button type="button" data-download-kind="disease" aria-pressed="false">
+          {copy.diseases} <span>{diseases.length}</span>
+        </button>
+      </div>
+    </div>
+
+    <p id={`download-count-${locale}`} class="result-count" aria-live="polite">
+      {copy.showing} {entries.length} {copy.dataset}
+    </p>
+
+    <div class="table-wrap" role="region" aria-label={copy.choose} tabindex="0">
+      <table>
+        <thead>
+          <tr>
+            <th>{copy.catalogue}</th>
+            <th>{copy.range}</th>
+            <th>{copy.formats}</th>
+            <th><span class="sr-only">{copy.details}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            entries.map((entry: any, index: number) => (
+              <tr
+                data-download-row
+                data-index={index}
+                data-kind={entry.kind}
+                data-name={entry.name.toLowerCase()}
+                data-count={entry.count}
+                data-search={`${entry.name} ${entry.aliases} ${entry.id}`.toLowerCase()}
+              >
+                <td data-label={copy.catalogue}>
+                  <div class="dataset-name">
+                    {entry.kind === 'country' ? (
+                      <CountryFlag code={entry.id} name={entry.name} sizeClass="w-9 h-7" />
+                    ) : (
+                      <span class="disease-mark" aria-hidden="true"></span>
+                    )}
+                    <span>
+                      <strong>{entry.name}</strong>
+                      <small>{entry.id}</small>
+                    </span>
+                  </div>
+                </td>
+                <td data-label={copy.range}>
+                  <strong>{entry.period}</strong>
+                  <small>{entry.detail}</small>
+                </td>
+                <td data-label={copy.formats}>
+                  <div class="formats">
+                    {(['csv', 'json', 'xlsx'] as const).map((format) =>
+                      entry.files?.[format]?.url ? (
+                        <a
+                          href={entry.files[format].url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`${copy.download} ${entry.name} ${format.toUpperCase()}`}
+                        >
+                          <strong>{format.toUpperCase()}</strong>
+                          <small>{bytes(entry.files[format].bytes)}</small>
+                        </a>
+                      ) : null,
+                    )}
+                  </div>
+                </td>
+                <td data-label={copy.details}>
+                  <a class="details" href={entry.pageHref}>
+                    {copy.details} →
+                  </a>
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <p id={`downloads-empty-${locale}`} class="empty" hidden>{copy.empty}</p>
+    <button id={`downloads-more-${locale}`} class="more" type="button">
+      {copy.more} 30 {copy.dataset}
+    </button>
+  </section>
+
+  <section class="guidance">
+    <div class="wrap guidance-grid">
+      <div>
+        <p class="eyebrow">{copy.before}</p>
+        <h2>{copy.context}</h2>
+      </div>
+      <div>
+        <p>{copy.guidance}</p>
+        <div>
+          <a href={`${prefix}/about/`}>{copy.methods}</a>
+          <a href={`${prefix}/terms/`}>{copy.terms}</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script is:inline define:vars={{ locale, copy }}>
+  const search = document.querySelector(`#download-search-${locale}`);
+  const sort = document.querySelector(`#download-sort-${locale}`);
+  const tbody = document.querySelector('[data-download-row]')?.closest('tbody');
+  const rows = Array.from(document.querySelectorAll('[data-download-row]'));
+  const buttons = Array.from(document.querySelectorAll('[data-download-kind]'));
+  const count = document.querySelector(`#download-count-${locale}`);
+  const empty = document.querySelector(`#downloads-empty-${locale}`);
+  const more = document.querySelector(`#downloads-more-${locale}`);
+  const validKinds = new Set(['all', 'country', 'disease']);
+  const validSorts = new Set(['featured', 'name', 'records', 'kind']);
+  const initialUrl = new URL(window.location.href);
+  let kind = validKinds.has(initialUrl.searchParams.get('type'))
+    ? initialUrl.searchParams.get('type')
+    : 'all';
+  let sortMode = validSorts.has(initialUrl.searchParams.get('sort'))
+    ? initialUrl.searchParams.get('sort')
+    : 'featured';
+  let limit = 30;
+
+  function normalize(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function orderedRows() {
+    const ordered = [...rows];
+    ordered.sort((a, b) => {
+      if (sortMode === 'name') {
+        return String(a.dataset.name || '').localeCompare(String(b.dataset.name || ''));
+      }
+      if (sortMode === 'records') {
+        return Number(b.dataset.count || 0) - Number(a.dataset.count || 0);
+      }
+      if (sortMode === 'kind') {
+        const kindCompare = String(a.dataset.kind || '').localeCompare(String(b.dataset.kind || ''));
+        if (kindCompare) return kindCompare;
+        return String(a.dataset.name || '').localeCompare(String(b.dataset.name || ''));
+      }
+      return Number(a.dataset.index || 0) - Number(b.dataset.index || 0);
+    });
+    return ordered;
+  }
+
+  function syncControls() {
+    if (sort) sort.value = sortMode;
+    buttons.forEach((button) => {
+      const active = button.dataset.downloadKind === kind;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  function syncUrl() {
+    const next = new URL(window.location.href);
+    const query = normalize(search?.value);
+    if (query) next.searchParams.set('q', query);
+    else next.searchParams.delete('q');
+    if (kind === 'all') next.searchParams.delete('type');
+    else next.searchParams.set('type', kind);
+    if (sortMode === 'featured') next.searchParams.delete('sort');
+    else next.searchParams.set('sort', sortMode);
+    window.history.replaceState({}, '', next);
+  }
+
+  function update() {
+    const query = normalize(search?.value);
+    let matches = 0;
+    let visible = 0;
+    const ordered = orderedRows();
+    ordered.forEach((row) => tbody?.append(row));
+    ordered.forEach((row) => {
+      const match =
+        (kind === 'all' || row.dataset.kind === kind) &&
+        (!query || row.dataset.search?.includes(query));
+      if (match) matches++;
+      row.hidden = !match || visible >= limit;
+      if (!row.hidden) visible++;
+    });
+    if (count) count.textContent = `${copy.showing} ${visible} ${copy.of} ${matches} ${copy.dataset}`;
+    if (empty) empty.hidden = matches !== 0;
+    if (more) {
+      more.hidden = visible >= matches;
+      more.textContent = `${copy.more} ${Math.min(30, matches - visible)} ${copy.dataset}`;
+    }
+    syncUrl();
+  }
+
+  search?.addEventListener('input', () => {
+    limit = 30;
+    update();
+  });
+  sort?.addEventListener('change', () => {
+    sortMode = validSorts.has(sort.value) ? sort.value : 'featured';
+    limit = 30;
+    update();
+  });
+  buttons.forEach((button) =>
+    button.addEventListener('click', () => {
+      kind = button.dataset.downloadKind || 'all';
+      limit = 30;
+      syncControls();
+      update();
+    }),
+  );
+  more?.addEventListener('click', () => {
+    limit += 30;
+    update();
+  });
+
+  if (search) search.value = initialUrl.searchParams.get('q') || '';
+  syncControls();
+  update();
+</script>
+
+<style>
+  .downloads-page {
+    min-width: 0;
+    contain: paint;
+    color: rgb(var(--text));
+  }
+  .wrap {
+    width: min(1160px, calc(100% - 2rem));
+    min-width: 0;
+    margin-inline: auto;
+  }
+  .hero {
+    padding-block: clamp(3.5rem, 8vw, 6rem);
+    background: rgb(var(--surface));
+    border-bottom: 1px solid rgb(var(--border));
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(22rem, .9fr);
+    gap: clamp(2rem, 7vw, 6rem);
+    align-items: center;
+  }
+  .eyebrow {
+    margin: 0 0 .65rem;
+    color: rgb(var(--color-teal));
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+  }
+  .hero h1 {
+    margin: 0;
+    color: rgb(var(--text-strong));
+    font-size: clamp(2.6rem, 5vw, 4.1rem);
+    font-weight: 650;
+    line-height: 1.05;
+  }
+  .hero p:not(.eyebrow) {
+    max-width: 45rem;
+    margin: 1rem 0 0;
+    color: rgb(var(--text-muted));
+    font-size: 1.02rem;
+    line-height: 1.7;
+  }
+  .hero dl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-top: 2px solid rgb(var(--text-strong));
+    border-left: 1px solid rgb(var(--border));
+  }
+  .hero dl div {
+    min-height: 6.4rem;
+    padding: .85rem;
+    border-right: 1px solid rgb(var(--border));
+    border-bottom: 1px solid rgb(var(--border));
+  }
+  .hero dt {
+    color: rgb(var(--text-muted));
+    font-size: .68rem;
+  }
+  .hero dd {
+    margin: .4rem 0 0;
+    color: rgb(var(--text-strong));
+    font-size: 1.5rem;
+    font-weight: 650;
+  }
+  .hero .date {
+    font-size: .86rem;
+  }
+  .catalogue {
+    min-width: 0;
+    padding-block: clamp(3.5rem, 7vw, 5.5rem);
+  }
+  .heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, .65fr);
+    gap: 2rem;
+    align-items: end;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid rgb(var(--text-strong));
+  }
+  .heading h2,
+  .guidance h2 {
+    margin: 0;
+    color: rgb(var(--text-strong));
+    font-size: clamp(1.7rem, 3vw, 2.3rem);
+  }
+  .heading > p {
+    margin: 0;
+    color: rgb(var(--text-muted));
+    font-size: .8rem;
+    line-height: 1.65;
+  }
+  .toolbar {
+    display: grid;
+    grid-template-columns: minmax(16rem, 1fr) minmax(9rem, auto) auto;
+    gap: 1rem;
+    align-items: end;
+    margin-top: 1.5rem;
+  }
+  .search label,
+  .sort label {
+    display: block;
+    margin-bottom: .35rem;
+    color: rgb(var(--text-strong));
+    font-size: .72rem;
+    font-weight: 650;
+  }
+  .search input,
+  .sort select {
+    width: 100%;
+    min-height: 2.7rem;
+    padding: .55rem .7rem;
+    color: rgb(var(--text-strong));
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--border-soft));
+    border-radius: 0;
+    font-size: .76rem;
+  }
+  .kind {
+    display: flex;
+    border: 1px solid rgb(var(--border));
+  }
+  .kind button {
+    min-height: 2.7rem;
+    padding: .5rem .7rem;
+    color: rgb(var(--text-muted));
+    background: rgb(var(--surface));
+    border: 0;
+    border-right: 1px solid rgb(var(--border));
+    font-size: .72rem;
+    font-weight: 650;
+    white-space: nowrap;
+  }
+  .kind button:last-child {
+    border-right: 0;
+  }
+  .kind button span {
+    color: rgb(var(--text-faint));
+  }
+  .kind .is-active {
+    color: #fff;
+    background: rgb(var(--color-brand));
+  }
+  .kind .is-active span {
+    color: #dce7ef;
+  }
+  .result-count {
+    margin: 1rem 0 .55rem;
+    color: rgb(var(--text-muted));
+    font-size: .73rem;
+  }
+  .table-wrap {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    contain: inline-size;
+    border: 1px solid rgb(var(--border));
+    background: rgb(var(--surface));
+  }
+  table {
+    width: 100%;
+    min-width: 940px;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+  th {
+    position: sticky;
+    top: 4.5rem;
+    z-index: 5;
+    padding: .7rem .8rem;
+    color: rgb(var(--text-muted));
+    background: rgb(var(--bg-soft));
+    border-bottom: 1px solid rgb(var(--border));
+    font-size: .66rem;
+    text-align: left;
+    text-transform: uppercase;
+  }
+  th:nth-child(1),
+  td:nth-child(1) {
+    width: 32%;
+  }
+  th:nth-child(2),
+  td:nth-child(2) {
+    width: 23%;
+  }
+  th:nth-child(3),
+  td:nth-child(3) {
+    width: 24%;
+  }
+  th:nth-child(4),
+  td:nth-child(4) {
+    width: 21%;
+    text-align: right;
+  }
+  td {
+    padding: .75rem .8rem;
+    border-bottom: 1px solid rgb(var(--border));
+    vertical-align: middle;
+  }
+  tr:last-child td {
+    border-bottom: 0;
+  }
+  tr[hidden] {
+    display: none;
+  }
+  .dataset-name {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: .65rem;
+  }
+  .dataset-name > span:last-child {
+    display: grid;
+    min-width: 0;
+  }
+  .dataset-name strong,
+  td:nth-child(2) > strong {
+    color: rgb(var(--text-strong));
+    font-size: .78rem;
+  }
+  .dataset-name small,
+  td:nth-child(2) > small {
+    margin-top: .12rem;
+    color: rgb(var(--text-muted));
+    font-size: .64rem;
+  }
+  .dataset-name strong,
+  .dataset-name small,
+  td:nth-child(2) > strong,
+  td:nth-child(2) > small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .disease-mark {
+    width: 1.55rem;
+    height: 1.55rem;
+    flex: 0 0 auto;
+    border: 5px solid rgb(var(--color-teal) / .2);
+    border-radius: 50%;
+    background: rgb(var(--color-teal));
+    box-shadow: inset 0 0 0 4px rgb(var(--surface));
+  }
+  .formats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 5.25rem));
+    gap: .35rem;
+    align-items: center;
+  }
+  .formats a {
+    display: grid;
+    min-width: 0;
+    padding: .32rem .4rem;
+    color: rgb(var(--text-strong));
+    border: 1px solid rgb(var(--border));
+    text-align: center;
+    text-decoration: none;
+  }
+  .formats strong {
+    font-size: .64rem;
+  }
+  .formats small {
+    color: rgb(var(--text-muted));
+    font-size: .54rem;
+  }
+  .details {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    color: rgb(var(--color-teal));
+    font-size: .7rem;
+    font-weight: 650;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .empty {
+    padding: 2rem;
+    color: rgb(var(--text-muted));
+    border: 1px solid rgb(var(--border));
+    text-align: center;
+  }
+  .more {
+    display: block;
+    min-height: 2.7rem;
+    margin: 1rem auto 0;
+    padding: .55rem 1rem;
+    color: rgb(var(--text-strong));
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--border));
+    font-size: .76rem;
+    font-weight: 650;
+  }
+  .more[hidden] {
+    display: none;
+  }
+  .guidance {
+    padding-block: clamp(3.5rem, 7vw, 5rem);
+    background: rgb(var(--surface));
+    border-top: 1px solid rgb(var(--border));
+  }
+  .guidance-grid {
+    display: grid;
+    grid-template-columns: minmax(16rem, .7fr) minmax(0, 1.3fr);
+    gap: clamp(2rem, 7vw, 6rem);
+  }
+  .guidance-grid > div:last-child > p {
+    margin: 0;
+    line-height: 1.75;
+  }
+  .guidance-grid > div:last-child > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .guidance a {
+    color: rgb(var(--color-teal));
+    font-size: .78rem;
+    font-weight: 650;
+  }
+
+  @media (max-width: 900px) {
+    .toolbar {
+      grid-template-columns: minmax(0, 1fr) minmax(9rem, .55fr);
+    }
+    .kind {
+      grid-column: 1 / -1;
+      width: max-content;
+      max-width: 100%;
+    }
+  }
+
+  @media (min-width: 960px) {
+    .table-wrap {
+      overflow: visible;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .hero-grid,
+    .heading,
+    .guidance-grid {
+      grid-template-columns: 1fr;
+    }
+    .hero {
+      padding-block: 3rem;
+    }
+    .hero dl {
+      grid-template-columns: 1fr 1fr;
+    }
+    .toolbar {
+      grid-template-columns: 1fr;
+    }
+    .kind {
+      width: 100%;
+    }
+    .kind button {
+      flex: 1;
+      min-width: 0;
+      padding-inline: .35rem;
+    }
+    .table-wrap {
+      overflow: visible;
+      border: 0;
+      background: transparent;
+    }
+    table,
+    tbody,
+    tr,
+    td {
+      display: block;
+      width: 100%;
+      min-width: 0;
+    }
+    table {
+      border-collapse: separate;
+    }
+    thead {
+      display: none;
+    }
+    tr {
+      border: 1px solid rgb(var(--border));
+      background: rgb(var(--surface));
+    }
+    tr + tr {
+      margin-top: .75rem;
+    }
+    td,
+    td:nth-child(1),
+    td:nth-child(2),
+    td:nth-child(3),
+    td:nth-child(4) {
+      width: 100%;
+      padding: .7rem .8rem;
+      border-bottom: 1px solid rgb(var(--border));
+      text-align: left;
+    }
+    td:last-child {
+      border-bottom: 0;
+    }
+    td::before {
+      display: block;
+      margin-bottom: .3rem;
+      color: rgb(var(--text-faint));
+      content: attr(data-label);
+      font-size: .6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    td:first-child::before {
+      display: none;
+    }
+    .formats {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .details {
+      justify-content: flex-start;
+      white-space: normal;
+    }
+  }
+
+  @media (max-width: 500px) {
+    .wrap {
+      width: min(100% - 1rem, 1160px);
+    }
+    .hero dl {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -154,9 +154,12 @@ the schema and reconcile existing snapshots idempotently with:
 venv/bin/python scripts/init_situation_history_database.py --backfill
 ```
 
-Situation Room v3 uses Pydantic as the canonical report contract, immutable
-analysis runs, history-first publication, robust quasi-Poisson detection, and
-BH FDR control. The normal operational sequence is:
+Situation Room v3.2 uses Pydantic as the canonical report contract, immutable
+analysis runs, history-first publication, joint weekly/monthly multi-horizon
+Gamma-Poisson prediction, and BH FDR control. Automatic publication is
+fail-closed by cadence/source group and remains disabled until both simulation
+and locked real-event calibration are registered. The normal operational
+sequence is:
 
 ```bash
 venv/bin/alembic upgrade head

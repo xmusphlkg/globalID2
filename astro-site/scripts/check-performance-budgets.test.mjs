@@ -53,7 +53,7 @@ test('fails closed for oversized chunks and legacy font artifacts', (t) => {
   assert.match(result.errors.join('\n'), /legacy WOFF/);
 });
 
-test('fails closed when generated HTML exceeds the all-site budget', (t) => {
+test('fails closed when generated HTML exceeds average and compressed all-site budgets', (t) => {
   const directory = fixture();
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   writeFileSync(join(directory, 'index.html'), '<main>' + 'catalogue-entry-'.repeat(20) + '</main>');
@@ -61,13 +61,13 @@ test('fails closed when generated HTML exceeds the all-site budget', (t) => {
   const result = auditPerformance(directory, {
     maxJavaScriptChunkBytes: 1_000,
     maxRouteCompressedAssetsBytes: 1_000,
-    maxTotalHtmlBytes: 100,
+    maxAverageHtmlBytes: 100,
     maxTotalHtmlGzipBytes: 10,
     maxWorldMapBytes: 1_000,
     maxWorldMapBrotliBytes: 1_000,
   });
   assert.equal(result.passed, false);
-  assert.match(result.errors.join('\n'), /Generated HTML totals/);
+  assert.match(result.errors.join('\n'), /Generated HTML averages/);
   assert.ok(result.html.rawBytes > 100);
   assert.ok(result.html.gzipBytes > 10);
 });

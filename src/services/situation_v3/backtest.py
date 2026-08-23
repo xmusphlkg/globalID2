@@ -8,7 +8,7 @@ import math
 from collections import Counter
 from copy import deepcopy
 from dataclasses import asdict, dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Iterable
 from urllib.parse import urlparse
 
@@ -17,6 +17,7 @@ import pandas as pd
 
 from src.services.situation_statistics import evaluate_frame as evaluate_frame_v2
 
+from .configuration import calibration_definition_hash
 from .model import evaluate_frame_v3
 
 
@@ -26,6 +27,7 @@ class SimulationScenario:
 
     key: str
     description: str
+    cadence: str
     baseline_range: tuple[float, float]
     dispersion_size_range: tuple[float, float]
     historical_zero_probability: float
@@ -36,8 +38,9 @@ class SimulationScenario:
 
 DEFAULT_SCENARIOS: tuple[SimulationScenario, ...] = (
     SimulationScenario(
-        key="common_sustained_2x",
+        key="weekly_common_sustained_2x",
         description="Common weekly counts with a two-period 2x increase.",
+        cadence="weekly",
         baseline_range=(24.0, 90.0),
         dispersion_size_range=(22.0, 45.0),
         historical_zero_probability=0.015,
@@ -46,8 +49,9 @@ DEFAULT_SCENARIOS: tuple[SimulationScenario, ...] = (
         minimum_sensitivity=0.80,
     ),
     SimulationScenario(
-        key="common_subtle_1_5x",
+        key="weekly_common_subtle_1_5x",
         description="Common weekly counts with a subtler two-period 1.5x increase.",
+        cadence="weekly",
         baseline_range=(24.0, 90.0),
         dispersion_size_range=(22.0, 45.0),
         historical_zero_probability=0.015,
@@ -55,8 +59,9 @@ DEFAULT_SCENARIOS: tuple[SimulationScenario, ...] = (
         anomaly_duration_source_periods=2,
     ),
     SimulationScenario(
-        key="common_single_cycle_2x",
+        key="weekly_common_single_cycle_2x",
         description="Common weekly counts with a transient one-period 2x increase.",
+        cadence="weekly",
         baseline_range=(24.0, 90.0),
         dispersion_size_range=(22.0, 45.0),
         historical_zero_probability=0.015,
@@ -64,14 +69,55 @@ DEFAULT_SCENARIOS: tuple[SimulationScenario, ...] = (
         anomaly_duration_source_periods=1,
     ),
     SimulationScenario(
-        key="rare_sustained_4x",
+        key="weekly_rare_sustained_4x",
         description="Low-count weekly series with a two-period 4x cluster.",
+        cadence="weekly",
         baseline_range=(1.0, 8.0),
         dispersion_size_range=(10.0, 25.0),
         historical_zero_probability=0.08,
         anomaly_factor=4.0,
         anomaly_duration_source_periods=2,
     ),
+    SimulationScenario(
+        key="monthly_common_sustained_2x",
+        description="Common monthly counts with a two-period 2x increase.",
+        cadence="monthly",
+        baseline_range=(24.0, 90.0),
+        dispersion_size_range=(22.0, 45.0),
+        historical_zero_probability=0.015,
+        anomaly_factor=2.0,
+        anomaly_duration_source_periods=2,
+        minimum_sensitivity=0.80,
+    ),
+    SimulationScenario(
+        key="monthly_common_subtle_1_5x",
+        description="Common monthly counts with a two-period 1.5x increase.",
+        cadence="monthly",
+        baseline_range=(24.0, 90.0),
+        dispersion_size_range=(22.0, 45.0),
+        historical_zero_probability=0.015,
+        anomaly_factor=1.5,
+        anomaly_duration_source_periods=2,
+    ),
+    SimulationScenario(
+        key="monthly_common_single_cycle_2x",
+        description="Common monthly counts with a one-period 2x increase.",
+        cadence="monthly",
+        baseline_range=(24.0, 90.0),
+        dispersion_size_range=(22.0, 45.0),
+        historical_zero_probability=0.015,
+        anomaly_factor=2.0,
+        anomaly_duration_source_periods=1,
+    ),
+)
+
+NULL_STRESS_STRATA: tuple[str, ...] = (
+    "zero_inflation",
+    "correlated_series",
+    "missing_periods",
+    "revisions",
+    "structural_break",
+    "delayed_data",
 )
 
 
@@ -95,6 +141,7 @@ def _series_rows(
     series_code: str,
     values: np.ndarray,
     dates: pd.DatetimeIndex,
+    cadence: str,
 ) -> list[dict[str, Any]]:
     return [
         {
@@ -113,14 +160,14 @@ def _series_rows(
             "source_label": "Offline simulation",
             "source_url": "https://example.invalid/situation-v3-backtest",
             "metric_type": "case_notifications",
-            "temporal_granularity": "weekly",
+            "temporal_granularity": cadence,
             "unit": "count",
         }
         for stamp, value in zip(dates, values, strict=True)
     ]
 
 
-def simulate_weekly_batch(
+def simulate_batch(
     *,
     seed: int,
     series_per_class: int = 32,
@@ -130,11 +177,18 @@ def simulate_weekly_batch(
     baseline_range: tuple[float, float] = (24.0, 90.0),
     dispersion_size_range: tuple[float, float] = (22.0, 45.0),
     historical_zero_probability: float = 0.015,
+    cadence: str = "weekly",
 ) -> SimulationBatch:
-    """Create a reproducible weekly null arm and parameterized anomaly arm."""
+    """Create a reproducible cadence-aware null and anomaly arm."""
 
-    if series_per_class < 1 or periods < 208:
-        raise ValueError("simulation requires at least one series and four years of weekly history")
+    minimum_periods = {"weekly": 208, "monthly": 48}
+    if cadence not in minimum_periods:
+        raise ValueError("simulation cadence must be weekly or monthly")
+    if series_per_class < 1 or periods < minimum_periods[cadence]:
+        raise ValueError(
+            f"simulation requires at least one series and {minimum_periods[cadence]} "
+            f"periods of {cadence} history"
+        )
     if not 1 <= anomaly_duration_source_periods <= 2:
         raise ValueError("calibration currently supports one- or two-period anomalies")
     if anomaly_factor <= 1.0:
@@ -146,7 +200,12 @@ def simulate_weekly_batch(
     if not 0.0 <= historical_zero_probability < 1.0:
         raise ValueError("historical_zero_probability must be in [0, 1)")
     rng = np.random.default_rng(seed)
-    dates = pd.date_range("2020-08-23", periods=periods, freq="7D", tz="UTC")
+    if cadence == "weekly":
+        dates = pd.date_range("2020-08-23", periods=periods, freq="7D", tz="UTC")
+        periods_per_year = 52.18
+    else:
+        dates = pd.date_range("2000-01-01", periods=periods, freq="MS", tz="UTC")
+        periods_per_year = 12.0
     time_index = np.arange(periods, dtype=float)
     null_rows: list[dict[str, Any]] = []
     first_rows: list[dict[str, Any]] = []
@@ -161,7 +220,11 @@ def simulate_weekly_batch(
         mean = np.maximum(
             0.05,
             baseline
-            * (1.0 + seasonal_amplitude * np.sin(time_index * 2.0 * np.pi / 52.18 + phase))
+            * (
+                1.0
+                + seasonal_amplitude
+                * np.sin(time_index * 2.0 * np.pi / periods_per_year + phase)
+            )
             * np.exp(trend * time_index),
         )
         # Negative binomial variance is mu + mu^2/size. The scenario-specific
@@ -174,15 +237,36 @@ def simulate_weekly_batch(
         # as its history. Suppressing structural zeros in the final window
         # creates an artificial upward regime shift, especially for rare counts.
         observed[historical_zero] = 0.0
-        null_rows.extend(_series_rows(series_code=series_code, values=observed, dates=dates))
+        null_rows.extend(
+            _series_rows(
+                series_code=series_code,
+                values=observed,
+                dates=dates,
+                cadence=cadence,
+            )
+        )
         first = observed.copy()
         second = observed.copy()
         if series_code in true_series:
             first[-1] = float(rng.poisson(mean[-1] * anomaly_factor))
             for offset in range(1, anomaly_duration_source_periods + 1):
                 second[-offset] = float(rng.poisson(mean[-offset] * anomaly_factor))
-        first_rows.extend(_series_rows(series_code=series_code, values=first, dates=dates))
-        second_rows.extend(_series_rows(series_code=series_code, values=second, dates=dates))
+        first_rows.extend(
+            _series_rows(
+                series_code=series_code,
+                values=first,
+                dates=dates,
+                cadence=cadence,
+            )
+        )
+        second_rows.extend(
+            _series_rows(
+                series_code=series_code,
+                values=second,
+                dates=dates,
+                cadence=cadence,
+            )
+        )
     return SimulationBatch(
         null=pd.DataFrame(null_rows),
         first_cycle=pd.DataFrame(first_rows),
@@ -190,6 +274,87 @@ def simulate_weekly_batch(
         true_series=true_series,
         null_series=null_series,
     )
+
+
+def simulate_weekly_batch(
+    *,
+    seed: int,
+    series_per_class: int = 32,
+    periods: int = 312,
+    anomaly_factor: float = 2.0,
+    anomaly_duration_source_periods: int = 2,
+    baseline_range: tuple[float, float] = (24.0, 90.0),
+    dispersion_size_range: tuple[float, float] = (22.0, 45.0),
+    historical_zero_probability: float = 0.015,
+) -> SimulationBatch:
+    """Backward-compatible weekly simulation wrapper."""
+
+    return simulate_batch(
+        seed=seed,
+        series_per_class=series_per_class,
+        periods=periods,
+        anomaly_factor=anomaly_factor,
+        anomaly_duration_source_periods=anomaly_duration_source_periods,
+        baseline_range=baseline_range,
+        dispersion_size_range=dispersion_size_range,
+        historical_zero_probability=historical_zero_probability,
+        cadence="weekly",
+    )
+
+
+def _apply_null_stress(
+    frame: pd.DataFrame,
+    *,
+    cadence: str,
+    stress: str,
+    seed: int,
+    as_of: date,
+) -> tuple[pd.DataFrame, date]:
+    """Apply one deterministic operational null stress without an outbreak."""
+
+    if stress not in NULL_STRESS_STRATA:
+        raise ValueError(f"unsupported null stress: {stress}")
+    work = frame.copy()
+    rng = np.random.default_rng(seed)
+    if stress == "zero_inflation":
+        mask = rng.random(len(work)) < 0.05
+        work.loc[mask, "value"] = 0.0
+    elif stress == "correlated_series":
+        periods = sorted(work["time"].unique())
+        factors = rng.lognormal(mean=-0.5 * 0.18**2, sigma=0.18, size=len(periods))
+        factor_by_period = dict(zip(periods, factors, strict=True))
+        work["value"] = np.round(
+            work["value"]
+            * work["time"].map(factor_by_period).to_numpy(dtype=float)
+        )
+    elif stress == "missing_periods":
+        recent_periods = set(sorted(work["time"].unique())[-8:])
+        eligible = ~work["time"].isin(recent_periods)
+        mask = eligible & (rng.random(len(work)) < 0.04)
+        work.loc[mask, "value"] = np.nan
+    elif stress == "revisions":
+        work["updated_at"] = "2026-01-02T00:00:00Z"
+        candidates = work.loc[~work["time"].isin(sorted(work["time"].unique())[-8:])]
+        revised = candidates.groupby("series_code", sort=True).tail(2).copy()
+        if not revised.empty:
+            work.loc[revised.index, "value"] = np.maximum(
+                0.0,
+                np.round(work.loc[revised.index, "value"].to_numpy(dtype=float) * 1.3),
+            )
+            work.loc[revised.index, "updated_at"] = "2026-01-01T00:00:00Z"
+            revised["updated_at"] = "2026-01-03T00:00:00Z"
+            work = pd.concat([work, revised], ignore_index=True)
+    elif stress == "structural_break":
+        break_periods = 26 if cadence == "weekly" else 6
+        affected = set(sorted(work["time"].unique())[-break_periods:])
+        mask = work["time"].isin(affected)
+        work.loc[mask, "value"] = np.round(
+            work.loc[mask, "value"].to_numpy(dtype=float) * 1.25
+        )
+    elif stress == "delayed_data":
+        delay_days = 60 if cadence == "weekly" else 120
+        as_of = as_of + timedelta(days=delay_days)
+    return work, as_of
 
 
 def _v3_analysis(
@@ -206,11 +371,22 @@ def _v3_analysis(
     return alerts, signals
 
 
+def _simulation_as_of(frame: pd.DataFrame, cadence: str) -> date:
+    latest = pd.Timestamp(frame["time"].max())
+    if cadence == "monthly":
+        return (latest + pd.offsets.MonthBegin(1)).date()
+    return latest.date()
+
+
 def _v3_alerts(frame: pd.DataFrame, config: dict[str, Any], as_of: date) -> set[str]:
     return _v3_analysis(frame, config, as_of)[0]
 
 
-def _guarded_auto_candidates(signals: list[Any]) -> set[str]:
+def _guarded_auto_candidates(
+    signals: list[Any],
+    *,
+    maximum_q: float = 0.01,
+) -> set[str]:
     """Apply the pre-registered strict gate for automation diagnostics only."""
 
     candidates: set[str] = set()
@@ -224,10 +400,11 @@ def _guarded_auto_candidates(signals: list[Any]) -> set[str]:
             signal.observation.data_status == "current"
             and signal.anomaly.fit_status == "completed"
             and signal.anomaly.model != "seasonal_empirical_fallback_v1"
+            and signal.anomaly.detector_tier == "common_count"
             and signal.anomaly.effect_threshold_passed
             and evidence_is_valid
             and signal.anomaly.q_value is not None
-            and signal.anomaly.q_value <= 0.01
+            and signal.anomaly.q_value <= maximum_q
         ):
             candidates.add(signal.identity.series_code)
     return candidates
@@ -361,6 +538,7 @@ def _null_discovery_details(
     scenario: SimulationScenario,
     batch_index: int,
     seed: int,
+    stress: str | None = None,
 ) -> list[dict[str, Any]]:
     details: list[dict[str, Any]] = []
     for signal in signals:
@@ -369,10 +547,13 @@ def _null_discovery_details(
         values = frame.loc[
             frame["series_code"] == signal.identity.series_code, "value"
         ].to_numpy(dtype=float)
+        history_values = values[:-4]
+        finite_history = history_values[np.isfinite(history_values)]
         diagnostics = signal.anomaly.diagnostics
         details.append(
             {
                 "scenario": scenario.key,
+                "null_stress": stress,
                 "batch_index": batch_index,
                 "seed": seed,
                 "series_code": signal.identity.series_code,
@@ -395,10 +576,25 @@ def _null_discovery_details(
                 "dispersion": signal.anomaly.dispersion,
                 "standardized_exceedance": signal.anomaly.standardized_exceedance,
                 "effect_threshold_passed": signal.anomaly.effect_threshold_passed,
-                "history_mean": round(float(np.mean(values[:-4])), 6),
-                "history_variance": round(float(np.var(values[:-4], ddof=1)), 6),
-                "history_zero_fraction": round(float(np.mean(values[:-4] == 0)), 6),
-                "recent_12_values": [float(value) for value in values[-12:]],
+                "history_mean": (
+                    round(float(np.mean(finite_history)), 6)
+                    if len(finite_history)
+                    else None
+                ),
+                "history_variance": (
+                    round(float(np.var(finite_history, ddof=1)), 6)
+                    if len(finite_history) > 1
+                    else None
+                ),
+                "history_zero_fraction": (
+                    round(float(np.mean(finite_history == 0)), 6)
+                    if len(finite_history)
+                    else None
+                ),
+                "recent_12_values": [
+                    float(value) if np.isfinite(value) else None
+                    for value in values[-12:]
+                ],
                 "supporting_cusum": diagnostics.get("supporting_cusum"),
             }
         )
@@ -469,9 +665,12 @@ def run_backtest(
     series_per_class: int = 16,
     seed: int = 20260817,
     scenarios: tuple[SimulationScenario, ...] = DEFAULT_SCENARIOS,
-    minimum_complete_null_families: int = 80,
+    minimum_complete_null_families: int = 384,
+    minimum_complete_null_families_per_cadence: int = 384,
+    automatic_q_grid: tuple[float, ...] = (0.0025, 0.005, 0.01, 0.015, 0.025),
+    locked_event_metrics: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """Run stratified null/anomaly calibration against v3 and the v2 comparator."""
+    """Run weekly/monthly calibration against v3.1 and the v2 comparator."""
 
     if batches < 1:
         raise ValueError("batches must be positive")
@@ -481,9 +680,43 @@ def run_backtest(
         raise ValueError("scenarios must be non-empty and have unique keys")
     if minimum_complete_null_families < 1:
         raise ValueError("minimum_complete_null_families must be positive")
+    if minimum_complete_null_families_per_cadence < 384:
+        raise ValueError(
+            "minimum_complete_null_families_per_cadence cannot be below 384"
+        )
+    if (
+        not automatic_q_grid
+        or tuple(sorted(set(automatic_q_grid))) != automatic_q_grid
+        or any(not 0.0 < threshold < 0.05 for threshold in automatic_q_grid)
+    ):
+        raise ValueError("automatic_q_grid must be unique, sorted, and inside (0, 0.05)")
     evaluation_config = deepcopy(config)
     evaluation_config.setdefault("v3", {})["maximum_analysis_workers"] = 1
-    primary = scenarios[0]
+    evaluation_multi_horizon = (
+        evaluation_config.setdefault("v3", {})
+        .setdefault("detectors", {})
+        .setdefault("multi_horizon", {})
+    )
+    if "calibration_draws" in evaluation_multi_horizon:
+        evaluation_multi_horizon["production_draws"] = int(
+            evaluation_multi_horizon["calibration_draws"]
+        )
+    champion_config = deepcopy(evaluation_config)
+    champion_v3 = champion_config.setdefault("v3", {})
+    champion_v3["method_version"] = "situation_room_v3.1"
+    champion_v3["model"] = "robust_quasi_poisson_v1"
+    champion_v3.setdefault("detectors", {}).setdefault("multi_horizon", {})[
+        "enabled"
+    ] = False
+    weekly_comparator = next(
+        (
+            scenario
+            for scenario in scenarios
+            if scenario.key == "weekly_common_sustained_2x"
+        ),
+        None,
+    )
+    primary = weekly_comparator or scenarios[0]
     all_null_family_discoveries: list[int] = []
     guarded_auto_null_family_discoveries: list[int] = []
     all_mixed_false_discovery_ratios: list[float] = []
@@ -491,9 +724,15 @@ def run_backtest(
     pvalue_tallies: dict[str, dict[str, Any]] = {}
     aggregate_v3_false = aggregate_null_trials = 0
     scenario_results: dict[str, Any] = {}
+    champion_detected_by_scenario: Counter[str] = Counter()
+    group_tallies: dict[str, dict[str, Any]] = {}
+    q_scenario_tallies: dict[str, dict[float, dict[str, Any]]] = {}
+    null_stress_tallies: dict[str, dict[str, dict[str, Any]]] = {}
     primary_v2_true = primary_v2_false = 0
     primary_v2_null_trials = 0
     for scenario_index, scenario in enumerate(scenarios):
+        if scenario.cadence not in {"weekly", "monthly"}:
+            raise ValueError(f"unsupported scenario cadence: {scenario.cadence}")
         null_family_discoveries: list[int] = []
         mixed_false_discovery_ratios: list[float] = []
         delays: list[int] = []
@@ -503,32 +742,53 @@ def run_backtest(
         guarded_scenario_family_discoveries: list[int] = []
         complete_null_trials = total_true = mixed_null_trials = 0
         for batch_index in range(batches):
-            batch = simulate_weekly_batch(
+            batch = simulate_batch(
                 seed=seed + scenario_index * 100_000 + batch_index,
                 series_per_class=series_per_class,
+                periods=312 if scenario.cadence == "weekly" else 72,
                 anomaly_factor=scenario.anomaly_factor,
                 anomaly_duration_source_periods=scenario.anomaly_duration_source_periods,
                 baseline_range=scenario.baseline_range,
                 dispersion_size_range=scenario.dispersion_size_range,
                 historical_zero_probability=scenario.historical_zero_probability,
+                cadence=scenario.cadence,
             )
-            as_of = pd.Timestamp(batch.second_cycle["time"].max()).date()
+            as_of = _simulation_as_of(batch.second_cycle, scenario.cadence)
+            null_frame = batch.null
+            null_as_of = as_of
+            null_stress = None
+            if "common_" in scenario.key:
+                null_stress = NULL_STRESS_STRATA[
+                    (scenario_index + batch_index) % len(NULL_STRESS_STRATA)
+                ]
+                null_frame, null_as_of = _apply_null_stress(
+                    batch.null,
+                    cadence=scenario.cadence,
+                    stress=null_stress,
+                    seed=seed + scenario_index * 100_000 + batch_index + 50_000,
+                    as_of=as_of,
+                )
             v3_null, null_signals = _v3_analysis(
-                batch.null, evaluation_config, as_of
+                null_frame, evaluation_config, null_as_of
             )
             _record_pvalue_tallies(
                 pvalue_tallies,
-                stratum_prefix=scenario.key,
+                stratum_prefix=(
+                    f"{scenario.key}|{null_stress}"
+                    if null_stress
+                    else scenario.key
+                ),
                 signals=null_signals,
             )
             if v3_null:
                 null_discovery_details.extend(
                     _null_discovery_details(
                         signals=null_signals,
-                        frame=batch.null,
+                        frame=null_frame,
                         scenario=scenario,
                         batch_index=batch_index,
                         seed=seed + scenario_index * 100_000 + batch_index,
+                        stress=null_stress,
                     )
                 )
             guarded_null = _guarded_auto_candidates(null_signals)
@@ -544,6 +804,7 @@ def run_backtest(
             guarded_first = _guarded_auto_candidates(first_signals)
             if scenario.anomaly_duration_source_periods == 1:
                 v3_endpoint = v3_first
+                endpoint_signals = first_signals
                 guarded_endpoint = guarded_first
                 endpoint_frame = batch.first_cycle
             else:
@@ -552,6 +813,73 @@ def run_backtest(
                 )
                 guarded_endpoint = _guarded_auto_candidates(endpoint_signals)
                 endpoint_frame = batch.second_cycle
+            if "common_" in scenario.key:
+                group_key = f"{scenario.cadence}.common_count"
+                group_tally = group_tallies.setdefault(
+                    group_key,
+                    {
+                        "family_trials": 0,
+                        "thresholds": {
+                            threshold: {"families_with_candidate": 0}
+                            for threshold in automatic_q_grid
+                        },
+                    },
+                )
+                group_tally["family_trials"] += 1
+                stress_tally = null_stress_tallies.setdefault(
+                    group_key, {}
+                ).setdefault(
+                    str(null_stress),
+                    {
+                        "family_trials": 0,
+                        "review_families_with_discovery": 0,
+                        "thresholds": {
+                            threshold: 0 for threshold in automatic_q_grid
+                        },
+                    },
+                )
+                stress_tally["family_trials"] += 1
+                stress_tally["review_families_with_discovery"] += int(
+                    bool(v3_null)
+                )
+                scenario_q = q_scenario_tallies.setdefault(
+                    scenario.key,
+                    {
+                        threshold: {
+                            "true_trials": 0,
+                            "detected_true": 0,
+                            "first_cycle_true": 0,
+                            "delays": [],
+                        }
+                        for threshold in automatic_q_grid
+                    },
+                )
+                for threshold in automatic_q_grid:
+                    q_null = _guarded_auto_candidates(
+                        null_signals, maximum_q=threshold
+                    )
+                    q_first = _guarded_auto_candidates(
+                        first_signals, maximum_q=threshold
+                    )
+                    q_endpoint = _guarded_auto_candidates(
+                        endpoint_signals, maximum_q=threshold
+                    )
+                    group_tally["thresholds"][threshold][
+                        "families_with_candidate"
+                    ] += int(bool(q_null))
+                    stress_tally["thresholds"][threshold] += int(bool(q_null))
+                    scenario_q[threshold]["true_trials"] += len(batch.true_series)
+                    scenario_q[threshold]["detected_true"] += len(
+                        q_endpoint & batch.true_series
+                    )
+                    scenario_q[threshold]["first_cycle_true"] += len(
+                        q_first & batch.true_series
+                    )
+                    for series_code in batch.true_series:
+                        if series_code in q_first:
+                            scenario_q[threshold]["delays"].append(0)
+                        elif series_code in q_endpoint:
+                            scenario_q[threshold]["delays"].append(1)
             family_discovery = int(bool(v3_null))
             null_family_discoveries.append(family_discovery)
             all_null_family_discoveries.append(family_discovery)
@@ -572,8 +900,17 @@ def run_backtest(
                     delays.append(0)
                 elif series_code in v3_endpoint:
                     delays.append(1)
-            if scenario.key == primary.key:
-                v2_null = _v2_alerts(batch.null, config, as_of)
+            if "common_" in scenario.key:
+                champion_endpoint, _ = _v3_analysis(
+                    endpoint_frame,
+                    champion_config,
+                    as_of,
+                )
+                champion_detected_by_scenario[scenario.key] += len(
+                    champion_endpoint & batch.true_series
+                )
+            if weekly_comparator is not None and scenario.key == weekly_comparator.key:
+                v2_null = _v2_alerts(null_frame, config, null_as_of)
                 v2_endpoint = _v2_alerts(endpoint_frame, config, as_of)
                 primary_v2_true += len(v2_endpoint & batch.true_series)
                 primary_v2_false += len(v2_null & batch.complete_null_series)
@@ -598,6 +935,11 @@ def run_backtest(
             guarded_first_cycle_true, total_true
         )
         median_delay = float(np.median(delays)) if delays else None
+        champion_sensitivity = (
+            champion_detected_by_scenario[scenario.key] / total_true
+            if "common_" in scenario.key and total_true
+            else None
+        )
         scenario_results[scenario.key] = {
             "profile": _scenario_payload(scenario),
             "complete_null": {
@@ -626,6 +968,20 @@ def run_backtest(
                     if scenario.minimum_sensitivity is None
                     else sensitivity_interval["estimate"] >= scenario.minimum_sensitivity
                 ),
+                "champion_v3_1_sensitivity": (
+                    None
+                    if champion_sensitivity is None
+                    else round(champion_sensitivity, 6)
+                ),
+                "sensitivity_change_vs_champion_pp": (
+                    None
+                    if champion_sensitivity is None
+                    else round(
+                        (sensitivity_interval["estimate"] - champion_sensitivity)
+                        * 100.0,
+                        3,
+                    )
+                ),
             },
             "guarded_auto": {
                 "complete_null_family_discovery_rate": guarded_family_interval[
@@ -648,7 +1004,11 @@ def run_backtest(
     rare_zero_control: dict[str, Any] | None = None
     diagnostic_model_evaluation_calls = 0
     rare_scenario_entry = next(
-        (scenario for scenario in scenarios if scenario.key == "rare_sustained_4x"),
+        (
+            scenario
+            for scenario in scenarios
+            if scenario.key == "weekly_rare_sustained_4x"
+        ),
         None,
     )
     if rare_scenario_entry is not None:
@@ -657,9 +1017,10 @@ def run_backtest(
         control_tallies: dict[str, dict[str, Any]] = {}
         for batch_index in range(batches):
             control_seed = seed + rare_scenario_index * 100_000 + batch_index
-            control_batch = simulate_weekly_batch(
+            control_batch = simulate_batch(
                 seed=control_seed,
                 series_per_class=series_per_class,
+                periods=312,
                 anomaly_factor=rare_scenario_entry.anomaly_factor,
                 anomaly_duration_source_periods=(
                     rare_scenario_entry.anomaly_duration_source_periods
@@ -667,11 +1028,12 @@ def run_backtest(
                 baseline_range=rare_scenario_entry.baseline_range,
                 dispersion_size_range=rare_scenario_entry.dispersion_size_range,
                 historical_zero_probability=0.0,
+                cadence="weekly",
             )
             control_alerts, control_signals = _v3_analysis(
                 control_batch.null,
                 evaluation_config,
-                pd.Timestamp(control_batch.null["time"].max()).date(),
+                _simulation_as_of(control_batch.null, "weekly"),
             )
             diagnostic_model_evaluation_calls += 1
             control_family_discoveries.append(int(bool(control_alerts)))
@@ -732,7 +1094,7 @@ def run_backtest(
         )
     )
     rare_main_anti_conservative = any(
-        stratum.startswith("rare_sustained_4x|rare_count:")
+        stratum.startswith("weekly_rare_sustained_4x|rare_count:")
         for stratum in anti_conservative_strata
     )
     rare_control_anti_conservative = bool(
@@ -770,7 +1132,7 @@ def run_backtest(
             (guarded_sensitivity - review_sensitivity) * 100.0, 3
         )
     sensitivity_preservation: dict[str, bool] = {}
-    for scenario_key in (primary.key, "rare_sustained_4x"):
+    for scenario_key in (primary.key, "weekly_rare_sustained_4x"):
         if scenario_key not in scenario_results:
             sensitivity_preservation[scenario_key] = False
             continue
@@ -786,67 +1148,272 @@ def run_backtest(
     guarded_auto_supported = guarded_auto_false_control_supported and all(
         sensitivity_preservation.values()
     )
+    calibration_groups: dict[str, Any] = {}
+    for cadence in ("weekly", "monthly"):
+        group_key = f"{cadence}.common_count"
+        group_tally = group_tallies.get(group_key) or {
+            "family_trials": 0,
+            "thresholds": {},
+        }
+        sustained_key = f"{cadence}_common_sustained_2x"
+        subtle_key = f"{cadence}_common_subtle_1_5x"
+        transient_key = f"{cadence}_common_single_cycle_2x"
+        weak_improvements = {
+            scenario_key: (
+                scenario_results.get(scenario_key, {})
+                .get("mixed_anomaly", {})
+                .get("sensitivity_change_vs_champion_pp")
+            )
+            for scenario_key in (subtle_key, transient_key)
+        }
+        weak_signal_gate = all(
+            value is not None and float(value) >= 15.0
+            for value in weak_improvements.values()
+        )
+        real_metrics = (locked_event_metrics or {}).get(group_key)
+        real_event_gate = bool(
+            real_metrics
+            and float(real_metrics.get("event_detection_rate", -1.0)) >= 0.80
+            and float(real_metrics.get("event_detection_rate", -1.0))
+            >= float(real_metrics.get("champion_event_detection_rate", 1.0)) - 0.05
+        )
+        threshold_results: dict[str, Any] = {}
+        simulation_eligible_thresholds: list[float] = []
+        fully_eligible_thresholds: list[float] = []
+        for threshold in automatic_q_grid:
+            false_families = int(
+                (group_tally.get("thresholds", {}).get(threshold) or {}).get(
+                    "families_with_candidate", 0
+                )
+            )
+            family_trials = int(group_tally.get("family_trials", 0))
+            family_ci = (
+                wilson_interval(false_families, family_trials)
+                if family_trials
+                else None
+            )
+            sensitivity_tally = (
+                q_scenario_tallies.get(sustained_key, {}).get(threshold) or {}
+            )
+            true_trials = int(sensitivity_tally.get("true_trials", 0))
+            detected_true = int(sensitivity_tally.get("detected_true", 0))
+            sensitivity_ci = (
+                wilson_interval(detected_true, true_trials) if true_trials else None
+            )
+            sensitivity = (
+                float(sensitivity_ci["estimate"]) if sensitivity_ci else None
+            )
+            threshold_delays = list(sensitivity_tally.get("delays", []))
+            median_threshold_delay = (
+                float(np.median(threshold_delays)) if threshold_delays else None
+            )
+            simulation_gates = {
+                "complete_null_families_gte_384": (
+                    family_trials >= minimum_complete_null_families_per_cadence
+                ),
+                "false_publication_upper_95_lte_2_5pct": bool(
+                    family_ci and float(family_ci["upper"]) <= 0.025
+                ),
+                "sustained_2x_sensitivity_gte_80pct": bool(
+                    sensitivity is not None and sensitivity >= 0.80
+                ),
+                "median_detection_delay_lte_1_period": bool(
+                    median_threshold_delay is not None
+                    and median_threshold_delay <= 1.0
+                ),
+                "weak_signal_improvement_gte_15pp": weak_signal_gate,
+            }
+            simulation_supported = all(simulation_gates.values())
+            if simulation_supported:
+                simulation_eligible_thresholds.append(threshold)
+            if simulation_supported and real_event_gate:
+                fully_eligible_thresholds.append(threshold)
+            threshold_results[str(threshold)] = {
+                "complete_null_family_trials": family_trials,
+                "families_with_false_publication": false_families,
+                "false_publication_rate_ci_95": family_ci,
+                "sustained_2x_sensitivity": sensitivity,
+                "sustained_2x_sensitivity_ci_95": sensitivity_ci,
+                "median_detection_delay_periods": median_threshold_delay,
+                "simulation_gates": simulation_gates,
+                "simulation_supported": simulation_supported,
+                "locked_real_event_gate": real_event_gate,
+            }
+        stress_results: dict[str, Any] = {}
+        for stress in NULL_STRESS_STRATA:
+            stress_tally = (
+                null_stress_tallies.get(group_key, {}).get(stress) or {}
+            )
+            stress_trials = int(stress_tally.get("family_trials", 0))
+            review_discoveries = int(
+                stress_tally.get("review_families_with_discovery", 0)
+            )
+            stress_results[stress] = {
+                "family_trials": stress_trials,
+                "review_family_discovery_rate_ci_95": (
+                    wilson_interval(review_discoveries, stress_trials)
+                    if stress_trials
+                    else None
+                ),
+                "automatic_thresholds": {
+                    str(threshold): (
+                        wilson_interval(
+                            int(
+                                (stress_tally.get("thresholds", {}) or {}).get(
+                                    threshold, 0
+                                )
+                            ),
+                            stress_trials,
+                        )
+                        if stress_trials
+                        else None
+                    )
+                    for threshold in automatic_q_grid
+                },
+            }
+        calibration_groups[group_key] = {
+            "status": "supported" if fully_eligible_thresholds else "not_supported",
+            "maximum_q": (
+                max(fully_eligible_thresholds) if fully_eligible_thresholds else None
+            ),
+            "simulation_maximum_q": (
+                max(simulation_eligible_thresholds)
+                if simulation_eligible_thresholds
+                else None
+            ),
+            "thresholds": threshold_results,
+            "null_stress_strata": stress_results,
+            "weak_signal_improvement_vs_champion_pp": weak_improvements,
+            "locked_real_event_metrics": real_metrics,
+            "failure_reasons": [
+                reason
+                for reason, failed in (
+                    ("insufficient_complete_null_families", int(group_tally.get("family_trials", 0)) < minimum_complete_null_families_per_cadence),
+                    ("weak_signal_improvement_below_15pp", not weak_signal_gate),
+                    ("locked_real_event_evaluation_missing_or_failed", not real_event_gate),
+                    ("no_q_threshold_passed_simulation_gates", not simulation_eligible_thresholds),
+                )
+                if failed
+            ],
+        }
     aggregate_fpr_interval = wilson_interval(aggregate_v3_false, aggregate_null_trials)
     primary_result = scenario_results[primary.key]["mixed_anomaly"]
     primary_sensitivity = float(primary_result["sensitivity"])
     primary_median_delay = primary_result["median_detection_delay_source_periods"]
-    primary_v2_sensitivity_interval = wilson_interval(
-        primary_v2_true, batches * series_per_class
+    primary_v2_sensitivity_interval = (
+        wilson_interval(primary_v2_true, batches * series_per_class)
+        if weekly_comparator is not None
+        else None
     )
-    primary_v2_fpr_interval = wilson_interval(
-        primary_v2_false, primary_v2_null_trials
+    primary_v2_fpr_interval = (
+        wilson_interval(primary_v2_false, primary_v2_null_trials)
+        if primary_v2_null_trials
+        else None
     )
-    v2_sensitivity = float(primary_v2_sensitivity_interval["estimate"])
-    v2_false_positive_rate = float(primary_v2_fpr_interval["estimate"])
+    v2_sensitivity = (
+        float(primary_v2_sensitivity_interval["estimate"])
+        if primary_v2_sensitivity_interval
+        else None
+    )
+    v2_false_positive_rate = (
+        float(primary_v2_fpr_interval["estimate"])
+        if primary_v2_fpr_interval
+        else None
+    )
     primary_v3_false_positive_rate = float(
         scenario_results[primary.key]["complete_null"]["false_positive_rate"]
     )
     false_positive_reduction = (
-        (v2_false_positive_rate - primary_v3_false_positive_rate)
-        / v2_false_positive_rate
-        if v2_false_positive_rate
-        else (1.0 if primary_v3_false_positive_rate == 0 else 0.0)
+        None
+        if v2_false_positive_rate is None
+        else (
+            (v2_false_positive_rate - primary_v3_false_positive_rate)
+            / v2_false_positive_rate
+            if v2_false_positive_rate
+            else (1.0 if primary_v3_false_positive_rate == 0 else 0.0)
+        )
     )
 
-    latency_batch = simulate_weekly_batch(
-        seed=seed + len(scenarios) * 100_000 + batches,
-        series_per_class=series_per_class,
-        anomaly_factor=primary.anomaly_factor,
-        anomaly_duration_source_periods=primary.anomaly_duration_source_periods,
-        baseline_range=primary.baseline_range,
-        dispersion_size_range=primary.dispersion_size_range,
-        historical_zero_probability=primary.historical_zero_probability,
-    )
-    latency_latest = pd.Timestamp(latency_batch.first_cycle["time"].max())
-    provisional = latency_batch.first_cycle.copy()
-    provisional["latest_available_time"] = latency_latest
-    provisional["analysis_cutoff"] = latency_latest - pd.Timedelta(days=7)
-    provisional["source_period_coverage"] = 0.8
-    provisional_alerts = _v3_alerts(
-        provisional,
-        evaluation_config,
-        latency_latest.date(),
-    )
-    delayed_alerts = _v3_alerts(
-        latency_batch.second_cycle,
-        evaluation_config,
-        (latency_latest + pd.Timedelta(days=21)).date(),
-    )
+    latency_guards: dict[str, Any] = {}
+    provisional_true_alert_count = 0
+    delayed_alert_count = 0
+    for cadence_index, cadence in enumerate(("weekly", "monthly")):
+        latency_scenario = next(
+            (
+                scenario
+                for scenario in scenarios
+                if scenario.key == f"{cadence}_common_sustained_2x"
+            ),
+            None,
+        )
+        if latency_scenario is None:
+            continue
+        latency_batch = simulate_batch(
+            seed=seed + len(scenarios) * 100_000 + batches + cadence_index,
+            series_per_class=series_per_class,
+            periods=312 if cadence == "weekly" else 72,
+            anomaly_factor=latency_scenario.anomaly_factor,
+            anomaly_duration_source_periods=(
+                latency_scenario.anomaly_duration_source_periods
+            ),
+            baseline_range=latency_scenario.baseline_range,
+            dispersion_size_range=latency_scenario.dispersion_size_range,
+            historical_zero_probability=(
+                latency_scenario.historical_zero_probability
+            ),
+            cadence=cadence,
+        )
+        latency_latest = pd.Timestamp(latency_batch.first_cycle["time"].max())
+        provisional = latency_batch.first_cycle.copy()
+        provisional["latest_available_time"] = latency_latest
+        cutoff_days = 7 if cadence == "weekly" else 31
+        delayed_days = 21 if cadence == "weekly" else 90
+        provisional["analysis_cutoff"] = latency_latest - pd.Timedelta(
+            days=cutoff_days
+        )
+        provisional["source_period_coverage"] = 0.8
+        analysis_as_of = _simulation_as_of(
+            latency_batch.first_cycle,
+            cadence,
+        )
+        provisional_alerts = _v3_alerts(
+            provisional,
+            evaluation_config,
+            analysis_as_of,
+        )
+        delayed_alerts = _v3_alerts(
+            latency_batch.second_cycle,
+            evaluation_config,
+            (latency_latest + pd.Timedelta(days=delayed_days)).date(),
+        )
+        provisional_true = len(provisional_alerts & latency_batch.true_series)
+        provisional_true_alert_count += provisional_true
+        delayed_alert_count += len(delayed_alerts)
+        latency_guards[cadence] = {
+            "provisional_true_alerts_after_cutoff": provisional_true,
+            "delayed_feed_current_alerts": len(delayed_alerts),
+        }
     scenario_manifest = [_scenario_payload(scenario) for scenario in scenarios]
     protocol_payload = {
-        "protocol_version": "v3_uniform_endpoint_zero_process",
+        "protocol_version": "v3.2_weekly_monthly_multi_horizon",
         "batches_per_scenario": batches,
         "series_per_class": series_per_class,
         "seed": seed,
         "scenarios": scenario_manifest,
         "minimum_complete_null_families": minimum_complete_null_families,
+        "minimum_complete_null_families_per_cadence": (
+            minimum_complete_null_families_per_cadence
+        ),
+        "automatic_q_grid": list(automatic_q_grid),
+        "null_stress_strata": list(NULL_STRESS_STRATA),
         "paired_rare_no_structural_zero_control": rare_scenario_entry is not None,
     }
     result = {
-        "method": "stratified_seasonal_overdispersed_weekly_simulation_v3",
+        "method": "stratified_seasonal_overdispersed_weekly_monthly_simulation_v3_2",
         "config_hash": hashlib.sha256(
             json.dumps(config, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest(),
+        "calibration_definition_hash": calibration_definition_hash(config),
         "simulation_protocol_hash": hashlib.sha256(
             json.dumps(protocol_payload, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest(),
@@ -859,6 +1426,7 @@ def run_backtest(
         "total_true_anomaly_series": batches * series_per_class * len(scenarios),
         "primary_scenario": primary.key,
         "scenarios": scenario_results,
+        "calibration_groups": calibration_groups,
         "precision": {
             "binary_interval_method": "wilson_score",
             "confidence_level": 0.95,
@@ -869,6 +1437,13 @@ def run_backtest(
             ),
             "sufficient_family_trials": (
                 len(all_null_family_discoveries) >= minimum_complete_null_families
+            ),
+            "complete_null_family_trials_by_automation_group": {
+                key: int(value.get("family_trials", 0))
+                for key, value in group_tallies.items()
+            },
+            "minimum_complete_null_families_per_cadence": (
+                minimum_complete_null_families_per_cadence
             ),
             "note": (
                 "Complete-null family FDR is binary per independent scenario batch; "
@@ -1011,7 +1586,7 @@ def run_backtest(
             "false_alerts_complete_null": aggregate_v3_false,
         },
         "v2_comparator": {
-            "scope": primary.key,
+            "scope": weekly_comparator.key if weekly_comparator else None,
             "false_positive_rate": v2_false_positive_rate,
             "false_positive_rate_ci_95": primary_v2_fpr_interval,
             "sensitivity": v2_sensitivity,
@@ -1020,17 +1595,22 @@ def run_backtest(
             "false_alerts_complete_null": primary_v2_false,
         },
         "comparison": {
-            "scope": primary.key,
-            "false_positive_reduction": round(false_positive_reduction, 6),
-            "sensitivity_change_percentage_points": round(
-                (primary_sensitivity - v2_sensitivity) * 100.0, 3
+            "scope": weekly_comparator.key if weekly_comparator else None,
+            "false_positive_reduction": (
+                None
+                if false_positive_reduction is None
+                else round(false_positive_reduction, 6)
+            ),
+            "sensitivity_change_percentage_points": (
+                None
+                if v2_sensitivity is None
+                else round((primary_sensitivity - v2_sensitivity) * 100.0, 3)
             ),
         },
         "latency_guard": {
-            "provisional_true_alerts_after_cutoff": len(
-                provisional_alerts & latency_batch.true_series
-            ),
-            "delayed_feed_current_alerts": len(delayed_alerts),
+            "provisional_true_alerts_after_cutoff": provisional_true_alert_count,
+            "delayed_feed_current_alerts": delayed_alert_count,
+            "by_cadence": latency_guards,
             "source_period_coverage_required": float(
                 config.get("data_latency", {}).get("minimum_source_period_coverage", 0.8)
             ),
@@ -1047,12 +1627,24 @@ def run_backtest(
         "median_delay_lte_1_cycle": (
             primary_median_delay is not None and primary_median_delay <= 1.0
         ),
-        "false_positive_reduction_gte_30pct": false_positive_reduction >= 0.30,
-        "sensitivity_drop_lte_5pp": primary_sensitivity >= v2_sensitivity - 0.05,
-        "provisional_period_does_not_leak": not (
-            provisional_alerts & latency_batch.true_series
+        "false_positive_reduction_gte_30pct": bool(
+            false_positive_reduction is not None
+            and false_positive_reduction >= 0.30
         ),
-        "delayed_feed_does_not_create_current_alert": not delayed_alerts,
+        "sensitivity_drop_lte_5pp": bool(
+            v2_sensitivity is not None
+            and primary_sensitivity >= v2_sensitivity - 0.05
+        ),
+        "provisional_period_does_not_leak": not (
+            provisional_true_alert_count
+        ),
+        "delayed_feed_does_not_create_current_alert": not delayed_alert_count,
+        "weekly_automation_group_supported": (
+            calibration_groups["weekly.common_count"]["status"] == "supported"
+        ),
+        "monthly_automation_group_supported": (
+            calibration_groups["monthly.common_count"]["status"] == "supported"
+        ),
     }
     result["passed"] = all(result["acceptance"].values())
     return result

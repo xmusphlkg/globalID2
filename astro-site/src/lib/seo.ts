@@ -17,7 +17,6 @@ export interface SeoDocument {
 }
 
 const SITE_NAME = 'Global Infectious Disease Surveillance';
-const SITE_SHORT_NAME = 'GIDS';
 const SEO_DESCRIPTION_LIMIT = 160;
 
 export function toSeoSlug(value: unknown): string {

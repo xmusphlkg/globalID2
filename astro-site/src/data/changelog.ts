@@ -22,6 +22,197 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.7.3',
+    date: '2026-08-23',
+    titleEn: 'Downloads catalogue ergonomics and release-pipeline recovery',
+    titleZh: '下载目录体验与发布流水线恢复能力改进',
+    summaryEn:
+      'This release turns Downloads into a more practical data catalogue with shareable filters, sorting, sticky table context, and mobile cards, while improving Taiwan monthly recovery and hardening automated publication checks.',
+    summaryZh:
+      '本次更新将 Downloads 打磨为更实用的数据目录，新增可分享筛选、排序、吸顶表头和移动端卡片，同时改进台湾月度数据恢复并强化自动发布校验。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added dataset sorting on Downloads by featured order, name, record volume, and dataset type so large catalogues are easier to scan.',
+            zh: 'Downloads 新增按默认顺序、名称、记录量和数据集类型排序，便于浏览大型数据目录。',
+          },
+          {
+            en: 'Added shareable Downloads state in the URL for search text, dataset type, and sort mode, with direct links restoring the same catalogue view.',
+            zh: 'Downloads 的搜索词、数据集类型和排序方式会写入 URL，直接打开链接即可恢复相同目录视图。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Reworked the Downloads table into a stable data-tool layout with fixed format columns, a sticky header on desktop, and a card layout on mobile to avoid horizontal scrolling.',
+            zh: '重构 Downloads 表格为更稳定的数据工具布局：桌面端固定格式列并吸顶表头，移动端改为卡片布局以避免横向滚动。',
+          },
+          {
+            en: 'Raised the public-site HTML performance budget to match the expanded Research graph while keeping the full production build inside the total gzip budget.',
+            zh: '根据扩展后的 Research graph 调整公开站点 HTML 性能预算，同时保持完整生产构建仍在总 gzip 预算内。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Fixed misaligned Downloads rows by restoring native table-cell layout and constraining CSV, JSON, XLSX, and source-note columns.',
+            zh: '修复 Downloads 行列错位：恢复原生 table-cell 布局，并约束 CSV、JSON、XLSX 与来源说明列宽。',
+          },
+          {
+            en: 'Recovered Taiwan NIDSS national monthly updates from cached raw monthly files when live CSV endpoints are temporarily unavailable.',
+            zh: '当台湾 NIDSS 在线 CSV 端点暂时不可用时，可从本地 raw 月度缓存恢复全国月度数据更新。',
+          },
+          {
+            en: 'Made GitHub direct-download verification retry after publication so transient Contents API visibility delays no longer fail an otherwise successful release.',
+            zh: '为 GitHub 直接下载仓库的发布后校验加入重试，避免 Contents API 短暂不可见导致已成功的发布误失败。',
+          },
+          {
+            en: 'Hardened China registry coverage policy and Research export fallback text for edge cases with incomplete disease metadata.',
+            zh: '强化中国数据 registry coverage 策略，并修复研究导出在疾病元数据不完整时的中文 fallback 文案。',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.7.2',
+    date: '2026-08-19',
+    titleEn: 'Calibrated Situation Room controls and public-site reliability',
+    titleZh: '态势室校准控制与公开站点可靠性改进',
+    summaryEn:
+      'This maintenance release advances Situation Room to a calibrated, multi-horizon v3.2 workflow and hardens the public GIDS experience with offline country flags, release-linked versioning, and broader browser regression checks.',
+    summaryZh:
+      '本次维护版本将态势室推进到经校准的多窗口 v3.2 工作流，并通过本地国旗资源、关联更新记录的版本信息和更广泛的浏览器回归检查，增强 GIDS 公开站点的可靠性。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added the Situation Room v3.2 multi-horizon Gamma-Poisson detector, which evaluates weekly and monthly count horizons through one correlated omnibus test and applies cadence- and expected-count-specific effect gates.',
+            zh: '新增态势室 v3.2 多窗口 Gamma-Poisson 检测器：通过一个保留相关性的综合检验评估周度和月度计数窗口，并按频率和预期计数应用效应门槛。',
+          },
+          {
+            en: 'Added durable event labels, calibration artifacts, and per-signal publication-policy decisions, with database migration, operator APIs, and scripts for auditable calibration registration.',
+            zh: '新增可持久化的事件标签、校准制品和逐信号发布策略决策，并提供数据库迁移、运营 API 与脚本，以支持可审计的校准登记。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Made automatic Situation verification fail closed by source and cadence group until a registered calibration meets null-family safety, sensitivity, detection-delay, and optional official-corroboration requirements.',
+            zh: '按来源和频率分组强化态势自动核验的失效关闭机制；只有已登记校准满足零假设族安全性、灵敏度、检出延迟及可选官方佐证要求后才可启用。',
+          },
+          {
+            en: 'Expanded public-site and dashboard regression coverage for accessibility, responsive navigation, release provenance, and the new Situation calibration and policy-decision surfaces.',
+            zh: '扩展公众站点与控制台的回归覆盖，涵盖无障碍、响应式导航、发布溯源，以及新增的态势校准和策略决策界面。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Restored country flags in Data Coverage map labels and hover tooltips with bundled local SVG assets, including every country and region in the coverage roadmap.',
+            zh: '使用随站点打包的本地 SVG 资源恢复 Data Coverage 地图标签和悬浮提示中的国旗，并覆盖路线图中的全部国家和地区。',
+          },
+          {
+            en: 'Made the footer version derive from the application package and link to the localized Changelog, preventing version text from drifting from the release manifest.',
+            zh: '使底栏版本号从应用包清单自动读取并链接到本地化更新记录，避免版本文本与发布清单发生偏差。',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.7.1',
+    date: '2026-08-18',
+    titleEn: 'Brand, bilingual experience, and release confidence rebuild',
+    titleZh: '品牌、双语体验与发布可信度重构',
+    summaryEn:
+      'This release rebuilds the public GIDS experience around a scientific editorial brand, completes the first full pass of bilingual public navigation and research routes, and hardens accessibility, search, performance, and deployment verification.',
+    summaryZh:
+      '本次更新围绕科学编辑部式品牌重构 GIDS 公众体验，完成第一轮完整双语导航与研究路由覆盖，并强化无障碍、搜索、性能和部署一致性校验。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Introduced the refreshed GIDS identity, local brand assets, a unified self-hosted interface typeface, and a separate Control Center sub-brand.',
+            zh: '推出更新后的 GIDS 品牌系统、本地品牌资源、统一的自托管界面字体，以及独立的 Control Center 子品牌。',
+          },
+          {
+            en: 'Added a compact static search index at `/site-data/search-index.json`, a noindex `/search/` experience, localized `/zh/search/`, and a Cmd/Ctrl+K quick search panel grouped across countries, diseases, Situation, reports, research, and pages.',
+            zh: '新增紧凑静态搜索索引 `/site-data/search-index.json`、noindex 的 `/search/` 搜索页、本地化 `/zh/search/`，以及按国家、疾病、态势、报告、研究和页面分组的 Cmd/Ctrl+K 快速搜索面板。',
+          },
+          {
+            en: 'Expanded Chinese public coverage with locale-aware Research routes, matching canonical and hreflang metadata, and sitemap entries for Research index, articles, topics, countries, diseases, integrity, preprints, graph, and weekly pages.',
+            zh: '扩展中文公众覆盖，新增 locale-aware 的 Research 路由、对应 canonical 与 hreflang 元数据，并将研究首页、文章、主题、国家、疾病、完整性、预印本、图谱和周报纳入 sitemap。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Restructured the public home, header, footer, country pages, disease pages, Situation pages, report pages, and downloads entry around current status, source trust, analysis pathways, and clearer professional navigation.',
+            zh: '围绕当前态势、来源可信度、分析入口和更清晰的专业导航，重组公众首页、页眉、页脚、国家页、疾病页、态势页、报告页和下载入口。',
+          },
+          {
+            en: 'Improved mobile usability by removing the oversized mobile hero, tightening the menu and Control Center shell, preserving keyboard focus, supporting Escape dismissal, and preventing horizontal overflow across tested viewports.',
+            zh: '优化移动端体验，移除过高的移动首屏英雄区，收紧菜单和 Control Center 外壳，保留键盘焦点，支持 Escape 关闭，并在测试视口中防止横向溢出。',
+          },
+          {
+            en: 'Hardened accessibility and data controls with stable id/name attributes, labels, help-text associations, clearer CTA copy, stronger contrast, chart/table alternatives, and WCAG checks across public and Control Center routes.',
+            zh: '强化无障碍和数据控件，为表单补齐稳定 id/name、标签与帮助文本关联，优化 CTA 文案和对比度，并为图表/表格替代视图及公众端、Control Center 路由加入 WCAG 检查。',
+          },
+          {
+            en: 'Rebalanced public performance budgets for JavaScript chunks, route assets, HTML gzip size, and font payloads, while keeping chart rendering lazy and replacing runtime FlagCDN requests with local region markers.',
+            zh: '重新校准公众端 JavaScript chunk、路由资源、HTML gzip 和字体体积预算，同时保留图表懒加载，并以本地区域标记替代运行时 FlagCDN 请求。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Changed language switching from DOM-only text replacement to locale URL navigation so the visible URL, page title, document language, canonical URL, and alternate links stay synchronized.',
+            zh: '将语言切换从仅替换 DOM 文本改为跳转对应 locale URL，使可见地址、页面标题、文档语言、canonical 和 alternate 链接保持同步。',
+          },
+          {
+            en: 'Added a post-deployment source-commit verifier so production HTML must expose the expected `gids-source-commit` before a release is accepted.',
+            zh: '新增部署后源码 commit 校验器，要求生产 HTML 暴露预期的 `gids-source-commit` 后发布才可通过。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.7.0',
     date: '2026-08-17',
     titleEn: 'Situation Room v3, verified alerts, and evidence-grade Research Radar',

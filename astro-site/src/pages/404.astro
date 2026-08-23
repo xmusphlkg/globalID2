@@ -2,25 +2,25 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 const requestedPath = Astro.url.pathname;
+const zh = requestedPath === '/zh' || requestedPath.startsWith('/zh/');
+const prefix = zh ? '/zh' : '';
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 ---
 
 <BaseLayout
-  title="Page not found"
-  description="The requested GIDS surveillance page is not available. Browse the disease directory or country coverage instead."
+  title={pick('Page not found', '页面不存在')}
+  description={pick('The requested GIDS surveillance page is not available. Browse the disease directory or country coverage instead.', '请求的 GIDS 监测页面不存在，请浏览疾病目录或国家数据覆盖。')}
+  initialLanguage={zh ? 'zh' : 'en'}
   noindex={true}
 >
   <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-    <p class="academic-kicker" data-lang-en="404" data-lang-zh="404">404</p>
-    <h1 class="academic-title mt-4" data-lang-en="This surveillance page is not available" data-lang-zh="该监测页面不存在">
-      This surveillance page is not available
-    </h1>
-    <p class="mt-5 text-[rgb(var(--text-muted))]" data-lang-en="The URL may be outdated, or the page may have been removed during a data-quality review." data-lang-zh="该链接可能已过期，或页面已在数据质量审核中移除。">
-      The URL may be outdated, or the page may have been removed during a data-quality review.
-    </p>
+    <p class="academic-kicker">404</p>
+    <h1 class="academic-title mt-4">{pick('This surveillance page is not available', '该监测页面不存在')}</h1>
+    <p class="mt-5 text-[rgb(var(--text-muted))]">{pick('The URL may be outdated, or the page may have been removed during a data-quality review.', '该链接可能已过期，或页面已在数据质量审核中移除。')}</p>
     <p class="mt-3 text-xs text-[rgb(var(--text-faint))] break-all">{requestedPath}</p>
     <div class="mt-8 flex flex-wrap justify-center gap-3">
-      <a href="/diseases/" class="site-action-primary px-4 py-2 rounded-none">Disease directory</a>
-      <a href="/countries/" class="site-action-secondary px-4 py-2 rounded-none border">Countries and regions</a>
+      <a href={`${prefix}/diseases/`} class="site-action-primary px-4 py-2 rounded-none">{pick('Disease directory', '疾病目录')}</a>
+      <a href={`${prefix}/countries/`} class="site-action-secondary px-4 py-2 rounded-none border">{pick('Countries and regions', '国家和地区')}</a>
     </div>
   </section>
 </BaseLayout>

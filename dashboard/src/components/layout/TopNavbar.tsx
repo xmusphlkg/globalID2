@@ -84,12 +84,12 @@ export function TopNavbar({
           </button>
 
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-1.5 text-xs text-[#6B7280]">
+            <div className="hidden min-w-0 items-center gap-1.5 text-xs text-[#6B7280] sm:flex">
               <span className="truncate">{section.title}</span>
               <ChevronRight className="h-3 w-3 shrink-0" />
               <span className="truncate font-medium text-[#374151]">{route?.label ?? "Control Center"}</span>
             </div>
-            <p className="mt-0.5 truncate text-sm font-semibold text-[#1D1D1F]">{route?.description ?? section.description}</p>
+            <p className="mt-0.5 truncate text-sm font-semibold text-[#1D1D1F]"><span className="sm:hidden">{route?.label ?? section.title}</span><span className="hidden sm:inline">{route?.description ?? section.description}</span></p>
           </div>
 
           <button type="button" onClick={() => setPaletteOpen(true)} className="hidden h-9 min-w-48 items-center gap-2 rounded-md border border-[#D9D9D6] bg-[#F7F7F5] px-3 text-left text-sm text-[#6B7280] transition hover:border-[#C8C8C4] sm:flex">
@@ -103,6 +103,8 @@ export function TopNavbar({
               <Globe2 className="h-4 w-4 text-[#6B7280]" />
               <span className="sr-only">Active country</span>
               <select
+                id="active-country"
+                name="active-country"
                 value={countryId ?? ""}
                 disabled={isLoading || !countries?.length}
                 onChange={(event) => setCountryContext(Number(event.target.value))}
@@ -115,17 +117,19 @@ export function TopNavbar({
               </select>
             </label>
           ) : (
-            <span className="hidden rounded-md border border-[#E5E5E2] bg-[#F7F7F5] px-2.5 py-1.5 text-xs font-medium text-[#6B7280] md:inline-flex">Global scope</span>
+            <span className="inline-flex rounded-md border border-[#E5E5E2] bg-[#F7F7F5] px-2.5 py-1.5 text-xs font-medium text-[#6B7280]">Global scope</span>
           )}
         </div>
       </header>
 
       {paletteOpen ? (
         <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/30 px-4 pt-[12vh]" onMouseDown={() => setPaletteOpen(false)}>
-          <div className="w-full max-w-xl overflow-hidden rounded-lg border border-[#D9D9D6] bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-labelledby="command-palette-title" className="w-full max-w-xl overflow-hidden rounded-lg border border-[#D9D9D6] bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+            <h2 id="command-palette-title" className="sr-only">Jump to a control center workspace</h2>
             <div className="flex items-center gap-3 border-b border-[#E5E5E2] px-4">
               <Search className="h-5 w-5 text-[#6B7280]" />
-              <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search workspaces and tools" className="h-14 flex-1 bg-transparent text-sm outline-none" />
+              <label htmlFor="command-palette-search" className="sr-only">Search workspaces and tools</label>
+              <input id="command-palette-search" name="command-palette-search" type="search" autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search workspaces and tools" className="h-14 flex-1 bg-transparent text-sm outline-none" />
               <button type="button" onClick={() => setPaletteOpen(false)} className="rounded p-1 text-[#6B7280] hover:bg-[#F7F7F5]" aria-label="Close jump menu"><X className="h-4 w-4" /></button>
             </div>
             <div className="max-h-[55vh] overflow-y-auto p-2">
