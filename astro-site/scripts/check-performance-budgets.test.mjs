@@ -62,6 +62,7 @@ test('fails closed when generated HTML exceeds average and compressed all-site b
     maxJavaScriptChunkBytes: 1_000,
     maxRouteCompressedAssetsBytes: 1_000,
     maxAverageHtmlBytes: 100,
+    maxAverageHtmlGzipBytes: 10,
     maxTotalHtmlGzipBytes: 10,
     maxWorldMapBytes: 1_000,
     maxWorldMapBrotliBytes: 1_000,
@@ -70,4 +71,25 @@ test('fails closed when generated HTML exceeds average and compressed all-site b
   assert.match(result.errors.join('\n'), /Generated HTML averages/);
   assert.ok(result.html.rawBytes > 100);
   assert.ok(result.html.gzipBytes > 10);
+});
+
+test('scales the all-site gzip allowance while preserving a per-page ceiling', (t) => {
+  const directory = fixture();
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  writeFileSync(join(directory, 'index.html'), '<main>compact</main>');
+  writeFileSync(join(directory, 'second.html'), '<main>compact</main>');
+
+  const result = auditPerformance(directory, {
+    maxJavaScriptChunkBytes: 1_000,
+    maxRouteCompressedAssetsBytes: 1_000,
+    maxAverageHtmlBytes: 1_000,
+    maxAverageHtmlGzipBytes: 1_000,
+    maxTotalHtmlGzipBytes: 1,
+    maxWorldMapBytes: 1_000,
+    maxWorldMapBrotliBytes: 1_000,
+  });
+
+  assert.equal(result.passed, true);
+  assert.equal(result.html.gzipBudgetBytes, 2_000);
+  assert.ok(result.html.averageGzipBytes < 1_000);
 });

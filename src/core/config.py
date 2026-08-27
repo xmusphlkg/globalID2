@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -437,6 +437,19 @@ class LiteratureSettings(_BaseEnvSettings):
             "Pause accelerated catch-up before the distinct article/summary review backlog can reach this limit"
         ),
     )
+
+    @model_validator(mode="after")
+    def _validate_catch_up_headroom(self) -> "LiteratureSettings":
+        if (
+            self.catch_up_enabled
+            and self.catch_up_max_exception_backlog <= self.max_records_per_run
+        ):
+            raise ValueError(
+                "catch_up_max_exception_backlog must exceed max_records_per_run "
+                "so one bounded catch-up batch can fit below the fail-closed limit"
+            )
+        return self
+
     poll_interval_seconds: int = Field(default=30, ge=5, le=300)
     timezone: str = Field(default="UTC")
     contact_email: str = Field(default="research-radar@globalinfectiousdisease.com")
@@ -473,6 +486,38 @@ class LiteratureSettings(_BaseEnvSettings):
         description="Reviewed WHO IRIS OAI-PMH endpoint; the client rejects other hosts and paths",
     )
     max_official_guidance_records: int = Field(default=60, ge=1, le=500)
+    springer_nature_enabled: bool = Field(
+        default=False,
+        description="Discover bounded article metadata through the credential-gated Springer Nature API",
+    )
+    springer_nature_api_key: str = Field(default="", description="Springer Nature Metadata API key")
+    springer_nature_query: str = Field(
+        default="infectious disease OR outbreak OR surveillance OR vaccine OR antimicrobial resistance",
+        max_length=1_000,
+    )
+    max_springer_nature_records: int = Field(default=50, ge=1, le=500)
+    elsevier_enabled: bool = Field(
+        default=False,
+        description="Discover bounded Scopus metadata through the credential-gated Elsevier API",
+    )
+    elsevier_api_key: str = Field(default="", description="Elsevier developer API key")
+    elsevier_institutional_token: str = Field(
+        default="",
+        description="Optional Elsevier institutional token; never persisted in checkpoints",
+    )
+    elsevier_query: str = Field(
+        default=(
+            "TITLE-ABS-KEY(\"infectious disease\" OR outbreak OR surveillance OR vaccine "
+            "OR \"antimicrobial resistance\")"
+        ),
+        max_length=1_000,
+    )
+    max_elsevier_records: int = Field(default=50, ge=1, le=500)
+    preprint_discovery_enabled: bool = Field(
+        default=False,
+        description="Discover bioRxiv/medRxiv metadata; every result is held for editorial review",
+    )
+    max_preprint_records: int = Field(default=100, ge=1, le=500)
     publisher_rss_enabled: bool = Field(
         default=False,
         description="Poll the explicitly trusted publisher RSS/Atom whitelist for Online First metadata",
@@ -490,6 +535,18 @@ class LiteratureSettings(_BaseEnvSettings):
     unpaywall_enabled: bool = Field(default=True)
     metadata_enrichment_concurrency: int = Field(default=3, ge=1, le=12)
     metadata_enrichment_min_interval_seconds: float = Field(default=0.05, ge=0.0, le=10.0)
+    metadata_backfill_openalex_target: float = Field(
+        default=0.95,
+        ge=0.0,
+        le=1.0,
+        description="Coverage target used by bounded resumable OpenAlex backfill runs",
+    )
+    metadata_backfill_unpaywall_target: float = Field(
+        default=0.95,
+        ge=0.0,
+        le=1.0,
+        description="Coverage target used by bounded resumable Unpaywall backfill runs",
+    )
     source_concurrency: int = Field(default=4, ge=1, le=12)
     request_timeout_seconds: int = Field(default=30, ge=5, le=120)
     max_retries: int = Field(default=3, ge=1, le=5)
@@ -518,6 +575,13 @@ class LiteratureSettings(_BaseEnvSettings):
         description="Only send abstracts from records identified as open access to an external model route",
     )
     ai_model_request_timeout_seconds: int = Field(default=120, ge=10, le=600)
+    weekly_ai_review_enabled: bool = Field(
+        default=False,
+        description="Run a distinct, content-bound AI quality review for generated weekly briefs",
+    )
+    weekly_ai_review_batch_size: int = Field(default=2, ge=1, le=8)
+    weekly_ai_review_timeout_seconds: int = Field(default=60, ge=10, le=180)
+    weekly_ai_review_max_attempts: int = Field(default=2, ge=1, le=2)
     gap_discovery_enabled: bool = Field(
         default=True,
         description="Enable review-only targeted literature discovery for Situation Room evidence gaps",
@@ -615,6 +679,48 @@ class TaskWorkerSettings(_BaseEnvSettings):
         validation_alias="TASK_WORKER_IDLE_LOG_EVERY",
         ge=1,
         description="worker 空闲日志输出周期（轮）",
+    )
+    task_heartbeat_seconds: int = Field(
+        default=15,
+        validation_alias="TASK_WORKER_TASK_HEARTBEAT_SECONDS",
+        ge=5,
+        le=300,
+        description="正在执行的任务租约心跳间隔（秒）",
+    )
+    stale_task_seconds: int = Field(
+        default=180,
+        validation_alias="TASK_WORKER_STALE_TASK_SECONDS",
+        ge=30,
+        le=86400,
+        description="RUNNING 任务失去心跳后可恢复的阈值（秒）",
+    )
+    recovery_scan_seconds: int = Field(
+        default=60,
+        validation_alias="TASK_WORKER_RECOVERY_SCAN_SECONDS",
+        ge=10,
+        le=3600,
+        description="扫描过期 RUNNING 任务的间隔（秒）",
+    )
+    runtime_lease_ttl_seconds: int = Field(
+        default=180,
+        validation_alias="TASK_WORKER_RUNTIME_LEASE_TTL_SECONDS",
+        ge=60,
+        le=900,
+        description="worker 单例租约 TTL；须容忍既有同步 crawler 的事件循环阻塞",
+    )
+    runtime_heartbeat_ttl_seconds: int = Field(
+        default=120,
+        validation_alias="TASK_WORKER_RUNTIME_HEARTBEAT_TTL_SECONDS",
+        ge=45,
+        le=900,
+        description="worker readiness 心跳 TTL；systemd 仍负责快速进程重启",
+    )
+    scheduler_worker_grace_seconds: int = Field(
+        default=90,
+        validation_alias="SCHEDULER_WORKER_GRACE_SECONDS",
+        ge=30,
+        le=3600,
+        description="scheduler 等待 worker 心跳的容忍时间（秒）",
     )
 
 

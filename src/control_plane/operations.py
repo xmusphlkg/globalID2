@@ -196,6 +196,10 @@ class TaskQueryRepository:
         ).one()
         services, _ = await runtime_registry.list_services()
         workers = [item for item in services if item.get("service") == "worker"]
+        # During a hard restart an expired instance can coexist with the new
+        # heartbeat until its TTL elapses. Prefer the newest observation so the
+        # operator never sees a dead PID when a replacement is already live.
+        workers.sort(key=lambda item: str(item.get("last_seen_at") or ""), reverse=True)
         running = int(row.running_tasks or 0)
         retrying = int(row.retrying_tasks or 0)
         return {

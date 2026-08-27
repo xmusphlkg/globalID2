@@ -13,6 +13,7 @@ interface Props {
   initialLanguage?: 'en' | 'zh';
   structuredData?: JsonLdNode | JsonLdNode[];
   seo?: import('../lib/seo').SeoDocument;
+  hideLanguageToggle?: boolean;
 }
 
 const {
@@ -22,6 +23,7 @@ const {
   initialLanguage = 'en',
   structuredData = [],
   seo,
+  hideLanguageToggle = false,
 } = Astro.props;
 const homeLabel = initialLanguage === 'zh' ? '首页' : 'Home';
 const localePrefix = initialLanguage === 'zh' ? '/zh' : '';
@@ -44,6 +46,7 @@ const additionalStructuredData = [
   initialLanguage={initialLanguage}
   additionalStructuredData={additionalStructuredData}
   seo={seo}
+  hideLanguageToggle={hideLanguageToggle}
 >
   <!-- Breadcrumb -->
   {breadcrumbs.length > 0 && (

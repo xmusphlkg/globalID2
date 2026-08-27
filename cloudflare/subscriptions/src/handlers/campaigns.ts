@@ -32,8 +32,8 @@ type Dependencies = {
   createSignedToken(env: Env, purpose: string, subscriptionId: string, ttlSeconds: number): Promise<string>;
   smtpConfig(env: Env): SmtpHandlerConfig | null;
   sendSmtpEmail(config: SmtpHandlerConfig, message: {
-    to: string; subject: string; text: string; html: string;
-  }): Promise<void>;
+    to: string; subject: string; text: string; html: string; messageId?: string;
+  }): Promise<void | { providerMessageId: string | null }>;
 };
 
 type CampaignRow = {
@@ -233,13 +233,19 @@ export function createCampaignHandlers(deps: Dependencies) {
         now: new Date().toISOString(),
       });
       try {
-        await deps.sendSmtpEmail(config, { to: delivery.email, subject: email.subject, text: email.text, html: email.html });
+        const receipt = await deps.sendSmtpEmail(config, {
+          to: delivery.email, subject: email.subject, text: email.text, html: email.html,
+          messageId: `${transactionId}@globalinfectiousdisease.com`,
+        });
+        const providerMessageId = receipt?.providerMessageId || `${transactionId}@globalinfectiousdisease.com`;
         const sentAt = new Date().toISOString();
         await env.DB.prepare(
           `UPDATE message_deliveries SET status = 'sent', provider = 'smtp', attempts = attempts + 1,
-           last_error = NULL, sent_at = ?, failed_at = NULL WHERE id = ?`,
-        ).bind(sentAt, delivery.delivery_id).run();
-        await updateEmailDelivery(env.DB, { deliveryId: transactionId, status: "sent", sentAt });
+           provider_message_id = ?, last_error = NULL, sent_at = ?, failed_at = NULL WHERE id = ?`,
+        ).bind(providerMessageId, sentAt, delivery.delivery_id).run();
+        await updateEmailDelivery(env.DB, {
+          deliveryId: transactionId, status: "sent", sentAt, providerMessageId,
+        });
       } catch (error) {
         const message = boundedText(error instanceof Error ? error.message : "smtp_delivery_failed", "smtp_delivery_failed", 500);
         await env.DB.prepare(
@@ -354,7 +360,7 @@ async function detail(env: Env, id: string, limit: number): Promise<JsonValue | 
 async function refreshStatus(env: Env, id: string) {
   const state = await progress(env, id);
   const status = campaignStatusFromProgress(state);
-  const finishedAt = state.queued === 0 ? new Date().toISOString() : null;
+  const finishedAt = state.queued === 0 && state.deferred === 0 ? new Date().toISOString() : null;
   await env.DB.prepare(
     `UPDATE message_campaigns SET status = ?,
      sent_at = CASE WHEN ? IS NOT NULL THEN COALESCE(sent_at, ?) ELSE sent_at END WHERE id = ?`,

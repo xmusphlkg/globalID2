@@ -36,6 +36,9 @@ async def test_api_lifespan_disposes_history_database(monkeypatch) -> None:
         async def run_heartbeat(self, service: str, instance_id: str, stop_event) -> None:
             await stop_event.wait()
 
+        async def remove_heartbeat(self, service: str, instance_id: str) -> None:
+            calls.append("heartbeat")
+
         async def close(self) -> None:
             calls.append("runtime")
 

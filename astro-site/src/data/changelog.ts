@@ -22,6 +22,75 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.8.0',
+    date: '2026-08-27',
+    titleEn: 'Auditable data governance and control-plane reliability',
+    titleZh: '可审计数据治理与控制面可靠性',
+    summaryEn:
+      'This release closes the operational loop from source ingestion through evidence review and publication: every enabled country schedule was exercised through Control Center, Research Radar gains fail-closed AI and backlog governance, and background tasks now recover safely without hiding provider failures.',
+    summaryZh:
+      '本次更新打通从来源摄取、证据审核到数据发布的运维闭环：通过控制中心实际运行全部已启用国家调度，为研究雷达加入失效关闭的 AI 审核和积压治理，并使后台任务可安全恢复且不再掩盖来源失败。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added evidence-bounded AI review for weekly Research Radar briefs, with deterministic preflight checks, strict schemas, safe model aliases, fingerprint invalidation, concurrency protection, and explicit separation from editorial approval.',
+            zh: '新增周报证据边界 AI 审核，包含确定性预检、严格结构、安全模型别名、指纹失效、并发保护，并与编辑签审明确分离。',
+          },
+          {
+            en: 'Added dry-run-first governance and recovery tools for editorial backlog, metadata coverage, stale ingest runs, and abandoned background tasks, with bounded plans and explicit apply gates.',
+            zh: '新增默认预演的治理与恢复工具，覆盖编辑积压、元数据覆盖、超时摄取运行和遗留后台任务，并提供有界计划与显式写入门。',
+          },
+          {
+            en: 'Added optional Springer Nature, Elsevier, bioRxiv/medRxiv, and publisher RSS connectors with bounded pagination, resumable checkpoints, source isolation, credential gates, and preprint review controls; paid publisher sources remain off by default.',
+            zh: '新增可选的 Springer Nature、Elsevier、bioRxiv/medRxiv 和出版商 RSS 连接器，支持有界分页、断点续运、来源隔离、凭据门和预印本审核；付费出版商来源仍默认关闭。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Hardened worker and scheduler ownership with Redis singleton leases, task heartbeats, stale-task recovery, worker-readiness watchdogs, richer health evidence, and safer systemd ordering.',
+            zh: '通过 Redis 单例租约、任务心跳、超时任务恢复、worker 就绪看门狗、更完整的健康证据与更安全的 systemd 顺序，强化 worker 和 scheduler 所有权。',
+          },
+          {
+            en: 'Made source health reflect completed per-provider result contracts instead of configured intent, and exposed actionable catch-up state, resume thresholds, queue age, and worker/scheduler readiness.',
+            zh: '来源健康现在依据已完成的逐提供商结果契约，而不是配置意图；同时展示可执行的追赶状态、恢复阈值、队列年龄以及 worker/scheduler 就绪度。',
+          },
+          {
+            en: 'Improved public release quality with stricter canonical and hreflang policy, real 301 legacy redirects, compact graph rendering, scalable HTML budgets, clearer copyright and provenance, and email-delivery feedback handling.',
+            zh: '通过更严格的 canonical/hreflang 策略、真实 301 旧链接跳转、紧凑图谱渲染、可扩展 HTML 预算、更清晰的版权与溯源信息，以及邮件送达反馈处理，提升公开发布质量。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Verified all 21 enabled country and regional schedules through Control Center and fixed CDC NHSS HIV ingestion by using an honest provider-specific crawler identity; the acceptance run completed without source errors.',
+            zh: '通过控制中心验证全部 21 个已启用国家和地区调度，并通过透明的提供商专用爬虫标识修复 CDC NHSS HIV 摄取；验收运行无来源错误完成。',
+          },
+          {
+            en: 'Fixed exact-limit OAI checkpoint rollover, optional-provider checkpoint loss, metadata backfill selection and completion boundaries, model bootstrap query storms, and read-path mutation of overdue catch-up schedules.',
+            zh: '修复 OAI 精确上限时的检查点翻页、可选来源检查点丢失、元数据回填选批与完成边界、模型初始化查询风暴，以及读路径修改逾期追赶调度的问题。',
+          },
+          {
+            en: 'Made bilingual research summaries use the English evidence set as a canonical semantic contract so Chinese output cannot add, omit, or strengthen claims independently.',
+            zh: '双语研究摘要现在以英文证据集作为规范语义契约，防止中文输出独立增加、遗漏或强化主张。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.7.3',
     date: '2026-08-23',
     titleEn: 'Downloads catalogue ergonomics and release-pipeline recovery',

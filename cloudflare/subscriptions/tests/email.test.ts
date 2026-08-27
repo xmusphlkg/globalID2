@@ -53,6 +53,18 @@ test("builds the established multipart MIME shape", () => {
   assert.match(raw, /Content-Type: text\/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n<p>HTML body<\/p>/);
 });
 
+test("adds a sanitized correlation Message-ID when supplied", () => {
+  const raw = buildRawEmail(
+    { fromEmail: "noreply@example.test", fromName: "GIDS" },
+    {
+      to: "reader@example.test", subject: "Update", text: "Text", html: "<p>Text</p>",
+      messageId: "delivery-1@example.test\r\nBcc:evil@example.test",
+    },
+  );
+  assert.match(raw, /Message-ID: <delivery-1@example.testBccevilexample.test>/);
+  assert.equal(raw.includes("\r\nBcc:evil"), false);
+});
+
 test("does not allow address or subject values to inject MIME headers", () => {
   const raw = buildRawEmail(
     { fromEmail: "alerts@example.test\r\nX-Injected: yes", fromName: "GIDS\r\nBcc: hidden@example.test" },

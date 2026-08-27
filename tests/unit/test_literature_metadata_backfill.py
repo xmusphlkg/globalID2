@@ -101,6 +101,15 @@ class _FakeUnpaywall:
         }
 
 
+class _NoMatches:
+    def __init__(self) -> None:
+        self.calls = []
+
+    async def enrich_by_dois(self, dois, **kwargs):
+        self.calls.append((list(dois), kwargs))
+        return {}
+
+
 def _settings() -> SimpleNamespace:
     return SimpleNamespace(
         contact_email="tests@example.org",
@@ -240,6 +249,8 @@ async def test_provider_failure_does_not_advance_checkpoint_past_failed_batch(ba
     assert failed["failure_count"] == 1
     assert failed["provider_stats"]["openalex"]["failed"] == 1
     assert failed["last_database_id"] == 1
+    assert failed["provider_cursors"]["unpaywall"] == 3
+    assert len(unpaywall.calls) == 3
 
     recovered = await backfill_existing_literature_metadata(
         apply=True,
@@ -257,3 +268,89 @@ async def test_provider_failure_does_not_advance_checkpoint_past_failed_batch(ba
         rows = session.execute(select(LiteratureArticle).order_by(LiteratureArticle.id)).scalars().all()
         assert [article.openalex_id for article in rows] == ["W1", "W2", "W3"]
         assert [article.publication_status for article in rows] == ["published", "review", "excluded"]
+
+
+async def test_adaptive_plan_requests_only_missing_provider_metadata(backfill_database, tmp_path):
+    engine, database = backfill_database
+    with Session(engine) as session:
+        first, second = session.execute(
+            select(LiteratureArticle).order_by(LiteratureArticle.id).limit(2)
+        ).scalars().all()
+        first.openalex_id = "W-existing"
+        second.source_payload = {"unpaywall": {"is_oa": False}}
+        session.commit()
+    openalex = _FakeOpenAlex()
+    unpaywall = _FakeUnpaywall()
+
+    result = await backfill_existing_literature_metadata(
+        batch_size=10,
+        checkpoint_path=tmp_path / "adaptive.json",
+        coverage_targets={"openalex": 2 / 3, "unpaywall": 2 / 3},
+        config=_settings(),
+        db_factory=database,
+        openalex_client=openalex,
+        unpaywall_client=unpaywall,
+    )
+
+    assert result["status"] == "completed"
+    assert result["target_reached"] is True
+    assert result["coverage_before"]["openalex"]["deficit"] == 1
+    assert result["coverage_before"]["unpaywall"]["deficit"] == 1
+    assert result["examined"] == 2  # each one-record batch is bounded by the largest deficit
+    assert result["planned_batch_size_min"] == result["planned_batch_size_max"] == 1
+    assert openalex.calls[0][0] == ["10.1000/article-2"]
+    assert unpaywall.calls[0][0] == ["10.1000/article-1"]
+    assert result["next_action_code"] == "none"
+
+
+async def test_bounded_run_skips_already_covered_rows_before_missing_candidate(
+    backfill_database, tmp_path
+):
+    engine, database = backfill_database
+    with Session(engine) as session:
+        first, second = session.execute(
+            select(LiteratureArticle).order_by(LiteratureArticle.id).limit(2)
+        ).scalars().all()
+        first.openalex_id = "W-existing-1"
+        second.openalex_id = "W-existing-2"
+        session.commit()
+    openalex = _FakeOpenAlex()
+
+    result = await backfill_existing_literature_metadata(
+        batch_size=1,
+        limit=1,
+        providers=("openalex",),
+        checkpoint_path=tmp_path / "skip-covered.json",
+        coverage_targets={"openalex": 1.0},
+        config=_settings(),
+        db_factory=database,
+        openalex_client=openalex,
+    )
+
+    assert result["examined"] == 1
+    assert result["provider_stats"]["openalex"]["requested"] == 1
+    assert openalex.calls[0][0] == ["10.1000/article-3"]
+    assert result["coverage_after"]["openalex"]["ratio"] == 1.0
+    assert result["target_reached"] is True
+    assert result["status"] == "completed"
+
+
+async def test_no_match_pass_finishes_below_target_with_operator_action(backfill_database, tmp_path):
+    _engine, database = backfill_database
+    no_matches = _NoMatches()
+
+    result = await backfill_existing_literature_metadata(
+        batch_size=2,
+        providers=("openalex",),
+        checkpoint_path=tmp_path / "no-match.json",
+        coverage_targets={"openalex": 1.0},
+        config=_settings(),
+        db_factory=database,
+        openalex_client=no_matches,
+    )
+
+    assert result["status"] == "completed_below_target"
+    assert result["target_reached"] is False
+    assert result["coverage_after"]["openalex"]["deficit"] == 3
+    assert result["next_action_code"] == "review_provider_match_gap"
+    assert len(no_matches.calls) == 2

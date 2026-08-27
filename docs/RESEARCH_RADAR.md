@@ -165,7 +165,18 @@ does not erase the audit trail or silently revert published content.
 Use a no-write simulation before changing thresholds:
 
 ```bash
-venv/bin/python scripts/run_literature_autopilot.py --dry-run
+venv/bin/python scripts/run_literature_autopilot.py
+```
+
+Dry-run is the default. Persisting deterministic publish/exclude/defer/archive
+decisions requires the explicit `--apply` flag. Deferred future-dated articles
+and summaries waiting on an article decision retain `review` status plus an
+auditable `autopilot.decision=defer` marker; summaries whose parent was excluded
+move to `archived`. These objects remain available for re-evaluation and audit
+but no longer consume the actionable human-review budget.
+
+```bash
+venv/bin/python scripts/run_literature_autopilot.py --apply
 ```
 
 When classifier aliases, controlled metadata rules, or their version changes,
@@ -198,7 +209,8 @@ Article pages include deterministic related-research recommendations with
 stable identifier deduplication. ISO-week briefs cite the exact released
 articles behind each finding, separate monitoring context from literature
 evidence, disclose evidence gaps, and identify themselves as automated rather
-than editor-reviewed. Ask GIDS likewise separates exact evidence, background
+than editor-reviewed unless a named human completes the content-bound review
+workflow below. Ask GIDS likewise separates exact evidence, background
 evidence, and gaps; it does not make causal, clinical, or disease-risk claims.
 
 Disease hubs place monthly GIDS reported records beside Research Radar
@@ -235,6 +247,62 @@ requires `LITERATURE__SCHEDULE_ENABLED=true`; its default cadence is 15 minutes.
 Use a monitored contact address in `LITERATURE__CONTACT_EMAIL` so Crossref
 requests identify the operator.
 
+### Weekly brief human review
+
+Generated weekly briefs remain labelled
+`automatically_compiled_not_editorially_reviewed` by default. A real reviewer
+must inspect the cited findings, monitoring context, and evidence gaps, then run
+the review CLI with their name and role. The command is a dry-run unless
+`--apply` is supplied:
+
+```bash
+PYTHONPATH=. venv/bin/python scripts/review_research_weekly_brief.py \
+  --week 2026-W33 \
+  --reviewer-name "Full reviewer name" \
+  --reviewer-role "Infectious disease editor" \
+  --attest-reviewed
+```
+
+After checking the dry-run output, repeat with `--apply`. The v2 registry binds
+the signature to a SHA-256 fingerprint of the exact public evidence. Any later
+change to a cited finding, monitoring relation, or evidence gap invalidates the
+old review automatically and restores the automated/not-reviewed label. The
+registry update is atomic; replacing an existing week additionally requires
+`--replace-existing`. Do not use service accounts, model names, placeholders,
+or invented reviewer identities.
+
+### Weekly brief AI quality review
+
+AI review is a separate quality-control signal, never an editorial signature.
+It receives only public `cited_findings`, `monitoring_context`,
+`evidence_gaps`, and `methodology`; browsing, retrieval, outside knowledge,
+abstracts, private notes, and database rows are excluded. Deterministic checks
+run first. The model must return one bounded JSON object using an issue-code
+allowlist. Prose, unknown codes, malformed output, unavailable routes, and
+missing credentials all fail closed; raw output and reasoning are not stored.
+
+The feature is off by default. A configured Model Center route can run it on
+the existing `ENRICH_LITERATURE` worker cadence:
+
+```dotenv
+LITERATURE__WEEKLY_AI_REVIEW_ENABLED=true
+LITERATURE__AI_ENRICHMENT_SCHEDULE_ENABLED=true
+```
+
+The task mode is `weekly_ai_review`, or
+`summaries_and_weekly_ai_review` when summary enrichment is also enabled. The
+manual CLI is dry-run unless `--apply` is supplied:
+
+```bash
+PYTHONPATH=. venv/bin/python scripts/ai_review_research_weekly_briefs.py --week 2026-W33
+```
+
+A pass is shown as `ai_reviewed` with an explicit “not editorial review”
+disclosure. Content changes invalidate it, and a matching human review always
+wins. Failures keep the public unreviewed label and fail a scheduled worker
+task with `weekly_brief_ai_review_failed_closed`, so health cannot appear green
+while the route is failing; site generation remains available.
+
 ### Crossref capacity and catch-up
 
 The curated 31-journal stream is globally ordered, not divided into 31
@@ -270,9 +338,21 @@ projected upper bound reaches
 count fails, it does not schedule the five-minute follow-up. The already
 persisted normal 15-minute run remains in place, so source ingestion slows but
 does not stop completely. Task results expose only integer
-`catch_up_backlog_observed_count`, limit/projected counts, the boolean
-`catch_up_paused_backpressure`, and a stable reason code; titles, IDs, and error
-text are never included.
+`catch_up_backlog_observed_count`, limit/projected counts, the strict
+`catch_up_resume_below_backlog` boundary, any
+`catch_up_required_backlog_reduction`, the boolean
+`catch_up_paused_backpressure`, and stable `catch_up_status` /
+`catch_up_next_action_code` values; titles, IDs, and error text are never
+included. Because equality is fail-closed, catch-up resumes only when the
+observed backlog is strictly below `limit - max_records_per_run`. The configured
+limit must therefore exceed one maximum batch.
+
+The earlier `next_run_at` is stored in `scheduled_job_states`. Scheduler startup
+loads that timestamp and an overdue run remains due immediately after a restart.
+Status/dashboard reads never roll an overdue persisted timestamp forward; a
+read path must not consume scheduled work. A false atomic advance is also
+verified against persisted state and reported as either `already_scheduled` or
+`schedule_persistence_unavailable`, never as a silent success.
 
 Each run records `source_catch_up_required` and
 `source_remaining_index_span_seconds`; the checkpoint records the equivalent
@@ -330,6 +410,15 @@ while an existing current record keeps its editorial publication state.
 Integrity exclusions still take precedence. Crossref failure remains fatal for
 the ingest run because it is the primary incremental source.
 
+Every new core ingest audit row records its owning `task_uuid` both in a
+dedicated indexed field and in the initial checkpoint. If task recovery proves
+that exact task's worker lease expired, it terminalizes only that task's still
+running ingest row before requeueing the task. Legacy rows without an ownership
+key are never inferred from worker or timestamp proximity; operators inspect
+and reconcile them with the default-dry-run
+`scripts/reconcile_stale_literature_ingest_runs.py` command documented in the
+health runbook.
+
 ### Official public-health guidance metadata
 
 `LITERATURE__OFFICIAL_GUIDANCE_ENABLED=true` enables bounded discovery from
@@ -368,19 +457,39 @@ database or checkpoint:
 PYTHONPATH=. venv/bin/python scripts/backfill_literature_metadata.py --limit 100
 ```
 
-Use a small explicit apply canary before a controlled full run. Apply mode
-commits one batch at a time and records its last committed database ID in
+Use a small explicit apply canary before a controlled full run. Each invocation
+plans against explicit coverage targets (95% by default), skips provider
+metadata already present, and shrinks the request batch to the remaining
+coverage deficit. Apply mode commits one batch at a time and records independent
+provider cursors plus the last committed database ID in
 `data/cache/literature_metadata_backfill.json`; rerunning the same command
-resumes automatically. A provider failure exits non-zero and leaves the
-watermark before the affected batch so it is retried rather than skipped.
+resumes automatically. A provider failure exits non-zero and leaves that
+provider's cursor before the affected batch while allowing another successful
+provider cursor to advance safely.
 Run only one apply process per checkpoint/database at a time.
+The CLI enforces a workspace-wide non-blocking apply lock, including when two
+operators choose different checkpoint files; a concurrent writer fails before
+opening a database session.
 
 ```bash
 PYTHONPATH=. venv/bin/python scripts/backfill_literature_metadata.py \
   --apply --limit 100 --batch-size 25 --concurrency 2 --min-interval-seconds 0.1
 PYTHONPATH=. venv/bin/python scripts/backfill_literature_metadata.py \
-  --apply --batch-size 50 --concurrency 2 --min-interval-seconds 0.1
+  --apply --limit 500 --batch-size 50 --concurrency 2 --min-interval-seconds 0.1
 ```
+
+The CLI never performs an unbounded invocation: `--limit` defaults to 500.
+The limit counts DOI-bearing rows that are actually missing metadata from at
+least one active provider; already-covered rows do not consume the budget.
+Repeat the second command until `target_reached=true` or the provider pass ends
+with an operator action code.
+
+Override a target for a controlled catch-up with `--openalex-target 0.98` or
+`--unpaywall-target 0.98`. Results expose `coverage_before`, `coverage_after`,
+per-provider deficits, `target_reached`, and a stable `next_action_code`. A full
+pass that remains below target ends as `completed_below_target` so repeated
+provider misses do not spin forever; inspect identifier quality or provider
+coverage before beginning a new pass.
 
 Use `--providers openalex` or `--providers unpaywall` for an isolated provider
 run. Provider selections are part of the checkpoint identity; use a separate

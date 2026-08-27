@@ -229,7 +229,7 @@ const formatCards = [
                 <div class="source-register-card__identity">
                   {source.country_code && <CountryFlag code={source.country_code} name={source.country_name ?? source.country_code} sizeClass="h-6 w-8 shrink-0" />}
                   <div class="min-w-0">
-                    <h4 class="source-register-title">{pick(source.label ?? source.scope ?? 'Unknown Source', sourceZhLabel(source))}</h4>
+                    <h3 class="source-register-title">{pick(source.label ?? source.scope ?? 'Unknown Source', sourceZhLabel(source))}</h3>
                     {source.country_name && <p class="source-register-country">{source.country_name}</p>}
                   </div>
                 </div>

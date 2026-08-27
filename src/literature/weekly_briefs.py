@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 from pathlib import Path
 import re
 from typing import Any, Iterable
+
+from .weekly_ai_review import bound_weekly_ai_review
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -17,6 +20,11 @@ _NON_HUMAN_REVIEWER = re.compile(
     r"\b(?:anonymous|automated|automation|compiler|chatgpt|openai|system|unknown|reviewer|tbd|test)\b",
     re.IGNORECASE,
 )
+_FINGERPRINT = re.compile(r"^[0-9a-f]{64}$")
+_METHODOLOGY = {
+    "en": "Source-level findings come only from published bilingual structured summaries. Monitoring links are deterministic Research Radar relationships; they do not establish cause, validate a signal, or constitute a risk assessment.",
+    "zh": "文献发现仅来自已发布的双语结构化摘要。监测关联由 Research Radar 确定性关系生成，不建立因果关系、不验证信号，也不构成风险评估。",
+}
 
 
 def _public_text(value: Any, *, minimum: int, maximum: int) -> str | None:
@@ -102,7 +110,7 @@ def load_weekly_review_registry(
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (FileNotFoundError, OSError, json.JSONDecodeError):
         return {}
-    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+    if not isinstance(payload, dict) or payload.get("schema_version") != 2:
         return {}
     rows = payload.get("reviews")
     if not isinstance(rows, list):
@@ -116,6 +124,10 @@ def load_weekly_review_registry(
         review = row.get("review")
         if not isinstance(week, str) or not _WEEK.fullmatch(week) or not isinstance(review, dict):
             continue
+        fingerprint = row.get("brief_fingerprint")
+        if not isinstance(fingerprint, str) or not _FINGERPRINT.fullmatch(fingerprint):
+            continue
+        review = {"review": review, "brief_fingerprint": fingerprint}
         if week in reviews:
             duplicates.add(week)
         else:
@@ -123,6 +135,73 @@ def load_weekly_review_registry(
     for week in duplicates:
         reviews.pop(week, None)
     return reviews
+
+
+def weekly_brief_review_fingerprint(value: dict[str, Any]) -> str:
+    """Bind a human review to the exact public evidence used by a brief.
+
+    Presentation fields and reviewer/byline state are deliberately excluded.
+    Any change to cited findings, monitoring relationships, or evidence gaps
+    invalidates the prior review without exposing private reviewer metadata.
+    """
+
+    def items(name: str, fields: tuple[str, ...]) -> list[dict[str, Any]]:
+        rows = value.get(name)
+        if not isinstance(rows, list):
+            return []
+        projected = [
+            {field: row.get(field) for field in fields}
+            for row in rows
+            if isinstance(row, dict)
+        ]
+        return sorted(
+            projected,
+            key=lambda row: json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+        )
+
+    canonical = {
+        "schema_version": "research-weekly-review-fingerprint.v2",
+        "week": value.get("week"),
+        "start_date": value.get("start_date"),
+        "end_date": value.get("end_date"),
+        "cited_findings": items(
+            "cited_findings",
+            ("article_id", "title", "finding_en", "finding_zh", "source_url", "doi", "provenance"),
+        ),
+        "monitoring_context": items(
+            "monitoring_context",
+            ("signal_id", "disease_id", "geographies", "data_through", "relation_level"),
+        ),
+        "evidence_gaps": items(
+            "evidence_gaps",
+            ("gap_id", "signal_id", "disease_id", "geographies", "gap_type", "note_en", "note_zh"),
+        ),
+        "methodology": {
+            "en": (value.get("methodology") or _METHODOLOGY).get("en")
+            if isinstance(value.get("methodology") or _METHODOLOGY, dict) else None,
+            "zh": (value.get("methodology") or _METHODOLOGY).get("zh")
+            if isinstance(value.get("methodology") or _METHODOLOGY, dict) else None,
+        },
+    }
+    serialized = json.dumps(canonical, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _bound_editorial_review(value: Any, brief: dict[str, Any], *, now: datetime | None) -> dict[str, str] | None:
+    if not isinstance(value, dict):
+        return None
+    # Direct review dictionaries remain supported for trusted in-memory
+    # callers. Registry v2 records are content-bound and fail closed.
+    if "review" not in value and "brief_fingerprint" not in value:
+        return project_weekly_editorial_review(value, now=now)
+    fingerprint = value.get("brief_fingerprint")
+    if (
+        not isinstance(fingerprint, str)
+        or not _FINGERPRINT.fullmatch(fingerprint)
+        or fingerprint != weekly_brief_review_fingerprint(brief)
+    ):
+        return None
+    return project_weekly_editorial_review(value.get("review"), now=now)
 
 
 def _finding(article: dict[str, Any]) -> dict[str, Any] | None:
@@ -159,7 +238,6 @@ def enrich_weekly_briefs(
     gaps = projection.get("evidence_gaps") or []
     output: list[dict[str, Any]] = []
     for raw in briefs:
-        review = project_weekly_editorial_review(raw.get("_editorial_review"), now=now)
         # Underscore-prefixed generation metadata is private by contract. The
         # public status and byline below are always derived, never trusted from
         # the caller or registry.
@@ -204,27 +282,41 @@ def enrich_weekly_briefs(
         ]
         findings = [finding for article in articles if (finding := _finding(article))]
         findings.sort(key=lambda item: (str(item.get("title") or ""), str(item.get("article_id") or "")))
-        output.append({
+        projected_brief = {
             **brief,
             "articles": articles,
             "cited_findings": findings[:5],
             "monitoring_context": sorted(signals.values(), key=lambda item: str(item.get("signal_id") or "")),
             "evidence_gaps": related_gaps,
+            "methodology": dict(_METHODOLOGY),
+        }
+        review = _bound_editorial_review(raw.get("_editorial_review"), projected_brief, now=now)
+        fingerprint = weekly_brief_review_fingerprint(projected_brief)
+        ai_review = (
+            None
+            if review is not None
+            else bound_weekly_ai_review(
+                raw.get("_ai_review"), projected_brief, fingerprint=fingerprint, now=now,
+            )
+        )
+        byline = {
+            "name_en": "GIDS Research Radar automated compiler",
+            "name_zh": "GIDS Research Radar 自动编译器",
+            "reviewer": review,
+        }
+        if ai_review is not None:
+            byline["ai_review"] = ai_review
+        projected_brief.update({
             "brief_status": (
                 "editorially_reviewed"
                 if review is not None
+                else "ai_reviewed"
+                if ai_review is not None
                 else "automatically_compiled_not_editorially_reviewed"
             ),
-            "byline": {
-                "name_en": "GIDS Research Radar automated compiler",
-                "name_zh": "GIDS Research Radar 自动编译器",
-                "reviewer": review,
-            },
-            "methodology": {
-                "en": "Source-level findings come only from published bilingual structured summaries. Monitoring links are deterministic Research Radar relationships; they do not establish cause, validate a signal, or constitute a risk assessment.",
-                "zh": "文献发现仅来自已发布的双语结构化摘要。监测关联由 Research Radar 确定性关系生成，不建立因果关系、不验证信号，也不构成风险评估。",
-            },
+            "byline": byline,
         })
+        output.append(projected_brief)
     return output
 
 
@@ -233,4 +325,5 @@ __all__ = [
     "enrich_weekly_briefs",
     "load_weekly_review_registry",
     "project_weekly_editorial_review",
+    "weekly_brief_review_fingerprint",
 ]

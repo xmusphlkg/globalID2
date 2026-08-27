@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
+import time
+import weakref
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -17,7 +20,13 @@ from src.domain import AIModelConfig, AIProviderConfig
 
 logger = get_logger(__name__)
 
-_schema_ready = False
+_schema_ready_engine: Any = None
+_bootstrap_checked_engine: Any = None
+_bootstrap_checked_at: Optional[float] = None
+_bootstrap_locks: weakref.WeakKeyDictionary[
+    asyncio.AbstractEventLoop, asyncio.Lock
+] = weakref.WeakKeyDictionary()
+_BOOTSTRAP_RECHECK_SECONDS = 60.0
 _ROUTING_STATE_KEY = "routing_state"
 _MODEL_TEST_MARKER = "globalid-model-test-ok"
 _MODEL_TEST_PROMPT = (
@@ -204,18 +213,61 @@ def mask_api_key(api_key: Optional[str]) -> str:
 
 async def ensure_model_center_tables() -> None:
     """Create model-center tables if they do not exist."""
-    global _schema_ready
-    if _schema_ready:
+    global _schema_ready_engine
+    engine = get_engine()
+    if _schema_ready_engine is engine:
         return
 
-    engine = get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(
             AIProviderConfig.metadata.create_all,
             tables=[AIProviderConfig.__table__, AIModelConfig.__table__],
         )
-    _schema_ready = True
+    _schema_ready_engine = engine
     logger.info("AI model center tables ensured")
+
+
+def invalidate_model_center_bootstrap_cache() -> None:
+    """Force the next non-forced bootstrap call to verify database state.
+
+    Normal callers do not need this: the cache expires after a short interval,
+    so a database cleared out-of-band is detected and reseeded.  Tests and code
+    that intentionally clear model-center rows can invalidate it immediately.
+    No environment values or credentials are retained in this cache.
+    """
+
+    global _bootstrap_checked_engine, _bootstrap_checked_at
+    _bootstrap_checked_engine = None
+    _bootstrap_checked_at = None
+
+
+def _bootstrap_cache_is_fresh(engine: Any) -> bool:
+    return bool(
+        _bootstrap_checked_engine is engine
+        and _bootstrap_checked_at is not None
+        and time.monotonic() - _bootstrap_checked_at < _BOOTSTRAP_RECHECK_SECONDS
+    )
+
+
+def _mark_bootstrap_cache_checked(engine: Any) -> None:
+    global _bootstrap_checked_engine, _bootstrap_checked_at
+    _bootstrap_checked_engine = engine
+    _bootstrap_checked_at = time.monotonic()
+
+
+def _bootstrap_lock() -> asyncio.Lock:
+    """Return a lock scoped to the current event loop.
+
+    Loop scoping keeps application processes single-flight while avoiding a
+    lock bound to a closed pytest/application lifecycle loop.
+    """
+
+    loop = asyncio.get_running_loop()
+    lock = _bootstrap_locks.get(loop)
+    if lock is None:
+        lock = asyncio.Lock()
+        _bootstrap_locks[loop] = lock
+    return lock
 
 
 def _env_provider_seed() -> List[Dict[str, Any]]:
@@ -305,10 +357,7 @@ def _env_provider_seed() -> List[Dict[str, Any]]:
     return providers
 
 
-async def bootstrap_model_center_from_env(force: bool = False) -> None:
-    """Seed provider/model records from .env only when database is empty (or force=True)."""
-    await ensure_model_center_tables()
-
+async def _bootstrap_model_center_from_env_uncached(force: bool = False) -> None:
     async with get_db() as db:
         if force:
             for model in (await db.execute(select(AIModelConfig))).scalars().all():
@@ -317,14 +366,16 @@ async def bootstrap_model_center_from_env(force: bool = False) -> None:
                 await db.delete(provider)
             await db.commit()
 
-        existing_provider_count = len((await db.execute(select(AIProviderConfig.id))).all())
-        if not force and existing_provider_count:
-            logger.info("Model center already initialized; env bootstrap skipped")
+        existing_provider_id = (
+            await db.execute(select(AIProviderConfig.id).limit(1))
+        ).scalar_one_or_none()
+        if not force and existing_provider_id is not None:
+            logger.debug("Model center already initialized; env bootstrap skipped")
             return
 
         providers = _env_provider_seed()
         if not providers:
-            logger.info("No provider credentials in env; skip model-center bootstrap")
+            logger.debug("No provider credentials in env; skip model-center bootstrap")
             return
 
         provider_by_name: Dict[str, AIProviderConfig] = {}
@@ -423,6 +474,32 @@ async def bootstrap_model_center_from_env(force: bool = False) -> None:
 
         await db.commit()
         logger.info("Model center bootstrapped from env")
+
+
+async def bootstrap_model_center_from_env(force: bool = False) -> None:
+    """Seed provider/model records from env when needed.
+
+    Non-forced calls are process-locally cached for a short interval and
+    concurrent callers share one database verification.  The finite cache
+    still detects an out-of-band database clear, while ``force=True`` always
+    bypasses it and retains the explicit destructive rebuild behavior.
+    """
+
+    engine = get_engine()
+    if force:
+        # Make concurrent non-forced callers join the forced rebuild instead
+        # of observing a stale successful check while rows are being replaced.
+        invalidate_model_center_bootstrap_cache()
+    elif _bootstrap_cache_is_fresh(engine):
+        return
+
+    async with _bootstrap_lock():
+        if not force and _bootstrap_cache_is_fresh(engine):
+            return
+
+        await ensure_model_center_tables()
+        await _bootstrap_model_center_from_env_uncached(force=force)
+        _mark_bootstrap_cache_checked(engine)
 
 
 def is_rate_limit_error(error: Any) -> bool:

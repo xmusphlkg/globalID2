@@ -9,6 +9,7 @@ import {
 import {
   sha256Hex,
   signSubscriptionToken,
+  secureTextEqual,
   verifySubscriptionToken,
 } from "./lib/security.ts";
 import {
@@ -62,6 +63,7 @@ import {
 } from "./handlers/situation-alerts.ts";
 import type { Env, Payload } from "./types.ts";
 import type { SituationAlertJob } from "./lib/situation-alert.ts";
+import { applyDeliveryFeedback, normalizeDeliveryFeedback } from "./lib/delivery-feedback.ts";
 interface EmailDeliveryResult extends Record<string, JsonValue | undefined> {
   status: "sent" | "failed" | "skipped";
   provider: "smtp";
@@ -107,6 +109,8 @@ export default {
           return unsubscribe(request, env);
         case "situation_alert_ingest":
           return situationAlertHandlers.ingest(request, env);
+        case "email_delivery_feedback":
+          return recordDeliveryFeedback(request, env);
         case "admin_audience":
           return listAudience(request, env, subscriptionHandlerDependencies);
         case "admin_stats":
@@ -327,6 +331,24 @@ async function createSubscription(request: Request, env: Env): Promise<Response>
   }, request, env, 201);
 }
 
+async function recordDeliveryFeedback(request: Request, env: Env): Promise<Response> {
+  const expected = env.EMAIL_DELIVERY_INGEST_TOKEN || "";
+  if (!expected) throw new HttpError(500, "EMAIL_DELIVERY_INGEST_TOKEN_not_configured");
+  const authorization = request.headers.get("authorization") || "";
+  const provided = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  if (!(await secureTextEqual(provided, expected))) throw new HttpError(401, "unauthorized");
+  const feedback = normalizeDeliveryFeedback(await readPayload(request));
+  if (!feedback) throw new HttpError(400, "invalid_email_delivery_event");
+  const result = await applyDeliveryFeedback(env.DB, feedback);
+  return json({
+    ok: true,
+    duplicate: result.duplicate,
+    matched_delivery_count: result.campaignRows + result.transactionalRows,
+    suppressed_contact_count: result.suppressedContacts,
+    event_type: feedback.eventType,
+  }, request, env, result.duplicate ? 200 : 202);
+}
+
 async function sendAndRecordConfirmationEmail(
   env: Env,
   request: Request,
@@ -421,16 +443,18 @@ async function sendAndRecordConfirmationEmail(
   });
 
   try {
-    await sendSmtpEmail(config, {
+    const receipt = await sendSmtpEmail(config, {
       to: input.email,
       subject: content.subject,
       text: content.text,
       html: content.html,
+      messageId: `${deliveryId}@globalinfectiousdisease.com`,
     });
     await updateEmailDeliveryRecord(env.DB, {
       deliveryId,
       status: "sent",
       sentAt: new Date().toISOString(),
+      providerMessageId: receipt.providerMessageId || `${deliveryId}@globalinfectiousdisease.com`,
     });
     await recordEvent(env, {
       subscriberId: input.subscriberId,

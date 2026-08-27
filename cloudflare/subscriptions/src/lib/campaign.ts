@@ -66,6 +66,8 @@ export interface CampaignProgress extends Record<string, JsonValue> {
   total: number;
   queued: number;
   sent: number;
+  delivered: number;
+  deferred: number;
   failed: number;
   skipped: number;
   completed: number;
@@ -196,13 +198,15 @@ export function campaignProgressFromRows(
   const total = Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0);
   const queued = Number(counts.queued || 0);
   const sent = Number(counts.sent || 0);
+  const delivered = Number(counts.delivered || 0);
+  const deferred = Number(counts.deferred || 0);
   const failed = Number(counts.failed || 0);
   const skipped = Number(counts.skipped || 0);
-  const completed = sent + failed + skipped;
+  const completed = sent + delivered + failed + skipped;
   return {
     total,
     queued,
-    sent,
+    sent, delivered, deferred,
     failed,
     skipped,
     completed,
@@ -212,8 +216,9 @@ export function campaignProgressFromRows(
 
 export function campaignStatusFromProgress(progress: CampaignProgress): string {
   if (progress.total === 0) return "sent";
-  if (progress.queued > 0) return progress.completed > 0 ? "sending" : "queued";
-  if (progress.failed > 0 && progress.sent > 0) return "partial_failed";
+  if (progress.queued > 0) return progress.completed > 0 || progress.deferred > 0 ? "sending" : "queued";
+  if (progress.deferred > 0) return "sending";
+  if (progress.failed > 0 && (progress.sent > 0 || progress.delivered > 0)) return "partial_failed";
   if (progress.failed > 0) return "failed";
   return "sent";
 }

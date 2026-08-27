@@ -26,6 +26,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.literature.weekly_briefs import project_weekly_editorial_review
+from src.literature.weekly_ai_review import project_weekly_ai_review
 
 
 DEFAULT_WEEKLY_DIR = ROOT / "astro-site" / "src" / "data" / "research" / "weekly"
@@ -126,21 +127,31 @@ def _reviewer_markdown_text(value: Any, field: str, maximum: int) -> str:
     return result
 
 
-def _validated_public_review(brief: Mapping[str, Any]) -> dict[str, str] | None:
+def _validated_public_review(brief: Mapping[str, Any]) -> tuple[dict[str, str] | None, dict[str, Any] | None]:
     status = brief.get("brief_status")
     byline_value = brief.get("byline")
     if byline_value is not None and not isinstance(byline_value, dict):
         raise DispatchError("invalid_brief_byline")
     byline = byline_value if isinstance(byline_value, dict) else {}
-    if set(byline) - {"name_en", "name_zh", "reviewer"}:
+    if set(byline) - {"name_en", "name_zh", "reviewer", "ai_review"}:
         raise DispatchError("brief_byline_contains_non_public_fields")
     reviewer = byline.get("reviewer")
+    ai_review = byline.get("ai_review")
     if status == "automatically_compiled_not_editorially_reviewed":
-        if reviewer is not None:
+        if reviewer is not None or ai_review is not None:
             raise DispatchError("unreviewed_brief_exposes_reviewer")
-        return None
+        return None, None
+    if status == "ai_reviewed":
+        if reviewer is not None:
+            raise DispatchError("ai_reviewed_brief_exposes_human_reviewer")
+        projected_ai = project_weekly_ai_review(ai_review)
+        if projected_ai is None:
+            raise DispatchError("invalid_ai_reviewed_brief_evidence")
+        return None, projected_ai
     if status != "editorially_reviewed":
         raise DispatchError("unsupported_brief_status")
+    if ai_review is not None:
+        raise DispatchError("editorially_reviewed_brief_exposes_ai_review")
     if not isinstance(reviewer, dict):
         raise DispatchError("reviewed_brief_reviewer_required")
     if set(reviewer) - {"name", "role", "reviewed_at", "institution", "note_en", "note_zh"}:
@@ -151,7 +162,7 @@ def _validated_public_review(brief: Mapping[str, Any]) -> dict[str, str] | None:
     return {
         key: _reviewer_markdown_text(value, f"reviewer_{key}", 1000)
         for key, value in projected.items()
-    }
+    }, None
 
 
 def _source_url(value: Any, public_origin: str) -> str:
@@ -222,6 +233,7 @@ def _markdown(
     brief_url: str,
     methodology: str,
     reviewer: Mapping[str, str] | None,
+    ai_review: Mapping[str, Any] | None,
 ) -> str:
     zh = locale == "zh"
     if reviewer:
@@ -231,6 +243,13 @@ def _markdown(
             f"> 本邮件由已发布的双语结构化摘要自动编译，并由 {reviewer['name']}（{reviewer['role']}{institution}）于 {reviewed_date} 完成编辑审核；仅供研究导航，不构成公共卫生风险评估。"
             if zh
             else f"> Automatically compiled from published bilingual structured summaries and editorially reviewed by {reviewer['name']} ({reviewer['role']}{institution}) on {reviewed_date}; for research navigation, not a public-health risk assessment."
+        )
+    elif ai_review:
+        reviewed_date = str(ai_review["reviewed_at"])[:10]
+        disclosure = (
+            f"> 本邮件由已发布的双语结构化摘要自动编译，并于 {reviewed_date} 通过仅限公开证据的 AI 质量审核；这不是编辑签审，也不构成公共卫生风险评估。"
+            if zh
+            else f"> Automatically compiled from published bilingual structured summaries and passed an AI review limited to the public evidence packet on {reviewed_date}; this is not editorial review or a public-health risk assessment."
         )
     else:
         disclosure = (
@@ -283,7 +302,7 @@ def build_campaign_payload(
         raise DispatchError("invalid_brief_week")
     if not REVISION.fullmatch(revision):
         raise DispatchError("invalid_revision")
-    reviewer = _validated_public_review(brief)
+    reviewer, ai_review = _validated_public_review(brief)
     if max_recipients < 1 or max_recipients > 50000:
         raise DispatchError("max_recipients_out_of_range")
     brief_path = _text(brief.get("url"), "brief_url", 500)
@@ -334,14 +353,14 @@ def build_campaign_payload(
                 "subject": f"Research Radar weekly brief — {week}",
                 "markdown": _markdown(
                     week=week, locale="en", findings=findings, brief_url=brief_url,
-                    methodology=method_en, reviewer=reviewer,
+                    methodology=method_en, reviewer=reviewer, ai_review=ai_review,
                 ),
             },
             "zh": {
                 "subject": f"Research Radar 每周研究简报 — {week}",
                 "markdown": _markdown(
                     week=week, locale="zh", findings=findings, brief_url=brief_url,
-                    methodology=method_zh, reviewer=reviewer,
+                    methodology=method_zh, reviewer=reviewer, ai_review=ai_review,
                 ),
             },
         },

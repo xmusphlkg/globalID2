@@ -11,9 +11,10 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   // now carries enough static graph metadata to sit just over the old cap.
   maxPageHtmlGzipBytes: 115_000,
   maxAverageHtmlBytes: 105_000,
-  // Raised from 24MB (2026-08-20): Research Radar content growth pushed the
-  // static site past the old cap. Keep this tight and revisit if archive
-  // pruning/pagination lands.
+  // Use both a fixed site floor and a compressed per-page ceiling. This keeps
+  // large catalogues honest without making ordinary route growth consume a
+  // permanently fixed allowance.
+  maxAverageHtmlGzipBytes: 18_500,
   maxTotalHtmlGzipBytes: 26_000_000,
   maxFontAssetBytes: 220_000,
   maxLegacyWoffFiles: 0,
@@ -162,16 +163,27 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
     errors.push(`Largest page HTML ${largestPageHtml.path} is ${largestPageHtml.gzipBytes} gzip bytes (budget ${budgets.maxPageHtmlGzipBytes}).`);
   }
   const averageHtmlBytes = pages.length > 0 ? Math.round(totalHtmlBytes / pages.length) : 0;
+  const averageHtmlGzipBytes = pages.length > 0 ? Math.round(totalHtmlGzipBytes / pages.length) : 0;
   if (averageHtmlBytes > budgets.maxAverageHtmlBytes) {
     errors.push(
       `Generated HTML averages ${averageHtmlBytes} bytes per page `
       + `(budget ${budgets.maxAverageHtmlBytes}).`,
     );
   }
-  if (totalHtmlGzipBytes > budgets.maxTotalHtmlGzipBytes) {
+  if (averageHtmlGzipBytes > budgets.maxAverageHtmlGzipBytes) {
+    errors.push(
+      `Generated HTML averages ${averageHtmlGzipBytes} gzip bytes per page `
+      + `(budget ${budgets.maxAverageHtmlGzipBytes}).`,
+    );
+  }
+  const effectiveTotalHtmlGzipBudget = Math.max(
+    budgets.maxTotalHtmlGzipBytes,
+    pages.length * budgets.maxAverageHtmlGzipBytes,
+  );
+  if (totalHtmlGzipBytes > effectiveTotalHtmlGzipBudget) {
     errors.push(
       `Generated HTML totals ${totalHtmlGzipBytes} gzip bytes `
-      + `(budget ${budgets.maxTotalHtmlGzipBytes}).`,
+      + `(budget ${effectiveTotalHtmlGzipBudget}; fixed floor ${budgets.maxTotalHtmlGzipBytes}).`,
     );
   }
 
@@ -196,6 +208,8 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
       rawBytes: totalHtmlBytes,
       gzipBytes: totalHtmlGzipBytes,
       averageRawBytes: averageHtmlBytes,
+      averageGzipBytes: averageHtmlGzipBytes,
+      gzipBudgetBytes: effectiveTotalHtmlGzipBudget,
       largestPage: largestPageHtml,
     },
     largestRoute,

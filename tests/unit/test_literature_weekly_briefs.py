@@ -129,15 +129,18 @@ def test_partial_or_unsafe_optional_note_fails_the_review_closed_without_leaking
 def test_review_registry_omits_duplicate_weeks_and_keeps_only_explicit_records(tmp_path):
     path = tmp_path / "weekly_reviews.json"
     path.write_text(json.dumps({
-        "schema_version": 1,
+        "schema_version": 2,
         "reviews": [
-            {"week": "2026-W32", "review": {"name": "First"}},
-            {"week": "2026-W32", "review": {"name": "Second"}},
-            {"week": "2026-W33", "review": {"name": "Dr Jane Q. Public"}},
-            {"week": "not-a-week", "review": {"name": "Ignored"}},
+            {"week": "2026-W32", "brief_fingerprint": "0" * 64, "review": {"name": "First"}},
+            {"week": "2026-W32", "brief_fingerprint": "1" * 64, "review": {"name": "Second"}},
+            {"week": "2026-W33", "brief_fingerprint": "2" * 64, "review": {"name": "Dr Jane Q. Public"}},
+            {"week": "not-a-week", "brief_fingerprint": "3" * 64, "review": {"name": "Ignored"}},
         ],
     }), encoding="utf-8")
 
     assert load_weekly_review_registry(path) == {
-        "2026-W33": {"name": "Dr Jane Q. Public"},
+        "2026-W33": {
+            "brief_fingerprint": "2" * 64,
+            "review": {"name": "Dr Jane Q. Public"},
+        },
     }

@@ -95,6 +95,7 @@ pnpm-debug.log*
 /backups/
 /data/system-settings.json
 !/data/.gitkeep
+/configs/literature/weekly_ai_reviews.json.lock
 
 # Documentation build artifacts / large fixtures
 site/

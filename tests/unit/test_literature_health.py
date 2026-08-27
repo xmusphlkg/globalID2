@@ -30,6 +30,29 @@ ALL_SOURCES = (
 )
 
 
+def _healthy_source_counts() -> dict[str, int]:
+    # Zero matches are a valid successful provider result. Presence of the
+    # complete counter contract, rather than a positive record count, is the
+    # execution evidence used by the health check.
+    return {
+        "crossref_fetched": 0,
+        "source_records_seen": 0,
+        "source_records_returned": 0,
+        "europe_pmc_enriched": 0,
+        "europe_pmc_errors": 0,
+        "openalex_enriched": 0,
+        "openalex_errors": 0,
+        "unpaywall_enriched": 0,
+        "unpaywall_errors": 0,
+        "official_guidance_fetched": 0,
+        "official_guidance_records_seen": 0,
+        "official_guidance_errors": 0,
+        "controlled_discovery_fetched": 0,
+        "controlled_discovery_queries": 0,
+        "controlled_discovery_query_errors": 0,
+    }
+
+
 def _article(article_id: str = "public-1") -> dict:
     return {
         "article_id": article_id,
@@ -85,7 +108,7 @@ def _healthy_snapshot() -> ResearchRadarSnapshot:
                     "controlled_discovery": {"schema_version": 1},
                     "official_guidance": {"schema_version": 1},
                 },
-                "counts": {},
+                "counts": _healthy_source_counts(),
             },
             {
                 "source": "research-radar-autopilot",
@@ -153,12 +176,148 @@ def test_healthy_snapshot_passes_all_slos() -> None:
 
     assert report["status"] == "healthy"
     assert report["summary"] == {
-        "check_count": 13,
-        "passed": 13,
+        "check_count": 14,
+        "passed": 14,
         "warnings": 0,
         "critical": 0,
     }
     assert exit_code_for(report) == 0
+
+
+def test_enabled_sources_accept_explicit_zero_record_success_for_every_contract() -> None:
+    expected_sources = (
+        *ALL_SOURCES,
+        "publisher-rss",
+        "springer-nature",
+        "elsevier",
+        "biorxiv-api",
+    )
+    counts = {
+        **_healthy_source_counts(),
+        "publisher_rss_fetched": 0,
+        "publisher_rss_records_seen": 0,
+        "publisher_rss_feeds_modified": 0,
+        "publisher_rss_feeds_not_modified": 1,
+        "publisher_rss_feed_errors": 0,
+        "springer_nature_fetched": 0,
+        "springer_nature_errors": 0,
+        "springer_nature_skipped_credentials": 0,
+        "elsevier_fetched": 0,
+        "elsevier_errors": 0,
+        "elsevier_skipped_credentials": 0,
+        "preprint_fetched": 0,
+        "preprint_source_errors": 0,
+    }
+    core = {
+        **_healthy_snapshot().ingest_runs[0],
+        "source": "+".join(expected_sources),
+        "counts": counts,
+    }
+    snapshot = replace(
+        _healthy_snapshot(),
+        ingest_runs=(core, _healthy_snapshot().ingest_runs[1]),
+        expected_sources=expected_sources,
+    )
+
+    source_check = _checks(evaluate_health(snapshot))["enabled_source_success"]
+
+    assert source_check["status"] == "pass"
+    assert source_check["observed"]["successful_source_count"] == len(expected_sources)
+    assert {
+        result["reason"] for result in source_check["observed"]["source_results"]
+    } == {"success"}
+
+
+@pytest.mark.parametrize(
+    ("source", "counter"),
+    [
+        ("europe-pmc", "europe_pmc_errors"),
+        ("openalex", "openalex_errors"),
+        ("unpaywall", "unpaywall_errors"),
+        ("who-iris-oai", "official_guidance_errors"),
+        ("controlled-query", "controlled_discovery_query_errors"),
+    ],
+)
+def test_enabled_source_error_counter_cannot_be_masked_by_completed_run(
+    source: str,
+    counter: str,
+) -> None:
+    snapshot = _healthy_snapshot()
+    core = dict(snapshot.ingest_runs[0])
+    core["counts"] = {**core["counts"], counter: 1}
+
+    source_check = _checks(evaluate_health(replace(
+        snapshot,
+        ingest_runs=(core, snapshot.ingest_runs[1]),
+    )))["enabled_source_success"]
+    result = next(
+        item for item in source_check["observed"]["source_results"]
+        if item["source"] == source
+    )
+
+    assert source_check["status"] == "warning"
+    assert source_check["observed"]["provider_error_source_count"] == 1
+    assert result == {
+        "source": source,
+        "status": "failed",
+        "reason": "provider_errors",
+        "error_count": 1,
+        "skipped_credentials_count": 0,
+    }
+
+
+@pytest.mark.parametrize(
+    ("source", "prefix"),
+    [("springer-nature", "springer_nature"), ("elsevier", "elsevier")],
+)
+def test_enabled_credential_source_skip_cannot_report_success(
+    source: str,
+    prefix: str,
+) -> None:
+    snapshot = _healthy_snapshot()
+    counts = {
+        **snapshot.ingest_runs[0]["counts"],
+        f"{prefix}_fetched": 0,
+        f"{prefix}_errors": 0,
+        f"{prefix}_skipped_credentials": 1,
+    }
+    core = {
+        **snapshot.ingest_runs[0],
+        "source": f"{snapshot.ingest_runs[0]['source']}+{source}",
+        "counts": counts,
+    }
+
+    source_check = _checks(evaluate_health(replace(
+        snapshot,
+        ingest_runs=(core, snapshot.ingest_runs[1]),
+        expected_sources=(*snapshot.expected_sources, source),
+    )))["enabled_source_success"]
+    result = source_check["observed"]["source_results"][-1]
+
+    assert source_check["status"] == "warning"
+    assert source_check["observed"]["credential_skipped_source_count"] == 1
+    assert result["reason"] == "skipped_credentials"
+    assert result["status"] == "failed"
+
+
+def test_enabled_source_fails_closed_when_latest_run_lacks_count_contract() -> None:
+    snapshot = _healthy_snapshot()
+    core = dict(snapshot.ingest_runs[0])
+    core["counts"] = {**core["counts"]}
+    core["counts"].pop("official_guidance_errors")
+
+    source_check = _checks(evaluate_health(replace(
+        snapshot,
+        ingest_runs=(core, snapshot.ingest_runs[1]),
+    )))["enabled_source_success"]
+    who = next(
+        item for item in source_check["observed"]["source_results"]
+        if item["source"] == "who-iris-oai"
+    )
+
+    assert source_check["status"] == "warning"
+    assert source_check["observed"]["count_contract_failure_source_count"] == 1
+    assert who["reason"] == "missing_count_contract"
 
 
 def test_failed_sync_is_not_masked_by_newer_autopilot_and_output_is_redacted() -> None:
@@ -219,6 +378,27 @@ def test_recovered_failure_is_visible_as_warning_with_configurable_ci_exit() -> 
     assert exit_code_for(report, fail_on="critical") == 0
 
 
+def test_stale_running_ingest_exposes_safe_reconciliation_dry_run_action() -> None:
+    snapshot = _healthy_snapshot()
+    stale = {
+        "source": "+".join(ALL_SOURCES),
+        "status": "running",
+        "started_at": NOW - timedelta(hours=3),
+        "completed_at": None,
+        "through_indexed_at": NOW - timedelta(hours=3),
+        "checkpoint": {"strategy": "index-date"},
+        "counts": {},
+    }
+
+    failure = _checks(evaluate_health(replace(
+        snapshot, ingest_runs=(stale, *snapshot.ingest_runs)
+    )))["sync_failures_and_recovery"]
+
+    assert failure["status"] == "critical"
+    assert failure["observed"]["stale_running_runs"] == 1
+    assert failure["next_action_code"] == "reconcile_stale_ingest_runs_dry_run"
+
+
 def test_truncated_checkpoint_exposes_catch_up_capacity_without_weakening_freshness_slo() -> None:
     snapshot = _healthy_snapshot()
     core = dict(snapshot.ingest_runs[0])
@@ -235,6 +415,26 @@ def test_truncated_checkpoint_exposes_catch_up_capacity_without_weakening_freshn
         "fetch_efficiency_ratio": round(300 / 330, 6),
     }
     snapshot = replace(snapshot, ingest_runs=(core, snapshot.ingest_runs[1]))
+    snapshot = replace(
+        snapshot,
+        tasks=tuple(
+            {
+                **task,
+                **({
+                    "catch_up": {
+                        "catch_up_required": 1,
+                        "catch_up_status": "scheduled",
+                        "catch_up_next_run_at": (NOW + timedelta(minutes=5)).isoformat(),
+                        "catch_up_backlog_observed_count": 100,
+                        "catch_up_backlog_projected_upper_bound": 400,
+                        "catch_up_backlog_limit": 500,
+                        "catch_up_resume_below_backlog": 200,
+                    },
+                } if task["type"] == "sync_literature" else {}),
+            }
+            for task in snapshot.tasks
+        ),
+    )
 
     report = evaluate_health(snapshot)
     checkpoint = _checks(report)["sync_checkpoint"]
@@ -255,6 +455,52 @@ def test_truncated_checkpoint_exposes_catch_up_capacity_without_weakening_freshn
         "fetch_efficiency_ratio": round(300 / 330, 6),
         "nested_checkpoint_count": 2,
     }
+    catch_up = _checks(report)["catch_up_orchestration"]
+    assert catch_up["status"] == "pass"
+    assert catch_up["next_action_code"] == "await_accelerated_catch_up"
+    assert catch_up["observed"]["resume_below_backlog"] == 200
+
+
+def test_catch_up_backpressure_reports_exact_resume_action() -> None:
+    snapshot = _healthy_snapshot()
+    core = dict(snapshot.ingest_runs[0])
+    core["checkpoint"] = {
+        **core["checkpoint"],
+        "truncated": True,
+        "next_from_indexed_at": (NOW - timedelta(hours=1)).isoformat(),
+        "catch_up_required": True,
+    }
+    tasks = tuple(
+        {
+            **task,
+            **({
+                "catch_up": {
+                    "catch_up_required": 1,
+                    "catch_up_status": "paused_backpressure",
+                    "catch_up_backlog_observed_count": 2404,
+                    "catch_up_backlog_projected_upper_bound": 2704,
+                    "catch_up_backlog_limit": 2500,
+                    "catch_up_resume_below_backlog": 2200,
+                    "catch_up_required_backlog_reduction": 205,
+                    "catch_up_backpressure_reason": (
+                        "exception_backlog_headroom_exhausted"
+                    ),
+                },
+            } if task["type"] == "sync_literature" else {}),
+        }
+        for task in snapshot.tasks
+    )
+    report = evaluate_health(
+        replace(snapshot, ingest_runs=(core, snapshot.ingest_runs[1]), tasks=tasks)
+    )
+
+    catch_up = _checks(report)["catch_up_orchestration"]
+    assert catch_up["status"] == "warning"
+    assert catch_up["next_action_code"] == (
+        "reduce_exception_backlog_below_resume_threshold"
+    )
+    assert catch_up["observed"]["resume_below_backlog"] == 2200
+    assert catch_up["observed"]["required_backlog_reduction"] == 205
 
 
 def test_release_classification_and_provider_regressions_fail_closed() -> None:
@@ -325,7 +571,9 @@ def test_stalled_backfill_and_exception_backlog_use_overridable_thresholds() -> 
     checks = _checks(report)
 
     assert checks["metadata_backfill_checkpoint"]["status"] == "critical"
+    assert checks["metadata_backfill_checkpoint"]["next_action_code"] == "resume_stalled_metadata_backfill"
     assert checks["exception_backlog"]["status"] == "critical"
+    assert checks["exception_backlog"]["next_action_code"] == "run_literature_autopilot_dry_run"
     assert checks["exception_backlog"]["observed"]["combined_exception_backlog"] == 3
 
 
@@ -467,6 +715,13 @@ def test_threshold_mapping_rejects_typos_and_invalid_ratios() -> None:
         HealthThresholds(min_openalex_coverage=1.1)
 
 
+def test_every_health_check_exposes_a_stable_next_action_code() -> None:
+    report = evaluate_health(_healthy_snapshot())
+
+    assert all(isinstance(check["next_action_code"], str) for check in report["checks"])
+    assert {check["next_action_code"] for check in report["checks"]} == {"none"}
+
+
 def test_cli_stdout_is_exactly_one_json_document_without_log_noise(tmp_path) -> None:
     invalid_thresholds = tmp_path / "invalid-thresholds.json"
     invalid_thresholds.write_text('{"unknown_slo": 1}', encoding="utf-8")
@@ -557,5 +812,12 @@ async def test_collector_issues_selects_only(tmp_path) -> None:
     assert snapshot.release_read_status == "ok"
     assert snapshot.backfill_read_status == "ok"
     assert snapshot.current_review_link_count == 0
-    assert len(statements) == 6
+    assert len(statements) == 7
     assert all(statement.startswith("SELECT") for statement in statements)
+    assert snapshot.article_metrics == {
+        "article_count": 0,
+        "classification_current_count": 0,
+        "doi_article_count": 0,
+        "openalex_count": 0,
+        "unpaywall_count": 0,
+    }

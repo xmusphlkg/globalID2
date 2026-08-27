@@ -151,20 +151,6 @@ const TRACK_ZH: Record<string, string> = {
             );
           }
 
-          if (status === 'Supported') {
-            return (
-              <CountryCard
-                code={c.code}
-                name={c.name_en}
-                nameZh={c.name_zh}
-                totalCases={0}
-                totalDeaths={0}
-                diseaseCount={0}
-                locale={locale}
-              />
-            );
-          }
-
           return (
             <div class="coverage-scheduled-card rounded-none border p-5 transition-all">
               <div class="flex items-start justify-between mb-4">
@@ -175,7 +161,11 @@ const TRACK_ZH: Record<string, string> = {
                     <span class="text-[rgb(var(--text-faint))] text-xs font-mono tracking-[0.12em] uppercase">{c.code}</span>
                   </div>
                 </div>
-                <span class="coverage-scheduled-pill">{pick('Planned', '规划中')}</span>
+                <span class="coverage-scheduled-pill">{
+                  status === 'Supported'
+                    ? pick('Data temporarily unavailable', '数据暂不可用')
+                    : pick('Planned', '规划中')
+                }</span>
               </div>
 
               <div class="coverage-source-meta">

@@ -11,7 +11,8 @@ import {
   readPublishableReports,
 } from '../../../../../lib/report-data';
 import { resolve } from 'path';
-import { buildAlternatePaths } from '../../../../../lib/seo';
+import { buildAlternatePaths, clampSeoTitle, toSeoSlug } from '../../../../../lib/seo';
+import { indexableDiseases } from '../../../../../lib/seo-page-data';
 
 type Lang = 'zh' | 'en';
 
@@ -57,6 +58,13 @@ const loadedReport = typeof id === 'string' ? loadReportDetail(id) : null;
 const report: any = isReportV4(loadedReport) ? loadedReport : null;
 const document = documentFor(report);
 const diseaseRow = directoryFor(report).find((row: any) => row.slug === disease) ?? null;
+const globalDisease = diseaseRow
+  ? indexableDiseases().find((item: any) => (
+      String(item.disease_id ?? '').toLowerCase() === String(diseaseRow.disease_id ?? '').toLowerCase()
+      || toSeoSlug(item.slug) === toSeoSlug(diseaseRow.slug)
+    ))
+  : null;
+const globalDiseasePath = globalDisease ? `/diseases/${toSeoSlug(globalDisease.slug)}/` : null;
 const countryData: any = readJsonFile(countryPath);
 const downloads: any = readJsonFile(downloadsPath);
 const diseaseDownload = (downloads?.diseases ?? []).find((entry: any) => entry.slug === disease) ?? null;
@@ -260,7 +268,7 @@ const description = zh
   : `${diseaseMeta?.name_en ?? 'Disease'} disease-level view from ${countryNameEn} report #${id}.`;
 const canonicalPath = localeHref(`/countries/${country}/reports/${id}/${disease}/`);
 const seo = {
-  title: pageTitle,
+  title: clampSeoTitle(pageTitle),
   description,
   locale,
   canonicalPath,
@@ -304,6 +312,7 @@ const seo = {
           country_name: zh ? countryNameZh : countryNameEn,
           country_code: String(country),
         }}
+        globalDiseasePath={globalDiseasePath}
         initialLanguage={locale}
       />
 

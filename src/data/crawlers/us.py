@@ -37,6 +37,7 @@ NHSS_HISTORIC_ATLAS_URL = (
 )
 NHSS_SOURCE_NAME = "US CDC NHSS"
 NHSS_HIV_LABEL = "HIV diagnoses among persons aged 13 years and older"
+NHSS_USER_AGENT = "GlobalIDBot/2.0 (+https://global.id)"
 
 
 def _normalize_text(value: object) -> str:
@@ -142,6 +143,16 @@ class USNHSSHIVCrawler(BaseCrawler):
         r"href=[\"']([^\"']*hiv_surveillance_data_release_tables_[^\"']*\.xlsx(?:\?[^\"']*)?)[\"']",
         re.IGNORECASE,
     )
+
+    def __init__(self, *args, user_agent: str | None = None, **kwargs):
+        # CDC's Akamai policy rejects the generic browser-compatible crawler
+        # identity used by BaseCrawler.  Use a transparent, contactable bot
+        # identity for this provider while retaining explicit caller overrides.
+        super().__init__(
+            *args,
+            user_agent=user_agent or NHSS_USER_AGENT,
+            **kwargs,
+        )
 
     def discover_current_workbook_url(self) -> str:
         response = self.get(NHSS_RELEASE_PAGE_URL)

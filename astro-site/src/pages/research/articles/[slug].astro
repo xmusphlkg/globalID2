@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import ReportLayout from '../../../layouts/ReportLayout.astro';
 import researchData from '../../../data/research/index.json';
 import { integrityAlertLabel, normalizeIntegrityAlerts } from '../../../lib/research-integrity';
-import { buildAlternatePaths } from '../../../lib/seo';
+import { buildAlternatePaths, clampSeoDescription, clampSeoTitle } from '../../../lib/seo';
 
 export function getStaticPaths() {
   const data: any = researchData;
@@ -87,7 +87,13 @@ const isIndexableEvidencePage = article.indexable !== false
   && Boolean(article.summary?.en)
   && Boolean(article.summary?.zh);
 const canonicalPath = localeHref(`/research/articles/${article.slug}/`);
-const pageDescription = pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en);
+const whyItMatters = pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en);
+const descriptionContext = zh
+  ? '本页提供研究设计、主要发现、重要局限、来源标识及相关监测背景。'
+  : 'Review the study design, main findings, important limitations, source identifiers, and related surveillance context.';
+const pageDescription = clampSeoDescription(`${whyItMatters} ${descriptionContext}`);
+const titleSuffix = zh ? ' | GIDS 中文证据摘要' : ' | GIDS';
+const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length)}${titleSuffix}`;
 ---
 
 <ReportLayout
@@ -95,7 +101,7 @@ const pageDescription = pick(article.why_it_matters_en, article.why_it_matters_z
   description={pageDescription}
   initialLanguage={locale}
   seo={{
-    title: `${article.title} | GIDS`,
+    title: pageSeoTitle,
     description: pageDescription,
     locale,
     canonicalPath,
@@ -161,7 +167,7 @@ const pageDescription = pick(article.why_it_matters_en, article.why_it_matters_z
     )}
 
     <div class="evidence-layout">
-      <main>
+      <div>
         <section class="evidence-context">
           <p class="evidence-kicker">{pick('Why this research matters now', '为何这项研究现在值得关注')}</p>
           <p>{pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en)}</p>
@@ -249,7 +255,7 @@ const pageDescription = pick(article.why_it_matters_en, article.why_it_matters_z
             </ol>
           </section>
         )}
-      </main>
+      </div>
 
       <aside>
         <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Topics', '主题')}</p><div class="topic-tags">{(article.topics ?? []).map((topic: any) => <a href={localeHref(`/research/topics/${String(topic.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}/`)}>{topic.name}</a>)}</div></div>

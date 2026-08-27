@@ -78,4 +78,18 @@ test('weekly briefs render a human reviewer only for an explicit reviewed status
   assert.match(weekly, /Automatically compiled · not editorially reviewed/);
   assert.match(weekly, /自动编译 · 未经编辑审核/);
   assert.match(weekly, /data-review-status="not-editorially-reviewed"/);
+  assert.match(weekly, /payload\.brief_status === 'ai_reviewed'/);
+  assert.match(weekly, /data-review-status="ai-reviewed"/);
+  assert.match(weekly, /AI evidence-bound review passed · not editorial review/);
+  assert.match(weekly, /AI 证据边界审核通过 · 非编辑签审/);
+});
+
+test('evidence graph ships a compact payload and renders only visible nodes', () => {
+  const graph = readSource('pages/research/graph.astro');
+
+  assert.match(graph, /const nodes: any\[\] = \(graph\.nodes \?\? \[\]\)\.map/);
+  assert.match(graph, /const edges: any\[\] = \(graph\.edges \?\? \[\]\)\.map/);
+  assert.match(graph, /nodeList\.replaceChildren\(fragment\)/);
+  assert.match(graph, /matching\.slice\(0, visibleLimit\)/);
+  assert.doesNotMatch(graph, /\{nodes\.map\(node => \(/);
 });

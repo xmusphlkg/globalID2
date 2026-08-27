@@ -37,7 +37,7 @@ const links = [
   { href: '/research/', label: 'Research Radar', labelZh: '研究雷达' },
   { href: '/about/', label: 'About', labelZh: '关于' },
   { href: '/subscribe/', label: 'Subscribe', labelZh: '订阅' },
-  { href: '/copyright/', label: 'Copyright & Reuse', labelZh: '版权与复用' },
+  { href: '/copyright/', label: 'Copyright Notice', labelZh: '版权声明' },
   { href: '/terms/', label: 'Terms & Privacy', labelZh: '条款与隐私' },
 ];
 const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/' ? '/zh/' : `/zh${href}`) : href;
@@ -52,6 +52,7 @@ const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/'
           variant="wordmark"
           theme="dark"
           alt="GIDS"
+          class="site-footer-logo"
           loading="lazy"
           wordmarkClass="h-11 w-auto max-w-[280px]"
         />
@@ -64,9 +65,9 @@ const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/'
 
       <!-- Quick links -->
       <div>
-        <h3 class="site-footer-section-title font-semibold text-sm mb-3">
+        <h2 class="site-footer-section-title font-semibold text-sm mb-3">
           {initialLanguage === 'zh' ? '导航' : 'Navigate'}
-        </h3>
+        </h2>
         <ul class="space-y-2">
           {links.map(({ href, label, labelZh }) => (
             <li>
@@ -80,9 +81,9 @@ const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/'
 
       <!-- Data info -->
       <div>
-        <h3 class="site-footer-section-title font-semibold text-sm mb-3">
+        <h2 class="site-footer-section-title font-semibold text-sm mb-3">
           {initialLanguage === 'zh' ? '数据' : 'Data'}
-        </h3>
+        </h2>
         <ul class="site-footer-meta space-y-1.5 text-sm">
           <li>
             <span>
@@ -103,14 +104,16 @@ const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/'
             </span>
           </li>
           <li><a class="site-footer-link" href={localizedHref('/about/')}>{initialLanguage === 'zh' ? '数据来源与方法' : 'Sources and methods'}</a></li>
-          <li><a class="site-footer-link" href={localizedHref('/copyright/')}>{initialLanguage === 'zh' ? '版权、许可与署名' : 'Copyright, licensing & attribution'}</a></li>
+          <li><a class="site-footer-link" href={localizedHref('/copyright/')}>{initialLanguage === 'zh' ? '版权与许可声明' : 'Copyright and licensing notice'}</a></li>
         </ul>
       </div>
     </div>
 
     <div class="site-footer-divider border-t mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
       <p class="site-footer-legal text-xs">
-        <a class="site-footer-link" href={localizedHref('/copyright/')}>© {year} GIDS</a>
+        <span>© {year} GIDS</span>
+        <span aria-hidden="true"> · </span>
+        <a class="site-footer-link" href={localizedHref('/copyright/')}>{initialLanguage === 'zh' ? '版权声明' : 'Copyright notice'}</a>
         <span aria-hidden="true"> · </span>
         <a
           class="site-footer-link"
