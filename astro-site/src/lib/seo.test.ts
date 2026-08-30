@@ -9,8 +9,10 @@ import {
   buildAlternatePaths,
   buildSeoTitle,
   clampSeoDescription,
+  clampSeoTitle,
   formatYearRange,
   isIndexableDisease,
+  isIndexableResearchCollection,
   toSeoSlug,
 } from './seo.ts';
 
@@ -85,11 +87,14 @@ test('normalizes SEO slugs, titles, descriptions, and language alternates', () =
   assert.equal(formatYearRange('1982-01-01', '2026-08-01'), '1982–2026');
   assert.equal(
     buildSeoTitle('Pertussis', 'surveillance data', '1982–2026'),
-    'Pertussis surveillance data 1982–2026 | Global Infectious Disease Surveillance',
+    'Pertussis surveillance data 1982–2026 | GIDS',
   );
   assert.equal(buildAlternatePaths('/countries/jp/', 'en').zh, '/zh/countries/jp/');
   assert.equal(buildAlternatePaths('/zh/countries/jp/', 'zh').en, '/countries/jp/');
   assert.ok(clampSeoDescription('word '.repeat(60)).length <= 160);
+  assert.ok(clampSeoTitle('A deliberately long evidence summary title '.repeat(4)).length <= 70);
+  assert.equal(isIndexableResearchCollection(1), false);
+  assert.equal(isIndexableResearchCollection(2), true);
 });
 
 test('requires an observation or sourced published profile before indexing a disease', () => {

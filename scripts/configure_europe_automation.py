@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Idempotently configure dynamic FI/NO/SE surveillance refresh jobs.
+"""Idempotently configure dynamic European surveillance refresh jobs.
 
 The command is read-only unless ``--apply`` is supplied. Sweden is public-
 release enabled, while automation still refreshes recent months independently
@@ -20,11 +20,33 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.core import get_database  # noqa: E402
+from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRIES  # noqa: E402
 from src.domain import AutomationJob  # noqa: E402
 
 
 DAILY_MINUTES = 24 * 60
 JOB_VALUES = {
+    "fr-ecdc-daily": {
+        "name": "France ECDC Atlas Daily Publication Check",
+        "country_code": "FR",
+        "source": "ecdc_atlas_annual",
+        "enabled": True,
+        "priority": "normal",
+        "process": True,
+        "save_raw": True,
+        "fill_missing": False,
+        "force": False,
+        "include_current_month": False,
+        "revision_window_months": 3,
+        "retry_threshold": 3,
+        "interval_minutes": None,
+        "daily_time": "09:50",
+        "timezone": "Europe/Paris",
+        "notes": (
+            "Daily availability check for the ECDC annual France baseline. "
+            "The source is revisable; missing topic/year cells remain unknown."
+        ),
+    },
     "fi-thl-weekly": {
         "name": "Finland THL Daily Dynamic Refresh",
         "country_code": "FI",
@@ -90,10 +112,71 @@ JOB_VALUES = {
     },
 }
 
+for _code, _name, _time, _timezone in (
+    ("ES", "Spain", "10:00", "Europe/Madrid"),
+    ("IT", "Italy", "10:10", "Europe/Rome"),
+    ("PT", "Portugal", "10:20", "Europe/Lisbon"),
+    ("PL", "Poland", "10:30", "Europe/Warsaw"),
+    ("CZ", "Czechia", "10:40", "Europe/Prague"),
+    ("GR", "Greece", "10:50", "Europe/Athens"),
+    ("RO", "Romania", "11:00", "Europe/Bucharest"),
+):
+    JOB_VALUES[f"{_code.casefold()}-ecdc-daily"] = {
+        "name": f"{_name} ECDC Atlas Daily Publication Check",
+        "country_code": _code,
+        "source": "ecdc_atlas_annual",
+        "enabled": True,
+        "priority": "normal",
+        "process": True,
+        "save_raw": True,
+        "fill_missing": False,
+        "force": False,
+        "include_current_month": False,
+        "revision_window_months": 3,
+        "retry_threshold": 3,
+        "interval_minutes": None,
+        "daily_time": _time,
+        "timezone": _timezone,
+        "notes": (
+            f"Daily availability check for the ECDC annual {_name} baseline. "
+            "The fetched history window is authoritative; withdrawn cells become unknown."
+        ),
+    }
+
+_scheduled_ecdc_codes = {"FR", "ES", "IT", "PT", "PL", "CZ", "GR", "RO"}
+_new_ecdc_codes = [
+    code for code in ECDC_BASELINE_COUNTRIES if code not in _scheduled_ecdc_codes
+]
+for _index, _code in enumerate(_new_ecdc_codes):
+    _meta = ECDC_BASELINE_COUNTRIES[_code]
+    _minute_of_day = 11 * 60 + 10 + _index * 10
+    _time = f"{_minute_of_day // 60:02d}:{_minute_of_day % 60:02d}"
+    JOB_VALUES[f"{_code.casefold()}-ecdc-daily"] = {
+        "name": f"{_meta['name']} ECDC Atlas Daily Publication Check",
+        "country_code": _code,
+        "source": "ecdc_atlas_annual",
+        "enabled": True,
+        "priority": "normal",
+        "process": True,
+        "save_raw": True,
+        "fill_missing": False,
+        "force": False,
+        "include_current_month": False,
+        "revision_window_months": 3,
+        "retry_threshold": 3,
+        "interval_minutes": None,
+        "daily_time": _time,
+        "timezone": _meta["timezone"],
+        "notes": (
+            f"Daily availability check for the ECDC annual {_meta['name']} baseline. "
+            "The fetched history window is authoritative; withdrawn cells become unknown."
+        ),
+    }
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Configure dynamic FI, NO, and internal SE crawl jobs."
+        description="Configure dynamic European surveillance crawl jobs."
     )
     parser.add_argument(
         "--apply",

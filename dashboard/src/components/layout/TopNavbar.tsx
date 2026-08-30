@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronRight, Globe2, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from "lucide-react";
+import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { getCountryDisplayName, useCountries } from "@/shared/config/countries";
+import { useCountries } from "@/shared/config/countries";
+import { JurisdictionPicker } from "@/components/layout/JurisdictionPicker";
 import { allRoutes, findRouteByPath, findSectionByPath } from "@/shared/navigation/route-registry";
 import { useAppStore } from "@/stores/app-store";
 
@@ -23,7 +24,7 @@ export function TopNavbar({
   const searchParams = useSearchParams();
   const route = findRouteByPath(pathname);
   const section = findSectionByPath(pathname);
-  const { countryId, countryCode, setCountry } = useAppStore();
+  const { countryId, countryCode, lang, setCountry } = useAppStore();
   const { data: countries, isLoading } = useCountries();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -63,9 +64,7 @@ export function TopNavbar({
     return allRoutes.filter((item) => `${item.label} ${item.description}`.toLowerCase().includes(normalized));
   }, [query]);
 
-  const setCountryContext = (id: number) => {
-    const country = countries?.find((item) => item.id === id);
-    if (!country) return;
+  const setCountryContext = (country: NonNullable<typeof countries>[number]) => {
     setCountry(country.id, country.name_en || country.name, country.code);
     const params = new URLSearchParams(searchParams.toString());
     params.set("country", country.code.toUpperCase());
@@ -99,23 +98,13 @@ export function TopNavbar({
           </button>
 
           {route?.countryScope !== "none" ? (
-            <label className="flex h-9 items-center gap-2 rounded-md border border-[#D9D9D6] bg-white px-2.5 text-sm">
-              <Globe2 className="h-4 w-4 text-[#6B7280]" />
-              <span className="sr-only">Active country</span>
-              <select
-                id="active-country"
-                name="active-country"
-                value={countryId ?? ""}
-                disabled={isLoading || !countries?.length}
-                onChange={(event) => setCountryContext(Number(event.target.value))}
-                className="max-w-36 bg-transparent pr-5 font-medium text-[#1D1D1F] outline-none"
-              >
-                {!countries?.length ? <option value="">No countries</option> : null}
-                {countries?.map((country) => (
-                  <option key={country.id} value={country.id}>{getCountryDisplayName(country, "en")}</option>
-                ))}
-              </select>
-            </label>
+            <JurisdictionPicker
+              countries={countries ?? []}
+              selectedId={countryId}
+              loading={isLoading}
+              lang={lang}
+              onSelect={setCountryContext}
+            />
           ) : (
             <span className="inline-flex rounded-md border border-[#E5E5E2] bg-[#F7F7F5] px-2.5 py-1.5 text-xs font-medium text-[#6B7280]">Global scope</span>
           )}

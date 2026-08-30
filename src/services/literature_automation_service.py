@@ -9,10 +9,11 @@ editorial decisions always win and are never rewritten by this service.
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import re
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 import uuid
 
 from sqlalchemy import func, select
@@ -28,7 +29,12 @@ from src.domain import (
     LiteratureStatusEvent,
     LiteratureSummary,
 )
-from src.literature.enrichment import ALLOWED_EVIDENCE, SUMMARY_FIELDS, source_fingerprint
+from src.literature.enrichment import (
+    ALLOWED_EVIDENCE,
+    SUMMARY_FIELDS,
+    canonical_summary_fingerprint,
+    source_fingerprint,
+)
 
 
 POLICY_VERSION = "research-radar-autopilot.v1"
@@ -44,6 +50,57 @@ class AutomationDecision:
 
 _CORRECTION_TITLE = re.compile(r"^\s*(?:correction|corrigendum|erratum)\s*(?::|to\b)", re.IGNORECASE)
 _STRICT_ANIMAL_ONLY_MAX_SCORE = 0.20
+_POLICY_OVERRIDE_FIELDS = frozenset({"autopilot_article_min_score"})
+_SCORED_REASON = re.compile(r"^(?:discovery score|summary quality)\s+[0-9.]+")
+
+
+def _effective_config(config: Any, overrides: Mapping[str, float] | None) -> Any:
+    """Return a validated, in-memory policy variant without mutating settings.
+
+    Runtime calibration is deliberately narrow: callers may project or apply a
+    different publication threshold, but cannot silently weaken integrity,
+    provenance, or summary-quality gates.
+    """
+
+    if not overrides:
+        return config
+    unknown = sorted(set(overrides) - _POLICY_OVERRIDE_FIELDS)
+    if unknown:
+        raise ValueError("unsupported autopilot policy overrides: " + ", ".join(unknown))
+    values = {name: float(value) for name, value in overrides.items()}
+    threshold = values.get("autopilot_article_min_score")
+    if threshold is not None and not 0.0 <= threshold <= 1.0:
+        raise ValueError("autopilot_article_min_score must be between zero and one")
+    if threshold is not None and threshold < float(config.autopilot_article_exclude_below_score):
+        raise ValueError("article publication threshold cannot be below the exclusion threshold")
+    copier = getattr(config, "model_copy", None)
+    return copier(update=values) if copier else config.copy(update=values)
+
+
+def _diagnostic_reason(decision: AutomationDecision) -> str:
+    """Collapse numeric score variants into stable, aggregate audit buckets."""
+
+    reason = decision.reasons[0] if decision.reasons else "no reason recorded"
+    if _SCORED_REASON.match(reason):
+        if reason.startswith("discovery score") and "below" in reason:
+            reason = "discovery score is below the automatic exclusion gate"
+        elif reason.startswith("summary quality") and "below" in reason:
+            reason = "summary quality is below the automatic gate"
+        elif reason.startswith("summary quality"):
+            reason = "summary quality passed the automatic gate"
+    return f"{decision.action}: {reason}"
+
+
+def _persisted_autopilot_decision(metadata: Any) -> str | None:
+    """Return only exact, auditable non-actionable decision markers."""
+
+    if not isinstance(metadata, Mapping):
+        return None
+    automation = metadata.get("autopilot")
+    if not isinstance(automation, Mapping):
+        return None
+    decision = automation.get("decision")
+    return decision if decision in {"defer", "archive"} else None
 
 
 def _now() -> datetime:
@@ -235,7 +292,13 @@ def decide_article(
     return AutomationDecision("hold", ("article relevance is inside the exception-review band",))
 
 
-def decide_summary(summary: Any, article: Any, config: Any) -> AutomationDecision:
+def decide_summary(
+    summary: Any,
+    article: Any,
+    config: Any,
+    *,
+    expected_canonical_summary_fingerprint: str | None = None,
+) -> AutomationDecision:
     """Validate a model summary against deterministic publication gates."""
     automation = dict((summary.generation_metadata or {}).get("autopilot") or {})
     if summary.status == "published" and (
@@ -256,6 +319,14 @@ def decide_summary(summary: Any, article: Any, config: Any) -> AutomationDecisio
     metadata = dict(summary.generation_metadata or {})
     if str(metadata.get("source_fingerprint") or "") != source_fingerprint(article):
         return AutomationDecision("hold", ("summary source fingerprint is stale",))
+    if getattr(summary, "language", None) == "zh" and int(metadata.get("protocol_version") or 0) >= 2:
+        alignment = metadata.get("bilingual_alignment")
+        if not isinstance(alignment, dict) or (
+            alignment.get("protocol_version") != "canonical-en-translation.v1"
+            or alignment.get("canonical_language") != "en"
+            or alignment.get("canonical_summary_fingerprint") != expected_canonical_summary_fingerprint
+        ):
+            return AutomationDecision("hold", ("bilingual canonical alignment evidence is missing or stale",))
     if "verbatim-overlap" in str(summary.review_notes or "").lower():
         return AutomationDecision("hold", ("verbatim overlap was detected during generation",))
     required_fields = {"research_question", "study_design", "main_findings", "public_health_relevance", "gids_interpretation"}
@@ -303,12 +374,21 @@ def _audit_payload(decision: AutomationDecision, *, at: datetime, config: Any) -
 
 
 class LiteratureAutomationService:
-    async def reconcile(self, *, dry_run: bool = False, export: bool | None = None) -> dict[str, Any]:
-        config = get_config().literature
+    async def reconcile(
+        self,
+        *,
+        dry_run: bool = False,
+        export: bool | None = None,
+        policy_overrides: Mapping[str, float] | None = None,
+        diagnostics: bool = False,
+    ) -> dict[str, Any]:
+        config = _effective_config(get_config().literature, policy_overrides)
         if not config.autopilot_enabled and not dry_run:
             return {"enabled": False, "dry_run": False, "policy_version": POLICY_VERSION, "changed": 0}
         async with _RUN_LOCK:
-            result = await self._reconcile_database(config, dry_run=dry_run)
+            result = await self._reconcile_database(
+                config, dry_run=dry_run, diagnostics=diagnostics
+            )
             should_export = config.autopilot_export_on_change if export is None else export
             if not dry_run and should_export and result["changed"]:
                 from src.services.literature_publication_service import export_public_research_artifacts
@@ -316,7 +396,9 @@ class LiteratureAutomationService:
                 result["public_export"] = await export_public_research_artifacts()
             return result
 
-    async def _reconcile_database(self, config: Any, *, dry_run: bool) -> dict[str, Any]:
+    async def _reconcile_database(
+        self, config: Any, *, dry_run: bool, diagnostics: bool = False
+    ) -> dict[str, Any]:
         at = _now()
         counts = {
             "articles_published": 0,
@@ -336,6 +418,16 @@ class LiteratureAutomationService:
             "gaps_reopened": 0,
         }
         published_article_ids: list[str] = []
+        decision_reasons: dict[str, Counter[str]] = {
+            "articles": Counter(),
+            "links": Counter(),
+            "summaries": Counter(),
+        }
+
+        def record_reason(entity: str, decision: AutomationDecision) -> None:
+            if diagnostics:
+                decision_reasons[entity][_diagnostic_reason(decision)] += 1
+
         async with get_db() as db:
             links_with_articles = (
                 await db.execute(
@@ -348,10 +440,13 @@ class LiteratureAutomationService:
             effective_link_status: dict[int, str] = {}
             links_by_article: dict[str, list[tuple[LiteratureSignalArticleLink, str]]] = {}
             links_by_gap: dict[str, list[tuple[LiteratureSignalArticleLink, LiteratureArticle]]] = {}
+            article_by_id: dict[str, LiteratureArticle] = {}
             for link, article in links_with_articles:
+                article_by_id[article.article_id] = article
                 effective = link.status
                 if link.status in {"review", "deprioritized"}:
                     decision = decide_evidence_link(link, article, config, now=at)
+                    record_reason("links", decision)
                     if decision.action == "confirm":
                         effective = "confirmed"
                         counts["links_confirmed"] += 1
@@ -378,13 +473,31 @@ class LiteratureAutomationService:
                         select(
                             LiteratureDiseaseLink.article_id,
                             func.max(LiteratureDiseaseLink.confidence),
-                        ).group_by(LiteratureDiseaseLink.article_id)
+                        )
+                        .join(
+                            LiteratureArticle,
+                            LiteratureArticle.article_id == LiteratureDiseaseLink.article_id,
+                        )
+                        .where(LiteratureArticle.publication_status == "review")
+                        .group_by(LiteratureDiseaseLink.article_id)
                     )
                 ).all()
             }
-            articles = (await db.execute(select(LiteratureArticle))).scalars().all()
-            effective_article_status = {article.article_id: article.publication_status for article in articles}
-            article_by_id = {article.article_id: article for article in articles}
+            # Only review articles are eligible for an article decision. Loading
+            # every article also materializes abstracts and multi-provider JSON;
+            # at production scale that exceeded 9 GiB even for a dry run.
+            articles = (
+                await db.execute(
+                    select(LiteratureArticle).where(
+                        LiteratureArticle.publication_status == "review"
+                    )
+                )
+            ).scalars().all()
+            article_by_id.update({article.article_id: article for article in articles})
+            effective_article_status = {
+                article_id: article.publication_status
+                for article_id, article in article_by_id.items()
+            }
             for article in articles:
                 if article.publication_status != "review":
                     continue
@@ -400,6 +513,7 @@ class LiteratureAutomationService:
                     confirmed_relation_levels=confirmed_levels,
                     now=at,
                 )
+                record_reason("articles", decision)
                 if decision.action == "publish":
                     desired = "published"
                     counts["articles_published"] += 1
@@ -438,24 +552,48 @@ class LiteratureAutomationService:
                     metadata_={"policy_version": POLICY_VERSION, "reasons": list(decision.reasons)},
                 ))
 
-            summaries = (
+            summaries_with_articles = (
                 await db.execute(
-                    select(LiteratureSummary).where(
+                    select(LiteratureSummary, LiteratureArticle)
+                    .join(
+                        LiteratureArticle,
+                        LiteratureArticle.article_id == LiteratureSummary.article_id,
+                    )
+                    .where(
                         LiteratureSummary.status.in_(("review", "published", "archived"))
                     )
                 )
-            ).scalars().all()
-            for summary in summaries:
-                article = article_by_id.get(summary.article_id)
-                if article is None:
-                    continue
-                if dry_run and effective_article_status.get(article.article_id) != article.publication_status:
+            ).all()
+            english_canonical_fingerprints = {
+                summary.article_id: canonical_summary_fingerprint({
+                    field: getattr(summary, field) for field in SUMMARY_FIELDS
+                })
+                for summary, _article in summaries_with_articles
+                if summary.language == "en"
+            }
+            for summary, article in summaries_with_articles:
+                article_by_id[article.article_id] = article
+                projected_article_status = effective_article_status.get(
+                    article.article_id, article.publication_status
+                )
+                if dry_run and projected_article_status != article.publication_status:
                     original_status = article.publication_status
-                    article.publication_status = effective_article_status[article.article_id]
-                    decision = decide_summary(summary, article, config)
+                    article.publication_status = projected_article_status
+                    decision = decide_summary(
+                        summary,
+                        article,
+                        config,
+                        expected_canonical_summary_fingerprint=english_canonical_fingerprints.get(summary.article_id),
+                    )
                     article.publication_status = original_status
                 else:
-                    decision = decide_summary(summary, article, config)
+                    decision = decide_summary(
+                        summary,
+                        article,
+                        config,
+                        expected_canonical_summary_fingerprint=english_canonical_fingerprints.get(summary.article_id),
+                    )
+                record_reason("summaries", decision)
                 if decision.action == "publish":
                     if summary.status != "published":
                         counts["summaries_published"] += 1
@@ -575,25 +713,36 @@ class LiteratureAutomationService:
                 run_uuid = None
             if not dry_run:
                 await db.commit()
-        return {
+        result = {
             "enabled": config.autopilot_enabled,
             "dry_run": dry_run,
             "policy_version": POLICY_VERSION,
+            "effective_article_min_score": float(config.autopilot_article_min_score),
             "run_uuid": run_uuid,
             **counts,
             "changed": changed,
             "published_article_ids": published_article_ids[:100],
         }
+        if diagnostics:
+            result["decision_reasons"] = {
+                entity: dict(counter.most_common())
+                for entity, counter in decision_reasons.items()
+            }
+        return result
 
     async def snapshot(self) -> dict[str, Any]:
         config = get_config().literature
         async with get_db() as db:
-            articles = (
-                await db.execute(select(LiteratureArticle).where(LiteratureArticle.publication_status == "published"))
+            article_metadata = (
+                await db.execute(
+                    select(LiteratureArticle.metadata_).where(
+                        LiteratureArticle.publication_status == "published"
+                    )
+                )
             ).scalars().all()
             auto_articles = sum(
-                1 for article in articles
-                if (article.metadata_ or {}).get("autopilot", {}).get("policy_version") == POLICY_VERSION
+                1 for metadata in article_metadata
+                if (metadata or {}).get("autopilot", {}).get("policy_version") == POLICY_VERSION
             )
             auto_links = int((await db.execute(
                 select(func.count()).select_from(LiteratureSignalArticleLink).where(
@@ -601,38 +750,58 @@ class LiteratureAutomationService:
                     LiteratureSignalArticleLink.status == "confirmed",
                 )
             )).scalar_one() or 0)
-            summaries = (
-                await db.execute(select(LiteratureSummary).where(LiteratureSummary.status == "published"))
+            summary_metadata = (
+                await db.execute(
+                    select(LiteratureSummary.generation_metadata).where(
+                        LiteratureSummary.status == "published"
+                    )
+                )
             ).scalars().all()
             auto_summaries = sum(
-                1 for summary in summaries
-                if (summary.generation_metadata or {}).get("autopilot", {}).get("policy_version") == POLICY_VERSION
+                1 for metadata in summary_metadata
+                if (metadata or {}).get("autopilot", {}).get("policy_version") == POLICY_VERSION
             )
-            review_articles = (
+            review_article_metadata = (
                 await db.execute(
-                    select(LiteratureArticle).where(LiteratureArticle.publication_status == "review")
+                    select(LiteratureArticle.metadata_).where(
+                        LiteratureArticle.publication_status == "review"
+                    )
                 )
             ).scalars().all()
             deferred_articles = sum(
-                1 for article in review_articles
-                if (article.metadata_ or {}).get("autopilot", {}).get("decision") == "defer"
+                1 for metadata in review_article_metadata
+                if _persisted_autopilot_decision(metadata) == "defer"
             )
-            exception_articles = len(review_articles) - deferred_articles
+            archived_decision_articles = sum(
+                1 for metadata in review_article_metadata
+                if _persisted_autopilot_decision(metadata) == "archive"
+            )
+            exception_articles = (
+                len(review_article_metadata) - deferred_articles - archived_decision_articles
+            )
             exception_links = int((await db.execute(
                 select(func.count()).select_from(LiteratureSignalArticleLink).where(
                     LiteratureSignalArticleLink.status == "review"
                 )
             )).scalar_one() or 0)
-            review_summaries = (
+            review_summary_metadata = (
                 await db.execute(
-                    select(LiteratureSummary).where(LiteratureSummary.status == "review")
+                    select(LiteratureSummary.generation_metadata).where(
+                        LiteratureSummary.status == "review"
+                    )
                 )
             ).scalars().all()
             deferred_summaries = sum(
-                1 for summary in review_summaries
-                if (summary.generation_metadata or {}).get("autopilot", {}).get("decision") == "defer"
+                1 for metadata in review_summary_metadata
+                if _persisted_autopilot_decision(metadata) == "defer"
             )
-            exception_summaries = len(review_summaries) - deferred_summaries
+            archived_decision_summaries = sum(
+                1 for metadata in review_summary_metadata
+                if _persisted_autopilot_decision(metadata) == "archive"
+            )
+            exception_summaries = (
+                len(review_summary_metadata) - deferred_summaries - archived_decision_summaries
+            )
             archived_summaries = int((await db.execute(
                 select(func.count()).select_from(LiteratureSummary).where(LiteratureSummary.status == "archived")
             )).scalar_one() or 0)
@@ -672,7 +841,11 @@ class LiteratureAutomationService:
                 "summaries": deferred_summaries,
                 "total": deferred_articles + deferred_summaries,
             },
-            "archived": {"summaries": archived_summaries},
+            "archived": {
+                "summaries": archived_summaries,
+                "review_article_decisions": archived_decision_articles,
+                "review_summary_decisions": archived_decision_summaries,
+            },
             "last_run": (
                 {
                     "run_uuid": latest_run.run_uuid,

@@ -31,7 +31,7 @@ type Dependencies = {
     subject: string;
     text: string;
     html: string;
-  }): Promise<void>;
+  }): Promise<unknown>;
 };
 
 type SmtpConfig = {

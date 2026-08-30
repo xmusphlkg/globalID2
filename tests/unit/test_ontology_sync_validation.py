@@ -44,3 +44,22 @@ def test_conservation_check_accepts_equal_totals() -> None:
         actual=(5, 12),
         dimensions="observations/cases",
     )
+
+
+def test_conservation_check_accepts_float_accumulation_noise() -> None:
+    assert_conserved_totals(
+        label="series",
+        expected=(231_306, 0, 170_100_801.79999995),
+        actual=(231_306, 0, 170_100_801.80000007),
+        dimensions="observations/suppressed/value",
+    )
+
+
+def test_conservation_check_rejects_material_float_change() -> None:
+    with pytest.raises(RuntimeError, match="series conservation failed"):
+        assert_conserved_totals(
+            label="series",
+            expected=(10, 0, 100.0),
+            actual=(10, 0, 100.01),
+            dimensions="observations/suppressed/value",
+        )

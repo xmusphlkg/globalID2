@@ -10,18 +10,27 @@ test("country context updates the URL and source data without client errors", as
   });
 
   await page.goto("/operations/sources?country=US");
-  const country = page.getByLabel("Active country");
+  const country = page.getByLabel("Active country or region");
   for (const selection of [
     { label: "Austria", code: "AT" },
     { label: "Germany", code: "DE" },
     { label: "Japan", code: "JP" },
     { label: "New Zealand", code: "NZ" },
   ]) {
-    await country.selectOption({ label: selection.label });
+    await country.click();
+    const search = page.getByLabel("Search countries, regions, or codes");
+    await search.fill(selection.code);
+    await page.getByTestId(`jurisdiction-option-${selection.code}`).click();
     await expect(page).toHaveURL(new RegExp(`[?&]country=${selection.code}(?:&|$)`));
-    await expect(country.locator("option:checked")).toHaveText(selection.label);
+    await expect(country).toContainText(selection.label);
     await page.waitForTimeout(500);
   }
+
+  await country.click();
+  await page.getByLabel("Search countries, regions, or codes").fill("CN-SH");
+  await page.getByTestId("jurisdiction-option-CN-SH").click();
+  await expect(page).toHaveURL(/[?&]country=CN-SH(?:&|$)/);
+  await expect(country).toContainText("Shanghai");
 
   expect(errors).toEqual([]);
 });

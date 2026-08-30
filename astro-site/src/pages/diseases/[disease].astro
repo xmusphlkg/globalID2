@@ -208,17 +208,26 @@ if (diseaseData?.global_monthly?.cases?.length > 0) {
   peakMonth = diseaseData.global_monthly.months[maxIdx] ?? '—';
 }
 
-const coverageDates = Object.values(diseaseData?.country_series ?? {})
+const countryMetaByCode = new Map(
+  ((metaRaw as any).countries ?? []).map((country: any) => [String(country.code).toUpperCase(), country]),
+);
+const isSubdivision = (rawCode: string) => {
+  const code = rawCode.toUpperCase();
+  const metadata = countryMetaByCode.get(code) as any;
+  return metadata?.location_type === 'subdivision' || Boolean(metadata?.parent_code) || code.includes('-');
+};
+const nationalCountrySeries = Object.fromEntries(
+  Object.entries(diseaseData?.country_series ?? {}).filter(([code]) => !isSubdivision(code)),
+);
+const coverageDates = Object.values(nationalCountrySeries)
   .flatMap((series: any) => Array.isArray(series?.dates) ? series.dates : [])
   .filter((date): date is string => typeof date === 'string' && date.length > 0)
   .sort();
 const coverageStart = coverageDates[0] ?? null;
 const coverageEnd = coverageDates.at(-1) ?? null;
 const coverageLabel = coverageStart && coverageEnd ? `${coverageStart} → ${coverageEnd}` : '—';
-const countryMetaByCode = new Map(
-  ((metaRaw as any).countries ?? []).map((country: any) => [String(country.code).toUpperCase(), country]),
-);
 const reportingCountries = Object.keys(diseaseData?.country_series ?? {})
+  .filter((rawCode) => !isSubdivision(rawCode))
   .map((rawCode) => {
     const code = rawCode.toUpperCase();
     const metadata = countryMetaByCode.get(code) as any;
@@ -230,7 +239,7 @@ const reportingCountries = Object.keys(diseaseData?.country_series ?? {})
   .sort((a, b) => a.nameEn.localeCompare(b.nameEn, 'en'));
 const countryCount = reportingCountries.length;
 const hasDeathsData = diseaseData?.total_deaths > 0
-  || Object.values(diseaseData?.country_series ?? {}).some((series: any) =>
+  || Object.values(nationalCountrySeries).some((series: any) =>
     Array.isArray(series?.deaths) && series.deaths.some((value: number) => value > 0)
   );
 const chartSourceMeta = buildChartSourceMeta(
@@ -315,7 +324,9 @@ const diseaseSeo = {
   title: zh ? `${diseaseNameZh}监测数据 ${diseaseCoverage} | GIDS` : buildSeoTitle(diseaseNameEn, 'surveillance data', diseaseCoverage),
   description: diseaseMetaDescription,
   canonicalPath: Astro.url.pathname,
-  alternatePaths: buildAlternatePaths(Astro.url.pathname, 'en'),
+  alternatePaths: diseaseIndexable
+    ? buildAlternatePaths(Astro.url.pathname, locale)
+    : { en: Astro.url.pathname },
   noindex: !diseaseIndexable,
   pageType: 'MedicalWebPage',
   dateModified: diseaseDownload?.generated_at ?? knowledgeUpdatedAt,
@@ -329,6 +340,7 @@ const diseaseSeo = {
   structuredData={[diseaseMedicalPageStructuredData, diseaseConditionStructuredData, diseaseDatasetStructuredData]}
   seo={diseaseSeo}
   initialLanguage={locale}
+  hideLanguageToggle={!diseaseIndexable}
   breadcrumbs={[
     { label: 'Diseases', labelZh: '疾病', href: localeHref('/diseases/') },
     { label: diseaseData?.name_en ?? disease, labelZh: diseaseData?.name_zh ?? diseaseData?.name_en ?? disease },
@@ -551,11 +563,6 @@ const diseaseSeo = {
                 <h2 class="figure-title">
                   {zh ? '报告国家和地区' : 'Reporting countries and regions'}
                 </h2>
-                <p
-                  class="figure-caption"
-                >
-                  {zh ? '选择国家或地区，查看完整的监测资料。' : 'Select a country or region to view its complete surveillance profile.'}
-                </p>
               </div>
               <span
                 class="site-control-pill inline-flex w-fit items-center border px-3 py-1.5 text-xs"
@@ -595,9 +602,6 @@ const diseaseSeo = {
               <h2 class="figure-title">
                 {zh ? '各报告国家的趋势' : 'Trends by reporting country'}
               </h2>
-              <p class="figure-caption mt-2">
-                {zh ? '默认先查看一个国家；需要时可选择任意数量的报告国家进行比较。图表会自动处理共同时间窗，并将不兼容的报告频率分开显示。' : 'Inspect one country first, or select any number of reporting countries for comparison. The chart automatically handles common time windows and separates incompatible reporting frequencies.'}
-              </p>
               <div class="mt-5">
               <DiseaseCountryCurve
                 client:visible
@@ -633,10 +637,10 @@ const diseaseSeo = {
         {diseaseDownload && (
           <div id="downloads" class="scroll-mt-24"><DownloadPanel
             entry={{ ...diseaseDownload, source_info: diseaseData?.source_info }}
-            title="Download data"
+            title="Data access"
             initialLanguage={locale}
-            descriptionEn="Download the data index used for this page, including source links and update information."
-            descriptionZh="下载本页面使用的数据索引，包含来源链接和更新时间。"
+            descriptionEn="Page dataset index with source links and update metadata."
+            descriptionZh="本页面数据索引，含来源链接和更新信息。"
           /></div>
         )}
 

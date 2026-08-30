@@ -36,9 +36,6 @@ def _value(value: Any) -> str:
     return str(value.value if hasattr(value, "value") else value).lower()
 
 
-_ACTIVE_STATUSES = {"pending", "queued", "running", "retrying"}
-
-
 async def _count_catch_up_exception_backlog() -> int:
     """Count distinct articles with a current article or summary review exception.
 
@@ -74,22 +71,14 @@ async def _count_catch_up_exception_backlog() -> int:
     return int(value or 0)
 
 
-def _roll_forward_stale_next_run(
-    state: "LiteratureScheduleState",
-    *,
-    now: datetime,
-    next_run,
-) -> bool:
-    """Keep dashboard snapshots from showing a past due time after another process updated tasks."""
-    if state.next_run_at is None or state.last_status in _ACTIVE_STATUSES:
+def _at_or_before(value: datetime | None, upper_bound: datetime) -> bool:
+    """Compare persisted timestamps defensively across SQLite/Postgres timezone shapes."""
+    if value is None:
         return False
-    next_run_at = state.next_run_at
-    if next_run_at.tzinfo is None:
-        next_run_at = next_run_at.replace(tzinfo=now.tzinfo)
-    if next_run_at >= now:
-        return False
-    state.next_run_at = next_run(now)
-    return True
+    candidate = value
+    if candidate.tzinfo is None:
+        candidate = candidate.replace(tzinfo=upper_bound.tzinfo)
+    return candidate <= upper_bound
 
 
 @dataclass
@@ -123,7 +112,7 @@ class LiteratureService:
         if not cfg.enabled or not (
             cfg.schedule_enabled
             or cfg.gap_discovery_schedule_enabled
-            or (cfg.ai_enrichment_enabled and cfg.ai_enrichment_schedule_enabled)
+            or ((cfg.ai_enrichment_enabled or cfg.weekly_ai_review_enabled) and cfg.ai_enrichment_schedule_enabled)
         ):
             logger.info("Research Radar scheduler disabled by configuration")
             return
@@ -139,7 +128,7 @@ class LiteratureService:
             setattr(self._gap_state, field, value)
         if cfg.schedule_enabled and self._state.next_run_at is None:
             self._state.next_run_at = self._next_run()
-        if cfg.ai_enrichment_enabled and cfg.ai_enrichment_schedule_enabled and self._enrichment_state.next_run_at is None:
+        if (cfg.ai_enrichment_enabled or cfg.weekly_ai_review_enabled) and cfg.ai_enrichment_schedule_enabled and self._enrichment_state.next_run_at is None:
             self._enrichment_state.next_run_at = self._next_enrichment_run()
         if cfg.gap_discovery_schedule_enabled and self._gap_state.next_run_at is None:
             self._gap_state.next_run_at = self._next_gap_run()
@@ -183,7 +172,7 @@ class LiteratureService:
                     await self.trigger_job(self.JOB_ID, manual=False)
                 except Exception:
                     logger.exception("Research Radar scheduled synchronization failed")
-            if cfg.ai_enrichment_enabled and cfg.ai_enrichment_schedule_enabled:
+            if (cfg.ai_enrichment_enabled or cfg.weekly_ai_review_enabled) and cfg.ai_enrichment_schedule_enabled:
                 if self._enrichment_state.next_run_at is None:
                     self._enrichment_state.next_run_at = self._next_enrichment_run(now)
                 if now >= self._enrichment_state.next_run_at:
@@ -275,63 +264,113 @@ class LiteratureService:
     async def execute_task(self, task: Task) -> dict[str, Any]:
         cfg = self._config()
         result = await LiteraturePipeline(cfg).execute(task)
+        catch_up_required = bool(result.get("source_truncated"))
+        result["catch_up_required"] = int(catch_up_required)
         result["catch_up_scheduled"] = 0
         result["catch_up_paused_backpressure"] = 0
+        result["catch_up_status"] = "not_required"
+        result["catch_up_next_action_code"] = "none"
         result["catch_up_backlog_observed_count"] = None
         result["catch_up_backlog_limit"] = int(
             getattr(cfg, "catch_up_max_exception_backlog", 500)
         )
+        max_records = int(getattr(cfg, "max_records_per_run", 300))
+        # Catch-up is allowed only when observed + one worst-case batch is
+        # strictly below the hard limit. This is the exact resume boundary,
+        # surfaced so an operator does not have to reverse-engineer ``>=``.
+        result["catch_up_resume_below_backlog"] = (
+            result["catch_up_backlog_limit"] - max_records
+        )
         scheduled_trigger = bool((task.input_data or {}).get("scheduled_trigger"))
-        if (
-            scheduled_trigger
-            and cfg.schedule_enabled
-            and getattr(cfg, "catch_up_enabled", False)
-            and bool(result.get("source_truncated"))
-        ):
-            backlog_limit = result["catch_up_backlog_limit"]
-            try:
-                backlog_count = await _count_catch_up_exception_backlog()
-            except Exception as exc:
-                result["catch_up_paused_backpressure"] = 1
-                result["catch_up_backpressure_reason"] = "backlog_measurement_unavailable"
-                logger.warning(
-                    "Research Radar catch-up paused because backlog measurement failed error_type={}",
-                    type(exc).__name__ or "Exception",
-                )
-                return result
-            result["catch_up_backlog_observed_count"] = backlog_count
-            projected_upper_bound = backlog_count + int(
-                getattr(cfg, "max_records_per_run", 300)
+        if not catch_up_required:
+            return result
+        if not scheduled_trigger:
+            result["catch_up_status"] = "waiting_for_scheduled_trigger"
+            result["catch_up_next_action_code"] = "await_next_scheduled_sync"
+            return result
+        if not cfg.schedule_enabled or not getattr(cfg, "catch_up_enabled", False):
+            result["catch_up_status"] = "disabled"
+            result["catch_up_next_action_code"] = "enable_accelerated_catch_up"
+            return result
+
+        backlog_limit = result["catch_up_backlog_limit"]
+        try:
+            backlog_count = await _count_catch_up_exception_backlog()
+        except Exception as exc:
+            result["catch_up_paused_backpressure"] = 1
+            result["catch_up_backpressure_reason"] = "backlog_measurement_unavailable"
+            result["catch_up_status"] = "paused_backlog_measurement"
+            result["catch_up_next_action_code"] = "retry_backlog_measurement"
+            logger.warning(
+                "Research Radar catch-up paused because backlog measurement failed error_type={}",
+                type(exc).__name__ or "Exception",
             )
-            result["catch_up_backlog_projected_upper_bound"] = projected_upper_bound
-            if projected_upper_bound >= backlog_limit:
-                result["catch_up_paused_backpressure"] = 1
-                result["catch_up_backpressure_reason"] = "exception_backlog_headroom_exhausted"
-                logger.info(
-                    "Research Radar catch-up paused by backpressure backlog_count={} projected_upper_bound={} limit={}",
-                    backlog_count,
-                    projected_upper_bound,
-                    backlog_limit,
-                )
-                return result
-            now = datetime.now(ZoneInfo(cfg.timezone))
-            next_run_at = now + timedelta(
-                minutes=getattr(cfg, "catch_up_interval_minutes", 5)
+            return result
+        result["catch_up_backlog_observed_count"] = backlog_count
+        projected_upper_bound = backlog_count + max_records
+        result["catch_up_backlog_projected_upper_bound"] = projected_upper_bound
+        if projected_upper_bound >= backlog_limit:
+            result["catch_up_paused_backpressure"] = 1
+            result["catch_up_backpressure_reason"] = "exception_backlog_headroom_exhausted"
+            result["catch_up_status"] = "paused_backpressure"
+            result["catch_up_next_action_code"] = (
+                "reduce_exception_backlog_below_resume_threshold"
             )
-            advanced = await schedule_state_repository.schedule_earlier(
-                "literature",
-                self.JOB_ID,
-                next_run_at,
+            result["catch_up_required_backlog_reduction"] = max(
+                0,
+                backlog_count - result["catch_up_resume_below_backlog"] + 1,
             )
-            if advanced:
-                self._state.next_run_at = next_run_at
-                logger.info(
-                    "Research Radar catch-up scheduled next_run_at={} remaining_index_span_seconds={}",
-                    next_run_at.isoformat(),
-                    int(result.get("source_remaining_index_span_seconds") or 0),
-                )
-            result["catch_up_scheduled"] = int(advanced)
-            result["catch_up_next_run_at"] = _iso(next_run_at) if advanced else None
+            logger.info(
+                "Research Radar catch-up paused by backpressure backlog_count={} projected_upper_bound={} limit={} resume_below={}",
+                backlog_count,
+                projected_upper_bound,
+                backlog_limit,
+                result["catch_up_resume_below_backlog"],
+            )
+            return result
+        now = datetime.now(ZoneInfo(cfg.timezone))
+        next_run_at = now + timedelta(
+            minutes=getattr(cfg, "catch_up_interval_minutes", 5)
+        )
+        advanced = await schedule_state_repository.schedule_earlier(
+            "literature",
+            self.JOB_ID,
+            next_run_at,
+        )
+        if advanced:
+            self._state.next_run_at = next_run_at
+            result["catch_up_status"] = "scheduled"
+            result["catch_up_next_action_code"] = "await_accelerated_catch_up"
+            logger.info(
+                "Research Radar catch-up scheduled next_run_at={} remaining_index_span_seconds={}",
+                next_run_at.isoformat(),
+                int(result.get("source_remaining_index_span_seconds") or 0),
+            )
+            result["catch_up_scheduled"] = 1
+            result["catch_up_next_run_at"] = _iso(next_run_at)
+            return result
+
+        # ``schedule_earlier`` returns false both when an equal/earlier durable
+        # schedule already exists and when its fail-closed DB update could not
+        # be made. Confirm which state we are in rather than reporting a silent
+        # no-op.
+        persisted = (await schedule_state_repository.load("literature")).get(
+            self.JOB_ID,
+            {},
+        )
+        persisted_next_run = persisted.get("next_run_at")
+        if _at_or_before(persisted_next_run, next_run_at):
+            self._state.next_run_at = persisted_next_run
+            result["catch_up_status"] = "already_scheduled"
+            result["catch_up_next_action_code"] = "await_accelerated_catch_up"
+            result["catch_up_next_run_at"] = _iso(persisted_next_run)
+        else:
+            result["catch_up_status"] = "schedule_persistence_unavailable"
+            result["catch_up_next_action_code"] = "inspect_scheduler_persistence"
+            result["catch_up_backpressure_reason"] = "schedule_persistence_unavailable"
+            logger.warning(
+                "Research Radar catch-up could not confirm a durable earlier schedule"
+            )
         return result
 
     async def trigger_enrichment(
@@ -344,8 +383,8 @@ class LiteratureService:
         manual: bool = True,
     ) -> dict[str, Any]:
         cfg = self._config()
-        if not cfg.ai_enrichment_enabled:
-            raise ValueError("Literature AI enrichment is disabled")
+        if not (cfg.ai_enrichment_enabled or cfg.weekly_ai_review_enabled):
+            raise ValueError("Literature AI enrichment and weekly AI review are disabled")
         async with self._lock:
             async with get_database() as db:
                 active = (
@@ -376,12 +415,33 @@ class LiteratureService:
             self._enrichment_state.last_status = "running"
             self._enrichment_state.last_error = None
             try:
+                mode = (
+                    "summaries_and_weekly_ai_review"
+                    if cfg.ai_enrichment_enabled and cfg.weekly_ai_review_enabled
+                    else "weekly_ai_review"
+                    if cfg.weekly_ai_review_enabled
+                    else "summaries"
+                )
+                weekly_only = mode == "weekly_ai_review"
                 task = await task_manager.create_task(
                     task_type=TaskType.ENRICH_LITERATURE,
-                    task_name="Generate Research Radar evidence summaries",
+                    task_name=(
+                        "Review Research Radar weekly briefs with AI"
+                        if weekly_only
+                        else "Generate and review Research Radar evidence"
+                        if mode == "summaries_and_weekly_ai_review"
+                        else "Generate Research Radar evidence summaries"
+                    ),
                     priority=TaskPriority.NORMAL,
-                    description="Model-center grounded summaries with automatic evidence-quality gates",
+                    description=(
+                        "Content-bound public-evidence AI review; never an editorial signature"
+                        if weekly_only
+                        else "Model-center grounded summaries and content-bound weekly quality review"
+                        if mode == "summaries_and_weekly_ai_review"
+                        else "Model-center grounded summaries with automatic evidence-quality gates"
+                    ),
                     input_data={
+                        "mode": mode,
                         "article_ids": article_ids or [],
                         "languages": languages or cfg.ai_enrichment_languages,
                         "limit": limit or cfg.ai_enrichment_batch_size,
@@ -389,7 +449,11 @@ class LiteratureService:
                         "scheduled_trigger": not manual,
                         "manual_trigger": manual,
                     },
-                    tags=["research-radar", "literature", "ai-enrichment", "autopilot"],
+                    tags=[
+                        "research-radar", "literature",
+                        "weekly-ai-review" if weekly_only else "ai-enrichment",
+                        "autopilot",
+                    ],
                 )
                 task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
                 self._enrichment_state.last_task_uuid = task.task_uuid
@@ -413,7 +477,32 @@ class LiteratureService:
                 )
 
     async def execute_enrichment_task(self, task: Task) -> dict[str, Any]:
-        return await LiteratureEnrichmentPipeline(self._config()).execute(task)
+        cfg = self._config()
+        mode = str((task.input_data or {}).get("mode") or "summaries")
+        if mode not in {"summaries", "weekly_ai_review", "summaries_and_weekly_ai_review"}:
+            raise ValueError("unsupported_literature_enrichment_mode")
+        output: dict[str, Any] = {"mode": mode}
+        if mode in {"summaries", "summaries_and_weekly_ai_review"}:
+            if cfg.ai_enrichment_enabled:
+                output["summaries"] = await LiteratureEnrichmentPipeline(cfg).execute(task)
+            else:
+                output["summaries"] = {"status": "disabled"}
+        if mode in {"weekly_ai_review", "summaries_and_weekly_ai_review"}:
+            if not cfg.weekly_ai_review_enabled:
+                output["weekly_ai_review"] = {"status": "disabled"}
+            else:
+                from src.literature.weekly_ai_review import review_weekly_brief_files
+
+                output["weekly_ai_review"] = await review_weekly_brief_files(
+                    limit=cfg.weekly_ai_review_batch_size,
+                    preferred_models=list((task.input_data or {}).get("preferred_models") or []),
+                    timeout_seconds=cfg.weekly_ai_review_timeout_seconds,
+                    max_attempts=cfg.weekly_ai_review_max_attempts,
+                    apply=True,
+                )
+                if output["weekly_ai_review"]["counts"]["failed"]:
+                    raise RuntimeError("weekly_brief_ai_review_failed_closed")
+        return output
 
     async def trigger_gap_discovery(
         self,
@@ -511,8 +600,6 @@ class LiteratureService:
         if cfg.schedule_enabled and self._state.next_run_at is None:
             self._state.next_run_at = self._next_run(now)
             state_changed.append((self.JOB_ID, self._state))
-        elif cfg.schedule_enabled and _roll_forward_stale_next_run(self._state, now=now, next_run=self._next_run):
-            state_changed.append((self.JOB_ID, self._state))
         enrichment_persisted = (await schedule_state_repository.load("literature")).get(self.ENRICHMENT_JOB_ID, {})
         for field, value in enrichment_persisted.items():
             setattr(self._enrichment_state, field, value)
@@ -531,14 +618,8 @@ class LiteratureService:
             self._enrichment_state.last_started_at = latest_enrichment.started_at or self._enrichment_state.last_started_at
             self._enrichment_state.last_finished_at = latest_enrichment.completed_at or self._enrichment_state.last_finished_at
             self._enrichment_state.last_error = latest_enrichment.last_error
-        if cfg.ai_enrichment_enabled and cfg.ai_enrichment_schedule_enabled and self._enrichment_state.next_run_at is None:
+        if (cfg.ai_enrichment_enabled or cfg.weekly_ai_review_enabled) and cfg.ai_enrichment_schedule_enabled and self._enrichment_state.next_run_at is None:
             self._enrichment_state.next_run_at = self._next_enrichment_run(now)
-            state_changed.append((self.ENRICHMENT_JOB_ID, self._enrichment_state))
-        elif (
-            cfg.ai_enrichment_enabled
-            and cfg.ai_enrichment_schedule_enabled
-            and _roll_forward_stale_next_run(self._enrichment_state, now=now, next_run=self._next_enrichment_run)
-        ):
             state_changed.append((self.ENRICHMENT_JOB_ID, self._enrichment_state))
         gap_persisted = (await schedule_state_repository.load("literature")).get(self.GAP_DISCOVERY_JOB_ID, {})
         for field, value in gap_persisted.items():
@@ -560,12 +641,6 @@ class LiteratureService:
             self._gap_state.last_error = latest_gap.last_error
         if cfg.gap_discovery_schedule_enabled and self._gap_state.next_run_at is None:
             self._gap_state.next_run_at = self._next_gap_run(now)
-            state_changed.append((self.GAP_DISCOVERY_JOB_ID, self._gap_state))
-        elif cfg.gap_discovery_schedule_enabled and _roll_forward_stale_next_run(
-            self._gap_state,
-            now=now,
-            next_run=self._next_gap_run,
-        ):
             state_changed.append((self.GAP_DISCOVERY_JOB_ID, self._gap_state))
         for job_id, state in state_changed:
             await schedule_state_repository.save("literature", job_id, state)
@@ -596,6 +671,30 @@ class LiteratureService:
                     "catch_up_max_exception_backlog",
                     None,
                 ),
+                "catch_up_resume_below_backlog": (
+                    getattr(cfg, "catch_up_max_exception_backlog", 500)
+                    - cfg.max_records_per_run
+                ),
+                "catch_up_required": bool(
+                    (latest.output_data or {}).get("catch_up_required")
+                    if latest is not None and isinstance(latest.output_data, dict)
+                    else False
+                ),
+                "catch_up_status": (
+                    (latest.output_data or {}).get("catch_up_status")
+                    if latest is not None and isinstance(latest.output_data, dict)
+                    else "unknown"
+                ),
+                "catch_up_next_action_code": (
+                    (latest.output_data or {}).get("catch_up_next_action_code")
+                    if latest is not None and isinstance(latest.output_data, dict)
+                    else "inspect_latest_sync_result"
+                ),
+                "catch_up_next_run_at": (
+                    (latest.output_data or {}).get("catch_up_next_run_at")
+                    if latest is not None and isinstance(latest.output_data, dict)
+                    else None
+                ),
                 "ai_enrichment_enabled": cfg.ai_enrichment_enabled,
                 "ai_enrichment_languages": cfg.ai_enrichment_languages,
                 "ai_enrichment_batch_size": cfg.ai_enrichment_batch_size,
@@ -623,7 +722,7 @@ class LiteratureService:
             }, {
                 "job_id": self.ENRICHMENT_JOB_ID,
                 "name": "Research Radar evidence enrichment",
-                "enabled": cfg.ai_enrichment_enabled,
+                "enabled": cfg.ai_enrichment_enabled or cfg.weekly_ai_review_enabled,
                 "country_code": None,
                 "timezone": cfg.timezone,
                 "interval_minutes": cfg.ai_enrichment_interval_minutes if cfg.ai_enrichment_schedule_enabled else None,
@@ -638,6 +737,8 @@ class LiteratureService:
                 "source": "Model Center evidence agent",
                 "batch_size": cfg.ai_enrichment_batch_size,
                 "languages": cfg.ai_enrichment_languages,
+                "weekly_ai_review_enabled": cfg.weekly_ai_review_enabled,
+                "weekly_ai_review_batch_size": cfg.weekly_ai_review_batch_size,
                 "review_required": not cfg.autopilot_enabled,
                 "autopilot_enabled": cfg.autopilot_enabled,
             }],

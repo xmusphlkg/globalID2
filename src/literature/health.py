@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, case, func, select
 
 from src.domain import (
     LiteratureArticle,
@@ -29,9 +29,10 @@ from src.domain import (
 )
 
 from .classification import CLASSIFICATION_VERSION
-from .metadata_backfill import DEFAULT_CHECKPOINT_PATH
+from .metadata_backfill import DEFAULT_CHECKPOINT_PATH, SUPPORTED_PROVIDERS
 from .release_validation import validate_public_research_payload
 from .weekly_briefs import project_weekly_editorial_review
+from .weekly_ai_review import project_weekly_ai_review
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -49,6 +50,74 @@ _ACTIVE_TASK_STATUSES = {
     TaskStatus.QUEUED.value,
     TaskStatus.RUNNING.value,
     TaskStatus.RETRYING.value,
+}
+
+# A source name in ``LiteratureIngestRun.source`` records configuration intent,
+# not execution success.  These are the bounded, aggregate result fields emitted
+# by ``LiteraturePipeline.execute`` for each enabled provider.  An explicit zero
+# is valid evidence that a provider ran and found no matching records.
+_SOURCE_RESULT_COUNT_CONTRACTS: Mapping[str, Mapping[str, tuple[str, ...]]] = {
+    "crossref": {
+        "result": ("crossref_fetched", "source_records_seen", "source_records_returned"),
+        "error": (),
+        "skipped": (),
+    },
+    "europe-pmc": {
+        "result": ("europe_pmc_enriched",),
+        "error": ("europe_pmc_errors",),
+        "skipped": (),
+    },
+    "openalex": {
+        "result": ("openalex_enriched",),
+        "error": ("openalex_errors",),
+        "skipped": (),
+    },
+    "unpaywall": {
+        "result": ("unpaywall_enriched",),
+        "error": ("unpaywall_errors",),
+        "skipped": (),
+    },
+    "publisher-rss": {
+        "result": (
+            "publisher_rss_fetched",
+            "publisher_rss_records_seen",
+            "publisher_rss_feeds_modified",
+            "publisher_rss_feeds_not_modified",
+        ),
+        "error": ("publisher_rss_feed_errors",),
+        "skipped": (),
+        # Zero article records is healthy, but at least one configured feed must
+        # have returned either a modified or not-modified response.
+        "attempt_any": (
+            "publisher_rss_feeds_modified",
+            "publisher_rss_feeds_not_modified",
+        ),
+    },
+    "springer-nature": {
+        "result": ("springer_nature_fetched",),
+        "error": ("springer_nature_errors",),
+        "skipped": ("springer_nature_skipped_credentials",),
+    },
+    "elsevier": {
+        "result": ("elsevier_fetched",),
+        "error": ("elsevier_errors",),
+        "skipped": ("elsevier_skipped_credentials",),
+    },
+    "biorxiv-api": {
+        "result": ("preprint_fetched",),
+        "error": ("preprint_source_errors",),
+        "skipped": (),
+    },
+    "who-iris-oai": {
+        "result": ("official_guidance_fetched", "official_guidance_records_seen"),
+        "error": ("official_guidance_errors",),
+        "skipped": (),
+    },
+    "controlled-query": {
+        "result": ("controlled_discovery_fetched", "controlled_discovery_queries"),
+        "error": ("controlled_discovery_query_errors",),
+        "skipped": (),
+    },
 }
 
 
@@ -136,6 +205,10 @@ class ResearchRadarSnapshot:
     backfill_read_status: str
     expected_sources: tuple[str, ...]
     current_review_link_count: int = 0
+    # Database collectors populate compact aggregate counters so health checks
+    # never materialize every article's large provider payload. Hand-built
+    # snapshots may leave this unset and retain the row-based evaluation path.
+    article_metrics: Mapping[str, int] | None = None
 
 
 def _utc(value: Any) -> datetime | None:
@@ -163,6 +236,91 @@ def _safe_int(value: Any) -> int:
         return int(value or 0)
     except (TypeError, ValueError):
         return 0
+
+
+def _nonnegative_count(value: Any) -> int | None:
+    """Parse a persisted counter without turning malformed values into zero."""
+
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value if value >= 0 else None
+    if isinstance(value, float):
+        return int(value) if value >= 0 and value.is_integer() else None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.isdigit():
+            return int(stripped)
+    return None
+
+
+def _source_run_outcome(
+    source: str,
+    *,
+    completed_sources: set[str],
+    counts: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Reduce one provider's latest-run counters to a privacy-safe verdict."""
+
+    if source not in completed_sources:
+        return {
+            "source": source,
+            "status": "failed",
+            "reason": "not_in_latest_completed_run",
+            "error_count": 0,
+            "skipped_credentials_count": 0,
+        }
+    contract = _SOURCE_RESULT_COUNT_CONTRACTS.get(source)
+    if contract is None:
+        return {
+            "source": source,
+            "status": "failed",
+            "reason": "unknown_count_contract",
+            "error_count": 0,
+            "skipped_credentials_count": 0,
+        }
+    required_keys = (
+        *contract["result"],
+        *contract["error"],
+        *contract["skipped"],
+        *contract.get("attempt_any", ()),
+    )
+    if any(key not in counts for key in required_keys):
+        return {
+            "source": source,
+            "status": "failed",
+            "reason": "missing_count_contract",
+            "error_count": 0,
+            "skipped_credentials_count": 0,
+        }
+    parsed = {key: _nonnegative_count(counts.get(key)) for key in required_keys}
+    if any(value is None for value in parsed.values()):
+        return {
+            "source": source,
+            "status": "failed",
+            "reason": "invalid_count_contract",
+            "error_count": 0,
+            "skipped_credentials_count": 0,
+        }
+    error_count = sum(parsed[key] or 0 for key in contract["error"])
+    skipped_count = sum(parsed[key] or 0 for key in contract["skipped"])
+    if skipped_count:
+        reason = "skipped_credentials"
+    elif error_count:
+        reason = "provider_errors"
+    elif contract.get("attempt_any") and not any(
+        parsed[key] for key in contract["attempt_any"]
+    ):
+        reason = "not_attempted"
+    else:
+        reason = "success"
+    return {
+        "source": source,
+        "status": "success" if reason == "success" else "failed",
+        "reason": reason,
+        "error_count": error_count,
+        "skipped_credentials_count": skipped_count,
+    }
 
 
 def _enum_value(value: Any) -> str:
@@ -195,6 +353,9 @@ def expected_source_names(settings: Any | None) -> tuple[str, ...]:
         ("openalex_enabled", "openalex"),
         ("unpaywall_enabled", "unpaywall"),
         ("publisher_rss_enabled", "publisher-rss"),
+        ("springer_nature_enabled", "springer-nature"),
+        ("elsevier_enabled", "elsevier"),
+        ("preprint_discovery_enabled", "biorxiv-api"),
         ("official_guidance_enabled", "who-iris-oai"),
         ("controlled_discovery_enabled", "controlled-query"),
     )
@@ -234,21 +395,39 @@ async def collect_health_snapshot(
         .order_by(Task.created_at.desc(), Task.id.desc())
         .limit(limits.task_history_limit)
     )).scalars().all())
+    doi_present = and_(
+        LiteratureArticle.doi.is_not(None),
+        func.length(func.trim(LiteratureArticle.doi)) > 0,
+    )
+    article_metrics_row = (await db.execute(select(
+        func.count(LiteratureArticle.id).label("article_count"),
+        func.sum(case((
+            LiteratureArticle.metadata_["classification_version"].as_integer()
+            >= CLASSIFICATION_VERSION,
+            1,
+        ), else_=0)).label("classification_current_count"),
+        func.sum(case((doi_present, 1), else_=0)).label("doi_article_count"),
+        func.sum(case((and_(
+            doi_present,
+            LiteratureArticle.openalex_id.is_not(None),
+        ), 1), else_=0)).label("openalex_count"),
+        func.sum(case((and_(
+            doi_present,
+            # ``as_string`` compiles to PostgreSQL ->> / SQLite JSON_EXTRACT,
+            # preserving SQL NULL for a missing key without loading the object.
+            LiteratureArticle.source_payload["unpaywall"].as_string().is_not(None),
+        ), 1), else_=0)).label("unpaywall_count"),
+    ))).mappings().one()
+    # Operations only needs the small editorial decision subset. Selecting all
+    # provider payloads here previously produced multi-gigabyte ORM allocations.
     articles = list((await db.execute(select(
-        LiteratureArticle.doi,
-        LiteratureArticle.openalex_id,
-        LiteratureArticle.source_payload,
         LiteratureArticle.metadata_,
         LiteratureArticle.publication_status,
-        LiteratureArticle.integrity_status,
-        LiteratureArticle.peer_review_status,
-    ))).mappings().all())
+    ).where(LiteratureArticle.publication_status == "review"))).mappings().all())
     summaries = list((await db.execute(select(
-        LiteratureSummary.article_id,
-        LiteratureSummary.language,
         LiteratureSummary.status,
         LiteratureSummary.generation_metadata,
-    ))).mappings().all())
+    ).where(LiteratureSummary.status.in_(("review", "archived"))))).mappings().all())
     current_review_link_count = _safe_int((await db.execute(
         select(func.count())
         .select_from(LiteratureSignalArticleLink)
@@ -282,6 +461,22 @@ async def collect_health_snapshot(
             "completed_at": task.completed_at,
             "updated_at": task.updated_at,
             "retry_count": _safe_int(task.retry_count),
+            "catch_up": {
+                key: (task.output_data or {}).get(key)
+                for key in (
+                    "catch_up_required",
+                    "catch_up_status",
+                    "catch_up_next_action_code",
+                    "catch_up_next_run_at",
+                    "catch_up_backlog_observed_count",
+                    "catch_up_backlog_projected_upper_bound",
+                    "catch_up_backlog_limit",
+                    "catch_up_resume_below_backlog",
+                    "catch_up_required_backlog_reduction",
+                    "catch_up_backpressure_reason",
+                )
+                if isinstance(task.output_data, Mapping) and key in task.output_data
+            },
         } for task in tasks),
         articles=tuple(dict(row) for row in articles),
         summaries=tuple(dict(row) for row in summaries),
@@ -292,6 +487,16 @@ async def collect_health_snapshot(
         backfill_checkpoint=backfill,
         backfill_read_status=backfill_status,
         expected_sources=expected_source_names(settings),
+        article_metrics={
+            key: _safe_int(article_metrics_row.get(key))
+            for key in (
+                "article_count",
+                "classification_current_count",
+                "doi_article_count",
+                "openalex_count",
+                "unpaywall_count",
+            )
+        },
     )
 
 
@@ -300,10 +505,15 @@ def _check(
     status: str,
     observed: Mapping[str, Any],
     threshold: Mapping[str, Any] | None = None,
+    *,
+    next_action_code: str | None = None,
 ) -> dict[str, Any]:
     return {
         "code": code,
         "status": status,
+        "next_action_code": next_action_code or (
+            "none" if status == "pass" else f"inspect_{code}"
+        ),
         "observed": dict(observed),
         "threshold": dict(threshold or {}),
     }
@@ -380,6 +590,13 @@ def _pipeline_checks(
             "max_consecutive_failures": thresholds.max_consecutive_failures,
             "max_stale_run_minutes": thresholds.max_stale_run_minutes,
         },
+        next_action_code=(
+            "reconcile_stale_ingest_runs_dry_run"
+            if stale_running > 0
+            else "inspect_sync_failures_and_recovery"
+            if failure_status != "pass"
+            else "none"
+        ),
     ))
 
     checkpoint = latest_completed.get("checkpoint") if latest_completed else None
@@ -392,6 +609,10 @@ def _pipeline_checks(
         checkpoint.get("next_from_indexed_at")
         or isinstance(checkpoint.get("resume_after"), Mapping)
     )
+    catch_up_required = bool(
+        checkpoint.get("catch_up_required")
+        or latest_counts.get("source_catch_up_required")
+    )
     checks.append(_check(
         "sync_checkpoint",
         "pass" if checkpoint_valid and resumable else "critical",
@@ -400,10 +621,7 @@ def _pipeline_checks(
             "strategy_present": bool(checkpoint.get("strategy")),
             "truncated": truncated,
             "truncated_checkpoint_resumable": resumable,
-            "catch_up_required": bool(
-                checkpoint.get("catch_up_required")
-                or latest_counts.get("source_catch_up_required")
-            ),
+            "catch_up_required": catch_up_required,
             "remaining_index_span_seconds": _safe_int(
                 checkpoint.get("remaining_index_span_seconds")
                 or latest_counts.get("source_remaining_index_span_seconds")
@@ -432,17 +650,126 @@ def _pipeline_checks(
         },
     ))
 
-    completed_sources = set(str(latest_completed.get("source") or "").split("+")) if latest_completed else set()
-    missing_sources = sorted(set(snapshot.expected_sources) - completed_sources)
+    latest_sync_task = next(
+        (
+            task for task in snapshot.tasks
+            if _enum_value(task.get("type")) == TaskType.SYNC_LITERATURE.value
+        ),
+        None,
+    )
+    catch_up = (
+        latest_sync_task.get("catch_up")
+        if isinstance(latest_sync_task, Mapping)
+        and isinstance(latest_sync_task.get("catch_up"), Mapping)
+        else {}
+    )
+    orchestration_status = str(catch_up.get("catch_up_status") or "unknown")
+    latest_task_status = _enum_value(
+        latest_sync_task.get("status") if latest_sync_task else None
+    )
+    if not catch_up_required:
+        catch_up_health = "pass"
+        catch_up_next_action = "none"
+    elif latest_task_status in _ACTIVE_TASK_STATUSES:
+        catch_up_health = "pass"
+        catch_up_next_action = "await_active_literature_sync"
+    elif orchestration_status in {"scheduled", "already_scheduled"}:
+        catch_up_health = "pass"
+        catch_up_next_action = "await_accelerated_catch_up"
+    elif orchestration_status == "paused_backpressure":
+        catch_up_health = "warning"
+        catch_up_next_action = "reduce_exception_backlog_below_resume_threshold"
+    elif orchestration_status == "paused_backlog_measurement":
+        catch_up_health = "critical"
+        catch_up_next_action = "retry_backlog_measurement"
+    elif orchestration_status == "schedule_persistence_unavailable":
+        catch_up_health = "critical"
+        catch_up_next_action = "inspect_scheduler_persistence"
+    elif orchestration_status == "disabled":
+        catch_up_health = "warning"
+        catch_up_next_action = "enable_accelerated_catch_up"
+    elif orchestration_status == "waiting_for_scheduled_trigger":
+        catch_up_health = "warning"
+        catch_up_next_action = "await_next_scheduled_sync"
+    else:
+        catch_up_health = "warning"
+        catch_up_next_action = "inspect_latest_sync_result"
+    checks.append(_check(
+        "catch_up_orchestration",
+        catch_up_health,
+        {
+            "catch_up_required": catch_up_required,
+            "latest_sync_task_status": latest_task_status or "missing",
+            "orchestration_status": orchestration_status,
+            "next_run_at": catch_up.get("catch_up_next_run_at"),
+            "backlog_observed_count": catch_up.get("catch_up_backlog_observed_count"),
+            "backlog_projected_upper_bound": catch_up.get(
+                "catch_up_backlog_projected_upper_bound"
+            ),
+            "backlog_limit": catch_up.get("catch_up_backlog_limit"),
+            "resume_below_backlog": catch_up.get("catch_up_resume_below_backlog"),
+            "required_backlog_reduction": catch_up.get(
+                "catch_up_required_backlog_reduction"
+            ),
+            "pause_reason": catch_up.get("catch_up_backpressure_reason"),
+        },
+        next_action_code=catch_up_next_action,
+    ))
+
+    completed_sources = (
+        {
+            source.strip().lower()
+            for source in str(latest_completed.get("source") or "").split("+")
+            if source.strip()
+        }
+        if latest_completed
+        else set()
+    )
+    source_results = [
+        _source_run_outcome(
+            source,
+            completed_sources=completed_sources,
+            counts=latest_counts,
+        )
+        for source in snapshot.expected_sources
+    ]
+    successful_sources = [
+        result for result in source_results if result["status"] == "success"
+    ]
+    unsuccessful_sources = [
+        result for result in source_results if result["status"] != "success"
+    ]
     checks.append(_check(
         "enabled_source_success",
-        "pass" if not missing_sources else "warning",
+        "pass" if not unsuccessful_sources else "warning",
         {
             "expected_source_count": len(snapshot.expected_sources),
-            "successful_source_count": len(set(snapshot.expected_sources) & completed_sources),
-            "missing_source_count": len(missing_sources),
+            "successful_source_count": len(successful_sources),
+            "unsuccessful_source_count": len(unsuccessful_sources),
+            "missing_source_count": sum(
+                result["reason"] == "not_in_latest_completed_run"
+                for result in source_results
+            ),
+            "provider_error_source_count": sum(
+                result["reason"] == "provider_errors" for result in source_results
+            ),
+            "credential_skipped_source_count": sum(
+                result["reason"] == "skipped_credentials" for result in source_results
+            ),
+            "not_attempted_source_count": sum(
+                result["reason"] == "not_attempted" for result in source_results
+            ),
+            "count_contract_failure_source_count": sum(
+                result["reason"] in {
+                    "missing_count_contract",
+                    "invalid_count_contract",
+                    "unknown_count_contract",
+                }
+                for result in source_results
+            ),
+            "source_results": source_results,
         },
-        {"required_missing_source_count": 0},
+        {"required_unsuccessful_source_count": 0},
     ))
     return checks
 
@@ -456,6 +783,8 @@ def _backfill_check(
     age = _age_hours(snapshot.collected_at, checkpoint.get("updated_at"))
     failures = _safe_int((checkpoint.get("run_stats") or {}).get("failure_count"))
     provider_stats = checkpoint.get("run_stats", {}).get("provider_stats", {})
+    coverage = checkpoint.get("coverage")
+    coverage = coverage if isinstance(coverage, Mapping) else {}
     provider_failed = sum(
         _safe_int(value.get("failed"))
         for value in provider_stats.values()
@@ -473,6 +802,16 @@ def _backfill_check(
         health_status = "pass"
     else:
         health_status = "warning"
+    if snapshot.backfill_read_status != "ok":
+        next_action = "run_metadata_backfill_dry_run"
+    elif failures or provider_failed or status == "stopped_on_provider_error":
+        next_action = "retry_failed_provider_batch"
+    elif stalled:
+        next_action = "resume_stalled_metadata_backfill"
+    elif status == "completed_below_target":
+        next_action = "review_provider_match_gap"
+    else:
+        next_action = "none"
     return _check(
         "metadata_backfill_checkpoint",
         health_status,
@@ -483,8 +822,15 @@ def _backfill_check(
             "failure_count": failures,
             "provider_failed_records": provider_failed,
             "provider_count": len(provider_stats) if isinstance(provider_stats, Mapping) else 0,
+            "target_reached": bool(checkpoint.get("target_reached")) if coverage else None,
+            "provider_deficits": {
+                provider: _safe_int(coverage.get(provider, {}).get("deficit"))
+                for provider in SUPPORTED_PROVIDERS
+                if isinstance(coverage.get(provider), Mapping)
+            },
         },
         {"max_stalled_hours": thresholds.max_backfill_stalled_hours, "max_failures": 0},
+        next_action_code=next_action,
     )
 
 
@@ -492,21 +838,35 @@ def _article_checks(
     snapshot: ResearchRadarSnapshot,
     thresholds: HealthThresholds,
 ) -> list[dict[str, Any]]:
-    total = len(snapshot.articles)
-    current = sum(
-        _safe_int((row.get("metadata_") or {}).get("classification_version"))
-        >= CLASSIFICATION_VERSION
-        for row in snapshot.articles
+    metrics = snapshot.article_metrics
+    total = (
+        _safe_int(metrics.get("article_count"))
+        if isinstance(metrics, Mapping)
+        else len(snapshot.articles)
+    )
+    current = (
+        _safe_int(metrics.get("classification_current_count"))
+        if isinstance(metrics, Mapping)
+        else sum(
+            _safe_int((row.get("metadata_") or {}).get("classification_version"))
+            >= CLASSIFICATION_VERSION
+            for row in snapshot.articles
+        )
     )
     current_ratio = current / total if total else 0.0
-    doi_rows = [row for row in snapshot.articles if str(row.get("doi") or "").strip()]
-    openalex = sum(bool(row.get("openalex_id")) for row in doi_rows)
-    unpaywall = sum(
-        isinstance(row.get("source_payload"), Mapping)
-        and isinstance(row.get("source_payload", {}).get("unpaywall"), Mapping)
-        for row in doi_rows
-    )
-    denominator = len(doi_rows)
+    if isinstance(metrics, Mapping):
+        denominator = _safe_int(metrics.get("doi_article_count"))
+        openalex = _safe_int(metrics.get("openalex_count"))
+        unpaywall = _safe_int(metrics.get("unpaywall_count"))
+    else:
+        doi_rows = [row for row in snapshot.articles if str(row.get("doi") or "").strip()]
+        openalex = sum(bool(row.get("openalex_id")) for row in doi_rows)
+        unpaywall = sum(
+            isinstance(row.get("source_payload"), Mapping)
+            and isinstance(row.get("source_payload", {}).get("unpaywall"), Mapping)
+            for row in doi_rows
+        )
+        denominator = len(doi_rows)
     openalex_ratio = openalex / denominator if denominator else 0.0
     unpaywall_ratio = unpaywall / denominator if denominator else 0.0
     return [
@@ -540,6 +900,13 @@ def _article_checks(
                 "min_openalex_coverage": thresholds.min_openalex_coverage,
                 "min_unpaywall_coverage": thresholds.min_unpaywall_coverage,
             },
+            next_action_code=(
+                "none"
+                if denominator
+                and openalex_ratio >= thresholds.min_openalex_coverage
+                and unpaywall_ratio >= thresholds.min_unpaywall_coverage
+                else "run_metadata_backfill_dry_run"
+            ),
         ),
     ]
 
@@ -615,12 +982,21 @@ def _release_checks(
         if isinstance((latest_brief or {}).get("byline"), Mapping)
         else None
     )
+    ai_review = (
+        ((latest_brief or {}).get("byline") or {}).get("ai_review")
+        if isinstance((latest_brief or {}).get("byline"), Mapping)
+        else None
+    )
     review_evidence_valid = (
         brief_status == "automatically_compiled_not_editorially_reviewed"
         and reviewer is None
     ) or (
         brief_status == "editorially_reviewed"
         and project_weekly_editorial_review(reviewer, now=snapshot.collected_at) is not None
+    ) or (
+        brief_status == "ai_reviewed"
+        and reviewer is None
+        and project_weekly_ai_review(ai_review, now=snapshot.collected_at) is not None
     )
     digest_valid = bool(
         latest_brief
@@ -669,6 +1045,7 @@ def _release_checks(
                 "cited_finding_count": len((latest_brief or {}).get("cited_findings") or []),
                 "brief_status": brief_status or "missing",
                 "human_reviewed": brief_status == "editorially_reviewed",
+                "ai_reviewed": brief_status == "ai_reviewed",
                 "review_evidence_valid": review_evidence_valid,
             },
             {"max_digest_age_days": thresholds.max_digest_age_days},
@@ -851,6 +1228,9 @@ def _operations_checks(
                 "max_exception_backlog": thresholds.max_exception_backlog,
                 "max_evidence_gap_errors": thresholds.max_evidence_gap_errors,
             },
+            next_action_code=(
+                "run_literature_autopilot_dry_run" if exception_status != "pass" else "none"
+            ),
         ),
     ]
 

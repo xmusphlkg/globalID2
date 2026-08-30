@@ -240,6 +240,9 @@ def test_ie_registry_mapping_and_permission_gate_are_complete() -> None:
         encoding="utf-8", newline=""
     ) as handle:
         mapping_rows = list(csv.DictReader(handle))
+    hpsc_mapping_rows = [
+        row for row in mapping_rows if row["source_id"] == "SRC_IE_HPSC_NDH"
+    ]
     ontology = json.loads(
         (root / "configs/disease_ontology.json").read_text(encoding="utf-8")
     )
@@ -254,18 +257,24 @@ def test_ie_registry_mapping_and_permission_gate_are_complete() -> None:
         if item["source_id"] == "SRC_IE_HPSC_NDH"
     ]
 
-    assert len(mapping_rows) == 56
+    assert len(mapping_rows) == 111
+    assert len(hpsc_mapping_rows) == 56
     assert len(source_series) == 65
     assert len(availability) == 65
     assert len({row["series_id"] for row in mapping_rows}) == len(mapping_rows)
-    assert {row["source_id"] for row in mapping_rows} == {"SRC_IE_HPSC_NDH"}
-    assert {row["series_id"] for row in mapping_rows} <= {
+    assert {row["source_id"] for row in mapping_rows} == {
+        "SRC_IE_HPSC_NDH",
+        "SRC_IE_ECDC_ATLAS",
+    }
+    assert {row["series_id"] for row in hpsc_mapping_rows} <= {
         item["id"] for item in source_series
     }
     assert sum(item.get("mapping_relation") == "unmapped" for item in source_series) == 9
 
     bootstrap = get_country_bootstrap_config("IE")
-    assert bootstrap["public_release_enabled"] is False
+    assert bootstrap["public_release_enabled"] is True
+    assert bootstrap["public_source_systems"] == ["SRC_IE_ECDC_ATLAS"]
+    assert bootstrap["public_legacy_enabled"] is False
     assert bootstrap["crawler_config"]["reuse_status"] == (
         "written_permission_required"
     )

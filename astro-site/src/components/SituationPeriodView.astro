@@ -40,7 +40,7 @@ const seo: SeoDocument = {
 ---
 
 <ReportLayout title={pick(title, titleZh)} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室'), href: zh ? '/zh/situation/' : '/situation/' }, { label: pick(`${periodKind} reports`, report.report.kind === 'weekly' ? '周报' : '月报'), href: archivePath }, { label: report.report.period_key }]}>
-  <main class="period-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="period-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <header class="period-header">
       <div><p>{pick(`${periodKind} period report`, report.report.kind === 'weekly' ? '周度期间报告' : '月度期间报告')}</p><h1>{pick(title, titleZh)}</h1><span>{formatDate(report.report.period_start)} – {formatDate(report.report.period_end)} · <i>{pick('revision', '修订版')}</i> {report.report.revision}</span></div>
       <a href={jsonPath} download>{pick('Download JSON', '下载 JSON')}</a>
@@ -53,7 +53,7 @@ const seo: SeoDocument = {
     <SituationSummary snapshot={report} locale={locale} />
     <SituationDetails snapshot={report} locale={locale} />
     <footer><p>{pick(report.limitations.en, report.limitations.zh)}</p></footer>
-  </main>
+  </div>
 </ReportLayout>
 
 <style>

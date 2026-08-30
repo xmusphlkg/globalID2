@@ -25,7 +25,7 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
     { label: pick('Ask GIDS Research', '问研究雷达') },
   ]}
 >
-  <main class="ask-page">
+  <div class="ask-page">
     <header class="academic-hero ask-hero">
       <p class="academic-kicker">{pick('Evidence-grounded retrieval', '基于证据的检索')}</p>
       <h1>{pick('Ask GIDS Research', '问研究雷达')}</h1>
@@ -67,7 +67,7 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
         <div id="answer-evidence" class="evidence-list"></div>
       </article>
     </section>
-  </main>
+  </div>
 </ReportLayout>
 
 <script>

@@ -5,10 +5,30 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from src.core.country_library import get_country_bootstrap_config
+from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRIES
 from src.core.source_scopes import scope_display_label
 from src.generation.site_data_views import resolve_country_display_names
 
 SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
+    ("*", "cn_province_datacenter"): {
+        "label": "Public Health Science Data Center",
+        "url": "https://www.phsciencedata.cn/Share/ky_sjml.jsp",
+        "type": "official_datacenter_spreadsheet",
+        "cadence": "annual",
+        "description": (
+            "Chinese province-level historical monthly observations; this "
+            "higher-priority source overlays overlapping official monthly reports."
+        ),
+    },
+    ("*", "cn_province_monthly_report"): {
+        "label": "Provincial statutory infectious disease monthly report",
+        "type": "official_provincial_report",
+        "cadence": "monthly",
+        "description": (
+            "Province-level statutory infectious disease report published by "
+            "the responsible health authority."
+        ),
+    },
     ("CN", "cdc_weekly"): {
         "label": "China CDC Weekly",
         "url": "https://weekly.chinacdc.cn",
@@ -52,6 +72,21 @@ SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
         "type": "microsoft_bi",
         "description": "Australian national notifiable diseases surveillance dashboard.",
     },
+    ("CA", "phac_cndss_annual"): {
+        "label": "Canada PHAC CNDSS Annual",
+        "url": "https://diseases.canada.ca/notifiable/extract-dataset",
+        "machine_url": "https://diseases.canada.ca/ndc/s/raw",
+        "type": "official_open_data_json",
+        "cadence": "annual",
+        "description": (
+            "Canadian national annual reported disease counts assembled by PHAC "
+            "from voluntary provincial and territorial CNDSS submissions. A "
+            "published national aggregate does not mean every jurisdiction is "
+            "complete: official disease-specific inclusion tables vary by year, "
+            "and Manitoba 2023 data were unavailable for 44 disease contracts. "
+            "Null cells remain unknown and explicit zeroes are preserved."
+        ),
+    },
     ("CA-ON", "pho_idto_monthly"): {
         "label": "Public Health Ontario IDTO Monthly",
         "url": (
@@ -94,6 +129,31 @@ SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
         "description": (
             "Korea KDCA notifiable infectious disease OpenAPI or portal/KOSIS downloads "
             "aggregated to national monthly notification counts."
+        ),
+    },
+    ("SG", "cda_weekly_bulletin"): {
+        "label": "Singapore CDA Weekly Infectious Diseases Bulletin",
+        "url": "https://www.cda.gov.sg/resources/weekly-infectious-diseases-bulletin-2026/",
+        "machine_url": "https://api-open.data.gov.sg/v1/public/api/datasets/d_ca168b2cb763640d72c4600a68f9909e/poll-download",
+        "type": "official_csv_and_workbook",
+        "cadence": "weekly",
+        "description": (
+            "Singapore national weekly case notifications, combining the official "
+            "data.gov.sg 2012–2022 CSV history with CDA annual workbooks from 2023 "
+            "onward; 2023 weekly PDFs are retained as a source fallback."
+        ),
+    },
+    ("FR", "ecdc_atlas_annual"): {
+        "label": "ECDC Surveillance Atlas — France Annual Baseline",
+        "url": "https://atlas.ecdc.europa.eu/public/index.aspx/",
+        "machine_url": "https://atlas.ecdc.europa.eu/public/AtlasService/rest/",
+        "type": "official_ecdc_rest_aggregate",
+        "cadence": "annual",
+        "description": (
+            "France annual Member-State reported case counts from the ECDC "
+            "Surveillance Atlas. Missing topic/year cells remain unknown and "
+            "published zeroes are preserved. Data provided by ECDC based on "
+            "data reported by EU/EEA Member States."
         ),
     },
     ("IS", "is_doh_annual"): {
@@ -151,6 +211,22 @@ SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
     },
 }
 
+for _code, _meta in ECDC_BASELINE_COUNTRIES.items():
+    _name = _meta["name"]
+    SOURCE_DETAILS_BY_SCOPE[(_code, "ecdc_atlas_annual")] = {
+        "label": f"ECDC Surveillance Atlas — {_name} Annual Baseline",
+        "url": "https://atlas.ecdc.europa.eu/public/index.aspx/",
+        "machine_url": "https://atlas.ecdc.europa.eu/public/AtlasService/rest/",
+        "type": "official_ecdc_rest_aggregate",
+        "cadence": "annual",
+        "description": (
+            f"{_name} annual Member-State reported case counts from the ECDC "
+            "Surveillance Atlas. Missing topic/year cells remain unknown and "
+            "published zeroes are preserved. Data provided by ECDC based on "
+            "data reported by EU/EEA Member States."
+        ),
+    }
+
 ABOUT_COUNTRY_NAMES_ZH: dict[str, str] = {
     "AU": "澳大利亚",
     "BR": "巴西",
@@ -158,18 +234,31 @@ ABOUT_COUNTRY_NAMES_ZH: dict[str, str] = {
     "CA-ON": "加拿大安大略省",
     "CH": "瑞士",
     "CN": "中国",
+    "FR": "法国",
+    "ES": "西班牙",
+    "IT": "意大利",
+    "PT": "葡萄牙",
+    "PL": "波兰",
+    "CZ": "捷克",
+    "GR": "希腊",
+    "RO": "罗马尼亚",
     "HK": "中国香港",
     "IS": "冰岛",
     "JP": "日本",
     "KR": "韩国",
     "NZ": "新西兰",
+    "SG": "新加坡",
     "TW": "中国台湾",
     "US": "美国",
 }
 
+for _code, _meta in ECDC_BASELINE_COUNTRIES.items():
+    ABOUT_COUNTRY_NAMES_ZH.setdefault(_code, _meta["name_zh"])
+
 ABOUT_SOURCE_LABELS_ZH: dict[tuple[str, str], str] = {
     ("AU", "all"): "澳大利亚 NINDSS",
     ("BR", "sinan_datasus"): "巴西 DATASUS SINAN",
+    ("CA", "phac_cndss_annual"): "加拿大公共卫生署 CNDSS 年度数据",
     ("CA-ON", "pho_idto_monthly"): "安大略省公共卫生局 IDTO 月度数据",
     ("CH", "foph_idd"): "瑞士 FOPH/BAG IDD",
     ("CN", "cdc_weekly"): "中国疾控中心周报",
@@ -184,12 +273,25 @@ ABOUT_SOURCE_LABELS_ZH: dict[tuple[str, str], str] = {
     ("JP", "jp_weekly"): "日本 NIID/JIHS 周报",
     ("KR", "kdca_open_api"): "韩国 KDCA EID",
     ("NZ", "phf_monthly"): "新西兰 PHF Science 法定传染病",
+    ("SG", "cda_weekly_bulletin"): "新加坡 CDA 周度传染病公报",
+    ("FR", "ecdc_atlas_annual"): "ECDC 传染病监测图谱（法国年度基线）",
     ("TW", "nidss_open_data"): "中国台湾 CDC NIDSS",
     ("US", "nndss_api"): "美国 CDC NNDSS",
 }
 
+for _code, _name_zh in {
+    code: ABOUT_COUNTRY_NAMES_ZH[code] for code in ECDC_BASELINE_COUNTRIES
+}.items():
+    ABOUT_SOURCE_LABELS_ZH[(_code, "ecdc_atlas_annual")] = (
+        f"ECDC 传染病监测图谱（{_name_zh}年度基线）"
+    )
+
 ABOUT_SOURCE_DESCRIPTIONS_ZH: dict[tuple[str, str], str] = {
     ("AU", "all"): "澳大利亚国家法定传染病监测系统仪表板。",
+    (
+        "CA",
+        "phac_cndss_annual",
+    ): "加拿大公共卫生署汇总各省和地区自愿报送数据形成的全国年度病例数；全国汇总值不代表所有辖区数据完整，官方各病种纳入表随年份而异，且 2023 年有 44 个病种缺少曼尼托巴省数据；缺失值保持未知，明确零值予以保留。",
     (
         "BR",
         "sinan_datasus",
@@ -213,6 +315,14 @@ ABOUT_SOURCE_DESCRIPTIONS_ZH: dict[tuple[str, str], str] = {
     ("IS", "is_doh_legacy_icd"): "1997—2020 年 Saga 电子病历 ICD 就诊数；该临床口径与登记通报不可比，保持独立。",
     ("JP", "jp_weekly"): "日本 NIID/JIHS 的周度传染病监测数据。",
     (
+        "SG",
+        "cda_weekly_bulletin",
+    ): "新加坡全国周度病例通报，合并 data.gov.sg 的 2012—2022 年官方 CSV 历史与 CDA 自 2023 年起的年度工作簿；2023 年周报 PDF 作为来源回退。",
+    (
+        "FR",
+        "ecdc_atlas_annual",
+    ): "法国年度成员国报告病例数，来自 ECDC 传染病监测图谱；缺失的病种/年份单元保持未知，来源明确发布的零值予以保留，并注明 ECDC 与成员国归属。",
+    (
         "KR",
         "kdca_open_api",
     ): "韩国 KDCA 法定传染病 OpenAPI 或门户/KOSIS 导出，按月聚合为全国通报病例数。",
@@ -220,6 +330,15 @@ ABOUT_SOURCE_DESCRIPTIONS_ZH: dict[tuple[str, str], str] = {
     ("TW", "nidss_open_data"): "中国台湾月度法定传染病开放数据 CSV。",
     ("US", "nndss_api"): "美国 CDC 国家法定传染病监测系统的临时数据。",
 }
+
+for _code, _name_zh in {
+    code: ABOUT_COUNTRY_NAMES_ZH[code] for code in ECDC_BASELINE_COUNTRIES
+}.items():
+    ABOUT_SOURCE_DESCRIPTIONS_ZH[(_code, "ecdc_atlas_annual")] = (
+        f"{_name_zh}年度成员国报告病例数，来自 ECDC 传染病监测图谱；"
+        "缺失的病种/年份单元保持未知，来源明确发布的零值予以保留，"
+        "并注明 ECDC 与成员国归属。"
+    )
 
 CADENCE_LABELS_ZH: dict[str, str] = {
     "annual": "每年",
@@ -234,11 +353,33 @@ CADENCE_LABELS_ZH: dict[str, str] = {
 }
 
 def build_country_source_info(
-    country_code: str, frequency_meta: dict | None = None
+    country_code: str,
+    frequency_meta: dict | None = None,
+    database_config: dict | None = None,
 ) -> dict:
     """Build structured source metadata for downloads and UI badges."""
     normalized_code = (country_code or "").strip().upper()
-    cfg = get_country_bootstrap_config(normalized_code)
+    cfg = dict(get_country_bootstrap_config(normalized_code))
+    database_config = database_config or {}
+    for field in ("data_source_url", "data_source_type", "notes"):
+        if database_config.get(field):
+            cfg[field] = database_config[field]
+    for field in ("crawler_config", "parser_config"):
+        if isinstance(database_config.get(field), dict):
+            cfg[field] = database_config[field]
+    metadata = (
+        database_config.get("metadata")
+        if isinstance(database_config.get("metadata"), dict)
+        else {}
+    )
+    for field in (
+        "parent_country_code",
+        "location_type",
+        "iso_country_code",
+        "iso_subdivision_code",
+    ):
+        if metadata.get(field):
+            cfg[field] = metadata[field]
     crawler_cfg = cfg.get("crawler_config", {})
     source_scopes = list(crawler_cfg.get("sources") or ["all"])
     fallback_cadence = (
@@ -249,7 +390,10 @@ def build_country_source_info(
     sources: list[dict] = []
 
     for scope in source_scopes:
-        details = SOURCE_DETAILS_BY_SCOPE.get((normalized_code, scope), {})
+        details = SOURCE_DETAILS_BY_SCOPE.get(
+            (normalized_code, scope),
+            SOURCE_DETAILS_BY_SCOPE.get(("*", scope), {}),
+        )
         url = details.get("url") or cfg.get("data_source_url")
         machine_url = details.get("machine_url")
         if not machine_url:

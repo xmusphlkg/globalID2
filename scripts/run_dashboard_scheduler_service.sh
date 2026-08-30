@@ -8,6 +8,8 @@ ensure_log_dir
 
 PYTHON_BIN="$(resolve_python)"
 
+require_no_python_module_process "src.control_plane.scheduler" "GlobalID scheduler"
+
 cd "$ROOT_DIR"
 export PYTHONUNBUFFERED=1
 

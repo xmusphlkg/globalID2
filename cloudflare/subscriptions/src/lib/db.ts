@@ -64,16 +64,24 @@ export async function updateEmailDelivery(db: D1Database, input: {
   sentAt?: string;
   errorCode?: string;
   errorMessage?: string;
+  providerMessageId?: string;
+  deliveredAt?: string;
+  failedAt?: string;
   now?: string;
 }): Promise<void> {
   try {
     await db.prepare(
       `UPDATE transactional_email_deliveries
-       SET status = ?, sent_at = COALESCE(?, sent_at), error_code = ?, error_message = ?, updated_at = ?
+       SET status = ?, sent_at = COALESCE(?, sent_at), provider_message_id = COALESCE(?, provider_message_id),
+       delivered_at = COALESCE(?, delivered_at), failed_at = COALESCE(?, failed_at),
+       error_code = ?, error_message = ?, updated_at = ?
        WHERE id = ?`
     ).bind(
       input.status,
       input.sentAt || null,
+      input.providerMessageId || null,
+      input.deliveredAt || null,
+      input.failedAt || null,
       input.errorCode || null,
       input.errorMessage || null,
       input.now || new Date().toISOString(),

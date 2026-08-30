@@ -147,6 +147,27 @@ def test_release_validator_accepts_complete_allowlisted_weekly_review():
     assert validate_public_research_payload(payload) == []
 
 
+def test_release_validator_accepts_ai_review_only_as_distinct_non_editorial_evidence():
+    payload = {
+        "articles": [_article()], "preprints": [], "integrity_alerts": [],
+        "weekly_briefs": [{
+            "week": "2026-W31", "article_count": 1, "articles": [_article()],
+            "brief_status": "ai_reviewed",
+            "byline": {"reviewer": None, "ai_review": {
+                "verdict": "pass", "issue_codes": [], "reviewed_at": "2020-08-16T10:00:00Z",
+                "protocol_version": "research-weekly-ai-review.v1",
+                "model": "bounded-review-model", "provider": "model-center",
+            }},
+        }],
+        "surveillance_evidence": {"signals": [], "evidence_gaps": []},
+    }
+
+    assert validate_public_research_payload(payload) == []
+
+    payload["weekly_briefs"][0]["byline"]["ai_review"]["private_reasoning"] = "must not leak"
+    assert any("AI review exports non-public fields" in item for item in validate_public_research_payload(payload))
+
+
 @pytest.mark.parametrize("brief, expected", [
     (
         {

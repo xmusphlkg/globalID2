@@ -37,21 +37,37 @@ const links = [
   { href: '/research/', label: 'Research Radar', labelZh: '研究雷达' },
   { href: '/about/', label: 'About', labelZh: '关于' },
   { href: '/subscribe/', label: 'Subscribe', labelZh: '订阅' },
-  { href: '/copyright/', label: 'Copyright & Reuse', labelZh: '版权与复用' },
+  { href: '/copyright/', label: 'Copyright Notice', labelZh: '版权声明' },
   { href: '/terms/', label: 'Terms & Privacy', labelZh: '条款与隐私' },
 ];
 const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/' ? '/zh/' : `/zh${href}`) : href;
+const maintainer = initialLanguage === 'zh' ? {
+  title: '维护者',
+  name: '李康国',
+  description: '厦门大学公共卫生学院博士研究生，正在寻找实习与合作机会。',
+  availability: '可全球远程，或在中国大陆及香港线下工作。',
+  learnMore: '了解更多',
+  contact: '邮件联系',
+} : {
+  title: 'Maintainer',
+  name: 'Kangguo Li',
+  description: 'Doctoral researcher at Xiamen University, open to internships and collaborations.',
+  availability: 'Available remotely worldwide or on site in mainland China and Hong Kong.',
+  learnMore: 'Learn more',
+  contact: 'Email me',
+};
 ---
 
 <footer class="site-footer border-t mt-20">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div class="site-footer-main">
       <!-- Brand -->
       <div class="space-y-4">
         <BrandLogo
           variant="wordmark"
           theme="dark"
           alt="GIDS"
+          class="site-footer-logo"
           loading="lazy"
           wordmarkClass="h-11 w-auto max-w-[280px]"
         />
@@ -64,9 +80,9 @@ const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/'
 
       <!-- Quick links -->
       <div>
-        <h3 class="site-footer-section-title font-semibold text-sm mb-3">
+        <h2 class="site-footer-section-title font-semibold text-sm mb-3">
           {initialLanguage === 'zh' ? '导航' : 'Navigate'}
-        </h3>
+        </h2>
         <ul class="space-y-2">
           {links.map(({ href, label, labelZh }) => (
             <li>
@@ -80,9 +96,9 @@ const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/'
 
       <!-- Data info -->
       <div>
-        <h3 class="site-footer-section-title font-semibold text-sm mb-3">
+        <h2 class="site-footer-section-title font-semibold text-sm mb-3">
           {initialLanguage === 'zh' ? '数据' : 'Data'}
-        </h3>
+        </h2>
         <ul class="site-footer-meta space-y-1.5 text-sm">
           <li>
             <span>
@@ -103,14 +119,28 @@ const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/'
             </span>
           </li>
           <li><a class="site-footer-link" href={localizedHref('/about/')}>{initialLanguage === 'zh' ? '数据来源与方法' : 'Sources and methods'}</a></li>
-          <li><a class="site-footer-link" href={localizedHref('/copyright/')}>{initialLanguage === 'zh' ? '版权、许可与署名' : 'Copyright, licensing & attribution'}</a></li>
+          <li><a class="site-footer-link" href={localizedHref('/copyright/')}>{initialLanguage === 'zh' ? '版权与许可声明' : 'Copyright and licensing notice'}</a></li>
         </ul>
+      </div>
+
+      <!-- Maintainer -->
+      <div class="site-footer-maintainer">
+        <h2 class="site-footer-section-title font-semibold text-sm mb-3">{maintainer.title}</h2>
+        <p class="site-footer-maintainer-name"><span aria-hidden="true"></span>{maintainer.name}</p>
+        <p>{maintainer.description}</p>
+        <p>{maintainer.availability}</p>
+        <div class="site-footer-maintainer-links">
+          <a class="site-footer-link" href={`${localizedHref('/about/')}#maintainer`}>{maintainer.learnMore}</a>
+          <a class="site-footer-link" href="mailto:lkg1116@outlook.com">{maintainer.contact}<span aria-hidden="true"> ↗</span></a>
+        </div>
       </div>
     </div>
 
     <div class="site-footer-divider border-t mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
       <p class="site-footer-legal text-xs">
-        <a class="site-footer-link" href={localizedHref('/copyright/')}>© {year} GIDS</a>
+        <span>© {year} GIDS</span>
+        <span aria-hidden="true"> · </span>
+        <a class="site-footer-link" href={localizedHref('/copyright/')}>{initialLanguage === 'zh' ? '版权声明' : 'Copyright notice'}</a>
         <span aria-hidden="true"> · </span>
         <a
           class="site-footer-link"
@@ -125,3 +155,61 @@ const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/'
     </div>
   </div>
 </footer>
+
+<style>
+  .site-footer-main {
+    display: grid;
+    grid-template-columns: 1.25fr .75fr 1fr 1.15fr;
+    gap: clamp(2rem, 4vw, 4.5rem);
+  }
+  .site-footer-maintainer {
+    padding-left: 1.25rem;
+    border-left: 1px solid rgb(255 255 255 / .1);
+  }
+  .site-footer-maintainer-name {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0;
+    color: rgb(235 241 247);
+    font-size: .84rem;
+    font-weight: 700;
+  }
+  .site-footer-maintainer-name span {
+    width: .42rem;
+    height: .42rem;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: rgb(83 198 187);
+    box-shadow: 0 0 0 4px rgb(83 198 187 / .08);
+  }
+  .site-footer-maintainer > p:not(.site-footer-maintainer-name) {
+    margin: .55rem 0 0;
+    color: rgb(160 177 195);
+    font-size: .72rem;
+    line-height: 1.6;
+  }
+  .site-footer-maintainer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem .9rem;
+    margin-top: .9rem;
+  }
+  .site-footer-maintainer-links a {
+    color: rgb(145 224 214);
+    font-size: .72rem;
+    font-weight: 700;
+    text-underline-offset: 3px;
+  }
+  .site-footer-maintainer-links a:hover {
+    text-decoration: underline;
+  }
+  @media (max-width: 900px) {
+    .site-footer-main { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .site-footer-maintainer { padding-left: 0; border-left: 0; }
+  }
+  @media (max-width: 600px) {
+    .site-footer-main { grid-template-columns: 1fr; }
+    .site-footer-maintainer { padding-top: 1.5rem; border-top: 1px solid rgb(255 255 255 / .1); }
+  }
+</style>

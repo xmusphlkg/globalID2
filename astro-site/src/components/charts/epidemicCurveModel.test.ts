@@ -10,6 +10,7 @@ import {
   dateWindowFromZoom,
   epidemicCurveViewReducer,
   formatIncidenceMetricLabel,
+  getCurveLineSampling,
   getEffectiveProvisionalFrom,
   getOutbreakEligibility,
   getSelectableSourceSeries,
@@ -90,6 +91,44 @@ test('missing reporting periods break lines instead of becoming implicit zeroes'
 
   assert.equal(broken.dates.length, 3);
   assert.deepEqual(broken.values, [5, null, 7]);
+  assert.equal(getCurveLineSampling(broken.values, 'monitor'), undefined);
+});
+
+test('explicit missing values disable line sampling so ECharts preserves gaps', () => {
+  assert.equal(getCurveLineSampling([5, null, 7], 'monitor'), undefined);
+  assert.equal(getCurveLineSampling([5, Number.NaN, 7], 'monitor'), undefined);
+  assert.equal(getCurveLineSampling([5, 6, 7], 'monitor'), 'lttb');
+  assert.equal(getCurveLineSampling([5, 6, 7], 'outbreak'), undefined);
+});
+
+test('point granularities break mixed-cadence public curves conservatively', () => {
+  assert.deepEqual(
+    insertMissingPeriodBreaks(
+      ['2024-01-07', '2024-02-01'],
+      [5, 7],
+      'mixed',
+      ['weekly', 'monthly'],
+    ).values,
+    [5, null, 7],
+  );
+  assert.deepEqual(
+    insertMissingPeriodBreaks(
+      ['2024-01-07', '2024-01-28'],
+      [5, 7],
+      'mixed',
+      ['weekly', 'weekly'],
+    ).values,
+    [5, null, 7],
+  );
+  assert.deepEqual(
+    insertMissingPeriodBreaks(
+      ['2024-01-07', '2024-02-01'],
+      [5, 7],
+      'unknown',
+      [null, null],
+    ).values,
+    [5, 7],
+  );
 });
 
 test('incidence labels retain the source-period denominator', () => {

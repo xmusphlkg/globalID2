@@ -62,7 +62,12 @@ def test_ie_control_plane_exposes_current_and_annual_source_policies() -> None:
     ie = _country_source_config(_country("IE"), lang="en")
     options = {option.value: option for option in ie.source_options}
 
-    assert list(options) == ["hpsc_ndh", "hpsc_weekly_archive", "hpsc_annual"]
+    assert list(options) == [
+        "hpsc_ndh",
+        "hpsc_weekly_archive",
+        "hpsc_annual",
+        "ecdc_atlas_annual",
+    ]
     assert options["hpsc_ndh"].default_start_year == 2021
     assert options["hpsc_ndh"].source_policy.revision_window_unit == "weeks"
     assert options["hpsc_ndh"].source_policy.default_revision_window == 12
@@ -77,6 +82,8 @@ def test_ie_control_plane_exposes_current_and_annual_source_policies() -> None:
     assert options["hpsc_weekly_archive"].history_end_year == 2021
     assert options["hpsc_weekly_archive"].source_policy.temporal_granularity == "weekly"
     assert options["hpsc_weekly_archive"].source_policy.public_release_enabled is False
+    assert options["ecdc_atlas_annual"].source_kind == "regional_baseline"
+    assert options["ecdc_atlas_annual"].source_policy.public_release_enabled is True
 
 
 def test_automation_contract_persists_dynamic_month_policy() -> None:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Activity, CalendarDays, Database, Download, FileText, Maximize2, Percent, RotateCcw, Skull, TrendingUp, X } from "lucide-react";
 
 import { Chart, echarts, type ChartExportHandle } from "@/components/charts/Chart";
@@ -261,6 +261,11 @@ export default function DataDashboardPage() {
   const [fullscreenMonthlyChart, setFullscreenMonthlyChart] = useState<TrendChart | null>(null);
 
   const { data: diseases } = useDiseases(countryCode || null, lang);
+  useEffect(() => {
+    if (diseaseCode && diseases && !diseases.some((disease) => disease.code === diseaseCode)) {
+      setDiseaseCode(null);
+    }
+  }, [diseaseCode, diseases]);
   const hasCustomDateRange = Boolean(startDate || endDate);
   const { data: trend } = useOverviewTrend(
     countryCode || null,
@@ -528,11 +533,11 @@ export default function DataDashboardPage() {
     <div className="space-y-5">
       <PageHeader
         eyebrow={t(lang, "mod_database")}
-        title={lang === "zh" ? t(lang, "dashboard") : "Country Analytics"}
+        title={lang === "zh" ? t(lang, "dashboard") : "Jurisdiction Analytics"}
         description={
           lang === "zh"
-            ? "按当前国家汇总疾病指标、趋势和发布流转状态。"
-            : "Country-level disease metrics, trend analysis, and release pipeline snapshot."
+            ? "按当前国家或地区汇总疾病指标、趋势和发布流转状态。"
+            : "Disease metrics, trend analysis, and release pipeline snapshot for the selected jurisdiction."
         }
         meta={
           <>
@@ -733,7 +738,7 @@ export default function DataDashboardPage() {
                           {disease.name}
                         </p>
                         <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                          {formatNumber(disease.total_cases)} {t(lang, "cases")} · {formatNumber(disease.total_deaths)} {t(lang, "deaths")}
+                          {formatNumber(disease.total_cases)} {t(lang, "cases")} · {disease.total_deaths === null ? "–" : formatNumber(disease.total_deaths)} {t(lang, "deaths")}
                         </p>
                       </div>
                       <StatusBadge tone={index === 0 ? "success" : "neutral"}>{index + 1}</StatusBadge>

@@ -63,7 +63,7 @@ class CrawlStartRequest(BaseModel):
     country_id: int = Field(..., ge=1, description="Country DB id")
     source: str = Field(
         "all",
-        description="Crawl source key declared by /sources/config for the selected country, or all.",
+        description="Crawl source key declared by /sources/config for the selected country or region, or all.",
     )
     force: bool = Field(False, description="Ignore DB and re-crawl everything")
     process: bool = Field(True, description="Also run data processing after fetch")

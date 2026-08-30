@@ -9,8 +9,22 @@ const prefix = zh ? '/zh' : '';
 const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 
 const graph: any = (researchData as any).knowledge_graph ?? { nodes: [], edges: [], stats: {}, quality: {} };
-const nodes: any[] = graph.nodes ?? [];
-const edges: any[] = graph.edges ?? [];
+// Export only fields the public graph UI consumes. The source graph also
+// carries indexing metadata that belongs in the catalogue, not in every graph
+// page response.
+const nodes: any[] = (graph.nodes ?? []).map((node: any) => ({
+  id: node.id,
+  type: node.type,
+  label: node.label,
+  ...(node.url ? { url: node.url } : {}),
+}));
+const edges: any[] = (graph.edges ?? []).map((edge: any) => ({
+  source: edge.source,
+  relation: edge.relation,
+  target: edge.target,
+  ...(edge.confidence == null ? {} : { confidence: edge.confidence }),
+  ...(edge.provenance ? { provenance: edge.provenance } : {}),
+}));
 const nodeTypes = [...new Set(nodes.map((node: any) => String(node.type || 'unknown')))].sort();
 const graphPayload = JSON.stringify({ nodes, edges }).replaceAll('<', '\\u003c');
 const relationLabels: Record<string, { en: string; zh: string }> = {
@@ -42,7 +56,7 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
     { label: pick('Evidence graph', '证据图谱') },
   ]}
 >
-  <main class="graph-page">
+  <div class="graph-page">
     <header class="academic-hero graph-hero">
       <p class="academic-kicker">{pick('Auditable relationships', '可审计关系')}</p>
       <h1>{pick('Research evidence graph', '研究证据图谱')}</h1>
@@ -73,13 +87,8 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
       <div class="graph-columns">
         <section aria-labelledby="graph-node-heading">
           <div class="graph-section-heading"><h2 id="graph-node-heading">{pick('Entities', '实体')}</h2><span data-graph-count>{nodes.length}</span></div>
-          <div class="graph-node-list" data-graph-node-list>
-            {nodes.map(node => (
-              <button type="button" data-node-id={node.id} data-node-type={node.type} data-node-label={String(node.label || '').toLowerCase()}>
-                <span>{node.label}</span><small>{String(node.type || '').replaceAll('_', ' ')}</small>
-              </button>
-            ))}
-          </div>
+          <div class="graph-node-list" data-graph-node-list></div>
+          <noscript><p class="graph-script-note">{pick('Enable JavaScript to browse graph entities and relationships.', '请启用 JavaScript 以浏览图谱实体和关系。')}</p></noscript>
           <button class="graph-more" type="button" data-graph-more>{pick('Show more entities', '显示更多实体')}</button>
         </section>
         <section aria-labelledby="graph-relation-heading" class="graph-detail">
@@ -95,7 +104,7 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
       <h2>{pick('Provenance and limits', '来源与限制')}</h2>
       <p>{pick('Disease, country, topic, pathogen, and study-design edges retain classifier confidence. Population-setting edges copy only a bilingual, quality-gated structured-summary field. Intervention and policy edges use a small published topic mapping. No raw abstracts, PDFs, or private source payloads are exported.', '疾病、国家、主题、病原体和研究设计关系保留分类置信度；人群与场景关系仅来自通过质量门控的双语结构化摘要；干预和政策关系使用小型公开主题映射。系统不会导出原始摘要、PDF 或私有来源负载。')}</p>
     </section>
-  </main>
+  </div>
 
   <script is:inline type="application/json" id="research-graph-data" set:html={graphPayload}></script>
   <script is:inline define:vars={{ relationLabels }}>
@@ -110,25 +119,43 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
       const count = root.querySelector('[data-graph-count]');
       const more = root.querySelector('[data-graph-more]');
       const detail = root.querySelector('[data-graph-detail]');
-      const buttons = Array.from(root.querySelectorAll('[data-node-id]'));
+      const nodeList = root.querySelector('[data-graph-node-list]');
       let visibleLimit = 80;
+      let selectedNodeId = '';
 
       const lang = () => root.dataset.graphLocale === 'zh' ? 'zh' : 'en';
       const routePrefix = root.dataset.graphPrefix || '';
       const refresh = () => {
         const query = String(search?.value || '').trim().toLowerCase();
         const selectedType = String(type?.value || '');
-        const matching = buttons.filter((button) => (!selectedType || button.dataset.nodeType === selectedType)
-          && (!query || String(button.dataset.nodeLabel || '').includes(query)));
-        buttons.forEach((button) => { button.hidden = true; });
-        matching.slice(0, visibleLimit).forEach((button) => { button.hidden = false; });
+        const matching = (graph.nodes || []).filter((node) => (!selectedType || node.type === selectedType)
+          && (!query || String(node.label || '').toLowerCase().includes(query)));
+        const visible = matching.slice(0, visibleLimit);
+        if (nodeList) {
+          const fragment = document.createDocumentFragment();
+          visible.forEach((node) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.dataset.nodeId = node.id;
+            button.setAttribute('aria-pressed', String(node.id === selectedNodeId));
+            const label = document.createElement('span');
+            label.textContent = node.label;
+            const nodeType = document.createElement('small');
+            nodeType.textContent = String(node.type || '').replaceAll('_', ' ');
+            button.append(label, nodeType);
+            button.addEventListener('click', () => showNode(node.id));
+            fragment.append(button);
+          });
+          nodeList.replaceChildren(fragment);
+        }
         if (count) count.textContent = `${Math.min(matching.length, visibleLimit)} / ${matching.length}`;
         if (more) more.hidden = matching.length <= visibleLimit;
       };
       const showNode = (nodeId) => {
         const node = nodes.get(nodeId);
         if (!node || !detail) return;
-        buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.nodeId === nodeId)));
+        selectedNodeId = nodeId;
+        root.querySelectorAll('[data-node-id]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.nodeId === nodeId)));
         const linked = (graph.edges || []).filter((edge) => edge.source === nodeId || edge.target === nodeId);
         const title = document.createElement('h3');
         title.textContent = node.label;
@@ -156,7 +183,6 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
       search?.addEventListener('input', () => { visibleLimit = 80; refresh(); });
       type?.addEventListener('change', () => { visibleLimit = 80; refresh(); });
       more?.addEventListener('click', () => { visibleLimit += 80; refresh(); });
-      buttons.forEach((button) => button.addEventListener('click', () => showNode(button.dataset.nodeId)));
       refresh();
     })();
   </script>
@@ -183,6 +209,7 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
   .graph-node-list button:hover, .graph-node-list button[aria-pressed="true"] { border-color: rgb(var(--color-brand) / .7); background: rgb(var(--color-brand) / .08); }
   .graph-node-list span { color: rgb(var(--text)); font-size: .78rem; line-height: 1.35; }
   .graph-node-list small { flex: 0 0 auto; color: rgb(var(--text-faint)); font-size: .6rem; text-transform: uppercase; }
+  .graph-script-note { margin-top: .8rem; color: rgb(var(--text-muted)); font-size: .75rem; }
   .graph-more { width: 100%; margin-top: .7rem; border: 1px solid rgb(var(--border)); padding: .65rem; color: rgb(var(--text-muted)); font-size: .72rem; }
   .graph-detail { border-left: 1px solid rgb(var(--border)); padding-left: 1.5rem; }
   .graph-detail [data-graph-detail] > p { margin-top: 1rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.6; }

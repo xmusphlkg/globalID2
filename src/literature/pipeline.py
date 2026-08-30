@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import uuid
-from typing import Any
+from typing import Any, Awaitable
 
 import pycountry
 from sqlalchemy import select
@@ -18,11 +18,14 @@ from src.domain import Country, LiteratureIngestRun, StandardDisease, Task
 
 from .classification import classify_candidate
 from .clients import (
+    BiorxivClient,
     CrossrefClient,
+    ElsevierClient,
     EuropePmcClient,
     OfficialGuidanceOaiClient,
     OpenAlexClient,
     PublisherRssClient,
+    SpringerNatureClient,
     UnpaywallClient,
 )
 from .controlled_discovery import build_controlled_query_batches, fetch_controlled_discovery
@@ -31,9 +34,12 @@ from .normalization import (
     apply_openalex,
     apply_unpaywall,
     normalize_crossref,
+    normalize_biorxiv,
+    normalize_elsevier,
     normalize_europe_pmc,
     normalize_official_guidance,
     normalize_publisher_rss,
+    normalize_springer_nature,
 )
 from .repository import LiteratureRepository
 from .types import ArticleCandidate, Classification
@@ -88,6 +94,16 @@ def _merge_candidate(primary: ArticleCandidate, incoming: ArticleCandidate) -> N
         primary.authors = list(incoming.authors)
     if primary.open_access_status == "unknown" and incoming.open_access_status != "unknown":
         primary.open_access_status = incoming.open_access_status
+    # A dedicated preprint registry is authoritative for the review status of
+    # its own DOI. Never let provider priority erase that safety signal.
+    if (
+        incoming.peer_review_status == "preprint"
+        and primary.doi
+        and primary.doi == incoming.doi
+    ):
+        primary.peer_review_status = "preprint"
+        primary.article_type = "preprint"
+        primary.study_type = "Preprint"
     existing_relations = {
         (
             relation.get("preprint_doi"),
@@ -154,6 +170,36 @@ def _hold_degraded_enrichment_for_review(
     return True
 
 
+def _hold_preprint_for_review(candidate: ArticleCandidate, classification: Classification) -> bool:
+    """Hard gate: discovery can index preprints, but automation cannot publish them."""
+    if candidate.peer_review_status != "preprint" or classification.publication_status != "published":
+        return False
+    classification.publication_status = "review"
+    return True
+
+
+async def _isolate_optional_source(provider: str, request: Awaitable[Any]) -> tuple[Any | None, str | None]:
+    """Contain optional-source failures without logging URLs, queries, or credentials."""
+    try:
+        return await request, None
+    except Exception as exc:
+        error_type = type(exc).__name__ or "Exception"
+        logger.warning(
+            "Optional literature discovery failed provider={} error_type={}",
+            provider,
+            error_type,
+        )
+        return None, error_type
+
+
+def _preserve_optional_checkpoint(result: Any | None, previous: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Keep the last committed cursor when an optional source is skipped or fails."""
+    checkpoint = getattr(result, "checkpoint", None) if result is not None else None
+    if isinstance(checkpoint, dict):
+        return checkpoint
+    return previous if isinstance(previous, dict) else None
+
+
 def _global_country_catalogue(
     country_rows: list[Any],
     taxonomy: dict[str, Any],
@@ -202,7 +248,7 @@ class LiteraturePipeline:
         now = datetime.now(timezone.utc)
         since, resume_after = await self._resolve_start(now, task)
         run_uuid = str(uuid.uuid4())
-        await self._create_run(run_uuid, since, now)
+        await self._create_run(run_uuid, since, now, task=task)
         try:
             journals_payload = _load_json(ROOT / self.config.journals_path)
             journals = [item for item in journals_payload.get("journals") or [] if item.get("issn")]
@@ -290,6 +336,87 @@ class LiteraturePipeline:
                     official_guidance_error = f"{type(exc).__name__}: {exc}"[:500]
                     logger.warning("WHO IRIS guidance metadata discovery failed: {}", official_guidance_error)
 
+            springer_result = None
+            springer_records: list[dict[str, Any]] = []
+            springer_error: str | None = None
+            springer_skipped_credentials = 0
+            springer_checkpoint: dict[str, Any] | None = None
+            if getattr(self.config, "springer_nature_enabled", False):
+                springer_checkpoint = await self._resolve_nested_checkpoint("springer_nature")
+                if not str(getattr(self.config, "springer_nature_api_key", "") or "").strip():
+                    springer_skipped_credentials = 1
+                    logger.warning("Springer Nature discovery enabled but credential is not configured; skipping")
+                else:
+                    springer_result, springer_error = await _isolate_optional_source(
+                        "springer-nature",
+                        SpringerNatureClient(
+                            api_key=self.config.springer_nature_api_key,
+                            contact_email=self.config.contact_email,
+                            timeout_seconds=self.config.request_timeout_seconds,
+                            retries=self.config.max_retries,
+                        ).search_recent(
+                            query=getattr(self.config, "springer_nature_query", ""),
+                            since=since,
+                            until=now,
+                            max_records=getattr(self.config, "max_springer_nature_records", 50),
+                            checkpoint=springer_checkpoint,
+                        ),
+                    )
+                    if springer_result is not None:
+                        springer_records = springer_result.records
+
+            elsevier_result = None
+            elsevier_records: list[dict[str, Any]] = []
+            elsevier_error: str | None = None
+            elsevier_skipped_credentials = 0
+            elsevier_checkpoint: dict[str, Any] | None = None
+            if getattr(self.config, "elsevier_enabled", False):
+                elsevier_checkpoint = await self._resolve_nested_checkpoint("elsevier")
+                if not str(getattr(self.config, "elsevier_api_key", "") or "").strip():
+                    elsevier_skipped_credentials = 1
+                    logger.warning("Elsevier discovery enabled but credential is not configured; skipping")
+                else:
+                    elsevier_result, elsevier_error = await _isolate_optional_source(
+                        "elsevier",
+                        ElsevierClient(
+                            api_key=self.config.elsevier_api_key,
+                            institutional_token=getattr(self.config, "elsevier_institutional_token", ""),
+                            contact_email=self.config.contact_email,
+                            timeout_seconds=self.config.request_timeout_seconds,
+                            retries=self.config.max_retries,
+                        ).search_recent(
+                            query=getattr(self.config, "elsevier_query", ""),
+                            since=since,
+                            until=now,
+                            max_records=getattr(self.config, "max_elsevier_records", 50),
+                            checkpoint=elsevier_checkpoint,
+                        ),
+                    )
+                    if elsevier_result is not None:
+                        elsevier_records = elsevier_result.records
+
+            preprint_result = None
+            preprint_records: list[dict[str, Any]] = []
+            preprint_error: str | None = None
+            preprint_checkpoint: dict[str, Any] | None = None
+            if getattr(self.config, "preprint_discovery_enabled", False):
+                preprint_checkpoint = await self._resolve_nested_checkpoint("preprints")
+                preprint_result, preprint_error = await _isolate_optional_source(
+                    "biorxiv-api",
+                    BiorxivClient(
+                    contact_email=self.config.contact_email,
+                    timeout_seconds=self.config.request_timeout_seconds,
+                    retries=self.config.max_retries,
+                ).fetch_recent(
+                    since=since,
+                    until=now,
+                    max_records=getattr(self.config, "max_preprint_records", 100),
+                    checkpoint=preprint_checkpoint,
+                ),
+                )
+                if preprint_result is not None:
+                    preprint_records = preprint_result.records
+
             rss_result = None
             rss_records: list[dict[str, Any]] = []
             if getattr(self.config, "publisher_rss_enabled", False):
@@ -314,6 +441,9 @@ class LiteraturePipeline:
             source_candidates = [
                 *[candidate for item in raw_records if (candidate := normalize_crossref(item))],
                 *[candidate for item in rss_records if (candidate := normalize_publisher_rss(item))],
+                *[candidate for item in springer_records if (candidate := normalize_springer_nature(item))],
+                *[candidate for item in elsevier_records if (candidate := normalize_elsevier(item))],
+                *[candidate for item in preprint_records if (candidate := normalize_biorxiv(item))],
                 *[
                     candidate
                     for item in controlled_crossref_records
@@ -341,7 +471,7 @@ class LiteraturePipeline:
             if task:
                 await task_manager.update_task_progress(task.task_uuid, 55)
 
-            inserted = updated = excluded = published = 0
+            inserted = updated = excluded = published = preprints_held_for_review = 0
             async with get_db() as db:
                 repository = LiteratureRepository(db)
                 for index, candidate in enumerate(candidates):
@@ -358,6 +488,9 @@ class LiteraturePipeline:
                         enrichment_degraded=enrichment_degraded,
                     ):
                         enrichment_counts["enrichment_degraded_review"] += 1
+                    preprints_held_for_review += int(
+                        _hold_preprint_for_review(candidate, classification)
+                    )
                     # Autopilot owns publication so that every automatic decision
                     # passes the complete metadata/integrity gate and is audited.
                     if self.config.autopilot_enabled and classification.publication_status == "published":
@@ -395,6 +528,9 @@ class LiteraturePipeline:
                     + len(controlled_crossref_records)
                     + len(controlled_europe_pmc_records)
                     + len(official_guidance_records)
+                    + len(springer_records)
+                    + len(elsevier_records)
+                    + len(preprint_records)
                 ),
                 "crossref_fetched": len(raw_records) + len(controlled_crossref_records),
                 "publisher_rss_fetched": len(rss_records),
@@ -411,6 +547,15 @@ class LiteraturePipeline:
                     (official_guidance_result.checkpoint if official_guidance_result else {}).get("truncated")
                 )),
                 "official_guidance_errors": int(official_guidance_error is not None),
+                "springer_nature_fetched": len(springer_records),
+                "springer_nature_errors": int(springer_error is not None),
+                "springer_nature_skipped_credentials": springer_skipped_credentials,
+                "elsevier_fetched": len(elsevier_records),
+                "elsevier_errors": int(elsevier_error is not None),
+                "elsevier_skipped_credentials": elsevier_skipped_credentials,
+                "preprint_fetched": len(preprint_records),
+                "preprint_source_errors": int(preprint_error is not None),
+                "preprints_held_for_review": preprints_held_for_review,
                 "controlled_discovery_queries": len(
                     (controlled_result.checkpoint if controlled_result else {}).get("selected_query_ids") or []
                 ),
@@ -454,6 +599,18 @@ class LiteraturePipeline:
                 **enrichment_counts,
             }
             through_indexed_at = _parse_checkpoint_datetime(source_result.checkpoint.get("through_indexed_at")) or now
+            springer_next_checkpoint = _preserve_optional_checkpoint(
+                springer_result,
+                springer_checkpoint,
+            )
+            elsevier_next_checkpoint = _preserve_optional_checkpoint(
+                elsevier_result,
+                elsevier_checkpoint,
+            )
+            preprint_next_checkpoint = _preserve_optional_checkpoint(
+                preprint_result,
+                preprint_checkpoint,
+            )
             checkpoint = {
                 **source_result.checkpoint,
                 **({"rss": rss_result.checkpoint} if rss_result else {}),
@@ -466,6 +623,21 @@ class LiteraturePipeline:
                     {"official_guidance": official_guidance_result.checkpoint}
                     if official_guidance_result
                     else ({"official_guidance": official_guidance_checkpoint} if official_guidance_checkpoint else {})
+                ),
+                **(
+                    {"springer_nature": springer_next_checkpoint}
+                    if springer_next_checkpoint
+                    else {}
+                ),
+                **(
+                    {"elsevier": elsevier_next_checkpoint}
+                    if elsevier_next_checkpoint
+                    else {}
+                ),
+                **(
+                    {"preprints": preprint_next_checkpoint}
+                    if preprint_next_checkpoint
+                    else {}
                 ),
             }
             await self._finish_run(
@@ -672,7 +844,14 @@ class LiteraturePipeline:
         countries = _global_country_catalogue(country_rows, taxonomy)
         return diseases, countries
 
-    async def _create_run(self, run_uuid: str, since: datetime, through: datetime) -> None:
+    async def _create_run(
+        self,
+        run_uuid: str,
+        since: datetime,
+        through: datetime,
+        *,
+        task: Task | None = None,
+    ) -> None:
         sources = ["crossref"]
         if self.config.europe_pmc_enabled:
             sources.append("europe-pmc")
@@ -682,6 +861,12 @@ class LiteraturePipeline:
             sources.append("unpaywall")
         if getattr(self.config, "publisher_rss_enabled", False):
             sources.append("publisher-rss")
+        if getattr(self.config, "springer_nature_enabled", False):
+            sources.append("springer-nature")
+        if getattr(self.config, "elsevier_enabled", False):
+            sources.append("elsevier")
+        if getattr(self.config, "preprint_discovery_enabled", False):
+            sources.append("biorxiv-api")
         if getattr(self.config, "official_guidance_enabled", False):
             sources.append("who-iris-oai")
         if getattr(self.config, "controlled_discovery_enabled", False):
@@ -689,6 +874,7 @@ class LiteraturePipeline:
         async with get_db() as db:
             db.add(LiteratureIngestRun(
                 run_uuid=run_uuid,
+                task_uuid=task.task_uuid if task is not None else None,
                 source="+".join(sources),
                 status="running",
                 started_at=datetime.now(timezone.utc),
@@ -698,6 +884,7 @@ class LiteraturePipeline:
                     "strategy": "index-date",
                     "overlap_days": 0,
                     "configured_legacy_overlap_days": self.config.index_overlap_days,
+                    "task_uuid": task.task_uuid if task is not None else None,
                 },
                 counts={},
             ))
@@ -722,7 +909,13 @@ class LiteraturePipeline:
             if through_indexed_at is not None:
                 run.through_indexed_at = through_indexed_at
             if checkpoint is not None:
-                run.checkpoint = checkpoint
+                # Preserve the immutable ownership marker when replacing the
+                # provisional checkpoint with the provider cursor at finish.
+                task_uuid = run.task_uuid or (run.checkpoint or {}).get("task_uuid")
+                run.checkpoint = {
+                    **checkpoint,
+                    **({"task_uuid": task_uuid} if task_uuid else {}),
+                }
             run.counts = counts or {}
             run.error = error
             await db.commit()

@@ -230,6 +230,8 @@ rich==15.0.0
     # via
     #   -r requirements.in
     #   typer
+ruff==0.16.5
+    # via -r requirements.in
 shellingham==1.5.4
     # via typer
 simplejson==4.1.1

@@ -168,20 +168,16 @@ const formatCards = [
 ---
 
 {entry && (
-  <section class="figure-panel space-y-6">
-    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-      <div class="space-y-3">
-        <p class="figure-kicker">{pick('Data access', '数据获取')}</p>
-        <h2 class="figure-title">{pick(title, '下载数据')}</h2>
-        <p class="figure-caption">{pick(descriptionEn, descriptionZh)}</p>
-        {entry.includes_series_provenance && (
-          <p class="figure-caption">
-            {pick('Files distinguish source_series_observation rows from the public_projection and retain series definitions and provenance columns.', '文件区分来源序列观测（source_series_observation）与公开投影（public_projection），并保留序列定义和溯源字段。')}
-          </p>
-        )}
+  <section class="figure-panel download-panel">
+    <div class="download-panel__header">
+      <div class="download-panel__intro">
+        <h2 class="figure-title">{pick(title, '数据获取')}</h2>
+        <p class="download-panel__summary">
+          {pick(descriptionEn, descriptionZh)}
+        </p>
       </div>
       {downloadParts.length > 0 && (
-        <button type="button" data-download-modal-trigger class="site-action-secondary inline-flex items-center gap-2 rounded-none border px-4 py-2 text-sm font-semibold transition-all">
+        <button type="button" data-download-modal-trigger class="site-action-secondary download-panel__action">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
           </svg>
@@ -190,36 +186,35 @@ const formatCards = [
       )}
     </div>
 
-    <div class="academic-meta-grid">
-      <div class="academic-meta-item">
-        <div class="academic-meta-label">{pick('Download rows', '下载行数')}</div>
-        <div class="academic-meta-value font-serif">{formatCount(entry.record_count)}</div>
+    <div class="download-panel__meta">
+      <div class="download-panel__metric">
+        <span>{pick('Rows', '行数')}</span>
+        <strong>{formatCount(entry.record_count)}</strong>
       </div>
-      <div class="academic-meta-item">
-        <div class="academic-meta-label">{pick('Updated', '数据更新时间')}</div>
-        <div class="academic-meta-value font-serif">{formatDate(entry.generated_at)}</div>
+      <div class="download-panel__metric">
+        <span>{pick('Updated', '更新')}</span>
+        <strong>{formatDate(entry.generated_at)}</strong>
       </div>
-      <div class="academic-meta-item">
-        <div class="academic-meta-label">{pick('Coverage', '覆盖区间')}</div>
-        <div class="academic-meta-value text-sm font-medium">{coverageLabel}</div>
+      <div class="download-panel__metric download-panel__metric--wide">
+        <span>{pick('Coverage', '范围')}</span>
+        <strong>{coverageLabel}</strong>
       </div>
-      <div class="academic-meta-item">
-        <div class="academic-meta-label">{pick('Download partitions', '下载分块')}</div>
-        <div class="academic-meta-value text-sm font-medium">{formatCount(downloadParts.length)}</div>
+      <div class="download-panel__metric">
+        <span>{pick('Partitions', '分块')}</span>
+        <strong>{formatCount(downloadParts.length)}</strong>
       </div>
       {entry.includes_series_provenance && (
-        <div class="academic-meta-item">
-          <div class="academic-meta-label">{pick('Source series', '来源序列')}</div>
-          <div class="academic-meta-value text-sm font-medium">{formatCount(entry.source_series_count)}</div>
-          <div class="mt-1 text-xs text-[rgb(var(--text-muted))]">{formatCount(entry.source_observation_count)} {pick('source observations', '条来源观测')}</div>
+        <div class="download-panel__metric download-panel__metric--wide">
+          <span>{pick('Source', '来源')}</span>
+          <strong>{formatCount(entry.source_series_count)} {pick('series', '序列')} · {formatCount(entry.source_observation_count)} {pick('observations', '观测')}</strong>
         </div>
       )}
     </div>
 
     {sourceEntries.length > 0 && (
-      <details class="source-register" open={sourceEntries.length <= 6}>
+      <details class="source-register">
         <summary>
-          <span><strong>{pick('Official sources', '官方数据来源')}</strong><small>{pick('Reporting authority, cadence, and source notes', '报告机构、更新频率与来源说明')}</small></span>
+          <span><strong>{pick('Official sources', '官方数据来源')}</strong><small>{pick('Authority, cadence, notes', '机构、频率与说明')}</small></span>
           <b>{sourceEntries.length}</b>
         </summary>
         <div class="source-register-grid">
@@ -229,7 +224,7 @@ const formatCards = [
                 <div class="source-register-card__identity">
                   {source.country_code && <CountryFlag code={source.country_code} name={source.country_name ?? source.country_code} sizeClass="h-6 w-8 shrink-0" />}
                   <div class="min-w-0">
-                    <h4 class="source-register-title">{pick(source.label ?? source.scope ?? 'Unknown Source', sourceZhLabel(source))}</h4>
+                    <h3 class="source-register-title">{pick(source.label ?? source.scope ?? 'Unknown Source', sourceZhLabel(source))}</h3>
                     {source.country_name && <p class="source-register-country">{source.country_name}</p>}
                   </div>
                 </div>
@@ -405,8 +400,20 @@ const formatCards = [
 </script>
 
 <style>
+  .download-panel { display: grid; gap: .85rem; padding-block: 1.05rem; }
+  .download-panel__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .download-panel__intro { min-width: 0; display: grid; gap: .28rem; }
+  .download-panel .figure-title { font-size: clamp(1.15rem, 1.8vw, 1.45rem); line-height: 1.15; }
+  .download-panel__summary { max-width: 58rem; color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.45; }
+  .download-panel__summary span { margin-left: .45rem; color: rgb(var(--text-faint)); }
+  .download-panel__action { display: inline-flex; min-height: 2.35rem; flex: 0 0 auto; align-items: center; gap: .45rem; border: 1px solid rgb(var(--border)); border-radius: 0; padding: .45rem .7rem; font-size: .78rem; font-weight: 700; transition: border-color .18s ease, background-color .18s ease, color .18s ease; }
+  .download-panel__meta { display: flex; flex-wrap: wrap; gap: .45rem; }
+  .download-panel__metric { display: inline-flex; min-height: 2.35rem; align-items: center; gap: .55rem; border: 1px solid rgb(var(--border) / .78); background: rgb(var(--surface-raised) / .44); padding: .4rem .6rem; }
+  .download-panel__metric--wide { flex: 1 1 15rem; }
+  .download-panel__metric span { color: rgb(var(--text-faint)); font-size: .58rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+  .download-panel__metric strong { min-width: 0; color: rgb(var(--text-strong)); font-size: .78rem; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
   .source-register { border-top: 1px solid rgb(var(--border)); }
-  .source-register > summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 0; color: rgb(var(--text-strong)); cursor: pointer; list-style: none; }
+  .source-register > summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .6rem 0 0; color: rgb(var(--text-strong)); cursor: pointer; list-style: none; }
   .source-register > summary::-webkit-details-marker { display: none; }
   .source-register > summary > span { display: grid; gap: .12rem; }
   .source-register > summary strong { font-size: .8rem; }
@@ -479,6 +486,15 @@ const formatCards = [
     .download-dialog__filters { grid-template-columns: 1fr 1fr; }
   }
   @media (max-width: 640px) {
+    .download-panel { padding-block: .9rem; }
+    .download-panel__header { align-items: center; gap: .7rem; }
+    .download-panel__summary { display: none; }
+    .download-panel__action { justify-content: center; padding-inline: .6rem; }
+    .download-panel__meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .download-panel__metric { min-height: 2.05rem; justify-content: space-between; padding: .32rem .45rem; }
+    .download-panel__metric--wide { grid-column: 1 / -1; }
+    .source-register > summary { padding-top: .45rem; }
+    .source-register > summary small { display: none; }
     .download-dialog { width: calc(100vw - 1rem); max-height: 92vh; }
     .download-dialog__toolbar { padding: .8rem; }
     .download-dialog__filters { grid-template-columns: 1fr 1fr; gap: .45rem; }

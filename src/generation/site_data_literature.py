@@ -32,6 +32,7 @@ from src.generation.site_data_writer import remove_stale_json_files, write_compa
 from src.literature.knowledge_graph import build_knowledge_graph
 from src.literature.recommendations import attach_related_research
 from src.literature.weekly_briefs import enrich_weekly_briefs, load_weekly_review_registry
+from src.literature.weekly_ai_review import load_weekly_ai_review_registry
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -1938,6 +1939,7 @@ async def collect_literature_export(
     ]
     weekly_briefs = []
     weekly_reviews = load_weekly_review_registry()
+    weekly_ai_reviews = load_weekly_ai_review_registry()
     for week, items in sorted(weekly_articles.items(), reverse=True):
         published_dates = sorted(_parse_public_datetime(item["published_at"]) for item in items)
         weekly_briefs.append({
@@ -1953,6 +1955,9 @@ async def collect_literature_export(
             # Registry records remain private generation metadata until the
             # final weekly-brief projector validates and allowlists them.
             "_editorial_review": weekly_reviews.get(week),
+            # AI review is a separate content-bound quality-control signal. A
+            # valid human editorial review still takes precedence downstream.
+            "_ai_review": weekly_ai_reviews.get(week),
         })
     latest_updated_values = [
         article.updated_at

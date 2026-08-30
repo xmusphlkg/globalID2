@@ -147,8 +147,11 @@ def enrich_source_attribution(
 
 async def fetch_countries(session) -> list[dict]:
     rows = await session.execute(text("""
-            SELECT code, name, name_en, name_local, language, timezone
+            SELECT code, name, name_en, name_local, language, timezone,
+                   data_source_url, data_source_type, crawler_config,
+                   parser_config, metadata, notes
             FROM countries
+            WHERE is_active = true
             ORDER BY code
             """))
     countries = [dict(row._mapping) for row in rows]
@@ -198,8 +201,13 @@ async def fetch_disease_export_layers(
 ) -> tuple[list[dict], list[dict]]:
     """Return public projections and lossless source observations separately."""
 
-    legacy_records = await fetch_disease_records_direct(
-        session, country_code, use_population_table
+    public_config = get_country_bootstrap_config(country_code)
+    legacy_records = (
+        await fetch_disease_records_direct(
+            session, country_code, use_population_table
+        )
+        if public_config.get("public_legacy_enabled", True) is not False
+        else []
     )
     registry_tables_exist = await has_table(
         session, "disease_surveillance_series"
@@ -330,6 +338,10 @@ async def fetch_disease_series_records(
     use_population_table: bool,
 ) -> list[dict]:
     """Read national, unstratified registry facts suitable for site export."""
+    # Province pages are independent public jurisdictions, but the two source
+    # registries are owned by CN. Their geography keys keep province facts
+    # isolated from the national China series.
+    series_country_code = "CN" if country_code.startswith("CN-") else country_code
     incidence_expr = "NULL::double precision"
     incidence_source_expr = "'missing_population'"
     population_join = ""
@@ -345,11 +357,18 @@ async def fetch_disease_series_records(
         )
         population_join = (
             "LEFT JOIN countries registry_country "
-            "ON registry_country.code = dss.country_code "
+            "ON registry_country.code = :population_code "
             "LEFT JOIN population_records pr "
             "ON pr.country_id = registry_country.id "
             "AND pr.year = EXTRACT(YEAR FROM dso.time)::int"
         )
+
+    query_params = {
+        "code": series_country_code,
+        "geography_key": f"country:{country_code}:national",
+    }
+    if use_population_table:
+        query_params["population_code"] = country_code
 
     rows = await session.execute(
         text(f"""
@@ -391,6 +410,12 @@ async def fetch_disease_series_records(
                     dss.metadata::jsonb ->> 'definition_effective_to', ''
                 ) AS definition_effective_to,
                 dss.metadata::jsonb -> 'comparability_break' AS comparability_break,
+                NULLIF(dss.metadata::jsonb ->> 'comparability_set', '')
+                    AS comparability_set,
+                NULLIF(dss.metadata::jsonb ->> 'projection_policy', '')
+                    AS projection_policy,
+                NULLIF(dss.metadata::jsonb ->> 'projection_priority', '')::integer
+                    AS projection_priority,
                 dss.is_active AS series_is_active,
                 dso.quality_status,
                 dso.geography_key,
@@ -410,15 +435,27 @@ async def fetch_disease_series_records(
             ORDER BY dss.disease_id, dso.series_code,
                      timezone('UTC', dso.time)::date ASC
             """),
-        {
-            "code": country_code,
-            "geography_key": f"country:{country_code}:national",
-        },
+        query_params,
     )
 
+    public_source_systems = {
+        str(value).strip()
+        for value in (
+            get_country_bootstrap_config(country_code).get(
+                "public_source_systems", []
+            )
+            or []
+        )
+        if str(value).strip()
+    }
     result: list[dict] = []
     for row in rows:
         record = dict(row._mapping)
+        if (
+            public_source_systems
+            and str(record.get("source_system") or "") not in public_source_systems
+        ):
+            continue
         record["date"] = record["date"].isoformat() if record.get("date") else None
         record["cases"] = _normalise_count(record.get("cases"))
         record["deaths"] = safe_int(record.get("deaths"))
@@ -437,6 +474,7 @@ async def fetch_disease_series_records(
 
 async def fetch_country_frequency_meta(session, country_code: str) -> dict:
     """Describe source periods without converting period totals into weekly rates."""
+    series_country_code = "CN" if country_code.startswith("CN-") else country_code
     source_frequencies: list[str] = []
     registry_tables_exist = await has_table(
         session, "disease_surveillance_series"
@@ -445,23 +483,43 @@ async def fetch_country_frequency_meta(session, country_code: str) -> dict:
         series_rows = await session.execute(
             text("""
                 SELECT DISTINCT lower(dss.temporal_granularity)
-                    AS temporal_granularity
+                    AS temporal_granularity,
+                    dss.source_system
                 FROM disease_surveillance_series dss
                 JOIN disease_series_observations dso
                   ON dso.series_code = dss.series_code
                 WHERE dss.country_code = :code
+                  AND dso.geography_key = :geography_key
                   AND dso.suppressed IS FALSE
                   AND dso.value IS NOT NULL
                   AND dso.quality_status <> 'rejected'
                 ORDER BY temporal_granularity ASC
                 """),
-            {"code": country_code},
+            {
+                "code": series_country_code,
+                "geography_key": f"country:{country_code}:national",
+            },
         )
+        public_source_systems = {
+            str(value).strip()
+            for value in (
+                get_country_bootstrap_config(country_code).get(
+                    "public_source_systems", []
+                )
+                or []
+            )
+            if str(value).strip()
+        }
         normalized: set[str] = set()
         for row in series_rows:
-            value = str(
-                dict(row._mapping).get("temporal_granularity") or ""
-            ).upper()
+            mapped = dict(row._mapping)
+            if (
+                public_source_systems
+                and str(mapped.get("source_system") or "")
+                not in public_source_systems
+            ):
+                continue
+            value = str(mapped.get("temporal_granularity") or "").upper()
             normalized.add("ANNUAL" if value == "YEARLY" else value)
         normalized.discard("")
         frequency_order = {
@@ -759,8 +817,8 @@ __all__ = [
     "fetch_countries",
     "fetch_country_briefs",
     "fetch_country_frequency_meta",
-    "fetch_disease_knowledge_briefs",
     "fetch_disease_export_layers",
+    "fetch_disease_knowledge_briefs",
     "fetch_disease_records",
     "fetch_disease_records_direct",
     "fetch_disease_series_records",

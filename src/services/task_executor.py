@@ -18,6 +18,7 @@ from src.core.task_manager import task_manager
 from src.domain import (
     AgentWorkflowRun,
     AgentWorkflowStep,
+    LiteratureIngestRun,
     Report,
     ReportSectionRun,
     ReportSectionRunStatus,
@@ -33,23 +34,166 @@ logger = get_logger(__name__)
 # Global set of currently-running task UUIDs (prevents double-execution)
 _running: set[str] = set()
 
+RECOVERABLE_IDEMPOTENT_TASK_TYPES = frozenset(
+    {
+        TaskType.SYNC_LITERATURE,
+        TaskType.ENRICH_LITERATURE,
+        TaskType.DISCOVER_LITERATURE_GAPS,
+    }
+)
 
-async def recover_interrupted_tasks_on_startup() -> int:
-    """Mark orphaned RUNNING tasks as cancelled after a task worker restart."""
-    message = (
-        "Task worker restarted while this task was running. "
-        "Resume the task to continue from the last checkpoint."
+
+def _as_aware_utc(value: Any) -> datetime | None:
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _task_heartbeat_at(task: Task) -> datetime | None:
+    metadata = task.metadata_ if isinstance(getattr(task, "metadata_", None), dict) else {}
+    lease = metadata.get("task_lease") if isinstance(metadata.get("task_lease"), dict) else {}
+    return (
+        _as_aware_utc(lease.get("heartbeat_at"))
+        or _as_aware_utc(lease.get("claimed_at"))
+        or _as_aware_utc(getattr(task, "updated_at", None))
+        or _as_aware_utc(getattr(task, "started_at", None))
+        or _as_aware_utc(getattr(task, "created_at", None))
     )
-    now = datetime.now(timezone.utc)
-    recovered: list[tuple[str, int]] = []
+
+
+async def _fail_interrupted_literature_ingest_runs(
+    db: Any,
+    *,
+    task_uuid: str,
+    now: datetime,
+) -> int:
+    """Terminalize only running ingest attempts bound to one recovered task.
+
+    The exact task UUID is the ownership boundary.  A replacement attempt has
+    a different task UUID (or creates its own run after this transaction), so
+    time proximity and worker identity are deliberately not used here.
+    """
+    runs = (
+        await db.execute(
+            select(LiteratureIngestRun)
+            .where(
+                LiteratureIngestRun.task_uuid == task_uuid,
+                LiteratureIngestRun.status == "running",
+            )
+            .with_for_update()
+        )
+    ).scalars().all()
+    for run in runs:
+        checkpoint = dict(run.checkpoint or {})
+        checkpoint["task_uuid"] = task_uuid
+        checkpoint["recovery"] = {
+            "reason_code": "task_worker_lease_expired",
+            "reconciled_at": now.isoformat(),
+        }
+        run.checkpoint = checkpoint
+        run.status = "failed"
+        run.completed_at = now
+        run.error = "task_worker_lease_expired"
+    return len(runs)
+
+
+async def recover_interrupted_tasks_on_startup(
+    *,
+    stale_after_seconds: int = 180,
+    now: datetime | None = None,
+    exclude_owner: str | None = None,
+    only_owner: str | None = None,
+) -> int:
+    """Recover only expired RUNNING tasks.
+
+    Idempotent Research Radar tasks are requeued up to their persisted retry
+    limit. Other task types retain the conservative cancellation semantics
+    because automatically replaying them may duplicate external side effects.
+    """
+    message = (
+        "Task worker lease expired while this task was running. "
+        "The previous worker is no longer reporting heartbeats."
+    )
+    now = now or datetime.now(timezone.utc)
+    stale_cutoff = now - timedelta(seconds=stale_after_seconds)
+    recovered: list[tuple[str, int, TaskStatus, str]] = []
     recovered_crawls: list[tuple[str, str, datetime]] = []
 
     async with get_database() as db:
         tasks = (
-            await db.execute(select(Task).where(Task.status == TaskStatus.RUNNING))
+            await db.execute(
+                select(Task)
+                .where(Task.status == TaskStatus.RUNNING)
+                .with_for_update(skip_locked=True)
+            )
         ).scalars().all()
 
         for task in tasks:
+            current_metadata = (
+                task.metadata_
+                if isinstance(getattr(task, "metadata_", None), dict)
+                else {}
+            )
+            current_lease = (
+                current_metadata.get("task_lease")
+                if isinstance(current_metadata.get("task_lease"), dict)
+                else {}
+            )
+            if exclude_owner and current_lease.get("owner") == exclude_owner:
+                continue
+            if only_owner and current_lease.get("owner") != only_owner:
+                continue
+            heartbeat_at = _task_heartbeat_at(task)
+            if heartbeat_at is None or heartbeat_at > stale_cutoff:
+                continue
+
+            metadata = dict(current_metadata)
+            lease = dict(metadata.get("task_lease") or {})
+            lease["expired_at"] = now.isoformat()
+            lease["released_at"] = now.isoformat()
+            metadata["task_lease"] = lease
+            history = list(metadata.get("task_recovery_history") or [])
+            history.append(
+                {
+                    "at": now.isoformat(),
+                    "previous_owner": lease.get("owner"),
+                    "last_heartbeat_at": heartbeat_at.isoformat(),
+                }
+            )
+            metadata["task_recovery_history"] = history[-10:]
+            task.metadata_ = metadata
+
+            if task.task_type == TaskType.SYNC_LITERATURE:
+                await _fail_interrupted_literature_ingest_runs(
+                    db,
+                    task_uuid=task.task_uuid,
+                    now=now,
+                )
+
+            retry_count = int(getattr(task, "retry_count", 0) or 0)
+            max_retries = int(getattr(task, "max_retries", 3) or 0)
+            if task.task_type in RECOVERABLE_IDEMPOTENT_TASK_TYPES and retry_count < max_retries:
+                task.status = TaskStatus.QUEUED
+                task.retry_count = retry_count + 1
+                task.started_at = None
+                task.completed_at = None
+                task.actual_duration = None
+                task.last_error = (
+                    f"{message} Automatically requeued idempotent task "
+                    f"(recovery {task.retry_count}/{max_retries})."
+                )
+                recovered.append(
+                    (task.task_uuid, task.progress or 0, TaskStatus.QUEUED, task.last_error)
+                )
+                continue
+
             if task.task_type == TaskType.CRAWL_DATA:
                 crawl_input = dict(task.input_data or {})
                 crawl_country = str(
@@ -131,7 +275,20 @@ async def recover_interrupted_tasks_on_startup() -> int:
                         step.error_message = message
                         step.ended_at = now
 
-            recovered.append((task.task_uuid, task.progress or 0))
+            terminal_status = (
+                TaskStatus.FAILED
+                if task.task_type in RECOVERABLE_IDEMPOTENT_TASK_TYPES
+                else TaskStatus.CANCELLED
+            )
+            task.status = terminal_status
+            if terminal_status == TaskStatus.FAILED:
+                task.last_error = (
+                    f"{message} Automatic recovery limit exhausted "
+                    f"({retry_count}/{max_retries})."
+                )
+            recovered.append(
+                (task.task_uuid, task.progress or 0, terminal_status, task.last_error)
+            )
 
         await db.commit()
 
@@ -156,25 +313,29 @@ async def recover_interrupted_tasks_on_startup() -> int:
                     exc,
                 )
 
-    for task_uuid, progress in recovered:
+    for task_uuid, progress, status, recovery_message in recovered:
         await task_manager.add_workbook_entry(
             task_uuid,
             entry_type="warning",
-            title="Task Recovered After Restart",
-            content=message,
+            title=(
+                "Stale Task Automatically Requeued"
+                if status == TaskStatus.QUEUED
+                else "Stale Task Recovered"
+            ),
+            content=recovery_message,
             content_type="text",
         )
         await task_manager._broadcast(
             {
                 "event": "task_status",
                 "task_uuid": task_uuid,
-                "status": TaskStatus.CANCELLED.value,
+                "status": status.value,
                 "progress": progress,
             }
         )
 
     if recovered:
-        logger.warning(f"Recovered {len(recovered)} interrupted running task(s) after startup")
+        logger.warning(f"Recovered {len(recovered)} stale running task(s)")
 
     return len(recovered)
 

@@ -128,6 +128,8 @@ test("calculates progress and campaign status for every terminal branch", () => 
     total: 8,
     queued: 3,
     sent: 2,
+    delivered: 0,
+    deferred: 0,
     failed: 1,
     skipped: 1,
     completed: 4,
@@ -135,6 +137,7 @@ test("calculates progress and campaign status for every terminal branch", () => 
   });
   assert.equal(campaignStatusFromProgress(queued), "sending");
   assert.equal(campaignStatusFromProgress(campaignProgressFromRows([{ status: "queued", count: 2 }])), "queued");
+  assert.equal(campaignStatusFromProgress(campaignProgressFromRows([{ status: "deferred", count: 2 }])), "sending");
   assert.equal(campaignStatusFromProgress(campaignProgressFromRows([{ status: "sent", count: 2 }, { status: "failed", count: 1 }])), "partial_failed");
   assert.equal(campaignStatusFromProgress(campaignProgressFromRows([{ status: "failed", count: 1 }])), "failed");
   assert.equal(campaignStatusFromProgress(campaignProgressFromRows([{ status: "sent", count: 2 }])), "sent");

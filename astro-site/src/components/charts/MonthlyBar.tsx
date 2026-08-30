@@ -142,8 +142,8 @@ export default function MonthlyBar({
     <>
       <div className="data-preview-meta">
         {lang === 'zh'
-          ? `月度数据预览。行表示月份，列表示已选年份，单元格显示${metricLabel}。`
-          : `Monthly data preview. Rows show months, columns show selected years, and cells report ${metricLabel}.`}
+          ? `${metricLabel} · ${state.activeYearSummaries.length} 个年份`
+          : `${metricLabel} · ${state.activeYearSummaries.length} years`}
       </div>
       <table className="data-preview-table">
         <thead>

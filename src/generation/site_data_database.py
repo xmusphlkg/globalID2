@@ -80,8 +80,16 @@ async def ensure_standard_country_rows(
                     name = EXCLUDED.name,
                     name_en = EXCLUDED.name_en,
                     name_local = EXCLUDED.name_local,
-                    language = COALESCE(NULLIF(countries.language, ''), EXCLUDED.language),
-                    timezone = COALESCE(NULLIF(countries.timezone, ''), EXCLUDED.timezone),
+                    language = CASE
+                        WHEN countries.name = countries.code AND countries.name_en = countries.code
+                            THEN EXCLUDED.language
+                        ELSE COALESCE(NULLIF(countries.language, ''), EXCLUDED.language)
+                    END,
+                    timezone = CASE
+                        WHEN countries.name = countries.code AND countries.name_en = countries.code
+                            THEN EXCLUDED.timezone
+                        ELSE COALESCE(NULLIF(countries.timezone, ''), EXCLUDED.timezone)
+                    END,
                     data_source_url = COALESCE(NULLIF(countries.data_source_url, ''), EXCLUDED.data_source_url),
                     data_source_type = COALESCE(NULLIF(countries.data_source_type, ''), EXCLUDED.data_source_type),
                     crawler_config = CASE

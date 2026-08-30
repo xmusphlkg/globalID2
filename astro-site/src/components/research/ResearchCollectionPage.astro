@@ -1,7 +1,7 @@
 ---
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import ResearchArticleCard from './ResearchArticleCard.astro';
-import { buildAlternatePaths } from '../../lib/seo';
+import { buildAlternatePaths, isIndexableResearchCollection } from '../../lib/seo';
 
 interface Props {
   eyebrow: string;
@@ -40,6 +40,7 @@ const zh = locale === 'zh';
 const prefix = zh ? '/zh' : '';
 const localeHref = (href: string) => `${prefix}${href}`;
 const localizedCanonicalPath = localeHref(canonicalPath);
+const collectionIndexable = isIndexableResearchCollection(articles.length);
 const initialVisibleArticles = 30;
 const initialResultCount = articles.length > initialVisibleArticles
   ? (zh ? `显示 ${articles.length} 篇文献中的 ${initialVisibleArticles} 篇` : `${initialVisibleArticles} of ${articles.length} publications shown`)
@@ -75,6 +76,7 @@ const structuredData = {
     canonicalPath: localizedCanonicalPath,
     alternatePaths: buildAlternatePaths(localizedCanonicalPath, locale),
     pageType: 'CollectionPage',
+    noindex: !collectionIndexable,
   }}
   structuredData={structuredData}
   breadcrumbs={[
@@ -82,7 +84,7 @@ const structuredData = {
     { label: title, labelZh: titleZh },
   ]}
 >
-  <main class="research-collection">
+  <div class="research-collection">
     <header class="academic-hero collection-hero">
       <div class="collection-topline">
         <p class="academic-kicker">{zh ? eyebrowZh : eyebrow}</p>
@@ -132,7 +134,7 @@ const structuredData = {
         )
         : <div class="collection-empty"><h3>{zh ? '暂无已发布记录' : 'No published records'}</h3><p>{zh ? '该集合已就绪，将通过自动质量门控发布流程填充。' : 'This collection is ready and will populate through the automatic quality-gated release workflow.'}</p></div>}
     </section>
-  </main>
+  </div>
 </ReportLayout>
 
 <script>

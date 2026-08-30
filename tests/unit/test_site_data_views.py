@@ -65,6 +65,16 @@ def test_generate_script_reexports_site_view_builders() -> None:
         assert getattr(legacy_api, name) is getattr(views, name)
 
 
+def test_subdivision_display_name_prefers_chinese_database_name_over_code_fallback() -> None:
+    assert views.resolve_country_display_names(
+        "CN-SH",
+        {
+            "name_en": "Shanghai, China",
+            "name_local": "上海市",
+        },
+    ) == ("Shanghai, China", "上海市")
+
+
 def test_country_builders_preserve_schema_sorting_and_compaction() -> None:
     records = [
         _record("2024-02-01", 20, 2),
@@ -242,3 +252,31 @@ def test_disease_builders_preserve_country_order_and_sorted_summary_codes() -> N
     assert [entry["cc"] for entry in compact["series"]] == ["ZZ", "AA"]
     assert compact["dates"] == ["2024-01-01", "2024-02-01"]
     assert compact["monthly"] == disease["global_monthly"]
+
+
+def test_disease_global_summary_excludes_subdivision_double_counting() -> None:
+    disease = views.build_disease_data(
+        "D_TEST",
+        {
+            "disease_id": "D_TEST",
+            "name_en": "Test disease",
+            "name_zh": "测试疾病",
+            "category": "Test",
+        },
+        {
+            "CN": [_record("2024-01-01", 100, 10)],
+            "CN-SH": [_record("2024-01-01", 40, 4)],
+            "AA": [_record("2024-01-01", 5, 1)],
+        },
+    )
+
+    assert list(disease["country_series"]) == ["CN", "CN-SH", "AA"]
+    assert disease["total_cases"] == 105
+    assert disease["total_deaths"] == 11
+    assert disease["global_monthly"] == {
+        "months": ["2024-01"],
+        "cases": [105],
+        "deaths": [11],
+    }
+    assert disease["aggregation_scope"] == "national_jurisdictions_only"
+    assert disease["subdivision_country_codes"] == ["CN-SH"]

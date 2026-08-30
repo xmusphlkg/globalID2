@@ -8,6 +8,11 @@ BR:
     death_counts: not_reported
     case_scope: national
     rate_basis: unavailable
+CA:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
 CA-ON:
   default:
     death_counts: not_reported

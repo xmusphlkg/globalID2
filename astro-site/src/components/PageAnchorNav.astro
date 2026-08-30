@@ -8,32 +8,143 @@ interface AnchorItem {
 interface Props {
   items: AnchorItem[];
   locale?: 'en' | 'zh';
+  variant?: 'bar' | 'list';
+  numbered?: boolean;
+  sticky?: boolean;
+  showTitle?: boolean;
+  label?: string;
+  labelZh?: string;
 }
 
-const { items, locale = 'en' } = Astro.props;
+const {
+  items,
+  locale = 'en',
+  variant = 'bar',
+  numbered = false,
+  sticky = true,
+  label = 'On this page',
+  labelZh = '本页导航',
+} = Astro.props;
 const zh = locale === 'zh';
+const showTitle = Astro.props.showTitle ?? variant === 'list';
 ---
 
-<nav class="page-anchor-nav" aria-label={zh ? '本页导航' : 'On this page'}>
-  <span>{zh ? '本页导航' : 'On this page'}</span>
-  {items.map(item => <a href={item.href}>{zh ? item.labelZh : item.label}</a>)}
+<nav
+  class:list={['page-anchor-nav', `page-anchor-nav-${variant}`, sticky && 'page-anchor-nav-sticky']}
+  aria-label={zh ? labelZh : label}
+  data-page-anchor-nav
+  style={`--anchor-count: ${items.length}`}
+>
+  {showTitle && <p class="page-anchor-title">
+    <span aria-hidden="true"></span>
+    {zh ? labelZh : label}
+  </p>}
+  <div class="page-anchor-links">
+    {items.map((item, index) => (
+      <a href={item.href} data-page-anchor-link>
+        {numbered && <small>{String(index + 1).padStart(2, '0')}</small>}
+        <span>{zh ? item.labelZh : item.label}</span>
+      </a>
+    ))}
+  </div>
 </nav>
 
+<script>
+  const initializePageAnchorNav = () => {
+    document.querySelectorAll<HTMLElement>('[data-page-anchor-nav]:not([data-ready])').forEach((nav) => {
+      nav.dataset.ready = 'true';
+      const links = Array.from(nav.querySelectorAll<HTMLAnchorElement>('[data-page-anchor-link]'));
+      const sections = links
+        .map((link) => document.getElementById(decodeURIComponent(link.hash.slice(1))))
+        .filter((section): section is HTMLElement => section instanceof HTMLElement);
+      if (!sections.length) return;
+
+      const selectSection = (id: string) => {
+        links.forEach((link) => {
+          const active = decodeURIComponent(link.hash.slice(1)) === id;
+          link.classList.toggle('is-active', active);
+          if (active) link.setAttribute('aria-current', 'location');
+          else link.removeAttribute('aria-current');
+        });
+      };
+
+      const scrollToSection = (id: string, behavior: ScrollBehavior = 'auto') => {
+        const section = document.getElementById(id);
+        if (!section) return;
+        const header = document.querySelector<HTMLElement>('.site-header');
+        const headerHeight = header?.getBoundingClientRect().height ?? 72;
+        const navHeight = nav.classList.contains('page-anchor-nav-sticky') ? nav.getBoundingClientRect().height : 0;
+        const offset = headerHeight + navHeight + 16;
+        window.scrollTo({
+          top: Math.max(0, window.scrollY + section.getBoundingClientRect().top - offset),
+          behavior,
+        });
+      };
+
+      const update = () => {
+        const offset = nav.classList.contains('page-anchor-nav-sticky')
+          ? nav.getBoundingClientRect().bottom + 24
+          : 112;
+        let active = sections[0].id;
+        for (const section of sections) {
+          if (section.getBoundingClientRect().top <= offset) active = section.id;
+        }
+        selectSection(active);
+      };
+
+      links.forEach((link) => link.addEventListener('click', (event) => {
+        const id = decodeURIComponent(link.hash.slice(1));
+        if (!document.getElementById(id)) return;
+        event.preventDefault();
+        window.history.pushState(null, '', link.hash);
+        selectSection(id);
+        scrollToSection(id, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+      }));
+      if (window.location.hash) {
+        const id = decodeURIComponent(window.location.hash.slice(1));
+        requestAnimationFrame(() => scrollToSection(id));
+      } else update();
+      window.addEventListener('scroll', update, { passive: true });
+      window.addEventListener('hashchange', () => {
+        const id = decodeURIComponent(window.location.hash.slice(1));
+        scrollToSection(id);
+        update();
+      });
+    });
+  };
+
+  initializePageAnchorNav();
+  document.addEventListener('astro:page-load', initializePageAnchorNav);
+</script>
+
 <style>
-  .page-anchor-nav {
-    position: sticky;
-    top: 68px;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    gap: .25rem;
-    overflow-x: auto;
-    padding: .55rem;
-    background: rgb(var(--bg) / .96);
-    border-block: 1px solid rgb(var(--border));
-    backdrop-filter: blur(12px);
+  .page-anchor-nav { --anchor-accent: var(--color-teal); }
+  .page-anchor-nav-sticky { position: sticky; top: calc(4.5rem + 1px); z-index: 20; }
+  .page-anchor-nav-bar { border-block: 1px solid rgb(var(--border)); background: rgb(var(--bg) / .96); backdrop-filter: blur(12px); }
+  .page-anchor-title { display: flex; align-items: center; gap: .6rem; margin: 0; padding: .72rem 1rem; color: rgb(var(--text-faint)); font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
+  .page-anchor-title > span { width: .48rem; height: .48rem; flex: 0 0 auto; background: rgb(var(--anchor-accent)); box-shadow: 0 0 0 .28rem rgb(var(--anchor-accent) / .12); }
+  .page-anchor-links { min-width: 0; }
+  .page-anchor-nav-bar .page-anchor-links { display: grid; grid-template-columns: repeat(var(--anchor-count), minmax(0, 1fr)); overflow: hidden; }
+  .page-anchor-nav-bar a { position: relative; display: flex; min-width: 0; align-items: center; justify-content: center; gap: .55rem; padding: .78rem .75rem; border-right: 1px solid rgb(var(--border) / .72); color: rgb(var(--text-muted)); font-size: .76rem; font-weight: 650; text-align: center; text-decoration: none; white-space: nowrap; transition: color 150ms ease, background 150ms ease; }
+  .page-anchor-nav-bar a::after { position: absolute; right: 0; bottom: -1px; left: 0; height: 2px; background: rgb(var(--anchor-accent)); content: ''; transform: scaleX(0); transform-origin: left; transition: transform 180ms ease; }
+  .page-anchor-nav-bar a:hover, .page-anchor-nav-bar a:focus-visible, .page-anchor-nav-bar a.is-active { color: rgb(var(--text-strong)); background: rgb(var(--surface-raised) / .55); }
+  .page-anchor-nav-bar a.is-active::after { transform: scaleX(1); }
+  a small { flex: 0 0 auto; color: rgb(var(--anchor-accent)); font-family: ui-monospace, monospace; font-size: .65rem; font-weight: 650; }
+
+  .page-anchor-nav-list .page-anchor-title { padding: 0 .2rem .6rem; }
+  .page-anchor-nav-list .page-anchor-links { display: grid; max-height: 16rem; overflow-y: auto; border-block: 1px solid rgb(var(--border) / .7); scrollbar-width: thin; }
+  .page-anchor-nav-list a { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .6rem .2rem; border-bottom: 1px solid rgb(var(--border) / .45); color: rgb(var(--text-muted)); font-family: ui-monospace, monospace; font-size: .78rem; text-decoration: none; transition: color 150ms ease, padding 150ms ease; }
+  .page-anchor-nav-list a:last-child { border-bottom: 0; }
+  .page-anchor-nav-list a:hover, .page-anchor-nav-list a:focus-visible, .page-anchor-nav-list a.is-active { padding-left: .45rem; color: rgb(var(--text-strong)); }
+  .page-anchor-nav-list a.is-active { box-shadow: inset 2px 0 0 rgb(var(--anchor-accent)); }
+
+  @media (max-width: 720px) {
+    .page-anchor-nav-bar .page-anchor-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .page-anchor-nav-bar a { min-height: 2.6rem; padding: .48rem .55rem; font-size: .68rem; line-height: 1.2; white-space: normal; }
+    .page-anchor-nav-bar a:nth-child(2n) { border-right: 0; }
+    .page-anchor-nav-bar a:nth-child(n + 3) { border-top: 1px solid rgb(var(--border) / .72); }
   }
-  span { padding: .45rem .6rem; color: rgb(var(--text-muted)); font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
-  a { padding: .45rem .65rem; color: rgb(var(--text-strong)); border-left: 1px solid rgb(var(--border)); font-size: .8rem; font-weight: 650; text-decoration: none; white-space: nowrap; }
-  a:hover { color: rgb(var(--color-teal)); text-decoration: underline; text-underline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) {
+    .page-anchor-nav a, .page-anchor-nav a::after { transition: none; }
+  }
 </style>

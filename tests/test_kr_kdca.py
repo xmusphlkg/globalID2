@@ -135,6 +135,8 @@ def test_kr_monthly_updater_loads_crawler_csv_shape(tmp_path):
             "SourceURL": "https://example.test",
             "DatasetStatus": "provisional",
             "IsProvisional": "true",
+            "RevisionSemantics": "authoritative_revision",
+            "AuthoritativeRevision": "true",
         }
     ]
 

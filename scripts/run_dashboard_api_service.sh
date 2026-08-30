@@ -10,6 +10,8 @@ PYTHON_BIN="$(resolve_python)"
 API_HOST="${GLOBALID_API_HOST:-0.0.0.0}"
 API_PORT="${GLOBALID_API_PORT:-8000}"
 
+require_port_available "$API_PORT" "GlobalID dashboard API"
+
 cd "$ROOT_DIR"
 export PYTHONUNBUFFERED=1
 

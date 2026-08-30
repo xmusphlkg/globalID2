@@ -73,7 +73,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
         "countries": [
             {
                 "code": "US",
-                "slug": "united-states",
+                "slug": "us",
                 "name_en": "United States",
                 "name_zh": "美国",
             }
@@ -230,11 +230,11 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
             "countries": [
                 {
                     "code": "US",
-                    "slug": "united-states",
+                    "slug": "us",
                     "name_en": "United States",
                     "name_zh": "美国",
                     "count": 1,
-                    "url": "/research/countries/united-states/",
+                    "url": "/research/countries/us/",
                 }
             ],
             "topics": [
@@ -306,7 +306,19 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
             "zh": "研究关注度不代表疾病风险或发病率。",
         },
     }
-    return {
+    fixture_diseases = [
+        ("D001", "influenza", "Influenza"),
+        ("CI002", "example-disease", "Example disease"),
+        ("CI003", "erythema-infectiosum-fifth-disease", "Erythema infectiosum (fifth disease)"),
+        ("CI004", "respiratory-syncytial-virus-infection-rsv", "Respiratory syncytial virus infection (RSV)"),
+        ("CI005", "roseola-exanthem-subitum", "Roseola (exanthem subitum)"),
+        ("CI006", "flavivirus-infection-unspecified", "Flavivirus infection (unspecified)"),
+        ("CI007", "haemolytic-uraemic-syndrome-hus", "Haemolytic uraemic syndrome (HUS)"),
+        ("CI008", "meningitis-all-reported-etiologies", "Meningitis (all reported etiologies)"),
+        ("CI009", "methicillin-resistant-staphylococcus-aureus-mrsa-surveillance", "MRSA surveillance"),
+        ("CI010", "escherichia-coli-enteritis-all-reported-pathotypes", "Escherichia coli enteritis"),
+    ]
+    payloads = {
         "src/data/meta.json": {
             "generated_at": "2000-01-01T00:00:00Z",
             "total_countries": 0,
@@ -316,7 +328,17 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
             "knowledge_quality": {},
             "disease_ontology": {},
         },
-        "src/data/diseases/index.json": [],
+        "src/data/diseases/index.json": [
+            {
+                "disease_id": disease_id,
+                "slug": slug,
+                "name_en": name,
+                "name_zh": name,
+                "category": "Other",
+                "country_count": 0,
+            }
+            for disease_id, slug, name in fixture_diseases
+        ],
         "src/data/reports/index.json": [],
         "src/data/about.json": {
             "generated_at": "2000-01-01T00:00:00Z",
@@ -342,6 +364,24 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
         "public/site-data/situation/v3/latest.json": dict(situation),
         "public/site-data/situation/latest.json": dict(situation),
     }
+    for disease_id, slug, name in fixture_diseases:
+        payloads[f"src/data/diseases/{disease_id.lower()}.json"] = {
+            "disease_id": disease_id,
+            "slug": slug,
+            "name_en": name,
+            "name_zh": name,
+            "category": "Other",
+            "total_cases": 0,
+            "total_deaths": 0,
+            "country_count": 0,
+            "country_series": {},
+            "date_range": {"start": None, "end": None},
+            "knowledge_status": "published",
+            "knowledge_sources": [
+                {"title": "CI fixture source", "url": "https://example.org/ci-fixture"}
+            ],
+        }
+    return payloads
 
 
 def prepare_fixture(

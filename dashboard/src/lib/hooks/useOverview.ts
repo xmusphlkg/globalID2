@@ -14,13 +14,13 @@ export interface TopDiseaseItem {
   name: string;
   name_en: string | null;
   total_cases: number;
-  total_deaths: number;
+  total_deaths: number | null;
 }
 
 export interface TrendPoint {
   time_period: string;
   cases: number;
-  deaths: number;
+  deaths: number | null;
   incidence_rate: number | null;
   mortality_rate: number | null;
 }
@@ -29,7 +29,7 @@ export interface MonthlyComparisonPoint {
   year: number;
   month: number;
   cases: number;
-  deaths: number;
+  deaths: number | null;
   incidence_rate: number | null;
   mortality_rate: number | null;
 }

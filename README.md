@@ -138,6 +138,10 @@ The shipped example includes these categories:
 For dashboard background tasks, `TASK_WORKER_CONCURRENCY` controls how many queued jobs
 the standalone worker consumes in parallel. Increase it carefully because higher values
 also increase model/API pressure and email/report throughput.
+`TASK_WORKER_TASK_HEARTBEAT_SECONDS`, `TASK_WORKER_STALE_TASK_SECONDS`, and
+`TASK_WORKER_RECOVERY_SCAN_SECONDS` control task-lease recovery; keep the stale threshold
+comfortably above the heartbeat interval. `SCHEDULER_WORKER_GRACE_SECONDS` bounds how long
+the scheduler may remain active without a worker heartbeat.
 
 For disease knowledge building, `AI__KNOWLEDGE_MODEL_SHARDS_RAW` lets us distribute
 tasks across multiple preferred models. The worker deterministically rotates the preferred
@@ -418,6 +422,7 @@ Useful commands:
 ```bash
 systemctl status globalid-stack.target
 journalctl -u globalid-dashboard-api.service -f
+venv/bin/python scripts/check_task_runtime.py
 journalctl -u globalid-dashboard-web.service -f
 journalctl -u globalid-site.service -f
 sudo ./scripts/install_systemd_services.sh --uninstall

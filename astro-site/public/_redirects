@@ -12,6 +12,16 @@
 /diseases/methicillin-resistant-staphylococcus-aureus-(mrsa)-surveillance/  /diseases/methicillin-resistant-staphylococcus-aureus-mrsa-surveillance/  301
 /diseases/escherichia-coli-enteritis,-all-reported-pathotypes/  /diseases/escherichia-coli-enteritis-all-reported-pathotypes/  301
 
+# Chinese equivalents of legacy disease slugs.
+/zh/diseases/erythema-infectiosum-(fifth-disease)/  /zh/diseases/erythema-infectiosum-fifth-disease/  301
+/zh/diseases/respiratory-syncytial-virus-infection-(rsv)/  /zh/diseases/respiratory-syncytial-virus-infection-rsv/  301
+/zh/diseases/roseola-(exanthem-subitum)/  /zh/diseases/roseola-exanthem-subitum/  301
+/zh/diseases/flavivirus-infection-(unspecified)/  /zh/diseases/flavivirus-infection-unspecified/  301
+/zh/diseases/haemolytic-uraemic-syndrome-(hus)/  /zh/diseases/haemolytic-uraemic-syndrome-hus/  301
+/zh/diseases/meningitis-(all-reported-etiologies)/  /zh/diseases/meningitis-all-reported-etiologies/  301
+/zh/diseases/methicillin-resistant-staphylococcus-aureus-(mrsa)-surveillance/  /zh/diseases/methicillin-resistant-staphylococcus-aureus-mrsa-surveillance/  301
+/zh/diseases/escherichia-coli-enteritis,-all-reported-pathotypes/  /zh/diseases/escherichia-coli-enteritis-all-reported-pathotypes/  301
+
 # Trailing slash normalization (Astro handles this, but keep as safety net)
 /countries  /countries/  301
 /diseases   /diseases/   301

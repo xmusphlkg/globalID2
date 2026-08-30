@@ -85,11 +85,18 @@ Use long random values for `TOKEN_SIGNING_SECRET` and `ADMIN_API_TOKEN`.
 SUBSCRIPTIONS__TOKEN_SIGNING_SECRET=replace-with-a-long-random-value
 SUBSCRIPTIONS__ADMIN_API_TOKEN=replace-with-a-long-random-value
 SUBSCRIPTIONS__SITUATION_ALERT_INGEST_TOKEN=replace-with-a-separate-long-random-value
+SUBSCRIPTIONS__EMAIL_DELIVERY_INGEST_TOKEN=replace-with-another-long-random-value
 ```
 
 `SITUATION_ALERT_INGEST_TOKEN` is a dedicated machine-to-machine secret. Do not
 reuse the dashboard admin token, expose it to a browser, or include it in a
 Situation report.
+
+`EMAIL_DELIVERY_INGEST_TOKEN` independently authenticates delivery, bounce,
+defer, and complaint callbacks from the approved SMTP provider adapter. The
+callback stores only bounded event identifiers and aggregate state; it never
+stores a provider webhook payload. Hard bounces and complaints suppress the
+matched contact automatically.
 
 If Turnstile is enabled on the subscribe form:
 
@@ -118,8 +125,9 @@ SUBSCRIPTIONS__ALLOW_SECRET_SYNC=production \
   cloudflare/subscriptions/scripts/wrangler-env.sh sync-secrets production
 ```
 
-This uploads `TOKEN_SIGNING_SECRET`, `ADMIN_API_TOKEN`, optional Turnstile, and
-`SITUATION_ALERT_INGEST_TOKEN`, plus SMTP username/password as Worker secrets.
+This uploads `TOKEN_SIGNING_SECRET`, `ADMIN_API_TOKEN`, optional Turnstile,
+`SITUATION_ALERT_INGEST_TOKEN`, and `EMAIL_DELIVERY_INGEST_TOKEN`, plus SMTP
+username/password as Worker secrets.
 SMTP host, port, sender address, sender name, and TLS mode are written to the
 generated Wrangler config from `.env`.
 
@@ -129,6 +137,29 @@ to transactional mail and must not be substituted for the recurring Research
 Radar campaign path. A future native-binding adoption should be a separately
 reviewed change with a restricted sender allowlist; local `remote: true` email
 bindings are intentionally absent because they send real mail.
+
+The SMTP adapter adds a correlation `Message-ID` and stores the provider's
+accepted message identifier when available. Configure the provider's event
+adapter to POST this bounded contract to
+`/api/internal/email-delivery-events` with the dedicated bearer token:
+
+```json
+{
+  "provider": "approved-smtp-provider",
+  "event_id": "provider-event-unique-id",
+  "provider_message_id": "provider-message-id",
+  "correlation_id": "optional-gids-delivery-id",
+  "event_type": "delivered",
+  "occurred_at": "2026-08-27T10:00:00Z",
+  "error_code": ""
+}
+```
+
+Allowed event types are `delivered`, `deferred`, `bounced`, and `complained`.
+The provider adapter must map only terminal/hard bounces to `bounced`; temporary
+delivery failures map to `deferred`.
+Events are idempotent by `provider` + `event_id`. Delivery aggregates and acceptance rate
+are available from the protected `GET /api/admin/stats` endpoint.
 
 ### Optional Cloudflare Queue acceleration
 

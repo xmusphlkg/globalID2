@@ -156,7 +156,10 @@ async def test_frequency_metadata_keeps_weekly_classification_and_query_params()
     sql, params = session.calls[2]
     assert "disease_surveillance_series" in sql
     assert "disease_series_observations" in sql
-    assert params == {"code": "US"}
+    assert params == {
+        "code": "US",
+        "geography_key": "country:US:national",
+    }
 
 
 @pytest.mark.asyncio

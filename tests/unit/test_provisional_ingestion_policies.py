@@ -100,6 +100,10 @@ def test_source_wide_provisional_feeds_are_explicit(tmp_path) -> None:
     assert {jp["IsProvisional"], kr["IsProvisional"], nz["IsProvisional"]} == {
         "true"
     }
+    assert {kr["RevisionSemantics"], nz["RevisionSemantics"]} == {
+        "authoritative_revision"
+    }
+    assert {kr["AuthoritativeRevision"], nz["AuthoritativeRevision"]} == {"true"}
 
 
 def test_tw_marks_open_month_provisional_and_closed_months_revisable(tmp_path) -> None:

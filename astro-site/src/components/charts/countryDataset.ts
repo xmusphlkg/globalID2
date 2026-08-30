@@ -45,6 +45,9 @@ export interface CountryDatasetSeriesEntry {
   deaths: (number | null)[];
   incidence_rates: (number | null)[];
   incidence_sources?: (string | null)[];
+  point_granularities?: (string | null)[];
+  point_series_codes?: (string | null)[];
+  point_data_layers?: (string | null)[];
   total_cases: number;
   total_deaths?: number;
   latest_cases?: number | null;
@@ -110,6 +113,9 @@ interface CompactCountryDatasetSeriesEntry {
   ri?: number[];
   rv?: number[];
   rs?: Array<number | null>;
+  point_granularities?: (string | null)[];
+  point_series_codes?: (string | null)[];
+  point_data_layers?: (string | null)[];
   data_layer?: string;
   projection_policy?: string;
   loss_risk?: string | null;
@@ -176,6 +182,9 @@ function normalizeCountryDataset(raw: CountryDataset | CompactCountryDataset): C
           deaths: entry.d ?? [],
           incidence_rates: incidenceRates,
           incidence_sources: incidenceSources,
+          point_granularities: entry.point_granularities ?? [],
+          point_series_codes: entry.point_series_codes ?? [],
+          point_data_layers: entry.point_data_layers ?? [],
           total_cases: entry.tc ?? 0,
           total_deaths: entry.td ?? 0,
           latest_cases: entry.lc ?? 0,

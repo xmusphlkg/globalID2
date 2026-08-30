@@ -1023,6 +1023,10 @@ class DataReleaseService:
             blockers.append("Wrangler CLI is unavailable.")
         if job.include_cloudflare_deploy and not cloudflare["payload"].get("production_branch"):
             blockers.append("Cloudflare Pages project has no production branch configured.")
+        if job.require_clean_worktree and worktree:
+            blockers.append(
+                "Code repository worktree is not clean: " + ", ".join(worktree)
+            )
         if tracked_generated_paths:
             blockers.append(
                 "Generated data is still tracked by the code repository: "

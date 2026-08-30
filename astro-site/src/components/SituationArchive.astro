@@ -21,10 +21,10 @@ const seo: SeoDocument = {
 ---
 
 <ReportLayout title={pick(`${titleWord} Situation Reports`, `传染病态势${titleZh}`)} description={seo.description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室'), href: `${prefix}/situation/` }, { label: pick(`${titleWord} reports`, titleZh) }]}>
-  <main class="archive max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="archive max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
     <header><p>{pick('Period archive', '期间报告归档')}</p><h1>{pick(`${titleWord} Situation Reports`, `传染病态势${titleZh}`)}</h1><span>{pick('Each report aggregates all gate-passed daily runs in the period; later upstream revisions create a new immutable revision.', '每份报告聚合期间内全部通过质量门的日运行；上游修订将生成新的不可变修订版。')}</span></header>
     {reports.length ? <ol>{[...reports].reverse().map(report => <li><a href={`${prefix}/situation/${kind}/${report.report.period_key}/`}><b>{report.report.period_key}</b><span>{formatDate(report.report.period_start)} – {formatDate(report.report.period_end)}</span><dl><div><dt>{pick('New', '新增')}</dt><dd>{report.summary.new_count}</dd></div><div><dt>{pick('Persistent', '持续')}</dt><dd>{report.summary.persistent_count}</dd></div><div><dt>{pick('Resolved', '消退')}</dt><dd>{report.summary.resolved_count}</dd></div><div><dt>{pick('Active', '活跃')}</dt><dd>{report.summary.active_at_period_end_count}</dd></div></dl><small><i>{pick('revision', '修订版')}</i> {report.report.revision} · {formatDate(report.report.as_of)}</small></a></li>)}</ol> : <p class="empty">{pick(`No gate-passed ${kind} report has been published yet.`, `尚无通过质量门的${titleZh}。`)}</p>}
-  </main>
+  </div>
 </ReportLayout>
 
 <style>

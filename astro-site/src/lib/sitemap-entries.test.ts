@@ -126,7 +126,7 @@ test('publishes latest, methodology, weekly and monthly situation URLs only afte
   assert.equal(visible.find(entry => entry.path === '/situation/monthly/2026-08/')?.lastmod, '2026-08-13T02:00:00.000Z');
 });
 
-test('publishes Research Radar articles, collections, weekly briefs, and RSS', () => {
+test('publishes indexable Research Radar articles, collections, and weekly briefs', () => {
   const entries = buildSitemapEntries({
     meta: { generated_at: '2026-08-13T00:00:00Z', countries: [] },
     diseases: [],
@@ -158,6 +158,13 @@ test('publishes Research Radar articles, collections, weekly briefs, and RSS', (
         editorial_status: 'published',
         indexable: true,
       }, {
+        slug: 'second-published-preprint',
+        title: 'Another published preprint',
+        updated_at: '2026-08-13T00:00:00Z',
+        peer_review_status: 'preprint',
+        editorial_status: 'published',
+        indexable: true,
+      }, {
         slug: 'held-preprint',
         title: 'A held preprint',
         peer_review_status: 'preprint',
@@ -165,10 +172,14 @@ test('publishes Research Radar articles, collections, weekly briefs, and RSS', (
         indexable: true,
       }],
       facets: {
-        diseases: [{ slug: 'dengue', name_en: 'Dengue' }],
-        countries: [{ slug: 'br', name_en: 'Brazil' }],
-        topics: [{ slug: 'vaccination', name: 'Vaccination' }],
-        weeks: [{ week: '2026-W33' }, { week: 'bad-week' }],
+        diseases: [{ slug: 'dengue', name_en: 'Dengue', count: 2 }, { slug: 'single-disease', count: 1 }],
+        countries: [{ slug: 'br', name_en: 'Brazil', count: 2 }, { slug: 'single-country', count: 1 }],
+        topics: [{ slug: 'vaccination', name: 'Vaccination', count: 2 }, { slug: 'single-topic', count: 1 }],
+        weeks: [
+          { week: '2026-W33', article_count: 2, start_date: '2026-08-10', end_date: '2026-08-16' },
+          { week: '2026-W32', article_count: 1, start_date: '2026-08-03', end_date: '2026-08-09' },
+          { week: 'bad-week', article_count: 2 },
+        ],
       },
     },
   });
@@ -179,24 +190,27 @@ test('publishes Research Radar articles, collections, weekly briefs, and RSS', (
     '/research/graph/',
     '/research/integrity/',
     '/research/preprints/',
-    '/research/rss.xml',
     '/research/articles/dengue-study/',
     '/research/articles/published-preprint/',
     '/research/diseases/dengue/',
     '/research/countries/br/',
     '/research/topics/vaccination/',
     '/research/weekly/2026-W33/',
-    '/research/rss/diseases/dengue.xml',
-    '/research/rss/countries/br.xml',
-    '/research/rss/topics/vaccination.xml',
-    '/research/rss/study-types/mathematical-modelling.xml',
-    '/research/rss/collections/reviews-and-guidelines.xml',
-    '/research/rss/peer-review/peer-reviewed.xml',
-    '/research/rss/peer-review/preprint.xml',
   ]) assert.equal(paths.has(path), true);
+  assert.equal([...paths].some(path => path.endsWith('.xml')), false);
   assert.equal(paths.has('/research/articles/metadata-only-study/'), false);
   assert.equal(paths.has('/research/articles/held-preprint/'), false);
   assert.equal(paths.has('/research/weekly/bad-week/'), false);
+  for (const path of [
+    '/research/diseases/single-disease/',
+    '/research/countries/single-country/',
+    '/research/topics/single-topic/',
+    '/research/weekly/2026-W32/',
+  ]) assert.equal(paths.has(path), false);
+  assert.equal(
+    entries.find(entry => entry.path === '/research/diseases/dengue/')?.lastmod,
+    '2026-08-12T00:00:00.000Z',
+  );
 });
 
 test('current generated data matches the Astro static-route intent', () => {

@@ -18,6 +18,7 @@ from .kr import KRMonthlyUpdater
 from .hk import HKMonthlyUpdater
 from .ch import CHMonthlyUpdater
 from .ca import CAOntarioMonthlyUpdater
+from .ca_national import CanadaCNDSSAnnualUpdater
 from .fi import FIMonthlyUpdater
 from .ie import IEWeeklyUpdater
 from .ie_annual import IEAnnualUpdater
@@ -26,6 +27,8 @@ from .no import NOMonthlyUpdater
 from .se import SEMonthlyUpdater
 from .at import ATMonthlyUpdater
 from .de import DEWeeklyUpdater
+from .sg import SGWeeklyUpdater
+from .ecdc import ECDCAnnualUpdater
 
 _is_processor = import_module(".is", __name__)
 ISDataUpdater = _is_processor.ISDataUpdater
@@ -45,6 +48,7 @@ __all__ = [
     "HKMonthlyUpdater",
     "CHMonthlyUpdater",
     "CAOntarioMonthlyUpdater",
+    "CanadaCNDSSAnnualUpdater",
     "FIMonthlyUpdater",
     "IEWeeklyUpdater",
     "IEAnnualUpdater",
@@ -53,6 +57,8 @@ __all__ = [
     "SEMonthlyUpdater",
     "ATMonthlyUpdater",
     "DEWeeklyUpdater",
+    "SGWeeklyUpdater",
+    "ECDCAnnualUpdater",
     "ISDataUpdater",
     "ISMonthlyUpdater",
     "ISMultiFrequencyUpdater",

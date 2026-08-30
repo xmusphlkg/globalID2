@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
@@ -26,6 +27,15 @@ def test_literature_capacity_defaults_match_observed_arrival_rate():
     assert config.catch_up_enabled is True
     assert config.catch_up_interval_minutes == 5
     assert config.catch_up_max_exception_backlog == 500
+
+
+def test_catch_up_limit_must_leave_room_for_one_bounded_batch():
+    with pytest.raises(ValueError, match="must exceed max_records_per_run"):
+        LiteratureSettings(
+            catch_up_enabled=True,
+            catch_up_max_exception_backlog=300,
+            max_records_per_run=300,
+        )
 
 
 class _AsyncSessionAdapter:
@@ -274,6 +284,9 @@ async def test_truncated_scheduled_task_pulls_persisted_schedule_forward(monkeyp
     assert result["catch_up_paused_backpressure"] == 0
     assert result["catch_up_backlog_observed_count"] == 100
     assert result["catch_up_backlog_projected_upper_bound"] == 400
+    assert result["catch_up_resume_below_backlog"] == 200
+    assert result["catch_up_status"] == "scheduled"
+    assert result["catch_up_next_action_code"] == "await_accelerated_catch_up"
     assert result["catch_up_next_run_at"] is not None
     assert len(advanced) == 1
     job_kind, job_id, next_run_at = advanced[0]
@@ -337,6 +350,12 @@ async def test_backpressure_pauses_only_accelerated_catch_up_and_keeps_normal_sc
     assert result["catch_up_backlog_observed_count"] == 200
     assert result["catch_up_backlog_projected_upper_bound"] == 500
     assert result["catch_up_backlog_limit"] == 500
+    assert result["catch_up_resume_below_backlog"] == 200
+    assert result["catch_up_required_backlog_reduction"] == 1
+    assert result["catch_up_status"] == "paused_backpressure"
+    assert result["catch_up_next_action_code"] == (
+        "reduce_exception_backlog_below_resume_threshold"
+    )
     assert service._state.next_run_at == normal_next_run
 
 
@@ -385,6 +404,8 @@ async def test_backlog_measurement_failure_fails_safe_without_accelerated_schedu
     assert result["catch_up_paused_backpressure"] == 1
     assert result["catch_up_backpressure_reason"] == "backlog_measurement_unavailable"
     assert result["catch_up_backlog_observed_count"] is None
+    assert result["catch_up_status"] == "paused_backlog_measurement"
+    assert result["catch_up_next_action_code"] == "retry_backlog_measurement"
     assert "private database detail" not in str(result)
 
 
@@ -429,3 +450,236 @@ async def test_manual_or_caught_up_task_does_not_pull_schedule_forward(
 
     assert result["catch_up_scheduled"] == 0
     assert "catch_up_next_run_at" not in result
+
+
+async def test_existing_earlier_catch_up_is_reported_as_durable(monkeypatch):
+    config = SimpleNamespace(
+        schedule_enabled=True,
+        catch_up_enabled=True,
+        catch_up_interval_minutes=5,
+        catch_up_max_exception_backlog=500,
+        max_records_per_run=300,
+        timezone="UTC",
+    )
+    service = LiteratureService()
+    persisted_next = datetime.now(timezone.utc)
+
+    class FakePipeline:
+        def __init__(self, _config):
+            pass
+
+        async def execute(self, _task):
+            return {"source_truncated": 1}
+
+    async def backlog_count():
+        return 100
+
+    async def not_advanced(*_args):
+        return False
+
+    async def load(_kind):
+        return {service.JOB_ID: {"next_run_at": persisted_next}}
+
+    monkeypatch.setattr(service, "_config", lambda: config)
+    monkeypatch.setattr(literature_service_module, "LiteraturePipeline", FakePipeline)
+    monkeypatch.setattr(
+        literature_service_module,
+        "_count_catch_up_exception_backlog",
+        backlog_count,
+    )
+    monkeypatch.setattr(
+        literature_service_module.schedule_state_repository,
+        "schedule_earlier",
+        not_advanced,
+    )
+    monkeypatch.setattr(
+        literature_service_module.schedule_state_repository,
+        "load",
+        load,
+    )
+
+    result = await service.execute_task(
+        SimpleNamespace(input_data={"scheduled_trigger": True})
+    )
+
+    assert result["catch_up_status"] == "already_scheduled"
+    assert result["catch_up_next_action_code"] == "await_accelerated_catch_up"
+    assert result["catch_up_next_run_at"] == persisted_next.isoformat()
+
+
+async def test_failed_schedule_persistence_is_not_reported_as_scheduled(monkeypatch):
+    config = SimpleNamespace(
+        schedule_enabled=True,
+        catch_up_enabled=True,
+        catch_up_interval_minutes=5,
+        catch_up_max_exception_backlog=500,
+        max_records_per_run=300,
+        timezone="UTC",
+    )
+    service = LiteratureService()
+
+    class FakePipeline:
+        def __init__(self, _config):
+            pass
+
+        async def execute(self, _task):
+            return {"source_truncated": 1}
+
+    async def backlog_count():
+        return 100
+
+    async def not_advanced(*_args):
+        return False
+
+    async def load(_kind):
+        return {}
+
+    monkeypatch.setattr(service, "_config", lambda: config)
+    monkeypatch.setattr(literature_service_module, "LiteraturePipeline", FakePipeline)
+    monkeypatch.setattr(
+        literature_service_module,
+        "_count_catch_up_exception_backlog",
+        backlog_count,
+    )
+    monkeypatch.setattr(
+        literature_service_module.schedule_state_repository,
+        "schedule_earlier",
+        not_advanced,
+    )
+    monkeypatch.setattr(
+        literature_service_module.schedule_state_repository,
+        "load",
+        load,
+    )
+
+    result = await service.execute_task(
+        SimpleNamespace(input_data={"scheduled_trigger": True})
+    )
+
+    assert result["catch_up_scheduled"] == 0
+    assert result["catch_up_status"] == "schedule_persistence_unavailable"
+    assert result["catch_up_next_action_code"] == "inspect_scheduler_persistence"
+
+
+async def test_status_snapshot_does_not_roll_forward_overdue_persisted_run(monkeypatch):
+    overdue = datetime(2026, 8, 17, 11, 55, tzinfo=timezone.utc)
+    config = SimpleNamespace(
+        enabled=True,
+        timezone="UTC",
+        schedule_enabled=True,
+        interval_minutes=15,
+        europe_pmc_enabled=True,
+        max_records_per_run=300,
+        catch_up_enabled=True,
+        catch_up_interval_minutes=5,
+        catch_up_max_exception_backlog=500,
+        ai_enrichment_enabled=False,
+        ai_enrichment_languages=["en", "zh"],
+        ai_enrichment_batch_size=10,
+        ai_enrichment_schedule_enabled=False,
+        weekly_ai_review_enabled=False,
+        weekly_ai_review_batch_size=5,
+        gap_discovery_enabled=False,
+        gap_discovery_schedule_enabled=False,
+        gap_discovery_interval_minutes=60,
+        gap_discovery_max_gaps_per_run=5,
+        gap_discovery_records_per_gap=10,
+        gap_discovery_candidate_limit=20,
+        autopilot_enabled=False,
+    )
+    service = LiteratureService()
+    saves = []
+
+    async def load(_kind):
+        return {
+            service.JOB_ID: {
+                "next_run_at": overdue,
+                "last_status": "completed",
+            }
+        }
+
+    async def save(*args):
+        saves.append(args)
+
+    class Result:
+        def scalar_one_or_none(self):
+            return None
+
+    class Session:
+        async def execute(self, _statement):
+            return Result()
+
+    class DatabaseContext:
+        async def __aenter__(self):
+            return Session()
+
+        async def __aexit__(self, *_args):
+            return False
+
+    monkeypatch.setattr(service, "_config", lambda: config)
+    monkeypatch.setattr(
+        literature_service_module.schedule_state_repository,
+        "load",
+        load,
+    )
+    monkeypatch.setattr(
+        literature_service_module.schedule_state_repository,
+        "save",
+        save,
+    )
+    monkeypatch.setattr(literature_service_module, "get_database", DatabaseContext)
+
+    snapshot = await service.snapshot_async()
+
+    core_job = next(job for job in snapshot["jobs"] if job["job_id"] == service.JOB_ID)
+    assert core_job["next_run_at"] == overdue.isoformat()
+    assert saves == []
+
+
+async def test_scheduler_restart_restores_persisted_overdue_next_run(monkeypatch):
+    overdue = datetime(2026, 8, 17, 11, 55, tzinfo=timezone.utc)
+    config = SimpleNamespace(
+        enabled=True,
+        schedule_enabled=True,
+        gap_discovery_schedule_enabled=False,
+        ai_enrichment_enabled=False,
+        weekly_ai_review_enabled=False,
+        ai_enrichment_schedule_enabled=False,
+    )
+    service = LiteratureService()
+
+    async def load(_kind):
+        return {
+            service.JOB_ID: {
+                "next_run_at": overdue,
+                "last_status": "completed",
+            }
+        }
+
+    saved = {}
+
+    async def save(_kind, job_id, state):
+        saved[job_id] = state.next_run_at
+
+    async def no_op_run_loop():
+        return None
+
+    monkeypatch.setattr(service, "_config", lambda: config)
+    monkeypatch.setattr(service, "_run_loop", no_op_run_loop)
+    monkeypatch.setattr(
+        literature_service_module.schedule_state_repository,
+        "load",
+        load,
+    )
+    monkeypatch.setattr(
+        literature_service_module.schedule_state_repository,
+        "save",
+        save,
+    )
+
+    await service.start()
+    await asyncio.sleep(0)
+    await service.stop()
+
+    assert service._state.next_run_at == overdue
+    assert saved[service.JOB_ID] == overdue

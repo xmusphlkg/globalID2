@@ -170,6 +170,10 @@ class LiteratureIngestRun(BaseModel):
     __tablename__ = "literature_ingest_runs"
 
     run_uuid: Mapped[str] = mapped_column(String(36), nullable=False, unique=True)
+    # Logical ownership key retained with the audit row even if task history is
+    # later pruned. Recovery always matches this exact value; it never guesses
+    # ownership from timestamps.
+    task_uuid: Mapped[Optional[str]] = mapped_column(String(36))
     source: Mapped[str] = mapped_column(String(80), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="running")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -183,6 +187,7 @@ class LiteratureIngestRun(BaseModel):
     __table_args__ = (
         Index("idx_literature_ingest_run_started", "started_at"),
         Index("idx_literature_ingest_run_status", "status"),
+        Index("idx_literature_ingest_run_task", "task_uuid", "status"),
     )
 
 

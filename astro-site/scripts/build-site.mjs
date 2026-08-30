@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
+import { writeBuildRedirects } from './build-redirects.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..', '..');
 const settingsPath = resolve(projectRoot, 'data', 'system-settings.json');
@@ -61,6 +62,10 @@ const result = spawnSync(astroBinary, ['build'], {
 if (result.error) {
   process.stderr.write(`${result.error.message}\n`);
   process.exit(1);
+}
+if ((result.status ?? 1) === 0) {
+  const redirects = writeBuildRedirects();
+  process.stdout.write(`[redirects] generated ${redirects.generatedRules} legacy situation rules\n`);
 }
 const researchFingerprintAfter = contentFingerprint(researchIndexPath);
 if (researchFingerprintAfter !== researchFingerprintBefore) {

@@ -31,16 +31,45 @@ const seo: SeoDocument = {
 ---
 
 <ReportLayout title={pick('Situation Room Methodology', '全球态势室方法')} description={seo.description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室'), href: `${prefix}/situation/` }, { label: pick('Methodology', '方法') }]}>
-  <article class="methodology max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <header><p class="eyebrow">{pick('Methods', '方法')}</p><h1>{pick('How GIDS screens infectious-disease signals', 'GIDS 如何筛查传染病信号')}</h1><p>{pick('Situation Room results are reproducible statistical screens over GIDS-covered jurisdictions. They prioritize review; they are not outbreak declarations or clinical guidance.', '全球态势室结果是针对 GIDS 覆盖地区的可复现统计筛查，用于安排复核优先级，并非疫情暴发定性或临床建议。')}</p></header>
-    {sections.map(([headingEn, headingZh, bodyEn, bodyZh]) => <section><h2>{pick(headingEn, headingZh)}</h2><p>{pick(bodyEn, bodyZh)}</p></section>)}
+  <article class="methodology">
+    <header>
+      <p class="eyebrow">{pick('Methods', '方法')}</p>
+      <h1>{pick('Signal screening methodology', '信号筛查方法')}</h1>
+      <p>{pick('Reproducible statistical screens for review priority. Not outbreak declarations or clinical guidance.', '用于确定复核优先级的可复现统计筛查；不等同于疫情定性或临床建议。')}</p>
+    </header>
+    <div class="methodology-grid">
+      {sections.map(([headingEn, headingZh, bodyEn, bodyZh], index) => (
+        <details open={index === 0}>
+          <summary>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <h2>{pick(headingEn, headingZh)}</h2>
+            <b aria-hidden="true">+</b>
+          </summary>
+          <p>{pick(bodyEn, bodyZh)}</p>
+        </details>
+      ))}
+    </div>
   </article>
 </ReportLayout>
 
 <style>
-  .methodology { color: rgb(var(--text-muted)); }
-  header { border-bottom: 2px solid rgb(var(--text-strong)); margin-bottom: 2rem; padding-bottom: 1.5rem; }
+  .methodology { width: min(72rem, calc(100% - 2rem)); margin-inline: auto; padding-block: clamp(1.75rem, 5vw, 3.5rem); color: rgb(var(--text-muted)); }
+  header { border-bottom: 1px solid rgb(var(--border)); margin-bottom: 1rem; padding-bottom: 1rem; }
   .eyebrow { color: rgb(var(--color-teal)); font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
-  h1, h2 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; } h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.05; } h2 { font-size: 1.45rem; margin-top: 0; }
-  section { border-top: 1px solid rgb(var(--border)); padding: 1.4rem 0; } p, li { line-height: 1.75; } ul, ol { padding-left: 1.25rem; }
+  h1, h2 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; }
+  h1 { margin-top: .35rem; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.05; }
+  header p:last-child { max-width: 48rem; margin-top: .7rem; font-size: .92rem; line-height: 1.58; }
+  .methodology-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+  details { min-width: 0; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+  summary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .65rem; align-items: center; padding: .75rem .85rem; cursor: pointer; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary span { color: rgb(var(--text-faint)); font-family: ui-monospace, monospace; font-size: .68rem; font-weight: 700; }
+  summary b { display: grid; width: 1.45rem; height: 1.45rem; place-items: center; border: 1px solid rgb(var(--border)); color: rgb(var(--text-muted)); font-size: .95rem; line-height: 1; }
+  details[open] summary b { transform: rotate(45deg); }
+  h2 { font-size: 1rem; line-height: 1.28; }
+  details p { margin: 0; padding: 0 .85rem .85rem 2.85rem; font-size: .8rem; line-height: 1.58; }
+  @media (max-width: 760px) {
+    .methodology { width: min(100% - 1rem, 72rem); }
+    .methodology-grid { grid-template-columns: 1fr; }
+  }
 </style>

@@ -166,6 +166,13 @@ class TaskManager:
                     if started_at.tzinfo is None:
                         started_at = started_at.replace(tzinfo=timezone.utc)
                     task.actual_duration = int((task.completed_at - started_at).total_seconds())
+                metadata = self._task_metadata(task)
+                lease = dict(metadata.get("task_lease") or {})
+                if lease:
+                    lease["released_at"] = now.isoformat()
+                    lease["terminal_status"] = status.value
+                    metadata["task_lease"] = lease
+                    task.metadata_ = metadata
             
             if error_message:
                 task.last_error = error_message
@@ -183,6 +190,60 @@ class TaskManager:
                 "progress": task.progress or 0,
             })
             return task
+
+    async def heartbeat_task_lease(self, task_uuid: str, owner: str) -> bool:
+        """Renew an executing task's metadata-backed lease if *owner* still owns it."""
+        async with get_db() as db:
+            result = await db.execute(
+                select(Task).where(Task.task_uuid == task_uuid).with_for_update()
+            )
+            task = result.scalar_one_or_none()
+            if task is None or task.status != TaskStatus.RUNNING:
+                return False
+
+            metadata = self._task_metadata(task)
+            lease = dict(metadata.get("task_lease") or {})
+            if lease.get("owner") != owner or lease.get("released_at"):
+                return False
+
+            lease["heartbeat_at"] = datetime.now(timezone.utc).isoformat()
+            metadata["task_lease"] = lease
+            task.metadata_ = metadata
+            await db.commit()
+            return True
+
+    async def fail_owned_task_lease(
+        self, task_uuid: str, owner: str, error_message: str
+    ) -> bool:
+        """Fail a still-RUNNING owned task after an exception outside its lifecycle."""
+        async with get_db() as db:
+            result = await db.execute(
+                select(Task).where(Task.task_uuid == task_uuid).with_for_update()
+            )
+            task = result.scalar_one_or_none()
+            if task is None or task.status != TaskStatus.RUNNING:
+                return False
+            metadata = self._task_metadata(task)
+            lease = dict(metadata.get("task_lease") or {})
+            if lease.get("owner") != owner:
+                return False
+
+            now = datetime.now(timezone.utc)
+            task.status = TaskStatus.FAILED
+            task.completed_at = now
+            task.last_error = error_message
+            task.retry_count = int(task.retry_count or 0) + 1
+            if task.started_at:
+                started_at = task.started_at
+                if started_at.tzinfo is None:
+                    started_at = started_at.replace(tzinfo=timezone.utc)
+                task.actual_duration = int((now - started_at).total_seconds())
+            lease["released_at"] = now.isoformat()
+            lease["terminal_status"] = TaskStatus.FAILED.value
+            metadata["task_lease"] = lease
+            task.metadata_ = metadata
+            await db.commit()
+            return True
 
     async def request_task_cancel(
         self,
