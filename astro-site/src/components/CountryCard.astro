@@ -10,10 +10,11 @@ interface Props {
   totalDeaths?: number;
   diseaseCount?: number;
   dateRange?: { start: string | null; end: string | null };
+  locationType?: 'country' | 'subdivision' | string;
   locale?: 'en' | 'zh';
 }
 
-const { code, name, nameZh = name, totalCases = 0, totalDeaths = 0, diseaseCount = 0, dateRange, locale = 'en' } = Astro.props;
+const { code, name, nameZh = name, totalCases = 0, totalDeaths = 0, diseaseCount = 0, dateRange, locationType = 'country', locale = 'en' } = Astro.props;
 
 function fmtNum(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -25,8 +26,8 @@ const href = `${locale === 'zh' ? '/zh' : ''}/countries/${code.toLowerCase()}/`;
 const deathsDisplay = totalDeaths > 0 ? fmtNum(totalDeaths) : '-';
 const displayName = locale === 'zh' ? nameZh : name;
 const labels = locale === 'zh'
-  ? { cases: '病例', deaths: '死亡', diseases: '疾病', present: '至今' }
-  : { cases: 'Cases', deaths: 'Deaths', diseases: 'Diseases', present: 'Present' };
+  ? { cases: '病例', deaths: '死亡', diseases: '疾病', present: '至今', subdivision: '省级地区' }
+  : { cases: 'Cases', deaths: 'Deaths', diseases: 'Diseases', present: 'Present', subdivision: 'Province / region' };
 ---
 
 <a
@@ -37,7 +38,7 @@ const labels = locale === 'zh'
     <CountryFlag code={code} name={name} sizeClass="w-8 h-6" />
     <div>
       <h3>{displayName}</h3>
-      <span>{code}</span>
+      <span>{code}{locationType === 'subdivision' ? ` · ${labels.subdivision}` : ''}</span>
     </div>
   </div>
 

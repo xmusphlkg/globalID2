@@ -81,6 +81,39 @@ def test_country_source_info_preserves_source_order_and_fallbacks(monkeypatch) -
     }
 
 
+def test_province_source_info_uses_database_adapter_metadata() -> None:
+    result = about.build_country_source_info(
+        "CN-SH",
+        {"source_frequency": "MONTHLY"},
+        database_config={
+            "data_source_url": "https://wsjkw.sh.gov.cn/yqxx/index.html",
+            "data_source_type": "mixed",
+            "crawler_config": {
+                "sources": [
+                    "cn_province_datacenter",
+                    "cn_province_monthly_report",
+                ],
+                "cadence": "mixed_annual_monthly",
+            },
+            "parser_config": {"primary": "html_table"},
+            "metadata": {
+                "location_type": "subdivision",
+                "parent_country_code": "CN",
+                "iso_subdivision_code": "CN-SH",
+            },
+        },
+    )
+
+    assert result["location_type"] == "subdivision"
+    assert result["parent_country_code"] == "CN"
+    assert result["parser_primary"] == "html_table"
+    assert [source["cadence"] for source in result["sources"]] == [
+        "annual",
+        "monthly",
+    ]
+    assert result["sources"][1]["url"] == "https://wsjkw.sh.gov.cn/yqxx/index.html"
+
+
 def test_cadence_and_iso_helpers_keep_labels_and_utc_semantics() -> None:
     assert about.normalize_cadence_label(None) == "Variable"
     assert about.normalize_cadence_label("every_two_weeks") == "Every Two Weeks"

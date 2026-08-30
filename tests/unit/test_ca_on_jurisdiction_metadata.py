@@ -41,10 +41,14 @@ def test_ontario_is_a_registered_subdivision_jurisdiction() -> None:
 
 
 def test_canada_national_scope_does_not_resolve_to_ontario() -> None:
-    assert get_expected_scopes_for_country("CA") == ["all"]
-    assert canonicalize_task_source("all", country_code="CA") == "all"
-    assert default_source_for_country("CA") == "all"
-    assert source_scope_label("all", country_code="CA") == "All Sources"
+    assert get_expected_scopes_for_country("CA") == ["phac_cndss_annual"]
+    assert canonicalize_task_source("all", country_code="CA") == (
+        "phac_cndss_annual"
+    )
+    assert default_source_for_country("CA") == "phac_cndss_annual"
+    assert source_scope_label("phac_cndss_annual", country_code="CA") == (
+        "Canada PHAC CNDSS Annual"
+    )
 
     assert get_expected_scopes_for_country("CA-ON") == ["pho_idto_monthly"]
     assert canonicalize_task_source("all", country_code="CA-ON") == (

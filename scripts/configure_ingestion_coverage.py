@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Idempotently add ingestion jobs for implemented but unscheduled pipelines.
 
-The command is read-only unless ``--apply`` is supplied.  It deliberately does
-not create a Canada-national job: ``CA`` is a parent jurisdiction and has no
-national crawler yet, while ``CA-ON`` is an implemented independent feed.
+The command is read-only unless ``--apply`` is supplied. Canada national CNDSS
+and Ontario PHO remain separate jobs because their geographic and temporal
+grains are not interchangeable.
 """
 
 from __future__ import annotations
@@ -24,6 +24,30 @@ from src.domain import AutomationJob  # noqa: E402
 
 
 JOB_VALUES = {
+    "ca-cndss-daily": {
+        "name": "Canada PHAC CNDSS Annual Availability Check",
+        "country_code": "CA",
+        "source": "phac_cndss_annual",
+        "enabled": True,
+        "priority": "normal",
+        "process": True,
+        "save_raw": True,
+        "fill_missing": False,
+        "force": False,
+        "include_current_month": False,
+        # AutomationJob persists its non-null default as 3. The annual CNDSS
+        # pipeline always refreshes the full authoritative snapshot, so this
+        # scheduler field is informational but must remain idempotent.
+        "revision_window_months": 3,
+        "retry_threshold": 3,
+        "interval_minutes": None,
+        "daily_time": "09:25",
+        "timezone": "America/Toronto",
+        "notes": (
+            "Daily availability check for the authoritative PHAC CNDSS national "
+            "annual snapshot. Null source cells remain unknown."
+        ),
+    },
     "ca-on-pho-daily": {
         "name": "Ontario PHO IDTO Daily Refresh",
         "country_code": "CA-ON",

@@ -22,6 +22,315 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.9.1',
+    date: '2026-08-30',
+    titleEn: 'Localized public site and jurisdiction-aware operations',
+    titleZh: '公开站点本地化与辖区化运营',
+    summaryEn:
+      'GIDS now has first-class Chinese public routes, a refreshed static-site experience, jurisdiction-aware Control Center selection, and stronger source-series-first data handling across public APIs and exports.',
+    summaryZh:
+      'GIDS 现已提供完整中文公开路由、焕新的静态站点体验、支持辖区选择的控制中心，以及贯穿公开 API 和导出的来源序列优先数据处理。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added Chinese routes for home, countries, diseases, reports, Situation Room, Research Radar, downloads, legal pages, and Changelog with localized canonical navigation.',
+            zh: '新增首页、国家、病种、报告、态势室、研究雷达、下载、法律页面和更新日志的中文路由，并提供本地化 canonical 导航。',
+          },
+          {
+            en: 'Added a China provincial monthly-source framework with province source configuration, 31 adapter registrations, documentation, tests, and Control Center/public metadata wiring.',
+            zh: '新增中国省级月度来源框架，包括省级来源配置、31 个适配器注册、文档、测试，以及控制中心和公开端元数据接入。',
+          },
+          {
+            en: 'Added jurisdiction-aware country and region classifications for coverage, source labels, API metadata, and the Control Center jurisdiction picker.',
+            zh: '新增面向辖区的国家与区域分类，用于覆盖地图、来源标签、API 元数据和控制中心辖区选择器。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Refreshed the public home, country, download, about, copyright, terms, and changelog experiences and synchronized offline country flags for deterministic static builds.',
+            zh: '焕新公开首页、国家、下载、关于、版权、条款和更新日志体验，并同步离线国家旗帜以保证静态构建可复现。',
+          },
+          {
+            en: 'Promoted source-series-first handling through APIs, site generation, charts, downloads, and coverage summaries so canonical projections and source-only series stay distinct.',
+            zh: '将来源序列优先处理贯穿 API、站点生成、图表、下载和覆盖摘要，使标准投影与仅来源序列保持清晰区分。',
+          },
+          {
+            en: 'Strengthened reusable ECDC, Singapore CDA, and Canada CNDSS ingestion paths with source-contract review, attribution, scheduled checks, and fail-closed refresh behavior.',
+            zh: '强化可复用的 ECDC、新加坡 CDA 和加拿大 CNDSS 摄取路径，补充来源契约审核、归属说明、计划检查和失效关闭刷新行为。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Hardened tests for disease-series policy, ontology validation, country coverage, classifications, generated API contracts, and source-series-first site exports.',
+            zh: '强化病种序列策略、 ontology 校验、国家覆盖、分类、生成式 API 契约和来源序列优先站点导出的测试。',
+          },
+          {
+            en: 'Improved chart and map behavior for sparse source data, hidden projections, mixed cadence series, and localized country/disease pages.',
+            zh: '改进稀疏来源数据、隐藏投影、混合频率序列以及本地化国家/病种页面中的图表和地图表现。',
+          },
+          {
+            en: 'Kept local Playwright run output and generated flag assets out of release commits while preserving stable static-site builds.',
+            zh: '将本地 Playwright 运行输出和生成的旗帜资源排除在发布提交之外，同时保留稳定的静态站点构建。',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.9.0',
+    date: '2026-08-29',
+    titleEn: 'Complete EU/EEA baselines and Canada national history',
+    titleZh: '欧盟/欧洲经济区基线全覆盖与加拿大国家历史数据',
+    summaryEn:
+      'All 30 EU/EEA countries, the historical United Kingdom baseline, and Canada PHAC CNDSS are now fully integrated with reviewed source contracts and public provenance.',
+    summaryZh:
+      '全部 30 个欧盟/欧洲经济区国家、英国历史基线及加拿大 PHAC CNDSS 现已通过经审核的来源契约和公开来源说明实现完整接入。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added 23 ECDC countries with 20,334 observations across 1,193 source series with values; the complete 31-country ECDC collection now contains 27,843 source observations.',
+            zh: '新增 23 个 ECDC 国家、20,334 条观测和 1,193 条有值来源序列；完整的 31 国 ECDC 数据集现包含 27,843 条来源观测。',
+          },
+          {
+            en: 'Added Canada PHAC CNDSS with 3,671 national annual observations across 69 source series from 1924 through 2023 under the Open Government Licence – Canada.',
+            zh: '依据加拿大开放政府许可，新增加拿大 PHAC CNDSS 1924—2023 年 3,671 条全国年度观测，覆盖 69 条来源序列。',
+          },
+          {
+            en: 'Integrated every new country into Control Center, automation, APIs, bilingual country pages, provenance, coverage, and CSV/JSON/XLSX downloads.',
+            zh: '将所有新增国家完整接入控制中心、自动化、API、中英文国家页面、来源追溯、覆盖地图以及 CSV/JSON/XLSX 下载。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Added 24 independent daily publication checks and kept regional baselines separate from higher-frequency national feeds, preventing overlapping records from being counted twice.',
+            zh: '新增 24 个独立的每日发布检查，并将区域基线与更高频国家来源保持分离，避免重叠记录被重复计数。',
+          },
+          {
+            en: 'Canonicalized the historical ECDC UK geography to platform code GB while retaining UK in provenance; England-only laboratory notifications remain separate.',
+            zh: '将 ECDC 历史来源代码 UK 规范化为平台代码 GB，同时在来源追溯中保留 UK；英格兰实验室通知继续独立管理。',
+          },
+          {
+            en: 'Clarified that Canada values are PHAC published national aggregates with varying jurisdiction coverage, including 44 disease contracts without Manitoba data in 2023.',
+            zh: '明确加拿大数值是 PHAC 发布的全国汇总，辖区覆盖会随病种和年份变化，其中 2023 年有 44 个病种契约缺少 Manitoba 数据。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Mapped Canadian viral meningitis to active concept D134 and retained historical non-A/non-B hepatitis as a related source-only series rather than using a deprecated concept.',
+            zh: '将加拿大病毒性脑膜炎映射到有效概念 D134，并将历史“非 A 非 B 型肝炎”保留为相关的仅来源序列，不再使用废弃概念。',
+          },
+          {
+            en: 'Made Canada refreshes preserve the full reviewed history and fail closed when the official last year changes; all-null contracts remain pending and 645 explicit zeroes remain observations.',
+            zh: '使加拿大刷新保留完整已审核历史，并在官方末年变化时失效关闭；全空契约保持待定，645 个明确零值继续作为观测保留。',
+          },
+          {
+            en: 'Kept Thailand in source research after its public snapshot, login-gated national exports, zero-reporting semantics, and reuse terms failed the publication contract review; no placeholder data were added.',
+            zh: '泰国公开快照、需登录的全国导出、零报告语义及复用条款未通过发布契约审核，因此继续保留为来源研究状态，未添加任何占位数据。',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.8.3',
+    date: '2026-08-28',
+    titleEn: 'Seven-country ECDC baseline expansion',
+    titleZh: 'ECDC 年度基线扩展至七个国家',
+    summaryEn:
+      'Spain, Italy, Portugal, Poland, Czechia, Greece, and Romania are now fully supported using attributed ECDC closed-year surveillance baselines.',
+    summaryZh:
+      '西班牙、意大利、葡萄牙、波兰、捷克、希腊和罗马尼亚现已通过注明归属的 ECDC 已闭合年度监测基线实现全量支持。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added 6,618 annual observations across 375 source series with values, backed by 385 reviewed country-specific ECDC contracts from 1990 through 2025.',
+            zh: '新增 1990—2025 年 6,618 条年度观测，覆盖 375 条有值来源序列，并由 385 条经审核的国家级 ECDC 契约支撑。',
+          },
+          {
+            en: 'Integrated all seven countries into Control Center, APIs, coverage, bilingual country pages, provenance, and CSV/JSON/XLSX downloads.',
+            zh: '将七国全部接入控制中心、API、覆盖地图、中英文国家页面、来源追溯以及 CSV/JSON/XLSX 下载。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Added staggered local-time daily publication checks and normalized the ECDC EL source code to the canonical GR identity for Greece.',
+            zh: '新增按各国本地时间错峰执行的每日发布检查，并将 ECDC 的希腊来源代码 EL 规范化为平台标准身份 GR。',
+          },
+          {
+            en: 'Preserved asynchronous disease coverage, source gaps as unknown, explicit zeroes, and source-only composite categories without double counting.',
+            zh: '保留各病种异步覆盖、来源断点的未知语义、明确零值及仅来源层复合类别，避免重复计数。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Withheld in-progress current-year Atlas cells so partial Czechia 2026 values cannot appear as completed annual totals.',
+            zh: '暂不发布尚未闭合的当年 Atlas 单元，避免捷克 2026 年部分累计值被误呈现为完整年度总量。',
+          },
+          {
+            en: 'Made refreshed ECDC windows authoritative in CSV and database storage so withdrawn cells become unknown instead of remaining stale.',
+            zh: '将 ECDC 刷新窗口在 CSV 与数据库中统一设为权威替换，使来源撤回的单元恢复为未知而不会残留旧值。',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.8.2',
+    date: '2026-08-28',
+    titleEn: 'France ECDC annual baseline and reusable regional adapter',
+    titleZh: '法国 ECDC 年度基线与可复用区域适配器',
+    summaryEn:
+      'France is now publicly supported across ingestion, Control Center, APIs, downloads, provenance, and country pages using attributed ECDC annual Member-State surveillance data.',
+    summaryZh:
+      '法国现已通过注明归属的 ECDC 成员国年度监测数据，完整接入摄取、控制中心、API、下载、来源说明和国家页面。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added 891 France annual observations across 51 published series from 1990 through 2025, backed by 55 reviewed ECDC source contracts.',
+            zh: '新增法国 1990—2025 年 891 条年度观测，覆盖 51 条已发布序列，并由 55 条经审核的 ECDC 来源合同支撑。',
+          },
+          {
+            en: 'Integrated France into Control Center source status and automation, public APIs, coverage, downloads, bilingual source metadata, and static generation.',
+            zh: '将法国接入控制中心来源状态与自动化、公开 API、覆盖地图、下载、双语来源元数据和静态生成。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Added a reusable ECDC Atlas adapter that discovers current measure IDs while failing closed on disease labels, population definitions, geography, frequency, and count semantics.',
+            zh: '新增可复用的 ECDC Atlas 适配器：动态发现当前指标 ID，同时对病种标签、人群定义、地理层级、频率和病例计数语义实行失效关闭。',
+          },
+          {
+            en: 'Enabled a daily 09:50 Europe/Paris publication check for annual source revisions.',
+            zh: '启用每日 09:50（Europe/Paris）的发布检查，以发现年度来源修订。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Governance',
+        labelZh: '治理',
+        items: [
+          {
+            en: 'Missing country/year cells stay unknown, explicit zeroes are preserved, composite categories remain source-only, and rate-only hepatitis B totals are not converted into case counts.',
+            zh: '缺失的国家/年份单元保持未知，明确零值予以保留，复合类别仅保留来源序列，且不会把仅有比率的乙肝总量换算成病例数。',
+          },
+          {
+            en: 'Every France record carries the required ECDC and reporting Member-State attribution.',
+            zh: '每条法国记录均保留 ECDC 与报告成员国所要求的归属说明。',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.8.1',
+    date: '2026-08-28',
+    titleEn: 'Singapore weekly surveillance and full public integration',
+    titleZh: '新加坡周度监测与公开端全量接入',
+    summaryEn:
+      'Singapore is now supported across ingestion, Control Center, public APIs, downloads, provenance pages, and the country experience, with official CSV history joined safely to current CDA workbooks.',
+    summaryZh:
+      '新加坡现已接入数据摄取、控制中心、公开 API、下载、来源说明和国家页面，并将官方 CSV 历史与当前 CDA 工作簿安全衔接。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added Singapore national weekly notifications from the official 2012–2022 data.gov.sg CSV and 2023+ CDA annual workbooks, with 2023 weekly PDFs as a fail-closed fallback.',
+            zh: '新增新加坡全国周度病例通报：历史采用 data.gov.sg 2012—2022 年官方 CSV，2023 年起采用 CDA 年度工作簿，并以 2023 年周报 PDF 作为失效关闭的回退来源。',
+          },
+          {
+            en: 'Registered 76 historical and current source series across 39 source categories, with complete source URLs, hashes, definition versions, and missing-value semantics.',
+            zh: '为 39 个来源分类注册 76 条历史与当前来源序列，并完整保留来源 URL、哈希、定义版本和缺失值语义。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Added a strict temporal-handoff projection so equivalent historical and successor series appear as one longitudinal curve only when their validity windows do not overlap.',
+            zh: '新增严格的时间接力投影：仅当历史与后继序列口径一致且有效期不重叠时，才将其呈现为一条纵向曲线。',
+          },
+          {
+            en: 'Integrated Singapore into Control Center source status, public country coverage, About metadata, bilingual labels, downloads, and static-site generation.',
+            zh: '将新加坡完整接入控制中心来源状态、公开国家覆盖、About 元数据、双语标签、下载和静态站点生成。',
+          },
+          {
+            en: 'Enabled a daily 09:30 Asia/Singapore Control Center publication check to discover each new weekly CDA workbook and bounded revisions automatically.',
+            zh: '在控制中心启用每日 09:30（Asia/Singapore）的发布检查，自动发现新的 CDA 周度工作簿及有界修订。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Governance',
+        labelZh: '治理',
+        items: [
+          {
+            en: 'Public release is explicitly operator-authorized while provenance continues to distinguish the Singapore Open Data Licence for history from CDA terms requiring written permission for current publications.',
+            zh: '公开发布以运营方明确授权为依据；溯源仍区分历史数据适用的新加坡开放数据许可与当前 CDA 发布物所记录的书面许可要求。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.8.0',
     date: '2026-08-27',
     titleEn: 'Auditable data governance and control-plane reliability',

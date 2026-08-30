@@ -45,8 +45,14 @@ export default function DiseaseMonthlyBar({ dataUrl, height = 360, sourceMeta = 
 
   if (!monthlyData?.months?.length) {
     return (
-      <div className="chart-shell flex items-center justify-center text-[rgb(var(--text-muted))] text-sm min-h-[160px]">
-        {lang === 'zh' ? '月度数据加载中' : 'Loading monthly data'}
+      <div className="chart-loading-shell" role="status" aria-busy="true" aria-label={lang === 'zh' ? '月度数据加载中' : 'Loading monthly data'}>
+        <div className="chart-loading-toolbar" aria-hidden="true">
+          <span className="chart-loading-pill w-20" />
+          <span className="chart-loading-pill w-28" />
+          <span className="chart-loading-pill w-24" />
+        </div>
+        <div className="chart-loading-line w-3/5" aria-hidden="true" />
+        <div className="chart-loading-panel" style={{ height }} aria-hidden="true" />
       </div>
     );
   }

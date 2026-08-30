@@ -32,6 +32,8 @@ UNSAFE_GENERIC_CASE_MAPPING_RELATIONS = frozenset(
 )
 SAFE_MULTI_SERIES_AGGREGATION_POLICIES = frozenset({"sum_disjoint"})
 SOURCE_OBSERVATIONS_ONLY_POLICY = "source_observations_only"
+TEMPORAL_HANDOFF_POLICY = "temporal_handoff"
+PRIORITY_OVERLAY_POLICY = "priority_overlay"
 
 
 @dataclass(frozen=True)
@@ -112,6 +114,49 @@ def select_series_projection(
             loss_risk=None,
         )
 
+    # Point-wise source precedence is deliberately opt-in. Every candidate
+    # must declare the same overlay set and an integer priority so unrelated
+    # series can never be coalesced merely because they share a concept.
+    overlay_policies = {
+        str(item.get("projection_policy") or "").strip().lower()
+        for item in projectable
+    }
+    overlay_sets = {
+        str(item.get("comparability_set") or "").strip()
+        for item in projectable
+    }
+    if (
+        overlay_policies == {PRIORITY_OVERLAY_POLICY}
+        and len(overlay_sets) == 1
+        and "" not in overlay_sets
+        and all(
+            _is_integer_priority(item.get("projection_priority"))
+            for item in projectable
+        )
+    ):
+        return SeriesProjectionSelection(
+            selected_codes=frozenset(
+                str(item["series_code"]) for item in projectable
+            ),
+            projection_policy=PRIORITY_OVERLAY_POLICY,
+            loss_risk=None,
+        )
+
+    exact = [
+        item
+        for item in projectable
+        if str(item.get("mapping_relation") or "").strip().lower() == "exact"
+    ]
+    candidate_pool = exact or projectable
+    if _is_safe_temporal_handoff(candidate_pool):
+        return SeriesProjectionSelection(
+            selected_codes=frozenset(
+                str(item["series_code"]) for item in candidate_pool
+            ),
+            projection_policy=TEMPORAL_HANDOFF_POLICY,
+            loss_risk=None,
+        )
+
     policies = {
         str(item.get("aggregation_policy") or "none").strip().lower()
         for item in projectable
@@ -146,12 +191,6 @@ def select_series_projection(
             loss_risk="narrower_non_additive_series_have_no_safe_rollup",
         )
 
-    exact = [
-        item
-        for item in projectable
-        if str(item.get("mapping_relation") or "").strip().lower() == "exact"
-    ]
-    candidate_pool = exact or projectable
     reported = [item for item in reported if item in candidate_pool]
     candidates = sorted(
         reported or candidate_pool,
@@ -187,6 +226,51 @@ def _coverage_end(item: Mapping[str, Any]) -> str:
     return ""
 
 
+def _series_bounds(item: Mapping[str, Any]) -> tuple[str, str]:
+    dates = item.get("dates")
+    date_start = ""
+    date_end = ""
+    if isinstance(dates, Sequence) and not isinstance(dates, (str, bytes)) and dates:
+        date_start = str(dates[0] or "")
+        date_end = str(dates[-1] or "")
+    start = str(item.get("valid_from") or item.get("coverage_start") or date_start)
+    end = str(item.get("valid_to") or item.get("coverage_end") or date_end)
+    return start, end
+
+
+def _is_safe_temporal_handoff(items: Sequence[Mapping[str, Any]]) -> bool:
+    """Return whether equivalent series form a strictly non-overlapping chain."""
+
+    if len(items) < 2:
+        return False
+    semantic_fields = (
+        "mapping_relation",
+        "metric_type",
+        "reporting_basis",
+        "temporal_granularity",
+        "time_basis",
+        "unit",
+    )
+    for field in semantic_fields:
+        values = {
+            str(item.get(field) or "").strip().lower()
+            for item in items
+            if item.get(field) not in (None, "")
+        }
+        if len(values) > 1:
+            return False
+    bounded = sorted(
+        ((_series_bounds(item), item) for item in items),
+        key=lambda entry: entry[0],
+    )
+    if any(not start or not end or start > end for (start, end), _ in bounded):
+        return False
+    return all(
+        previous[0][1] < current[0][0]
+        for previous, current in zip(bounded, bounded[1:])
+    )
+
+
 def _current_series_rank(item: Mapping[str, Any]) -> int:
     """Prefer an explicitly current definition before comparing coverage.
 
@@ -207,11 +291,24 @@ def _current_series_rank(item: Mapping[str, Any]) -> int:
     return int(bool(active))
 
 
+def _is_integer_priority(value: Any) -> bool:
+    if isinstance(value, bool) or value is None:
+        return False
+    normalized = str(value).strip()
+    try:
+        parsed = int(normalized)
+    except (TypeError, ValueError):
+        return False
+    return normalized == str(parsed)
+
+
 __all__ = [
     "GENERIC_CASE_MAPPING_RELATIONS",
     "SAFE_MULTI_SERIES_AGGREGATION_POLICIES",
     "SERIES_CASE_COUNT_METRICS",
     "SOURCE_OBSERVATIONS_ONLY_POLICY",
+    "TEMPORAL_HANDOFF_POLICY",
+    "PRIORITY_OVERLAY_POLICY",
     "UNSAFE_GENERIC_CASE_MAPPING_RELATIONS",
     "SeriesProjectionSelection",
     "is_case_count_metric",

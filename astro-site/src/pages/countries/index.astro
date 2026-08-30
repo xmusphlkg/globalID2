@@ -12,6 +12,16 @@ import {
 } from '../../lib/country-coverage';
 import metaRaw from '../../data/meta.json';
 import { buildAlternatePaths } from '../../lib/seo';
+import {
+  COUNTRY_CLASSIFICATION_METADATA,
+  INCOME_GROUP_LABELS,
+  WHO_REGION_LABELS,
+  WORLD_BANK_REGION_LABELS,
+  getCountryClassification,
+  type IncomeGroupCode,
+  type WhoRegionCode,
+  type WorldBankRegionCode,
+} from '../../lib/country-classifications';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
 const zh = locale === 'zh';
@@ -21,11 +31,19 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 const meta = metaRaw as any;
 const metaCountries = (meta.countries ?? []) as Array<{
   code: string; name: string; name_en?: string; name_zh?: string; language: string;
+  location_type?: 'country' | 'subdivision' | string; parent_code?: string | null;
   total_cases: number; total_deaths: number; disease_count: number;
   data_available?: boolean; record_count?: number;
   date_range: { start: string | null; end: string | null };
 }>;
-const supportedCountries = metaCountries.filter(hasCountryDataSnapshot);
+const supportedJurisdictions = metaCountries.filter(hasCountryDataSnapshot);
+const subdivisionCountries = supportedJurisdictions.filter(country => (
+  country.location_type === 'subdivision' || Boolean(country.parent_code)
+));
+const supportedCountries = supportedJurisdictions.filter(country => (
+  country.location_type !== 'subdivision' && !country.parent_code
+));
+const chinaSubdivisionCount = subdivisionCountries.filter(country => country.parent_code === 'CN').length;
 
 const metaByCode = Object.fromEntries(
   metaCountries.map(c => [c.code.toUpperCase(), c])
@@ -60,6 +78,37 @@ const ORDERED_COUNTRIES = [...CARD_COUNTRIES].sort((a, b) => {
 const scheduledCount = ORDERED_COUNTRIES.filter(
   c => resolveCoverageStatus(c, hasCountryDataSnapshot(metaByCode[c.code])) === 'Scheduled'
 ).length;
+const activeCount = supportedCountries.length;
+const totalReportedCases = supportedCountries.reduce(
+  (sum, country) => sum + Number(country.total_cases ?? 0),
+  0,
+);
+const latestCoverageEnd = supportedCountries
+  .map(country => country.date_range?.end)
+  .filter((date): date is string => Boolean(date))
+  .sort()
+  .at(-1) ?? '—';
+const numberFormatter = new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+
+const WHO_OPTIONS = [...new Set(
+  ORDERED_COUNTRIES.map(c => getCountryClassification(c.code)?.who_region).filter(Boolean),
+)] as WhoRegionCode[];
+const WB_REGION_OPTIONS = [...new Set(
+  ORDERED_COUNTRIES.map(c => getCountryClassification(c.code)?.wb_region).filter(Boolean),
+)] as WorldBankRegionCode[];
+const INCOME_OPTIONS = [...new Set(
+  ORDERED_COUNTRIES.map(c => getCountryClassification(c.code)?.income_group).filter(Boolean),
+)] as IncomeGroupCode[];
+
+const byLocalizedLabel = <T extends string>(labels: Record<T, { en: string; zh: string }>) =>
+  (a: T, b: T) => labels[a][locale].localeCompare(labels[b][locale], zh ? 'zh-CN' : 'en');
+
+WHO_OPTIONS.sort(byLocalizedLabel(WHO_REGION_LABELS));
+WB_REGION_OPTIONS.sort(byLocalizedLabel(WORLD_BANK_REGION_LABELS));
+INCOME_OPTIONS.sort(byLocalizedLabel(INCOME_GROUP_LABELS));
 
 const CADENCE_ZH: Record<string, string> = {
   Weekly: '每周',
@@ -89,11 +138,35 @@ const TRACK_ZH: Record<string, string> = {
   breadcrumbs={[{ label: pick('Countries', '国家') }]}
 >
   <div class="coverage-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <section class="coverage-hero">
+      <div>
+        <p class="coverage-kicker">{pick('Current coverage', '当前覆盖')}</p>
+        <h1 class="coverage-title">{pick('Countries and Regions', '国家和地区')}</h1>
+      </div>
+      <dl class="coverage-meta-grid" aria-label={pick('Coverage summary', '覆盖摘要')}>
+        <div class="coverage-meta-card">
+          <dt class="coverage-meta-label">{pick('Active', '已支持')}</dt>
+          <dd class="coverage-meta-value">{activeCount}</dd>
+        </div>
+        <div class="coverage-meta-card">
+          <dt class="coverage-meta-label">{pick('Scheduled', '规划中')}</dt>
+          <dd class="coverage-meta-value">{scheduledCount}</dd>
+        </div>
+        <div class="coverage-meta-card">
+          <dt class="coverage-meta-label">{pick('Records', '记录')}</dt>
+          <dd class="coverage-meta-value">{numberFormatter.format(totalReportedCases)}</dd>
+        </div>
+        <div class="coverage-meta-card">
+          <dt class="coverage-meta-label">{pick('Latest data', '最新数据')}</dt>
+          <dd class="coverage-meta-value coverage-meta-date">{latestCoverageEnd}</dd>
+        </div>
+      </dl>
+    </section>
+
     <section class="card coverage-surface p-6 sm:p-8">
       <div class="coverage-section-header flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 class="coverage-section-title">{pick('Data Coverage', '数据覆盖国家/地区')}</h1>
-
+          <h2 class="coverage-section-title">{pick('Data coverage map', '数据覆盖地图')}</h2>
         </div>
 
         <div class="coverage-legend">
@@ -116,7 +189,6 @@ const TRACK_ZH: Record<string, string> = {
           initialLanguage={locale}
         />
       </div>
-      <p class="coverage-map-note">{pick('Countries and regions with available data are shown on the map. Select a card below to view sources and coverage.', '地图展示当前可用数据的国家和地区；选择下方卡片可查看来源与覆盖范围。')}</p>
     </section>
 
     <section class="card coverage-surface p-6 sm:p-8">
@@ -124,9 +196,86 @@ const TRACK_ZH: Record<string, string> = {
         <div>
           <h2 class="coverage-section-title">{pick('Countries and regions', '国家/地区')}</h2>
         </div>
-        <span class="coverage-summary-pill">
+        <span class="coverage-summary-pill" id={`country-filter-summary-${locale}`} aria-live="polite">
           <span>{pick(`${supportedCountries.length} active · ${scheduledCount} scheduled`, `${supportedCountries.length} 个已支持 · ${scheduledCount} 个规划中`)}</span>
         </span>
+      </div>
+
+      {chinaSubdivisionCount > 0 && (
+        <a
+          class="mb-6 flex flex-col gap-2 border border-[rgb(var(--border))] bg-[rgb(var(--surface-muted))] p-4 transition-colors hover:border-[rgb(var(--color-teal))] sm:flex-row sm:items-center sm:justify-between"
+          href={`${prefix}/countries/cn/#subnational-data`}
+        >
+          <span>
+            <strong class="block text-[rgb(var(--text-strong))]">
+              {pick('China province-level datasets', '中国分省数据')}
+            </strong>
+            <span class="mt-1 block text-sm leading-6 text-[rgb(var(--text-muted))]">
+              {pick(
+                `${chinaSubdivisionCount} province-level datasets are grouped under China and excluded from country-level totals.`,
+                `${chinaSubdivisionCount} 个分省数据集统一归入中国，不计入国家级汇总。`,
+              )}
+            </span>
+          </span>
+          <span class="shrink-0 text-sm font-semibold text-[rgb(var(--color-teal))]">
+            {pick('Browse provinces →', '浏览分省数据 →')}
+          </span>
+        </a>
+      )}
+
+      <div class="coverage-filters" aria-label={pick('Filter countries and regions', '筛选国家和地区')}>
+        <label class="coverage-filter coverage-filter-search">
+          <span>{pick('Country or region', '国家或地区')}</span>
+          <input
+            id={`country-filter-search-${locale}`}
+            type="search"
+            placeholder={pick('Search by name or code', '按名称或代码搜索')}
+            autocomplete="off"
+          />
+        </label>
+
+        <label class="coverage-filter">
+          <span>{pick('WHO region', 'WHO 区域')}</span>
+          <select id={`country-filter-who-${locale}`}>
+            <option value="">{pick('All WHO regions', '全部 WHO 区域')}</option>
+            {WHO_OPTIONS.map(code => (
+              <option value={code}>{WHO_REGION_LABELS[code][locale]}</option>
+            ))}
+          </select>
+        </label>
+
+        <label class="coverage-filter">
+          <span>{pick('World Bank region', '世界银行区域')}</span>
+          <select id={`country-filter-wb-${locale}`}>
+            <option value="">{pick('All WB regions', '全部世界银行区域')}</option>
+            {WB_REGION_OPTIONS.map(code => (
+              <option value={code}>{WORLD_BANK_REGION_LABELS[code][locale]}</option>
+            ))}
+          </select>
+        </label>
+
+        <label class="coverage-filter">
+          <span>{pick('Development level', '发展水平')}</span>
+          <select id={`country-filter-income-${locale}`}>
+            <option value="">{pick('All income groups', '全部收入组')}</option>
+            {INCOME_OPTIONS.map(code => (
+              <option value={code}>{INCOME_GROUP_LABELS[code][locale]}</option>
+            ))}
+          </select>
+        </label>
+
+        <div class="coverage-filter coverage-filter-status">
+          <span>{pick('Data status', '数据状态')}</span>
+          <div role="group" aria-label={pick('Filter by data status', '按数据状态筛选')}>
+            <button type="button" data-country-status-filter="all" aria-pressed="true">{pick('All', '全部')}</button>
+            <button type="button" data-country-status-filter="supported" aria-pressed="false">{pick('Supported', '已支持')}</button>
+            <button type="button" data-country-status-filter="scheduled" aria-pressed="false">{pick('Scheduled', '规划中')}</button>
+          </div>
+        </div>
+
+        <button class="coverage-filter-reset" id={`country-filter-reset-${locale}`} type="button">
+          {pick('Reset filters', '重置筛选')}
+        </button>
       </div>
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -134,25 +283,50 @@ const TRACK_ZH: Record<string, string> = {
           const m = metaByCode[c.code];
           const hasData = hasCountryDataSnapshot(m);
           const status = resolveCoverageStatus(c, hasData);
+          const filterStatus = m && hasData ? 'supported' : 'scheduled';
+          const classification = getCountryClassification(c.code)
+            ?? getCountryClassification(m?.parent_code ?? '');
+          const searchText = `${c.code} ${c.name_en} ${c.name_zh} ${m?.name ?? ''} ${m?.name_en ?? ''} ${m?.name_zh ?? ''}`.toLowerCase();
           const cadenceZh = c.cadence ? CADENCE_ZH[c.cadence] ?? c.cadence : '';
           const trackZh = c.onboarding_track ? TRACK_ZH[c.onboarding_track] ?? c.onboarding_track : '';
           if (m && hasData) {
             return (
-              <CountryCard
-                code={m.code}
-                name={m.name_en ?? m.name}
-                nameZh={m.name_zh ?? c.name_zh}
-                totalCases={m.total_cases}
-                totalDeaths={m.total_deaths}
-                diseaseCount={m.disease_count}
-                dateRange={m.date_range}
-                locale={locale}
-              />
+              <div
+                class="coverage-country-card"
+                data-country-card
+                data-country-code={c.code}
+                data-country-search={searchText}
+                data-who-region={classification?.who_region ?? ''}
+                data-wb-region={classification?.wb_region ?? ''}
+                data-income-group={classification?.income_group ?? ''}
+                data-country-status={filterStatus}
+              >
+                <CountryCard
+                  code={m.code}
+                  name={m.name_en ?? m.name}
+                  nameZh={m.name_zh ?? c.name_zh}
+                  totalCases={m.total_cases}
+                  totalDeaths={m.total_deaths}
+                  diseaseCount={m.disease_count}
+                  dateRange={m.date_range}
+                  locationType={m.location_type}
+                  locale={locale}
+                />
+              </div>
             );
           }
 
           return (
-            <div class="coverage-scheduled-card rounded-none border p-5 transition-all">
+            <div
+              class="coverage-country-card coverage-scheduled-card rounded-none border p-5 transition-all"
+              data-country-card
+              data-country-code={c.code}
+              data-country-search={searchText}
+              data-who-region={classification?.who_region ?? ''}
+              data-wb-region={classification?.wb_region ?? ''}
+              data-income-group={classification?.income_group ?? ''}
+              data-country-status={filterStatus}
+            >
               <div class="flex items-start justify-between mb-4">
                 <div class="flex items-center gap-3">
                   <CountryFlag code={c.code} name={c.name_en} sizeClass="w-9 h-7" />
@@ -196,11 +370,169 @@ const TRACK_ZH: Record<string, string> = {
           );
         })}
       </div>
+      <p class="coverage-filter-empty" id={`country-filter-empty-${locale}`} hidden>
+        {pick('No countries or regions match these filters.', '没有符合当前筛选条件的国家或地区。')}
+      </p>
+      <p class="coverage-filter-provenance">
+        {pick(
+          `WHO regions and World Bank FY${COUNTRY_CLASSIFICATION_METADATA.worldBankFiscalYear} regions/income groups; snapshot updated ${COUNTRY_CLASSIFICATION_METADATA.updatedAt}.`,
+          `WHO 区域及世界银行 ${COUNTRY_CLASSIFICATION_METADATA.worldBankFiscalYear} 财年区域/收入组；快照更新于 ${COUNTRY_CLASSIFICATION_METADATA.updatedAt}。`,
+        )}
+        {' '}
+        <a href={COUNTRY_CLASSIFICATION_METADATA.sources.who_regions} target="_blank" rel="noreferrer">WHO ↗</a>
+        <span aria-hidden="true"> · </span>
+        <a href={COUNTRY_CLASSIFICATION_METADATA.sources.world_bank_groups} target="_blank" rel="noreferrer">World Bank ↗</a>
+      </p>
     </section>
   </div>
 </ReportLayout>
 
+<script is:inline define:vars={{
+  locale,
+  filterCopy: {
+    showing: pick('Showing', '显示'),
+    of: pick('of', '/'),
+    countries: pick('countries/regions', '个国家/地区'),
+    active: pick('active', '已支持'),
+  },
+}}>
+  const countryCards = Array.from(document.querySelectorAll('[data-country-card]'));
+  const countrySearch = document.querySelector(`#country-filter-search-${locale}`);
+  const whoSelect = document.querySelector(`#country-filter-who-${locale}`);
+  const wbSelect = document.querySelector(`#country-filter-wb-${locale}`);
+  const incomeSelect = document.querySelector(`#country-filter-income-${locale}`);
+  const resetButton = document.querySelector(`#country-filter-reset-${locale}`);
+  const filterSummary = document.querySelector(`#country-filter-summary-${locale}`);
+  const emptyState = document.querySelector(`#country-filter-empty-${locale}`);
+  const statusButtons = Array.from(document.querySelectorAll('[data-country-status-filter]'));
+  const validStatuses = new Set(['all', 'supported', 'scheduled']);
+  let selectedStatus = 'all';
+
+  function normalize(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+  }
+
+  function validSelectValue(select, value) {
+    return Array.from(select?.options || []).some(option => option.value === value) ? value : '';
+  }
+
+  function readUrl() {
+    const url = new URL(window.location.href);
+    if (countrySearch) countrySearch.value = url.searchParams.get('q') || '';
+    if (whoSelect) whoSelect.value = validSelectValue(whoSelect, url.searchParams.get('who') || '');
+    if (wbSelect) wbSelect.value = validSelectValue(wbSelect, url.searchParams.get('wb') || '');
+    if (incomeSelect) incomeSelect.value = validSelectValue(incomeSelect, url.searchParams.get('income') || '');
+    const urlStatus = url.searchParams.get('status') || 'all';
+    selectedStatus = validStatuses.has(urlStatus) ? urlStatus : 'all';
+  }
+
+  function syncStatusButtons() {
+    statusButtons.forEach(button => {
+      const active = button.dataset.countryStatusFilter === selectedStatus;
+      button.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  function syncUrl() {
+    const url = new URL(window.location.href);
+    const query = normalize(countrySearch?.value);
+    const values = {
+      q: query,
+      who: whoSelect?.value || '',
+      wb: wbSelect?.value || '',
+      income: incomeSelect?.value || '',
+      status: selectedStatus === 'all' ? '' : selectedStatus,
+    };
+
+    Object.entries(values).forEach(([key, value]) => {
+      if (value) url.searchParams.set(key, value);
+      else url.searchParams.delete(key);
+    });
+    window.history.replaceState({}, '', url);
+  }
+
+  function updateCountryFilters({ updateUrl = true } = {}) {
+    const query = normalize(countrySearch?.value);
+    const who = whoSelect?.value || '';
+    const wb = wbSelect?.value || '';
+    const income = incomeSelect?.value || '';
+    const visibleCodes = [];
+    let activeCount = 0;
+
+    countryCards.forEach(card => {
+      const matches =
+        (!query || normalize(card.dataset.countrySearch).includes(query))
+        && (!who || card.dataset.whoRegion === who)
+        && (!wb || card.dataset.wbRegion === wb)
+        && (!income || card.dataset.incomeGroup === income)
+        && (selectedStatus === 'all' || card.dataset.countryStatus === selectedStatus);
+      card.hidden = !matches;
+      if (!matches) return;
+      visibleCodes.push(card.dataset.countryCode);
+      if (card.dataset.countryStatus === 'supported') activeCount += 1;
+    });
+
+    if (filterSummary) {
+      filterSummary.textContent = `${filterCopy.showing} ${visibleCodes.length} ${filterCopy.of} ${countryCards.length} ${filterCopy.countries} · ${activeCount} ${filterCopy.active}`;
+    }
+    if (emptyState) emptyState.hidden = visibleCodes.length !== 0;
+    if (resetButton) resetButton.disabled = !query && !who && !wb && !income && selectedStatus === 'all';
+
+    window.__globalIdCountryFilterCodes = visibleCodes;
+    window.dispatchEvent(new CustomEvent('globalid:country-filter', { detail: { codes: visibleCodes } }));
+    if (updateUrl) syncUrl();
+  }
+
+  countrySearch?.addEventListener('input', () => updateCountryFilters());
+  [whoSelect, wbSelect, incomeSelect].forEach(select =>
+    select?.addEventListener('change', () => updateCountryFilters()),
+  );
+  statusButtons.forEach(button =>
+    button.addEventListener('click', () => {
+      selectedStatus = validStatuses.has(button.dataset.countryStatusFilter)
+        ? button.dataset.countryStatusFilter
+        : 'all';
+      syncStatusButtons();
+      updateCountryFilters();
+    }),
+  );
+  resetButton?.addEventListener('click', () => {
+    if (countrySearch) countrySearch.value = '';
+    if (whoSelect) whoSelect.value = '';
+    if (wbSelect) wbSelect.value = '';
+    if (incomeSelect) incomeSelect.value = '';
+    selectedStatus = 'all';
+    syncStatusButtons();
+    updateCountryFilters();
+    countrySearch?.focus();
+  });
+  window.addEventListener('popstate', () => {
+    readUrl();
+    syncStatusButtons();
+    updateCountryFilters({ updateUrl: false });
+  });
+
+  readUrl();
+  syncStatusButtons();
+  updateCountryFilters({ updateUrl: false });
+</script>
+
 <style>
+.coverage-hero {
+  display: grid;
+  grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+  gap: clamp(1.5rem, 5vw, 4rem);
+  align-items: end;
+  border: 1px solid rgb(var(--border));
+  border-top: 3px solid rgb(var(--color-teal));
+  background: rgb(var(--surface));
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+}
+
 .coverage-surface {
   position: relative;
   overflow: hidden;
@@ -234,7 +566,7 @@ const TRACK_ZH: Record<string, string> = {
 .coverage-meta-grid {
   display: grid;
   gap: 0.9rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .coverage-meta-card {
@@ -258,6 +590,11 @@ const TRACK_ZH: Record<string, string> = {
   font-size: 1.9rem;
   font-weight: 600;
   line-height: 1;
+}
+
+.coverage-meta-date {
+  font-size: 1rem;
+  line-height: 1.15;
 }
 
 .coverage-section-header {
@@ -314,13 +651,6 @@ const TRACK_ZH: Record<string, string> = {
   padding: 1rem;
 }
 
-.coverage-map-note {
-  margin-top: 0.8rem;
-  color: rgb(var(--text-faint));
-  font-size: 0.78rem;
-  line-height: 1.6;
-}
-
 .coverage-summary-pill {
   display: inline-flex;
   align-items: center;
@@ -333,6 +663,128 @@ const TRACK_ZH: Record<string, string> = {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.coverage-filters {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.15fr) repeat(3, minmax(8rem, 1fr)) auto auto;
+  align-items: end;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgb(var(--border) / 0.78);
+  background: rgb(var(--bg-soft) / 0.54);
+  padding: 1rem;
+}
+
+.coverage-filter {
+  display: grid;
+  align-content: start;
+  gap: 0.42rem;
+  min-width: 0;
+}
+
+.coverage-filter > span {
+  color: rgb(var(--text-faint));
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.coverage-filter input,
+.coverage-filter select {
+  width: 100%;
+  min-height: 2.6rem;
+  border: 1px solid rgb(var(--border));
+  border-radius: 0;
+  background: rgb(var(--surface));
+  padding: 0.58rem 0.7rem;
+  color: rgb(var(--text-strong));
+  font-size: 0.8rem;
+}
+
+.coverage-filter input:focus,
+.coverage-filter select:focus,
+.coverage-filter-status button:focus-visible,
+.coverage-filter-reset:focus-visible {
+  outline: 2px solid rgb(var(--color-brand) / 0.75);
+  outline-offset: 2px;
+}
+
+.coverage-filter-status {
+  grid-column: auto;
+}
+
+.coverage-filter-status > div {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.3rem;
+}
+
+.coverage-filter-status button,
+.coverage-filter-reset {
+  min-height: 2.6rem;
+  border: 1px solid rgb(var(--border));
+  border-radius: 0;
+  background: rgb(var(--surface));
+  padding: 0.48rem 0.58rem;
+  color: rgb(var(--text));
+  font-size: 0.74rem;
+  font-weight: 650;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.coverage-filter-status button:hover,
+.coverage-filter-reset:hover:not(:disabled) {
+  border-color: rgb(var(--color-brand) / 0.58);
+}
+
+.coverage-filter-status button[aria-pressed="true"] {
+  border-color: rgb(var(--color-brand) / 0.72);
+  background: rgb(var(--color-brand) / 0.12);
+  color: rgb(var(--text-strong));
+}
+
+.coverage-filter-reset {
+  align-self: end;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.coverage-filter-reset:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.coverage-filter-provenance {
+  margin: 1rem 0 0;
+  border-top: 1px solid rgb(var(--border) / 0.55);
+  padding-top: 0.75rem;
+  color: rgb(var(--text-faint));
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+.coverage-filter-provenance a {
+  color: rgb(var(--color-brand));
+  text-decoration: none;
+}
+
+.coverage-filter-provenance a:hover {
+  text-decoration: underline;
+}
+
+.coverage-country-card {
+  display: grid;
+  min-width: 0;
+}
+
+.coverage-filter-empty {
+  margin: 1rem 0 0;
+  border: 1px dashed rgb(var(--border-soft));
+  padding: 1rem;
+  color: rgb(var(--text-muted));
+  text-align: center;
 }
 
 .coverage-scheduled-card {
@@ -418,12 +870,46 @@ const TRACK_ZH: Record<string, string> = {
 }
 
 @media (max-width: 640px) {
-  .coverage-meta-grid {
+  .coverage-hero {
     grid-template-columns: 1fr;
+  }
+
+  .coverage-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .coverage-map-frame {
     padding: 0.7rem;
+  }
+
+  .coverage-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .coverage-filter-status {
+    grid-column: auto;
+  }
+
+  .coverage-filter-reset {
+    justify-self: stretch;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1199px) {
+  .coverage-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .coverage-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .coverage-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .coverage-filter-status {
+    grid-column: 1 / -1;
   }
 }
 </style>

@@ -53,6 +53,16 @@ export const INITIAL_CURVE_VIEW_STATE: EpidemicCurveViewState = {
   dateWindow: null,
 };
 
+export function getCurveLineSampling(
+  values: (number | null)[],
+  analysisMode: EpidemicAnalysisMode,
+): 'lttb' | undefined {
+  if (analysisMode === 'outbreak') return undefined;
+  return values.some((value) => value == null || !Number.isFinite(value))
+    ? undefined
+    : 'lttb';
+}
+
 export function buildStableSeriesColorMap(ids: string[], colors: string[]) {
   const palette = colors.length > 0 ? colors : ['currentColor'];
   return new Map<string, string>(
@@ -191,21 +201,33 @@ export function insertMissingPeriodBreaks(
   dates: string[],
   values: (number | null)[],
   granularity: string,
+  pointGranularities: Array<string | null | undefined> = [],
 ) {
   if (dates.length < 2 || dates.length !== values.length) return { dates, values };
   const normalized = normalizeTemporalGranularity(granularity);
   const outputDates: string[] = [];
   const outputValues: (number | null)[] = [];
 
-  const hasGap = (left: Date, right: Date) => {
+  const effectiveGranularity = (index: number) => {
+    const pointGranularity = normalizeTemporalGranularity(pointGranularities[index]);
+    return pointGranularity === 'unknown' ? normalized : pointGranularity;
+  };
+
+  const hasGap = (left: Date, right: Date, leftGranularity: string, rightGranularity: string) => {
+    if (leftGranularity !== rightGranularity) {
+      return ![leftGranularity, rightGranularity].some((value) => (
+        value === 'unknown' || value === 'mixed'
+      ));
+    }
+    const activeGranularity = leftGranularity;
     const elapsedDays = (right.getTime() - left.getTime()) / 86_400_000;
     const monthDifference = ((right.getUTCFullYear() - left.getUTCFullYear()) * 12)
       + right.getUTCMonth() - left.getUTCMonth();
-    if (normalized === 'daily') return elapsedDays > 1.5;
-    if (normalized === 'weekly') return elapsedDays > 10.5;
-    if (normalized === 'monthly') return monthDifference > 1;
-    if (normalized === 'quarterly') return monthDifference > 3;
-    if (normalized === 'annual') {
+    if (activeGranularity === 'daily') return elapsedDays > 1.5;
+    if (activeGranularity === 'weekly') return elapsedDays > 10.5;
+    if (activeGranularity === 'monthly') return monthDifference > 1;
+    if (activeGranularity === 'quarterly') return monthDifference > 3;
+    if (activeGranularity === 'annual') {
       return right.getUTCFullYear() - left.getUTCFullYear() > 1;
     }
     return false;
@@ -218,7 +240,12 @@ export function insertMissingPeriodBreaks(
       if (
         Number.isFinite(previous.getTime())
         && Number.isFinite(current.getTime())
-        && hasGap(previous, current)
+        && hasGap(
+          previous,
+          current,
+          effectiveGranularity(index - 1),
+          effectiveGranularity(index),
+        )
       ) {
         outputDates.push(new Date(
           previous.getTime() + ((current.getTime() - previous.getTime()) / 2)
@@ -443,6 +470,9 @@ export function selectSourceSeries(
           value != null && Number.isFinite(value) ? Number(value) : null
         ))
       : [],
+    point_granularities: source.values.map(() => source.temporal_granularity ?? null),
+    point_series_codes: source.values.map(() => source.series_code ?? seriesCode),
+    point_data_layers: source.values.map(() => 'source_series_selected'),
     deaths: [],
     incidence_rates: incidenceRates,
     incidence_sources: incidenceRates.map((value) => (
@@ -583,14 +613,14 @@ export function assessComparison(
   return { level, reasons: [...reasons], commonWindow };
 }
 
-export function clipToDateWindow(
+export function clipToDateWindow<T>(
   dates: string[],
-  values: (number | null)[],
+  values: T[],
   window: DateWindow | null,
 ) {
   if (!window) return { dates, values };
   const clippedDates: string[] = [];
-  const clippedValues: (number | null)[] = [];
+  const clippedValues: Array<T | null> = [];
   dates.forEach((date, index) => {
     if (date < window.startDate || date > window.endDate) return;
     clippedDates.push(date);

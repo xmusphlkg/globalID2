@@ -11,6 +11,8 @@ export interface Country {
   language: string;
   timezone: string;
   is_active: boolean;
+  location_type?: "country" | "subdivision" | string;
+  parent_code?: string | null;
 }
 
 const COUNTRY_NAMES_ZH: Record<string, string> = {
@@ -52,6 +54,17 @@ export function getCountryDisplayName(country: Country, lang: "en" | "zh") {
   }
 
   return country.name_en || country.name || country.name_local || country.code;
+}
+
+export function isCountrySubdivision(country: Country): boolean {
+  return country.location_type === "subdivision" || Boolean(country.parent_code) || country.code.includes("-");
+}
+
+export function getCountrySearchText(country: Country): string {
+  return [country.code, country.name, country.name_en, country.name_zh, country.name_local]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase();
 }
 
 export function useCountries() {

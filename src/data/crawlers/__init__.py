@@ -17,6 +17,7 @@ from .kr import KoreaKDCAOpenAPICrawler
 from .hk import HongKongCHPCrawler
 from .ch import SwitzerlandIDDCrawler
 from .ca import CanadaOntarioPHOCrawler
+from .ca_national import CanadaCNDSSNationalCrawler
 from .fi import FinlandTHLCrawler
 from .ie import IrelandHPSCWeeklyCrawler
 from .ie_annual import IrelandHPSCAnnualCrawler
@@ -25,6 +26,8 @@ from .no import NorwayMSISCrawler
 from .se import SwedenSmiNetCrawler
 from .at import AustriaAGESRadarCrawler
 from .de import GermanySurvStatCrawler
+from .sg import SingaporeCDACrawler
+from .ecdc import ECDCAtlasCrawler
 
 # ``is`` is Iceland's ISO code and a Python keyword, so this one module must be
 # loaded dynamically rather than through a ``from .is import ...`` statement.
@@ -49,6 +52,7 @@ __all__ = [
     "HongKongCHPCrawler",
     "SwitzerlandIDDCrawler",
     "CanadaOntarioPHOCrawler",
+    "CanadaCNDSSNationalCrawler",
     "FinlandTHLCrawler",
     "IrelandHPSCWeeklyCrawler",
     "IrelandHPSCAnnualCrawler",
@@ -57,5 +61,7 @@ __all__ = [
     "SwedenSmiNetCrawler",
     "AustriaAGESRadarCrawler",
     "GermanySurvStatCrawler",
+    "SingaporeCDACrawler",
+    "ECDCAtlasCrawler",
     "IcelandDOHCrawler",
 ]

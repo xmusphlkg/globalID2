@@ -167,6 +167,60 @@ def test_exact_series_is_preferred_to_narrower_representative() -> None:
     assert selection.projection_policy == "representative_series"
 
 
+def test_equivalent_non_overlapping_series_form_temporal_handoff() -> None:
+    selection = select_series_projection(
+        [
+            {
+                "series_code": "SER_HISTORY",
+                "mapping_relation": "exact",
+                "aggregation_policy": "non_additive",
+                "metric_type": "case_notifications",
+                "temporal_granularity": "weekly",
+                "unit": "count",
+                "valid_from": "2012-01-01",
+                "valid_to": "2022-12-31",
+            },
+            {
+                "series_code": "SER_CURRENT",
+                "mapping_relation": "exact",
+                "aggregation_policy": "non_additive",
+                "metric_type": "case_notifications",
+                "temporal_granularity": "weekly",
+                "unit": "count",
+                "valid_from": "2023-01-01",
+                "coverage_end": "2026-08-16",
+            },
+        ]
+    )
+
+    assert selection.selected_codes == frozenset({"SER_HISTORY", "SER_CURRENT"})
+    assert selection.projection_policy == "temporal_handoff"
+    assert selection.loss_risk is None
+
+
+def test_overlapping_series_do_not_form_temporal_handoff() -> None:
+    selection = select_series_projection(
+        [
+            {
+                "series_code": "SER_A",
+                "mapping_relation": "exact",
+                "aggregation_policy": "non_additive",
+                "valid_from": "2020-01-01",
+                "valid_to": "2024-12-31",
+            },
+            {
+                "series_code": "SER_B",
+                "mapping_relation": "exact",
+                "aggregation_policy": "non_additive",
+                "valid_from": "2024-01-01",
+                "valid_to": "2026-12-31",
+            },
+        ]
+    )
+
+    assert selection.projection_policy == "representative_series"
+
+
 def test_reported_aggregate_allows_multiple_narrower_source_series() -> None:
     selection = select_series_projection(
         [

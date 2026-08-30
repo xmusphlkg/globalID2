@@ -7,6 +7,10 @@ and report period, so this module builds that compatibility view conservatively:
 * one registered case-count series is read directly;
 * multiple series are summed only when every series explicitly declares
   ``sum_disjoint`` and every selected component exists in the period;
+* equivalent predecessor and successor series may form a strictly
+  non-overlapping ``temporal_handoff`` without summing;
+* equivalent retained sources may use an explicit per-period
+  ``priority_overlay`` without deleting the lower-priority observation;
 * otherwise one deterministic representative exact series is used and every
   source definition remains visible in provenance;
 * multiple narrower non-additive series without a reported aggregate remain
@@ -27,6 +31,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..location_codes import jurisdiction_geography_key, registry_country_code
 from src.core.disease_cutover import (
     READ_MODES,
     DiseaseReadPolicy,
@@ -41,8 +46,10 @@ from src.domain.disease_ontology import (
 )
 from src.domain.disease_record import DiseaseRecord
 from src.services.disease_series_policy import (
+    PRIORITY_OVERLAY_POLICY,
     SERIES_CASE_COUNT_METRICS as _SERIES_CASE_COUNT_METRICS,
     SOURCE_OBSERVATIONS_ONLY_POLICY,
+    TEMPORAL_HANDOFF_POLICY,
     is_case_count_metric,
     is_case_count_series,
     select_series_projection,
@@ -138,6 +145,9 @@ def _source_series_details(
         "missing_value_policy",
         "valid_from",
         "valid_to",
+        "comparability_set",
+        "projection_policy",
+        "projection_priority",
     )
     details: list[dict[str, Any]] = []
     for code in sorted(grouped):
@@ -372,9 +382,26 @@ def project_series_first_records(
     registry: dict[str, dict[str, Any]] = {}
     for period, rows in selected_by_period.items():
         present_codes = {str(row.get("series_code")) for row in rows}
-        if len(selected_codes) > 1 and present_codes != selected_codes:
-            # A missing disjoint component is unknown, not zero.
-            continue
+        if len(selected_codes) > 1:
+            if projection_policy == PRIORITY_OVERLAY_POLICY:
+                rows = [
+                    max(
+                        rows,
+                        key=lambda row: (
+                            int(row.get("projection_priority") or 0),
+                            str(row.get("series_code") or ""),
+                        ),
+                    )
+                ]
+            elif projection_policy == TEMPORAL_HANDOFF_POLICY:
+                if len(present_codes) != 1:
+                    raise RuntimeError(
+                        "Temporal handoff series overlap at the compatibility grain: "
+                        f"{period}"
+                    )
+            elif present_codes != selected_codes:
+                # A missing disjoint component is unknown, not zero.
+                continue
         first = rows[0]
         source_names = sorted(
             {str(row.get("source_system")) for row in rows if row.get("source_system")}
@@ -434,7 +461,10 @@ def project_series_first_records(
         fallback_reason = None
         coverage_status = "parity"
 
-    safely_aligned_metrics = projection_policy in {"single_series", "sum_disjoint"}
+    safely_aligned_metrics = projection_policy in {
+        "single_series", "sum_disjoint", TEMPORAL_HANDOFF_POLICY,
+        PRIORITY_OVERLAY_POLICY,
+    }
     context = {
         "data_layer": data_layer,
         "projection_policy": effective_policy,
@@ -575,6 +605,7 @@ async def load_series_first_records(
     )
     series: list[dict[str, Any]] = []
     if policy.read_mode != "legacy" or policy.shadow_compare:
+        registry_code = registry_country_code(country)
         series_query = (
             select(
                 DiseaseSeriesObservation.time,
@@ -599,12 +630,21 @@ async def load_series_first_records(
                 DiseaseSurveillanceSeries.missing_value_policy,
                 DiseaseSurveillanceSeries.valid_from,
                 DiseaseSurveillanceSeries.valid_to,
+                DiseaseSurveillanceSeries.metadata_.op("->>")(
+                    "comparability_set"
+                ).label("comparability_set"),
+                DiseaseSurveillanceSeries.metadata_.op("->>")(
+                    "projection_policy"
+                ).label("projection_policy"),
+                DiseaseSurveillanceSeries.metadata_.op("->>")(
+                    "projection_priority"
+                ).label("projection_priority"),
             )
             .select_from(DiseaseSurveillanceSeries)
             .outerjoin(DiseaseSeriesObservation, observation_join)
             .where(
                 DiseaseSurveillanceSeries.disease_id == disease_code,
-                DiseaseSurveillanceSeries.country_code == country.code,
+                DiseaseSurveillanceSeries.country_code == registry_code,
                 _readable_series_availability_clause(),
             )
             .order_by(
@@ -612,6 +652,14 @@ async def load_series_first_records(
                 DiseaseSeriesObservation.time,
             )
         )
+        if registry_code != country.code:
+            # A child jurisdiction may inherit definitions from the parent
+            # registry, but unrelated parent-national definitions must not
+            # participate in projection selection.  Keep only series that
+            # actually publish a fact for this jurisdiction geography.
+            series_query = series_query.where(
+                DiseaseSeriesObservation.id.is_not(None)
+            )
         rows = (await db.execute(series_query)).all()
         series = [dict(row._mapping) for row in rows]
 
@@ -686,6 +734,78 @@ async def load_series_first_records(
         records=records,
         metadata=metadata,
     )
+
+
+async def load_jurisdiction_series_first_records(
+    db: AsyncSession,
+    *,
+    country_id: int,
+) -> list[SeriesFirstResult]:
+    """Load every safely projectable disease curve for one jurisdiction.
+
+    This is primarily used by aggregate dashboard endpoints.  It discovers
+    concepts from both the legacy layer and the registry observation geography,
+    then delegates each curve to the same projection policy used by the disease
+    detail API.  A child jurisdiction therefore inherits registry definitions
+    without inheriting its parent's observations.
+    """
+
+    country = (
+        await db.execute(select(Country).where(Country.id == country_id))
+    ).scalar_one_or_none()
+    if country is None:
+        return []
+
+    legacy_codes = set(
+        (
+            await db.execute(
+                select(Disease.name)
+                .join(DiseaseRecord, DiseaseRecord.disease_id == Disease.id)
+                .where(
+                    DiseaseRecord.country_id == country_id,
+                    Disease.name != "D999",
+                )
+                .distinct()
+            )
+        ).scalars().all()
+    )
+    series_codes = set(
+        (
+            await db.execute(
+                select(DiseaseSurveillanceSeries.disease_id)
+                .join(
+                    DiseaseSeriesObservation,
+                    DiseaseSeriesObservation.series_code
+                    == DiseaseSurveillanceSeries.series_code,
+                )
+                .where(
+                    DiseaseSurveillanceSeries.country_code
+                    == registry_country_code(country),
+                    DiseaseSurveillanceSeries.disease_id.is_not(None),
+                    DiseaseSeriesObservation.geography_key
+                    == jurisdiction_geography_key(country.code),
+                    DiseaseSeriesObservation.dimension_key == "all",
+                    DiseaseSeriesObservation.suppressed.is_(False),
+                    DiseaseSeriesObservation.value.is_not(None),
+                    DiseaseSeriesObservation.quality_status != "rejected",
+                )
+                .distinct()
+            )
+        ).scalars().all()
+    )
+
+    results: list[SeriesFirstResult] = []
+    for disease_code in sorted(legacy_codes | series_codes):
+        if not disease_code:
+            continue
+        projected = await load_series_first_records(
+            db,
+            disease_code=str(disease_code),
+            country_id=country_id,
+        )
+        if projected.records:
+            results.append(projected)
+    return results
 
 
 def _strict_series_metadata(
@@ -856,10 +976,11 @@ def monthly_comparison_points(
         )
         month = normalized.strftime("%Y-%m-01")
         point = monthly.setdefault(
-            month, {"time_period": month, "cases": 0, "deaths": 0}
+            month, {"time_period": month, "cases": 0, "deaths": None}
         )
         point["cases"] = _count(float(point["cases"]) + float(record.get("cases") or 0))
-        point["deaths"] = _count(
-            float(point["deaths"]) + float(record.get("deaths") or 0)
-        )
+        if record.get("deaths") is not None:
+            point["deaths"] = _count(
+                float(point["deaths"] or 0) + float(record["deaths"])
+            )
     return [monthly[key] for key in sorted(monthly)]

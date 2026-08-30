@@ -49,6 +49,7 @@ def test_export_public_signature_remains_stable() -> None:
         "direct_download_output_dir",
         "direct_download_url_base",
         "direct_download_max_file_bytes",
+        "direct_download_workers",
     ]
 
 

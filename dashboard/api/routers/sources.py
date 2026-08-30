@@ -60,8 +60,11 @@ _SERIES_SOURCE_SCOPE_OVERRIDES = {
     "SRC_AU_NINDSS": "all",
     "SRC_BR_SINAN": "sinan_datasus",
     "SRC_CA_ON_PHO_IDTO": "pho_idto_monthly",
+    "SRC_CA_PHAC_CNDSS": "phac_cndss_annual",
     "SRC_CH_FOPH_IDD": "foph_idd",
     "SRC_CN_CDC": "cdc_weekly",
+    "SRC_CN_PROV_DATACENTER": "cn_province_datacenter",
+    "SRC_CN_PROV_MONTHLY_REPORT": "cn_province_monthly_report",
     "SRC_FI_THL_TTR": "thl_ttr",
     "SRC_HK_CHP": "chp_notifiable",
     "SRC_IE_HPSC_NDH": "hpsc_ndh",
@@ -76,10 +79,16 @@ _SERIES_SOURCE_SCOPE_OVERRIDES = {
     "SRC_KR_KDCA": "kdca_open_api",
     "SRC_NO_FHI_MSIS": "fhi_msis",
     "SRC_SE_FOHM_SMINET": "fohm_sminet",
+    "SRC_SG_CDA_WIDB": "cda_weekly_bulletin",
+    "SRC_SG_DATA_GOV_WIDB": "cda_weekly_bulletin",
     "SRC_TW_NIDSS": "nidss_open_data",
     "SRC_US_NHSS": "nhss_hiv",
     "SRC_US_NNDSS": "nndss_api",
 }
+
+_JURISDICTION_SERIES_SOURCES = frozenset(
+    {"SRC_CN_PROV_DATACENTER", "SRC_CN_PROV_MONTHLY_REPORT"}
+)
 
 
 def _source_kind(country_code: str, scope: str) -> str:
@@ -115,6 +124,8 @@ def _series_source_scope(source_system: str, *, country_code: str) -> str:
     """Resolve a series registry source ID to a dashboard crawl scope."""
 
     raw = str(source_system or "").strip()
+    if raw.upper().startswith("SRC_") and raw.upper().endswith("_ECDC_ATLAS"):
+        return "ecdc_atlas_annual"
     if raw.upper() in _SERIES_SOURCE_SCOPE_OVERRIDES:
         return _SERIES_SOURCE_SCOPE_OVERRIDES[raw.upper()]
     candidate = raw.casefold()
@@ -684,6 +695,11 @@ async def get_sources_flow(
             DiseaseSeriesObservation.series_code
             == DiseaseSurveillanceSeries.series_code,
         )
+        .where(
+            DiseaseSurveillanceSeries.source_system.not_in(
+                _JURISDICTION_SERIES_SOURCES
+            )
+        )
         .group_by(
             Country.id,
             Country.code,
@@ -694,6 +710,50 @@ async def get_sources_flow(
     if country_id is not None:
         series_q = series_q.where(Country.id == country_id)
     series_rows = (await db.execute(series_q)).all()
+
+    # Province series are registered by the national publishing authority but
+    # their facts belong to the geography encoded on each observation.  Map
+    # those observations to the child Country row so they appear in region
+    # flows and never inflate China's national flow.
+    observation_country_code = func.split_part(
+        DiseaseSeriesObservation.geography_key, ":", 2
+    )
+    jurisdiction_series_q = (
+        select(
+            Country.id.label("country_id"),
+            Country.code.label("country_code"),
+            Country.name_en.label("country_name"),
+            DiseaseSurveillanceSeries.source_system,
+            func.count(func.distinct(DiseaseSurveillanceSeries.series_code)).label(
+                "series_count"
+            ),
+            func.count(DiseaseSeriesObservation.id).label("observation_count"),
+            func.min(DiseaseSeriesObservation.time).label("earliest_date"),
+            func.max(DiseaseSeriesObservation.time).label("latest_date"),
+        )
+        .select_from(DiseaseSurveillanceSeries)
+        .join(
+            DiseaseSeriesObservation,
+            DiseaseSeriesObservation.series_code
+            == DiseaseSurveillanceSeries.series_code,
+        )
+        .join(Country, Country.code == observation_country_code)
+        .where(
+            DiseaseSurveillanceSeries.source_system.in_(
+                _JURISDICTION_SERIES_SOURCES
+            ),
+            DiseaseSeriesObservation.geography_key.like("country:CN-%:national"),
+        )
+        .group_by(
+            Country.id,
+            Country.code,
+            Country.name_en,
+            DiseaseSurveillanceSeries.source_system,
+        )
+    )
+    if country_id is not None:
+        jurisdiction_series_q = jurisdiction_series_q.where(Country.id == country_id)
+    series_rows += (await db.execute(jurisdiction_series_q)).all()
 
     definition_q = (
         select(
@@ -708,6 +768,11 @@ async def get_sources_flow(
         )
         .select_from(DiseaseSurveillanceSeries)
         .join(Country, Country.code == DiseaseSurveillanceSeries.country_code)
+        .where(
+            DiseaseSurveillanceSeries.source_system.not_in(
+                _JURISDICTION_SERIES_SOURCES
+            )
+        )
         .group_by(
             Country.id,
             Country.code,
@@ -721,6 +786,47 @@ async def get_sources_flow(
     if country_id is not None:
         definition_q = definition_q.where(Country.id == country_id)
     definition_rows = (await db.execute(definition_q)).all()
+    jurisdiction_definition_q = (
+        select(
+            Country.id.label("country_id"),
+            Country.code.label("country_code"),
+            DiseaseSurveillanceSeries.source_system,
+            DiseaseSurveillanceSeries.availability_status,
+            DiseaseSurveillanceSeries.metric_type,
+            DiseaseSurveillanceSeries.mapping_relation,
+            DiseaseSurveillanceSeries.comparability,
+            func.count(func.distinct(DiseaseSurveillanceSeries.series_code)).label(
+                "count"
+            ),
+        )
+        .select_from(DiseaseSurveillanceSeries)
+        .join(
+            DiseaseSeriesObservation,
+            DiseaseSeriesObservation.series_code
+            == DiseaseSurveillanceSeries.series_code,
+        )
+        .join(Country, Country.code == observation_country_code)
+        .where(
+            DiseaseSurveillanceSeries.source_system.in_(
+                _JURISDICTION_SERIES_SOURCES
+            ),
+            DiseaseSeriesObservation.geography_key.like("country:CN-%:national"),
+        )
+        .group_by(
+            Country.id,
+            Country.code,
+            DiseaseSurveillanceSeries.source_system,
+            DiseaseSurveillanceSeries.availability_status,
+            DiseaseSurveillanceSeries.metric_type,
+            DiseaseSurveillanceSeries.mapping_relation,
+            DiseaseSurveillanceSeries.comparability,
+        )
+    )
+    if country_id is not None:
+        jurisdiction_definition_q = jurisdiction_definition_q.where(
+            Country.id == country_id
+        )
+    definition_rows += (await db.execute(jurisdiction_definition_q)).all()
 
     quality_q = (
         select(
@@ -737,6 +843,11 @@ async def get_sources_flow(
             DiseaseSeriesObservation.series_code
             == DiseaseSurveillanceSeries.series_code,
         )
+        .where(
+            DiseaseSurveillanceSeries.source_system.not_in(
+                _JURISDICTION_SERIES_SOURCES
+            )
+        )
         .group_by(
             Country.id,
             Country.code,
@@ -747,6 +858,37 @@ async def get_sources_flow(
     if country_id is not None:
         quality_q = quality_q.where(Country.id == country_id)
     quality_rows = (await db.execute(quality_q)).all()
+    jurisdiction_quality_q = (
+        select(
+            Country.id.label("country_id"),
+            Country.code.label("country_code"),
+            DiseaseSurveillanceSeries.source_system,
+            DiseaseSeriesObservation.quality_status,
+            func.count().label("count"),
+        )
+        .select_from(DiseaseSurveillanceSeries)
+        .join(
+            DiseaseSeriesObservation,
+            DiseaseSeriesObservation.series_code
+            == DiseaseSurveillanceSeries.series_code,
+        )
+        .join(Country, Country.code == observation_country_code)
+        .where(
+            DiseaseSurveillanceSeries.source_system.in_(
+                _JURISDICTION_SERIES_SOURCES
+            ),
+            DiseaseSeriesObservation.geography_key.like("country:CN-%:national"),
+        )
+        .group_by(
+            Country.id,
+            Country.code,
+            DiseaseSurveillanceSeries.source_system,
+            DiseaseSeriesObservation.quality_status,
+        )
+    )
+    if country_id is not None:
+        jurisdiction_quality_q = jurisdiction_quality_q.where(Country.id == country_id)
+    quality_rows += (await db.execute(jurisdiction_quality_q)).all()
 
     availability_q = (
         select(
@@ -758,6 +900,11 @@ async def get_sources_flow(
         )
         .select_from(DiseaseSourceAvailability)
         .join(Country, Country.code == DiseaseSourceAvailability.country_code)
+        .where(
+            DiseaseSourceAvailability.source_system.not_in(
+                _JURISDICTION_SERIES_SOURCES
+            )
+        )
         .group_by(
             Country.id,
             Country.code,
@@ -768,6 +915,46 @@ async def get_sources_flow(
     if country_id is not None:
         availability_q = availability_q.where(Country.id == country_id)
     availability_rows = (await db.execute(availability_q)).all()
+    jurisdiction_availability_q = (
+        select(
+            Country.id.label("country_id"),
+            Country.code.label("country_code"),
+            DiseaseSourceAvailability.source_system,
+            DiseaseSourceAvailability.status,
+            func.count(func.distinct(DiseaseSourceAvailability.availability_code)).label(
+                "count"
+            ),
+        )
+        .select_from(DiseaseSourceAvailability)
+        .join(
+            DiseaseSurveillanceSeries,
+            DiseaseSurveillanceSeries.series_code
+            == DiseaseSourceAvailability.series_code,
+        )
+        .join(
+            DiseaseSeriesObservation,
+            DiseaseSeriesObservation.series_code
+            == DiseaseSurveillanceSeries.series_code,
+        )
+        .join(Country, Country.code == observation_country_code)
+        .where(
+            DiseaseSourceAvailability.source_system.in_(
+                _JURISDICTION_SERIES_SOURCES
+            ),
+            DiseaseSeriesObservation.geography_key.like("country:CN-%:national"),
+        )
+        .group_by(
+            Country.id,
+            Country.code,
+            DiseaseSourceAvailability.source_system,
+            DiseaseSourceAvailability.status,
+        )
+    )
+    if country_id is not None:
+        jurisdiction_availability_q = jurisdiction_availability_q.where(
+            Country.id == country_id
+        )
+    availability_rows += (await db.execute(jurisdiction_availability_q)).all()
 
     series_availability_by_key: Dict[str, Dict[str, int]] = {}
     metric_types_by_key: Dict[str, Dict[str, int]] = {}

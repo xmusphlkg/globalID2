@@ -27,10 +27,17 @@ export default function DiseasesPage() {
   const { data: compareData } = useCompare(compareMode ? countryCode || null : null, compareCodes);
 
   useEffect(() => {
-    if (!compareMode && !selectedCode && diseases && diseases.length > 0) {
-      setSelectedCode(diseases[0].code);
+    if (!compareMode && diseases && diseases.length > 0) {
+      if (!selectedCode || !diseases.some((disease) => disease.code === selectedCode)) {
+        setSelectedCode(diseases[0].code);
+      }
     }
   }, [compareMode, selectedCode, diseases]);
+
+  useEffect(() => {
+    setSelectedCode(null);
+    setCompareCodes([]);
+  }, [countryCode]);
 
   const compareXAxis = useMemo(() => {
     if (!compareData?.diseases) return [] as string[];
@@ -44,15 +51,16 @@ export default function DiseasesPage() {
       <EmptyState
         icon={<Activity className="h-12 w-12" />}
         title={t(lang, "no_data")}
-        description={lang === "zh" ? "请选择国家后分析疾病数据。" : "Select a country to analyze diseases."}
+        description={lang === "zh" ? "请选择国家或地区后分析疾病数据。" : "Select a country or region to analyze diseases."}
         className="min-h-[55vh]"
       />
     );
   }
 
   const totalCases = records?.reduce((sum, row) => sum + (row.cases ?? 0), 0) ?? 0;
-  const totalDeaths = records?.reduce((sum, row) => sum + (row.deaths ?? 0), 0) ?? 0;
-  const cfr = totalCases > 0 ? ((totalDeaths / totalCases) * 100).toFixed(2) : "0.00";
+  const hasDeathData = records?.some((row) => row.deaths !== null && row.deaths !== undefined) ?? false;
+  const totalDeaths = hasDeathData ? records?.reduce((sum, row) => sum + (row.deaths ?? 0), 0) ?? 0 : null;
+  const cfr = totalCases > 0 && totalDeaths !== null ? ((totalDeaths / totalCases) * 100).toFixed(2) : null;
   const avgMonthly = records && records.length > 0 ? Math.round(totalCases / records.length) : 0;
   const selectedDiseaseName = selectedCode
     ? diseases?.find((disease) => disease.code === selectedCode)?.display_name || selectedCode
@@ -149,13 +157,13 @@ export default function DiseasesPage() {
             />
             <MetricTile
               label={t(lang, "total_deaths")}
-              value={formatNumber(totalDeaths)}
+              value={totalDeaths === null ? "–" : formatNumber(totalDeaths)}
               icon={<Skull className="h-4 w-4" />}
               tone="danger"
             />
             <MetricTile
               label={t(lang, "cfr")}
-              value={`${cfr}%`}
+              value={cfr === null ? "–" : `${cfr}%`}
               icon={<Percent className="h-4 w-4" />}
               tone="info"
             />

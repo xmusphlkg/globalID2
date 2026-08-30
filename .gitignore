@@ -116,3 +116,5 @@ tests/fixtures/ai_test_data/
 Thumbs.db
 astro-site/public/site-data/
 astro-site/logs/
+/astro-site/test-results/
+/astro-site/public/flags/

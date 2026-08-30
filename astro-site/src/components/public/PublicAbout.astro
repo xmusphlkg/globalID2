@@ -1,69 +1,427 @@
 ---
 import aboutRaw from '../../data/about.json';
 import { acknowledgementEntries, acknowledgementIntro } from '../../data/acknowledgements';
-interface Props { locale?: 'en' | 'zh'; }
+import PageAnchorNav from '../PageAnchorNav.astro';
+import StatBar from '../StatBar.astro';
+
+interface Props {
+  locale?: 'en' | 'zh';
+}
+
 const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
 const prefix = zh ? '/zh' : '';
 const about = aboutRaw as any;
 const summary = about.summary ?? {};
 const dateLocale = zh ? 'zh-CN' : 'en-US';
-const generatedAt = about.generated_at ? new Date(about.generated_at).toLocaleDateString(dateLocale, { year: 'numeric', month: zh ? 'numeric' : 'long', day: 'numeric', timeZone: 'UTC' }) : zh ? '暂无' : 'Not available';
+const generatedAt = about.generated_at
+  ? new Date(about.generated_at).toLocaleDateString(dateLocale, {
+      year: 'numeric',
+      month: zh ? 'numeric' : 'long',
+      day: 'numeric',
+      timeZone: 'UTC',
+    })
+  : zh ? '暂无' : 'Not available';
+
 const copy = zh ? {
-  eyebrow: '方法与关于', title: '每条证据都可以追溯到来源', lead: 'GIDS 整理由公共卫生机构发布的传染病监测记录，让数据更容易查找、比较、理解和下载，同时保留原始报告背景。', updated: `公开数据快照更新于 ${generatedAt}。各来源的覆盖和发布时间不同。`,
-  onPage: '本页目录', nav: ['覆盖范围','工作流程','数据原则','局限性','编辑责任','致谢','项目'], scopeKicker: '当前范围', scope: '公开目录覆盖什么', scopeNote: '以下数字描述当前发布快照，而不是全球传染病的完整疾病负担。',
-  metrics: [['国家与地区',summary.total_countries ?? 0,'已发布监测数据的报告地区。'],['收录疾病',summary.total_diseases ?? 0,'目录中标准化的疾病概念。'],['公开记录',summary.total_cases ?? 0,'当前公开快照中的报告观测记录。'],['最新报告日期',summary.coverage_end ?? '暂无','至少一个公开来源包含的最新日期。']],
-  coverage: '当前时间覆盖', workflowKicker: '从来源到发布', workflow: '数据如何进入网站', workflowNote: '每个阶段都保留来源背景，并阻止不完整或未发布的数据进入公开目录。',
-  steps: [['采集','从配置的官方卫生机构来源获取新发布记录。'],['标准化','统一疾病名称、地点、日期和指标，同时保留原始报告粒度。'],['检查','在公开前执行完整性、一致性、来源和发布条件检查。'],['发布','更新页面和下载文件，并保留来源链接、局限和纠错渠道。']],
-  principlesKicker: '数据原则', principlesTitle: '如何负责任地阅读 GIDS', principles: [['可追溯至官方来源','每个公开数据集都保留卫生机构链接、报告频率和覆盖说明。'],['保留来源定义','不同报告系统并不一定可直接比较；病例定义、时间粒度和修订信息始终随数据保留。'],['缺失不等于零','未提供的字段和未报告的周期保持缺失，不会被静默转换成零。'],['公开结果可以复核','下载、方法、局限和纠错入口与图表及摘要同时发布。']],
-  limitsKicker: '局限性', limitsTitle: '这个网站不能告诉你什么', limits: ['GIDS 是监测与证据导航资源，不是临床工具、疫情声明服务，也不能代替国家和地方卫生机构的指导。','数据可能在修订后变化。报告系统的病例定义、覆盖人群、延迟和时间粒度不同；跨地区比较应先阅读各页面的来源及局限。'],
-  downloads: '浏览可下载数据', guidance: '阅读版权与复用说明', projectKicker: '项目', projectTitle: '可审查的方法与公开纠错渠道', project: ['GIDS 是独立、源码可见的公共利益项目。仓库当前未发布适用于全部代码的通用开源许可；代码、公开数据产品和第三方来源应分别按其明确标注的许可与使用规则处理。','反馈某个数字时，请同时提供页面地址、国家或疾病、报告周期和用于比较的官方来源。'], repository: '查看源代码仓库', correction: '提交数据纠错',
+  eyebrow: '方法与关于',
+  title: '每条证据都可以追溯到来源',
+  lead: 'GIDS 整理公共卫生机构发布的传染病监测记录，在保留原始报告语境的同时，让数据更容易查找、理解和复核。',
+  updated: `公开数据快照更新于 ${generatedAt}。各来源的覆盖和发布时间不同。`,
+  onPage: '本页目录',
+  nav: ['项目与维护者', '数据与方法', '使用边界', '致谢'],
+  story: {
+    kicker: '项目与维护者',
+    title: '从居家学习时的一份记录，到今天的全球监测项目',
+    lead: 'GIDS 并非始于一份完整的项目计划。2021 年，我只是想把不断更新、散落各处的传染病监测数据保存下来。这次个人的数据整理，后来慢慢变成了一个持续至今的公开项目。',
+    milestones: [
+      ['2021', '从一个个人需求开始', '受 COVID-19 疫情影响，我不得不在家远程学习。为了不让持续更新的月度数据淹没在网页和表格中，我开始系统整理中国法定报告传染病。'],
+      ['2024', '当数据成为研究的一部分', '几年的持续积累，支撑了我与合作者对 COVID-19 前后中国 24 种法定报告传染病变化的研究。'],
+      ['2025', '把同样的方法带向更多国家', '项目开始从中国扩展至全球。这不只是增加国家页面，还意味着理解不同报告制度，并保留每个数据源的原有语境。'],
+      ['2026', '让一个人的项目走得更远', '在 Codex 的帮助下，我继续扩充数据源，并重新整理采集、标准化、检查和发布流程。'],
+    ],
+    paperLabel: '阅读 2024 年论文',
+    current: '当前阶段',
+  },
+  maintainer: {
+    label: '维护者',
+    name: '李康国',
+    role: '厦门大学公共卫生学院博士研究生',
+    bio: '我目前攻读流行病与卫生统计学博士学位，预计于 2027 年毕业。这个网站既是我的研究训练，也是我对开放、可复核的公共卫生数据所做的长期实践。',
+    focus: ['流行病学', '卫生统计', '健康数据', '数据工程'],
+    opportunityTitle: '实习与合作',
+    opportunity: '我希望将这些经验带入真实的团队与产品中，目前正在寻找公共卫生、流行病学、卫生统计或健康数据方向的机会。可全球远程，也可在中国大陆或香港线下工作。',
+    profile: '访问个人主页',
+    email: '邮件联系',
+  },
+  data: {
+    kicker: '数据与方法',
+    title: '数据如何进入网站',
+    lead: '网站只发布已通过基本来源、完整性和一致性检查的公开记录。以下数字描述当前快照，不代表全球传染病的完整负担。',
+    metrics: [
+      ['国家与地区', summary.total_countries ?? 0],
+      ['收录疾病', summary.total_diseases ?? 0],
+      ['公开记录', summary.total_cases ?? 0],
+      ['最新报告日期', summary.coverage_end ?? '暂无'],
+    ],
+    coverage: `时间覆盖 ${summary.coverage_start ?? '—'} – ${summary.coverage_end ?? '—'}`,
+    steps: [
+      ['采集', '从已配置的官方卫生机构来源获取新发布记录。'],
+      ['标准化', '统一疾病名称、地点、日期和指标，但保留原始报告粒度。'],
+      ['检查', '在公开前检查完整性、一致性、来源与发布条件。'],
+      ['发布', '更新页面与下载文件，同时保留来源链接、局限和纠错入口。'],
+    ],
+    notes: [
+      ['官方来源', '每个数据集都保留负责机构、来源链接和覆盖周期。'],
+      ['保留语境', '不默认不同报告系统可直接比较，原始定义与时间粒度随数据保留。'],
+      ['缺失不是零', '未提供的字段和未报告的周期保持缺失，不会被默认转换为零。'],
+    ],
+  },
+  responsibility: {
+    kicker: '使用边界',
+    title: '如何负责任地使用 GIDS',
+    lead: '这里的数据适合用于监测、研究和证据导航，但不能脱离原始报告制度单独解读。',
+    items: [
+      ['不是临床或疫情声明工具', 'GIDS 不代替国家和地方卫生机构的指导，也不用于个人诊断或风险判断。'],
+      ['数字会修订，系统有差异', '病例定义、覆盖人群、报告延迟和时间粒度因地区而异；跨地区比较前应先阅读来源说明。'],
+      ['自动化需要公开纠错', '采集、标准化和部分摘要由软件辅助完成。发现问题时，请提供页面、报告周期和用于比较的官方来源。'],
+      ['独立性与复用', 'GIDS 是独立的公共利益项目，不代表所链接的机构。代码、公开数据产品与第三方来源应分别按其明确标注的规则使用。'],
+    ],
+    downloads: '浏览可下载数据',
+    reuse: '阅读复用说明',
+    repository: '查看源代码',
+    correction: '提交数据纠错',
+  },
 } : {
-  eyebrow: 'Methods & About', title: 'Evidence you can trace back to its source', lead: 'GIDS organizes infectious disease surveillance records published by public health authorities. The site makes those records easier to find, compare, interpret, and download without hiding their original context.', updated: `Public data snapshot updated ${generatedAt}. Coverage and publication schedules vary by source.`,
-  onPage: 'On this page', nav: ['Coverage','Workflow','Data principles','Limitations','Editorial responsibility','Acknowledgements','Project'], scopeKicker: 'Current scope', scope: 'What the public catalogue covers', scopeNote: 'These figures describe the current published snapshot, not the full global burden of infectious disease.',
-  metrics: [['Countries and regions',summary.total_countries ?? 0,'Jurisdictions with a published surveillance dataset.'],['Diseases tracked',summary.total_diseases ?? 0,'Standardized disease concepts represented in the catalogue.'],['Published records',summary.total_cases ?? 0,'Reported observations included in the current public snapshot.'],['Latest reporting date',summary.coverage_end ?? 'Not available','The latest date present in at least one published source.']],
-  coverage: 'Current time coverage', workflowKicker: 'From source to publication', workflow: 'How data reaches the site', workflowNote: 'Each stage preserves source context and keeps incomplete or unpublished records out of the public catalogue.',
-  steps: [['Collect','Retrieve newly published records from configured official health authority sources.'],['Standardize','Align disease names, places, dates, and measures while preserving the original reporting grain.'],['Check','Run completeness, consistency, provenance, and publication checks before records can appear publicly.'],['Publish','Refresh public pages and downloads while retaining source links, limitations, and correction paths.']],
-  principlesKicker: 'Data principles', principlesTitle: 'How to read GIDS responsibly', principles: [['Traceable to official sources','Every public dataset retains links to the responsible health authority and records its reporting cadence and coverage.'],['Source definitions remain visible','Reporting systems are not assumed to be directly comparable. Case definitions, temporal grain, and revisions stay attached to the data.'],['Missing does not mean zero','Unavailable fields and unreported periods remain missing. They are not silently converted into zero counts.'],['Public outputs are reviewable','Downloads, methods, limitations, and correction routes are published alongside charts and summaries.']],
-  limitsKicker: 'Limitations', limitsTitle: 'What this site cannot tell you', limits: ['GIDS is a surveillance and evidence navigation resource. It is not a clinical tool, an outbreak declaration service, or a substitute for guidance from health authorities.','Counts can change after revision. Reporting systems differ in case definition, population coverage, delay, and temporal grain. Cross-country comparisons should begin with each page’s source and limitation notes.'],
-  downloads: 'Explore downloadable data', guidance: 'Read copyright & reuse guidance', projectKicker: 'The project', projectTitle: 'Reviewable methods, public correction routes', project: ['GIDS is an independent, source-visible public-interest project. The repository currently publishes no general open-source licence covering all code; code, public data products, and third-party sources must each be handled under their expressly stated licence or reuse rules.','Questions about a figure should include the page URL, country or disease, reporting period, and the official source being compared.'], repository: 'View the source repository', correction: 'Report a data correction',
+  eyebrow: 'Methods & About',
+  title: 'Evidence you can trace back to its source',
+  lead: 'GIDS organizes infectious disease surveillance records published by public health authorities, making them easier to find, understand, and verify while preserving the context of the original reports.',
+  updated: `Public data snapshot updated ${generatedAt}. Coverage and publication schedules vary by source.`,
+  onPage: 'On this page',
+  nav: ['Project & maintainer', 'Data & methods', 'Responsible use', 'Acknowledgements'],
+  story: {
+    kicker: 'Project & maintainer',
+    title: 'What began as a record at home grew into a global surveillance project',
+    lead: 'GIDS did not begin with a complete roadmap. In 2021, I simply wanted to preserve surveillance data that kept changing and disappearing into scattered webpages and spreadsheets. That personal archive gradually became the public project I still maintain today.',
+    milestones: [
+      ['2021', 'It started with a personal need', 'When COVID-19 forced me to study remotely from home, I began organizing China\'s monthly notifiable infectious disease reports so that each release would not disappear into another webpage or spreadsheet.'],
+      ['2024', 'The archive became part of the research', 'Several years of accumulation supported research with my collaborators on changes in 24 notifiable infectious diseases in China before and during COVID-19.'],
+      ['2025', 'The same approach moved beyond China', 'The project began expanding globally. This meant more than adding country pages: it required understanding different reporting systems while keeping the original context of every source visible.'],
+      ['2026', 'Making a personal project sustainable', 'With help from Codex, I continue to add sources and reshape the collection, standardization, checking, and publication workflows.'],
+    ],
+    paperLabel: 'Read the 2024 paper',
+    current: 'Current',
+  },
+  maintainer: {
+    label: 'Maintainer',
+    name: 'Kangguo Li',
+    role: 'Doctoral researcher, School of Public Health, Xiamen University',
+    bio: 'I am pursuing a doctorate in Epidemiology and Health Statistics and expect to graduate in 2027. This site is both part of my research training and a long-term commitment to open, reviewable public health data.',
+    focus: ['Epidemiology', 'Health statistics', 'Health data', 'Data engineering'],
+    opportunityTitle: 'Internships & collaboration',
+    opportunity: 'I would like to bring this experience into a real team and product. I am currently exploring opportunities in public health, epidemiology, health statistics, or health data. I can contribute remotely worldwide or work on site in mainland China or Hong Kong.',
+    profile: 'Visit my personal website',
+    email: 'Contact me by email',
+  },
+  data: {
+    kicker: 'Data & methods',
+    title: 'How data reaches the site',
+    lead: 'Only public records that pass basic provenance, completeness, and consistency checks are published. These figures describe the current snapshot, not the full global burden of infectious disease.',
+    metrics: [
+      ['Countries and regions', summary.total_countries ?? 0],
+      ['Diseases tracked', summary.total_diseases ?? 0],
+      ['Published records', summary.total_cases ?? 0],
+      ['Latest reporting date', summary.coverage_end ?? 'Not available'],
+    ],
+    coverage: `Time coverage ${summary.coverage_start ?? '—'} – ${summary.coverage_end ?? '—'}`,
+    steps: [
+      ['Collect', 'Retrieve newly published records from configured official health authority sources.'],
+      ['Standardize', 'Align disease names, places, dates, and measures while preserving the original reporting grain.'],
+      ['Check', 'Review completeness, consistency, provenance, and publication conditions before release.'],
+      ['Publish', 'Refresh pages and downloads while retaining source links, limitations, and correction routes.'],
+    ],
+    notes: [
+      ['Official sources', 'Each dataset retains the responsible authority, source link, and coverage period.'],
+      ['Context stays visible', 'Reporting systems are not assumed to be directly comparable; original definitions and temporal grain remain visible.'],
+      ['Missing is not zero', 'Unavailable fields and unreported periods remain missing rather than being silently converted to zero.'],
+    ],
+  },
+  responsibility: {
+    kicker: 'Responsible use',
+    title: 'How to use GIDS responsibly',
+    lead: 'These data support surveillance, research, and evidence navigation, but should not be interpreted outside the context of the original reporting system.',
+    items: [
+      ['Not a clinical or outbreak declaration tool', 'GIDS does not replace guidance from national or local health authorities and should not be used for personal diagnosis or risk decisions.'],
+      ['Figures change and systems differ', 'Case definitions, covered populations, reporting delays, and temporal grain vary. Read the source notes before making cross-jurisdiction comparisons.'],
+      ['Automation needs public correction routes', 'Collection, standardization, and parts of summarization are software-assisted. Reports should include the page, period, and official comparison source.'],
+      ['Independence and reuse', 'GIDS is an independent public-interest project and does not represent linked institutions. Code, public data products, and third-party sources follow their separately stated rules.'],
+    ],
+    downloads: 'Explore downloadable data',
+    reuse: 'Read reuse guidance',
+    repository: 'View source code',
+    correction: 'Report a data correction',
+  },
 };
-const editorial = zh ? {
-  kicker: '编辑责任',
-  title: '来源、自动化与纠错如何公开',
-  lead: 'GIDS 对页面中的数据选择、摘要和发布决定负责。以下说明帮助读者判断信息的来源、时效与适用范围。',
-  items: [
-    ['来源与日期', '数据页面标注负责机构、来源链接、覆盖周期和快照日期；来源更新后，历史数字仍可能被修订。'],
-    ['自动化与人工复核', '采集、标准化和部分摘要由软件自动完成。发布条件、完整性检查和公开纠错流程用于发现异常；自动生成内容不应被视为临床判断。'],
-    ['更正与撤回', '发现错误时请通过公开问题追踪器提交页面地址、报告周期和官方来源。已撤回或存在完整性问题的研究不会继续作为普通证据展示。'],
-    ['范围与独立性', 'GIDS 是独立的公共利益项目，不代表所链接的卫生机构、研究机构或致谢人员。外部链接和致谢不构成背书。'],
-  ],
-} : {
-  kicker: 'Editorial responsibility',
-  title: 'How sources, automation, and corrections are disclosed',
-  lead: 'GIDS is accountable for the data selection, summaries, and publication decisions shown here. These disclosures help readers assess provenance, freshness, and appropriate use.',
-  items: [
-    ['Sources and dates', 'Data pages identify the responsible authority, source link, coverage period, and snapshot date. Historical figures can still change when a source revises them.'],
-    ['Automation and review', 'Collection, standardization, and parts of summarization are software-assisted. Publication gates, integrity checks, and a public correction route are used to surface errors; generated material is not clinical judgment.'],
-    ['Corrections and removals', 'Reports should include the page URL, reporting period, and official comparison source. Retracted research and records with integrity concerns are not presented as ordinary evidence.'],
-    ['Scope and independence', 'GIDS is an independent public-interest project. It does not represent linked health authorities, research institutions, or acknowledged contributors; links and acknowledgements are not endorsements.'],
-  ],
-};
-const ids = ['coverage','workflow','principles','limitations','editorial-responsibility','acknowledgements','project'];
+
+const ids = ['maintainer', 'data-methods', 'responsible-use', 'acknowledgements'];
+const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[index], labelZh: copy.nav[index] }));
 ---
 
 <article class="about-page">
-  <header class="about-hero"><div class="wrap hero-grid"><div><p class="eyebrow">{copy.eyebrow}</p><h1>{copy.title}</h1></div><div><p class="lead">{copy.lead}</p><p class="updated">{copy.updated}</p></div></div></header>
-  <nav class="local-nav" aria-label={copy.onPage}><div class="wrap"><span>{copy.onPage}</span>{copy.nav.map((label,index)=><a href={`#${ids[index]}`}>{label}</a>)}</div></nav>
-  <section id="coverage" class="section wrap"><header class="section-heading"><p class="eyebrow">{copy.scopeKicker}</p><h2>{copy.scope}</h2><p>{copy.scopeNote}</p></header><dl class="metrics">{copy.metrics.map(metric=><div><dt>{metric[0]}</dt><dd>{typeof metric[1] === 'number' ? Number(metric[1]).toLocaleString(dateLocale) : metric[1]}</dd><p>{metric[2]}</p></div>)}</dl><p class="coverage-note">{copy.coverage}: <strong>{summary.coverage_start ?? '—'}</strong> – <strong>{summary.coverage_end ?? '—'}</strong></p></section>
-  <section id="workflow" class="band"><div class="wrap"><header class="section-heading"><p class="eyebrow">{copy.workflowKicker}</p><h2>{copy.workflow}</h2><p>{copy.workflowNote}</p></header><ol class="workflow">{copy.steps.map((step,index)=><li><span>{String(index+1).padStart(2,'0')}</span><div><h3>{step[0]}</h3><p>{step[1]}</p></div></li>)}</ol></div></section>
-  <section id="principles" class="section wrap"><header class="section-heading"><p class="eyebrow">{copy.principlesKicker}</p><h2>{copy.principlesTitle}</h2></header><div class="principles">{copy.principles.map((item,index)=><section><span>{String(index+1).padStart(2,'0')}</span><h3>{item[0]}</h3><p>{item[1]}</p></section>)}</div></section>
-  <section id="limitations" class="band"><div class="wrap two-column"><div><p class="eyebrow">{copy.limitsKicker}</p><h2>{copy.limitsTitle}</h2></div><div class="prose">{copy.limits.map(item=><p>{item}</p>)}<div class="actions"><a class="primary" href={`${prefix}/downloads/`}>{copy.downloads}</a><a href={`${prefix}/copyright/`}>{copy.guidance}</a></div></div></div></section>
-  <section id="editorial-responsibility" class="section wrap"><header class="section-heading"><p class="eyebrow">{editorial.kicker}</p><h2>{editorial.title}</h2><p>{editorial.lead}</p></header><div class="editorial-grid">{editorial.items.map((item,index)=><section><span>{String(index+1).padStart(2,'0')}</span><h3>{item[0]}</h3><p>{item[1]}</p></section>)}</div></section>
-  <section id="acknowledgements" class="band"><div class="wrap"><header class="section-heading"><p class="eyebrow">{zh ? acknowledgementIntro.kickerZh : acknowledgementIntro.kickerEn}</p><h2>{zh ? acknowledgementIntro.titleZh : acknowledgementIntro.titleEn}</h2><p>{zh ? acknowledgementIntro.leadZh : acknowledgementIntro.leadEn}</p></header><div class="acknowledgements">{acknowledgementEntries.map(entry=><article><h3>{entry.name}</h3><p class="affiliation">{zh ? entry.affiliationZh : entry.affiliationEn}</p><p>{zh ? entry.contributionZh : entry.contributionEn}</p><ul aria-label={zh ? '贡献类型' : 'Contribution types'}>{entry.roles.map(role=><li>{zh ? role.zh : role.en}</li>)}</ul></article>)}</div><p class="acknowledgement-note">{zh ? acknowledgementIntro.noteZh : acknowledgementIntro.noteEn}</p></div></section>
-  <section id="project" class="section wrap two-column"><div><p class="eyebrow">{copy.projectKicker}</p><h2>{copy.projectTitle}</h2></div><div class="prose">{copy.project.map(item=><p>{item}</p>)}<div class="actions"><a class="primary" href="https://github.com/xmusphlkg/globalID2" target="_blank" rel="noopener noreferrer">{copy.repository}</a><a href="https://github.com/xmusphlkg/globalID2/issues/new" target="_blank" rel="noopener noreferrer">{copy.correction}</a></div></div></section>
+  <header class="about-hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">{copy.eyebrow}</p>
+        <h1>{copy.title}</h1>
+      </div>
+      <div>
+        <p class="lead">{copy.lead}</p>
+        <p class="updated">{copy.updated}</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="about-nav">
+    <div class="wrap">
+      <PageAnchorNav items={anchorItems} locale={locale} label={copy.onPage} labelZh={copy.onPage} numbered showTitle={false} />
+    </div>
+  </div>
+
+  <section id="maintainer" class="band">
+    <div class="wrap">
+      <header class="section-heading">
+        <p class="eyebrow">{copy.story.kicker}</p>
+        <h2>{copy.story.title}</h2>
+        <p>{copy.story.lead}</p>
+      </header>
+
+      <ol class="timeline">
+        {copy.story.milestones.map((milestone, index) => (
+          <li class:list={[index === copy.story.milestones.length - 1 && 'timeline-current']}>
+            <div class="timeline-marker">
+              <span class="timeline-node" aria-hidden="true"></span>
+              <time datetime={milestone[0]}>{milestone[0]}</time>
+              <i aria-hidden="true"></i>
+            </div>
+            <div>
+              {index === copy.story.milestones.length - 1 && <span class="timeline-current-label">{copy.story.current}</span>}
+              <h3>{milestone[1]}</h3>
+              <p>{milestone[2]}</p>
+              {index === 1 && (
+                <a class="text-link" href="https://www.nature.com/articles/s41467-024-48201-8" target="_blank" rel="noopener noreferrer">
+                  {copy.story.paperLabel}<span aria-hidden="true"> ↗</span>
+                </a>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <article class="maintainer-card">
+        <div class="maintainer-identity">
+          <p class="eyebrow">{copy.maintainer.label}</p>
+          <h3>{copy.maintainer.name}</h3>
+          <p class="maintainer-role">{copy.maintainer.role}</p>
+          <p>{copy.maintainer.bio}</p>
+          <ul class="focus-list" aria-label={zh ? '专业方向' : 'Areas of focus'}>
+            {copy.maintainer.focus.map(area => <li>{area}</li>)}
+          </ul>
+        </div>
+        <div class="opportunity">
+          <span class="availability-dot" aria-hidden="true"></span>
+          <p class="opportunity-label">{copy.maintainer.opportunityTitle}</p>
+          <p>{copy.maintainer.opportunity}</p>
+          <div class="actions">
+            <a class="site-action-primary" href="https://kangguo.online/" target="_blank" rel="me noopener noreferrer">
+              {copy.maintainer.profile}<span aria-hidden="true"> ↗</span>
+            </a>
+            <a class="site-action-secondary" href="mailto:lkg1116@outlook.com">{copy.maintainer.email}</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="data-methods" class="section wrap">
+    <header class="section-heading">
+      <p class="eyebrow">{copy.data.kicker}</p>
+      <h2>{copy.data.title}</h2>
+      <p>{copy.data.lead}</p>
+    </header>
+
+    <div class="metrics">
+      <StatBar locale={locale} stats={copy.data.metrics.map(metric => ({
+        label: metric[0],
+        labelZh: metric[0],
+        value: typeof metric[1] === 'number' ? Number(metric[1]).toLocaleString(dateLocale) : metric[1],
+        accent: 'teal' as const,
+      }))} />
+    </div>
+    <p class="coverage-note">{copy.data.coverage}</p>
+
+    <ol class="workflow">
+      {copy.data.steps.map((step, index) => (
+        <li>
+          <span>{String(index + 1).padStart(2, '0')}</span>
+          <h3>{step[0]}</h3>
+          <p>{step[1]}</p>
+        </li>
+      ))}
+    </ol>
+
+    <div class="data-notes">
+      {copy.data.notes.map(note => (
+        <article>
+          <h3>{note[0]}</h3>
+          <p>{note[1]}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section id="responsible-use" class="band">
+    <div class="wrap">
+      <header class="section-heading">
+        <p class="eyebrow">{copy.responsibility.kicker}</p>
+        <h2>{copy.responsibility.title}</h2>
+        <p>{copy.responsibility.lead}</p>
+      </header>
+      <div class="responsibility-grid">
+        {copy.responsibility.items.map((item, index) => (
+          <article>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <h3>{item[0]}</h3>
+            <p>{item[1]}</p>
+          </article>
+        ))}
+      </div>
+      <div class="actions responsibility-actions">
+        <a class="site-action-primary" href={`${prefix}/downloads/`}>{copy.responsibility.downloads}</a>
+        <a class="site-action-secondary" href={`${prefix}/copyright/`}>{copy.responsibility.reuse}</a>
+        <a class="site-action-secondary" href="https://github.com/xmusphlkg/globalID2" target="_blank" rel="noopener noreferrer">{copy.responsibility.repository}</a>
+        <a class="site-action-secondary" href="https://github.com/xmusphlkg/globalID2/issues/new" target="_blank" rel="noopener noreferrer">{copy.responsibility.correction}</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="acknowledgements" class="section wrap">
+    <header class="section-heading acknowledgements-heading">
+      <p class="eyebrow">{zh ? acknowledgementIntro.kickerZh : acknowledgementIntro.kickerEn}</p>
+      <h2>{zh ? acknowledgementIntro.titleZh : acknowledgementIntro.titleEn}</h2>
+      <p>{zh ? acknowledgementIntro.leadZh : acknowledgementIntro.leadEn}</p>
+    </header>
+    <div class="acknowledgements">
+      {acknowledgementEntries.map(entry => (
+        <article>
+          <h3>{entry.name}</h3>
+          <p class="affiliation">{zh ? entry.affiliationZh : entry.affiliationEn}</p>
+          <p>{zh ? entry.contributionZh : entry.contributionEn}</p>
+          <ul aria-label={zh ? '贡献类型' : 'Contribution types'}>
+            {entry.roles.map(role => <li>{zh ? role.zh : role.en}</li>)}
+          </ul>
+        </article>
+      ))}
+    </div>
+    <p class="acknowledgement-note">{zh ? acknowledgementIntro.noteZh : acknowledgementIntro.noteEn}</p>
+  </section>
 </article>
 
 <style>
-  .about-page{color:rgb(var(--text))}.wrap{width:min(1080px,calc(100% - 2rem));margin-inline:auto}.about-hero{padding-block:clamp(3.5rem,8vw,6rem);background:rgb(var(--surface));border-bottom:1px solid rgb(var(--border))}.hero-grid,.two-column{display:grid;grid-template-columns:minmax(16rem,.8fr) minmax(0,1.2fr);gap:clamp(2.5rem,8vw,7rem)}.eyebrow{margin:0 0 .65rem;color:rgb(var(--color-teal));font-size:.7rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase}h1{max-width:15ch;margin:0;color:rgb(var(--text-strong));font-size:clamp(2.6rem,5.5vw,4.5rem);font-weight:650;line-height:1.04}.lead{margin:0;color:rgb(var(--text-strong));font-size:clamp(1.05rem,2vw,1.3rem);line-height:1.7}.updated{margin:1.2rem 0 0;color:rgb(var(--text-muted));font-size:.78rem}.local-nav{position:sticky;top:72px;z-index:20;background:rgb(var(--bg)/.96);border-bottom:1px solid rgb(var(--border));backdrop-filter:blur(12px)}.local-nav .wrap{display:flex;overflow-x:auto}.local-nav span,.local-nav a{padding:.8rem .75rem;white-space:nowrap}.local-nav span{color:rgb(var(--text-muted));font-size:.66rem;font-weight:700;text-transform:uppercase}.local-nav a{color:rgb(var(--text-strong));border-left:1px solid rgb(var(--border));font-size:.76rem;font-weight:650;text-decoration:none}.section,.band{padding-block:clamp(3.5rem,7vw,5.5rem);scroll-margin-top:8rem}.band{background:rgb(var(--surface));border-block:1px solid rgb(var(--border))}.section-heading{display:grid;grid-template-columns:minmax(15rem,.6fr) minmax(0,1fr);gap:.3rem 3rem;padding-bottom:1rem;border-bottom:2px solid rgb(var(--text-strong))}.section-heading .eyebrow{grid-column:1}.section-heading h2{grid-column:1;margin:0;color:rgb(var(--text-strong));font-size:clamp(1.65rem,3vw,2.25rem)}.section-heading>p:last-child{grid-column:2;grid-row:1/3;align-self:end;margin:0;color:rgb(var(--text-muted));font-size:.82rem;line-height:1.65}.metrics{display:grid;grid-template-columns:repeat(4,1fr);margin:2rem 0 0;border-top:1px solid rgb(var(--border));border-left:1px solid rgb(var(--border))}.metrics div{padding:1rem;border-right:1px solid rgb(var(--border));border-bottom:1px solid rgb(var(--border))}.metrics dt{color:rgb(var(--text-muted));font-size:.7rem}.metrics dd{margin:.5rem 0;color:rgb(var(--text-strong));font-size:1.5rem;font-weight:650}.metrics p,.coverage-note{color:rgb(var(--text-muted));font-size:.7rem;line-height:1.55}.coverage-note{margin:1rem 0 0}.workflow{list-style:none;margin:2rem 0 0;padding:0;border-top:1px solid rgb(var(--border))}.workflow li{display:grid;grid-template-columns:3rem 10rem 1fr;gap:1rem;padding:1.1rem 0;border-bottom:1px solid rgb(var(--border))}.workflow li>span,.principles>section>span,.editorial-grid span{color:rgb(var(--color-teal));font-family:ui-monospace,monospace;font-size:.68rem}.workflow div{display:contents}.workflow h3,.principles h3,.editorial-grid h3,.acknowledgements h3{margin:0;color:rgb(var(--text-strong));font-size:.95rem}.workflow p,.principles p,.editorial-grid p,.acknowledgements p,.prose p{margin:0;color:rgb(var(--text-muted));font-size:.82rem;line-height:1.7}.principles,.editorial-grid,.acknowledgements{display:grid;grid-template-columns:repeat(2,1fr);margin-top:2rem;border-top:1px solid rgb(var(--border));border-left:1px solid rgb(var(--border))}.principles section,.editorial-grid section,.acknowledgements article{display:grid;grid-template-columns:2rem 1fr;gap:.4rem .8rem;padding:1.2rem;border-right:1px solid rgb(var(--border));border-bottom:1px solid rgb(var(--border))}.principles p,.editorial-grid p{grid-column:2}.acknowledgements article{display:block}.acknowledgements .affiliation{margin:.3rem 0 .8rem}.acknowledgements ul{display:flex;flex-wrap:wrap;gap:.4rem;margin:.9rem 0 0;padding:0;list-style:none}.acknowledgements li{padding:.25rem .45rem;color:rgb(var(--color-teal));background:rgb(var(--color-teal)/.08);font-size:.68rem;font-weight:700}.acknowledgement-note{margin:1rem 0 0;color:rgb(var(--text-muted));font-size:.72rem}.two-column h2{margin:0;color:rgb(var(--text-strong));font-size:clamp(1.65rem,3vw,2.25rem)}.prose{display:grid;gap:1rem}.actions{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.5rem}.actions a{padding:.6rem .85rem;color:rgb(var(--text-strong));border:1px solid rgb(var(--border));font-size:.78rem;font-weight:650;text-decoration:none}.actions .primary{color:#fff;background:rgb(var(--color-teal));border-color:rgb(var(--color-teal))}@media(max-width:760px){.hero-grid,.two-column,.section-heading{grid-template-columns:1fr;gap:1.5rem}.section-heading>p:last-child{grid-column:1;grid-row:auto}.metrics{grid-template-columns:1fr 1fr}.workflow li{grid-template-columns:2rem 1fr}.workflow div{display:block}.workflow p{margin-top:.25rem}.principles,.editorial-grid,.acknowledgements{grid-template-columns:1fr}}@media(max-width:480px){.metrics{grid-template-columns:1fr}}
+  .about-page { color: rgb(var(--text)); }
+  .wrap { width: min(1080px, calc(100% - 2rem)); margin-inline: auto; }
+  .about-hero { padding-block: clamp(3.5rem, 8vw, 6rem); border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+  .hero-grid { display: grid; grid-template-columns: minmax(16rem, .8fr) minmax(0, 1.2fr); gap: clamp(2.5rem, 8vw, 7rem); }
+  .eyebrow { margin: 0 0 .65rem; color: rgb(var(--color-teal)); font-size: .7rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+  h1 { max-width: 15ch; margin: 0; color: rgb(var(--text-strong)); font-size: clamp(2.6rem, 5.5vw, 4.5rem); font-weight: 650; line-height: 1.04; }
+  .lead { margin: 0; color: rgb(var(--text-strong)); font-size: clamp(1.05rem, 2vw, 1.3rem); line-height: 1.7; }
+  .updated { margin: 1.2rem 0 0; color: rgb(var(--text-muted)); font-size: .78rem; }
+  .about-nav { position: sticky; top: calc(4.5rem + 1px); z-index: 35; border-bottom: 1px solid rgb(var(--border) / .72); background: rgb(var(--bg) / .96); backdrop-filter: blur(12px); }
+  .about-nav :global(.page-anchor-nav-sticky) { position: relative; top: auto; }
+  .section, .band { padding-block: clamp(3.5rem, 7vw, 5.5rem); scroll-margin-top: 8rem; }
+  .band { border-block: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+  .section-heading { display: grid; grid-template-columns: minmax(15rem, .65fr) minmax(0, 1fr); gap: .3rem 3rem; padding-bottom: 1rem; border-bottom: 2px solid rgb(var(--text-strong)); }
+  .section-heading .eyebrow, .section-heading h2 { grid-column: 1; }
+  .section-heading h2 { margin: 0; color: rgb(var(--text-strong)); font-size: clamp(1.65rem, 3vw, 2.25rem); }
+  .section-heading > p:last-child { grid-column: 2; grid-row: 1 / 3; align-self: end; margin: 0; color: rgb(var(--text-muted)); font-size: .82rem; line-height: 1.65; }
+  .timeline { display: grid; grid-template-columns: 1fr; gap: .8rem; margin: 2.25rem 0 0; padding: 0; list-style: none; }
+  .timeline li { position: relative; display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: 1.1rem; min-width: 0; min-height: 14rem; padding: 1.3rem; border: 1px solid rgb(var(--border) / .85); border-top: 3px solid rgb(var(--border-soft)); background: rgb(var(--bg)); transition: border-color 180ms ease, transform 180ms ease; }
+  .timeline li.timeline-current { border-top-color: rgb(var(--color-teal)); }
+  .timeline-marker { min-width: 0; }
+  .timeline-node { display: block; width: .58rem; height: .58rem; margin-bottom: .7rem; border: 2px solid rgb(var(--border-soft)); background: rgb(var(--bg)); }
+  .timeline-current .timeline-node { border-color: rgb(var(--color-teal)); background: rgb(var(--color-teal)); box-shadow: 0 0 0 .35rem rgb(var(--color-teal) / .12); }
+  .timeline-marker time { color: rgb(var(--color-teal)); font-family: ui-monospace, monospace; font-size: 1.05rem; font-weight: 700; }
+  .timeline-marker i { display: none; }
+  .timeline-current-label { display: inline-block; margin-bottom: .55rem; padding: .18rem .42rem; color: rgb(var(--color-teal)); background: rgb(var(--color-teal) / .1); box-shadow: inset 0 0 0 1px rgb(var(--color-teal) / .2); font-size: .6rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .timeline h3, .workflow h3, .data-notes h3, .responsibility-grid h3, .maintainer-card h3, .acknowledgements h3 { margin: 0; color: rgb(var(--text-strong)); font-size: .95rem; }
+  .timeline p, .workflow p, .data-notes p, .responsibility-grid p, .maintainer-card p, .acknowledgements p { margin: .45rem 0 0; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.68; }
+  .text-link { display: inline-block; margin-top: .75rem; color: rgb(var(--color-teal)); font-size: .75rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+  .maintainer-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); margin-top: 2.5rem; overflow: hidden; border: 1px solid rgb(var(--border)); border-top: 3px solid rgb(var(--color-teal)); background: rgb(var(--bg)); }
+  .maintainer-identity, .opportunity { padding: clamp(1.25rem, 3vw, 2rem); }
+  .maintainer-identity { border-right: 1px solid rgb(var(--border)); }
+  .maintainer-card .maintainer-role { margin-top: .35rem; color: rgb(var(--text-strong)); font-weight: 650; }
+  .focus-list { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+  .focus-list li { padding: .28rem .5rem; border: 1px solid rgb(var(--color-teal) / .18); color: rgb(var(--color-teal)); background: rgb(var(--color-teal) / .08); font-size: .68rem; font-weight: 700; }
+  .opportunity { position: relative; background: rgb(var(--surface)); }
+  .availability-dot { position: absolute; top: 2rem; right: 2rem; width: .55rem; height: .55rem; border-radius: 50%; background: rgb(var(--color-teal)); box-shadow: 0 0 0 5px rgb(var(--color-teal) / .1); }
+  .maintainer-card .opportunity-label { margin: 0; color: rgb(var(--text-strong)); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .metrics { margin-top: 2rem; }
+  .coverage-note { margin: .8rem 0 0; color: rgb(var(--text-muted)); font-size: .72rem; }
+  .workflow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 2rem 0 0; padding: 0; border-top: 1px solid rgb(var(--border)); border-left: 1px solid rgb(var(--border)); list-style: none; }
+  .workflow li { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .4rem .7rem; min-height: 9.25rem; padding: 1.1rem; border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--bg) / .54); }
+  .workflow li > span { grid-row: 1 / 3; color: rgb(var(--color-teal)); font-family: ui-monospace, monospace; font-size: .68rem; }
+  .workflow p { grid-column: 2; }
+  .data-notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 1.2rem; padding-top: 1.2rem; border-top: 2px solid rgb(var(--text-strong)); }
+  .data-notes article { padding-right: 1.25rem; }
+  .data-notes article + article { padding-left: 1.25rem; border-left: 1px solid rgb(var(--border)); }
+  .responsibility-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 2rem; border-top: 1px solid rgb(var(--border)); border-left: 1px solid rgb(var(--border)); }
+  .responsibility-grid article { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .4rem .7rem; min-height: 10.5rem; padding: 1.25rem; border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--bg) / .54); }
+  .responsibility-grid span { color: rgb(var(--color-teal)); font-family: ui-monospace, monospace; font-size: .68rem; }
+  .responsibility-grid p { grid-column: 2; }
+  .actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1rem; }
+  .actions a { padding: .6rem .85rem; border-width: 1px; border-style: solid; font-size: .78rem; font-weight: 650; text-decoration: none; }
+  .responsibility-actions { justify-content: flex-end; }
+  .acknowledgements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 2rem; border-top: 1px solid rgb(var(--border)); border-left: 1px solid rgb(var(--border)); }
+  .acknowledgements article { padding: 1.35rem; border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--bg) / .54); }
+  .acknowledgements .affiliation { margin-top: .3rem; }
+  .acknowledgements ul { display: flex; flex-wrap: wrap; gap: .4rem; margin: .9rem 0 0; padding: 0; list-style: none; }
+  .acknowledgements li { padding: .25rem .45rem; color: rgb(var(--color-teal)); background: rgb(var(--color-teal) / .08); font-size: .68rem; font-weight: 700; }
+  .acknowledgement-note { margin: 1rem 0 0; color: rgb(var(--text-muted)); font-size: .72rem; }
+
+  @media (min-width: 640px) {
+    .timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .timeline li { display: block; }
+    .timeline-marker { display: flex; align-items: center; }
+    .timeline-node { flex: 0 0 auto; margin: 0 .55rem 0 0; }
+    .timeline-marker i { display: block; height: 1px; flex: 1; margin-left: .7rem; background: linear-gradient(90deg, rgb(var(--border-soft)), rgb(var(--border) / .4)); }
+    .timeline li > div:last-child { margin-top: 1rem; }
+  }
+  @media (min-width: 900px) {
+    .timeline, .workflow { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+  @media (max-width: 760px) {
+    .hero-grid, .section-heading { grid-template-columns: 1fr; gap: 1.5rem; }
+    .section-heading > p:last-child { grid-column: 1; grid-row: auto; }
+    .maintainer-card, .responsibility-grid, .acknowledgements { grid-template-columns: 1fr; }
+    .maintainer-identity { border-right: 0; border-bottom: 1px solid rgb(var(--border)); }
+    .data-notes { grid-template-columns: 1fr; }
+    .data-notes article { padding: 1rem 0; }
+    .data-notes article + article { padding-left: 0; border-top: 1px solid rgb(var(--border)); border-left: 0; }
+    .responsibility-actions { justify-content: flex-start; }
+    .timeline li, .workflow li, .responsibility-grid article { min-height: 0; }
+  }
+  @media (max-width: 480px) {
+    .workflow { grid-template-columns: 1fr; }
+    .timeline li { grid-template-columns: 3.7rem minmax(0, 1fr); padding: 1.1rem; }
+    .maintainer-identity, .opportunity { padding: 1.2rem; }
+    .actions { display: grid; grid-template-columns: 1fr; }
+    .actions a { display: flex; align-items: center; justify-content: center; min-height: 2.6rem; }
+    .responsibility-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .responsibility-actions a { min-height: 2.9rem; padding-inline: .55rem; font-size: .68rem; text-align: center; }
+  }
+  @media (hover: hover) {
+    .timeline li:hover { z-index: 1; border-color: rgb(var(--color-teal) / .55); transform: translateY(-.2rem); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .timeline li { transition: none; }
+  }
 </style>

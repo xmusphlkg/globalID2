@@ -58,13 +58,13 @@ class TopDiseaseItem(BaseModel):
     name: str
     name_en: Optional[str] = None
     total_cases: int = 0
-    total_deaths: int = 0
+    total_deaths: Optional[int] = None
 
 
 class TrendPoint(BaseModel):
     time_period: str
     cases: int = 0
-    deaths: int = 0
+    deaths: Optional[int] = None
     incidence_rate: Optional[float] = None
     mortality_rate: Optional[float] = None
 
@@ -73,6 +73,6 @@ class MonthlyComparisonPoint(BaseModel):
     year: int
     month: int
     cases: int = 0
-    deaths: int = 0
+    deaths: Optional[int] = None
     incidence_rate: Optional[float] = None
     mortality_rate: Optional[float] = None

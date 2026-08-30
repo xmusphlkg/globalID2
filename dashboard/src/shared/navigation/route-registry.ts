@@ -108,7 +108,7 @@ export const navigationSections: RouteSection[] = [
     descriptionKey: "nav_data_desc",
     icon: Database,
     items: [
-      { id: "data.analytics", href: "/data/analytics", label: "Country Analytics", labelKey: "dashboard", description: "Country KPIs and surveillance trends", icon: ChartNoAxesCombined, section: "data", countryScope: "required" },
+      { id: "data.analytics", href: "/data/analytics", label: "Jurisdiction Analytics", labelKey: "dashboard", description: "Country and regional KPIs and surveillance trends", icon: ChartNoAxesCombined, section: "data", countryScope: "required" },
       { id: "data.diseases", href: "/data/diseases", label: "Diseases & Series", labelKey: "diseases", description: "Disease records and surveillance series", icon: Microscope, section: "data", countryScope: "required" },
       { id: "data.quality", href: "/data/quality", label: "Quality", labelKey: "quality", description: "Completeness, gaps, and provenance", icon: ShieldCheck, section: "data", countryScope: "required" },
       { id: "data.explorer", href: "/data/explorer", label: "Explorer", labelKey: "explorer", description: "Allowlisted database catalogue", icon: Search, section: "data", countryScope: "none" },

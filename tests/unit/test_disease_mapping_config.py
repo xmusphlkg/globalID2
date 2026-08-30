@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from src.data.normalizers.disease_mapper import DiseaseMapper
+from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
 from src.services.disease_mapping_config import (
     DiseaseMappingConfigError,
     load_reviewed_source_category_mappings,
@@ -23,17 +24,31 @@ def _source_codes(path: Path) -> set[str]:
 
 def test_at_de_reviewed_manifests_cover_full_source_inventory() -> None:
     mappings = load_reviewed_source_category_mappings()
+    national_source_ids = {
+        "AT": "SRC_AT_AGES_RADAR",
+        "DE": "SRC_DE_RKI_SURVSTAT",
+    }
     by_country = {
-        country: {item.source_code for item in mappings if item.country_code == country}
+        country: {
+            item.source_code
+            for item in mappings
+            if item.country_code == country
+            and item.source_id == national_source_ids[country]
+        }
         for country in ("AT", "DE")
     }
 
-    assert Counter(item.country_code for item in mappings) == {
-        "AT": 63,
+    expected_counts = {code: 55 for code in ECDC_BASELINE_COUNTRY_CODES}
+    expected_counts.update({
+        "AT": 118,
+        "CA": 70,
         "CN": 1,
-        "DE": 87,
+        "DE": 142,
+        "IE": 111,
         "NZ": 36,
-    }
+        "SG": 76,
+    })
+    assert Counter(item.country_code for item in mappings) == expected_counts
     assert all(
         len(codes) == expected
         for codes, expected in ((by_country["AT"], 63), (by_country["DE"], 87))
@@ -82,6 +97,7 @@ def test_at_de_high_risk_semantics_and_no_projection_boundaries() -> None:
         (item.country_code, item.source_code)
         for item in mappings
         if item.projection_policy == "no_projection"
+        and item.source_id in {"SRC_AT_AGES_RADAR", "SRC_DE_RKI_SURVSTAT"}
     }
     assert actual_no_projection == expected_no_projection
     assert all(
@@ -90,6 +106,7 @@ def test_at_de_high_risk_semantics_and_no_projection_boundaries() -> None:
         and item.comparability == "not_comparable"
         for item in mappings
         if item.projection_policy == "no_projection"
+        and item.source_id in {"SRC_AT_AGES_RADAR", "SRC_DE_RKI_SURVSTAT"}
     )
 
 

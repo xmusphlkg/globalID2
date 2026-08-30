@@ -2,14 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from src.generation.site_series_projection import (
-    apply_disease_cutover_projection as extracted_cutover_projection,
-    apply_series_first_projection as extracted_series_first_projection,
-    validate_series_first_projection as extracted_projection_validator,
-)
 from scripts.generate_site_data import (
-    LEGACY_GAP_FILL_DATA_LAYER,
     LEGACY_DATA_LAYER,
+    LEGACY_GAP_FILL_DATA_LAYER,
     MIXED_DATA_LAYER,
     SERIES_DATA_LAYER,
     apply_disease_cutover_projection,
@@ -19,6 +14,15 @@ from scripts.generate_site_data import (
     build_disease_data,
     build_disease_site_data,
     validate_series_first_projection,
+)
+from src.generation.site_series_projection import (
+    apply_disease_cutover_projection as extracted_cutover_projection,
+)
+from src.generation.site_series_projection import (
+    apply_series_first_projection as extracted_series_first_projection,
+)
+from src.generation.site_series_projection import (
+    validate_series_first_projection as extracted_projection_validator,
 )
 
 
@@ -186,6 +190,41 @@ def test_all_raw_series_has_no_provisional_boundary() -> None:
     assert source["provisional_from"] is None
 
 
+def test_priority_overlay_uses_datacenter_only_for_overlapping_months() -> None:
+    monthly = [
+        _series("D001", "SER_CN_PROV_REPORT", "2024-01-01", 10),
+        _series("D001", "SER_CN_PROV_REPORT", "2024-02-01", 20),
+    ]
+    datacenter = [
+        _series("D001", "SER_CN_PROV_CENTER", "2024-01-01", 11),
+    ]
+    for row in monthly:
+        row.update(
+            projection_policy="priority_overlay",
+            projection_priority=100,
+            comparability_set="CN_PROVINCE_MONTHLY_NOTIFIABLE",
+        )
+    for row in datacenter:
+        row.update(
+            projection_policy="priority_overlay",
+            projection_priority=200,
+            comparability_set="CN_PROVINCE_MONTHLY_NOTIFIABLE",
+        )
+
+    projected = apply_series_first_projection([], [*monthly, *datacenter])
+
+    assert [(row["date"], row["cases"], row["series_code"]) for row in projected] == [
+        ("2024-01-01", 11, "SER_CN_PROV_CENTER"),
+        ("2024-02-01", 20, "SER_CN_PROV_REPORT"),
+    ]
+    context = projected[0]["_series_context"]
+    assert context["projection_policy"] == "priority_overlay"
+    assert context["selected_series_codes"] == [
+        "SER_CN_PROV_CENTER",
+        "SER_CN_PROV_REPORT",
+    ]
+
+
 def test_partial_registry_history_replaces_overlap_and_gap_fills_legacy() -> None:
     legacy = [
         _legacy("D001", "2024-01-01", 900, deaths=2),
@@ -339,6 +378,48 @@ def test_sum_disjoint_does_not_treat_missing_component_as_zero() -> None:
         ("2024-02-01", 91),
     ]
     assert projected[1]["data_layer"] == LEGACY_GAP_FILL_DATA_LAYER
+
+
+def test_temporal_handoff_preserves_history_and_successor_without_summing() -> None:
+    history = _series("D001", "SER_HISTORY", "2022-12-25", 4, temporal_granularity="weekly")
+    history.update({"valid_from": "2012-01-01", "valid_to": "2022-12-31"})
+    current = _series("D001", "SER_CURRENT", "2023-01-01", 7, temporal_granularity="weekly")
+    current.update({"valid_from": "2023-01-01", "valid_to": "2026-12-31"})
+
+    projected = apply_series_first_projection([], [history, current])
+
+    assert [(row["date"], row["cases"]) for row in projected] == [
+        ("2022-12-25", 4),
+        ("2023-01-01", 7),
+    ]
+    assert projected[0]["_series_context"]["projection_policy"] == "temporal_handoff"
+    assert {row["series_code"] for row in projected} == {"SER_HISTORY", "SER_CURRENT"}
+    assert {row["temporal_granularity"] for row in projected} == {"weekly"}
+
+
+def test_public_site_payload_retains_point_granularity_for_mixed_curves() -> None:
+    records = [
+        _legacy("D001", "2024-01-07", 5, temporal_granularity="weekly"),
+        _legacy("D001", "2024-02-01", 7, temporal_granularity="monthly"),
+    ]
+    country_data = build_country_data(
+        "XX",
+        "Exampleland",
+        records,
+        {
+            "D001": {
+                "name_en": "Test disease",
+                "name_zh": "测试疾病",
+                "category": "Test",
+                "slug": "test-disease",
+            }
+        },
+    )
+    compact = build_country_site_data(country_data)
+
+    series = country_data["disease_series"]["D001"]
+    assert series["point_granularities"] == ["weekly", "monthly"]
+    assert compact["series"][0]["point_granularities"] == ["weekly", "monthly"]
 
 
 def test_non_additive_series_are_exposed_but_never_silently_summed() -> None:

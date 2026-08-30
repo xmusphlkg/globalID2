@@ -1,0 +1,15 @@
+---
+import Page, { getStaticPaths as getEnglishStaticPaths } from '../../../countries/[country]/index.astro';
+const ZhPage = Page as any;
+
+export async function getStaticPaths() {
+  const paths = await Promise.resolve(getEnglishStaticPaths() as any);
+  return paths.map((entry: any) => ({
+    ...entry,
+    props: { ...entry.props, locale: 'zh' },
+  }));
+}
+const props = Astro.props as any;
+---
+
+<ZhPage {...props} locale="zh" />

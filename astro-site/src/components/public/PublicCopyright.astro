@@ -9,12 +9,12 @@ const updatedLabel = zh ? '2026 年 8 月 18 日' : '18 August 2026';
 const currentYear = new Date().getUTCFullYear();
 
 const heroFacts = zh ? [
-  ['当前原则', '支持规范的学术研究、教学、新闻报道及其他公共利益用途。'],
-  ['核心规则', '监测数据的许可条件以原始来源为准。'],
+  ['允许', '学术、教学、新闻与公共利益使用'],
+  ['数据许可', '以原始来源为准'],
   ['最后更新', updatedLabel],
 ] : [
-  ['Current position', 'Responsible academic, educational, journalistic, and public-interest use is supported.'],
-  ['Key principle', 'Source-specific licences continue to apply to surveillance data.'],
+  ['Allowed', 'Research, teaching, journalism, public-interest use'],
+  ['Data licence', 'Source-specific terms apply'],
   ['Last updated', updatedLabel],
 ];
 
@@ -183,23 +183,14 @@ const concerns = zh ? [
       <h1>{zh ? '版权、许可与复用说明' : 'Copyright, licensing & reuse'}</h1>
       <p class="copyright-intro">
         {zh
-          ? '清楚了解如何引用、使用和再发布 GIDS 内容与数据。GIDS 汇集公共卫生机构公开发布的传染病监测信息，并通过标准化数据、图表、摘要和研究工具进行整理与呈现。'
-          : 'Use GIDS materials with clear provenance and appropriate attribution. GIDS brings together infectious disease surveillance information published by public health authorities and presents it through standardized datasets, charts, summaries, and research tools.'}
+          ? '了解 GIDS 内容、监测数据、代码与品牌材料的引用和复用边界。'
+          : 'Citation and reuse guidance for GIDS content, surveillance data, code, and brand materials.'}
       </p>
-      <div class="copyright-principles" aria-label={zh ? '主要原则' : 'Key principles'}>
-        <span>{zh ? '支持学术与公共利益复用' : 'Academic & public-interest reuse supported'}</span>
-        <span>{zh ? '监测数据适用来源许可' : 'Source-specific licences apply to surveillance data'}</span>
-      </div>
       <dl class="copyright-summary">
         {heroFacts.map(([label, value]) => (
           <div><dt>{label}</dt><dd>{value}</dd></div>
         ))}
       </dl>
-      <p class="copyright-caveat">
-        {zh
-          ? '公开可访问并不等于不受任何使用条件限制。使用前应先判断相关材料属于 GIDS 原创内容，还是来自外部数据源。'
-          : 'Public access does not by itself determine reuse rights. Always distinguish between GIDS-created material and content originating from external sources.'}
-      </p>
     </div>
   </header>
 
@@ -394,26 +385,21 @@ const concerns = zh ? [
   .copyright-page { min-height: 100%; color: rgb(var(--text)); background: rgb(var(--bg)); }
   .copyright-wrap, .copyright-shell { width: min(73.75rem, calc(100% - 2rem)); margin-inline: auto; }
   .copyright-header { border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
-  .copyright-wrap { padding: clamp(2.25rem, 5vw, 4rem) 0 1.75rem; }
+  .copyright-wrap { padding: clamp(1.6rem, 4vw, 2.6rem) 0 1.15rem; }
   .copyright-breadcrumb { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; color: rgb(var(--text-muted)); font-size: .76rem; line-height: 1.5; }
   .copyright-breadcrumb a { color: inherit; text-decoration: none; }
   .copyright-breadcrumb a:hover { color: rgb(var(--text-strong)); text-decoration: underline; text-underline-offset: .2em; }
   .copyright-label, .copyright-section-heading > p:first-child, .copyright-summary dt, .copyright-toc > p, .copyright-citation-header span { color: rgb(var(--text-faint)); font-size: .68rem; font-weight: 750; letter-spacing: 0; line-height: 1.5; text-transform: uppercase; }
-  .copyright-label { margin: 1.75rem 0 0; }
-  .copyright-header h1 { max-width: 54rem; margin: .5rem 0 0; color: rgb(var(--text-strong)); font-family: var(--font-serif, Georgia, serif); font-size: clamp(2.15rem, 5vw, 3.4rem); font-weight: 650; letter-spacing: 0; line-height: 1.1; text-wrap: balance; }
-  .copyright-intro { max-width: 51rem; margin: .95rem 0 0; color: rgb(var(--text-muted)); font-size: clamp(.98rem, 1.5vw, 1.08rem); line-height: 1.72; }
-  .copyright-principles { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.25rem; }
-  .copyright-principles span { display: inline-flex; align-items: center; min-height: 2rem; padding: .32rem .65rem; border: 1px solid rgb(var(--border)); border-radius: 2px; color: rgb(var(--text-strong)); background: rgb(var(--bg-soft)); font-size: .75rem; font-weight: 700; line-height: 1.4; }
-  .copyright-principles span:first-child { border-color: rgb(var(--accent) / .34); color: rgb(var(--accent-strong)); background: rgb(var(--accent) / .07); }
-  .copyright-summary { display: grid; margin: 1.5rem 0 0; border-top: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); }
-  .copyright-summary div { padding: .85rem 0; border-bottom: 1px solid rgb(var(--border)); }
-  .copyright-summary div:last-child { border-bottom: 0; }
-  .copyright-summary dd { margin: .25rem 0 0; color: rgb(var(--text)); font-size: .84rem; line-height: 1.58; }
-  .copyright-caveat { max-width: 58rem; margin: .85rem 0 0; color: rgb(var(--text-faint)); font-size: .79rem; line-height: 1.65; }
+  .copyright-label { margin: 1.1rem 0 0; }
+  .copyright-header h1 { max-width: 54rem; margin: .35rem 0 0; color: rgb(var(--text-strong)); font-family: var(--font-serif, Georgia, serif); font-size: clamp(2rem, 4.4vw, 3rem); font-weight: 650; letter-spacing: 0; line-height: 1.1; text-wrap: balance; }
+  .copyright-intro { max-width: 51rem; margin: .65rem 0 0; color: rgb(var(--text-muted)); font-size: .92rem; line-height: 1.6; }
+  .copyright-summary { display: grid; gap: .45rem; margin: 1rem 0 0; }
+  .copyright-summary div { display: flex; min-height: 2.5rem; align-items: center; justify-content: space-between; gap: .85rem; padding: .5rem .65rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised) / .42); }
+  .copyright-summary dd { margin: 0; color: rgb(var(--text)); font-size: .78rem; font-weight: 700; line-height: 1.35; text-align: right; }
   .copyright-shell { display: grid; }
   .copyright-toc { display: none; }
   .copyright-content { min-width: 0; max-width: 51rem; }
-  .copyright-section { padding: clamp(3.25rem, 7vw, 5.25rem) 0; border-top: 1px solid rgb(var(--border)); scroll-margin-top: 6rem; }
+  .copyright-section { padding: clamp(2.25rem, 5vw, 3.5rem) 0; border-top: 1px solid rgb(var(--border)); scroll-margin-top: 6rem; }
   .copyright-section-first { border-top: 0; }
   .copyright-section-heading { max-width: 46rem; }
   .copyright-section-heading h2 { margin: .35rem 0 0; color: rgb(var(--text-strong)); font-family: var(--font-serif, Georgia, serif); font-size: clamp(1.55rem, 3.5vw, 2.1rem); font-weight: 650; letter-spacing: 0; line-height: 1.2; }
@@ -482,9 +468,6 @@ const concerns = zh ? [
   @media (min-width: 640px) {
     .copyright-wrap, .copyright-shell { width: min(73.75rem, calc(100% - 3rem)); }
     .copyright-summary { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.05fr) minmax(10rem, .6fr); }
-    .copyright-summary div { padding: .85rem 1rem; border-right: 1px solid rgb(var(--border)); border-bottom: 0; }
-    .copyright-summary div:first-child { padding-left: 0; }
-    .copyright-summary div:last-child { padding-right: 0; border-right: 0; }
     .copyright-material-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (min-width: 940px) {
@@ -500,7 +483,8 @@ const concerns = zh ? [
     .copyright-wrap, .copyright-shell { width: min(100% - 1.5rem, 73.75rem); }
     .copyright-wrap { padding-top: 1.75rem; }
     .copyright-header h1 { font-size: 2rem; }
-    .copyright-principles { display: grid; }
+    .copyright-summary div { align-items: flex-start; flex-direction: column; gap: .18rem; }
+    .copyright-summary dd { text-align: left; }
     .copyright-table-wrap { margin-inline: -.25rem; }
     .copyright-attribution-list, .copyright-checklist ul, .copyright-prose-columns, .copyright-concern-grid { grid-template-columns: 1fr; }
     .copyright-attribution-list li:nth-child(odd), .copyright-concern-grid article:nth-child(odd) { border-right: 0; }

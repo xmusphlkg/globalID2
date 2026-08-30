@@ -168,6 +168,37 @@ def test_sum_disjoint_requires_every_component_in_each_period() -> None:
     assert metadata["projection_policy"] == "sum_disjoint"
 
 
+def test_temporal_handoff_preserves_predecessor_and_successor_periods() -> None:
+    history = {**_series("SER_HISTORY", 1, 4), "valid_from": "2023-01-01", "valid_to": "2024-01-31"}
+    current = {**_series("SER_CURRENT", 2, 7), "valid_from": "2024-02-01", "valid_to": "2026-12-31"}
+
+    records, metadata = project_series_first_records(
+        [], [history, current], disease_numeric_id=7, country_id=11
+    )
+
+    assert [row["cases"] for row in records] == [4, 7]
+    assert metadata["projection_policy"] == "temporal_handoff"
+    assert metadata["selected_series_codes"] == ["SER_CURRENT", "SER_HISTORY"]
+
+
+def test_priority_overlay_coalesces_each_period_without_dropping_report_tail() -> None:
+    report = [
+        {**_series("SER_REPORT", 1, 10), "projection_policy": "priority_overlay", "projection_priority": "100", "comparability_set": "CN_PROVINCE_MONTHLY_NOTIFIABLE"},
+        {**_series("SER_REPORT", 2, 20), "projection_policy": "priority_overlay", "projection_priority": "100", "comparability_set": "CN_PROVINCE_MONTHLY_NOTIFIABLE"},
+    ]
+    center = [
+        {**_series("SER_CENTER", 1, 11), "projection_policy": "priority_overlay", "projection_priority": "200", "comparability_set": "CN_PROVINCE_MONTHLY_NOTIFIABLE"},
+    ]
+
+    records, metadata = project_series_first_records(
+        [], [*report, *center], disease_numeric_id=7, country_id=11
+    )
+
+    assert [row["cases"] for row in records] == [11, 20]
+    assert metadata["projection_policy"] == "priority_overlay"
+    assert metadata["selected_series_codes"] == ["SER_CENTER", "SER_REPORT"]
+
+
 def test_sum_disjoint_counts_registered_component_with_no_observations() -> None:
     missing_component = {
         **_series("SER_ADULT", 1, 0, aggregation_policy="sum_disjoint"),

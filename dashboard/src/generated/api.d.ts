@@ -3664,6 +3664,11 @@ export interface components {
             is_active: boolean;
             /** Language */
             language: string;
+            /**
+             * Location Type
+             * @default country
+             */
+            location_type: string;
             /** Name */
             name: string;
             /** Name En */
@@ -3672,6 +3677,8 @@ export interface components {
             name_local?: string | null;
             /** Name Zh */
             name_zh?: string | null;
+            /** Parent Code */
+            parent_code?: string | null;
             /** Timezone */
             timezone: string;
         };
@@ -5366,11 +5373,8 @@ export interface components {
              * @default 0
              */
             cases: number;
-            /**
-             * Deaths
-             * @default 0
-             */
-            deaths: number;
+            /** Deaths */
+            deaths?: number | null;
             /** Incidence Rate */
             incidence_rate?: number | null;
             /** Month */
@@ -6952,11 +6956,8 @@ export interface components {
              * @default 0
              */
             cases: number;
-            /**
-             * Deaths
-             * @default 0
-             */
-            deaths: number;
+            /** Deaths */
+            deaths?: number | null;
             /** Incidence Rate */
             incidence_rate?: number | null;
             /** Mortality Rate */

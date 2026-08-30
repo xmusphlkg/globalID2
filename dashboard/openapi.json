@@ -3029,6 +3029,11 @@
             "title": "Language",
             "type": "string"
           },
+          "location_type": {
+            "default": "country",
+            "title": "Location Type",
+            "type": "string"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -3058,6 +3063,17 @@
               }
             ],
             "title": "Name Zh"
+          },
+          "parent_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Code"
           },
           "timezone": {
             "title": "Timezone",
@@ -8029,9 +8045,15 @@
             "type": "integer"
           },
           "deaths": {
-            "default": 0,
-            "title": "Deaths",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deaths"
           },
           "incidence_rate": {
             "anyOf": [
@@ -12298,9 +12320,15 @@
             "type": "integer"
           },
           "deaths": {
-            "default": 0,
-            "title": "Deaths",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deaths"
           },
           "incidence_rate": {
             "anyOf": [

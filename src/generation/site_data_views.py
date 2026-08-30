@@ -29,10 +29,17 @@ def resolve_country_display_names(
         or get_country_display_name(normalized, "en")
         or normalized
     )
+    local_name = str(row.get("name_local") or "").strip()
+    chinese_local_name = (
+        local_name
+        if any("\u4e00" <= character <= "\u9fff" for character in local_name)
+        else None
+    )
     name_zh = (
         row.get("name_zh")
+        or chinese_local_name
         or get_country_display_name(normalized, "zh")
-        or row.get("name_local")
+        or local_name
         or name_en
     )
     return name_en, name_zh
@@ -331,6 +338,9 @@ def build_country_data(
                     "incidence_sources": [],
                     "mortality_rates": [],
                     "quality_statuses": [],
+                    "temporal_granularities": [],
+                    "series_codes": [],
+                    "data_layers": [],
                 }
             points[d]["cases"].append(rec.get("cases"))
             points[d]["deaths"].append(rec.get("deaths"))
@@ -339,6 +349,19 @@ def build_country_data(
             points[d]["mortality_rates"].append(rec.get("mortality_rate"))
             points[d]["quality_statuses"].append(
                 rec.get("quality_status") or rec.get("data_quality")
+            )
+            context = (
+                rec.get("_series_context")
+                if isinstance(rec.get("_series_context"), dict)
+                else {}
+            )
+            points[d]["temporal_granularities"].append(
+                rec.get("temporal_granularity")
+                or context.get("period_granularity")
+            )
+            points[d]["series_codes"].append(rec.get("series_code"))
+            points[d]["data_layers"].append(
+                rec.get("data_layer") or context.get("data_layer")
             )
 
         series_dates = sorted(points.keys())
@@ -355,6 +378,15 @@ def build_country_data(
         ]
         series_quality = [
             dominant_value(points[d]["quality_statuses"]) for d in series_dates
+        ]
+        series_point_granularities = [
+            dominant_value(points[d]["temporal_granularities"]) for d in series_dates
+        ]
+        series_point_series_codes = [
+            dominant_value(points[d]["series_codes"]) for d in series_dates
+        ]
+        series_point_data_layers = [
+            dominant_value(points[d]["data_layers"]) for d in series_dates
         ]
         provenance = _provenance_with_source_records(
             recs,
@@ -381,6 +413,9 @@ def build_country_data(
             "incidence_sources": series_incidence_sources,
             "mortality_rates": series_mortality,
             "quality_statuses": series_quality,
+            "point_granularities": series_point_granularities,
+            "point_series_codes": series_point_series_codes,
+            "point_data_layers": series_point_data_layers,
             "provisional_from": trailing_provisional_from(
                 series_dates, series_quality
             ),
@@ -583,6 +618,9 @@ def build_country_site_data(country_data: dict) -> dict:
             "source_series": _compact_source_series_metadata(
                 entry.get("source_series") or []
             ),
+            "point_granularities": entry.get("point_granularities") or [],
+            "point_series_codes": entry.get("point_series_codes") or [],
+            "point_data_layers": entry.get("point_data_layers") or [],
         }
         if ri:
             compact_entry["ri"] = ri
@@ -598,6 +636,8 @@ def build_country_site_data(country_data: dict) -> dict:
             "cc": country_data.get("country_code"),
             "cn": country_data.get("country_name"),
             "cn_zh": country_data.get("country_name_zh"),
+            "lt": country_data.get("location_type") or "country",
+            "pc": country_data.get("parent_code"),
             "tc": country_data.get("total_cases"),
             "td": country_data.get("total_deaths"),
             "dc": country_data.get("disease_count"),
@@ -684,6 +724,9 @@ def build_disease_data(
                     "incidence_rates": [],
                     "incidence_sources": [],
                     "quality_statuses": [],
+                    "temporal_granularities": [],
+                    "series_codes": [],
+                    "data_layers": [],
                 }
             points[d]["cases"].append(rec.get("cases"))
             points[d]["deaths"].append(rec.get("deaths"))
@@ -691,6 +734,19 @@ def build_disease_data(
             points[d]["incidence_sources"].append(rec.get("incidence_rate_source"))
             points[d]["quality_statuses"].append(
                 rec.get("quality_status") or rec.get("data_quality")
+            )
+            context = (
+                rec.get("_series_context")
+                if isinstance(rec.get("_series_context"), dict)
+                else {}
+            )
+            points[d]["temporal_granularities"].append(
+                rec.get("temporal_granularity")
+                or context.get("period_granularity")
+            )
+            points[d]["series_codes"].append(rec.get("series_code"))
+            points[d]["data_layers"].append(
+                rec.get("data_layer") or context.get("data_layer")
             )
 
         series_dates = sorted(points.keys())
@@ -704,6 +760,15 @@ def build_disease_data(
         ]
         series_quality = [
             dominant_value(points[d]["quality_statuses"]) for d in series_dates
+        ]
+        series_point_granularities = [
+            dominant_value(points[d]["temporal_granularities"]) for d in series_dates
+        ]
+        series_point_series_codes = [
+            dominant_value(points[d]["series_codes"]) for d in series_dates
+        ]
+        series_point_data_layers = [
+            dominant_value(points[d]["data_layers"]) for d in series_dates
         ]
 
         provenance = _provenance_with_source_records(
@@ -722,6 +787,9 @@ def build_disease_data(
             "incidence_rates": series_incidence,
             "incidence_sources": series_incidence_sources,
             "quality_statuses": series_quality,
+            "point_granularities": series_point_granularities,
+            "point_series_codes": series_point_series_codes,
+            "point_data_layers": series_point_data_layers,
             "provisional_from": trailing_provisional_from(
                 series_dates, series_quality
             ),
@@ -745,9 +813,19 @@ def build_disease_data(
             **provenance,
         }
 
+    # Country-level global summaries must not add child jurisdictions to their
+    # parent national series. Keep every series addressable, while aggregating
+    # only the comparable national layer.
+    national_country_series = {
+        code: series for code, series in country_series.items() if "-" not in code
+    }
+    subdivision_country_codes = sorted(
+        code for code in country_series if "-" in code
+    )
     all_disease_records = [
         r
-        for recs in all_records_by_country.values()
+        for country_code, recs in all_records_by_country.items()
+        if "-" not in country_code
         for r in recs
         if r["disease_id"] == disease_id
     ]
@@ -773,8 +851,10 @@ def build_disease_data(
             "cases": [monthly[m]["cases"] for m in months_sorted],
             "deaths": [monthly[m]["deaths"] for m in months_sorted],
         },
-        "total_cases": sum(cs["total_cases"] for cs in country_series.values()),
-        "total_deaths": sum(cs["total_deaths"] for cs in country_series.values()),
+        "total_cases": sum(cs["total_cases"] for cs in national_country_series.values()),
+        "total_deaths": sum(cs["total_deaths"] for cs in national_country_series.values()),
+        "aggregation_scope": "national_jurisdictions_only",
+        "subdivision_country_codes": subdivision_country_codes,
         "data_layer_summary": _country_series_data_layer_summary(country_series),
     }
 
@@ -863,6 +943,9 @@ def build_disease_site_data(
             "source_series": _compact_source_series_metadata(
                 entry.get("source_series") or []
             ),
+            "point_granularities": entry.get("point_granularities") or [],
+            "point_series_codes": entry.get("point_series_codes") or [],
+            "point_data_layers": entry.get("point_data_layers") or [],
         }
         if ri:
             compact_entry["ri"] = ri

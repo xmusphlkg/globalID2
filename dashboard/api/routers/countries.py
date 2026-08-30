@@ -29,6 +29,8 @@ def _country_name_zh(country: Country) -> str:
 
 
 def _country_to_out(country: Country) -> dict:
+    metadata = country.metadata_ if isinstance(country.metadata_, dict) else {}
+    parent_code = str(metadata.get("parent_country_code") or "").strip().upper() or None
     return {
         "id": country.id,
         "code": country.code,
@@ -39,6 +41,11 @@ def _country_to_out(country: Country) -> dict:
         "language": country.language,
         "timezone": country.timezone,
         "is_active": country.is_active,
+        "location_type": str(
+            metadata.get("location_type")
+            or ("subdivision" if "-" in country.code else "country")
+        ),
+        "parent_code": parent_code,
     }
 
 
