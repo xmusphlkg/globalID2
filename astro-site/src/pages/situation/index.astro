@@ -58,7 +58,7 @@ const seo: SeoDocument = {
 ---
 
 <ReportLayout title={pick(title, titleZh)} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室') }]}>
-  <main class="situation-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="situation-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     {report ? <>
       <header class="report-hero">
         <div>
@@ -92,7 +92,7 @@ const seo: SeoDocument = {
         <p><span>{pick('Updated', '更新于')}</span> {formatDate(report.report.as_of)}</p>
       </footer>
     </> : <section class="placeholder"><p class="eyebrow">{pick('Not yet published', '尚未发布')}</p><h1>{pick('No current situation review is available', '当前暂无态势复核')}</h1><p>{pick('A situation review appears here after its sources, analysis, and evidence links pass publication checks.', '来源、分析与证据链接通过发布检查后，态势复核将在此显示。')}</p><a href={`${prefix}/diseases/`}>{pick('Browse disease datasets', '浏览疾病数据')}</a></section>}
-  </main>
+  </div>
 </ReportLayout>
 
 <style>

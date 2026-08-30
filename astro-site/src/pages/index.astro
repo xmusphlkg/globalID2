@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import PublicHome from '../components/public/PublicHome.astro';
+import PublicHomeRedesign from '../components/public/PublicHomeRedesign.astro';
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
 const zh = locale === 'zh';
 ---
@@ -11,5 +11,5 @@ const zh = locale === 'zh';
   initialLanguage={locale}
   seo={{ title: zh ? '全球传染病监测 | GIDS' : 'Global Infectious Disease Surveillance | GIDS', description: zh ? '浏览官方来源的传染病监测数据、当前态势报告、趋势和可下载数据集。' : 'Explore official-source infectious disease surveillance data, current situation reports, trends, and downloadable datasets.', locale, canonicalPath: zh ? '/zh/' : '/', alternatePaths: { en: '/', zh: '/zh/' } }}
 >
-  <PublicHome locale={locale} />
+  <PublicHomeRedesign locale={locale} />
 </BaseLayout>

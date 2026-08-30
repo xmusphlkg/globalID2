@@ -10,14 +10,18 @@ export interface SeoDocument {
   alternatePaths?: Partial<Record<SeoLocale, string>>;
   noindex?: boolean;
   image?: string;
+  imageAlt?: string;
   pageType?: string;
   datePublished?: string | null;
   dateModified?: string | null;
   structuredData?: JsonLdNode | JsonLdNode[] | readonly JsonLdNode[];
 }
 
-const SITE_NAME = 'Global Infectious Disease Surveillance';
+const SITE_NAME = 'GIDS';
 const SEO_DESCRIPTION_LIMIT = 160;
+const SEO_TITLE_LIMIT = 70;
+
+export const MIN_INDEXABLE_RESEARCH_COLLECTION_ITEMS = 2;
 
 export function toSeoSlug(value: unknown): string {
   return normalizeSeoText(value)
@@ -46,13 +50,30 @@ export function clampSeoDescription(value: unknown, limit = SEO_DESCRIPTION_LIMI
   return `${text.slice(0, boundary > 40 ? boundary : limit - 1).trimEnd()}…`;
 }
 
+export function clampSeoTitle(value: unknown, limit = SEO_TITLE_LIMIT): string {
+  const text = normalizeSeoText(value);
+  if (text.length <= limit) return text;
+  const punctuationBoundary = Math.max(
+    text.lastIndexOf(':', limit - 1),
+    text.lastIndexOf('—', limit - 1),
+    text.lastIndexOf('-', limit - 1),
+  );
+  const wordBoundary = text.lastIndexOf(' ', limit - 1);
+  const boundary = punctuationBoundary >= 36 ? punctuationBoundary : wordBoundary;
+  return `${text.slice(0, boundary >= 36 ? boundary : limit - 1).trimEnd()}…`;
+}
+
+export function isIndexableResearchCollection(itemCount: unknown): boolean {
+  return Number(itemCount) >= MIN_INDEXABLE_RESEARCH_COLLECTION_ITEMS;
+}
+
 export function buildSeoTitle(subject: string, intent: string, coverage?: string, locale: SeoLocale = 'en'): string {
   const cleanSubject = normalizeSeoText(subject) || (locale === 'zh' ? '传染病监测' : 'Infectious disease surveillance');
   const cleanCoverage = normalizeSeoText(coverage);
   if (locale === 'zh') {
-    return `${cleanSubject}${cleanCoverage ? `监测数据 ${cleanCoverage}` : '监测数据'} | ${SITE_NAME}`;
+    return clampSeoTitle(`${cleanSubject}${cleanCoverage ? `监测数据 ${cleanCoverage}` : '监测数据'} | ${SITE_NAME}`);
   }
-  return `${cleanSubject} ${intent}${cleanCoverage ? ` ${cleanCoverage}` : ''} | ${SITE_NAME}`;
+  return clampSeoTitle(`${cleanSubject} ${intent}${cleanCoverage ? ` ${cleanCoverage}` : ''} | ${SITE_NAME}`);
 }
 
 export function buildAlternatePaths(canonicalPath: string, locale: SeoLocale): Record<SeoLocale, string> {
@@ -111,7 +132,7 @@ const DOWNLOAD_MIME_TYPES: Record<string, string> = {
 };
 
 export function normalizeSeoText(value: unknown): string {
-  return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+  return typeof value === 'string' ? value.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim() : '';
 }
 
 function coverageText(start?: string | null, end?: string | null): string {

@@ -4,6 +4,7 @@ import ReportLayout from '../../../layouts/ReportLayout.astro';
 import StatBar from '../../../components/StatBar.astro';
 import ReportCard from '../../../components/ReportCard.astro';
 import CountryFlag from '../../../components/CountryFlag.astro';
+import CountryCard from '../../../components/CountryCard.astro';
 import DownloadPanel from '../../../components/DownloadPanel.astro';
 import PageAnchorNav from '../../../components/PageAnchorNav.astro';
 import EpidemicCurve from '../../../components/charts/EpidemicCurve';
@@ -22,6 +23,7 @@ import {
 } from '../../../lib/seo';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import metaRaw from '../../../data/meta.json';
 
 export function getStaticPaths() {
   const metaPath = resolve('./src/data/meta.json');
@@ -38,6 +40,15 @@ const zh = locale === 'zh';
 const prefix = zh ? '/zh' : '';
 const localeHref = (path: string) => `${prefix}${path}`;
 const fallbackCountryCode = String(country ?? '').toUpperCase();
+const childJurisdictions = ((metaRaw as any).countries ?? [])
+  .filter((entry: any) => (
+    entry.parent_code === fallbackCountryCode && hasCountryDataSnapshot(entry)
+  ))
+  .sort((left: any, right: any) => String(
+    zh ? left.name_zh ?? left.name : left.name_en ?? left.name
+  ).localeCompare(String(
+    zh ? right.name_zh ?? right.name : right.name_en ?? right.name
+  ), zh ? 'zh-CN' : 'en'));
 const dataPath = resolve(`./src/data/countries/${country}.json`);
 const reportsIndexPath = resolve('./src/data/reports/index.json');
 const downloadsPath = resolve('./src/data/downloads.json');
@@ -260,6 +271,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
     </section>
 
     <PageAnchorNav locale={locale} items={[
+      ...(childJurisdictions.length > 0 ? [{ href: '#subnational-data', label: 'Subnational data', labelZh: '分省数据' }] : []),
       { href: '#indicators', label: 'Indicators', labelZh: '核心指标' },
       { href: '#trends', label: 'Trends', labelZh: '趋势' },
       { href: '#disease-directory', label: 'Diseases', labelZh: '疾病目录' },
@@ -315,6 +327,41 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
       </div>
       </details>
     </section>
+
+    {childJurisdictions.length > 0 && (
+      <section id="subnational-data" class="figure-panel scroll-mt-24">
+        <p class="figure-kicker">{zh ? '分层浏览' : 'Hierarchical access'}</p>
+        <h2 class="figure-title">
+          {zh ? `${countryNameZh}分省数据` : `${countryName} subnational datasets`}
+        </h2>
+        <p class="figure-caption mt-2 max-w-3xl">
+          {zh
+            ? `当前收录 ${childJurisdictions.length} 个分省数据集。分省序列独立展示，不与全国序列叠加，也不进入国家级排行和全球汇总。`
+            : `${childJurisdictions.length} subnational datasets are available. These series are shown independently and are not added to the national series, country rankings, or global totals.`}
+        </p>
+        <details class="subnational-browser mt-5">
+          <summary>
+            <span>{zh ? `展开 ${childJurisdictions.length} 个分省数据集` : `Show ${childJurisdictions.length} subnational datasets`}</span>
+            <span aria-hidden="true">＋</span>
+          </summary>
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {childJurisdictions.map((entry: any) => (
+              <CountryCard
+                code={entry.code}
+                name={entry.name_en ?? entry.name}
+                nameZh={entry.name_zh ?? entry.name}
+                totalCases={entry.total_cases}
+                totalDeaths={entry.total_deaths}
+                diseaseCount={entry.disease_count}
+                dateRange={entry.date_range}
+                locationType={entry.location_type ?? 'subdivision'}
+                locale={locale}
+              />
+            ))}
+          </div>
+        </details>
+      </section>
+    )}
 
     {stats.length > 0 && (
         <section id="indicators" class="figure-panel scroll-mt-24">
@@ -445,10 +492,10 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
     {countryDownload && (
       <div id="downloads" class="scroll-mt-24"><DownloadPanel
         entry={{ ...countryDownload, source_info: countryData?.source_info }}
-        title="Download data"
+        title="Data access"
         initialLanguage={locale}
-        descriptionEn="Download source observations and the public compatibility projection with series definitions, reporting grain, and provenance."
-        descriptionZh="下载来源观测与公开兼容投影，并保留序列定义、报告粒度和数据溯源信息。"
+        descriptionEn="CSV, JSON, XLSX · source observations, public projection, provenance."
+        descriptionZh="CSV、JSON、XLSX · 来源观测、公开投影与溯源。"
       /></div>
     )}
   </div>
@@ -459,6 +506,10 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
   .country-context summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 0; color: rgb(var(--color-teal)); cursor: pointer; font-size: .78rem; font-weight: 650; list-style: none; }
   .country-context summary::-webkit-details-marker { display: none; }
   .country-context[open] summary span:last-child { transform: rotate(45deg); }
+  .subnational-browser { border-top: 1px solid rgb(var(--border)); }
+  .subnational-browser summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 0; color: rgb(var(--color-teal)); cursor: pointer; font-size: .85rem; font-weight: 650; list-style: none; }
+  .subnational-browser summary::-webkit-details-marker { display: none; }
+  .subnational-browser[open] summary span:last-child { transform: rotate(45deg); }
   .country-context-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: .65rem; padding-top: .25rem; }
   @media(max-width:1024px){.country-context-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:640px){.country-context-grid{grid-template-columns:1fr}}

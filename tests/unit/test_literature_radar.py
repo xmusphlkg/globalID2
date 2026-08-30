@@ -1,6 +1,9 @@
 from datetime import datetime, timezone
+import json
 from pathlib import Path
 from types import SimpleNamespace
+
+import pytest
 
 from src.generation.site_data_literature import (
     append_historical_seed_articles,
@@ -21,7 +24,7 @@ from src.generation.site_data_literature import (
 )
 from src.literature.classification import classify_candidate
 from src.literature.clients.crossref import CrossrefClient
-from src.literature.enrichment import LiteratureSummaryGenerator
+from src.literature.enrichment import LiteratureSummaryGenerator, SUMMARY_FIELDS
 from src.literature.knowledge_graph import build_knowledge_graph
 from src.literature.normalization import normalize_crossref
 from src.literature.normalization import normalize_europe_pmc
@@ -1021,7 +1024,11 @@ def test_editor_confirmation_cannot_close_a_dated_signal_without_article_date():
 
 
 class _FakeLiteratureAgent:
+    def __init__(self):
+        self.calls = []
+
     async def process(self, **_kwargs):
+        self.calls.append(_kwargs)
         return {"raw_response": """{
           "research_question": {"text": "What patterns were observed?", "evidence": ["abstract"], "confidence": 0.8},
           "study_design": {"text": "This was a descriptive surveillance study.", "evidence": ["abstract"], "confidence": 0.9},
@@ -1053,6 +1060,50 @@ async def test_model_enrichment_rejects_verbatim_overlap_and_stays_reviewable():
     assert result.fields["study_design"] == "This was a descriptive surveillance study."
     assert result.model == "test-model"
     assert "Removed verbatim-overlap fields: main_findings" in result.review_notes
+
+
+@pytest.mark.asyncio
+async def test_chinese_enrichment_requires_and_records_english_semantic_contract():
+    candidate = normalize_crossref(_crossref_payload())
+    assert candidate is not None
+    canonical = {
+        field: f"Canonical {field}."
+        for field in SUMMARY_FIELDS
+    }
+    canonical["population_setting"] = None
+    canonical["limitations"] = None
+    agent = _FakeLiteratureAgent()
+
+    with pytest.raises(ValueError, match="canonical_english_summary_required"):
+        await LiteratureSummaryGenerator(agent=agent).generate(
+            article=candidate, language="zh", diseases=["Dengue"], countries=["Japan"],
+            topics=["Surveillance"], timeout_seconds=10, preferred_models=[],
+        )
+
+    result = await LiteratureSummaryGenerator(agent=agent).generate(
+        article=candidate, language="zh", diseases=["Dengue"], countries=["Japan"],
+        topics=["Surveillance"], timeout_seconds=10, preferred_models=[],
+        canonical_fields=canonical,
+    )
+
+    assert result.canonical_summary_fingerprint
+    request = json.loads(agent.calls[-1]["prompt"])
+    assert request["canonical_summary_en"] == canonical
+    assert "do not add, remove" in agent.calls[-1]["system"]
+
+
+@pytest.mark.asyncio
+async def test_chinese_enrichment_rejects_different_null_field_topology():
+    candidate = normalize_crossref(_crossref_payload())
+    assert candidate is not None
+    canonical = {field: f"Canonical {field}." for field in SUMMARY_FIELDS}
+
+    with pytest.raises(ValueError, match="bilingual_null_alignment_mismatch:population_setting"):
+        await LiteratureSummaryGenerator(agent=_FakeLiteratureAgent()).generate(
+            article=candidate, language="zh", diseases=["Dengue"], countries=["Japan"],
+            topics=["Surveillance"], timeout_seconds=10, preferred_models=[],
+            canonical_fields=canonical,
+        )
 
 
 def _autopilot_config():
@@ -1305,6 +1356,7 @@ def test_autopilot_publishes_only_current_well_grounded_model_summaries():
     }
     summary = SimpleNamespace(
         article_id=article.article_id,
+        language="en",
         status="review",
         generated_by="literature-evidence-agent",
         quality_score=0.94,
@@ -1324,3 +1376,43 @@ def test_autopilot_publishes_only_current_well_grounded_model_summaries():
     published_stale = decide_summary(summary, article, _autopilot_config())
     assert published_stale.action == "hold"
     assert "fingerprint is stale" in published_stale.reasons[0]
+
+
+def test_autopilot_holds_protocol_v2_chinese_summary_without_alignment_evidence():
+    from src.literature.enrichment import source_fingerprint
+
+    article = _autopilot_article(publication_status="published")
+    fields = {
+        "research_question": "研究问题。", "study_design": "研究设计。",
+        "population_setting": "研究人群。", "main_findings": "主要发现。",
+        "public_health_relevance": "公共卫生意义。", "limitations": "局限性。",
+        "gids_interpretation": "资料库解释。",
+    }
+    summary = SimpleNamespace(
+        article_id=article.article_id, language="zh", status="review",
+        generated_by="literature-evidence-agent", quality_score=0.94,
+        generation_metadata={
+            "protocol_version": 2,
+            "source_fingerprint": source_fingerprint(article),
+        },
+        evidence_map={
+            field: {"sources": ["abstract"], "confidence": 0.88} for field in fields
+        },
+        review_notes="Grounded generation passed.", **fields,
+    )
+
+    decision = decide_summary(summary, article, _autopilot_config())
+    assert decision.action == "hold"
+    assert "alignment evidence is missing or stale" in decision.reasons[0]
+
+    summary.generation_metadata["bilingual_alignment"] = {
+        "protocol_version": "canonical-en-translation.v1",
+        "canonical_language": "en",
+        "canonical_summary_fingerprint": "abc123",
+    }
+    assert decide_summary(
+        summary,
+        article,
+        _autopilot_config(),
+        expected_canonical_summary_fingerprint="abc123",
+    ).action == "publish"

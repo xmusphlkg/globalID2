@@ -189,16 +189,31 @@ export async function subscriptionStats(request: Request, env: Env): Promise<Res
      GROUP BY status
      ORDER BY status`
   ).bind(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).all<{ status: string; count: number }>();
+  const campaignDeliveryRows = await env.DB.prepare(
+    `SELECT status, COUNT(*) AS count FROM message_deliveries
+     WHERE queued_at >= ? GROUP BY status ORDER BY status`
+  ).bind(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).all<{ status: string; count: number }>();
+  const feedbackRows = await env.DB.prepare(
+    `SELECT event_type AS status, COUNT(*) AS count FROM email_delivery_events
+     WHERE occurred_at >= ? GROUP BY event_type ORDER BY event_type`
+  ).bind(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).all<{ status: string; count: number }>();
   const stalePending = await env.DB.prepare(
     "SELECT COUNT(*) AS count FROM subscriptions WHERE status = 'pending' AND created_at < ?"
   ).bind(pendingCutoff(env.PENDING_EXPIRY_DAYS)).first<{ count: number }>();
 
+  const campaignDeliveries = rowsToCounts(campaignDeliveryRows.results || []);
+  const feedback = rowsToCounts(feedbackRows.results || []);
+  const accepted = Number(campaignDeliveries.sent || 0) + Number(campaignDeliveries.delivered || 0);
+  const terminal = accepted + Number(campaignDeliveries.failed || 0);
   return json({
     ok: true,
     generated_at: new Date().toISOString(),
     subscriptions: rowsToCounts(subscriptionRows.results || []),
     contacts: rowsToCounts(contactRows.results || []),
     deliveries_last_7_days: rowsToCounts(deliveryRows.results || []),
+    campaign_deliveries_last_7_days: campaignDeliveries,
+    provider_feedback_last_7_days: feedback,
+    delivery_acceptance_rate_last_7_days: terminal > 0 ? Math.round((accepted / terminal) * 10000) / 10000 : null,
     stale_pending_subscriptions: Number(stalePending?.count || 0),
     pending_expiry_days: configInt(env.PENDING_EXPIRY_DAYS, 14, 1, 365),
   }, request, env);

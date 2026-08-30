@@ -15,11 +15,24 @@ from ..frequency import (
     period_gap,
     period_start,
 )
+from ..location_codes import (
+    is_subdivision_code,
+    jurisdiction_geography_key,
+    registry_country_code,
+)
 from ..schemas.quality import CompletenessItem, DataSourceDist, QualityStats, TimeGap
+from ..services.disease_series_projection import (
+    SeriesFirstResult,
+    load_jurisdiction_series_first_records,
+)
 from src.core.source_scopes import canonical_data_source_label
 from src.domain.disease import Disease
 from src.domain.country import Country
 from src.domain.disease_record import DiseaseRecord
+from src.domain.disease_ontology import (
+    DiseaseSeriesObservation,
+    DiseaseSurveillanceSeries,
+)
 from src.domain.standard_disease import StandardDisease
 
 router = APIRouter()
@@ -36,11 +49,52 @@ async def _country_id(country_code: str, db: AsyncSession) -> int:
     return int(country_id)
 
 
+async def _jurisdiction_results(
+    country_code: str, db: AsyncSession
+) -> tuple[Country, list[SeriesFirstResult]] | None:
+    if not is_subdivision_code(country_code):
+        return None
+    country = (
+        await db.execute(
+            select(Country).where(
+                func.upper(Country.code) == country_code.strip().upper()
+            )
+        )
+    ).scalar_one_or_none()
+    if country is None:
+        raise HTTPException(404, "Country not found")
+    results = await load_jurisdiction_series_first_records(db, country_id=country.id)
+    return country, results
+
+
+def _projected_records(results: list[SeriesFirstResult]) -> list[dict]:
+    return [record for result in results for record in result.records]
+
+
 @router.get("/quality/stats", response_model=QualityStats)
 async def quality_stats(
     country_code: str = Query(..., min_length=2, max_length=10),
     db: AsyncSession = Depends(get_db),
 ):
+    jurisdiction = await _jurisdiction_results(country_code, db)
+    if jurisdiction is not None:
+        _, results = jurisdiction
+        records = _projected_records(results)
+        times = [record.get("time") for record in records if record.get("time") is not None]
+        zero_cases = sum(1 for record in records if record.get("cases") == 0)
+        zero_deaths = sum(1 for record in records if record.get("deaths") == 0)
+        total = len(records)
+        return QualityStats(
+            total_records=total,
+            unique_diseases=len(results),
+            earliest_date=min(times).strftime("%Y-%m-%d") if times else None,
+            latest_date=max(times).strftime("%Y-%m-%d") if times else None,
+            zero_cases_count=zero_cases,
+            zero_cases_pct=round(zero_cases / total * 100, 2) if total else 0.0,
+            zero_deaths_count=zero_deaths,
+            zero_deaths_pct=round(zero_deaths / total * 100, 2) if total else 0.0,
+        )
+
     country_id = await _country_id(country_code, db)
     q = select(
         func.count().label("total_records"),
@@ -72,6 +126,27 @@ async def quality_gaps(
     db: AsyncSession = Depends(get_db),
 ):
     """Find gaps > 1 detected period in the country time-series."""
+    jurisdiction = await _jurisdiction_results(country_code, db)
+    if jurisdiction is not None:
+        _, results = jurisdiction
+        times = [
+            record.get("time")
+            for record in _projected_records(results)
+            if record.get("time") is not None
+        ]
+        profile = infer_frequency_profile_from_times(times)
+        periods = sorted({period_start(value, profile) for value in times})
+        return [
+            TimeGap(
+                period_start=current.strftime("%Y-%m-%d"),
+                next_period=next_period.strftime("%Y-%m-%d"),
+                gap_periods=float(period_gap(current, next_period, profile)),
+                period_unit=profile.period_unit,
+            )
+            for current, next_period in zip(periods, periods[1:])
+            if period_gap(current, next_period, profile) > 1
+        ]
+
     country_id = await _country_id(country_code, db)
     profile = await infer_country_frequency_profile(country_id, db)
     q = (
@@ -102,6 +177,45 @@ async def quality_sources(
     country_code: Optional[str] = Query(None, min_length=2, max_length=10),
     db: AsyncSession = Depends(get_db),
 ):
+    if country_code and is_subdivision_code(country_code):
+        jurisdiction = await _jurisdiction_results(country_code, db)
+        assert jurisdiction is not None
+        country, _ = jurisdiction
+        rows = (
+            await db.execute(
+                select(
+                    DiseaseSurveillanceSeries.source_system,
+                    func.count(DiseaseSeriesObservation.id).label("count"),
+                )
+                .join(
+                    DiseaseSeriesObservation,
+                    DiseaseSeriesObservation.series_code
+                    == DiseaseSurveillanceSeries.series_code,
+                )
+                .where(
+                    DiseaseSurveillanceSeries.country_code
+                    == registry_country_code(country),
+                    DiseaseSeriesObservation.geography_key
+                    == jurisdiction_geography_key(country.code),
+                    DiseaseSeriesObservation.quality_status != "rejected",
+                )
+                .group_by(DiseaseSurveillanceSeries.source_system)
+            )
+        ).all()
+        labels = {
+            "SRC_CN_PROV_DATACENTER": "公共卫生科学数据中心分省月度数据",
+            "SRC_CN_PROV_MONTHLY_REPORT": "省级法定传染病月报",
+        }
+        total = sum(int(row.count or 0) for row in rows)
+        return [
+            DataSourceDist(
+                data_source=labels.get(row.source_system, row.source_system),
+                count=int(row.count or 0),
+                percentage=round(int(row.count or 0) / total * 100, 2) if total else 0.0,
+            )
+            for row in sorted(rows, key=lambda item: int(item.count or 0), reverse=True)
+        ]
+
     country_id = await _country_id(country_code, db) if country_code else None
     q = select(
         DiseaseRecord.data_source,
@@ -138,6 +252,57 @@ async def quality_completeness(
     lang: str = Query("en"),
     db: AsyncSession = Depends(get_db),
 ):
+    jurisdiction = await _jurisdiction_results(country_code, db)
+    if jurisdiction is not None:
+        _, results = jurisdiction
+        codes = [result.disease_code for result in results]
+        name_rows = (
+            await db.execute(
+                select(
+                    Disease.name,
+                    Disease.name_en,
+                    StandardDisease.standard_name_zh,
+                )
+                .outerjoin(StandardDisease, Disease.name == StandardDisease.disease_id)
+                .where(Disease.name.in_(codes))
+            )
+        ).all() if codes else []
+        names = {
+            row.name: (
+                (row.standard_name_zh or row.name_en or row.name)
+                if lang == "zh"
+                else (row.name_en or row.name)
+            )
+            for row in name_rows
+        }
+        result_rows: list[CompletenessItem] = []
+        for result in results:
+            times = [
+                record.get("time")
+                for record in result.records
+                if record.get("time") is not None
+                and (not start or record["time"].date().isoformat() >= start)
+                and (not end or record["time"].date().isoformat() <= end)
+            ]
+            if not times:
+                continue
+            profile = infer_frequency_profile_from_times(times)
+            periods = sorted({period_start(value, profile) for value in times})
+            expected = max(expected_periods(periods[0], periods[-1], profile), 1)
+            result_rows.append(
+                CompletenessItem(
+                    disease_name=names.get(result.disease_code, result.disease_name),
+                    data_periods=len(periods),
+                    expected_periods=expected,
+                    completeness_rate=round(len(periods) / expected * 100, 2),
+                    earliest_date=min(times).strftime("%Y-%m-%d"),
+                    latest_date=max(times).strftime("%Y-%m-%d"),
+                    total_records=len(times),
+                    period_unit=profile.period_unit,
+                )
+            )
+        return sorted(result_rows, key=lambda item: item.disease_name.lower())
+
     country_id = await _country_id(country_code, db)
     if lang == "zh":
         name_col = func.coalesce(

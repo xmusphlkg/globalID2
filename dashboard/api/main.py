@@ -64,6 +64,7 @@ async def lifespan(app: FastAPI):
         await heartbeat
         task_manager.set_broadcast_hook(None)
         await control_plane_events.publish("runtime.stopped", resource_type="runtime", resource_id=instance_id)
+        await runtime_registry.remove_heartbeat("api", instance_id)
         await runtime_registry.close()
         await control_plane_events.close()
         await dispose_history_database()

@@ -108,20 +108,25 @@ test('shared public pages render complete Chinese structures', async ({ page }, 
   await expect(page.locator('[data-download-row]:visible')).toHaveCount(1);
 });
 
-test('copyright center exposes rights layers, reuse decisions, and localized notice routes', async ({ page }, testInfo) => {
+test('copyright center exposes reuse guidance, material rules, and citation tools', async ({ page }, testInfo) => {
   test.skip(!['chromium-390', 'chromium-1280'].includes(testInfo.project.name));
   await page.goto('/copyright/');
-  await expect(page.getByRole('heading', { level: 1, name: 'Copyright, data licensing & reuse' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: 'Four rights layers' })).toBeVisible();
-  await expect(page.locator('#reuse-checker tbody tr')).toHaveCount(7);
+  await expect(page.getByRole('heading', { level: 1, name: 'Copyright, licensing & reuse' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Using GIDS at a glance' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'What rules apply?' })).toBeVisible();
+  await expect(page.locator('#reuse-checker tbody tr')).toHaveCount(8);
+  await expect(page.getByRole('tab', { name: 'BibTeX' })).toBeVisible();
+  await page.getByRole('tab', { name: 'RIS' }).click();
+  await expect(page.getByRole('tabpanel')).toContainText('TY  - DATA');
   await expect(page.getByRole('link', { name: /Read the official licence deed/ })).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/');
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
   const axeResults = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(axeResults.violations.filter(item => ['critical', 'serious'].includes(item.impact ?? ''))).toEqual([]);
 
   await page.goto('/zh/copyright/');
-  await expect(page.getByRole('heading', { level: 1, name: '版权、数据许可与复用说明' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: '四层权利结构' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: '版权、许可与复用说明' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'GIDS 内容可以怎样使用？' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: '不同材料适用什么规则？' })).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/zh\/copyright\/$/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
 });
@@ -228,8 +233,9 @@ test('Chinese indexes, tools, Situation, and static services use route-native te
 
   await page.goto('/zh/countries/');
   expect(await page.locator('.country-flag img').count()).toBeGreaterThan(0);
-  await expect(page.locator('.country-flag-fallback').first()).toBeVisible();
-  await expect(page.locator('.country-flag img[src="/flags/at.svg"]')).toHaveCount(0);
+  await expect.poll(() => page.locator('.country-flag img').evaluateAll(images => (
+    images.every(image => image instanceof HTMLImageElement && (!image.complete || image.naturalWidth > 0))
+  ))).toBe(true);
   await expect(page.locator('.country-card').first()).toHaveAttribute('href', /^\/zh\/countries\//);
   await page.goto('/zh/diseases/');
   await expect(page.locator('.disease-card-wrap a').first()).toHaveAttribute('href', /^\/zh\/diseases\//);

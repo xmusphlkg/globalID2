@@ -17,6 +17,7 @@ from src.core.source_scopes import (
 )
 from src.data.crawlers.us import (
     NHSS_HIV_LABEL,
+    NHSS_USER_AGENT,
     USNHSSHIVCrawler,
     USNNDSSCrawler,
 )
@@ -65,6 +66,12 @@ def test_nhss_current_workbook_parser_extracts_national_total() -> None:
     assert rows[-1]["ReleaseYear"] == "2024"
     assert rows[-1]["IsProvisional"] == "true"
     assert rows[0]["IsProvisional"] == "false"
+
+
+def test_nhss_crawler_uses_transparent_provider_compatible_identity() -> None:
+    crawler = USNHSSHIVCrawler(delay=0)
+
+    assert crawler.session.headers["User-Agent"] == NHSS_USER_AGENT
 
 
 def test_nhss_release_workbook_url_is_discovered_from_stable_page(monkeypatch) -> None:

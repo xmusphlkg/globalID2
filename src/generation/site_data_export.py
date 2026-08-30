@@ -3,6 +3,7 @@
 from collections import defaultdict
 from pathlib import Path
 
+from src.core.config import get_config
 from src.core.data_share import (
     derive_github_raw_base_url,
     get_data_share_repo_branch,
@@ -30,6 +31,11 @@ from src.generation.site_data_database import (
 from src.generation.site_data_knowledge import (
     apply_country_brief_fields,
     build_disease_knowledge_fields,
+)
+from src.generation.site_data_literature import (
+    attach_surveillance_evidence,
+    collect_literature_export,
+    write_literature_artifacts,
 )
 from src.generation.site_data_queries import (
     fetch_countries,
@@ -222,6 +228,16 @@ async def collect_site_export_context(
                     "name_en": name_en,
                     "name_zh": name_zh,
                     "language": country["language"],
+                    "location_type": (
+                        (country.get("metadata") or {}).get("location_type")
+                        if isinstance(country.get("metadata"), dict)
+                        else None
+                    ) or ("subdivision" if "-" in country["code"] else "country"),
+                    "parent_code": (
+                        (country.get("metadata") or {}).get("parent_country_code")
+                        if isinstance(country.get("metadata"), dict)
+                        else None
+                    ),
                 }
             )
 
@@ -237,7 +253,11 @@ async def collect_site_export_context(
             country_name_en = country_name_by_code.get(code) or country["name"]
             print(f"  Fetching records for {code}…")
             frequency_meta = await fetch_country_frequency_meta(session, code)
-            country_source_info = build_country_source_info(code, frequency_meta)
+            country_source_info = build_country_source_info(
+                code,
+                frequency_meta,
+                database_config=country,
+            )
             records, source_records = await fetch_disease_export_layers(
                 session, code, population_enabled
             )
@@ -257,6 +277,18 @@ async def collect_site_export_context(
                 diseases_by_id,
                 frequency_meta,
                 source_records,
+            )
+            country_metadata = (
+                country.get("metadata")
+                if isinstance(country.get("metadata"), dict)
+                else {}
+            )
+            country_data["country_name_zh"] = country_name_zh_by_code.get(code)
+            country_data["location_type"] = country_metadata.get(
+                "location_type"
+            ) or ("subdivision" if "-" in code else "country")
+            country_data["parent_code"] = country_metadata.get(
+                "parent_country_code"
             )
             if code.upper() == "IS":
                 country_source_info = _retain_observed_iceland_sources(
@@ -733,6 +765,7 @@ async def export(
     direct_download_output_dir: Path = DEFAULT_DIRECT_DOWNLOAD_OUTPUT,
     direct_download_url_base: str = DEFAULT_DIRECT_DOWNLOAD_URL_BASE,
     direct_download_max_file_bytes: int = DEFAULT_TARGET_FILE_BYTES,
+    direct_download_workers: int | None = None,
 ) -> None:
     """Package and write one complete export from a collected context."""
     context = await collect_site_export_context(output_dir, allow_empty_export)
@@ -746,6 +779,7 @@ async def export(
         direct_download_output_dir,
         download_url_base=direct_download_url_base,
         max_file_bytes=direct_download_max_file_bytes,
+        workers=direct_download_workers,
     )
     manifest_output.parent.mkdir(parents=True, exist_ok=True)
     write_pretty_json(manifest_output, downloads_manifest)

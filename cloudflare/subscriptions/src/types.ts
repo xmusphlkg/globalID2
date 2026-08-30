@@ -19,6 +19,7 @@ export interface Env extends OptionalGeneratedBindings {
   SMTP_USERNAME?: string;
   SMTP_PASSWORD?: string;
   SITUATION_ALERT_INGEST_TOKEN?: string;
+  EMAIL_DELIVERY_INGEST_TOKEN?: string;
 }
 
 export type Payload = Record<string, unknown>;

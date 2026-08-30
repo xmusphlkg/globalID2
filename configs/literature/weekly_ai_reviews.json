@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "reviews": [
+    {
+      "week": "2026-W34",
+      "brief_fingerprint": "b658dbd89f67fda73acf1bd5bb3e8c02efff9a9813539290c302121eb5ad1710",
+      "review": {
+        "verdict": "pass",
+        "issue_codes": [],
+        "reviewed_at": "2026-08-27T05:36:56+00:00",
+        "protocol_version": "research-weekly-ai-review.v1",
+        "model": "configured-review-model",
+        "provider": "model-center"
+      }
+    },
+    {
+      "week": "2026-W35",
+      "brief_fingerprint": "fbbd2627858a49b0e71e6bedf595c83da70f9c2763d22fe75c069f6d027fdb3c",
+      "review": {
+        "verdict": "pass",
+        "issue_codes": [],
+        "reviewed_at": "2026-08-29T18:34:00+00:00",
+        "protocol_version": "research-weekly-ai-review.v1",
+        "model": "configured-review-model",
+        "provider": "model-center"
+      }
+    }
+  ]
+}

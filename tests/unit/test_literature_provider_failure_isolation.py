@@ -173,7 +173,7 @@ async def test_crossref_connect_failure_still_fails_the_whole_run(monkeypatch, t
         from datetime import datetime, timezone
         return datetime(2026, 8, 1, tzinfo=timezone.utc), None
 
-    async def create_run(*_args):
+    async def create_run(*_args, **_kwargs):
         return None
 
     async def finish_run(_run_uuid, status, **kwargs):
@@ -277,7 +277,7 @@ async def test_full_pipeline_autopilot_cannot_publish_crossref_record_when_opena
         from datetime import datetime, timezone
         return datetime(2026, 8, 1, tzinfo=timezone.utc), None
 
-    async def create_run(*_args):
+    async def create_run(*_args, **_kwargs):
         return None
 
     async def finish_run(_run_uuid, status, **kwargs):

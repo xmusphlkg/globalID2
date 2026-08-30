@@ -71,7 +71,7 @@ export default function QualityPage() {
       <EmptyState
         icon={<ShieldCheck className="h-12 w-12" />}
         title={t(lang, "no_data")}
-        description={lang === "zh" ? "请选择国家后查看数据质量指标。" : "Select a country to view data quality metrics."}
+        description={lang === "zh" ? "请选择国家或地区后查看数据质量指标。" : "Select a country or region to view data quality metrics."}
         className="min-h-[55vh]"
       />
     );

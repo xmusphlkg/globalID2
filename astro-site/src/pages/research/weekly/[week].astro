@@ -25,6 +25,9 @@ const evidenceGaps = payload.evidence_gaps ?? [];
 const reviewer = payload.brief_status === 'editorially_reviewed' && payload.byline?.reviewer
   ? payload.byline.reviewer
   : null;
+const aiReview = payload.brief_status === 'ai_reviewed' && payload.byline?.ai_review
+  ? payload.byline.ai_review
+  : null;
 const reviewedDate = reviewer?.reviewed_at ? String(reviewer.reviewed_at).slice(0, 10) : '';
 const reviewedByEn = reviewer ? `Editorially reviewed by ${reviewer.name} · ${reviewer.role}` : '';
 const reviewedByZh = reviewer ? `编辑审核：${reviewer.name} · ${reviewer.role}` : '';
@@ -57,6 +60,12 @@ const reviewedAtZh = reviewer ? `审核于 ${reviewedDate}` : '';
           {reviewer.institution && <span>{reviewer.institution}</span>}
           <time datetime={reviewer.reviewed_at}>{zh ? reviewedAtZh : reviewedAtEn}</time>
           {reviewer.note_en && reviewer.note_zh && <p>{zh ? reviewer.note_zh : reviewer.note_en}</p>}
+        </div>
+      ) : aiReview ? (
+        <div class="weekly-review" data-review-status="ai-reviewed">
+          <strong>{zh ? 'AI 证据边界审核通过 · 非编辑签审' : 'AI evidence-bound review passed · not editorial review'}</strong>
+          <span>{aiReview.provider} · {aiReview.model}</span>
+          <time datetime={aiReview.reviewed_at}>{String(aiReview.reviewed_at).slice(0, 10)}</time>
         </div>
       ) : (
         <strong data-review-status="not-editorially-reviewed">{zh ? '自动编译 · 未经编辑审核' : 'Automatically compiled · not editorially reviewed'}</strong>

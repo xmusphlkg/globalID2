@@ -168,8 +168,17 @@ def test_legacy_backup_inventory_matches_current_tracked_files() -> None:
     declared = {entry["path"] for entry in inventory["files"]}
 
     assert inventory["external_storage_verified"] is False
-    assert declared == tracked
+    # These emergency backups are intentionally local-only and ignored by Git;
+    # the manifest preserves their audit metadata without reintroducing binary
+    # database artifacts into a clean clone.
+    assert tracked == set()
+    assert declared
     for entry in inventory["files"]:
-        payload = (root / entry["path"]).read_bytes()
+        path = root / entry["path"]
+        assert isinstance(entry["size"], int) and entry["size"] > 0
+        assert len(entry["sha256"]) == 64
+        if not path.exists():
+            continue
+        payload = path.read_bytes()
         assert len(payload) == entry["size"]
         assert hashlib.sha256(payload).hexdigest() == entry["sha256"]

@@ -132,6 +132,28 @@ def _validate_feed(feed: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def validate_feed_whitelist(payload: dict[str, Any]) -> dict[str, Any]:
+    """Validate activation readiness without enabling or polling any feed."""
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise ValueError("Unsupported publisher RSS whitelist schema_version")
+    feeds = payload.get("feeds")
+    if not isinstance(feeds, list):
+        raise ValueError("Publisher RSS whitelist must contain a feeds list")
+    enabled = [_validate_feed(feed) for feed in feeds if isinstance(feed, dict) and feed.get("enabled", True)]
+    if not enabled:
+        raise ValueError("Publisher RSS activation requires at least one enabled trusted HTTPS feed")
+    feed_ids = [feed["feed_id"] for feed in enabled]
+    if len(set(feed_ids)) != len(feed_ids):
+        raise ValueError("Publisher RSS whitelist contains duplicate enabled feed_id values")
+    return {
+        "schema_version": 1,
+        "ready_for_probe": True,
+        "enabled_feed_count": len(enabled),
+        "enabled_feed_ids": feed_ids,
+        "https_only": True,
+    }
+
+
 def _parse_feed(body: bytes, feed: dict[str, Any], *, retrieved_at: datetime) -> list[dict[str, Any]]:
     try:
         root = ET.fromstring(body)
@@ -206,6 +228,7 @@ class PublisherRssClient:
         now: datetime | None = None,
     ) -> RssIncrementalResult:
         retrieved_at = now or datetime.now(timezone.utc)
+        validation = validate_feed_whitelist({"schema_version": 1, "feeds": feeds})
         trusted_feeds = [_validate_feed(feed) for feed in feeds if feed.get("enabled", True)]
         feed_ids = [feed["feed_id"] for feed in trusted_feeds]
         if len(set(feed_ids)) != len(feed_ids):
@@ -350,6 +373,7 @@ class PublisherRssClient:
                 "feeds": next_states,
                 "seen_record_ids": next_global_ids,
                 "feed_count": len(trusted_feeds),
+                "whitelist_validated": bool(validation["ready_for_probe"]),
                 "feeds_modified": modified,
                 "feeds_not_modified": not_modified,
                 "feed_errors": errors,
@@ -360,6 +384,42 @@ class PublisherRssClient:
                 "max_records": max_records,
             },
         )
+
+    async def probe_readiness(
+        self,
+        *,
+        whitelist: dict[str, Any],
+        concurrency: int = 3,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Perform a one-record dry run and return bounded operational evidence."""
+        validation = validate_feed_whitelist(whitelist)
+        result = await self.fetch_incremental(
+            feeds=[feed for feed in whitelist.get("feeds") or [] if isinstance(feed, dict)],
+            checkpoint=None,
+            max_records=1,
+            concurrency=concurrency,
+            now=now,
+        )
+        errors = result.checkpoint.get("feed_errors") or []
+        successful = int(result.checkpoint.get("feeds_modified") or 0) + int(
+            result.checkpoint.get("feeds_not_modified") or 0
+        )
+        return {
+            **validation,
+            "probe_mode": "dry-run",
+            "probed_at": (now or datetime.now(timezone.utc)).isoformat(),
+            "ready": successful > 0 and successful + len(errors) == validation["enabled_feed_count"],
+            "feeds_successful": successful,
+            "feeds_failed": len(errors),
+            "records_seen": int(result.checkpoint.get("records_seen") or 0),
+            "sample_records": len(result.records),
+            "errors": [
+                {"feed_id": str(error.get("feed_id") or ""), "error": str(error.get("error") or "")[:240]}
+                for error in errors
+                if isinstance(error, dict)
+            ],
+        }
 
     async def _request_feed(
         self,
@@ -418,4 +478,4 @@ class PublisherRssClient:
         raise RuntimeError("unreachable")
 
 
-__all__ = ["PublisherRssClient", "RssIncrementalResult"]
+__all__ = ["PublisherRssClient", "RssIncrementalResult", "validate_feed_whitelist"]

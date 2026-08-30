@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import PageAnchorNav from '../components/PageAnchorNav.astro';
 import { changelogReleases, type ChangeKind } from '../data/changelog';
 import { buildAlternatePaths } from '../lib/seo';
 
@@ -44,7 +45,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
           <span>{pick('Product updates', '产品更新')}</span>
         </div>
         <h1>{pick('What’s new in GIDS', 'GIDS 版本更新')}</h1>
-        <p class="changelog-hero-copy">{pick('A complete record of new capabilities, refinements, and fixes across every public release.', '完整记录每个公开版本中的新增能力、体验优化与问题修复。')}</p>
+        <p class="changelog-hero-copy">{pick('Public release history across capabilities, refinements, and fixes.', '公开版本的新增能力、体验优化与问题修复。')}</p>
         <div class="changelog-summary" aria-label={pick('Changelog summary', '更新记录摘要')}>
           <div>
             <strong>{changelogReleases.length}</strong>
@@ -74,17 +75,18 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
           </time>
         </div>
 
-        <nav class="changelog-jump" aria-labelledby="changelog-jump-title">
-          <p id="changelog-jump-title">{pick('Jump to a version', '跳转至版本')}</p>
-          <div class="changelog-jump-list">
-            {changelogReleases.map((release, index) => (
-              <a href={`#v${release.version}`}>
-                <span>v{release.version}</span>
-                {index === 0 && <small>{pick('Latest', '最新')}</small>}
-              </a>
-            ))}
-          </div>
-        </nav>
+        <PageAnchorNav
+          variant="list"
+          sticky={false}
+          locale={locale}
+          label="Jump to a version"
+          labelZh="跳转至版本"
+          items={changelogReleases.map((release) => ({
+            href: `#v${release.version}`,
+            label: `v${release.version}`,
+            labelZh: `v${release.version}`,
+          }))}
+        />
 
         <a class="changelog-subscribe-link" href={`${prefix}/subscribe/`}>
           <span>
@@ -102,7 +104,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
               <span class:list={['changelog-node', index === 0 && 'changelog-node-latest']}></span>
             </div>
 
-            <details class="changelog-release-body" open={index < 3}>
+            <details class="changelog-release-body" open={index === 0}>
               <summary class="changelog-release-summary-row">
                 <span><strong>v{release.version}</strong><span>{pick(release.titleEn, release.titleZh)}</span></span>
                 <time datetime={release.date}><span>{formatDate(release.date, zh ? 'zh-CN' : 'en-US')}</span></time>
@@ -185,14 +187,14 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
   }
 
   .changelog-hero-inner {
-    padding-block: clamp(4.75rem, 10vw, 7.5rem) clamp(3.75rem, 8vw, 6rem);
+    padding-block: clamp(2.25rem, 5vw, 3.5rem);
   }
 
   .changelog-eyebrow {
     display: inline-flex;
     align-items: center;
     gap: 0.65rem;
-    margin-bottom: 1.25rem;
+    margin-bottom: 0.8rem;
     color: rgb(var(--text-muted));
     font-size: 0.78rem;
     font-weight: 700;
@@ -211,19 +213,19 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
     max-width: 54rem;
     color: rgb(var(--text-strong));
     font-family: 'IBM Plex Sans', sans-serif;
-    font-size: clamp(2.65rem, 7vw, 5.35rem);
+    font-size: clamp(2.2rem, 4.8vw, 3.4rem);
     font-weight: 600;
-    letter-spacing: -0.045em;
-    line-height: 0.98;
+    letter-spacing: 0;
+    line-height: 1.04;
     text-wrap: balance;
   }
 
   .changelog-hero-copy {
     max-width: 42rem;
-    margin-top: 1.5rem;
+    margin-top: 0.8rem;
     color: rgb(var(--text-muted));
-    font-size: clamp(1rem, 2vw, 1.2rem);
-    line-height: 1.75;
+    font-size: .94rem;
+    line-height: 1.6;
   }
 
   .changelog-summary {
@@ -231,8 +233,8 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
     align-items: stretch;
     gap: 1.5rem;
     width: fit-content;
-    margin-top: 2.5rem;
-    padding: 1rem 1.2rem;
+    margin-top: 1.2rem;
+    padding: .7rem .9rem;
     border: 1px solid rgb(var(--border) / 0.76);
     background: rgb(var(--bg));
     box-shadow: none;
@@ -263,9 +265,9 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
   .changelog-layout {
     display: grid;
     grid-template-columns: 14rem minmax(0, 1fr);
-    gap: clamp(2.5rem, 6vw, 5.5rem);
+    gap: clamp(1.5rem, 5vw, 4rem);
     align-items: start;
-    padding-top: clamp(3.5rem, 7vw, 6rem);
+    padding-top: clamp(1.6rem, 4vw, 2.75rem);
   }
 
   .changelog-sidebar {
@@ -285,8 +287,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
     box-shadow: none;
   }
 
-  .changelog-card-kicker,
-  .changelog-jump > p {
+  .changelog-card-kicker {
     color: rgb(var(--text-faint));
     font-size: 0.7rem;
     font-weight: 700;
@@ -303,49 +304,6 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
   .changelog-latest-card time {
     color: rgb(var(--text-muted));
     font-size: 0.78rem;
-  }
-
-  .changelog-jump > p {
-    margin-bottom: 0.6rem;
-    padding-inline: 0.2rem;
-  }
-
-  .changelog-jump-list {
-    display: grid;
-    max-height: 16rem;
-    overflow-y: auto;
-    border-block: 1px solid rgb(var(--border) / 0.7);
-    scrollbar-width: thin;
-  }
-
-  .changelog-jump-list a {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.6rem 0.2rem;
-    border-bottom: 1px solid rgb(var(--border) / 0.45);
-    color: rgb(var(--text-muted));
-    font-family: ui-monospace, monospace;
-    font-size: 0.78rem;
-    transition: color 150ms ease, padding 150ms ease;
-  }
-
-  .changelog-jump-list a:last-child {
-    border-bottom: 0;
-  }
-
-  .changelog-jump-list a:hover,
-  .changelog-jump-list a:focus-visible {
-    padding-left: 0.45rem;
-    color: rgb(var(--text-strong));
-  }
-
-  .changelog-jump-list small {
-    color: rgb(var(--changelog-accent));
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 0.66rem;
-    font-weight: 700;
-    text-transform: uppercase;
   }
 
   .changelog-subscribe-link {
@@ -429,7 +387,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
 
   .changelog-release-body {
     min-width: 0;
-    padding-bottom: clamp(3.75rem, 8vw, 6rem);
+    padding-bottom: clamp(1.75rem, 5vw, 3rem);
   }
 
   .changelog-release-summary-row {
@@ -619,16 +577,12 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
   @media (max-width: 800px) {
     .changelog-layout {
       grid-template-columns: 1fr;
-      gap: 3rem;
+      gap: 1.5rem;
     }
 
     .changelog-sidebar {
       position: static;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-    }
-
-    .changelog-jump {
-      display: none;
     }
 
     .changelog-release {
@@ -642,7 +596,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
     }
 
     .changelog-hero-inner {
-      padding-block: 4rem 3.5rem;
+      padding-block: 2rem;
     }
 
     .changelog-summary {

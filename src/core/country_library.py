@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 import re
 
+from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRIES
+
 try:
     import pycountry
 except Exception:  # pragma: no cover - graceful fallback when optional dep is missing
@@ -71,6 +73,19 @@ COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
         "language": "fi-FI",
         "timezone": "Europe/Helsinki",
     },
+    "FR": {
+        "name": "France",
+        "name_local": "France",
+        "language": "fr-FR",
+        "timezone": "Europe/Paris",
+    },
+    "ES": {"name": "Spain", "name_local": "España", "language": "es-ES", "timezone": "Europe/Madrid"},
+    "IT": {"name": "Italy", "name_local": "Italia", "language": "it-IT", "timezone": "Europe/Rome"},
+    "PT": {"name": "Portugal", "name_local": "Portugal", "language": "pt-PT", "timezone": "Europe/Lisbon"},
+    "PL": {"name": "Poland", "name_local": "Polska", "language": "pl-PL", "timezone": "Europe/Warsaw"},
+    "CZ": {"name": "Czechia", "name_local": "Česko", "language": "cs-CZ", "timezone": "Europe/Prague"},
+    "GR": {"name": "Greece", "name_local": "Ελλάδα", "language": "el-GR", "timezone": "Europe/Athens"},
+    "RO": {"name": "Romania", "name_local": "România", "language": "ro-RO", "timezone": "Europe/Bucharest"},
     "IE": {
         "name": "Ireland",
         "name_local": "Éire / Ireland",
@@ -128,6 +143,12 @@ COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
         "language": "sv-SE",
         "timezone": "Europe/Stockholm",
     },
+    "SG": {
+        "name": "Singapore",
+        "name_local": "Singapore",
+        "language": "en-SG",
+        "timezone": "Asia/Singapore",
+    },
     "IS": {
         "name": "Iceland",
         "name_local": "Ísland",
@@ -135,6 +156,17 @@ COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
         "timezone": "Atlantic/Reykjavik",
     },
 }
+
+for _ecdc_code, _ecdc_meta in ECDC_BASELINE_COUNTRIES.items():
+    COUNTRY_OVERRIDES.setdefault(
+        _ecdc_code,
+        {
+            "name": _ecdc_meta["name"],
+            "name_local": _ecdc_meta["name_local"],
+            "language": _ecdc_meta["language"],
+            "timezone": _ecdc_meta["timezone"],
+        },
+    )
 
 COUNTRY_NAMES_ZH: dict[str, str] = {
     "AT": "奥地利",
@@ -146,17 +178,29 @@ COUNTRY_NAMES_ZH: dict[str, str] = {
     "CN": "中国",
     "DE": "德国",
     "FI": "芬兰",
+    "FR": "法国",
+    "ES": "西班牙",
+    "IT": "意大利",
+    "PT": "葡萄牙",
+    "PL": "波兰",
+    "CZ": "捷克",
+    "GR": "希腊",
+    "RO": "罗马尼亚",
     "IE": "爱尔兰",
     "JP": "日本",
     "KR": "韩国",
     "NZ": "新西兰",
     "NO": "挪威",
     "SE": "瑞典",
+    "SG": "新加坡",
     "TW": "中国台湾",
     "HK": "中国香港",
     "IS": "冰岛",
     "US": "美国",
 }
+
+for _ecdc_code, _ecdc_meta in ECDC_BASELINE_COUNTRIES.items():
+    COUNTRY_NAMES_ZH.setdefault(_ecdc_code, _ecdc_meta["name_zh"])
 
 
 COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
@@ -262,12 +306,36 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
     "CA": {
         "location_type": "country",
         "iso_country_code": "CA",
+        "data_source_url": "https://diseases.canada.ca/notifiable/extract-dataset",
+        "data_source_type": "open_data_json",
         "crawler_config": {
-            "sources": ["all"],
+            "sources": ["phac_cndss_annual"],
+            "cadence": "annual",
+            "describe_url": "https://diseases.canada.ca/ndc/json/en_US/1924/describe.json",
+            "raw_url": "https://diseases.canada.ca/ndc/s/raw",
             "reporting_area": "national",
             "geography_key": "country:CA:national",
+            "required_attribution": (
+                "Contains information licensed under the Open Government Licence – Canada; "
+                "source: Public Health Agency of Canada, Canadian Notifiable Disease "
+                "Surveillance System (CNDSS)."
+            ),
+            "reuse_terms_url": "https://open.canada.ca/en/open-government-licence-canada",
+            "public_release_enabled": True,
         },
-        "notes": "Canada is the national jurisdiction; subdivision feeds are registered separately.",
+        "parser_config": {"primary": "ca_phac_cndss_national_annual"},
+        "disease_mapping_rules": {
+            "strategy": "source_series_registry",
+            "fallback": "quarantine_unmapped",
+        },
+        "report_config": {"default_type": "ANNUAL", "lang": "en-CA"},
+        "notes": (
+            "PHAC CNDSS national annual reported counts under the Open Government "
+            "Licence – Canada. A national aggregate is not an all-jurisdiction "
+            "completeness claim: disease/year inclusion varies, and Manitoba "
+            "2023 data were unavailable for 44 disease contracts. Subdivision "
+            "feeds remain separately registered."
+        ),
     },
     "CA-ON": {
         "parent_country_code": "CA",
@@ -643,6 +711,38 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
         "report_config": {"default_type": "MONTHLY", "lang": "sv-SE"},
         "notes": "Sweden SmiNet national monthly reported cases from the official Public Health Agency statistics pages; public release is enabled with closed-month publication and revisable recent-month refreshes.",
     },
+    "SG": {
+        "public_release_enabled": True,
+        "data_source_url": "https://www.cda.gov.sg/resources/weekly-infectious-diseases-bulletin-2026/",
+        "data_source_type": "official_csv_xlsx_pdf",
+        "crawler_config": {
+            "sources": ["cda_weekly_bulletin"],
+            "cadence": "weekly",
+            "full_history_start_year": 2012,
+            "historical_csv_end_year": 2022,
+            "cda_workbook_start_year": 2023,
+            "cda_pdf_fallback_years": [2023],
+            "cda_xlsx_start_year": 2024,
+            "refresh_recent_weeks": 12,
+            "reporting_area": "national",
+            "geography_key": "country:SG:national",
+            "reuse_status": "operator_authorized_public_release",
+            "historical_reuse_status": "singapore_open_data_licence",
+            "current_source_terms_status": "cda_written_permission_required",
+            "series_quality_guard": {
+                "mode": "fail_closed",
+                "registry_coverage": "required",
+                "history_lookback_days": 730
+            }
+        },
+        "parser_config": {"primary": "sg_cda_weekly_notifications"},
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "quarantine_unmapped"
+        },
+        "report_config": {"default_type": "WEEKLY", "lang": "en-SG"},
+        "notes": "Singapore weekly case notifications: 2012-2022 official data.gov.sg CSV history and 2023+ CDA annual workbooks, with 2023 weekly PDFs as fallback. Public release is enabled by explicit operator authorization; CDA source terms remain recorded as requiring written permission."
+    },
 }
 
 
@@ -746,6 +846,91 @@ def get_country_bootstrap_config(code: str) -> dict:
 
     merged = _deep_merge_dict(fallback, default_cfg)
     merged = _deep_merge_dict(merged, country_cfg)
+    if normalized in ECDC_BASELINE_COUNTRIES:
+        merged = _merge_ecdc_baseline_config(normalized, merged)
+    return merged
+
+
+def _merge_ecdc_baseline_config(code: str, config: dict) -> dict:
+    """Attach the independent ECDC fallback without replacing national feeds."""
+
+    meta = ECDC_BASELINE_COUNTRIES[code]
+    merged = dict(config)
+    crawler = dict(merged.get("crawler_config") or {})
+    existing_sources = list(crawler.get("sources") or [])
+    if "ecdc_atlas_annual" not in existing_sources:
+        existing_sources.append("ecdc_atlas_annual")
+    crawler["sources"] = existing_sources
+    source_policies = dict(crawler.get("source_policies") or {})
+    source_policies["ecdc_atlas_annual"] = {
+        "source_kind": "regional_baseline",
+        "temporal_granularity": "annual",
+        "full_history_start_year": 1990,
+        "supports_start_year": True,
+        "supports_fill_missing": False,
+        "default_fill_missing": False,
+        "dynamic_revision_enabled": True,
+        "revision_window_unit": "years",
+        "default_revision_window": 3,
+        "source_update_cadence": "daily_availability_check",
+        "public_release_enabled": True,
+        "dataset_id": 27,
+        "dataset_code": "CURRENT.GENERAL",
+        "required_attribution": (
+            "Data provided by ECDC based on data reported by EU/EEA Member States."
+        ),
+        "reuse_terms_url": (
+            "https://www.ecdc.europa.eu/en/publications-data/"
+            "access-eueea-surveillance-data-third-parties"
+        ),
+    }
+    crawler["source_policies"] = source_policies
+    crawler.setdefault("reporting_area", "national")
+    crawler.setdefault("geography_key", f"country:{code}:national")
+    crawler.setdefault(
+        "series_quality_guard",
+        {
+            "mode": "fail_closed",
+            "registry_coverage": "required",
+            "history_lookback_days": 7300,
+        },
+    )
+    merged["crawler_config"] = crawler
+    if len(existing_sources) == 1:
+        crawler.update(source_policies["ecdc_atlas_annual"])
+        merged.update(
+            {
+                "data_source_url": "https://atlas.ecdc.europa.eu/public/index.aspx/",
+                "data_source_type": "official_ecdc_rest_aggregate",
+                "parser_config": {"primary": "ecdc_atlas_annual_reported_cases"},
+                "disease_mapping_rules": {
+                    "strategy": "db_first",
+                    "fallback": "quarantine_unmapped",
+                },
+                "report_config": {
+                    "default_type": "ANNUAL",
+                    "lang": meta["language"],
+                },
+            }
+        )
+    merged["public_release_enabled"] = True
+    merged["ecdc_baseline"] = {
+        "source_id": f"SRC_{code}_ECDC_ATLAS",
+        "dataset_id": 27,
+        "dataset_code": "CURRENT.GENERAL",
+        "required_attribution": (
+            "Data provided by ECDC based on data reported by EU/EEA Member States."
+        ),
+        "reuse_terms_url": (
+            "https://www.ecdc.europa.eu/en/publications-data/"
+            "access-eueea-surveillance-data-third-parties"
+        ),
+    }
+    if code in {"AT", "IE"}:
+        # These national adapters remain permission-gated. Public export is
+        # enabled only for the independently licensed ECDC source facts.
+        merged["public_source_systems"] = [f"SRC_{code}_ECDC_ATLAS"]
+        merged["public_legacy_enabled"] = False
     return merged
 
 
@@ -770,7 +955,7 @@ def validate_standard_country_registry() -> list[str]:
     warnings: list[str] = []
 
     hardcoded = set(COUNTRY_OVERRIDES.keys())
-    fallback = set(COUNTRY_BOOTSTRAP_CONFIGS.keys())
+    fallback = set(COUNTRY_BOOTSTRAP_CONFIGS.keys()) | set(ECDC_BASELINE_COUNTRIES)
     registry = _load_country_bootstrap_registry()
     configured = {k for k in registry.keys() if k != "_DEFAULT"}
 

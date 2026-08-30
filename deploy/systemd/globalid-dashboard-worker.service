@@ -16,5 +16,13 @@ EnvironmentFile=-__PROJECT_DIR__/.env
 ExecStart=__PROJECT_DIR__/scripts/run_dashboard_worker_service.sh
 Restart=on-failure
 RestartSec=10
-TimeoutStopSec=60
-
+# Contain an accidental unbounded ORM/JSON allocation inside the worker
+# cgroup. Normal concurrent crawler + literature load stays well below the
+# soft limit; a hard-limit restart is recovered through persisted task leases.
+MemoryHigh=4G
+MemoryMax=6G
+# Long-running crawlers and literature syncs finish cooperatively after SIGTERM.
+# Keep this above the normal upper bound so a maintenance restart does not turn
+# a healthy idempotent task into a forced recovery.
+TimeoutStopSec=900
+KillMode=mixed

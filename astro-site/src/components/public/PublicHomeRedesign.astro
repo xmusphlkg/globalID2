@@ -1,0 +1,448 @@
+---
+import CountryCard from '../CountryCard.astro';
+import CountryFlag from '../CountryFlag.astro';
+import { hasCountryDataSnapshot } from '../../lib/country-coverage';
+import { isSituationReportV3, type SituationReportV3 } from '../../utils/situation';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import metaRaw from '../../data/meta.json';
+import diseasesRaw from '../../data/diseases/index.json';
+import reportsRaw from '../../data/reports/index.json';
+
+interface Props { locale?: 'en' | 'zh'; }
+
+const { locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
+const prefix = zh ? '/zh' : '';
+const href = (path: string) => `${prefix}${path}`;
+const t = zh ? {
+  eyebrow: '官方来源的公共卫生数据',
+  title: '把全球传染病监测数据变成可检索、可复用的证据库',
+  summary: 'GIDS 汇集官方监测记录、当前态势复核、研究证据与下载数据，帮助研究者和公共卫生团队更快找到可信来源、比较趋势并复用数据。',
+  searchLabel: '检索数据与证据',
+  searchPlaceholder: '搜索国家、疾病、报告或研究',
+  search: '搜索',
+  situation: '查看当前态势',
+  countries: '浏览国家与地区',
+  downloads: '下载数据',
+  release: '本次公开发布',
+  updated: '已更新',
+  observations: '监测记录',
+  reportedCases: '报告病例',
+  jurisdictions: '国家与地区',
+  diseases: '收录疾病',
+  sources: '官方来源',
+  through: '数据截至',
+  recentBoard: '近期数据面板',
+  cadence: '频率',
+  sourceNote: '覆盖、指标定义和发布时间因来源而异；缺失值不应自动解释为零。',
+  methods: '来源与方法',
+  review: '态势复核',
+  attention: '当前关注',
+  reviewText: '统计监测信号与官方发布事件并列展示；信号用于筛查，不等同于疫情声明。',
+  events: '官方事件',
+  signals: '公开信号',
+  reviewed: '复核地区',
+  fullReview: '查看完整态势复核',
+  explore: '开始探索',
+  exploreTitle: '像使用数据目录一样进入公共卫生证据',
+  exploreText: '首页优先提供搜索、按主题浏览、下载与方法说明，而不是只展示项目介绍。',
+  countryPath: '按地区看',
+  countryPathText: '查看国家和地区的监测范围、来源、疾病列表与时间跨度。',
+  diseasePath: '按疾病看',
+  diseasePathText: '从疾病目录进入跨地区记录，比较同一疾病在不同来源中的覆盖。',
+  downloadPath: '直接复用',
+  downloadPathText: '获取可下载数据集，并在引用前查看字段说明和限制。',
+  researchPath: '连接研究',
+  researchPathText: '浏览研究雷达，把监测信号放到文献与证据背景中理解。',
+  countryList: '覆盖较多的地区',
+  common: '常用疾病入口',
+  viewAll: '查看全部',
+  analysis: '已发布分析',
+  latest: '最新监测报告',
+  research: '浏览研究证据',
+  openReport: '打开报告',
+  unavailable: '暂无',
+  empty: '当前没有公开报告。',
+} : {
+  eyebrow: 'Official-source public health data',
+  title: 'A searchable evidence base for global infectious disease surveillance',
+  summary: 'GIDS brings together official surveillance records, situation reviews, research evidence, and downloadable datasets so researchers and public health teams can find sources, compare trends, and reuse data faster.',
+  searchLabel: 'Search the evidence base',
+  searchPlaceholder: 'Search a country, disease, report, or study',
+  search: 'Search',
+  situation: 'View current situation',
+  countries: 'Browse countries',
+  downloads: 'Download data',
+  release: 'Current public release',
+  updated: 'Updated',
+  observations: 'Surveillance records',
+  reportedCases: 'Reported cases',
+  jurisdictions: 'Countries and regions',
+  diseases: 'Diseases tracked',
+  sources: 'Official sources',
+  through: 'Data through',
+  recentBoard: 'Recent data board',
+  cadence: 'Cadence',
+  sourceNote: 'Coverage, definitions, and release schedules vary by source; missing values should not be read as zero.',
+  methods: 'Sources and methods',
+  review: 'Situation review',
+  attention: 'Current attention',
+  reviewText: 'Statistical surveillance signals are shown alongside independently published official events; signals are screening results, not outbreak declarations.',
+  events: 'Official events',
+  signals: 'Published signals',
+  reviewed: 'Jurisdictions reviewed',
+  fullReview: 'Open the full situation review',
+  explore: 'Start exploring',
+  exploreTitle: 'Enter public health evidence like a data catalog',
+  exploreText: 'The homepage now privileges search, topic browsing, downloads, and methodology instead of only explaining the project.',
+  countryPath: 'Explore by place',
+  countryPathText: 'Review each country or region by surveillance scope, source, disease list, and time span.',
+  diseasePath: 'Explore by disease',
+  diseasePathText: 'Open the disease directory and compare coverage for the same condition across sources.',
+  downloadPath: 'Reuse directly',
+  downloadPathText: 'Download public datasets and check field notes and limitations before citing.',
+  researchPath: 'Connect research',
+  researchPathText: 'Use Research Radar to read surveillance signals in the context of published evidence.',
+  countryList: 'High-coverage places',
+  common: 'Common disease entry points',
+  viewAll: 'View all',
+  analysis: 'Published analysis',
+  latest: 'Latest surveillance reports',
+  research: 'Browse research evidence',
+  openReport: 'Open report',
+  unavailable: 'Not available',
+  empty: 'No public reports are currently available.',
+};
+
+const meta = metaRaw as any;
+const jurisdictions = (meta.countries ?? []).filter(hasCountryDataSnapshot);
+// Headline totals and rankings use one comparable national layer. Subnational
+// datasets remain available from their parent country pages.
+const countries = jurisdictions.filter((country: any) => (
+  country.location_type !== 'subdivision' && !country.parent_code
+));
+const latestReports = (reportsRaw as any[]).slice(0, 3);
+const preferredDiseases = ['covid-19', 'cholera', 'dengue', 'measles', 'malaria', 'tuberculosis', 'hepatitis-a', 'pertussis'];
+const diseaseIndex = new Map((diseasesRaw as any[]).map(disease => [disease.slug, disease]));
+const featuredDiseases = preferredDiseases.map(slug => diseaseIndex.get(slug)).filter(Boolean);
+const featuredCountries = [...countries]
+  .sort((a: any, b: any) => Number(b.record_count ?? b.total_cases ?? 0) - Number(a.record_count ?? a.total_cases ?? 0))
+  .slice(0, 6);
+const recentlyUpdatedCountries = [...countries]
+  .sort((a: any, b: any) => String(b.date_range?.end ?? '').localeCompare(String(a.date_range?.end ?? '')))
+  .slice(0, 4);
+const sourceNames = new Set<string>();
+for (const country of countries) {
+  for (const source of country.source_info?.sources ?? []) {
+    if (source?.label) sourceNames.add(source.label);
+  }
+}
+const situationPath = resolve('./src/data/situation/v3/latest.json');
+const shadowPath = resolve('./src/data/situation/v3/shadow-latest.json');
+const readPath = existsSync(situationPath) ? situationPath : import.meta.env.DEV && existsSync(shadowPath) ? shadowPath : null;
+const rawSituation: unknown = readPath ? JSON.parse(readFileSync(readPath, 'utf-8')) : null;
+const situation: SituationReportV3 | null = isSituationReportV3(rawSituation) ? rawSituation : null;
+const totalCases = countries.reduce((sum: number, country: any) => sum + Number(country.total_cases ?? 0), 0);
+const totalRecords = countries.reduce((sum: number, country: any) => sum + Number(country.record_count ?? 0), 0);
+const dataThrough = situation?.data_currency.latest_data_through ?? meta.generated_at;
+const formatDate = (value?: string) => {
+  if (!value) return t.unavailable;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? t.unavailable
+    : date.toLocaleDateString(zh ? 'zh-CN' : 'en-US', { year: 'numeric', month: zh ? 'numeric' : 'short', day: 'numeric', timeZone: 'UTC' });
+};
+const formatNumber = (value: number) => new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', {
+  notation: value >= 1_000_000 ? 'compact' : 'standard',
+  maximumFractionDigits: value >= 1_000_000 ? 1 : 0,
+}).format(value);
+const assetMetrics = [
+  { label: t.observations, value: formatNumber(totalRecords) },
+  { label: t.reportedCases, value: formatNumber(totalCases) },
+  { label: t.jurisdictions, value: String(countries.length) },
+  { label: t.diseases, value: String(meta.total_diseases ?? t.unavailable) },
+];
+const explorePaths = [
+  { href: href('/countries/'), index: '01', title: t.countryPath, text: t.countryPathText, stat: `${countries.length}`, metric: t.jurisdictions },
+  { href: href('/diseases/'), index: '02', title: t.diseasePath, text: t.diseasePathText, stat: `${meta.total_diseases ?? t.unavailable}`, metric: t.diseases },
+  { href: href('/downloads/'), index: '03', title: t.downloadPath, text: t.downloadPathText, stat: formatNumber(totalRecords), metric: t.observations },
+  { href: href('/research/'), index: '04', title: t.researchPath, text: t.researchPathText, stat: `${latestReports.length}`, metric: t.analysis },
+];
+---
+
+<div class="public-home-redesign">
+  <section class="home-hero">
+    <div class="page-wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">{t.eyebrow}</p>
+        <h1>{t.title}</h1>
+        <p class="lead">{t.summary}</p>
+        <form class="home-search" action={href('/search/')} method="get">
+          <label for={`home-search-${locale}`}>{t.searchLabel}</label>
+          <div class="home-search-row">
+            <input id={`home-search-${locale}`} name="q" type="search" placeholder={t.searchPlaceholder} />
+            <button type="submit">{t.search}</button>
+          </div>
+        </form>
+        <div class="actions" aria-label={zh ? '主要入口' : 'Primary entry points'}>
+          <a class="primary" href={href('/situation/')}>{t.situation}</a>
+          <a href={href('/countries/')}>{t.countries}</a>
+          <a href={href('/downloads/')}>{t.downloads}</a>
+        </div>
+      </div>
+
+      <aside class="data-console" aria-labelledby={`home-console-${locale}`}>
+        <header class="console-header">
+          <div>
+            <p class="eyebrow">{t.sources}</p>
+            <h2 id={`home-console-${locale}`}>{t.release}</h2>
+          </div>
+          <span class="release-pill"><i></i>{t.updated}</span>
+        </header>
+        <dl class="asset-grid">
+          {assetMetrics.map(metric => <div><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}
+        </dl>
+        <div class="release-meta">
+          <span>{t.sources}: <strong>{sourceNames.size}</strong></span>
+          <span>{t.through}: <strong>{formatDate(dataThrough)}</strong></span>
+        </div>
+        <div class="source-board">
+          <h3>{t.recentBoard}</h3>
+          {recentlyUpdatedCountries.map((country: any) => {
+            const name = zh ? country.name_zh ?? country.name : country.name_en ?? country.name;
+            const source = country.source_info?.sources?.[0];
+            return (
+              <a href={href(`/countries/${String(country.code).toLowerCase()}/`)}>
+                <CountryFlag code={country.code} name={name} sizeClass="w-8 h-6" />
+                <span><strong>{name}</strong><small>{source?.cadence ? `${t.cadence}: ${source.cadence}` : source?.type ?? t.unavailable}</small></span>
+                <time datetime={country.date_range?.end ?? ''}>{formatDate(country.date_range?.end)}</time>
+              </a>
+            );
+          })}
+        </div>
+        <p class="source-note">{t.sourceNote}</p>
+        <a class="text-link console-link" href={href('/about/')}>{t.methods} <span aria-hidden="true">-&gt;</span></a>
+      </aside>
+    </div>
+  </section>
+
+  {situation && (
+    <section class="situation-strip">
+      <div class="page-wrap situation-grid">
+        <div>
+          <p class="eyebrow">{t.review} · {formatDate(situation.report.as_of)}</p>
+          <h2>{t.attention}</h2>
+          <p>{t.reviewText}</p>
+        </div>
+        <dl>
+          <div><dt>{t.events}</dt><dd>{situation.summary.official_event_count ?? 0}</dd></div>
+          <div><dt>{t.signals}</dt><dd>{situation.summary.unique_signal_count ?? 0}</dd></div>
+          <div><dt>{t.reviewed}</dt><dd>{situation.coverage.jurisdiction_count}</dd></div>
+        </dl>
+        <a href={href('/situation/')}>{t.fullReview} <span aria-hidden="true">-&gt;</span></a>
+      </div>
+    </section>
+  )}
+
+  <section class="home-section browse-section">
+    <div class="page-wrap">
+      <header class="section-heading">
+        <div>
+          <p class="eyebrow">{t.explore}</p>
+          <h2>{t.exploreTitle}</h2>
+        </div>
+        <p>{t.exploreText}</p>
+      </header>
+      <div class="path-grid">
+        {explorePaths.map(path => (
+          <a class="path-card" href={path.href}>
+            <span class="path-index">{path.index}</span>
+            <span class="path-copy"><strong>{path.title}</strong><small>{path.text}</small></span>
+            <span class="path-stat"><b>{path.stat}</b><small>{path.metric}</small></span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section data-section">
+    <div class="page-wrap explore-grid">
+      <div>
+        <div class="subheading">
+          <h2>{t.countryList}</h2>
+          <a href={href('/countries/')}>{t.viewAll} {countries.length}</a>
+        </div>
+        <div class="country-grid">
+          {featuredCountries.map((country: any) => (
+            <CountryCard code={country.code} name={country.name} nameZh={country.name_zh} totalCases={country.total_cases} totalDeaths={country.total_deaths} diseaseCount={country.disease_count} dateRange={country.date_range} locationType={country.location_type} locale={locale} />
+          ))}
+        </div>
+      </div>
+      <div>
+        <div class="subheading">
+          <h2>{t.common}</h2>
+          <a href={href('/diseases/')}>{t.viewAll}</a>
+        </div>
+        <div class="disease-list">
+          {featuredDiseases.map((disease: any) => (
+            <a href={href(`/diseases/${disease.slug}/`)}>
+              <span><strong>{zh ? disease.name_zh ?? disease.name_en : disease.name_en}</strong><small>{zh ? disease.name_en : `${disease.name_zh ?? ''} · ${disease.category}`}</small></span>
+              <span aria-hidden="true">-&gt;</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section reports">
+    <div class="page-wrap">
+      <header class="section-heading compact">
+        <div>
+          <p class="eyebrow">{t.analysis}</p>
+          <h2>{t.latest}</h2>
+        </div>
+        <a class="text-link" href={href('/research/')}>{t.research} <span aria-hidden="true">-&gt;</span></a>
+      </header>
+      {latestReports.length ? (
+        <div class="report-list">
+          {latestReports.map((report: any) => {
+            const code = String(report.country_code ?? '').toLowerCase();
+            const name = zh ? report.country_name_zh ?? report.country_name_en ?? report.country_name ?? report.country_code : report.country_name_en ?? report.country_name ?? report.country_code;
+            return (
+              <a href={href(`/countries/${code}/reports/${report.id}/`)}>
+                <CountryFlag code={report.country_code} name={name} sizeClass="w-9 h-7" />
+                <span><strong>{name}</strong><small>{report.period_start} - {report.period_end}</small></span>
+                <b>{t.openReport} <span aria-hidden="true">-&gt;</span></b>
+              </a>
+            );
+          })}
+        </div>
+      ) : <p class="empty-state">{t.empty}</p>}
+    </div>
+  </section>
+</div>
+
+<style>
+  .public-home-redesign { color: rgb(var(--text)); }
+  .page-wrap { width: min(1180px, calc(100% - 2rem)); margin-inline: auto; }
+  .eyebrow { margin: 0 0 .65rem; color: rgb(var(--color-teal)); font-size: .7rem; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+  .home-hero { position: relative; overflow: hidden; background: linear-gradient(90deg, rgb(var(--surface)) 0 50%, rgb(var(--bg-soft) / .62) 50% 100%); border-bottom: 1px solid rgb(var(--border)); }
+  .home-hero::before { position: absolute; inset: 0; pointer-events: none; content: ''; background-image: linear-gradient(rgb(var(--border) / .34) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--border) / .28) 1px, transparent 1px); background-size: 3rem 3rem; mask-image: linear-gradient(90deg, transparent, black 18%, black 78%, transparent); opacity: .35; }
+  .hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(21rem, .92fr); gap: clamp(2rem, 5vw, 4.5rem); align-items: center; padding-block: clamp(3rem, 7vw, 5.75rem); }
+  h1 { max-width: 17ch; margin: 0; color: rgb(var(--text-strong)); font-size: clamp(2.35rem, 5.3vw, 4.85rem); font-weight: 700; letter-spacing: 0; line-height: 1.02; }
+  .lead { max-width: 47rem; margin: 1.35rem 0 0; color: rgb(var(--text-muted)); font-size: clamp(1rem, 1.6vw, 1.15rem); line-height: 1.72; }
+  .home-search { max-width: 43rem; margin-top: 2rem; }
+  .home-search label { display: block; margin-bottom: .45rem; color: rgb(var(--text-strong)); font-size: .78rem; font-weight: 700; }
+  .home-search-row { display: grid; grid-template-columns: 1fr auto; border: 1px solid rgb(var(--border-soft)); background: rgb(var(--bg)); box-shadow: 0 18px 44px rgb(10 26 40 / .08); }
+  .home-search input { min-width: 0; min-height: 3.25rem; padding: .72rem .9rem; color: rgb(var(--text-strong)); background: transparent; border: 0; outline: 0; }
+  .home-search input:focus { box-shadow: inset 0 0 0 2px rgb(var(--color-teal)); }
+  .home-search button { padding-inline: 1.25rem; color: #fff; background: rgb(var(--color-brand)); border: 0; font-weight: 750; }
+  .home-search button:hover { background: rgb(var(--color-teal)); }
+  .actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: 1rem; }
+  .actions a { display: inline-flex; min-height: 2.55rem; align-items: center; padding: .58rem .9rem; color: rgb(var(--text-strong)); background: rgb(var(--surface-raised) / .52); border: 1px solid rgb(var(--border)); font-size: .8rem; font-weight: 700; text-decoration: none; }
+  .actions a:hover { border-color: rgb(var(--border-soft)); background: rgb(var(--bg-soft)); }
+  .actions .primary { color: #fff; background: rgb(var(--color-teal)); border-color: rgb(var(--color-teal)); }
+  .data-console { background: rgb(var(--surface) / .96); border: 1px solid rgb(var(--border)); box-shadow: 0 24px 54px rgb(10 26 40 / .13); }
+  .console-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.15rem 1.2rem; border-bottom: 1px solid rgb(var(--border)); }
+  .console-header h2 { margin: 0; color: rgb(var(--text-strong)); font-size: 1.35rem; line-height: 1.18; }
+  .release-pill { display: inline-flex; flex: 0 0 auto; align-items: center; gap: .38rem; margin-top: .1rem; color: rgb(var(--text-muted)); font-size: .68rem; font-weight: 700; }
+  .release-pill i { width: .48rem; height: .48rem; background: #15803d; border-radius: 50%; }
+  .asset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; border-bottom: 1px solid rgb(var(--border)); }
+  .asset-grid div { min-height: 6rem; padding: .95rem 1rem; border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--bg-soft) / .42); }
+  .asset-grid div:nth-child(2n) { border-right: 0; }
+  .asset-grid div:nth-last-child(-n + 2) { border-bottom: 0; }
+  .asset-grid dt { color: rgb(var(--text-muted)); font-size: .7rem; font-weight: 650; }
+  .asset-grid dd { margin: .42rem 0 0; color: rgb(var(--text-strong)); font-size: clamp(1.35rem, 2.4vw, 1.8rem); font-weight: 750; font-variant-numeric: tabular-nums; line-height: 1; }
+  .release-meta { display: grid; grid-template-columns: 1fr 1.2fr; gap: .75rem; padding: .9rem 1.2rem; color: rgb(var(--text-muted)); border-bottom: 1px solid rgb(var(--border)); font-size: .72rem; }
+  .release-meta strong { color: rgb(var(--text-strong)); font-weight: 750; }
+  .source-board { padding: 1rem 1.2rem .5rem; }
+  .source-board h3 { margin: 0 0 .5rem; color: rgb(var(--text-strong)); font-size: .82rem; }
+  .source-board a { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .7rem; align-items: center; min-height: 3.45rem; color: rgb(var(--text-strong)); border-top: 1px solid rgb(var(--border)); text-decoration: none; }
+  .source-board a:hover strong { color: rgb(var(--color-teal)); }
+  .source-board span { display: grid; min-width: 0; }
+  .source-board strong { overflow: hidden; font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
+  .source-board small, .source-board time { color: rgb(var(--text-muted)); font-size: .66rem; }
+  .source-board time { font-variant-numeric: tabular-nums; text-align: right; }
+  .source-note { margin: .3rem 1.2rem 0; color: rgb(var(--text-muted)); font-size: .72rem; line-height: 1.55; }
+  .text-link, .subheading a, .situation-grid > a { display: inline-flex; gap: .25rem; align-items: center; color: rgb(var(--color-teal)); font-size: .78rem; font-weight: 750; text-decoration: none; }
+  .console-link { margin: .8rem 1.2rem 1.2rem; }
+  .text-link:hover, .subheading a:hover, .situation-grid > a:hover { color: rgb(var(--color-accent)); }
+  .situation-strip { color: #e5edf3; background: rgb(var(--color-brand)); }
+  .situation-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(19rem, .85fr) auto; gap: 2rem; align-items: center; padding-block: 2rem; }
+  .situation-grid .eyebrow { color: #8ad2ca; }
+  .situation-grid h2 { margin: 0; color: #fff; font-size: 1.45rem; }
+  .situation-grid p:not(.eyebrow) { margin: .55rem 0 0; color: #cbd8e2; font-size: .83rem; line-height: 1.6; }
+  .situation-grid dl { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; }
+  .situation-grid dl div { padding-inline: .9rem; border-left: 1px solid rgb(255 255 255 / .2); }
+  .situation-grid dt { color: #cbd8e2; font-size: .64rem; }
+  .situation-grid dd { margin: .25rem 0 0; color: #fff; font-size: 1.3rem; font-weight: 750; }
+  .situation-grid > a { color: #fff; white-space: nowrap; }
+  .home-section { padding-block: clamp(3.5rem, 7vw, 5.5rem); }
+  .browse-section { background: rgb(var(--bg)); }
+  .section-heading { display: grid; grid-template-columns: minmax(0, .9fr) minmax(18rem, .6fr); gap: 2rem; align-items: end; padding-bottom: 1.1rem; border-bottom: 2px solid rgb(var(--text-strong)); }
+  .section-heading.compact { display: flex; justify-content: space-between; }
+  .section-heading h2, .subheading h2 { margin: 0; color: rgb(var(--text-strong)); font-size: clamp(1.55rem, 2.8vw, 2.2rem); line-height: 1.12; }
+  .section-heading p:not(.eyebrow) { margin: 0; color: rgb(var(--text-muted)); font-size: .86rem; line-height: 1.65; }
+  .path-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 1.5rem; border-top: 1px solid rgb(var(--border)); border-left: 1px solid rgb(var(--border)); }
+  .path-card { display: grid; grid-template-rows: auto 1fr auto; min-height: 17rem; padding: 1rem; color: rgb(var(--text-strong)); background: rgb(var(--surface)); border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); text-decoration: none; }
+  .path-card:hover { background: rgb(var(--bg-soft)); }
+  .path-index { color: rgb(var(--color-accent)); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .72rem; font-weight: 750; }
+  .path-copy { display: grid; align-content: start; gap: .65rem; margin-top: 2.4rem; }
+  .path-copy strong { font-size: 1.05rem; line-height: 1.24; }
+  .path-copy small { color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.6; }
+  .path-stat { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; padding-top: .75rem; border-top: 1px solid rgb(var(--border)); }
+  .path-stat b { color: rgb(var(--text-strong)); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+  .path-stat small { max-width: 8rem; color: rgb(var(--text-faint)); font-size: .66rem; text-align: right; }
+  .data-section { background: rgb(var(--surface-raised)); border-top: 1px solid rgb(var(--border)); }
+  .explore-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, .65fr); gap: clamp(2rem, 5vw, 3.5rem); }
+  .subheading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+  .subheading h2 { font-size: 1.15rem; }
+  .country-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+  .disease-list { background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); border-bottom: 0; }
+  .disease-list > a { display: flex; min-height: 4.05rem; align-items: center; justify-content: space-between; gap: 1rem; padding: .78rem .9rem; color: rgb(var(--text-strong)); border-bottom: 1px solid rgb(var(--border)); text-decoration: none; }
+  .disease-list > a:hover { background: rgb(var(--bg-soft)); }
+  .disease-list > a:hover strong { color: rgb(var(--color-teal)); }
+  .disease-list span:first-child { display: grid; min-width: 0; }
+  .disease-list strong { overflow-wrap: anywhere; font-size: .84rem; line-height: 1.25; }
+  .disease-list small { margin-top: .16rem; color: rgb(var(--text-muted)); font-size: .68rem; line-height: 1.35; }
+  .reports { background: rgb(var(--surface)); border-top: 1px solid rgb(var(--border)); }
+  .report-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 2rem; border-top: 1px solid rgb(var(--border)); border-left: 1px solid rgb(var(--border)); }
+  .report-list > a { display: grid; grid-template-columns: auto 1fr; gap: .7rem; padding: 1rem; color: rgb(var(--text-strong)); background: rgb(var(--bg) / .46); border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); text-decoration: none; }
+  .report-list > a:hover { background: rgb(var(--bg-soft)); }
+  .report-list span { display: grid; min-width: 0; }
+  .report-list strong { font-size: .88rem; }
+  .report-list small { color: rgb(var(--text-muted)); font-size: .7rem; }
+  .report-list b { grid-column: 1 / -1; margin-top: .7rem; color: rgb(var(--color-teal)); font-size: .74rem; }
+  .empty-state { margin-top: 1.5rem; color: rgb(var(--text-muted)); }
+
+  @media (max-width: 1060px) {
+    .hero-grid, .explore-grid { grid-template-columns: 1fr; }
+    .home-hero { background: rgb(var(--surface)); }
+    .data-console { width: 100%; max-width: 46rem; }
+    .path-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 860px) {
+    .situation-grid { grid-template-columns: 1fr; align-items: start; gap: 1.4rem; }
+    .situation-grid dl { width: 100%; }
+    .section-heading { grid-template-columns: 1fr; align-items: start; gap: .8rem; }
+  }
+
+  @media (max-width: 680px) {
+    .hero-grid { padding-block: 2.75rem; }
+    h1 { font-size: 2.28rem; }
+    .home-search-row, .release-meta, .asset-grid, .path-grid, .country-grid, .report-list { grid-template-columns: 1fr; }
+    .home-search button { min-height: 3rem; }
+    .actions { display: grid; }
+    .actions a { justify-content: center; text-align: center; }
+    .asset-grid div, .asset-grid div:nth-child(2n), .asset-grid div:nth-last-child(-n + 2) { border-right: 0; border-bottom: 1px solid rgb(var(--border)); }
+    .asset-grid div:last-child { border-bottom: 0; }
+    .source-board a { grid-template-columns: auto minmax(0, 1fr); }
+    .source-board time { grid-column: 2; text-align: left; }
+    .path-card { min-height: 13rem; }
+    .path-copy { margin-top: 1.4rem; }
+    .section-heading.compact, .subheading { align-items: flex-start; flex-direction: column; gap: .65rem; }
+  }
+</style>

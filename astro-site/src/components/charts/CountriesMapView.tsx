@@ -104,6 +104,10 @@ interface Props {
   initialLanguage?: 'en' | 'zh';
 }
 
+type CountryFilterWindow = Window & {
+  __globalIdCountryFilterCodes?: string[];
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CountriesMapView({ metaCountries = [], height = 450, initialLanguage = 'en' }: Props) {
@@ -114,6 +118,10 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
   const [lang] = useState<'en' | 'zh'>(initialLanguage);
   const [mapReady, setMapReady] = useState(false);
   const [dotPositions, setDotPositions] = useState<DotPos[]>([]);
+  const [visibleCountryCodes, setVisibleCountryCodes] = useState<string[] | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return (window as CountryFilterWindow).__globalIdCountryFilterCodes ?? null;
+  });
 
   // Build meta lookup
   const metaByCode = useMemo(
@@ -138,6 +146,21 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
     }),
     [lang, metaByCode],
   );
+
+  const displayedCountries = useMemo(() => {
+    if (visibleCountryCodes === null) return countriesWithStatus;
+    const visible = new Set(visibleCountryCodes.map(code => code.toUpperCase()));
+    return countriesWithStatus.filter(country => visible.has(country.iso2));
+  }, [countriesWithStatus, visibleCountryCodes]);
+
+  useEffect(() => {
+    const handleCountryFilter = (event: Event) => {
+      const codes = (event as CustomEvent<{ codes?: string[] }>).detail?.codes;
+      setVisibleCountryCodes(Array.isArray(codes) ? codes : null);
+    };
+    window.addEventListener('globalid:country-filter', handleCountryFilter);
+    return () => window.removeEventListener('globalid:country-filter', handleCountryFilter);
+  }, []);
 
   // Theme detection ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -183,7 +206,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
     const hw = BOX_W / 2; const hh = BOX_H / 2;
     const pos: DotPos[] = [];
     
-    for (const c of countriesWithStatus) {
+    for (const c of displayedCountries) {
       const pt = inst.convertToPixel({ geoIndex: 0 }, [c.lng, c.lat]) as [number, number] | null;
       if (!pt) continue;
       const [bdx, bdy] = getCoverageLabelOffset(c.iso2);
@@ -203,7 +226,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
     }
 
     setDotPositions(pos);
-  }, [countriesWithStatus, metaByCode]);
+  }, [displayedCountries, metaByCode]);
 
   // Recalculate positions after the map is fully laid out ───────────────────
   useEffect(() => {
@@ -288,7 +311,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
         {
           type: 'scatter',
           coordinateSystem: 'geo',
-          data: countriesWithStatus.map(c => ({
+          data: displayedCountries.map(c => ({
             value: [c.lng, c.lat],
             name: c.name,
             status: c.status,
@@ -324,7 +347,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
           </div>`,
       },
     };
-  }, [mapReady, countriesWithStatus, palette]);
+  }, [mapReady, displayedCountries, palette]);
 
   const handleEvents = useMemo(() => ({
     finished: () => setTimeout(computePositions, 600),

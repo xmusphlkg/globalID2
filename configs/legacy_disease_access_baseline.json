@@ -72,8 +72,8 @@
     },
     "dashboard/api/services/disease_series_projection.py": {
       "classification": "compatibility_projection",
-      "reason": "This is the existing controlled series-first reader; legacy rows only provide explicit fallback and period gap fill.",
-      "max_references": {"DiseaseRecord": 5, "disease_records": 0}
+      "reason": "This is the existing controlled series-first reader; legacy rows only provide explicit fallback, jurisdiction-scoped lookup, and period gap fill.",
+      "max_references": {"DiseaseRecord": 8, "disease_records": 0}
     },
     "main.py": {
       "classification": "runtime_read",

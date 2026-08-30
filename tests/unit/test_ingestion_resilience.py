@@ -445,6 +445,187 @@ async def test_worker_restart_closes_interrupted_crawl_run(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_stale_literature_task_is_boundedly_requeued_but_fresh_task_is_untouched(
+    monkeypatch,
+):
+    now = datetime.now(timezone.utc)
+    stale = SimpleNamespace(
+        id=21,
+        task_uuid="stale-literature-sync",
+        task_type=TaskType.SYNC_LITERATURE,
+        status=TaskStatus.RUNNING,
+        started_at=now - timedelta(hours=2),
+        updated_at=now - timedelta(hours=2),
+        created_at=now - timedelta(hours=2),
+        completed_at=None,
+        actual_duration=None,
+        last_error=None,
+        retry_count=0,
+        max_retries=2,
+        report_id=None,
+        output_data={},
+        progress=55,
+        input_data={},
+        metadata_={
+            "task_lease": {
+                "owner": "dead-worker",
+                "heartbeat_at": (now - timedelta(minutes=10)).isoformat(),
+            }
+        },
+    )
+    fresh = SimpleNamespace(
+        id=22,
+        task_uuid="fresh-literature-sync",
+        task_type=TaskType.SYNC_LITERATURE,
+        status=TaskStatus.RUNNING,
+        started_at=now - timedelta(minutes=1),
+        updated_at=now - timedelta(seconds=5),
+        created_at=now - timedelta(minutes=1),
+        completed_at=None,
+        actual_duration=None,
+        last_error=None,
+        retry_count=0,
+        max_retries=2,
+        report_id=None,
+        output_data={},
+        progress=10,
+        input_data={},
+        metadata_={
+            "task_lease": {
+                "owner": "live-worker",
+                "heartbeat_at": (now - timedelta(seconds=5)).isoformat(),
+            }
+        },
+    )
+    database = _Database([
+        _ScalarResult(many=[stale, fresh]),
+        _ScalarResult(many=[]),
+    ])
+    entries = []
+    broadcasts = []
+    monkeypatch.setattr(task_executor_module, "get_database", lambda: database)
+
+    async def add_entry(*args, **kwargs):
+        entries.append((args, kwargs))
+
+    async def broadcast(payload):
+        broadcasts.append(payload)
+
+    monkeypatch.setattr(task_executor_module.task_manager, "add_workbook_entry", add_entry)
+    monkeypatch.setattr(task_executor_module.task_manager, "_broadcast", broadcast)
+
+    recovered = await task_executor_module.recover_interrupted_tasks_on_startup(
+        stale_after_seconds=180,
+        now=now,
+    )
+
+    assert recovered == 1
+    assert stale.status == TaskStatus.QUEUED
+    assert stale.retry_count == 1
+    assert stale.started_at is None
+    assert stale.metadata_["task_recovery_history"][0]["previous_owner"] == "dead-worker"
+    assert fresh.status == TaskStatus.RUNNING
+    assert len(entries) == 1
+    assert broadcasts[0]["status"] == TaskStatus.QUEUED.value
+
+
+@pytest.mark.asyncio
+async def test_stale_recovery_can_be_restricted_to_one_dead_owner(monkeypatch):
+    now = datetime.now(timezone.utc)
+
+    def task(task_uuid, owner):
+        return SimpleNamespace(
+            id=30 if owner == "dead-a" else 31,
+            task_uuid=task_uuid,
+            task_type=TaskType.SYNC_LITERATURE,
+            status=TaskStatus.RUNNING,
+            started_at=now - timedelta(minutes=10),
+            updated_at=now - timedelta(minutes=10),
+            created_at=now - timedelta(minutes=10),
+            completed_at=None,
+            actual_duration=None,
+            last_error=None,
+            retry_count=0,
+            max_retries=2,
+            report_id=None,
+            output_data={},
+            progress=50,
+            input_data={},
+            metadata_={"task_lease": {
+                "owner": owner,
+                "heartbeat_at": (now - timedelta(minutes=10)).isoformat(),
+            }},
+        )
+
+    owned = task("owned-stale", "dead-a")
+    unrelated = task("unrelated-stale", "dead-b")
+    database = _Database([
+        _ScalarResult(many=[owned, unrelated]),
+        _ScalarResult(many=[]),
+    ])
+    monkeypatch.setattr(task_executor_module, "get_database", lambda: database)
+
+    async def noop(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(task_executor_module.task_manager, "add_workbook_entry", noop)
+    monkeypatch.setattr(task_executor_module.task_manager, "_broadcast", noop)
+
+    recovered = await task_executor_module.recover_interrupted_tasks_on_startup(
+        stale_after_seconds=0,
+        now=now,
+        only_owner="dead-a",
+    )
+
+    assert recovered == 1
+    assert owned.status == TaskStatus.QUEUED
+    assert unrelated.status == TaskStatus.RUNNING
+
+
+@pytest.mark.asyncio
+async def test_stale_literature_task_fails_after_recovery_limit(monkeypatch):
+    now = datetime.now(timezone.utc)
+    task = SimpleNamespace(
+        id=23,
+        task_uuid="exhausted-literature-sync",
+        task_type=TaskType.ENRICH_LITERATURE,
+        status=TaskStatus.RUNNING,
+        started_at=now - timedelta(hours=1),
+        updated_at=now - timedelta(hours=1),
+        created_at=now - timedelta(hours=1),
+        completed_at=None,
+        actual_duration=None,
+        last_error=None,
+        retry_count=2,
+        max_retries=2,
+        report_id=None,
+        output_data={},
+        progress=70,
+        input_data={},
+        metadata_={"task_lease": {"owner": "dead-worker"}},
+    )
+    database = _Database([_ScalarResult(many=[task])])
+    monkeypatch.setattr(task_executor_module, "get_database", lambda: database)
+
+    async def noop(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(task_executor_module.task_manager, "add_workbook_entry", noop)
+    monkeypatch.setattr(task_executor_module.task_manager, "_broadcast", noop)
+
+    assert (
+        await task_executor_module.recover_interrupted_tasks_on_startup(
+            stale_after_seconds=180,
+            now=now,
+        )
+        == 1
+    )
+    assert task.status == TaskStatus.FAILED
+    assert task.completed_at == now
+    assert "limit exhausted" in task.last_error
+
+
+@pytest.mark.asyncio
 async def test_lifecycle_suppresses_alert_when_ingestion_retry_is_scheduled(
     monkeypatch,
 ):

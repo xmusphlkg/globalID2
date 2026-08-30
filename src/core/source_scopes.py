@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from typing import Optional
 
+from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
+
 EXPECTED_SCOPES_BY_COUNTRY = {
     "CN": ["cdc_weekly", "nhc", "pubmed"],
     "US": ["nndss_api", "nhss_hiv"],
     "JP": ["jp_weekly"],
     "AU": ["all"],
-    "CA": ["all"],
+    "CA": ["phac_cndss_annual"],
     "CA-ON": ["pho_idto_monthly"],
     "NZ": ["phf_monthly"],
     "FI": ["thl_ttr"],
@@ -23,6 +25,15 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     "CH": ["foph_idd"],
     "NO": ["fhi_msis"],
     "SE": ["fohm_sminet"],
+    "SG": ["cda_weekly_bulletin"],
+    "FR": ["ecdc_atlas_annual"],
+    "ES": ["ecdc_atlas_annual"],
+    "IT": ["ecdc_atlas_annual"],
+    "PT": ["ecdc_atlas_annual"],
+    "PL": ["ecdc_atlas_annual"],
+    "CZ": ["ecdc_atlas_annual"],
+    "GR": ["ecdc_atlas_annual"],
+    "RO": ["ecdc_atlas_annual"],
     "IS": [
         "is_doh_annual",
         "is_doh_sti",
@@ -32,6 +43,11 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     ],
 }
 
+for _ecdc_country_code in ECDC_BASELINE_COUNTRY_CODES:
+    _scopes = EXPECTED_SCOPES_BY_COUNTRY.setdefault(_ecdc_country_code, [])
+    if "ecdc_atlas_annual" not in _scopes:
+        _scopes.append("ecdc_atlas_annual")
+
 SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
     "all": {
         "en": "All Sources",
@@ -40,6 +56,14 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
     "cdc_weekly": {
         "en": "China CDC Weekly",
         "zh": "中国疾控中心周报",
+    },
+    "cn_province_datacenter": {
+        "en": "China Public Health Science Data Center — Province Monthly",
+        "zh": "公共卫生科学数据中心分省月度数据",
+    },
+    "cn_province_monthly_report": {
+        "en": "Provincial Statutory Infectious Disease Monthly Reports",
+        "zh": "省级法定传染病月报",
     },
     "nhc": {
         "en": "NHC",
@@ -85,6 +109,10 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
         "en": "Public Health Ontario IDTO Monthly",
         "zh": "安大略省公共卫生局 IDTO 月度数据",
     },
+    "phac_cndss_annual": {
+        "en": "Canada PHAC CNDSS Annual",
+        "zh": "加拿大公共卫生署 CNDSS 年度数据",
+    },
     "phf_monthly": {
         "en": "New Zealand PHF Science Monthly Notifiable Diseases",
         "zh": "新西兰 PHF Science 法定传染病月度监测",
@@ -114,6 +142,14 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
     "fohm_sminet": {
         "en": "Sweden Public Health Agency SmiNet",
         "zh": "瑞典公共卫生局 SmiNet",
+    },
+    "cda_weekly_bulletin": {
+        "en": "Singapore CDA Weekly Infectious Diseases Bulletin",
+        "zh": "新加坡 CDA 每周传染病通报",
+    },
+    "ecdc_atlas_annual": {
+        "en": "ECDC Surveillance Atlas Annual Baseline",
+        "zh": "ECDC 传染病监测图谱年度基线",
     },
     "is_doh_annual": {
         "en": "Iceland Directorate of Health Annual Dashboard",
@@ -178,6 +214,9 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "public health ontario idto monthly preliminary data": "pho_idto_monthly",
     "public health ontario idto monthly": "pho_idto_monthly",
     "pho idto monthly": "pho_idto_monthly",
+    "canadian notifiable disease surveillance system (cndss)": "phac_cndss_annual",
+    "canadian notifiable disease surveillance system": "phac_cndss_annual",
+    "phac cndss": "phac_cndss_annual",
     "nz phf science monthly notifiable disease surveillance": "phf_monthly",
     "nz phf science monthly notifiable disease surveillance (pdf)": "phf_monthly",
     "new zealand phf science monthly notifiable disease surveillance": "phf_monthly",
@@ -200,6 +239,11 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "sweden public health agency sminet": "fohm_sminet",
     "sweden fohm sminet": "fohm_sminet",
     "fohm sminet": "fohm_sminet",
+    "singapore cda weekly infectious diseases bulletin": "cda_weekly_bulletin",
+    "singapore data.gov.sg weekly infectious diseases bulletin (2012-2022)": "cda_weekly_bulletin",
+    "cda weekly infectious diseases bulletin": "cda_weekly_bulletin",
+    "ecdc surveillance atlas of infectious diseases": "ecdc_atlas_annual",
+    "ecdc surveillance atlas annual baseline": "ecdc_atlas_annual",
     "iceland directorate of health annual dashboard": "is_doh_annual",
     "iceland directorate of health sti dashboard": "is_doh_sti",
     "iceland directorate of health respiratory dashboard": "is_doh_respiratory",
@@ -262,6 +306,11 @@ _TASK_SOURCE_ALIASES = {
     "idto": "pho_idto_monthly",
     "ontario": "pho_idto_monthly",
     "ca-on": "pho_idto_monthly",
+    "cndss": "phac_cndss_annual",
+    "phac": "phac_cndss_annual",
+    "phac_cndss": "phac_cndss_annual",
+    "phac_cndss_annual": "phac_cndss_annual",
+    "canada": "phac_cndss_annual",
     "phf": "phf_monthly",
     "phf_monthly": "phf_monthly",
     "nz": "phf_monthly",
@@ -299,6 +348,30 @@ _TASK_SOURCE_ALIASES = {
     "sminet": "fohm_sminet",
     "se": "fohm_sminet",
     "sweden": "fohm_sminet",
+    "cda": "cda_weekly_bulletin",
+    "cda_weekly_bulletin": "cda_weekly_bulletin",
+    "widb": "cda_weekly_bulletin",
+    "sg": "cda_weekly_bulletin",
+    "singapore": "cda_weekly_bulletin",
+    "ecdc": "ecdc_atlas_annual",
+    "atlas": "ecdc_atlas_annual",
+    "ecdc_atlas_annual": "ecdc_atlas_annual",
+    "fr": "ecdc_atlas_annual",
+    "france": "ecdc_atlas_annual",
+    "es": "ecdc_atlas_annual",
+    "spain": "ecdc_atlas_annual",
+    "it": "ecdc_atlas_annual",
+    "italy": "ecdc_atlas_annual",
+    "pt": "ecdc_atlas_annual",
+    "portugal": "ecdc_atlas_annual",
+    "pl": "ecdc_atlas_annual",
+    "poland": "ecdc_atlas_annual",
+    "cz": "ecdc_atlas_annual",
+    "czechia": "ecdc_atlas_annual",
+    "gr": "ecdc_atlas_annual",
+    "greece": "ecdc_atlas_annual",
+    "ro": "ecdc_atlas_annual",
+    "romania": "ecdc_atlas_annual",
     "is_annual": "is_doh_annual",
     "is_doh_annual": "is_doh_annual",
     "is_sti": "is_doh_sti",
@@ -335,6 +408,8 @@ def canonicalize_task_source(
         return "foph_idd"
     if normalized == "all" and (country_code or "").strip().upper() == "CA-ON":
         return "pho_idto_monthly"
+    if normalized == "all" and (country_code or "").strip().upper() == "CA":
+        return "phac_cndss_annual"
     if normalized == "all" and (country_code or "").strip().upper() == "NZ":
         return "phf_monthly"
     if normalized == "all" and (country_code or "").strip().upper() == "FI":
@@ -349,6 +424,13 @@ def canonicalize_task_source(
         return "fhi_msis"
     if normalized == "all" and (country_code or "").strip().upper() == "SE":
         return "fohm_sminet"
+    if normalized == "all" and (country_code or "").strip().upper() == "SG":
+        return "cda_weekly_bulletin"
+    if normalized == "all" and (
+        (country_code or "").strip().upper()
+        in ECDC_BASELINE_COUNTRY_CODES - {"AT", "DE", "FI", "IE", "IS", "NO", "SE"}
+    ):
+        return "ecdc_atlas_annual"
 
     return normalized
 
@@ -490,6 +572,8 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
         return "foph_idd"
     if "public health ontario" in text or "pho idto" in text:
         return "pho_idto_monthly"
+    if "cndss" in text or "canadian notifiable disease surveillance" in text:
+        return "phac_cndss_annual"
     if "phf science" in text or "nz phf" in text:
         return "phf_monthly"
     if "finland thl" in text or "thl infectious" in text or "thl ttr" in text:
@@ -580,6 +664,12 @@ def canonical_data_source_label(
         "pho idto monthly",
     }:
         return "Public Health Ontario IDTO Monthly"
+    if text in {
+        "canadian notifiable disease surveillance system (cndss)",
+        "canadian notifiable disease surveillance system",
+        "phac cndss",
+    }:
+        return "Canada PHAC CNDSS Annual"
     if text in {
         "nz phf science monthly notifiable disease surveillance",
         "nz phf science monthly notifiable disease surveillance (pdf)",

@@ -940,6 +940,7 @@ def load_disease_ontology(
                     "missing_value_policy": derived.get(
                         "missing_value_policy", "missing_is_unknown"
                     ),
+                    **dict(template.get("availability_overrides") or {}),
                 }
             )
     return DiseaseOntology.from_dict(document)

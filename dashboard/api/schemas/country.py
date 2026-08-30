@@ -14,5 +14,7 @@ class CountryOut(BaseModel):
     language: str
     timezone: str
     is_active: bool
+    location_type: str = "country"
+    parent_code: Optional[str] = None
 
     model_config = {"from_attributes": True}

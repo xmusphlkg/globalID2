@@ -4,7 +4,7 @@ import '../styles/fonts.css';
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { buildAlternatePaths, type JsonLdNode, type SeoDocument } from '../lib/seo';
+import { buildAlternatePaths, clampSeoDescription, type JsonLdNode, type SeoDocument } from '../lib/seo';
 
 interface Props {
   title: string;
@@ -14,16 +14,18 @@ interface Props {
   initialLanguage?: 'en' | 'zh';
   additionalStructuredData?: JsonLdNode | JsonLdNode[];
   seo?: SeoDocument;
+  hideLanguageToggle?: boolean;
 }
 
 const {
   title,
   description = 'GIDS — Global Infectious Disease Surveillance',
-  image = '/logo-2.png',
+  image = '/og-default.png',
   noindex = false,
   initialLanguage = 'en',
   additionalStructuredData = [],
   seo,
+  hideLanguageToggle = false,
 } = Astro.props;
 
 const siteReleaseId = import.meta.env.PUBLIC_GIDS_RELEASE_ID?.trim() || 'development';
@@ -35,7 +37,9 @@ const siteOrigin = new URL(siteBase).origin;
 const documentLocale = seo?.locale ?? initialLanguage;
 const pageTitle = seo?.title ?? (title === 'GIDS' ? title : `${title} | GIDS`);
 const pageDescription = seo?.description ?? description;
+const metaDescription = clampSeoDescription(pageDescription);
 const pageImage = seo?.image ?? image;
+const pageImageAlt = seo?.imageAlt ?? `${pageTitle} — GIDS`;
 const shouldNoindex = seo?.noindex ?? noindex;
 const robotsContent = shouldNoindex
   ? 'noindex,nofollow'
@@ -81,6 +85,7 @@ const structuredData = {
       url: siteOrigin,
       logo: new URL('/logo.png', siteOrigin).toString(),
       sameAs: ['https://github.com/xmusphlkg/globalID2'],
+      publishingPrinciples: new URL('/about/#editorial-responsibility', siteOrigin).toString(),
     },
     {
       '@type': 'DataCatalog',
@@ -95,6 +100,8 @@ const structuredData = {
       url: canonicalURL.toString(),
       name: pageTitle,
       description: pageDescription,
+      author: { '@id': `${siteOrigin}#organization` },
+      publisher: { '@id': `${siteOrigin}#organization` },
       isPartOf: {
         '@id': `${siteOrigin}#website`,
       },
@@ -123,7 +130,7 @@ const structuredData = {
 
     <!-- SEO -->
     <title>{pageTitle}</title>
-    <meta name="description" content={pageDescription} />
+    <meta name="description" content={metaDescription} />
     <link rel="canonical" href={canonicalURL} />
     {alternateUrls.map(({ locale, url }) => (
       <link rel="alternate" hreflang={locale === 'zh' ? 'zh-CN' : 'en'} href={url} />
@@ -138,8 +145,11 @@ const structuredData = {
     <meta property="og:locale" content={documentLocale === 'zh' ? 'zh_CN' : 'en_US'} />
     <meta property="og:locale:alternate" content={documentLocale === 'zh' ? 'en_US' : 'zh_CN'} />
     <meta property="og:title" content={pageTitle} />
-    <meta property="og:description" content={pageDescription} />
+    <meta property="og:description" content={metaDescription} />
     <meta property="og:image" content={new URL(pageImage, siteBase)} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={pageImageAlt} />
     <meta property="og:url" content={canonicalURL} />
     {seo?.datePublished && <meta property="article:published_time" content={seo.datePublished} />}
     {seo?.dateModified && <meta property="article:modified_time" content={seo.dateModified} />}
@@ -147,8 +157,9 @@ const structuredData = {
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={pageTitle} />
-    <meta name="twitter:description" content={pageDescription} />
+    <meta name="twitter:description" content={metaDescription} />
     <meta name="twitter:image" content={new URL(pageImage, siteBase)} />
+    <meta name="twitter:image:alt" content={pageImageAlt} />
     <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
     {validGaMeasurementId && <script is:inline set:html={`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config','${validGaMeasurementId}');document.addEventListener('click',function(event){const target=event.target instanceof Element?event.target.closest('[data-seo-event],[data-file-download]'):null;if(!target)return;gtag('event',target.getAttribute('data-seo-event')||'dataset_download');});(function(){let started=false;function loadAnalytics(){if(started)return;started=true;const script=document.createElement('script');script.async=true;script.src='https://www.googletagmanager.com/gtag/js?id=${validGaMeasurementId}';document.head.appendChild(script)}function deferAnalytics(){window.setTimeout(function(){if('requestIdleCallback'in window){window.requestIdleCallback(loadAnalytics,{timeout:2000})}else{loadAnalytics()}},2000)}if(document.readyState==='complete'){deferAnalytics()}else{window.addEventListener('load',deferAnalytics,{once:true})}})();`} />}
 
@@ -168,7 +179,7 @@ const structuredData = {
   </head>
   <body class="min-h-screen flex flex-col">
     <a class="skip-link" href="#main-content">{documentLocale === 'zh' ? '跳到主要内容' : 'Skip to main content'}</a>
-    <Header initialLanguage={initialLanguage} />
+    <Header initialLanguage={initialLanguage} hideLanguageToggle={hideLanguageToggle} />
     {maintenanceMessage && <div class="site-update-banner border-b" role="status" aria-live="polite">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 text-sm font-medium text-center">
         <span>

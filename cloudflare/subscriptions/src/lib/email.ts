@@ -146,13 +146,17 @@ export function buildConfirmationEmail(
   return { subject, text: textLines.join("\n"), html };
 }
 
-export function buildRawEmail(config: RawEmailConfig, email: EmailContent & { to: string }): string {
+export function buildRawEmail(
+  config: RawEmailConfig,
+  email: EmailContent & { to: string; messageId?: string },
+): string {
   const boundary = `gids-${crypto.randomUUID()}`;
   const from = `${formatAddressName(config.fromName)} <${cleanAddressHeader(config.fromEmail)}>`;
   return [
     `From: ${from}`,
     `To: <${cleanAddressHeader(email.to)}>`,
     `Subject: ${encodeHeader(email.subject)}`,
+    ...(email.messageId ? [`Message-ID: <${cleanMessageId(email.messageId)}>`] : []),
     "MIME-Version: 1.0",
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
     "",
@@ -170,6 +174,13 @@ export function buildRawEmail(config: RawEmailConfig, email: EmailContent & { to
     "",
     `--${boundary}--`,
   ].join("\r\n");
+}
+
+function cleanMessageId(value: string): string {
+  const cleaned = value.replace(/[^A-Za-z0-9._@+-]+/g, "");
+  const at = cleaned.indexOf("@");
+  if (at < 1) return cleaned.replace(/@/g, "").slice(0, 240);
+  return `${cleaned.slice(0, at + 1)}${cleaned.slice(at + 1).replace(/@/g, "")}`.slice(0, 240);
 }
 
 function notificationTemplateLabels(locale: string): { title: string; reason: string; unsubscribe: string } {

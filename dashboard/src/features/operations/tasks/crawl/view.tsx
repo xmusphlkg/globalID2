@@ -262,7 +262,7 @@ function CrawlTasksPageContent() {
           value={isLoading ? "-" : summary.total}
           icon={<ListTodo className="h-4 w-4" />}
           tone="neutral"
-          hint={scopeMode === "all" ? (lang === "zh" ? "全部国家" : "All countries") : (lang === "zh" ? "当前国家" : "Selected country")}
+          hint={scopeMode === "all" ? (lang === "zh" ? "全部国家 / 地区" : "All countries / regions") : (lang === "zh" ? "当前国家 / 地区" : "Selected country / region")}
         />
         <MetricTile
           label={t(lang, "running_tasks")}
@@ -426,7 +426,7 @@ function CrawlTasksPageContent() {
                     : "No source tasks match the current filters."
                   : lang === "zh"
                     ? "当前国家暂时没有采集任务。"
-                    : "There are no source tasks for the selected country."
+                    : "There are no source tasks for the selected country or region."
               }
             />
           }

@@ -135,6 +135,21 @@ def test_editorially_reviewed_brief_emits_only_the_validated_public_byline():
     assert "reviewer_email" not in serialized
 
 
+def test_ai_reviewed_digest_discloses_that_it_is_not_editorial_review():
+    brief = _brief()
+    brief["brief_status"] = "ai_reviewed"
+    brief["byline"] = {"reviewer": None, "ai_review": {
+        "verdict": "pass", "issue_codes": [], "reviewed_at": "2026-08-16T10:00:00Z",
+        "protocol_version": "research-weekly-ai-review.v1",
+        "model": "bounded-review-model", "provider": "model-center",
+    }}
+
+    payload = dispatcher.build_campaign_payload(brief)
+    assert "passed an AI review limited to the public evidence packet" in payload["contents"]["en"]["markdown"]
+    assert "this is not editorial review" in payload["contents"]["en"]["markdown"]
+    assert "这不是编辑签审" in payload["contents"]["zh"]["markdown"]
+
+
 @pytest.mark.parametrize(("mutation", "error"), [
     (
         {"brief_status": "editorially_reviewed", "byline": {"reviewer": {"name": "Dr Jane Q. Public"}}},

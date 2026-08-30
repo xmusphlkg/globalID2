@@ -15,7 +15,7 @@ test("production readiness configuration is fail-closed and secret-free", () => 
   assert.deepEqual(report, {
     ok: true,
     compatibility_date: "2026-08-17",
-    migrations: 9,
+    migrations: 10,
     environment_isolation: true,
     remote_guards: true,
     secret_config_leakage: false,

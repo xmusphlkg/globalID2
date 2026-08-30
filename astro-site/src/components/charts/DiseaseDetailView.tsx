@@ -51,6 +51,7 @@ interface Props {
   sections: DiseaseSection[];
   series: DiseaseSeries | null;
   reportMeta: ReportMeta;
+  globalDiseasePath?: string | null;
   initialLanguage?: 'en' | 'zh';
 }
 
@@ -412,10 +413,10 @@ function SectionBlock({ section, theme, lang }: {
     >
       <div className="flex items-center gap-3 mb-4">
         <span style={{ color: accentColor, fontSize: '16px', fontWeight: 700 }}>{meta.icon}</span>
-        <h3 style={{ color: accentColor }}
+        <h2 style={{ color: accentColor }}
           className="text-xs font-bold uppercase tracking-[0.15em]">
           {lang === 'zh' ? meta.zh : meta.en}
-        </h3>
+        </h2>
       </div>
       {contentHtml ? (
         <div
@@ -523,7 +524,7 @@ function categoryLabel(value: string, lang: 'en' | 'zh') {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function DiseaseDetailView({ diseaseMeta, sections, series, reportMeta, initialLanguage = 'en' }: Props) {
+export default function DiseaseDetailView({ diseaseMeta, sections, series, reportMeta, globalDiseasePath = null, initialLanguage = 'en' }: Props) {
   const theme = useTheme();
   const lang = useLang(initialLanguage);
   const localePrefix = lang === 'zh' ? '/zh' : '';
@@ -796,8 +797,8 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
             </svg>
             {lang === 'zh' ? '← 返回国家总览' : '← Back to overview'}
           </a>
-          <a
-            href={`${localePrefix}/diseases/${diseaseMeta.slug}/`}
+          {globalDiseasePath && <a
+            href={`${localePrefix}${globalDiseasePath}`}
             style={{ color: textBody }}
             className="flex items-center gap-2 text-sm hover:text-brand-400 transition-colors"
           >
@@ -805,7 +806,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
-          </a>
+          </a>}
         </div>
 
       </div>

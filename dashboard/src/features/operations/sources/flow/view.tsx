@@ -995,7 +995,7 @@ export default function SourcesFlowPage() {
             onClick={() => setScopeMode("selected")}
             className={`h-8 rounded-tremor-default px-3 text-sm font-medium transition ${scopeMode === "selected" ? "bg-tremor-background text-tremor-content-strong dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong" : "text-tremor-content-subtle hover:text-tremor-content-strong dark:text-dark-tremor-content-subtle dark:hover:text-dark-tremor-content-strong"}`}
           >
-            {lang === "zh" ? "当前国家" : "Selected country"}
+            {lang === "zh" ? "当前国家 / 地区" : "Selected country / region"}
           </button>
           <button
             onClick={() => setScopeMode("all")}

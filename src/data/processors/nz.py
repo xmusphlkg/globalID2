@@ -247,6 +247,8 @@ class NZMonthlyUpdater:
                     # provisional and may include cases still under review.
                     "DatasetStatus": "provisional",
                     "IsProvisional": "true",
+                    "RevisionSemantics": "authoritative_revision",
+                    "AuthoritativeRevision": "true",
                 }
                 if source_series_code:
                     normalized_row["SourceDiseaseCode"] = source_series_code

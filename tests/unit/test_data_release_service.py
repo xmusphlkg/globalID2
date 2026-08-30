@@ -479,6 +479,11 @@ async def test_release_preflight_checks_direct_download_repo_when_enabled(
     async def load_jobs():
         return [job]
 
+    worktree_paths = []
+
+    async def git_status_paths():
+        return list(worktree_paths)
+
     async def no_paths():
         return []
 
@@ -509,7 +514,7 @@ async def test_release_preflight_checks_direct_download_repo_when_enabled(
 
     monkeypatch.setattr(service, "ensure_storage", no_op)
     monkeypatch.setattr(service, "load_jobs", load_jobs)
-    monkeypatch.setattr(service, "_git_status_paths", no_paths)
+    monkeypatch.setattr(service, "_git_status_paths", git_status_paths)
     monkeypatch.setattr(service, "_run_capture", command_available)
     monkeypatch.setattr(service, "_cloudflare_check", cloudflare_disabled)
     monkeypatch.setattr(service, "_tracked_generated_paths", no_paths)
@@ -529,6 +534,13 @@ async def test_release_preflight_checks_direct_download_repo_when_enabled(
     assert checks["git"]["read_access_ok"] is True
     assert checks["git"]["write_access_ok"] is True
     assert checks["repository_boundary"]["enforced"] is True
+
+    worktree_paths.append("CHANGELOG.md")
+    dirty_checks = await service.integration_checks("site-release")
+
+    assert dirty_checks["overall_ready"] is False
+    assert dirty_checks["git"]["dirty_blocking_paths"] == ["CHANGELOG.md"]
+    assert any("worktree is not clean" in item for item in dirty_checks["blockers"])
 
 
 def test_download_publish_command_uses_incremental_partition_publisher(tmp_path):

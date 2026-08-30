@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any, Iterable, Mapping
 
 
@@ -33,7 +34,15 @@ def assert_conserved_totals(
 ) -> None:
     """Raise a consistent error when a migration changes protected totals."""
 
-    if actual != expected:
+    conserved = len(actual) == len(expected) and all(
+        (
+            left == right
+            if isinstance(left, int) and isinstance(right, int)
+            else math.isclose(float(left), float(right), rel_tol=1e-12, abs_tol=1e-9)
+        )
+        for left, right in zip(actual, expected)
+    )
+    if not conserved:
         raise RuntimeError(
             f"Post-migration {label} conservation failed: "
             f"expected {dimensions}={expected}, actual={actual}"

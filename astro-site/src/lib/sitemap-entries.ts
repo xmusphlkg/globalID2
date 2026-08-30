@@ -1,4 +1,5 @@
 import {
+  isIndexableResearchCollection,
   isIndexableDisease,
   toSeoSlug,
 } from './seo.ts';
@@ -12,10 +13,6 @@ import {
   reportArchiveCountries,
   type ReportIndexEntry,
 } from './report-routes.ts';
-import {
-  buildResearchFeedDefinitions,
-  type ResearchFeedData,
-} from './research-feed.ts';
 
 export interface SitemapEntry {
   path: string;
@@ -85,10 +82,10 @@ export interface BuildSitemapEntriesOptions {
     }>;
     reviews_and_guidelines?: Array<{ slug?: unknown; title?: unknown; study_type?: unknown; article_type?: unknown }>;
     facets?: {
-      diseases?: Array<{ disease_id?: unknown; slug?: unknown; name_en?: unknown; name_zh?: unknown }>;
-      countries?: Array<{ slug?: unknown; code?: unknown; name_en?: unknown; name_zh?: unknown }>;
-      topics?: Array<{ slug?: unknown; name?: unknown }>;
-      weeks?: Array<{ week?: unknown }>;
+      diseases?: Array<{ disease_id?: unknown; slug?: unknown; name_en?: unknown; name_zh?: unknown; count?: unknown }>;
+      countries?: Array<{ slug?: unknown; code?: unknown; name_en?: unknown; name_zh?: unknown; count?: unknown }>;
+      topics?: Array<{ slug?: unknown; name?: unknown; count?: unknown }>;
+      weeks?: Array<{ week?: unknown; article_count?: unknown; start_date?: unknown; end_date?: unknown }>;
     };
   };
 }
@@ -216,7 +213,10 @@ export function buildSitemapGroups({
 }: BuildSitemapEntriesOptions): Record<SitemapGroup, SitemapEntry[]> {
   const siteLastmod = normalizeSitemapDate(meta.generated_at);
   const groups: Record<SitemapGroup, SitemapEntry[]> = {
-    static: STATIC_SITEMAP_PATHS.flatMap(path => localizedEntry(path, siteLastmod)),
+    // Static legal/navigation pages do not necessarily change with the data
+    // snapshot. Omitting lastmod is more accurate than refreshing it on every
+    // data release.
+    static: STATIC_SITEMAP_PATHS.flatMap(path => localizedEntry(path)),
     diseases: [],
     countries: [],
     reports: [],
@@ -227,39 +227,76 @@ export function buildSitemapGroups({
 
   if (research) {
     const researchLastmod = normalizeSitemapDate(research.last_updated) ?? siteLastmod;
+    const publicPreprints = (research.preprints ?? []).filter(article => (
+      article.peer_review_status === 'preprint' && article.editorial_status === 'published'
+    ));
+    const publicResearchArticles = [...(research.articles ?? []), ...publicPreprints]
+      .filter(article => article.indexable !== false);
+    const latestMatchingResearchUpdate = (
+      predicate: (article: (typeof publicResearchArticles)[number]) => boolean,
+    ) => {
+      const values = publicResearchArticles
+        .filter(predicate)
+        .map(article => normalizeSitemapDate(article.updated_at ?? article.published_at))
+        .filter((value): value is string => Boolean(value))
+        .sort();
+      return values.at(-1) ?? researchLastmod;
+    };
     groups.research.push(...localizedEntry('/research/', researchLastmod));
     groups.research.push(...localizedEntry('/research/ask/', researchLastmod));
     groups.research.push(...localizedEntry('/research/graph/', researchLastmod));
     groups.research.push(...localizedEntry('/research/integrity/', researchLastmod));
-    groups.research.push(...localizedEntry('/research/preprints/', researchLastmod));
-    groups.research.push({ path: '/research/rss.xml', lastmod: researchLastmod });
-    for (const feed of buildResearchFeedDefinitions(research as ResearchFeedData)) {
-      groups.research.push({ path: feed.path, lastmod: researchLastmod });
+    if (isIndexableResearchCollection(publicPreprints.length)) {
+      groups.research.push(...localizedEntry('/research/preprints/', researchLastmod));
     }
-    const publicPreprints = (research.preprints ?? []).filter(article => (
-      article.peer_review_status === 'preprint' && article.editorial_status === 'published'
-    ));
-    for (const article of [...(research.articles ?? []), ...publicPreprints]) {
-      if (article.indexable === false) continue;
+    for (const article of publicResearchArticles) {
       const slug = pathSegment(article.slug, true);
       if (!slug) continue;
       groups.research.push(...localizedEntry(`/research/articles/${slug}/`, normalizeSitemapDate(article.updated_at ?? article.published_at) ?? researchLastmod));
     }
     for (const disease of research.facets?.diseases ?? []) {
       const slug = pathSegment(disease.slug, true);
-      if (slug) groups.research.push(...localizedEntry(`/research/diseases/${slug}/`, researchLastmod));
+      const count = Number(disease.count ?? 0);
+      if (slug && isIndexableResearchCollection(count)) groups.research.push(...localizedEntry(
+        `/research/diseases/${slug}/`,
+        latestMatchingResearchUpdate(article => (article.diseases ?? []).some(item => (
+          pathSegment(item.slug, true) === slug
+          || String(item.disease_id ?? '').toLowerCase() === String(disease.disease_id ?? '').toLowerCase()
+        ))),
+      ));
     }
     for (const country of research.facets?.countries ?? []) {
       const slug = pathSegment(country.slug ?? country.code, true);
-      if (slug) groups.research.push(...localizedEntry(`/research/countries/${slug}/`, researchLastmod));
+      const count = Number(country.count ?? 0);
+      if (slug && isIndexableResearchCollection(count)) groups.research.push(...localizedEntry(
+        `/research/countries/${slug}/`,
+        latestMatchingResearchUpdate(article => (article.countries ?? []).some(item => (
+          pathSegment(item.slug ?? item.code, true) === slug
+        ))),
+      ));
     }
     for (const topic of research.facets?.topics ?? []) {
       const slug = pathSegment(topic.slug, true);
-      if (slug) groups.research.push(...localizedEntry(`/research/topics/${slug}/`, researchLastmod));
+      const count = Number(topic.count ?? 0);
+      if (slug && isIndexableResearchCollection(count)) groups.research.push(...localizedEntry(
+        `/research/topics/${slug}/`,
+        latestMatchingResearchUpdate(article => (article.topics ?? []).some(item => (
+          pathSegment(item.slug ?? item.name, true) === slug
+        ))),
+      ));
     }
     for (const brief of research.facets?.weeks ?? []) {
       const week = typeof brief.week === 'string' && /^\d{4}-W\d{2}$/.test(brief.week) ? brief.week : null;
-      if (week) groups.research.push(...localizedEntry(`/research/weekly/${week}/`, researchLastmod));
+      const count = Number(brief.article_count ?? 0);
+      const start = typeof brief.start_date === 'string' ? brief.start_date : null;
+      const end = typeof brief.end_date === 'string' ? brief.end_date : null;
+      if (week && isIndexableResearchCollection(count)) groups.research.push(...localizedEntry(
+        `/research/weekly/${week}/`,
+        latestMatchingResearchUpdate(article => {
+          const published = typeof article.published_at === 'string' ? article.published_at.slice(0, 10) : '';
+          return Boolean(published && start && end && published >= start && published <= end);
+        }),
+      ));
     }
   }
 
@@ -267,8 +304,12 @@ export function buildSitemapGroups({
     const lastmod = normalizeSitemapDate(situation.latest.report?.as_of ?? situation.latest.content_updated_at ?? situation.latest.generated_at) ?? siteLastmod;
     groups.situation.push(...localizedEntry('/situation/', lastmod));
     groups.situation.push(...localizedEntry('/situation/methodology/', lastmod));
-    groups.situation.push(...localizedEntry('/situation/weekly/', lastmod));
-    groups.situation.push(...localizedEntry('/situation/monthly/', lastmod));
+    if ((situation.weeks ?? situation.archives ?? []).length > 0) {
+      groups.situation.push(...localizedEntry('/situation/weekly/', lastmod));
+    }
+    if ((situation.months ?? []).length > 0) {
+      groups.situation.push(...localizedEntry('/situation/monthly/', lastmod));
+    }
     for (const archive of situation.weeks ?? situation.archives ?? []) {
       const rawWeek = archive.report?.period_key ?? archive.period_key ?? archive.iso_week;
       const week = typeof rawWeek === 'string' && /^\d{4}-W\d{2}$/.test(rawWeek)

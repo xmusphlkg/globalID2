@@ -34,11 +34,11 @@ export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
   },
   {
     code: 'CH', name_en: 'Switzerland', name_zh: '瑞士', lat: 46.8, lng: 8.2,
-    status: 'Supported', labelOffset: [-120, 80],
+    status: 'Supported', labelOffset: [-135, 35],
   },
   {
     code: 'CN', name_en: 'China', name_zh: '中国', lat: 35, lng: 104,
-    status: 'Supported', labelOffset: [-82, -8],
+    status: 'Supported', labelOffset: [-82, 58],
   },
   {
     code: 'HK', name_en: 'Hong Kong, China', name_zh: '中国香港', lat: 22.32, lng: 114.17,
@@ -65,56 +65,55 @@ export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
     status: 'Supported', labelOffset: [-140, 28],
   },
 
-  // National-source onboarding candidates, ordered by recommended delivery
-  // sequence. These entries are visible on the map and the country cards, but
-  // remain Scheduled until a real database snapshot exists.
+  // Countries promoted from the national-source roadmap. Regional baselines
+  // remain explicitly labelled where they are the currently published feed.
   {
     code: 'SG', name_en: 'Singapore', name_zh: '新加坡', lat: 1.35, lng: 103.8,
-    status: 'Scheduled', labelOffset: [80, -30], cadence: 'Weekly', onboarding_track: 'National source',
+    status: 'Supported', labelOffset: [-100, 100], cadence: 'Weekly',
     source_name: 'CDA Weekly Infectious Diseases Bulletin',
     source_url: 'https://www.cda.gov.sg/resources/weekly-infectious-diseases-bulletin-2026/',
   },
   {
     code: 'AT', name_en: 'Austria', name_zh: '奥地利', lat: 47.5, lng: 14.5,
-    status: 'Scheduled', labelOffset: [80, -30], cadence: 'Monthly', onboarding_track: 'National source',
-    source_name: 'AGES Radar for Infectious Diseases',
-    source_url: 'https://www.ages.at/en/human/disease/ages-radar-for-infectious-diseases/',
+    status: 'Supported', labelOffset: [-80, -130], cadence: 'Annual', onboarding_track: 'Regional baseline',
+    source_name: 'ECDC Surveillance Atlas',
+    source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/',
   },
   {
     code: 'IE', name_en: 'Ireland', name_zh: '爱尔兰', lat: 53.3, lng: -8,
-    status: 'Scheduled', labelOffset: [80, -30], cadence: 'Weekly', onboarding_track: 'National source',
-    source_name: 'HPSC National Notifiable Disease Hub',
-    source_url: 'https://notifiabledisease.hpsc.ie/',
+    status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline',
+    source_name: 'ECDC Surveillance Atlas',
+    source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/',
   },
   {
     code: 'SE', name_en: 'Sweden', name_zh: '瑞典', lat: 62, lng: 18,
-    status: 'Scheduled', labelOffset: [120, -30], cadence: 'Monthly', onboarding_track: 'National source',
+    status: 'Supported', labelOffset: [120, -30], cadence: 'Monthly', onboarding_track: 'National source',
     source_name: 'Public Health Agency of Sweden',
     source_url: 'https://www.folkhalsomyndigheten.se/statistik-och-data/hitta-statistik-och-data/smittsamma-sjukdomar-statistik/',
   },
   {
     code: 'NO', name_en: 'Norway', name_zh: '挪威', lat: 62, lng: 10,
-    status: 'Scheduled', labelOffset: [-80, -90], cadence: 'Daily', onboarding_track: 'National source',
+    status: 'Supported', labelOffset: [-80, -90], cadence: 'Daily', onboarding_track: 'National source',
     source_name: 'FHI MSIS Statistics Bank',
     source_url: 'https://allvis.fhi.no/msis',
   },
   {
     code: 'DK', name_en: 'Denmark', name_zh: '丹麦', lat: 56, lng: 10,
-    status: 'Scheduled', labelOffset: [80, -30], cadence: 'Weekdays', onboarding_track: 'National source',
-    source_name: 'SSI Surveillance Statistics',
-    source_url: 'https://statistik.ssi.dk/',
+    status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline',
+    source_name: 'ECDC Surveillance Atlas',
+    source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/',
   },
   {
     code: 'FI', name_en: 'Finland', name_zh: '芬兰', lat: 64, lng: 26,
-    status: 'Scheduled', labelOffset: [80, -80], cadence: 'Periodic', onboarding_track: 'National source',
+    status: 'Supported', labelOffset: [80, -80], cadence: 'Monthly', onboarding_track: 'National source',
     source_name: 'THL Infectious Diseases Register',
     source_url: 'https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases',
   },
   {
     code: 'CA', name_en: 'Canada', name_zh: '加拿大', lat: 56, lng: -106,
-    status: 'Scheduled', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'National source',
+    status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'National source',
     source_name: 'Canadian Notifiable Disease Surveillance System',
-    source_url: 'https://diseases.canada.ca/notifiable/charts-list?wbdisable=true',
+    source_url: 'https://diseases.canada.ca/notifiable/extract-dataset',
   },
   {
     code: 'CA-ON', name_en: 'Ontario, Canada', name_zh: '加拿大安大略省', lat: 50, lng: -85,
@@ -124,45 +123,60 @@ export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
   },
   {
     code: 'DE', name_en: 'Germany', name_zh: '德国', lat: 51, lng: 10,
-    status: 'Scheduled', labelOffset: [80, -30], cadence: 'Current aggregate', onboarding_track: 'National source',
+    status: 'Supported', labelOffset: [80, -30], cadence: 'Weekly', onboarding_track: 'National source',
     source_name: 'RKI SurvStat',
     source_url: 'https://survstat.rki.de/',
   },
   {
-    code: 'GB', name_en: 'England & Wales', name_zh: '英格兰与威尔士', lat: 52.5, lng: -2.5,
-    status: 'Scheduled', labelOffset: [80, -30], cadence: 'Weekly', onboarding_track: 'National source',
-    source_name: 'UKHSA Notifiable Causative Agents Reports',
-    source_url: 'https://www.gov.uk/government/publications/notifiable-diseases-causative-agents-reports-for-2026',
+    code: 'GB', name_en: 'United Kingdom', name_zh: '英国', lat: 54.5, lng: -3.5,
+    status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline',
+    source_name: 'ECDC Surveillance Atlas historical baseline',
+    source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/',
   },
   {
     code: 'NL', name_en: 'Netherlands', name_zh: '荷兰', lat: 52.2, lng: 5.3,
-    status: 'Scheduled', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'National source',
-    source_name: 'RIVM Infectious Disease Notifications',
-    source_url: 'https://www.rivm.nl/meldingsplicht-infectieziekten/overzicht-meldingen',
+    status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline',
+    source_name: 'ECDC Surveillance Atlas',
+    source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/',
   },
   {
     code: 'IS', name_en: 'Iceland', name_zh: '冰岛', lat: 65, lng: -19,
-    status: 'Scheduled', labelOffset: [-100, -20], cadence: 'Mixed', onboarding_track: 'National source',
+    status: 'Supported', labelOffset: [-100, -20], cadence: 'Mixed', onboarding_track: 'National source',
     source_name: 'Directorate of Health Infectious Disease Statistics',
     source_url: 'https://island.is/en/smitsjukdomar-tolur',
   },
 
   // Countries that can receive a comparable historical baseline from the ECDC
   // Surveillance Atlas before a higher-frequency national source is onboarded.
-  { code: 'FR', name_en: 'France', name_zh: '法国', lat: 46.2, lng: 2.2, status: 'Scheduled', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
-  { code: 'ES', name_en: 'Spain', name_zh: '西班牙', lat: 40.4, lng: -3.7, status: 'Scheduled', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
-  { code: 'IT', name_en: 'Italy', name_zh: '意大利', lat: 42.8, lng: 12.8, status: 'Scheduled', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
-  { code: 'PT', name_en: 'Portugal', name_zh: '葡萄牙', lat: 39.5, lng: -8, status: 'Scheduled', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
-  { code: 'PL', name_en: 'Poland', name_zh: '波兰', lat: 52, lng: 19, status: 'Scheduled', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
-  { code: 'CZ', name_en: 'Czechia', name_zh: '捷克', lat: 49.8, lng: 15.5, status: 'Scheduled', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
-  { code: 'GR', name_en: 'Greece', name_zh: '希腊', lat: 39, lng: 22, status: 'Scheduled', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
-  { code: 'RO', name_en: 'Romania', name_zh: '罗马尼亚', lat: 46, lng: 25, status: 'Scheduled', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'FR', name_en: 'France', name_zh: '法国', lat: 46.2, lng: 2.2, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'ES', name_en: 'Spain', name_zh: '西班牙', lat: 40.4, lng: -3.7, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'IT', name_en: 'Italy', name_zh: '意大利', lat: 42.8, lng: 12.8, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'PT', name_en: 'Portugal', name_zh: '葡萄牙', lat: 39.5, lng: -8, status: 'Supported', labelOffset: [-95, 65], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'PL', name_en: 'Poland', name_zh: '波兰', lat: 52, lng: 19, status: 'Supported', labelOffset: [-160, 0], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'CZ', name_en: 'Czechia', name_zh: '捷克', lat: 49.8, lng: 15.5, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'GR', name_en: 'Greece', name_zh: '希腊', lat: 39, lng: 22, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'RO', name_en: 'Romania', name_zh: '罗马尼亚', lat: 46, lng: 25, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'BE', name_en: 'Belgium', name_zh: '比利时', lat: 50.8, lng: 4.5, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'BG', name_en: 'Bulgaria', name_zh: '保加利亚', lat: 42.7, lng: 25.5, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'HR', name_en: 'Croatia', name_zh: '克罗地亚', lat: 45.1, lng: 15.2, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'CY', name_en: 'Cyprus', name_zh: '塞浦路斯', lat: 35.1, lng: 33.4, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'EE', name_en: 'Estonia', name_zh: '爱沙尼亚', lat: 58.6, lng: 25, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'HU', name_en: 'Hungary', name_zh: '匈牙利', lat: 47.2, lng: 19.5, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'LV', name_en: 'Latvia', name_zh: '拉脱维亚', lat: 56.9, lng: 24.6, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'LI', name_en: 'Liechtenstein', name_zh: '列支敦士登', lat: 47.2, lng: 9.55, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'LT', name_en: 'Lithuania', name_zh: '立陶宛', lat: 55.2, lng: 23.9, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'LU', name_en: 'Luxembourg', name_zh: '卢森堡', lat: 49.8, lng: 6.1, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'MT', name_en: 'Malta', name_zh: '马耳他', lat: 35.9, lng: 14.4, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'SI', name_en: 'Slovenia', name_zh: '斯洛文尼亚', lat: 46.1, lng: 14.8, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
+  { code: 'SK', name_en: 'Slovakia', name_zh: '斯洛伐克', lat: 48.7, lng: 19.7, status: 'Supported', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'Regional baseline', source_name: 'ECDC Surveillance Atlas', source_url: 'https://atlas.ecdc.europa.eu/public/index.aspx/' },
 
   // Existing roadmap entry retained until an official machine-readable source
   // and ingestion contract are selected.
   {
     code: 'TH', name_en: 'Thailand', name_zh: '泰国', lat: 15.5, lng: 100.5,
     status: 'Scheduled', labelOffset: [80, -30], cadence: 'To be confirmed', onboarding_track: 'Source research',
+    source_name: 'DOE DDS — national export and reuse contract pending',
+    source_url: 'https://ddsdoe.ddc.moph.go.th/ddss/',
   },
 ];
 

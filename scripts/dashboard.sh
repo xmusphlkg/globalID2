@@ -44,6 +44,26 @@ have_command() {
   command -v "$1" >/dev/null 2>&1
 }
 
+systemd_owns_service() {
+  local service="$1"
+  local unit="globalid-dashboard-${service}.service"
+  have_command systemctl && systemctl is-active --quiet "$unit" 2>/dev/null
+}
+
+skip_if_systemd_owned() {
+  local service="$1"
+  local operation="$2"
+  if systemd_owns_service "$service"; then
+    if [[ "$service" == "worker" || "$service" == "scheduler" ]]; then
+      echo "${service}: owned by systemd; use 'venv/bin/python scripts/restart_task_runtime.py --include-api' for a planned task-runtime restart."
+    else
+      echo "${service}: owned by systemd; use 'sudo systemctl ${operation} globalid-dashboard-${service}.service'."
+    fi
+    return 0
+  fi
+  return 1
+}
+
 port_has_listener() {
   local port="$1"
 
@@ -580,8 +600,8 @@ run_for_target() {
   case "$TARGET" in
     all)
       "$operation" api
-      "$operation" scheduler
       "$operation" worker
+      "$operation" scheduler
       "$operation" web
       ;;
     api|scheduler|worker|web)
@@ -596,6 +616,9 @@ run_for_target() {
 }
 
 dispatch_start() {
+  if skip_if_systemd_owned "$1" "restart"; then
+    return
+  fi
   case "$1" in
     api) start_api ;;
     scheduler) start_scheduler ;;
@@ -605,6 +628,9 @@ dispatch_start() {
 }
 
 dispatch_stop() {
+  if skip_if_systemd_owned "$1" "stop"; then
+    return
+  fi
   case "$1" in
     api) stop_one "API" "$API_PID_FILE" "api" ;;
     scheduler) stop_one "Control-plane scheduler" "$SCHEDULER_PID_FILE" "scheduler" ;;
@@ -649,8 +675,8 @@ case "$ACTION" in
   stop)
     if [[ "$TARGET" == "all" ]]; then
       dispatch_stop web
-      dispatch_stop worker
       dispatch_stop scheduler
+      dispatch_stop worker
       dispatch_stop api
     else
       run_for_target dispatch_stop
@@ -659,12 +685,12 @@ case "$ACTION" in
   restart)
     if [[ "$TARGET" == "all" ]]; then
       dispatch_stop web
-      dispatch_stop worker
       dispatch_stop scheduler
+      dispatch_stop worker
       dispatch_stop api
       dispatch_start api
-      dispatch_start scheduler
       dispatch_start worker
+      dispatch_start scheduler
       dispatch_start web
     else
       run_for_target dispatch_stop

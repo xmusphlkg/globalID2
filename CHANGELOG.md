@@ -1,0 +1,144 @@
+# Changelog
+
+This file records release-level changes to the GIDS application and its data operations. Public-facing bilingual notes are also available in the website Changelog.
+
+## [0.9.1] - 2026-08-30
+
+### Added
+
+- Added first-class Chinese public routes for home, countries, diseases, reports, Situation Room, Research Radar, downloads, legal pages, and Changelog, with localized canonical URLs and navigation.
+- Added the China provincial monthly-source framework, including province source configuration, 31 adapter registrations, documentation, tests, and Control Center/public metadata plumbing.
+- Expanded Chinese province history from the initial 24-category subset to all 49 non-total PHSM ProvinceReport categories, with distinct non-additive parent/subtype series and six restored standard disease concepts.
+- Added jurisdiction-aware country and region classification data for public coverage, source labels, API metadata, and the Control Center jurisdiction picker.
+
+### Changed
+
+- Refreshed the public website experience across the home, countries, downloads, about, copyright, terms, and changelog pages, including offline country flag synchronization for stable static builds.
+- Promoted source-series-first data handling through APIs, static-site generation, disease/country charts, downloads, and coverage summaries so canonical projections and source-only series remain visibly distinct.
+- Extended reusable ECDC, Singapore CDA, and Canada CNDSS ingestion paths with stronger source-contract review, attribution, scheduled checks, and fail-closed refresh behavior.
+
+### Fixed
+
+- Hardened disease-series policy, ontology validation, country coverage, classification, and generated API contract tests around annual/monthly handoffs, jurisdiction metadata, and source-only mappings.
+- Made province history and official monthly-report parsing fail closed on unknown disease or province labels, and added auditable accounting for totals, blanks, and duplicates.
+- Improved chart and map behavior for sparse source data, hidden projections, mixed cadence series, and localized country/disease pages.
+- Kept local Playwright run output and generated flag assets out of release commits while preserving deterministic static-site builds.
+
+### Operations
+
+- Added dedicated validation coverage for China provinces, ECDC Atlas baselines, Singapore CDA, Canada CNDSS, dashboard jurisdiction selection, and source-series-first site exports.
+- Updated the website package release version to 0.9.1.
+
+## [0.9.0] - 2026-08-29
+
+### Added
+
+- Completed the shared ECDC annual baseline across all 30 EU/EEA countries and added the historical United Kingdom baseline. This release adds 23 countries, 1,265 reviewed contracts, and 20,334 observations across 1,193 source series with values; the complete 31-country ECDC collection now contains 27,843 source observations.
+- Added Canada's PHAC CNDSS national annual source with 70 reviewed contracts and 3,671 observations across 69 source series from 1924 through 2023 under the Open Government Licence – Canada.
+- Integrated all new countries into source-series storage, Control Center selection and automation, APIs, bilingual provenance, coverage, downloads, country pages, and static-site generation.
+
+### Changed
+
+- Added 24 independent daily publication checks: 23 staggered ECDC checks in each country's local timezone and a 09:25 America/Toronto CNDSS availability check. Existing higher-frequency national feeds remain separate from ECDC baselines.
+- Canonicalized the historical ECDC United Kingdom source geography `UK` to platform country code `GB`, while retaining the upstream code in provenance. England-only laboratory notifications remain a separate future regional source.
+- Published Canada as PHAC's national aggregate reported counts, not an all-jurisdiction completeness claim. Disease/year coverage varies, including unavailable Manitoba data for 44 disease contracts in 2023; null cells remain unknown.
+
+### Fixed
+
+- Corrected Canada's viral meningitis to the active D134 concept and retained historical non-A/non-B hepatitis as a related source-only series instead of projecting it to a deprecated concept.
+- Made bounded Canada refreshes rebuild the full reviewed 1924–2023 current snapshot and fail closed when the official last year changes, requiring explicit contract review before a new annual release is accepted.
+- Kept all-null Canada influenza contract 58 registered as upstream-pending rather than falsely advertising an available series, while preserving 645 published zeroes as observations.
+
+### Operations
+
+- Independently reviewed Thailand's DOE DDS route and left it in source research: the public dashboard is a limited current-week snapshot, national exports and zero-reporting require login, and no explicit public reuse licence was found. No placeholder Thailand data or partial adapter was added.
+- Recorded the required ECDC attribution and preserved source-only composite categories, asynchronous disease updates, explicit zeroes, and missing cells without double counting.
+
+## [0.8.3] - 2026-08-28
+
+### Added
+
+- Added Spain, Italy, Portugal, Poland, Czechia, Greece, and Romania as publicly supported ECDC annual-baseline countries across ingestion, source-series storage, Control Center, APIs, downloads, provenance, coverage, and bilingual country pages.
+- Registered 385 reviewed country-specific source contracts and imported 6,618 annual observations across 375 source series with values from 1990 through 2025.
+
+### Changed
+
+- Added staggered daily Control Center publication checks in each country's local timezone while preserving ECDC's asynchronous topic coverage, explicit zeroes, and missing cells as unknown.
+- Normalized the ECDC `EL` source geography to the platform's ISO `GR` identity for Greece while retaining `EL` in source provenance.
+
+### Fixed
+
+- Withheld in-progress current-calendar-year Atlas cells from the closed annual baseline, preventing partial Czechia 2026 data from being presented as a completed year.
+- Made each refreshed ECDC history window authoritative in both CSV and database storage, so a cell withdrawn by ECDC becomes unknown instead of leaving a stale local value.
+
+## [0.8.2] - 2026-08-28
+
+### Added
+
+- Added France as a publicly supported annual-baseline country across ECDC ingestion, source-series storage, Control Center source selection and automation, API metadata, country coverage, downloads, provenance, and static-site generation.
+- Added a reusable ECDC Surveillance Atlas adapter with 55 reviewed source contracts and 891 France observations across 51 published series from 1990 through 2025.
+
+### Changed
+
+- Preserved ECDC country/year gaps as unknown and explicit published zeroes as zero; four registered France series currently have no country values and remain empty rather than being fabricated.
+- Kept aggregate Ebola/Marburg and unmapped arenavirus categories source-only, excluded non-case datasets, and excluded hepatitis B totals because the current Atlas contract exposes a total rate but no total case count.
+- Recorded the required attribution: “Data provided by ECDC based on data reported by EU/EEA Member States.”
+
+### Operations
+
+- Added an enabled Control Center publication check at 09:50 Europe/Paris each day for annual revisions.
+- Corrected roadmap governance: Austria remains public-release gated pending clear AGES redistribution permission, and the current UKHSA causative-agent series is labelled as England laboratory notifications rather than UK or England-and-Wales case counts.
+
+## [0.8.1] - 2026-08-28
+
+### Added
+
+- Added Singapore as a publicly supported country across ingestion, source-series storage, Control Center source selection, API metadata, country coverage, About/source provenance, downloads, and static-site generation.
+- Added the official 2012–2022 data.gov.sg CSV history and 2023+ CDA annual workbook pipeline, with 2023 weekly CDA PDFs as a fail-closed fallback.
+- Added 76 registered Singapore source series covering 39 source categories and a safe temporal-handoff projection for equivalent historical and successor series with strictly non-overlapping validity windows.
+
+### Changed
+
+- Enabled Singapore public release by explicit operator authorization while preserving separate provenance: historical CSV reuse follows the Singapore Open Data Licence, and current CDA records retain the source-terms status requiring written permission.
+- Marked Singapore as Supported on the public coverage map and exposed both Singapore ontology sources through the weekly Control Center scope.
+- Promoted reviewed exact and narrower Singapore mappings to canonical projection; the historical aggregate encephalitis category remains source-only and is never projected automatically.
+
+### Operations
+
+- Singapore full refresh starts in 2012, refreshes the most recent 12 weeks incrementally, preserves explicit zeroes, never fills absent source rows, and stores raw SHA-256/source-contract provenance.
+- Added an enabled Control Center publication-check schedule at 09:30 Asia/Singapore each day so new weekly CDA workbooks and bounded revisions are discovered automatically.
+- CDA content is not described as open-licensed. Operators remain responsible for ensuring their explicit publication authorization satisfies CDA terms before production redistribution.
+
+## [0.8.0] - 2026-08-27
+
+### Added
+
+- Evidence-bounded AI review for weekly Research Radar briefs, with deterministic preflight, strict output schemas, fingerprint invalidation, concurrency protection, and a clear separation from editorial approval.
+- Dry-run-first governance and recovery commands for editorial backlog, metadata coverage, stale ingest runs, and abandoned background tasks.
+- Optional bounded and resumable Springer Nature, Elsevier, bioRxiv/medRxiv, and publisher RSS connectors. Paid publisher APIs remain disabled until credentials and operating terms are supplied.
+- Redis-backed worker ownership, task leases and heartbeats, stale-task recovery, runtime health inspection, and guarded maintenance commands.
+- Email-delivery feedback processing for subscription suppression and campaign delivery accounting.
+
+### Changed
+
+- Source health is now derived from complete per-provider run evidence, not source configuration alone, and exposes safe reason codes and next actions.
+- Literature catch-up reports explicit capacity, resume thresholds, and persistence failures without mutating overdue schedules from read paths.
+- OpenAlex and Unpaywall metadata backfill is coverage-targeted, bounded, independently resumable, and defaults to dry-run.
+- Research summaries use a canonical English evidence set before Chinese generation, preventing cross-language claim drift.
+- Public release checks now enforce weekly AI-review evidence where present, canonical/hreflang consistency, valid generated redirects, scalable compressed-HTML budgets, and safer graph payloads.
+- Runtime startup and systemd ownership checks prevent duplicate API, worker, or scheduler processes and ensure the scheduler depends on a ready worker.
+
+### Fixed
+
+- Exercised all 21 enabled country and regional schedules through Control Center. All completed successfully; the run covered 32,684 reported records and 172 source workbook events with no source errors. A valid China incremental no-op was separately confirmed against current database coverage.
+- Fixed CDC NHSS HIV ingestion by sending a transparent provider-specific crawler identity accepted by the official endpoint.
+- Fixed OAI exact-limit checkpoint rollover, optional-source checkpoint preservation, and bioRxiv partial-page resume boundaries.
+- Fixed metadata backfill selection and target-completion boundaries, model-centre bootstrap query storms, and catch-up schedule drift after restart.
+- Fixed stale ingest runs that lacked task ownership, while keeping cleanup locked, bounded, and fail-closed.
+- Fixed legacy Situation Room URLs by generating real 301 rules instead of static redirect pages.
+
+### Operations
+
+- Database migration `0011_ingest_task_binding` adds task ownership to literature ingest runs and must be applied before using stale-ingest reconciliation.
+- Springer Nature and Elsevier are intentionally off by default. Current curated records are fully covered by DOI/Crossref in the audited publisher subsets, while PubMed/Europe PMC provide partial biomedical coverage; publisher APIs can be enabled later if discovery scope requires them.
+- Production-writing maintenance commands require an explicit `--apply`; backlog governance additionally requires a fresh plan hash and bounded post-run projection.

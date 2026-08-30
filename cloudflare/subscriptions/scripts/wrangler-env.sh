@@ -518,6 +518,7 @@ case "${1:-}" in
     sync_secret TOKEN_SIGNING_SECRET SUBSCRIPTIONS__TOKEN_SIGNING_SECRET required "$target"
     sync_secret ADMIN_API_TOKEN SUBSCRIPTIONS__ADMIN_API_TOKEN required "$target"
     sync_secret SITUATION_ALERT_INGEST_TOKEN SUBSCRIPTIONS__SITUATION_ALERT_INGEST_TOKEN required "$target"
+    sync_secret EMAIL_DELIVERY_INGEST_TOKEN SUBSCRIPTIONS__EMAIL_DELIVERY_INGEST_TOKEN required "$target"
     sync_secret TURNSTILE_SECRET_KEY SUBSCRIPTIONS__TURNSTILE_SECRET_KEY optional "$target"
     smtp_requirement="optional"
     if [ -n "${SUBSCRIPTIONS__SMTP_HOST:-${AUTOMATION__SMTP_HOST:-}}" ]; then

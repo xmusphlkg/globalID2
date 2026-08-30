@@ -8,7 +8,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
-from ..location_codes import COUNTRY_REGION_CODE_MAX_LENGTH
+from ..location_codes import (
+    COUNTRY_REGION_CODE_MAX_LENGTH,
+    jurisdiction_geography_key,
+    registry_country_code,
+)
 from ..schemas.disease import DiseaseListItem, DiseaseOut
 from ..schemas.disease_record import DiseaseRecordOut
 from ..services.disease_series_projection import (
@@ -192,6 +196,7 @@ async def list_diseases(
     country = await _resolve_country(country_code, db)
     country_id = country.id
     country_code = country.code
+    registry_code = registry_country_code(country)
 
     if lang == "zh":
         display = func.coalesce(
@@ -230,13 +235,13 @@ async def list_diseases(
                 )
                 .outerjoin(StandardDisease, Disease.name == StandardDisease.disease_id)
                 .where(
-                    DiseaseSurveillanceSeries.country_code == country_code,
+                    DiseaseSurveillanceSeries.country_code == registry_code,
                     DiseaseSurveillanceSeries.metric_type.in_(
                         SERIES_CASE_COUNT_METRICS
                     ),
                     DiseaseSurveillanceSeries.unit == "count",
                     DiseaseSeriesObservation.geography_key
-                    == f"country:{country_code}:national",
+                    == jurisdiction_geography_key(country_code),
                     DiseaseSeriesObservation.dimension_key == "all",
                     DiseaseSeriesObservation.suppressed.is_(False),
                     DiseaseSeriesObservation.value.is_not(None),

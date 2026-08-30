@@ -222,6 +222,8 @@ def build_disease_ontology_sync_payload(
                             "metric_notes",
                             "time_basis",
                             "comparability_set",
+                            "projection_policy",
+                            "projection_priority",
                         )
                         if key in series
                     },

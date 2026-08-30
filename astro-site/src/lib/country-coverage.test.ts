@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import test from 'node:test';
+import flagCatalogue from 'flag-icons/country.json' with { type: 'json' };
 import {
   COUNTRY_COVERAGE,
   getCountryCoverage,
@@ -10,10 +11,10 @@ import {
 import { getFlagAssetPath, resolveFlagIso2 } from './country-flag.ts';
 
 test('an empty seeded metadata row does not activate a scheduled country', () => {
-  const iceland = getCountryCoverage('IS');
-  assert.ok(iceland);
+  const thailand = getCountryCoverage('TH');
+  assert.ok(thailand);
   assert.equal(hasCountryDataSnapshot({}), false);
-  assert.equal(resolveCoverageStatus(iceland, hasCountryDataSnapshot({})), 'Scheduled');
+  assert.equal(resolveCoverageStatus(thailand, hasCountryDataSnapshot({})), 'Scheduled');
 });
 
 test('a snapshot requires records or a disease-bearing coverage window', () => {
@@ -40,12 +41,12 @@ test('Ontario is a first-class region that activates when its snapshot exists', 
   assert.equal(resolveCoverageStatus(ontario, true), 'Supported');
 });
 
-test('Sweden activates as supported when public site data exists', () => {
+test('Sweden remains supported after its verified baseline import', () => {
   const sweden = getCountryCoverage('SE');
   assert.ok(sweden);
   assert.equal(sweden.name_en, 'Sweden');
   assert.equal(sweden.cadence, 'Monthly');
-  assert.equal(resolveCoverageStatus(sweden, false), 'Scheduled');
+  assert.equal(resolveCoverageStatus(sweden, false), 'Supported');
   assert.equal(resolveCoverageStatus(sweden, true), 'Supported');
 });
 
@@ -60,4 +61,17 @@ test('every country coverage marker has a bundled flag asset', () => {
     const flag = new URL(`../../public${getFlagAssetPath(country.code)}`, import.meta.url);
     assert.equal(existsSync(flag), true, `${country.code} flag asset is missing`);
   }
+});
+
+test('the local flag library contains every ISO country flag', () => {
+  const isoCountries = flagCatalogue.filter(country => country.iso && /^[a-z]{2}$/.test(country.code));
+  assert.ok(isoCountries.length >= 249, `expected a complete ISO flag set, found ${isoCountries.length}`);
+
+  for (const country of isoCountries) {
+    const flag = new URL(`../../public/flags/${country.code}.svg`, import.meta.url);
+    assert.equal(existsSync(flag), true, `${country.code.toUpperCase()} flag asset is missing`);
+  }
+
+  const license = new URL('../../public/flags/LICENSE.flag-icons.txt', import.meta.url);
+  assert.equal(existsSync(license), true, 'flag-icons license is missing');
 });

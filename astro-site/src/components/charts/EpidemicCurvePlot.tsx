@@ -6,6 +6,7 @@ import {
   METRIC_LABELS,
   dateWindowFromZoom,
   formatTemporalGranularity,
+  getCurveLineSampling,
   insertMissingPeriodBreaks,
   normalizeTemporalGranularity,
   type DateWindow,
@@ -34,6 +35,7 @@ export interface EpidemicCurveLine {
   reportingBasis?: string;
   timeBasis?: string;
   sourceLabel?: string;
+  pointGranularities?: Array<string | null>;
   provisionalFrom?: string | null;
   events?: CurveEvent[];
   reference?: CurveHistoricalReference;
@@ -390,7 +392,8 @@ export default function EpidemicCurvePlot({
           const withBreaks = insertMissingPeriodBreaks(
             line.dates,
             line.values,
-            line.granularity
+            line.granularity,
+            line.pointGranularities,
           );
           const eventLines = (line.events ?? []).map((event) => ({
             xAxis: event.date,
@@ -418,7 +421,7 @@ export default function EpidemicCurvePlot({
             symbolSize: 7,
             smooth: false,
             connectNulls: false,
-            sampling: analysisMode === 'outbreak' ? undefined : 'lttb' as const,
+            sampling: getCurveLineSampling(withBreaks.values, analysisMode),
             barMaxWidth: analysisMode === 'outbreak' ? 26 : undefined,
             barCategoryGap: analysisMode === 'outbreak' ? '0%' : undefined,
             lineStyle: analysisMode === 'outbreak' ? undefined : {
@@ -461,7 +464,8 @@ export default function EpidemicCurvePlot({
           const lower = insertMissingPeriodBreaks(
             line.dates,
             line.reference.lower,
-            line.granularity
+            line.granularity,
+            line.pointGranularities,
           );
           const upperRangeValues = line.reference.upper.map((value, index) => {
             const low = line.reference?.lower[index];
@@ -470,12 +474,14 @@ export default function EpidemicCurvePlot({
           const upperRange = insertMissingPeriodBreaks(
             line.dates,
             upperRangeValues,
-            line.granularity
+            line.granularity,
+            line.pointGranularities,
           );
           const expected = insertMissingPeriodBreaks(
             line.dates,
             line.reference.expected,
-            line.granularity
+            line.granularity,
+            line.pointGranularities,
           );
           const stackName = `reference-${line.id}`;
           return [

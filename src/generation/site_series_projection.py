@@ -13,7 +13,9 @@ from collections import defaultdict
 from src.core.disease_cutover import get_disease_cutover_config
 from src.core.reporting_period import report_period_key, selected_series_granularity
 from src.services.disease_series_policy import (
+    PRIORITY_OVERLAY_POLICY,
     SOURCE_OBSERVATIONS_ONLY_POLICY,
+    TEMPORAL_HANDOFF_POLICY,
     is_case_count_metric,
     is_case_count_series,
     select_series_projection,
@@ -86,6 +88,7 @@ def _source_series_details(records: list[dict]) -> list[dict]:
         "availability_status", "missing_value_policy", "valid_from", "valid_to",
         "definition_effective_from", "definition_effective_to",
         "comparability_break",
+        "comparability_set", "projection_policy", "projection_priority",
         "series_is_active",
     )
     details: list[dict] = []
@@ -173,6 +176,15 @@ def _projection_context(series_records: list[dict]) -> tuple[set[str], dict]:
     elif projection_policy == "sum_disjoint":
         note_en = "Registered source series are summed under an explicit disjoint-series policy."
         note_zh = "多个来源序列依据明确的互斥可加策略进行汇总。"
+    elif projection_policy == TEMPORAL_HANDOFF_POLICY:
+        note_en = "Equivalent registered source series are joined across strictly non-overlapping validity windows."
+        note_zh = "口径一致的已注册来源序列按严格不重叠的有效期接力拼接。"
+    elif projection_policy == PRIORITY_OVERLAY_POLICY:
+        note_en = (
+            "Retained source series are overlaid per period using their explicit "
+            "source priority; lower-priority observations remain downloadable."
+        )
+        note_zh = "各来源原始序列均予保留；公开曲线按每期明确的来源优先级覆盖。"
     elif projection_policy == SOURCE_OBSERVATIONS_ONLY_POLICY:
         note_en = (
             "The registered definitions are narrower non-additive source series "
@@ -236,8 +248,25 @@ def _collapse_selected_series_records(records: list[dict], context: dict) -> lis
     for period in sorted(by_period):
         date_records = by_period[period]
         present_codes = {str(r.get("series_code") or "") for r in date_records}
-        if len(selected_codes) > 1 and present_codes != selected_codes:
-            continue
+        if len(selected_codes) > 1:
+            if context.get("projection_policy") == PRIORITY_OVERLAY_POLICY:
+                date_records = [
+                    max(
+                        date_records,
+                        key=lambda record: (
+                            int(record.get("projection_priority") or 0),
+                            str(record.get("series_code") or ""),
+                        ),
+                    )
+                ]
+            elif context.get("projection_policy") == TEMPORAL_HANDOFF_POLICY:
+                if len(present_codes) != 1:
+                    raise RuntimeError(
+                        "Temporal handoff series overlap at the public date grain: "
+                        f"{period}"
+                    )
+            elif present_codes != selected_codes:
+                continue
         first = date_records[0]
         report_date = max(str(record.get("date")) for record in date_records)
         incidence_values = [_safe_float(r.get("incidence_rate")) for r in date_records]
@@ -261,10 +290,21 @@ def _collapse_selected_series_records(records: list[dict], context: dict) -> lis
                 "metric_type": first.get("metric_type"),
                 "reporting_basis": first.get("reporting_basis"),
                 "time_basis": first.get("time_basis"),
+                "temporal_granularity": (
+                    first.get("temporal_granularity")
+                    or context.get("period_granularity")
+                ),
                 "comparability": first.get("comparability"),
                 "definition_version": first.get("definition_version"),
                 "data_layer": SERIES_DATA_LAYER,
-                "series_code": first.get("series_code") if len(selected_codes) == 1 else None,
+                "series_code": (
+                    first.get("series_code")
+                    if len(selected_codes) == 1
+                    or context.get("projection_policy") in {
+                        TEMPORAL_HANDOFF_POLICY, PRIORITY_OVERLAY_POLICY,
+                    }
+                    else None
+                ),
                 "_series_context": context,
             }
         )
@@ -302,7 +342,10 @@ def _attach_legacy_supplemental_metrics(
             if record.get("date")
         ],
     }
-    safe_alignment = context.get("projection_policy") in {"single_series", "sum_disjoint"}
+    safe_alignment = context.get("projection_policy") in {
+        "single_series", "sum_disjoint", TEMPORAL_HANDOFF_POLICY,
+        PRIORITY_OVERLAY_POLICY,
+    }
     context["metric_layers"] = {
         "cases": SERIES_DATA_LAYER,
         "deaths": LEGACY_DATA_LAYER if safe_alignment and legacy_records else (
@@ -688,7 +731,7 @@ def validate_series_first_projection(records: list[dict]) -> None:
         seen.add(identity)
         context = record.get("_series_context")
         if not isinstance(context, dict):
-            raise RuntimeError(f"Site projection lacks data-layer provenance for {disease_id}")
+            raise TypeError(f"Site projection lacks data-layer provenance for {disease_id}")
         layer = str(context.get("data_layer") or "").strip()
         layers[disease_id].add(layer)
         record_layers[disease_id].add(str(record.get("data_layer") or layer).strip())
@@ -697,10 +740,12 @@ def validate_series_first_projection(records: list[dict]) -> None:
         if layer in {SERIES_DATA_LAYER, MIXED_DATA_LAYER}:
             if not selected:
                 raise RuntimeError(f"Registry projection has no selected series for {disease_id}")
-            if len(selected) > 1 and policy != "sum_disjoint":
+            if len(selected) > 1 and policy not in {
+                "sum_disjoint", TEMPORAL_HANDOFF_POLICY, PRIORITY_OVERLAY_POLICY,
+            }:
                 raise RuntimeError(
                     "Multiple source series reached the flat public curve without "
-                    f"an explicit sum_disjoint policy for {disease_id}"
+                    f"an explicit multi-series policy for {disease_id}"
                 )
             if policy in {
                 "representative_series",

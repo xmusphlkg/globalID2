@@ -17,13 +17,18 @@ from ..frequency import (
     infer_frequency_profile_from_times,
     period_start,
 )
+from ..location_codes import is_subdivision_code
 from ..schemas.disease_record import (
     MonthlyComparisonPoint,
     OverviewSummary,
     TopDiseaseItem,
     TrendPoint,
 )
-from ..services.disease_series_projection import load_series_first_records
+from ..services.disease_series_projection import (
+    SeriesFirstResult,
+    load_jurisdiction_series_first_records,
+    load_series_first_records,
+)
 from src.domain.disease import Disease
 from src.domain.disease_record import DiseaseRecord
 from src.domain.country import Country
@@ -54,6 +59,53 @@ async def _resolve_country_id(country_code: str, db: AsyncSession) -> int:
     return int(country_id)
 
 
+async def _jurisdiction_results(
+    country_code: str, country_id: int, db: AsyncSession
+) -> list[SeriesFirstResult] | None:
+    """Return registry projections for child jurisdictions only.
+
+    Existing country endpoints keep their optimized legacy queries.  Child
+    jurisdictions have no legacy rows by design, so their aggregate views are
+    built from the same series-first curves as disease detail pages.
+    """
+
+    if not is_subdivision_code(country_code):
+        return None
+    return await load_jurisdiction_series_first_records(db, country_id=country_id)
+
+
+def _all_projected_records(results: list[SeriesFirstResult]) -> list[dict]:
+    return [record for result in results for record in result.records]
+
+
+async def _result_display_names(
+    results: list[SeriesFirstResult], *, lang: str, db: AsyncSession
+) -> dict[str, tuple[str, str | None]]:
+    codes = [result.disease_code for result in results]
+    if not codes:
+        return {}
+    rows = (
+        await db.execute(
+            select(
+                Disease.name,
+                Disease.name_en,
+                StandardDisease.standard_name_zh,
+            )
+            .outerjoin(StandardDisease, Disease.name == StandardDisease.disease_id)
+            .where(Disease.name.in_(codes))
+        )
+    ).all()
+    return {
+        row.name: (
+            (row.standard_name_zh or row.name_en or row.name)
+            if lang == "zh"
+            else (row.name_en or row.name),
+            row.name_en,
+        )
+        for row in rows
+    }
+
+
 @router.get("/analytics/summary", response_model=OverviewSummary)
 async def overview_summary(
     country_code: str = Query(..., min_length=2, max_length=10),
@@ -63,6 +115,65 @@ async def overview_summary(
     """Single aggregated call that powers the Overview page KPIs + top diseases."""
 
     country_id = await _resolve_country_id(country_code, db)
+
+    jurisdiction_results = await _jurisdiction_results(country_code, country_id, db)
+    if jurisdiction_results is not None:
+        records = _all_projected_records(jurisdiction_results)
+        times = [record["time"] for record in records if isinstance(record.get("time"), datetime)]
+        recent_boundary = datetime.now(timezone.utc) - timedelta(days=30)
+        top_boundary = datetime.now(timezone.utc) - timedelta(days=365)
+        display_names = await _result_display_names(
+            jurisdiction_results, lang=lang, db=db
+        )
+        top: list[TopDiseaseItem] = []
+        for result in jurisdiction_results:
+            recent = [
+                row
+                for row in result.records
+                if isinstance(row.get("time"), datetime)
+                and (
+                    row["time"].replace(tzinfo=timezone.utc)
+                    if row["time"].tzinfo is None
+                    else row["time"].astimezone(timezone.utc)
+                )
+                > top_boundary
+            ]
+            name, name_en = display_names.get(
+                result.disease_code,
+                (result.disease_name, result.disease_name),
+            )
+            top.append(
+                TopDiseaseItem(
+                    name=name,
+                    name_en=name_en,
+                    total_cases=int(sum(float(row.get("cases") or 0) for row in recent)),
+                    total_deaths=(
+                        int(sum(float(row["deaths"]) for row in recent if row.get("deaths") is not None))
+                        if any(row.get("deaths") is not None for row in recent)
+                        else None
+                    ),
+                )
+            )
+        top.sort(key=lambda item: item.total_cases, reverse=True)
+        recent_cases = sum(
+            float(record.get("cases") or 0)
+            for record in records
+            if isinstance(record.get("time"), datetime)
+            and (
+                record["time"].replace(tzinfo=timezone.utc)
+                if record["time"].tzinfo is None
+                else record["time"].astimezone(timezone.utc)
+            )
+            > recent_boundary
+        )
+        return OverviewSummary(
+            total_diseases=len(jurisdiction_results),
+            total_records=len(records),
+            earliest_date=min(times).strftime("%Y-%m-%d") if times else None,
+            latest_date=max(times).strftime("%Y-%m-%d") if times else None,
+            recent_cases_30d=int(recent_cases),
+            top_diseases=top[:10],
+        )
 
     # --- KPI metrics (single query) ---
     kpi_q = select(
@@ -179,7 +290,33 @@ async def overview_trend(
             TrendPoint(
                 time_period=bucket.strftime("%Y-%m-%d"),
                 cases=int(sum(float(item.get("cases") or 0) for item in items)),
-                deaths=int(sum(float(item.get("deaths") or 0) for item in items)),
+                deaths=_optional_count_sum(items, "deaths"),
+                incidence_rate=_average_rate(items, "incidence_rate"),
+                mortality_rate=_average_rate(items, "mortality_rate"),
+            )
+            for bucket, items in sorted(grouped.items())
+        ]
+
+    jurisdiction_results = await _jurisdiction_results(country_code, country_id, db)
+    if jurisdiction_results is not None:
+        records = _filter_projected_records(
+            _all_projected_records(jurisdiction_results),
+            start_date=start_date,
+            end_date=end_date,
+            interval=interval,
+        )
+        profile = infer_frequency_profile_from_times(
+            record["time"] for record in records if isinstance(record.get("time"), datetime)
+        )
+        grouped: dict[datetime, list[dict]] = defaultdict(list)
+        for record in records:
+            if isinstance(record.get("time"), datetime):
+                grouped[period_start(record["time"], profile)].append(record)
+        return [
+            TrendPoint(
+                time_period=bucket.strftime("%Y-%m-%d"),
+                cases=int(sum(float(item.get("cases") or 0) for item in items)),
+                deaths=_optional_count_sum(items, "deaths"),
                 incidence_rate=_average_rate(items, "incidence_rate"),
                 mortality_rate=_average_rate(items, "mortality_rate"),
             )
@@ -288,7 +425,31 @@ async def overview_monthly_comparison(
                 year=year,
                 month=month,
                 cases=int(sum(float(item.get("cases") or 0) for item in items)),
-                deaths=int(sum(float(item.get("deaths") or 0) for item in items)),
+                deaths=_optional_count_sum(items, "deaths"),
+                incidence_rate=_average_rate(items, "incidence_rate"),
+                mortality_rate=_average_rate(items, "mortality_rate"),
+            )
+            for (year, month), items in sorted(grouped.items())
+        ]
+
+    jurisdiction_results = await _jurisdiction_results(country_code, country_id, db)
+    if jurisdiction_results is not None:
+        records = _filter_projected_records(
+            _all_projected_records(jurisdiction_results),
+            start_date=start_date,
+            end_date=end_date,
+            interval=interval,
+        )
+        grouped: dict[tuple[int, int], list[dict]] = defaultdict(list)
+        for record in records:
+            if isinstance(record.get("time"), datetime):
+                grouped[(record["time"].year, record["time"].month)].append(record)
+        return [
+            MonthlyComparisonPoint(
+                year=year,
+                month=month,
+                cases=int(sum(float(item.get("cases") or 0) for item in items)),
+                deaths=_optional_count_sum(items, "deaths"),
                 incidence_rate=_average_rate(items, "incidence_rate"),
                 mortality_rate=_average_rate(items, "mortality_rate"),
             )
@@ -401,3 +562,8 @@ def _average_rate(records: list[dict], field: str) -> float | None:
         if record.get(field) is not None and float(record[field]) >= 0
     ]
     return round(sum(values) / len(values), 4) if values else None
+
+
+def _optional_count_sum(records: list[dict], field: str) -> int | None:
+    values = [float(record[field]) for record in records if record.get(field) is not None]
+    return int(sum(values)) if values else None

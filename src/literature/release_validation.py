@@ -6,6 +6,7 @@ from typing import Any
 
 from .classification import CLASSIFICATION_VERSION
 from .weekly_briefs import project_weekly_editorial_review
+from .weekly_ai_review import project_weekly_ai_review
 
 PRIVATE_ARTICLE_FIELDS = {"abstract_text", "abstract", "source_payload", "raw_payload", "full_text"}
 
@@ -106,6 +107,7 @@ def validate_public_research_payload(payload: dict[str, Any]) -> list[str]:
         status = brief.get("brief_status")
         byline = brief.get("byline") if isinstance(brief.get("byline"), dict) else {}
         reviewer = byline.get("reviewer")
+        ai_review = byline.get("ai_review")
         valid_reviewer = project_weekly_editorial_review(reviewer)
         if isinstance(reviewer, dict) and set(reviewer) - {
             "name", "role", "reviewed_at", "institution", "note_en", "note_zh",
@@ -115,6 +117,19 @@ def validate_public_research_payload(payload: dict[str, Any]) -> list[str]:
             blockers.append(f"weekly brief claims review without valid reviewer evidence: {brief.get('week')}")
         if status != "editorially_reviewed" and reviewer is not None:
             blockers.append(f"weekly brief exposes a reviewer without reviewed status: {brief.get('week')}")
+        valid_ai_review = project_weekly_ai_review(ai_review)
+        if isinstance(ai_review, dict) and set(ai_review) - {
+            "verdict", "issue_codes", "reviewed_at", "protocol_version", "model", "provider",
+        }:
+            blockers.append(f"weekly brief AI review exports non-public fields: {brief.get('week')}")
+        if status == "ai_reviewed" and valid_ai_review is None:
+            blockers.append(f"weekly brief claims AI review without valid evidence: {brief.get('week')}")
+        if status != "ai_reviewed" and ai_review is not None:
+            blockers.append(f"weekly brief exposes AI review without AI-reviewed status: {brief.get('week')}")
+        if status not in {
+            None, "automatically_compiled_not_editorially_reviewed", "editorially_reviewed", "ai_reviewed",
+        }:
+            blockers.append(f"weekly brief has unsupported review status: {brief.get('week')}")
 
     for alert in payload.get("integrity_alerts") or []:
         leaked = sorted(PRIVATE_ARTICLE_FIELDS & set(alert))

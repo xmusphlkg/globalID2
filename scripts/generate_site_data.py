@@ -173,6 +173,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--direct-download-workers",
+        type=int,
+        default=None,
+        help=(
+            "Maximum concurrent workers for partitioned download generation "
+            "(default: CPU-based exporter default)"
+        ),
+    )
+    parser.add_argument(
         "--manifest-output",
         type=Path,
         default=DEFAULT_DOWNLOAD_MANIFEST,
@@ -196,6 +205,7 @@ def main() -> None:
             direct_download_output_dir=args.direct_download_output,
             direct_download_url_base=args.direct_download_url_base,
             direct_download_max_file_bytes=args.direct_download_max_file_bytes,
+            direct_download_workers=args.direct_download_workers,
         )
     )
 

@@ -2,6 +2,50 @@ import type { CountrySourceConfig, SourceOption } from "@/lib/hooks/useSources";
 
 export type DashboardLang = "en" | "zh";
 
+const ECDC_COUNTRY_LABELS: Record<string, { en: string; zh: string }> = {
+  AT: { en: "Austria", zh: "奥地利" },
+  BE: { en: "Belgium", zh: "比利时" },
+  BG: { en: "Bulgaria", zh: "保加利亚" },
+  HR: { en: "Croatia", zh: "克罗地亚" },
+  CY: { en: "Cyprus", zh: "塞浦路斯" },
+  DK: { en: "Denmark", zh: "丹麦" },
+  EE: { en: "Estonia", zh: "爱沙尼亚" },
+  FI: { en: "Finland", zh: "芬兰" },
+  FR: { en: "France", zh: "法国" },
+  GB: { en: "United Kingdom", zh: "英国" },
+  DE: { en: "Germany", zh: "德国" },
+  HU: { en: "Hungary", zh: "匈牙利" },
+  IS: { en: "Iceland", zh: "冰岛" },
+  IE: { en: "Ireland", zh: "爱尔兰" },
+  ES: { en: "Spain", zh: "西班牙" },
+  IT: { en: "Italy", zh: "意大利" },
+  LV: { en: "Latvia", zh: "拉脱维亚" },
+  LI: { en: "Liechtenstein", zh: "列支敦士登" },
+  LT: { en: "Lithuania", zh: "立陶宛" },
+  LU: { en: "Luxembourg", zh: "卢森堡" },
+  MT: { en: "Malta", zh: "马耳他" },
+  NL: { en: "Netherlands", zh: "荷兰" },
+  NO: { en: "Norway", zh: "挪威" },
+  PT: { en: "Portugal", zh: "葡萄牙" },
+  PL: { en: "Poland", zh: "波兰" },
+  CZ: { en: "Czechia", zh: "捷克" },
+  GR: { en: "Greece", zh: "希腊" },
+  RO: { en: "Romania", zh: "罗马尼亚" },
+  SK: { en: "Slovakia", zh: "斯洛伐克" },
+  SI: { en: "Slovenia", zh: "斯洛文尼亚" },
+  SE: { en: "Sweden", zh: "瑞典" },
+};
+
+function getEcdcLabel(countryCode: string, lang: DashboardLang): string {
+  const country = ECDC_COUNTRY_LABELS[countryCode];
+  if (!country) {
+    return lang === "zh" ? "ECDC 传染病监测图谱年度基线" : "ECDC Surveillance Atlas Annual Baseline";
+  }
+  return lang === "zh"
+    ? `ECDC 传染病监测图谱（${country.zh}年度基线）`
+    : `ECDC Surveillance Atlas — ${country.en} Annual Baseline`;
+}
+
 export function getSourceOptionLabel(option: SourceOption, lang: DashboardLang = "en"): string {
   return lang === "zh" ? option.label_zh || option.label : option.label_en || option.label;
 }
@@ -31,6 +75,14 @@ export function getSourceDisplayLabel(
   const s = (source || "all").trim().toLowerCase();
   const cc = (countryCode || "").trim().toUpperCase();
   if (s === "nndss_api") return "US CDC NNDSS";
+  if (
+    s === "phac_cndss_annual" ||
+    s === "phac_cndss" ||
+    s === "cndss" ||
+    ((s === "all" || s === "ca" || s === "canada") && cc === "CA")
+  ) {
+    return lang === "zh" ? "加拿大公共卫生署 CNDSS 年度数据" : "Canada PHAC CNDSS Annual";
+  }
   if (s === "nhss_hiv" || s === "nhss" || s === "hiv_nhss") {
     return lang === "zh" ? "美国 CDC NHSS HIV 监测" : "US CDC NHSS HIV";
   }
@@ -133,6 +185,21 @@ export function getSourceDisplayLabel(
   ) {
     return lang === "zh" ? "瑞典公共卫生局 SmiNet" : "Sweden Public Health Agency SmiNet";
   }
+  if (
+    s === "cda_weekly_bulletin" ||
+    s === "cda" ||
+    s === "widb" ||
+    ((s === "all" || s === "sg" || s === "singapore") && cc === "SG")
+  ) {
+    return lang === "zh" ? "新加坡 CDA 每周传染病通报" : "Singapore CDA Weekly Infectious Diseases Bulletin";
+  }
+  if (
+    s === "ecdc_atlas_annual" ||
+    s === "ecdc" ||
+    s === "atlas"
+  ) {
+    return getEcdcLabel(cc, lang);
+  }
   const icelandLabels: Record<string, { en: string; zh: string }> = {
     is_doh_annual: { en: "Iceland Directorate of Health Annual Dashboard", zh: "冰岛卫生署年度传染病看板" },
     is_doh_sti: { en: "Iceland Directorate of Health STI Dashboard", zh: "冰岛卫生署性病监测看板" },
@@ -210,26 +277,51 @@ export function getSourceOptionsForCountry(
     ];
   }
   if (code === "FI") {
-    return [{ value: "thl_ttr", label: lang === "zh" ? "芬兰 THL 传染病登记" : "Finland THL Infectious Diseases Register" }];
+    return [
+      { value: "thl_ttr", label: lang === "zh" ? "芬兰 THL 传染病登记" : "Finland THL Infectious Diseases Register" },
+      { value: "ecdc_atlas_annual", label: getEcdcLabel(code, lang) },
+    ];
   }
   if (code === "AT") {
-    return [{ value: "ages_radar", label: lang === "zh" ? "奥地利 AGES 传染病雷达" : "Austria AGES Radar for Infectious Diseases" }];
+    return [
+      { value: "ages_radar", label: lang === "zh" ? "奥地利 AGES 传染病雷达" : "Austria AGES Radar for Infectious Diseases" },
+      { value: "ecdc_atlas_annual", label: getEcdcLabel(code, lang) },
+    ];
   }
   if (code === "DE") {
-    return [{ value: "rki_survstat", label: lang === "zh" ? "德国 RKI SurvStat 2.0" : "Germany RKI SurvStat 2.0" }];
+    return [
+      { value: "rki_survstat", label: lang === "zh" ? "德国 RKI SurvStat 2.0" : "Germany RKI SurvStat 2.0" },
+      { value: "ecdc_atlas_annual", label: getEcdcLabel(code, lang) },
+    ];
   }
   if (code === "IE") {
     return [
       { value: "hpsc_ndh", label: lang === "zh" ? "爱尔兰 HPSC 法定传染病中心" : "Ireland HPSC Notifiable Diseases Hub" },
       { value: "hpsc_weekly_archive", label: lang === "zh" ? "爱尔兰 HPSC 周报档案（2017–2021年第29周）" : "Ireland HPSC Weekly Report Archive (2017–2021 W29)" },
       { value: "hpsc_annual", label: lang === "zh" ? "爱尔兰 HPSC 年度历史统计（2004–2020）" : "Ireland HPSC Annual Statistics (2004–2020)" },
+      { value: "ecdc_atlas_annual", label: getEcdcLabel(code, lang) },
     ];
   }
   if (code === "NO") {
-    return [{ value: "fhi_msis", label: lang === "zh" ? "挪威 FHI MSIS 统计库" : "Norway FHI MSIS Statistics Bank" }];
+    return [
+      { value: "fhi_msis", label: lang === "zh" ? "挪威 FHI MSIS 统计库" : "Norway FHI MSIS Statistics Bank" },
+      { value: "ecdc_atlas_annual", label: getEcdcLabel(code, lang) },
+    ];
   }
   if (code === "SE") {
-    return [{ value: "fohm_sminet", label: lang === "zh" ? "瑞典公共卫生局 SmiNet" : "Sweden Public Health Agency SmiNet" }];
+    return [
+      { value: "fohm_sminet", label: lang === "zh" ? "瑞典公共卫生局 SmiNet" : "Sweden Public Health Agency SmiNet" },
+      { value: "ecdc_atlas_annual", label: getEcdcLabel(code, lang) },
+    ];
+  }
+  if (code === "SG") {
+    return [{ value: "cda_weekly_bulletin", label: lang === "zh" ? "新加坡 CDA 每周传染病通报" : "Singapore CDA Weekly Infectious Diseases Bulletin" }];
+  }
+  if (code === "CA") {
+    return [{ value: "phac_cndss_annual", label: lang === "zh" ? "加拿大公共卫生署 CNDSS 年度数据" : "Canada PHAC CNDSS Annual" }];
+  }
+  if (ECDC_COUNTRY_LABELS[code] && code !== "IS") {
+    return [{ value: "ecdc_atlas_annual", label: getEcdcLabel(code, lang) }];
   }
   if (code === "IS") {
     return [
@@ -239,6 +331,7 @@ export function getSourceOptionsForCountry(
       { value: "is_doh_respiratory", label: lang === "zh" ? "呼吸道感染周度看板" : "Respiratory Dashboard" },
       { value: "is_doh_history", label: lang === "zh" ? "历史传染病登记" : "Historical Registry" },
       { value: "is_doh_legacy_icd", label: lang === "zh" ? "历史 ICD 临床月报" : "Legacy ICD Monthly" },
+      { value: "ecdc_atlas_annual", label: getEcdcLabel(code, lang) },
     ];
   }
   return [{ value: "all", label: lang === "zh" ? "全部来源" : "All Sources" }];

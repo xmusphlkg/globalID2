@@ -214,6 +214,21 @@ class OfficialGuidanceOaiClient(LiteratureHttpClient):
                         "records_returned": len(returned),
                         "through_datestamp": last_datestamp,
                     })
+                if len(returned) >= limit:
+                    # The current page was consumed exactly at the caller's
+                    # limit.  Resume from the server's next page rather than
+                    # replaying this page (or falling through the loop).
+                    return OaiIncrementalResult(returned, {
+                        "strategy": "oai-pmh-datestamp",
+                        "from": window_from,
+                        "until": window_until,
+                        "request_token": next_token,
+                        "consumed_on_page": [],
+                        "truncated": True,
+                        "records_seen": records_seen,
+                        "records_returned": len(returned),
+                        "through_datestamp": last_datestamp,
+                    })
                 request_token = next_token
                 already_consumed = set()
 

@@ -73,6 +73,60 @@ require_dir() {
   fi
 }
 
+port_listener_pid() {
+  local port="$1"
+  if have_command lsof; then
+    lsof -ti tcp:"$port" -sTCP:LISTEN 2>/dev/null | head -n 1 || true
+    return
+  fi
+  if have_command ss; then
+    ss -ltnpH "( sport = :$port )" 2>/dev/null \
+      | sed -n 's/.*pid=\([0-9][0-9]*\).*/\1/p' \
+      | head -n 1 || true
+  fi
+}
+
+require_port_available() {
+  local port="$1"
+  local service_name="$2"
+  local listener_pid
+  listener_pid="$(port_listener_pid "$port")"
+
+  if [[ -n "$listener_pid" ]]; then
+    local command_line
+    command_line="$(ps -p "$listener_pid" -o args= 2>/dev/null || true)"
+    echo "$service_name cannot start: port $port is already owned by PID $listener_pid (${command_line:-unknown command})." >&2
+    echo "Stop the standalone process or the competing service; do not run scripts/dashboard.sh and systemd for the same stack." >&2
+    exit 1
+  fi
+
+  # Some ss builds omit process data for listeners owned by another user.
+  if have_command ss && ss -ltnH "( sport = :$port )" 2>/dev/null | grep -q ":$port"; then
+    echo "$service_name cannot start: port $port already has a listener." >&2
+    exit 1
+  fi
+}
+
+require_no_python_module_process() {
+  local module="$1"
+  local service_name="$2"
+  local cmdline
+  local pid
+  local arg
+  for cmdline in /proc/[0-9]*/cmdline; do
+    [[ -r "$cmdline" ]] || continue
+    while IFS= read -r -d '' arg; do
+      if [[ "$arg" == "$module" ]]; then
+        pid="${cmdline#/proc/}"
+        pid="${pid%/cmdline}"
+        echo "$service_name cannot start: $module is already running as PID $pid." >&2
+        echo "Use exactly one service owner (systemd or scripts/dashboard.sh), then retry." >&2
+        exit 1
+      fi
+    done < "$cmdline"
+  done
+}
+
 is_truthy() {
   local value="${1:-}"
   shopt -s nocasematch

@@ -10,6 +10,7 @@ test("matches every public and admin route with the established methods", () => 
   assert.deepEqual(matchWorkerRoute("GET", "/api/subscriptions/confirm"), { name: "confirm_subscription" });
   assert.deepEqual(matchWorkerRoute("GET", "/api/subscriptions/unsubscribe"), { name: "unsubscribe" });
   assert.deepEqual(matchWorkerRoute("POST", "/api/internal/situation-alerts"), { name: "situation_alert_ingest" });
+  assert.deepEqual(matchWorkerRoute("POST", "/api/internal/email-delivery-events"), { name: "email_delivery_feedback" });
   assert.deepEqual(matchWorkerRoute("POST", "/api/admin/audience"), { name: "admin_audience" });
   assert.deepEqual(matchWorkerRoute("GET", "/api/admin/stats"), { name: "admin_stats" });
   assert.deepEqual(matchWorkerRoute("GET", "/api/admin/subscriptions"), { name: "admin_subscriptions" });

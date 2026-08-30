@@ -117,17 +117,12 @@
 
   .site-footer {
     position: relative;
-    border-color: rgb(255 255 255 / 0.08);
-    background: linear-gradient(180deg, rgb(8 27 46 / 0.98), rgb(8 27 46 / 1));
+    border-color: rgb(255 255 255 / 0.1);
+    background: rgb(var(--footer-bg));
   }
 
-  .site-footer::before {
-    content: '';
-    position: absolute;
-    inset: 0 auto auto 0;
-    width: min(320px, 36vw);
-    height: 3px;
-    background: linear-gradient(90deg, rgb(var(--color-teal)), rgb(var(--color-accent)) 46%, transparent);
+  .site-footer .site-footer-logo.brand-logo {
+    color: rgb(246 248 251);
   }
 
   .site-footer-brand {
@@ -171,7 +166,7 @@
   }
 
   .site-footer-legal-note {
-    color: rgb(109 130 153);
+    color: rgb(177 194 210);
   }
 
   .site-control-input {
@@ -1842,4 +1837,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+.site-footer .site-footer-logo.brand-logo {
+  color: rgb(246 248 251);
 }

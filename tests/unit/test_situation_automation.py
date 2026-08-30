@@ -306,9 +306,9 @@ def test_deployment_probe_does_not_retry_auth_or_configuration_failure(tmp_path:
 
 def test_migration_graph_is_linear_and_database_guard_requires_disposable_opt_in() -> None:
     graph = validate_revision_graph()
-    assert graph["head"] == "0010_situation_v32"
+    assert graph["head"] == "0011_ingest_task_binding"
     assert graph["base"] == "0001_control_plane_baseline"
-    assert graph["revision_count"] == 10
+    assert graph["revision_count"] == 11
 
     url = "postgresql://user:pass@localhost/globalid_migration_smoke"
     with pytest.raises(MigrationSmokeError, match="opt_in"):
@@ -381,9 +381,12 @@ def test_ci_site_fixture_is_guarded_missing_only_and_supplies_required_inputs(tm
     assert result["status"] == "prepared"
     assert "src/data/meta.json" in result["preserved"]
     assert json.loads(meta.read_text(encoding="utf-8")) == {"preserve": True}
-    assert json.loads(
+    fixture_diseases = json.loads(
         (site / "src" / "data" / "diseases" / "index.json").read_text(encoding="utf-8")
-    ) == []
+    )
+    assert {item["slug"] for item in fixture_diseases}.issuperset(
+        {"influenza", "example-disease"}
+    )
     research = json.loads(
         (site / "src" / "data" / "research" / "index.json").read_text(encoding="utf-8")
     )
@@ -393,7 +396,7 @@ def test_ci_site_fixture_is_guarded_missing_only_and_supplies_required_inputs(tm
     assert research["surveillance_evidence"]["available"] is True
     assert research["surveillance_evidence"]["visibility"] == "public"
     assert research["facets"]["diseases"][0]["slug"] == "influenza"
-    assert research["facets"]["countries"][0]["slug"] == "united-states"
+    assert research["facets"]["countries"][0]["slug"] == "us"
     assert research["facets"]["topics"][0]["slug"] == "surveillance"
     latest = site / "public" / "site-data" / "situation" / "v3" / "latest.json"
     assert json.loads(latest.read_text(encoding="utf-8"))["schema_version"] == "situation_room.v3"

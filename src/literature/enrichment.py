@@ -76,6 +76,14 @@ class EnrichmentResult:
     provider: str | None
     token_usage: dict[str, Any]
     source_fingerprint: str
+    canonical_summary_fingerprint: str | None = None
+
+
+def canonical_summary_fingerprint(fields: dict[str, str | None]) -> str:
+    """Fingerprint the English semantic contract used for a translation."""
+    canonical = {field: fields.get(field) for field in SUMMARY_FIELDS}
+    payload = json.dumps(canonical, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def source_fingerprint(article: LiteratureArticle) -> str:
@@ -121,7 +129,8 @@ def _has_long_verbatim_overlap(source: str, output: str, *, words: int = 12) -> 
 
 
 class LiteratureSummaryGenerator:
-    PROTOCOL_VERSION = 1
+    PROTOCOL_VERSION = 2
+    BILINGUAL_PROTOCOL_VERSION = "canonical-en-translation.v1"
 
     def __init__(self, agent: LiteratureEvidenceAgent | None = None) -> None:
         self.agent = agent or LiteratureEvidenceAgent()
@@ -136,8 +145,11 @@ class LiteratureSummaryGenerator:
         topics: list[str],
         timeout_seconds: int,
         preferred_models: list[str],
+        canonical_fields: dict[str, str | None] | None = None,
     ) -> EnrichmentResult:
         language = "zh" if language == "zh" else "en"
+        if language == "zh" and not canonical_fields:
+            raise ValueError("canonical_english_summary_required")
         evidence = {
             "title": article.title,
             "abstract": article.abstract_text,
@@ -164,6 +176,12 @@ class LiteratureSummaryGenerator:
             "does not support a field, return null. The output language is "
             f"{'Simplified Chinese' if language == 'zh' else 'English'}. Return JSON only."
         )
+        if language == "zh":
+            system += (
+                " The supplied canonical English summary is the semantic contract. Translate each field "
+                "faithfully: preserve its factual claims, qualifications, comparisons, and null fields; "
+                "do not add, remove, strengthen, or weaken any claim."
+            )
         schema = {
             field: {
                 "text": "concise evidence-grounded prose or null",
@@ -172,9 +190,12 @@ class LiteratureSummaryGenerator:
             }
             for field in SUMMARY_FIELDS
         }
-        prompt = json.dumps(
-            {
-                "task": "Create a conservative structured evidence summary for editorial review.",
+        request = {
+                "task": (
+                    "Create a faithful field-aligned Simplified Chinese rendering for editorial review."
+                    if language == "zh"
+                    else "Create a conservative structured evidence summary for editorial review."
+                ),
                 "requirements": {
                     "main_findings": "Report findings only when explicitly present in the abstract.",
                     "limitations": "Include only limitations explicitly stated or directly evident from the supplied study design; otherwise null.",
@@ -183,7 +204,13 @@ class LiteratureSummaryGenerator:
                 },
                 "output_schema": schema,
                 "evidence": evidence,
-            },
+            }
+        if language == "zh":
+            request["canonical_summary_en"] = {
+                field: canonical_fields.get(field) for field in SUMMARY_FIELDS
+            }
+        prompt = json.dumps(
+            request,
             ensure_ascii=False,
             separators=(",", ":"),
         )
@@ -200,6 +227,8 @@ class LiteratureSummaryGenerator:
         confidences: list[float] = []
         for field in SUMMARY_FIELDS:
             raw = parsed.get(field)
+            if language == "zh" and ((canonical_fields.get(field) is None) != (raw is None)):
+                raise ValueError(f"bilingual_null_alignment_mismatch:{field}")
             if raw is None:
                 fields[field] = None
                 continue
@@ -242,6 +271,10 @@ class LiteratureSummaryGenerator:
             provider=str(conversation.get("provider") or "") or None,
             token_usage=conversation.get("tokens") if isinstance(conversation.get("tokens"), dict) else {},
             source_fingerprint=source_fingerprint(article),
+            canonical_summary_fingerprint=(
+                canonical_summary_fingerprint(canonical_fields)
+                if language == "zh" and canonical_fields else None
+            ),
         )
 
 
@@ -255,10 +288,12 @@ class LiteratureEnrichmentPipeline:
         input_data = task.input_data or {}
         requested_ids = [str(value) for value in input_data.get("article_ids") or [] if value]
         force = bool(input_data.get("force", False))
-        languages = [
+        languages = list(dict.fromkeys([
             value for value in input_data.get("languages") or self.config.ai_enrichment_languages
             if value in {"en", "zh"}
-        ]
+        ]))
+        if "en" in languages and "zh" in languages:
+            languages = ["en", "zh"]
         limit = min(
             max(1, int(input_data.get("limit") or self.config.ai_enrichment_batch_size)),
             self.config.ai_enrichment_batch_size,
@@ -275,6 +310,7 @@ class LiteratureEnrichmentPipeline:
         total = max(1, len(articles) * max(1, len(languages)))
         step = 0
         for article in articles:
+            canonical_fields = context[article.article_id].get("canonical_en")
             for language in languages:
                 step += 1
                 if await task_manager.is_cancel_requested(task.task_uuid):
@@ -291,10 +327,15 @@ class LiteratureEnrichmentPipeline:
                         topics=context[article.article_id]["topics"],
                         timeout_seconds=self.config.ai_model_request_timeout_seconds,
                         preferred_models=list(input_data.get("preferred_models") or []),
+                        canonical_fields=canonical_fields if language == "zh" else None,
                     )
                     await self._store(article.article_id, language=language, result=result)
+                    if language == "en":
+                        canonical_fields = dict(result.fields)
                     counts["generated"] += 1
                 except Exception as exc:
+                    if language == "en":
+                        canonical_fields = None
                     logger.warning("Literature enrichment failed for {}/{}: {}", article.article_id, language, exc)
                     counts["failed"] += 1
                     errors.append({"article_id": article.article_id, "language": language, "error": str(exc)[:500]})
@@ -372,11 +413,16 @@ class LiteratureEnrichmentPipeline:
 
             articles = [article for article in candidates if needs_work(article)][:limit]
             article_ids = [article.article_id for article in articles]
-            context = {
-                article_id: {"diseases": [], "countries": [], "topics": []}
+            context: dict[str, dict[str, Any]] = {
+                article_id: {"diseases": [], "countries": [], "topics": [], "canonical_en": None}
                 for article_id in article_ids
             }
             if article_ids:
+                for summary in existing_summaries:
+                    if summary.article_id in context and summary.language == "en":
+                        context[summary.article_id]["canonical_en"] = {
+                            field: getattr(summary, field) for field in SUMMARY_FIELDS
+                        }
                 disease_rows = (
                     await db.execute(
                         select(LiteratureDiseaseLink, StandardDisease)
@@ -462,6 +508,12 @@ class LiteratureEnrichmentPipeline:
                 "publication_gate": "autopilot-quality-gate" if self.config.autopilot_enabled else "human-review-required",
                 "quality_attempts": int(existing_metadata.get("quality_attempts") or 0) + 1,
             }
+            if language == "zh" and result.canonical_summary_fingerprint:
+                summary.generation_metadata["bilingual_alignment"] = {
+                    "protocol_version": LiteratureSummaryGenerator.BILINGUAL_PROTOCOL_VERSION,
+                    "canonical_language": "en",
+                    "canonical_summary_fingerprint": result.canonical_summary_fingerprint,
+                }
             summary.generated_at = datetime.now(timezone.utc)
             summary.review_notes = result.review_notes
             await db.commit()
@@ -473,5 +525,6 @@ __all__ = [
     "LiteratureEvidenceAgent",
     "LiteratureSummaryGenerator",
     "SUMMARY_FIELDS",
+    "canonical_summary_fingerprint",
     "source_fingerprint",
 ]

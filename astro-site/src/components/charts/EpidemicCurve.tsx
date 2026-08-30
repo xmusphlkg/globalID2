@@ -296,6 +296,11 @@ export default function EpidemicCurve({
       const primarySource = selectedSources[0];
       const rawValues = getMetricValues(item, curveState.metric);
       const clipped = clipToDateWindow(item.dates, rawValues, comparisonWindow);
+      const clippedPointGranularities = clipToDateWindow(
+        item.dates,
+        item.point_granularities ?? [],
+        comparisonWindow
+      ).values;
       const historicalReference = buildHistoricalReference(
         item.dates,
         item.cases ?? [],
@@ -319,6 +324,7 @@ export default function EpidemicCurve({
         dates: clipped.dates,
         values: clipped.values,
         granularity: getSeriesGranularity(item),
+        pointGranularities: clippedPointGranularities,
         reportingBasis: primarySource?.reporting_basis ?? item.reporting_basis ?? undefined,
         timeBasis: primarySource?.time_basis ?? item.time_basis ?? undefined,
         sourceLabel: primarySource?.source_label,
@@ -684,8 +690,8 @@ export default function EpidemicCurve({
           {analysisMode === 'monitor' && curveState.metric === 'cases' && referencePointCount > 0 && (
             <p className="chart-advanced-note">
               {lang === 'zh'
-                ? `图中自动显示历史中位预期与四分位范围，共 ${referencePointCount} 个可评估点。`
-                : `The chart automatically shows historical median expected and interquartile range for ${referencePointCount} evaluable points.`}
+                ? `历史参照：${referencePointCount} 个可评估点`
+                : `Historical reference: ${referencePointCount} evaluable points`}
             </p>
           )}
           {sourceControls.length > 0 && (
@@ -849,11 +855,11 @@ export default function EpidemicCurve({
         <div className="data-preview-meta">
           {['historical_index', 'trend_index'].includes(curveState.metric)
             ? (lang === 'zh'
-                ? `派生比较数据预览，共 ${tableRows.length} 行。${curveState.metric === 'historical_index' ? '100 表示与同季节历史中位预期一致。' : '峰值归一化仅用于比较变化形态。'}`
-                : `Derived comparison preview with ${tableRows.length} rows. ${curveState.metric === 'historical_index' ? '100 means equal to the seasonal historical median expected value.' : 'Peak normalization is for comparing trend shape only.'}`)
+                ? `${metricDisplayLabel} · ${tableRows.length} 行`
+                : `${metricDisplayLabel} · ${tableRows.length} rows`)
             : (lang === 'zh'
-                ? `原始数据预览，共 ${tableRows.length} 行。当前表格显示${metricDisplayLabel}。`
-                : `Raw data preview with ${tableRows.length} rows. The current table shows ${metricDisplayLabel}.`)}
+                ? `${metricDisplayLabel} · ${tableRows.length} 行`
+                : `${metricDisplayLabel} · ${tableRows.length} rows`)}
         </div>
         <table className="data-preview-table">
           <thead>

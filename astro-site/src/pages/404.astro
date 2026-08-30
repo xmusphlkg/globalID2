@@ -12,6 +12,7 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
   description={pick('The requested GIDS surveillance page is not available. Browse the disease directory or country coverage instead.', '请求的 GIDS 监测页面不存在，请浏览疾病目录或国家数据覆盖。')}
   initialLanguage={zh ? 'zh' : 'en'}
   noindex={true}
+  hideLanguageToggle={true}
 >
   <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
     <p class="academic-kicker">404</p>

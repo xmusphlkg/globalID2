@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_database, get_logger
 from src.core.country_library import get_country_bootstrap_config
+from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
 from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
 from src.core.task_manager import task_manager
 from src.data.storage import (
@@ -53,6 +54,7 @@ class CrawlService:
         "US": _PipelineSpec("_execute_us_weekly", "USWeeklyUpdater"),
         "JP": _PipelineSpec("_execute_jp_weekly", "JPWeeklyUpdater"),
         "AU": _PipelineSpec("_execute_au_monthly", "AUMonthlyUpdater"),
+        "CA": _PipelineSpec("_execute_ca_national_annual", "CanadaCNDSSAnnualUpdater"),
         "NZ": _PipelineSpec("_execute_nz_monthly", "NZMonthlyUpdater"),
         "TW": _PipelineSpec("_execute_tw_monthly", "TWMonthlyUpdater"),
         "HK": _PipelineSpec("_execute_hk_monthly", "HKMonthlyUpdater"),
@@ -62,6 +64,15 @@ class CrawlService:
         "SE": _PipelineSpec("_execute_se_monthly", "SEMonthlyUpdater"),
         "AT": _PipelineSpec("_execute_at_monthly", "ATMonthlyUpdater"),
         "DE": _PipelineSpec("_execute_de_weekly", "DEWeeklyUpdater"),
+        "SG": _PipelineSpec("_execute_sg_weekly", "SGWeeklyUpdater"),
+        "FR": _PipelineSpec("_execute_ecdc_annual", "ECDCAnnualUpdater"),
+        "ES": _PipelineSpec("_execute_ecdc_annual", "ECDCAnnualUpdater"),
+        "IT": _PipelineSpec("_execute_ecdc_annual", "ECDCAnnualUpdater"),
+        "PT": _PipelineSpec("_execute_ecdc_annual", "ECDCAnnualUpdater"),
+        "PL": _PipelineSpec("_execute_ecdc_annual", "ECDCAnnualUpdater"),
+        "CZ": _PipelineSpec("_execute_ecdc_annual", "ECDCAnnualUpdater"),
+        "GR": _PipelineSpec("_execute_ecdc_annual", "ECDCAnnualUpdater"),
+        "RO": _PipelineSpec("_execute_ecdc_annual", "ECDCAnnualUpdater"),
         "CA-ON": _PipelineSpec(
             "_execute_ca_on_monthly", "CAOntarioMonthlyUpdater"
         ),
@@ -70,6 +81,11 @@ class CrawlService:
         "CH": _PipelineSpec("_execute_ch_monthly", "CHMonthlyUpdater"),
         "IS": _PipelineSpec("_execute_is_mixed", "ISMultiFrequencyUpdater"),
     }
+    for _ecdc_country_code in ECDC_BASELINE_COUNTRY_CODES:
+        _PIPELINES.setdefault(
+            _ecdc_country_code,
+            _PipelineSpec("_execute_ecdc_annual", "ECDCAnnualUpdater"),
+        )
     _SERIES_SOURCE_IDS: Dict[str, str | Dict[str, str]] = {
         "US": {
             "US CDC NNDSS": "SRC_US_NNDSS",
@@ -77,6 +93,7 @@ class CrawlService:
         },
         "JP": "SRC_JP_NIID",
         "AU": "SRC_AU_NINDSS",
+        "CA": "SRC_CA_PHAC_CNDSS",
         "NZ": "SRC_NZ_PHS",
         "TW": "SRC_TW_NIDSS",
         "HK": "SRC_HK_CHP",
@@ -86,6 +103,18 @@ class CrawlService:
         "SE": "SRC_SE_FOHM_SMINET",
         "AT": "SRC_AT_AGES_RADAR",
         "DE": "SRC_DE_RKI_SURVSTAT",
+        "SG": {
+            "Singapore data.gov.sg Weekly Infectious Diseases Bulletin (2012-2022)": "SRC_SG_DATA_GOV_WIDB",
+            "Singapore CDA Weekly Infectious Diseases Bulletin": "SRC_SG_CDA_WIDB",
+        },
+        "FR": "SRC_FR_ECDC_ATLAS",
+        "ES": "SRC_ES_ECDC_ATLAS",
+        "IT": "SRC_IT_ECDC_ATLAS",
+        "PT": "SRC_PT_ECDC_ATLAS",
+        "PL": "SRC_PL_ECDC_ATLAS",
+        "CZ": "SRC_CZ_ECDC_ATLAS",
+        "GR": "SRC_GR_ECDC_ATLAS",
+        "RO": "SRC_RO_ECDC_ATLAS",
         "KR": "SRC_KR_KDCA",
         "BR": "SRC_BR_SINAN",
         "CH": "SRC_CH_FOPH_IDD",
@@ -101,6 +130,11 @@ class CrawlService:
             "Iceland Directorate of Health Legacy ICD Monthly": "SRC_IS_DOH_LEGACY_ICD",
         },
     }
+    for _ecdc_country_code in ECDC_BASELINE_COUNTRY_CODES:
+        _SERIES_SOURCE_IDS.setdefault(
+            _ecdc_country_code,
+            f"SRC_{_ecdc_country_code}_ECDC_ATLAS",
+        )
 
     @classmethod
     def supported_country_codes(cls) -> List[str]:
@@ -113,12 +147,13 @@ class CrawlService:
         return ", ".join(cls.supported_country_codes())
 
     @staticmethod
-    def _make_updater(updater_name: str):
+    def _make_updater(updater_name: str, country_code: Optional[str] = None):
         from src.data.processors import (
             AUMonthlyUpdater,
             ATMonthlyUpdater,
             BRMonthlyUpdater,
             CAOntarioMonthlyUpdater,
+            CanadaCNDSSAnnualUpdater,
             CHMonthlyUpdater,
             FIMonthlyUpdater,
             HKMonthlyUpdater,
@@ -130,6 +165,8 @@ class CrawlService:
             NZMonthlyUpdater,
             SEMonthlyUpdater,
             DEWeeklyUpdater,
+            SGWeeklyUpdater,
+            ECDCAnnualUpdater,
             TWMonthlyUpdater,
             USWeeklyUpdater,
         )
@@ -139,6 +176,7 @@ class CrawlService:
             "ATMonthlyUpdater": ATMonthlyUpdater,
             "BRMonthlyUpdater": BRMonthlyUpdater,
             "CAOntarioMonthlyUpdater": CAOntarioMonthlyUpdater,
+            "CanadaCNDSSAnnualUpdater": CanadaCNDSSAnnualUpdater,
             "CHMonthlyUpdater": CHMonthlyUpdater,
             "FIMonthlyUpdater": FIMonthlyUpdater,
             "HKMonthlyUpdater": HKMonthlyUpdater,
@@ -150,10 +188,15 @@ class CrawlService:
             "NZMonthlyUpdater": NZMonthlyUpdater,
             "SEMonthlyUpdater": SEMonthlyUpdater,
             "DEWeeklyUpdater": DEWeeklyUpdater,
+            "SGWeeklyUpdater": SGWeeklyUpdater,
+            "ECDCAnnualUpdater": ECDCAnnualUpdater,
             "TWMonthlyUpdater": TWMonthlyUpdater,
             "USWeeklyUpdater": USWeeklyUpdater,
         }
-        return updaters[updater_name]()
+        updater_type = updaters[updater_name]
+        if updater_name == "ECDCAnnualUpdater":
+            return updater_type(country_code or "FR")
+        return updater_type()
 
     @staticmethod
     async def _save_series_rows(
@@ -432,7 +475,16 @@ class CrawlService:
         Raises on unrecoverable errors (caller handles via task_lifecycle).
         """
         normalized_country = (country_code or "").strip().upper()
-        pipeline = self._PIPELINES.get(normalized_country)
+        normalized_source = str(source or "all").strip().casefold()
+        if (
+            normalized_country in ECDC_BASELINE_COUNTRY_CODES
+            and normalized_source in {"ecdc", "atlas", "ecdc_atlas_annual"}
+        ):
+            # Countries with a higher-frequency national pipeline can also
+            # refresh the independent ECDC annual fallback explicitly.
+            pipeline = _PipelineSpec("_execute_ecdc_annual", "ECDCAnnualUpdater")
+        else:
+            pipeline = self._PIPELINES.get(normalized_country)
         if pipeline is None:
             raise ValueError(
                 f"Unsupported country: {normalized_country or country_code}. "
@@ -440,7 +492,9 @@ class CrawlService:
             )
 
         if pipeline.handler_name != "_execute_cn_cdc":
-            updater = self._make_updater(pipeline.updater_name or "")
+            updater = self._make_updater(
+                pipeline.updater_name or "", normalized_country
+            )
             self._configure_monthly_runtime_policy(
                 updater,
                 country_code=normalized_country,
@@ -979,6 +1033,30 @@ class CrawlService:
             result_type=CrawlResult, logger=logger,
         )
 
+    async def _execute_sg_weekly(
+        self, *, task: Task, source: str, force: bool, process: bool,
+        save_raw: bool, fill_missing: bool, updater,
+    ) -> CrawlResult:
+        from src.services.crawl_pipelines.sg import execute_sg_pipeline
+        return await execute_sg_pipeline(
+            self, task=task, source=source, force=force, process=process,
+            save_raw=save_raw, fill_missing=fill_missing, updater=updater,
+            get_database=get_database, task_manager=task_manager,
+            crawl_run_type=CrawlRun, result_type=CrawlResult, logger=logger,
+        )
+
+    async def _execute_ecdc_annual(
+        self, *, task: Task, source: str, force: bool, process: bool,
+        save_raw: bool, fill_missing: bool, updater,
+    ) -> CrawlResult:
+        from src.services.crawl_pipelines.ecdc import execute_ecdc_pipeline
+        return await execute_ecdc_pipeline(
+            self, task=task, source=source, force=force, process=process,
+            save_raw=save_raw, fill_missing=fill_missing, updater=updater,
+            get_database=get_database, task_manager=task_manager,
+            crawl_run_type=CrawlRun, result_type=CrawlResult, logger=logger,
+        )
+
     async def _execute_ca_on_monthly(
         self,
         *,
@@ -1000,6 +1078,36 @@ class CrawlService:
             save_raw=save_raw,
             fill_missing=fill_missing,
             updater=updater,
+        )
+
+    async def _execute_ca_national_annual(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        """Run the national Canadian CNDSS annual authoritative snapshot."""
+        from src.services.crawl_pipelines.ca_national import execute_ca_national_pipeline
+
+        return await execute_ca_national_pipeline(
+            self,
+            task=task,
+            source=source,
+            force=force,
+            process=process,
+            save_raw=save_raw,
+            fill_missing=fill_missing,
+            updater=updater,
+            get_database=get_database,
+            task_manager=task_manager,
+            crawl_run_type=CrawlRun,
+            result_type=CrawlResult,
+            logger=logger,
         )
 
     async def _execute_br_monthly(

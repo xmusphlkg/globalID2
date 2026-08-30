@@ -20,14 +20,33 @@ async def run(*, dry_run: bool, export: bool) -> dict:
     return await literature_automation_service.reconcile(dry_run=dry_run, export=export)
 
 
-if __name__ == "__main__":
+def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the versioned Research Radar autopilot policy")
-    parser.add_argument("--dry-run", action="store_true", help="Evaluate decisions without writing them")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--apply",
+        action="store_true",
+        help="Persist audited decisions; without this flag the command is read-only",
+    )
+    mode.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Explicitly evaluate decisions without writing them (the default)",
+    )
     parser.add_argument("--no-export", action="store_true", help="Do not refresh public Research Radar artifacts")
-    args = parser.parse_args()
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
     print(json.dumps(
-        asyncio.run(run(dry_run=args.dry_run, export=not args.no_export)),
+        asyncio.run(run(dry_run=not args.apply, export=not args.no_export)),
         ensure_ascii=False,
         indent=2,
         default=str,
     ))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

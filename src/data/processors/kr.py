@@ -310,6 +310,8 @@ class KRMonthlyUpdater:
                         # changeable provisional statistics.
                         "DatasetStatus": "provisional",
                         "IsProvisional": "true",
+                        "RevisionSemantics": "authoritative_revision",
+                        "AuthoritativeRevision": "true",
                     }
                 )
 

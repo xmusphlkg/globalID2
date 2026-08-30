@@ -1,5 +1,7 @@
 export {
   getCountryDisplayName,
+  getCountrySearchText,
+  isCountrySubdivision,
   useCountries,
 } from "@/lib/hooks/useCountries";
 

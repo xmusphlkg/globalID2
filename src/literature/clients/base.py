@@ -30,11 +30,23 @@ class AsyncRequestLimiter:
             self._next_request_at = loop.time() + self.min_interval_seconds
 
 
+class ProviderNotConfiguredError(RuntimeError):
+    """Raised before transport when a credential-gated provider is not configured."""
+
+
 class LiteratureHttpClient:
-    def __init__(self, *, user_agent: str, timeout_seconds: float = 30.0, retries: int = 3) -> None:
+    def __init__(
+        self,
+        *,
+        user_agent: str,
+        timeout_seconds: float = 30.0,
+        retries: int = 3,
+        max_response_bytes: int = 5_000_000,
+    ) -> None:
         self.user_agent = user_agent
         self.timeout_seconds = timeout_seconds
         self.retries = retries
+        self.max_response_bytes = max(16_384, max_response_bytes)
 
     async def get_json(self, client: httpx.AsyncClient, url: str, *, params: dict[str, Any]) -> dict[str, Any]:
         last_error: Exception | None = None
@@ -49,6 +61,9 @@ class LiteratureHttpClient:
                     timeout=self.timeout_seconds,
                 )
                 response.raise_for_status()
+                declared_size = int(response.headers.get("Content-Length") or 0)
+                if declared_size > self.max_response_bytes or len(response.content) > self.max_response_bytes:
+                    raise ValueError("Literature API response exceeds the configured size limit")
                 payload = response.json()
                 if not isinstance(payload, dict):
                     raise ValueError("Literature API returned a non-object JSON payload")
@@ -72,4 +87,4 @@ class LiteratureHttpClient:
         raise last_error
 
 
-__all__ = ["AsyncRequestLimiter", "LiteratureHttpClient"]
+__all__ = ["AsyncRequestLimiter", "LiteratureHttpClient", "ProviderNotConfiguredError"]
