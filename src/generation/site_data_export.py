@@ -92,6 +92,31 @@ _ICELAND_SCOPE_MARKERS = {
 }
 
 
+def _group_records_by_disease(
+    records_by_country: dict[str, list],
+) -> dict[str, dict[str, list]]:
+    grouped_by_country: dict[str, dict[str, list]] = {}
+    for country_code, records in records_by_country.items():
+        grouped: dict[str, list] = defaultdict(list)
+        for record in records:
+            disease_id = record.get("disease_id")
+            if disease_id:
+                grouped[str(disease_id)].append(record)
+        grouped_by_country[country_code] = dict(grouped)
+    return grouped_by_country
+
+
+def _records_for_disease(
+    grouped_by_country: dict[str, dict[str, list]],
+    disease_id: str,
+) -> dict[str, list]:
+    return {
+        country_code: records
+        for country_code, records_by_disease in grouped_by_country.items()
+        if (records := records_by_disease.get(disease_id))
+    }
+
+
 def _retain_observed_iceland_sources(
     source_info: dict,
     country_data: dict,
@@ -365,6 +390,12 @@ async def collect_site_export_context(
             raise RuntimeError(message)
 
         generated_at = resolve_snapshot_version(countries_simple, reports)
+        records_by_disease_by_country = _group_records_by_disease(
+            all_records_by_country
+        )
+        source_records_by_disease_by_country = _group_records_by_disease(
+            all_source_records_by_country
+        )
 
         for country_export in country_exports:
             code = country_export["code"]
@@ -399,11 +430,19 @@ async def collect_site_export_context(
         # ── Per-disease files ──
         for disease in diseases:
             did = disease["disease_id"]
+            disease_records_by_country = _records_for_disease(
+                records_by_disease_by_country,
+                did,
+            )
+            disease_source_records_by_country = _records_for_disease(
+                source_records_by_disease_by_country,
+                did,
+            )
             disease_data = build_disease_data(
                 did,
                 disease,
-                all_records_by_country,
-                all_source_records_by_country,
+                disease_records_by_country,
+                disease_source_records_by_country,
             )
             disease_site_data = build_disease_site_data(
                 disease_data,
