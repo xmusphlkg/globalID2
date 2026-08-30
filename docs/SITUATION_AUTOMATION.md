@@ -1,6 +1,6 @@
 # Situation Room automated release
 
-`.github/workflows/situation-room.yml` provides the production-oriented,
+`.github/workflows/situation-room-release.yml` provides the production-oriented,
 fail-closed automation path for Situation Room. It runs every day at 03:17 UTC
 and can also be started with **Run workflow**.
 

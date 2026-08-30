@@ -36,7 +36,7 @@ from scripts.automation.verify_situation_deployment import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
-WORKFLOW = ROOT / ".github" / "workflows" / "situation-room.yml"
+WORKFLOW = ROOT / ".github" / "workflows" / "situation-room-release.yml"
 QUALITY_WORKFLOW = ROOT / ".github" / "workflows" / "project-quality.yml"
 TEST_RUNNER = ROOT / "tests" / "run_tests.sh"
 
