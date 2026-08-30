@@ -600,7 +600,7 @@ def parse_datacenter_spreadsheet(
     fallback_disease_label: str | None = None,
 ) -> list[dict[str, object]]:
     table = _spreadsheet_rows(content)
-    if len(table) < 4:
+    if len(table) <= 4:
         return []
     disease_headers = {
         column: label

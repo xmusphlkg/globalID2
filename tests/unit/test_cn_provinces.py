@@ -177,13 +177,13 @@ def test_datacenter_parser_uses_audited_disease_id_fallback_for_2021() -> None:
         xml,
         report_date=date(2021, 1, 1),
         source_url="https://center.example/?diseaseId=10",
-        fallback_disease_label="\xe7\x97\xa2\xe7\x96\xbe",
+        fallback_disease_label="痢疾",
     )
 
     assert len(rows) == 1
     assert rows[0]["Cases"] == 3
     assert rows[0]["SourceDiseaseCode"] == "dysentery"
-    assert rows[0]["RawDiseaseLabel"] == "\xe7\x97\xa2\xe7\x96\xbe"
+    assert rows[0]["RawDiseaseLabel"] == "痢疾"
 
 
 def test_datacenter_fallback_refuses_unlabelled_province_rows() -> None:
@@ -201,7 +201,7 @@ def test_datacenter_fallback_refuses_unlabelled_province_rows() -> None:
         xml,
         report_date=date(2022, 1, 1),
         source_url="https://center.example/?diseaseId=10",
-        fallback_disease_label="\xe7\x97\xa2\xe7\x96\xbe",
+        fallback_disease_label="痢疾",
     )
 
     assert rows == []
