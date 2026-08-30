@@ -64,6 +64,10 @@ function redirectMap(dist) {
   return output;
 }
 
+function isRedirectSource(route, redirects) {
+  return redirects.has(route);
+}
+
 export function auditSeoOutput(distDirectory) {
   const dist = resolve(distDirectory);
   const redirects = redirectMap(dist);
@@ -76,6 +80,7 @@ export function auditSeoOutput(distDirectory) {
 
   for (const file of walk(dist, '.html')) {
     const route = routeFor(file, dist);
+    if (isRedirectSource(route, redirects)) continue;
     const html = readFileSync(file, 'utf8');
     const title = decodeHtml(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1] ?? '').replace(/\s+/g, ' ').trim();
     const meta = tags(html, 'meta');

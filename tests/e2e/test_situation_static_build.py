@@ -10,6 +10,18 @@ ROOT = Path(__file__).resolve().parents[2]
 ASTRO = ROOT / "astro-site"
 FIXTURE = ROOT / "tests" / "fixtures" / "situation" / "public_report_v3.json"
 RESEARCH_SNAPSHOT_DRIFT = "Research Radar source data changed during the Astro build"
+PRERENDER_MODULE_DRIFT = "dist/.prerender/chunks/"
+
+
+def _retryable_astro_build_drift(completed: subprocess.CompletedProcess[str]) -> bool:
+    output = completed.stdout + completed.stderr
+    return (
+        completed.returncode == 3 and RESEARCH_SNAPSHOT_DRIFT in output
+    ) or (
+        completed.returncode != 0
+        and "Cannot find module" in output
+        and PRERENDER_MODULE_DRIFT in output
+    )
 
 
 def _run_astro_build() -> subprocess.CompletedProcess[str]:
@@ -26,9 +38,7 @@ def _run_astro_build() -> subprocess.CompletedProcess[str]:
         )
 
     completed = invoke()
-    if completed.returncode == 3 and RESEARCH_SNAPSHOT_DRIFT in (
-        completed.stdout + completed.stderr
-    ):
+    if _retryable_astro_build_drift(completed):
         completed = invoke()
     return completed
 
