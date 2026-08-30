@@ -458,10 +458,40 @@ class ProvinceDataCenterCrawler:
         self.max_retries = max_retries
 
     def available_years(self) -> list[int]:
+        """Return catalogued years plus safely parseable unpublished years.
+
+        The Data Center's year selector currently stops at 2020 even though
+        the report endpoint serves 2021.  CNIDS trusts the selector verbatim,
+        which leaves that year undiscovered.  Probe the bounded set of later
+        years and accept one only when the response retains source province
+        labels and can be parsed without positional inference.
+        """
+
         response = self._get_with_retry(
             self.config["availability_url"], session=self.session
         )
-        return sorted({int(item["code"]) for item in response.json()})
+        catalogued = {int(item["code"]) for item in response.json()}
+        if not catalogued:
+            raise ValueError("Data Center returned an empty year catalogue")
+        probe_id = int(self.config.get("probe_disease_id", 10))
+        probe_month = int(self.config.get("probe_month", 1))
+        probe_label = self.config.get("disease_id_labels", {}).get(str(probe_id))
+        current_year = datetime.now(timezone.utc).year
+        for year in range(max(catalogued) + 1, current_year + 1):
+            url = self.config["download_url"].format(
+                year=year, disease_id=probe_id, month=probe_month
+            )
+            response = self._get_with_retry(url, session=self.session)
+            rows = parse_datacenter_spreadsheet(
+                response.content,
+                report_date=date(year, probe_month, 1),
+                source_url=url,
+                config_path=self.config_path,
+                fallback_disease_label=probe_label,
+            )
+            if rows:
+                catalogued.add(year)
+        return sorted(catalogued)
 
     def fetch_year(self, year: int) -> list[dict[str, object]]:
         if year not in self.available_years():
@@ -507,11 +537,15 @@ class ProvinceDataCenterCrawler:
             time.sleep(self.request_interval)
         if len(response.content) < 6 * 1024:
             return []
+        fallback_label = self.config.get("disease_id_labels", {}).get(
+            str(disease_id)
+        )
         return parse_datacenter_spreadsheet(
             response.content,
             report_date=date(year, month, 1),
             source_url=url,
             config_path=self.config_path,
+            fallback_disease_label=fallback_label,
         )
 
     def _get_with_retry(
@@ -563,6 +597,7 @@ def parse_datacenter_spreadsheet(
     report_date: date,
     source_url: str,
     config_path: str | Path = DEFAULT_CONFIG,
+    fallback_disease_label: str | None = None,
 ) -> list[dict[str, object]]:
     table = _spreadsheet_rows(content)
     if len(table) < 4:
@@ -572,6 +607,23 @@ def parse_datacenter_spreadsheet(
         for column, value in table[1].items()
         if column >= 3 and (label := _norm(value))
     }
+    if not disease_headers and fallback_disease_label:
+        case_columns = [
+            column
+            for column, value in table[2].items()
+            if column >= 3 and _is_cases_header(_norm(value))
+        ]
+        if len(case_columns) != 1:
+            raise ValueError(
+                "Data Center fallback requires exactly one case column: "
+                f"found {case_columns!r} ({source_url})"
+            )
+        if resolve_disease(fallback_disease_label, config_path) is None:
+            raise ValueError(
+                "Data Center diseaseId fallback is not registered: "
+                f"{fallback_disease_label!r}"
+            )
+        disease_headers = {case_columns[0]: fallback_disease_label}
     rows: list[dict[str, object]] = []
     for raw in table[3:]:
         province_code = resolve_province_code(raw.get(2), config_path)

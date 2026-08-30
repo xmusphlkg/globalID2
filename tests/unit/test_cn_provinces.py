@@ -161,6 +161,52 @@ def test_datacenter_spreadsheet_parser_preserves_explicit_zero() -> None:
     assert rows[0]["GeographyKey"] == "country:CN-BJ:national"
 
 
+def test_datacenter_parser_uses_audited_disease_id_fallback_for_2021() -> None:
+    xml = b'''<?xml version="1.0" encoding="UTF-8"?>
+    <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet">
+      <Worksheet><Table>
+        <Row><Cell><Data></Data></Cell></Row>
+        <Row><Cell><Data></Data></Cell><Cell><Data></Data></Cell><Cell><Data></Data></Cell></Row>
+        <Row><Cell><Data></Data></Cell><Cell><Data>\xe5\x9c\xb0\xe5\x8c\xba</Data></Cell><Cell><Data>\xe5\x8f\x91\xe7\x97\x85\xe6\x95\xb0</Data></Cell></Row>
+        <Row><Cell><Data></Data></Cell><Cell><Data>\xe5\x85\xa8\xe5\x9b\xbd</Data></Cell><Cell><Data>8</Data></Cell></Row>
+        <Row><Cell><Data></Data></Cell><Cell><Data>\xe5\x8c\x97\xe4\xba\xac\xe5\xb8\x82</Data></Cell><Cell><Data>3</Data></Cell></Row>
+      </Table></Worksheet>
+    </Workbook>'''
+
+    rows = parse_datacenter_spreadsheet(
+        xml,
+        report_date=date(2021, 1, 1),
+        source_url="https://center.example/?diseaseId=10",
+        fallback_disease_label="\xe7\x97\xa2\xe7\x96\xbe",
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["Cases"] == 3
+    assert rows[0]["SourceDiseaseCode"] == "dysentery"
+    assert rows[0]["RawDiseaseLabel"] == "\xe7\x97\xa2\xe7\x96\xbe"
+
+
+def test_datacenter_fallback_refuses_unlabelled_province_rows() -> None:
+    xml = b'''<?xml version="1.0" encoding="UTF-8"?>
+    <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet">
+      <Worksheet><Table>
+        <Row><Cell><Data></Data></Cell></Row>
+        <Row><Cell><Data></Data></Cell><Cell><Data></Data></Cell><Cell><Data></Data></Cell></Row>
+        <Row><Cell><Data></Data></Cell><Cell><Data>\xe5\x9c\xb0\xe5\x8c\xba</Data></Cell><Cell><Data>\xe5\x8f\x91\xe7\x97\x85\xe6\x95\xb0</Data></Cell></Row>
+        <Row><Cell><Data></Data></Cell><Cell><Data></Data></Cell><Cell><Data>3</Data></Cell></Row>
+      </Table></Worksheet>
+    </Workbook>'''
+
+    rows = parse_datacenter_spreadsheet(
+        xml,
+        report_date=date(2022, 1, 1),
+        source_url="https://center.example/?diseaseId=10",
+        fallback_disease_label="\xe7\x97\xa2\xe7\x96\xbe",
+    )
+
+    assert rows == []
+
+
 def test_datacenter_retries_transient_upstream_error(monkeypatch) -> None:
     class FakeResponse:
         def __init__(self, status_code: int) -> None:
