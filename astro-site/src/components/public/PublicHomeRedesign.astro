@@ -8,6 +8,8 @@ import { resolve } from 'node:path';
 import metaRaw from '../../data/meta.json';
 import diseasesRaw from '../../data/diseases/index.json';
 import reportsRaw from '../../data/reports/index.json';
+import japanDataRaw from '../../data/countries/jp.json';
+import chinaDataRaw from '../../data/countries/cn.json';
 
 interface Props { locale?: 'en' | 'zh'; }
 
@@ -16,10 +18,12 @@ const zh = locale === 'zh';
 const prefix = zh ? '/zh' : '';
 const href = (path: string) => `${prefix}${path}`;
 const t = zh ? {
-  eyebrow: '官方来源的公共卫生数据',
-  title: '把全球传染病监测数据变成可检索、可复用的证据库',
-  summary: 'GIDS 汇集官方监测记录、当前态势复核、研究证据与下载数据，帮助研究者和公共卫生团队更快找到可信来源、比较趋势并复用数据。',
-  searchLabel: '检索数据与证据',
+  eyebrow: 'GIDS · 官方来源监测',
+  titleLines: ['发现信号', '追溯来源'],
+  sloganPrefix: '继续',
+  sloganWords: ['比较趋势', '复用数据', '核对证据', '更快研判'],
+  summary: '检索官方监测记录、态势复核、研究背景与可下载数据集，在同一个入口完成查源、比较和复用。',
+  searchLabel: '搜索 GIDS',
   searchPlaceholder: '搜索国家、疾病、报告或研究',
   search: '搜索',
   situation: '查看当前态势',
@@ -33,7 +37,7 @@ const t = zh ? {
   diseases: '收录疾病',
   sources: '官方来源',
   through: '数据截至',
-  recentBoard: '近期数据面板',
+  recentBoard: '近期来源更新',
   cadence: '频率',
   sourceNote: '覆盖、指标定义和发布时间因来源而异；缺失值不应自动解释为零。',
   methods: '来源与方法',
@@ -64,11 +68,14 @@ const t = zh ? {
   openReport: '打开报告',
   unavailable: '暂无',
   empty: '当前没有公开报告。',
+  curveLabel: '日本流感 · 中国流感',
 } : {
-  eyebrow: 'Official-source public health data',
-  title: 'A searchable evidence base for global infectious disease surveillance',
-  summary: 'GIDS brings together official surveillance records, situation reviews, research evidence, and downloadable datasets so researchers and public health teams can find sources, compare trends, and reuse data faster.',
-  searchLabel: 'Search the evidence base',
+  eyebrow: 'GIDS · official-source surveillance',
+  titleLines: ['Find signals', 'Trace sources'],
+  sloganPrefix: 'Then',
+  sloganWords: ['compare trends', 'reuse data', 'check evidence', 'act faster'],
+  summary: 'Search official surveillance records, situation reviews, research context, and download-ready datasets from one public data workspace.',
+  searchLabel: 'Search GIDS',
   searchPlaceholder: 'Search a country, disease, report, or study',
   search: 'Search',
   situation: 'View current situation',
@@ -82,7 +89,7 @@ const t = zh ? {
   diseases: 'Diseases tracked',
   sources: 'Official sources',
   through: 'Data through',
-  recentBoard: 'Recent data board',
+  recentBoard: 'Recent source updates',
   cadence: 'Cadence',
   sourceNote: 'Coverage, definitions, and release schedules vary by source; missing values should not be read as zero.',
   methods: 'Sources and methods',
@@ -113,6 +120,7 @@ const t = zh ? {
   openReport: 'Open report',
   unavailable: 'Not available',
   empty: 'No public reports are currently available.',
+  curveLabel: 'Japan influenza · China influenza',
 };
 
 const meta = metaRaw as any;
@@ -163,6 +171,49 @@ const assetMetrics = [
   { label: t.jurisdictions, value: String(countries.length) },
   { label: t.diseases, value: String(meta.total_diseases ?? t.unavailable) },
 ];
+const numericCases = (series: any) => (series?.cases ?? [])
+  .map((value: unknown) => Number(value))
+  .filter((value: number) => Number.isFinite(value) && value >= 0);
+const sampleValues = (values: number[], count: number) => {
+  if (!values.length) return Array.from({ length: count }, () => 0);
+  const max = Math.max(...values, 1);
+  return Array.from({ length: count }, (_, index) => {
+    const position = index * (values.length - 1) / Math.max(1, count - 1);
+    const left = Math.floor(position);
+    const right = Math.min(values.length - 1, Math.ceil(position));
+    const ratio = position - left;
+    return ((values[left] ?? 0) * (1 - ratio) + (values[right] ?? 0) * ratio) / max;
+  });
+};
+const makeCurvePoints = (values: number[], options: { baseline: number; amplitude: number }) => {
+  const max = Math.max(...values, 1);
+  const samples = values.map(value => value / max);
+  return samples.map((value, index) => {
+    const x = 42 + index * (1356 / Math.max(1, samples.length - 1));
+    const y = options.baseline - value * options.amplitude;
+    return `${x.toFixed(1)},${Math.max(468, Math.min(742, y)).toFixed(1)}`;
+  }).join(' ');
+};
+const makeBars = (primary: number[], secondary: number[], count = 72) => {
+  const a = sampleValues(primary, count);
+  const b = sampleValues(secondary, count);
+  const baseline = 760;
+  return a.map((value, index) => {
+    const mixed = value * .68 + (b[index] ?? 0) * .32;
+    const height = 26 + mixed * 198;
+    const x = 78 + index * (1284 / Math.max(1, count - 1));
+    return { x: x.toFixed(1), y: (baseline - height).toFixed(1), width: '10', height: height.toFixed(1), index };
+  });
+};
+// The hero background is generated from real public surveillance series, then
+// normalized to an abstract visual layer so it does not imply comparable counts.
+const japanInfluenza = numericCases((japanDataRaw as any).disease_series?.D038);
+const chinaInfluenza = numericCases((chinaDataRaw as any).disease_series?.D038);
+const backgroundCurves = [
+  { className: 'curve-line-a', points: makeCurvePoints(japanInfluenza, { baseline: 724, amplitude: 246 }) },
+  { className: 'curve-line-b', points: makeCurvePoints(chinaInfluenza, { baseline: 738, amplitude: 224 }) },
+];
+const backgroundBars = makeBars(japanInfluenza, chinaInfluenza);
 const explorePaths = [
   { href: href('/countries/'), index: '01', title: t.countryPath, text: t.countryPathText, stat: `${countries.length}`, metric: t.jurisdictions },
   { href: href('/diseases/'), index: '02', title: t.diseasePath, text: t.diseasePathText, stat: `${meta.total_diseases ?? t.unavailable}`, metric: t.diseases },
@@ -171,12 +222,37 @@ const explorePaths = [
 ];
 ---
 
-<div class="public-home-redesign">
+<div class:list={['public-home-redesign', zh && 'is-zh']}>
   <section class="home-hero">
+    <div class="curve-field" aria-hidden="true">
+      <svg viewBox="0 0 1440 760" preserveAspectRatio="none">
+        <g class="curve-bars">
+          {backgroundBars.map(bar => (
+            <rect style={`--i:${bar.index}`} x={bar.x} y={bar.y} width={bar.width} height={bar.height} />
+          ))}
+        </g>
+        <g class="curve-lines">
+          {backgroundCurves.map(curve => (
+            <polyline class:list={['curve-line', curve.className]} pathLength="1" points={curve.points} />
+          ))}
+        </g>
+      </svg>
+      <p class="curve-annotation">
+        <b>{t.curveLabel}</b>
+      </p>
+    </div>
     <div class="page-wrap hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">{t.eyebrow}</p>
-        <h1>{t.title}</h1>
+        <h1>{t.titleLines.map(line => <span>{line}</span>)}</h1>
+        <p class="animated-slogan" aria-label={`${t.sloganPrefix} ${t.sloganWords.join(', ')}`}>
+          <span>{t.sloganPrefix}</span>
+          <span class="slogan-window" aria-hidden="true">
+            {t.sloganWords.map((word, index) => (
+              <b style={`--i:${index}`}>{word}</b>
+            ))}
+          </span>
+        </p>
         <p class="lead">{t.summary}</p>
         <form class="home-search" action={href('/search/')} method="get">
           <label for={`home-search-${locale}`}>{t.searchLabel}</label>
@@ -201,7 +277,7 @@ const explorePaths = [
           <span class="release-pill"><i></i>{t.updated}</span>
         </header>
         <dl class="asset-grid">
-          {assetMetrics.map(metric => <div><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}
+          {assetMetrics.map((metric, index) => <div style={`--i:${index}`}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}
         </dl>
         <div class="release-meta">
           <span>{t.sources}: <strong>{sourceNames.size}</strong></span>
@@ -209,7 +285,7 @@ const explorePaths = [
         </div>
         <div class="source-board">
           <h3>{t.recentBoard}</h3>
-          {recentlyUpdatedCountries.map((country: any) => {
+          {recentlyUpdatedCountries.slice(0, 3).map((country: any) => {
             const name = zh ? country.name_zh ?? country.name : country.name_en ?? country.name;
             const source = country.source_info?.sources?.[0];
             return (
@@ -326,48 +402,66 @@ const explorePaths = [
 
 <style>
   .public-home-redesign { color: rgb(var(--text)); }
-  .page-wrap { width: min(1180px, calc(100% - 2rem)); margin-inline: auto; }
+  .page-wrap { width: min(1240px, calc(100% - 2rem)); margin-inline: auto; }
   .eyebrow { margin: 0 0 .65rem; color: rgb(var(--color-teal)); font-size: .7rem; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
-  .home-hero { position: relative; overflow: hidden; background: linear-gradient(90deg, rgb(var(--surface)) 0 50%, rgb(var(--bg-soft) / .62) 50% 100%); border-bottom: 1px solid rgb(var(--border)); }
-  .home-hero::before { position: absolute; inset: 0; pointer-events: none; content: ''; background-image: linear-gradient(rgb(var(--border) / .34) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--border) / .28) 1px, transparent 1px); background-size: 3rem 3rem; mask-image: linear-gradient(90deg, transparent, black 18%, black 78%, transparent); opacity: .35; }
-  .hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(21rem, .92fr); gap: clamp(2rem, 5vw, 4.5rem); align-items: center; padding-block: clamp(3rem, 7vw, 5.75rem); }
-  h1 { max-width: 17ch; margin: 0; color: rgb(var(--text-strong)); font-size: clamp(2.35rem, 5.3vw, 4.85rem); font-weight: 700; letter-spacing: 0; line-height: 1.02; }
-  .lead { max-width: 47rem; margin: 1.35rem 0 0; color: rgb(var(--text-muted)); font-size: clamp(1rem, 1.6vw, 1.15rem); line-height: 1.72; }
-  .home-search { max-width: 43rem; margin-top: 2rem; }
+  .home-hero { position: relative; display: grid; min-height: calc(100svh - 4.6rem); overflow: hidden; background: linear-gradient(90deg, rgb(var(--surface)) 0 52%, rgb(var(--bg-soft) / .78) 52% 100%); border-bottom: 1px solid rgb(var(--border)); }
+  .home-hero::before { position: absolute; inset: 0; z-index: 0; pointer-events: none; content: ''; background: linear-gradient(90deg, rgb(var(--surface) / .99) 0%, rgb(var(--surface) / .95) 36%, rgb(var(--surface) / .72) 58%, rgb(var(--bg-soft) / .34) 100%); }
+  .home-hero::after { position: absolute; inset: auto 0 0; z-index: 0; height: 38%; pointer-events: none; content: ''; background: linear-gradient(180deg, transparent, rgb(var(--surface) / .88)); }
+  .curve-field { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; color: rgb(var(--color-teal)); opacity: .74; }
+  .curve-field svg { display: block; width: 100%; height: 100%; }
+  .curve-bars rect { fill: rgb(var(--color-teal) / .14); transform-box: fill-box; transform-origin: 50% 100%; animation: bar-wave 12s cubic-bezier(.45, 0, .25, 1) infinite; animation-delay: calc(var(--i) * -260ms); }
+  .curve-bars rect:nth-child(3n + 1) { fill: rgb(var(--color-brand) / .1); }
+  .curve-bars rect:nth-child(3n + 2) { fill: rgb(var(--color-accent) / .11); }
+  .curve-line { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 12px 20px rgb(10 26 40 / .08)); animation: curve-draw 11s cubic-bezier(.45, 0, .22, 1) infinite; }
+  .curve-line { animation-duration: 18s; }
+  .curve-line-a { stroke: rgb(var(--color-teal) / .62); stroke-width: 4; }
+  .curve-line-b { stroke: rgb(var(--color-accent) / .42); stroke-width: 3; animation-delay: -8s; }
+  .curve-annotation { position: absolute; right: max(1rem, calc((100vw - 1240px) / 2)); bottom: clamp(1.05rem, 3.2vw, 2.15rem); max-width: min(22rem, calc(100% - 2rem)); margin: 0; color: rgb(var(--text-muted)); font-size: .68rem; line-height: 1.25; letter-spacing: .04em; text-align: right; }
+  .curve-annotation b { color: rgb(var(--text-muted)); font-weight: 700; }
+  .hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(23rem, .98fr); gap: clamp(2rem, 4.4vw, 4.25rem); align-items: center; min-height: calc(100svh - 4.6rem); padding-block: clamp(2.5rem, 4.8vw, 4rem); }
+  .hero-copy { padding-block: .5rem; }
+  h1 { display: grid; max-width: 12ch; margin: 0; color: rgb(var(--text-strong)); font-size: clamp(3rem, 5.4vw, 5.55rem); font-weight: 760; letter-spacing: 0; line-height: .98; text-wrap: balance; }
+  h1 span { display: block; }
+  .animated-slogan { display: grid; gap: .2rem; min-height: 2.85em; margin: 1.05rem 0 0; color: rgb(var(--text-strong)); font-size: clamp(1.35rem, 2.6vw, 2rem); font-weight: 720; line-height: 1.18; }
+  .slogan-window { position: relative; display: block; width: min(100%, 19ch); height: 1.28em; color: rgb(var(--color-teal)); overflow: hidden; }
+  .slogan-window b { position: absolute; inset: 0 auto auto 0; opacity: 0; transform: translateY(85%); animation: slogan-cycle 12s cubic-bezier(.2, .7, .2, 1) infinite; animation-delay: calc(var(--i) * 3s); font: inherit; white-space: nowrap; }
+  .lead { max-width: 42rem; margin: 1.1rem 0 0; color: rgb(var(--text-muted)); font-size: clamp(.98rem, 1.35vw, 1.08rem); line-height: 1.68; }
+  .home-search { max-width: 41rem; margin-top: 1.55rem; }
   .home-search label { display: block; margin-bottom: .45rem; color: rgb(var(--text-strong)); font-size: .78rem; font-weight: 700; }
   .home-search-row { display: grid; grid-template-columns: 1fr auto; border: 1px solid rgb(var(--border-soft)); background: rgb(var(--bg)); box-shadow: 0 18px 44px rgb(10 26 40 / .08); }
   .home-search input { min-width: 0; min-height: 3.25rem; padding: .72rem .9rem; color: rgb(var(--text-strong)); background: transparent; border: 0; outline: 0; }
   .home-search input:focus { box-shadow: inset 0 0 0 2px rgb(var(--color-teal)); }
   .home-search button { padding-inline: 1.25rem; color: #fff; background: rgb(var(--color-brand)); border: 0; font-weight: 750; }
   .home-search button:hover { background: rgb(var(--color-teal)); }
-  .actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: 1rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: .9rem; }
   .actions a { display: inline-flex; min-height: 2.55rem; align-items: center; padding: .58rem .9rem; color: rgb(var(--text-strong)); background: rgb(var(--surface-raised) / .52); border: 1px solid rgb(var(--border)); font-size: .8rem; font-weight: 700; text-decoration: none; }
   .actions a:hover { border-color: rgb(var(--border-soft)); background: rgb(var(--bg-soft)); }
   .actions .primary { color: #fff; background: rgb(var(--color-teal)); border-color: rgb(var(--color-teal)); }
-  .data-console { background: rgb(var(--surface) / .96); border: 1px solid rgb(var(--border)); box-shadow: 0 24px 54px rgb(10 26 40 / .13); }
-  .console-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.15rem 1.2rem; border-bottom: 1px solid rgb(var(--border)); }
-  .console-header h2 { margin: 0; color: rgb(var(--text-strong)); font-size: 1.35rem; line-height: 1.18; }
+  .data-console { position: relative; overflow: hidden; background: color-mix(in srgb, rgb(var(--surface)) 92%, white); border: 1px solid rgb(var(--border)); box-shadow: 0 22px 50px rgb(10 26 40 / .12); animation: panel-rise .7s ease-out both; }
+  .data-console::before { position: absolute; inset: 0; pointer-events: none; content: ''; background: linear-gradient(135deg, transparent 0 34%, rgb(var(--color-teal) / .1) 48%, transparent 62% 100%); animation: console-sweep 7s ease-in-out infinite; }
+  .data-console::after { position: absolute; inset: auto 1.05rem 0; height: 2px; content: ''; background: linear-gradient(90deg, rgb(var(--color-teal)), rgb(var(--color-accent)), transparent); opacity: .62; }
+  .console-header { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1.1rem; border-bottom: 1px solid rgb(var(--border)); }
+  .console-header h2 { margin: 0; color: rgb(var(--text-strong)); font-size: 1.18rem; line-height: 1.18; }
   .release-pill { display: inline-flex; flex: 0 0 auto; align-items: center; gap: .38rem; margin-top: .1rem; color: rgb(var(--text-muted)); font-size: .68rem; font-weight: 700; }
   .release-pill i { width: .48rem; height: .48rem; background: #15803d; border-radius: 50%; }
-  .asset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; border-bottom: 1px solid rgb(var(--border)); }
-  .asset-grid div { min-height: 6rem; padding: .95rem 1rem; border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--bg-soft) / .42); }
-  .asset-grid div:nth-child(2n) { border-right: 0; }
-  .asset-grid div:nth-last-child(-n + 2) { border-bottom: 0; }
+  .asset-grid { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin: 0; padding: .85rem 1.05rem; border-bottom: 1px solid rgb(var(--border)); }
+  .asset-grid div { position: relative; min-height: 4.8rem; padding: .8rem .85rem .72rem; overflow: hidden; background: rgb(var(--bg-soft) / .58); border: 1px solid rgb(var(--border) / .74); animation: metric-in .55s ease-out both; animation-delay: calc(var(--i) * 80ms); }
+  .asset-grid div::after { position: absolute; right: .75rem; bottom: .6rem; width: 2.4rem; height: .22rem; content: ''; background: linear-gradient(90deg, rgb(var(--color-teal) / .15), rgb(var(--color-teal))); transform-origin: left; animation: metric-pulse 3.8s ease-in-out infinite; animation-delay: calc(var(--i) * 220ms); }
   .asset-grid dt { color: rgb(var(--text-muted)); font-size: .7rem; font-weight: 650; }
-  .asset-grid dd { margin: .42rem 0 0; color: rgb(var(--text-strong)); font-size: clamp(1.35rem, 2.4vw, 1.8rem); font-weight: 750; font-variant-numeric: tabular-nums; line-height: 1; }
-  .release-meta { display: grid; grid-template-columns: 1fr 1.2fr; gap: .75rem; padding: .9rem 1.2rem; color: rgb(var(--text-muted)); border-bottom: 1px solid rgb(var(--border)); font-size: .72rem; }
+  .asset-grid dd { margin: .38rem 0 0; color: rgb(var(--text-strong)); font-size: clamp(1.24rem, 2vw, 1.62rem); font-weight: 750; font-variant-numeric: tabular-nums; line-height: 1; }
+  .release-meta { position: relative; display: grid; grid-template-columns: 1fr 1.2fr; gap: .75rem; padding: .78rem 1.1rem; color: rgb(var(--text-muted)); border-bottom: 1px solid rgb(var(--border)); font-size: .72rem; }
   .release-meta strong { color: rgb(var(--text-strong)); font-weight: 750; }
-  .source-board { padding: 1rem 1.2rem .5rem; }
+  .source-board { position: relative; padding: .9rem 1.1rem .35rem; }
   .source-board h3 { margin: 0 0 .5rem; color: rgb(var(--text-strong)); font-size: .82rem; }
-  .source-board a { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .7rem; align-items: center; min-height: 3.45rem; color: rgb(var(--text-strong)); border-top: 1px solid rgb(var(--border)); text-decoration: none; }
+  .source-board a { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .24rem .7rem; align-items: center; min-height: 3.05rem; padding-block: .44rem; color: rgb(var(--text-strong)); border-top: 1px solid rgb(var(--border)); text-decoration: none; }
   .source-board a:hover strong { color: rgb(var(--color-teal)); }
   .source-board span { display: grid; min-width: 0; }
   .source-board strong { overflow: hidden; font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
   .source-board small, .source-board time { color: rgb(var(--text-muted)); font-size: .66rem; }
-  .source-board time { font-variant-numeric: tabular-nums; text-align: right; }
-  .source-note { margin: .3rem 1.2rem 0; color: rgb(var(--text-muted)); font-size: .72rem; line-height: 1.55; }
+  .source-board time { grid-column: 2; font-variant-numeric: tabular-nums; text-align: left; }
+  .source-note { position: relative; margin: .25rem 1.1rem 0; color: rgb(var(--text-muted)); font-size: .7rem; line-height: 1.5; }
   .text-link, .subheading a, .situation-grid > a { display: inline-flex; gap: .25rem; align-items: center; color: rgb(var(--color-teal)); font-size: .78rem; font-weight: 750; text-decoration: none; }
-  .console-link { margin: .8rem 1.2rem 1.2rem; }
+  .console-link { margin: .65rem 1.1rem 1rem; }
   .text-link:hover, .subheading a:hover, .situation-grid > a:hover { color: rgb(var(--color-accent)); }
   .situation-strip { color: #e5edf3; background: rgb(var(--color-brand)); }
   .situation-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(19rem, .85fr) auto; gap: 2rem; align-items: center; padding-block: 2rem; }
@@ -386,8 +480,8 @@ const explorePaths = [
   .section-heading h2, .subheading h2 { margin: 0; color: rgb(var(--text-strong)); font-size: clamp(1.55rem, 2.8vw, 2.2rem); line-height: 1.12; }
   .section-heading p:not(.eyebrow) { margin: 0; color: rgb(var(--text-muted)); font-size: .86rem; line-height: 1.65; }
   .path-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 1.5rem; border-top: 1px solid rgb(var(--border)); border-left: 1px solid rgb(var(--border)); }
-  .path-card { display: grid; grid-template-rows: auto 1fr auto; min-height: 17rem; padding: 1rem; color: rgb(var(--text-strong)); background: rgb(var(--surface)); border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); text-decoration: none; }
-  .path-card:hover { background: rgb(var(--bg-soft)); }
+  .path-card { display: grid; grid-template-rows: auto 1fr auto; min-height: 17rem; padding: 1rem; color: rgb(var(--text-strong)); background: rgb(var(--surface)); border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); text-decoration: none; transition: transform .18s ease, background-color .18s ease, box-shadow .18s ease; }
+  .path-card:hover { background: rgb(var(--bg-soft)); box-shadow: 0 18px 36px rgb(10 26 40 / .08); transform: translateY(-3px); }
   .path-index { color: rgb(var(--color-accent)); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .72rem; font-weight: 750; }
   .path-copy { display: grid; align-content: start; gap: .65rem; margin-top: 2.4rem; }
   .path-copy strong { font-size: 1.05rem; line-height: 1.24; }
@@ -417,9 +511,45 @@ const explorePaths = [
   .report-list b { grid-column: 1 / -1; margin-top: .7rem; color: rgb(var(--color-teal)); font-size: .74rem; }
   .empty-state { margin-top: 1.5rem; color: rgb(var(--text-muted)); }
 
+  @keyframes slogan-cycle {
+    0%, 24% { opacity: 1; transform: translateY(0); }
+    30% { opacity: 0; transform: translateY(-62%); }
+    30.01%, 100% { opacity: 0; transform: translateY(62%); }
+  }
+  @keyframes curve-draw {
+    0% { opacity: 0; stroke-dashoffset: 1; }
+    18%, 64% { opacity: 1; stroke-dashoffset: 0; }
+    84%, 100% { opacity: 0; stroke-dashoffset: -.08; }
+  }
+  @keyframes bar-wave {
+    0%, 100% { opacity: .22; transform: scaleY(.42); }
+    18% { opacity: .46; transform: scaleY(.7); }
+    42%, 58% { opacity: .86; transform: scaleY(1.04); }
+    76% { opacity: .5; transform: scaleY(.66); }
+  }
+  @keyframes panel-rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes console-sweep {
+    0%, 100% { opacity: .18; }
+    50% { opacity: .58; }
+  }
+  @keyframes metric-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes metric-pulse {
+    0%, 100% { opacity: .45; transform: scaleX(.48); }
+    50% { opacity: .95; transform: scaleX(1); }
+  }
+
   @media (max-width: 1060px) {
     .hero-grid, .explore-grid { grid-template-columns: 1fr; }
+    .hero-grid { min-height: calc(100svh - 4.6rem); }
     .home-hero { background: rgb(var(--surface)); }
+    .home-hero::before { background: linear-gradient(180deg, rgb(var(--surface) / .97), rgb(var(--surface) / .82) 48%, rgb(var(--surface) / .64)); }
+    .curve-field { inset: 0; width: 100%; height: 58rem; opacity: .56; }
     .data-console { width: 100%; max-width: 46rem; }
     .path-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
@@ -433,10 +563,12 @@ const explorePaths = [
   @media (max-width: 680px) {
     .hero-grid { padding-block: 2.75rem; }
     h1 { font-size: 2.28rem; }
+    .animated-slogan { font-size: 1.2rem; }
     .home-search-row, .release-meta, .asset-grid, .path-grid, .country-grid, .report-list { grid-template-columns: 1fr; }
     .home-search button { min-height: 3rem; }
     .actions { display: grid; }
     .actions a { justify-content: center; text-align: center; }
+    .data-console::before { animation: none; opacity: 0; }
     .asset-grid div, .asset-grid div:nth-child(2n), .asset-grid div:nth-last-child(-n + 2) { border-right: 0; border-bottom: 1px solid rgb(var(--border)); }
     .asset-grid div:last-child { border-bottom: 0; }
     .source-board a { grid-template-columns: auto minmax(0, 1fr); }
@@ -444,5 +576,12 @@ const explorePaths = [
     .path-card { min-height: 13rem; }
     .path-copy { margin-top: 1.4rem; }
     .section-heading.compact, .subheading { align-items: flex-start; flex-direction: column; gap: .65rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .curve-bars rect, .curve-line, .data-console, .data-console::before, .asset-grid div, .asset-grid div::after, .path-card { animation: none; transition: none; }
+    .curve-line { opacity: .55; stroke-dashoffset: 0; }
+    .slogan-window b { animation: none; opacity: 0; transform: none; }
+    .slogan-window b:first-child { opacity: 1; }
   }
 </style>
