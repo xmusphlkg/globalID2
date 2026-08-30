@@ -48,8 +48,8 @@ def test_fixture_snapshot_builds_latest_month_week_json_and_seo(tmp_path: Path) 
     # Keep the fixture signal synthetic while pointing its public disease link
     # at a real generated route so the strict SEO output audit remains valid.
     snapshot["signals"][0]["identity"].update({
-        "disease_name": "Plague",
-        "disease_slug": "plague",
+        "disease_name": "Influenza",
+        "disease_slug": "influenza",
     })
     weekly = json.loads(json.dumps(snapshot))
     weekly["report"].update({
