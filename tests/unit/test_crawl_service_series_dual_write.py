@@ -335,6 +335,94 @@ def test_partially_registered_country_updaters_select_registry_rows() -> None:
     assert all(cls.series_registered_rows_only for cls in updater_types)
 
 
+def test_crawl_service_supports_australia_state_and_territory_codes() -> None:
+    supported = set(CrawlService.supported_country_codes())
+
+    assert {
+        "AU-ACT",
+        "AU-NSW",
+        "AU-NT",
+        "AU-QLD",
+        "AU-SA",
+        "AU-TAS",
+        "AU-VIC",
+        "AU-WA",
+    }.issubset(supported)
+    updater = CrawlService._make_updater("AUMonthlyUpdater", "AU-NSW")
+    assert updater.country_code == "AU-NSW"
+    assert updater.mapping_country_code == "AU"
+    assert updater.series_geography_key == "country:AU-NSW:national"
+
+
+@pytest.mark.asyncio
+async def test_australia_subdivision_reuses_parent_series_registry(monkeypatch) -> None:
+    rows = [
+        {
+            "Date": "2026-03-01",
+            "RawDiseaseLabel": "Anthrax",
+            "Cases": "4",
+            "GeographyKey": "country:AU-NSW:national",
+        }
+    ]
+    calls = []
+
+    class Store:
+        def enrich_registry_identities(self, source_rows, country_code, **kwargs):
+            calls.append(("enrich", country_code, kwargs))
+            return source_rows
+
+        def select_registry_rows(self, source_rows, country_code, **kwargs):
+            calls.append(("select", country_code, kwargs))
+            return SimpleNamespace(
+                rows=source_rows,
+                skipped_unregistered=0,
+                skipped_missing=0,
+                unregistered_rows=(),
+            )
+
+        async def save_rows(self, _db, source_rows, country_code, **kwargs):
+            calls.append(("save", country_code, kwargs))
+            return SimpleNamespace(
+                upserted=1,
+                skipped_unmatched=0,
+                skipped_ambiguous=0,
+                skipped_invalid=0,
+                skipped_registry_not_synced=0,
+                quality_report=SimpleNamespace(
+                    issues=(), highest_severity=None, to_dict=lambda: {"issues": []}
+                ),
+            )
+
+    monkeypatch.setattr(
+        "src.services.crawl_service.SeriesObservationStore", lambda: Store()
+    )
+
+    updater = SimpleNamespace(
+        country_code="AU-NSW",
+        series_country_code="AU",
+        ontology_source_id="SRC_AU_NINDSS",
+        series_geography_key="country:AU-NSW:national",
+        series_registered_rows_only=True,
+    )
+
+    result = await CrawlService._save_series_rows(object(), updater, rows)
+
+    assert result.upserted == 1
+    assert calls == [
+        ("select", "AU", {"source_id": "SRC_AU_NINDSS"}),
+        (
+            "save",
+            "AU",
+            {
+                "source_id": "SRC_AU_NINDSS",
+                "geography_key": "country:AU-NSW:national",
+                "quality_policy": CrawlService._series_quality_policy(updater),
+            },
+        ),
+    ]
+    assert calls[-1][2]["quality_policy"].registry_coverage == "required"
+
+
 @pytest.mark.asyncio
 async def test_series_write_failure_is_not_silently_ignored(monkeypatch) -> None:
     class Updater:

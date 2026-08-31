@@ -112,6 +112,254 @@
     },
     "notes": "NINDSS Microsoft BI feed aggregated to national via internal globalID2 crawler"
   },
+  "AU-ACT": {
+    "parent_country_code": "AU",
+    "location_type": "subdivision",
+    "iso_subdivision_code": "AU-ACT",
+    "data_source_url": "https://nindss.health.gov.au/pbi-dashboard/",
+    "data_source_type": "microsoft_bi",
+    "crawler_config": {
+      "sources": [
+        "all"
+      ],
+      "cadence": "monthly",
+      "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+      "reporting_area": "Australian Capital Territory",
+      "geocode": "AU-ACT",
+      "geography_key": "country:AU-ACT:national",
+      "parent_geography_key": "country:AU:national"
+    },
+    "parser_config": {
+      "primary": "au_nindss_internal_crawler"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first_parent_mapping",
+      "parent_country_code": "AU",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "en-AU"
+    },
+    "notes": "Australia NINDSS monthly state/territory notifications for Australian Capital Territory, published as an independent country/region dataset linked to parent Australia."
+  },
+  "AU-NSW": {
+    "parent_country_code": "AU",
+    "location_type": "subdivision",
+    "iso_subdivision_code": "AU-NSW",
+    "data_source_url": "https://nindss.health.gov.au/pbi-dashboard/",
+    "data_source_type": "microsoft_bi",
+    "crawler_config": {
+      "sources": [
+        "all"
+      ],
+      "cadence": "monthly",
+      "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+      "reporting_area": "New South Wales",
+      "geocode": "AU-NSW",
+      "geography_key": "country:AU-NSW:national",
+      "parent_geography_key": "country:AU:national"
+    },
+    "parser_config": {
+      "primary": "au_nindss_internal_crawler"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first_parent_mapping",
+      "parent_country_code": "AU",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "en-AU"
+    },
+    "notes": "Australia NINDSS monthly state/territory notifications for New South Wales, published as an independent country/region dataset linked to parent Australia."
+  },
+  "AU-NT": {
+    "parent_country_code": "AU",
+    "location_type": "subdivision",
+    "iso_subdivision_code": "AU-NT",
+    "data_source_url": "https://nindss.health.gov.au/pbi-dashboard/",
+    "data_source_type": "microsoft_bi",
+    "crawler_config": {
+      "sources": [
+        "all"
+      ],
+      "cadence": "monthly",
+      "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+      "reporting_area": "Northern Territory",
+      "geocode": "AU-NT",
+      "geography_key": "country:AU-NT:national",
+      "parent_geography_key": "country:AU:national"
+    },
+    "parser_config": {
+      "primary": "au_nindss_internal_crawler"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first_parent_mapping",
+      "parent_country_code": "AU",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "en-AU"
+    },
+    "notes": "Australia NINDSS monthly state/territory notifications for Northern Territory, published as an independent country/region dataset linked to parent Australia."
+  },
+  "AU-QLD": {
+    "parent_country_code": "AU",
+    "location_type": "subdivision",
+    "iso_subdivision_code": "AU-QLD",
+    "data_source_url": "https://nindss.health.gov.au/pbi-dashboard/",
+    "data_source_type": "microsoft_bi",
+    "crawler_config": {
+      "sources": [
+        "all"
+      ],
+      "cadence": "monthly",
+      "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+      "reporting_area": "Queensland",
+      "geocode": "AU-QLD",
+      "geography_key": "country:AU-QLD:national",
+      "parent_geography_key": "country:AU:national"
+    },
+    "parser_config": {
+      "primary": "au_nindss_internal_crawler"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first_parent_mapping",
+      "parent_country_code": "AU",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "en-AU"
+    },
+    "notes": "Australia NINDSS monthly state/territory notifications for Queensland, published as an independent country/region dataset linked to parent Australia."
+  },
+  "AU-SA": {
+    "parent_country_code": "AU",
+    "location_type": "subdivision",
+    "iso_subdivision_code": "AU-SA",
+    "data_source_url": "https://nindss.health.gov.au/pbi-dashboard/",
+    "data_source_type": "microsoft_bi",
+    "crawler_config": {
+      "sources": [
+        "all"
+      ],
+      "cadence": "monthly",
+      "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+      "reporting_area": "South Australia",
+      "geocode": "AU-SA",
+      "geography_key": "country:AU-SA:national",
+      "parent_geography_key": "country:AU:national"
+    },
+    "parser_config": {
+      "primary": "au_nindss_internal_crawler"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first_parent_mapping",
+      "parent_country_code": "AU",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "en-AU"
+    },
+    "notes": "Australia NINDSS monthly state/territory notifications for South Australia, published as an independent country/region dataset linked to parent Australia."
+  },
+  "AU-TAS": {
+    "parent_country_code": "AU",
+    "location_type": "subdivision",
+    "iso_subdivision_code": "AU-TAS",
+    "data_source_url": "https://nindss.health.gov.au/pbi-dashboard/",
+    "data_source_type": "microsoft_bi",
+    "crawler_config": {
+      "sources": [
+        "all"
+      ],
+      "cadence": "monthly",
+      "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+      "reporting_area": "Tasmania",
+      "geocode": "AU-TAS",
+      "geography_key": "country:AU-TAS:national",
+      "parent_geography_key": "country:AU:national"
+    },
+    "parser_config": {
+      "primary": "au_nindss_internal_crawler"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first_parent_mapping",
+      "parent_country_code": "AU",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "en-AU"
+    },
+    "notes": "Australia NINDSS monthly state/territory notifications for Tasmania, published as an independent country/region dataset linked to parent Australia."
+  },
+  "AU-VIC": {
+    "parent_country_code": "AU",
+    "location_type": "subdivision",
+    "iso_subdivision_code": "AU-VIC",
+    "data_source_url": "https://nindss.health.gov.au/pbi-dashboard/",
+    "data_source_type": "microsoft_bi",
+    "crawler_config": {
+      "sources": [
+        "all"
+      ],
+      "cadence": "monthly",
+      "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+      "reporting_area": "Victoria",
+      "geocode": "AU-VIC",
+      "geography_key": "country:AU-VIC:national",
+      "parent_geography_key": "country:AU:national"
+    },
+    "parser_config": {
+      "primary": "au_nindss_internal_crawler"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first_parent_mapping",
+      "parent_country_code": "AU",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "en-AU"
+    },
+    "notes": "Australia NINDSS monthly state/territory notifications for Victoria, published as an independent country/region dataset linked to parent Australia."
+  },
+  "AU-WA": {
+    "parent_country_code": "AU",
+    "location_type": "subdivision",
+    "iso_subdivision_code": "AU-WA",
+    "data_source_url": "https://nindss.health.gov.au/pbi-dashboard/",
+    "data_source_type": "microsoft_bi",
+    "crawler_config": {
+      "sources": [
+        "all"
+      ],
+      "cadence": "monthly",
+      "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+      "reporting_area": "Western Australia",
+      "geocode": "AU-WA",
+      "geography_key": "country:AU-WA:national",
+      "parent_geography_key": "country:AU:national"
+    },
+    "parser_config": {
+      "primary": "au_nindss_internal_crawler"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first_parent_mapping",
+      "parent_country_code": "AU",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "en-AU"
+    },
+    "notes": "Australia NINDSS monthly state/territory notifications for Western Australia, published as an independent country/region dataset linked to parent Australia."
+  },
   "CA": {
     "location_type": "country",
     "iso_country_code": "CA",

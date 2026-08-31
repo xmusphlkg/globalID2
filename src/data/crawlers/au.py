@@ -55,6 +55,97 @@ _MODEL_ID = 3305775
 # States to skip when summing to national total (these are aggregate rows)
 _SKIP_STATES = {"AUS", "UNKNOWN", "TOTAL", "ALL"}
 
+AU_STATE_SUBDIVISIONS: Dict[str, Dict[str, str]] = {
+    "AU-ACT": {
+        "source_label": "ACT",
+        "name": "Australian Capital Territory",
+        "name_zh": "澳大利亚首都领地",
+    },
+    "AU-NSW": {
+        "source_label": "NSW",
+        "name": "New South Wales",
+        "name_zh": "新南威尔士州",
+    },
+    "AU-NT": {
+        "source_label": "NT",
+        "name": "Northern Territory",
+        "name_zh": "北领地",
+    },
+    "AU-QLD": {
+        "source_label": "QLD",
+        "name": "Queensland",
+        "name_zh": "昆士兰州",
+    },
+    "AU-SA": {
+        "source_label": "SA",
+        "name": "South Australia",
+        "name_zh": "南澳大利亚州",
+    },
+    "AU-TAS": {
+        "source_label": "TAS",
+        "name": "Tasmania",
+        "name_zh": "塔斯马尼亚州",
+    },
+    "AU-VIC": {
+        "source_label": "VIC",
+        "name": "Victoria",
+        "name_zh": "维多利亚州",
+    },
+    "AU-WA": {
+        "source_label": "WA",
+        "name": "Western Australia",
+        "name_zh": "西澳大利亚州",
+    },
+}
+
+_AU_STATE_ALIASES: Dict[str, str] = {}
+for _code, _meta in AU_STATE_SUBDIVISIONS.items():
+    for _alias in {
+        _code,
+        _code.removeprefix("AU-"),
+        _meta["source_label"],
+        _meta["name"],
+    }:
+        _AU_STATE_ALIASES[" ".join(_alias.split()).casefold()] = _code
+_AU_STATE_ALIASES.update(
+    {
+        "australian capital territory": "AU-ACT",
+        "act": "AU-ACT",
+        "new south wales": "AU-NSW",
+        "nsw": "AU-NSW",
+        "northern territory": "AU-NT",
+        "nt": "AU-NT",
+        "queensland": "AU-QLD",
+        "qld": "AU-QLD",
+        "south australia": "AU-SA",
+        "sa": "AU-SA",
+        "tasmania": "AU-TAS",
+        "tas": "AU-TAS",
+        "victoria": "AU-VIC",
+        "vic": "AU-VIC",
+        "western australia": "AU-WA",
+        "wa": "AU-WA",
+    }
+)
+
+
+def normalize_au_state_code(value: object) -> Optional[str]:
+    """Resolve a NINDSS state/territory label to an ISO subdivision code."""
+
+    normalized = " ".join(str(value or "").replace("_", " ").split()).casefold()
+    if not normalized:
+        return None
+    return _AU_STATE_ALIASES.get(normalized)
+
+
+def au_state_source_label(code: str) -> str:
+    """Return the source label used by NINDSS for an AU subdivision code."""
+
+    normalized = str(code or "").strip().upper()
+    if normalized not in AU_STATE_SUBDIVISIONS:
+        raise ValueError(f"Unsupported Australian state/territory code: {code!r}")
+    return AU_STATE_SUBDIVISIONS[normalized]["source_label"]
+
 
 # ── Helpers (ported from GetDataFunctions.py) ─────────────────────────────────
 
@@ -1024,15 +1115,15 @@ class AustraliaNINDSSCrawler(BaseCrawler):
 
     # ── Internal sync fetch (shared by crawl() and crawl_monthly_national_csv) ─
 
-    def _fetch_months_concurrent(
+    def _fetch_months_concurrent_state_counts(
         self,
         months_to_fetch: List[Tuple[int, int]],
         diseases: List[str],
-    ) -> Dict[Tuple[int, int, str], int]:
+    ) -> Dict[Tuple[int, int, str, str], int]:
         """
-        Fetch national totals for every disease × month combination.
+        Fetch state/territory counts for every disease × month combination.
 
-        Returns {(year, month, disease): national_total}.
+        Returns {(year, month, disease, jurisdiction_code): state_total}.
         """
         tasks = [
             (y, m, disease)
@@ -1043,7 +1134,7 @@ class AustraliaNINDSSCrawler(BaseCrawler):
             f"[AU-NINDSS] Fetching | months={len(months_to_fetch)} "
             f"diseases={len(diseases)} total_requests={len(tasks)}"
         )
-        totals: Dict[Tuple[int, int, str], int] = {}
+        totals: Dict[Tuple[int, int, str, str], int] = {}
         with ThreadPoolExecutor(max_workers=6) as pool:
             futures = {
                 pool.submit(self._fetch_month_disease, y, m, dis): (y, m, dis)
@@ -1056,14 +1147,27 @@ class AustraliaNINDSSCrawler(BaseCrawler):
                 try:
                     state_counts = future.result()
                     if state_counts:
-                        national = sum(
-                            v for k, v in state_counts.items()
-                            if k.upper() not in _SKIP_STATES
-                            and isinstance(v, (int, float))
-                        )
-                        # Preserve explicit zero-count disease/month rows.
-                        # A confirmed 0 is materially different from "missing".
-                        totals[(y, m, dis)] = int(national)
+                        for raw_state, value in state_counts.items():
+                            raw_state_text = _norm_text(raw_state)
+                            if raw_state_text.upper() in _SKIP_STATES:
+                                continue
+                            jurisdiction_code = normalize_au_state_code(raw_state_text)
+                            if jurisdiction_code is None:
+                                parsed_value = _parse_int(value)
+                                if parsed_value:
+                                    raise ValueError(
+                                        "AU NINDSS returned an unknown non-empty "
+                                        f"state/territory label: {raw_state_text!r}"
+                                    )
+                                continue
+                            parsed_value = _parse_int(value)
+                            if parsed_value is None:
+                                continue
+                            # Preserve explicit zero-count disease/month rows.
+                            # A confirmed 0 is materially different from "missing".
+                            totals[(y, m, dis, jurisdiction_code)] = int(parsed_value)
+                except ValueError:
+                    raise
                 except Exception as exc:
                     logger.debug(
                         f"[AU-NINDSS] fetch failed | "
@@ -1072,6 +1176,26 @@ class AustraliaNINDSSCrawler(BaseCrawler):
                 if done % 50 == 0:
                     logger.info(f"[AU-NINDSS] Progress | {done}/{len(tasks)}")
         return totals
+
+    def _fetch_months_concurrent(
+        self,
+        months_to_fetch: List[Tuple[int, int]],
+        diseases: List[str],
+    ) -> Dict[Tuple[int, int, str], int]:
+        """
+        Fetch national totals for every disease x month combination.
+
+        Returns {(year, month, disease): national_total}.
+        """
+        state_totals = self._fetch_months_concurrent_state_counts(
+            months_to_fetch,
+            diseases,
+        )
+        national_totals: Dict[Tuple[int, int, str], int] = {}
+        for (year, month, disease, _state_code), value in state_totals.items():
+            key = (year, month, disease)
+            national_totals[key] = national_totals.get(key, 0) + int(value)
+        return national_totals
 
     # ── Public interface ──────────────────────────────────────────────────────
 
@@ -1234,6 +1358,241 @@ class AustraliaNINDSSCrawler(BaseCrawler):
             latest_date=latest_date,
             csv_url=self.dashboard_url,
         )
+
+    def crawl_monthly_subdivision_csv(
+        self,
+        output_csv: Path,
+        *,
+        jurisdiction_code: str,
+        months: Optional[List[Tuple[int, int]]] = None,
+    ) -> AUFetchSummary:
+        """
+        Fetch NINDSS disease data and write one state/territory CSV.
+
+        The facts remain monthly case notifications for the whole published
+        subdivision jurisdiction, represented as ``country:AU-XX:national``.
+        """
+
+        target_code = str(jurisdiction_code or "").strip().upper()
+        if target_code not in AU_STATE_SUBDIVISIONS:
+            raise ValueError(
+                f"Unsupported Australian state/territory code: {jurisdiction_code}"
+            )
+        target_meta = AU_STATE_SUBDIVISIONS[target_code]
+
+        if not self._load_config():
+            raise RuntimeError(
+                "AU NINDSS: failed to capture Power BI auth token via Playwright after retries"
+            )
+
+        diseases = self.get_all_diseases()
+        if not diseases:
+            raise RuntimeError(
+                "AU NINDSS: could not retrieve disease list from Power BI"
+            )
+
+        now = datetime.now()
+        if months is not None:
+            months_to_fetch = sorted(set(months))
+        else:
+            months_to_fetch = []
+            for delta in range(3):
+                m = now.month - delta
+                y = now.year
+                if m <= 0:
+                    m += 12
+                    y -= 1
+                months_to_fetch.append((y, m))
+
+        totals = self._fetch_months_concurrent_state_counts(months_to_fetch, diseases)
+
+        output_csv.parent.mkdir(parents=True, exist_ok=True)
+        fieldnames = [
+            "",
+            "Disease",
+            "DiseaseFull",
+            "Group",
+            "Year",
+            "Month",
+            "Date",
+            "Cases",
+            "Population",
+            "Incidence",
+            "JurisdictionCode",
+            "ParentCountryCode",
+            "LocationType",
+            "ReportingArea",
+            "Geocode",
+            "GeographyKey",
+        ]
+        latest_date: Optional[date] = None
+        rows_written = 0
+
+        with output_csv.open("w", encoding="utf-8", newline="") as fh:
+            writer = csv.DictWriter(fh, fieldnames=fieldnames)
+            writer.writeheader()
+            rows = [
+                ((y, m, disease), value)
+                for (y, m, disease, state_code), value in totals.items()
+                if state_code == target_code
+            ]
+            for idx, ((y, m, disease), state_total) in enumerate(
+                sorted(rows, key=lambda x: (x[0][0], x[0][1], x[0][2])),
+                start=1,
+            ):
+                row_date = date(y, m, 1)
+                if latest_date is None or row_date > latest_date:
+                    latest_date = row_date
+                writer.writerow(
+                    {
+                        "": str(idx),
+                        "Disease": disease,
+                        "DiseaseFull": disease,
+                        "Group": "state_territory_total",
+                        "Year": str(y),
+                        "Month": str(m),
+                        "Date": row_date.isoformat(),
+                        "Cases": str(state_total),
+                        "Population": "",
+                        "Incidence": "",
+                        "JurisdictionCode": target_code,
+                        "ParentCountryCode": "AU",
+                        "LocationType": "subdivision",
+                        "ReportingArea": target_meta["name"],
+                        "Geocode": target_code,
+                        "GeographyKey": f"country:{target_code}:national",
+                    }
+                )
+                rows_written += 1
+
+        logger.info(
+            f"[AU-NINDSS] Subdivision CSV written | path={output_csv} "
+            f"jurisdiction={target_code} rows={rows_written} latest={latest_date}"
+        )
+        return AUFetchSummary(
+            row_count=rows_written,
+            latest_date=latest_date,
+            csv_url=self.dashboard_url,
+        )
+
+    def crawl_monthly_subdivision_csvs(
+        self,
+        output_dir: Path,
+        *,
+        jurisdiction_codes: Optional[List[str]] = None,
+        months: Optional[List[Tuple[int, int]]] = None,
+    ) -> Dict[str, AUFetchSummary]:
+        """Fetch NINDSS once and write CSVs for multiple state/territory codes."""
+
+        target_codes = [
+            str(code or "").strip().upper()
+            for code in (jurisdiction_codes or list(AU_STATE_SUBDIVISIONS))
+        ]
+        invalid = [code for code in target_codes if code not in AU_STATE_SUBDIVISIONS]
+        if invalid:
+            raise ValueError(
+                "Unsupported Australian state/territory code(s): "
+                + ", ".join(invalid)
+            )
+
+        if not self._load_config():
+            raise RuntimeError(
+                "AU NINDSS: failed to capture Power BI auth token via Playwright after retries"
+            )
+
+        diseases = self.get_all_diseases()
+        if not diseases:
+            raise RuntimeError(
+                "AU NINDSS: could not retrieve disease list from Power BI"
+            )
+
+        now = datetime.now()
+        if months is not None:
+            months_to_fetch = sorted(set(months))
+        else:
+            months_to_fetch = []
+            for delta in range(3):
+                m = now.month - delta
+                y = now.year
+                if m <= 0:
+                    m += 12
+                    y -= 1
+                months_to_fetch.append((y, m))
+
+        totals = self._fetch_months_concurrent_state_counts(months_to_fetch, diseases)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        summaries: Dict[str, AUFetchSummary] = {}
+        fieldnames = [
+            "",
+            "Disease",
+            "DiseaseFull",
+            "Group",
+            "Year",
+            "Month",
+            "Date",
+            "Cases",
+            "Population",
+            "Incidence",
+            "JurisdictionCode",
+            "ParentCountryCode",
+            "LocationType",
+            "ReportingArea",
+            "Geocode",
+            "GeographyKey",
+        ]
+        for target_code in target_codes:
+            target_meta = AU_STATE_SUBDIVISIONS[target_code]
+            output_csv = output_dir / f"{target_code.lower()}_nindss_monthly.csv"
+            latest_date: Optional[date] = None
+            rows_written = 0
+            with output_csv.open("w", encoding="utf-8", newline="") as fh:
+                writer = csv.DictWriter(fh, fieldnames=fieldnames)
+                writer.writeheader()
+                rows = [
+                    ((y, m, disease), value)
+                    for (y, m, disease, state_code), value in totals.items()
+                    if state_code == target_code
+                ]
+                for idx, ((y, m, disease), state_total) in enumerate(
+                    sorted(rows, key=lambda x: (x[0][0], x[0][1], x[0][2])),
+                    start=1,
+                ):
+                    row_date = date(y, m, 1)
+                    if latest_date is None or row_date > latest_date:
+                        latest_date = row_date
+                    writer.writerow(
+                        {
+                            "": str(idx),
+                            "Disease": disease,
+                            "DiseaseFull": disease,
+                            "Group": "state_territory_total",
+                            "Year": str(y),
+                            "Month": str(m),
+                            "Date": row_date.isoformat(),
+                            "Cases": str(state_total),
+                            "Population": "",
+                            "Incidence": "",
+                            "JurisdictionCode": target_code,
+                            "ParentCountryCode": "AU",
+                            "LocationType": "subdivision",
+                            "ReportingArea": target_meta["name"],
+                            "Geocode": target_code,
+                            "GeographyKey": f"country:{target_code}:national",
+                        }
+                    )
+                    rows_written += 1
+            summaries[target_code] = AUFetchSummary(
+                row_count=rows_written,
+                latest_date=latest_date,
+                csv_url=self.dashboard_url,
+            )
+
+        logger.info(
+            f"[AU-NINDSS] Subdivision CSV batch written | "
+            f"jurisdictions={len(summaries)} output_dir={output_dir}"
+        )
+        return summaries
 
     def parse(self, response: Any) -> List[CrawlerResult]:
         return []

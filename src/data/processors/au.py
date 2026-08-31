@@ -21,7 +21,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_logger
 from src.data.crawlers import AustraliaNINDSSCrawler
-from src.data.crawlers.au import AUFetchSummary
+from src.data.crawlers.au import (
+    AUFetchSummary,
+    AU_STATE_SUBDIVISIONS,
+    normalize_au_state_code,
+)
 from src.data.processors.mapping_lookup import (
     load_country_mapping_dict,
     normalize_mapping_key,
@@ -31,6 +35,7 @@ logger = get_logger(__name__)
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_CSV = ROOT / "data/current/au/australia_national_data.csv"
+DEFAULT_SUBDIVISION_OUTPUT_DIR = ROOT / "data/current/au/subdivisions"
 DEFAULT_SOURCE_NAME = "Australia NINDSS (location aggregated)"
 MAPPING_SOURCE_ID = "SRC_AU_NINDSS"
 _ARCHIVE_SKIP_STATES = {"AUS", "UNKNOWN", "TOTAL", "ALL"}
@@ -90,6 +95,7 @@ class AUMonthlyUpdater:
 
     # The legacy disease mapping is complete, while lossless source-series
     # registrations are intentionally introduced a subset at a time.
+    ontology_source_id = MAPPING_SOURCE_ID
     series_registered_rows_only = True
 
     def __init__(
@@ -97,11 +103,41 @@ class AUMonthlyUpdater:
         *,
         country_code: str = "AU",
         source_name: str = DEFAULT_SOURCE_NAME,
-        output_csv: Path = DEFAULT_OUTPUT_CSV,
+        output_csv: Path | None = None,
     ) -> None:
         self.country_code = country_code.upper()
+        if self.country_code != "AU" and self.country_code not in AU_STATE_SUBDIVISIONS:
+            raise ValueError(
+                f"Unsupported Australian state/territory jurisdiction: {country_code}"
+            )
+        self.parent_country_code = "AU" if self.country_code != "AU" else None
+        self.mapping_country_code = "AU"
+        self.series_country_code = "AU"
+        self.series_geography_key = f"country:{self.country_code}:national"
         self.source_name = source_name
-        self.output_csv = output_csv
+        self.output_csv = (
+            Path(output_csv)
+            if output_csv is not None
+            else self._default_output_csv(self.country_code)
+        )
+
+    @staticmethod
+    def _default_output_csv(country_code: str) -> Path:
+        normalized = str(country_code or "").strip().upper()
+        if normalized == "AU":
+            return DEFAULT_OUTPUT_CSV
+        return DEFAULT_SUBDIVISION_OUTPUT_DIR / f"{normalized.lower()}_nindss_monthly.csv"
+
+    @staticmethod
+    def _default_raw_archive_root(country_code: str) -> Path:
+        normalized = str(country_code or "").strip().upper()
+        if normalized == "AU":
+            return ROOT / "data/raw/au"
+        return ROOT / "data/raw/au/subdivisions" / normalized.lower()
+
+    @property
+    def is_subdivision(self) -> bool:
+        return self.country_code != "AU"
 
     @staticmethod
     def _default_recent_months() -> List[Tuple[int, int]]:
@@ -161,6 +197,12 @@ class AUMonthlyUpdater:
             "Cases",
             "Population",
             "Incidence",
+            "JurisdictionCode",
+            "ParentCountryCode",
+            "LocationType",
+            "ReportingArea",
+            "Geocode",
+            "GeographyKey",
         ]
 
         latest_date = self._latest_row_date(ordered_rows)
@@ -183,6 +225,12 @@ class AUMonthlyUpdater:
                         "Cases": str(max(0, _parse_int(row.get("Cases")) or 0)),
                         "Population": row.get("Population", ""),
                         "Incidence": row.get("Incidence", ""),
+                        "JurisdictionCode": row.get("JurisdictionCode", "AU"),
+                        "ParentCountryCode": row.get("ParentCountryCode", ""),
+                        "LocationType": row.get("LocationType", "country"),
+                        "ReportingArea": row.get("ReportingArea", "Australia"),
+                        "Geocode": row.get("Geocode", "AU"),
+                        "GeographyKey": row.get("GeographyKey", "country:AU:national"),
                     }
                 )
 
@@ -220,30 +268,93 @@ class AUMonthlyUpdater:
                 if not disease or not isinstance(parsed_counts, dict):
                     return None
 
-                national_total = 0
-                for state, value in parsed_counts.items():
-                    if _norm_text(state).upper() in _ARCHIVE_SKIP_STATES:
+                if self.is_subdivision:
+                    state_value = None
+                    for raw_state, raw_value in parsed_counts.items():
+                        if normalize_au_state_code(raw_state) == self.country_code:
+                            state_value = raw_value
+                            break
+                    if state_value is None:
+                        return None
+                    parsed_value = _parse_int(state_value)
+                    if parsed_value is None:
                         continue
-                    parsed_value = _parse_int(value)
-                    if parsed_value is not None:
-                        national_total += parsed_value
+                    restored_rows.append(
+                        self._normalized_output_row(
+                            year=year,
+                            month=month,
+                            disease=disease,
+                            cases=max(0, parsed_value),
+                            source_file=archive_file.name,
+                        )
+                    )
+                else:
+                    national_total = 0
+                    for state, value in parsed_counts.items():
+                        if _norm_text(state).upper() in _ARCHIVE_SKIP_STATES:
+                            continue
+                        parsed_value = _parse_int(value)
+                        if parsed_value is not None:
+                            national_total += parsed_value
 
-                restored_rows.append(
-                    {
-                        "Date": date(year, month, 1).isoformat(),
-                        "RawDiseaseLabel": disease,
-                        "DiseaseFull": disease,
-                        "Cases": str(max(0, national_total)),
-                        "Group": "national_total",
-                        "Incidence": "",
-                        "Population": "",
-                        "Source": self.source_name,
-                        "__source_file": archive_file.name,
-                    }
-                )
+                    restored_rows.append(
+                        self._normalized_output_row(
+                            year=year,
+                            month=month,
+                            disease=disease,
+                            cases=max(0, national_total),
+                            source_file=archive_file.name,
+                        )
+                    )
 
         restored_rows.sort(key=lambda row: (row["Date"], row["RawDiseaseLabel"]))
         return restored_rows
+
+    def _normalized_output_row(
+        self,
+        *,
+        year: int,
+        month: int,
+        disease: str,
+        cases: int,
+        source_file: str,
+    ) -> Dict[str, str]:
+        if self.is_subdivision:
+            meta = AU_STATE_SUBDIVISIONS[self.country_code]
+            return {
+                "Date": date(year, month, 1).isoformat(),
+                "RawDiseaseLabel": disease,
+                "DiseaseFull": disease,
+                "Cases": str(max(0, cases)),
+                "Group": "state_territory_total",
+                "Incidence": "",
+                "Population": "",
+                "Source": self.source_name,
+                "JurisdictionCode": self.country_code,
+                "ParentCountryCode": "AU",
+                "LocationType": "subdivision",
+                "ReportingArea": meta["name"],
+                "Geocode": self.country_code,
+                "GeographyKey": self.series_geography_key,
+                "__source_file": source_file,
+            }
+        return {
+            "Date": date(year, month, 1).isoformat(),
+            "RawDiseaseLabel": disease,
+            "DiseaseFull": disease,
+            "Cases": str(max(0, cases)),
+            "Group": "national_total",
+            "Incidence": "",
+            "Population": "",
+            "Source": self.source_name,
+            "JurisdictionCode": "AU",
+            "ParentCountryCode": "",
+            "LocationType": "country",
+            "ReportingArea": "Australia",
+            "Geocode": "AU",
+            "GeographyKey": "country:AU:national",
+            "__source_file": source_file,
+        }
 
     def refresh_source(
         self,
@@ -266,7 +377,11 @@ class AUMonthlyUpdater:
         """
         logs: List[str] = []
         requested_months = self._resolve_requested_months(months)
-        archive_root = Path(raw_dir) if raw_dir is not None else ROOT / "data/raw" / self.country_code.lower()
+        archive_root = (
+            Path(raw_dir)
+            if raw_dir is not None
+            else self._default_raw_archive_root(self.country_code)
+        )
         prior_rows: List[Dict[str, str]] = []
         if self.output_csv.exists():
             try:
@@ -274,12 +389,25 @@ class AUMonthlyUpdater:
             except Exception as exc:
                 logs.append(f"[cache] unable to read existing CSV snapshot: {type(exc).__name__}: {exc}")
 
-        crawler = AustraliaNINDSSCrawler(save_raw=save_raw, raw_dir=raw_dir)
+        crawler = AustraliaNINDSSCrawler(
+            save_raw=save_raw,
+            raw_dir=archive_root if save_raw else raw_dir,
+        )
         live_rows: List[Dict[str, str]] = []
         live_error: Optional[Exception] = None
 
         try:
-            fetch_summary = crawler.crawl_monthly_national_csv(self.output_csv, months=months)
+            if self.is_subdivision:
+                fetch_summary = crawler.crawl_monthly_subdivision_csv(
+                    self.output_csv,
+                    jurisdiction_code=self.country_code,
+                    months=months,
+                )
+            else:
+                fetch_summary = crawler.crawl_monthly_national_csv(
+                    self.output_csv,
+                    months=months,
+                )
             logs.append(
                 f"[crawler] fetched {fetch_summary.row_count} rows; "
                 f"months={'all 3 recent' if months is None else len(months)}; "
@@ -376,12 +504,54 @@ class AUMonthlyUpdater:
                             == (today.year, today.month)
                             else "false"
                         ),
+                        "JurisdictionCode": _norm_text(row.get("JurisdictionCode"))
+                        or self.country_code,
+                        "ParentCountryCode": _norm_text(row.get("ParentCountryCode")),
+                        "LocationType": _norm_text(row.get("LocationType"))
+                        or ("subdivision" if self.is_subdivision else "country"),
+                        "ReportingArea": _norm_text(row.get("ReportingArea"))
+                        or (
+                            AU_STATE_SUBDIVISIONS[self.country_code]["name"]
+                            if self.is_subdivision
+                            else "Australia"
+                        ),
+                        "Geocode": _norm_text(row.get("Geocode")) or self.country_code,
+                        "GeographyKey": _norm_text(row.get("GeographyKey"))
+                        or self.series_geography_key,
                         "__source_file": csv_path.name,
                     }
                 )
 
         rows.sort(key=lambda r: (r["Date"], r["RawDiseaseLabel"]))
+        if self.is_subdivision:
+            self._validate_subdivision_rows(rows)
         return rows
+
+    def _validate_subdivision_rows(self, rows: List[Dict[str, str]]) -> None:
+        expected_area = AU_STATE_SUBDIVISIONS[self.country_code]["name"]
+        for row_number, row in enumerate(rows, start=2):
+            if row.get("JurisdictionCode") != self.country_code:
+                raise ValueError(
+                    f"AU subdivision row {row_number} has unexpected jurisdiction"
+                )
+            if row.get("ParentCountryCode") != "AU":
+                raise ValueError(
+                    f"AU subdivision row {row_number} has unexpected parent country"
+                )
+            if row.get("LocationType") != "subdivision":
+                raise ValueError(
+                    f"AU subdivision row {row_number} has unexpected location type"
+                )
+            if row.get("Geocode") != self.country_code:
+                raise ValueError(f"AU subdivision row {row_number} has unexpected geocode")
+            if row.get("GeographyKey") != self.series_geography_key:
+                raise ValueError(
+                    f"AU subdivision row {row_number} has unexpected geography"
+                )
+            if row.get("ReportingArea") != expected_area:
+                raise ValueError(
+                    f"AU subdivision row {row_number} has unexpected reporting area"
+                )
 
     @staticmethod
     def _latest_row_date(rows: List[Dict[str, str]]) -> Optional[date]:
@@ -438,7 +608,7 @@ class AUMonthlyUpdater:
 
     async def _load_mapping_dict(self, db: AsyncSession) -> Dict[str, int]:
         return await load_country_mapping_dict(
-            db, self.country_code, source_id=MAPPING_SOURCE_ID
+            db, self.mapping_country_code, source_id=MAPPING_SOURCE_ID
         )
 
     async def import_rows(
@@ -496,6 +666,11 @@ class AUMonthlyUpdater:
                 "group": row.get("Group", ""),
                 "population": row.get("Population", ""),
                 "source_file": row.get("__source_file", ""),
+                "jurisdiction_code": row.get("JurisdictionCode", self.country_code),
+                "parent_country_code": row.get("ParentCountryCode", ""),
+                "location_type": row.get("LocationType", ""),
+                "reporting_area": row.get("ReportingArea", ""),
+                "geography_key": row.get("GeographyKey", self.series_geography_key),
                 "death_reporting": "not_provided_by_source",
                 "death_reporting_note": "Australia NNDSS notification feed used here reports cases, not death counts.",
             }
@@ -512,6 +687,7 @@ class AUMonthlyUpdater:
                     "country_id": country_id,
                     "cases": cases if cases is not None else 0,
                     "deaths": None,
+                    "region": row.get("ReportingArea") if self.is_subdivision else None,
                     "data_source": row.get("Source", self.source_name),
                     "incidence_rate": incidence,
                     "metadata": json.dumps(metadata_obj),
@@ -524,17 +700,18 @@ class AUMonthlyUpdater:
                 text(
                     """
                     INSERT INTO disease_records (
-                        time, disease_id, country_id, cases, deaths,
+                        time, disease_id, country_id, cases, deaths, region,
                         data_source, incidence_rate, metadata, raw_data,
                         new_cases, new_deaths, recoveries, active_cases, new_recoveries
                     ) VALUES (
-                        :time, :disease_id, :country_id, :cases, :deaths,
+                        :time, :disease_id, :country_id, :cases, :deaths, :region,
                         :data_source, :incidence_rate, :metadata, :raw_data,
                         0, 0, 0, 0, 0
                     )
                     ON CONFLICT (time, disease_id, country_id) DO UPDATE SET
                         cases = EXCLUDED.cases,
                         deaths = EXCLUDED.deaths,
+                        region = EXCLUDED.region,
                         data_source = EXCLUDED.data_source,
                         incidence_rate = EXCLUDED.incidence_rate,
                         metadata = EXCLUDED.metadata,

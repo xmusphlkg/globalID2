@@ -21,6 +21,7 @@ from src.core.country_library import get_country_bootstrap_config
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
 from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
 from src.core.task_manager import task_manager
+from src.data.crawlers.au import AU_STATE_SUBDIVISIONS
 from src.data.storage import (
     SeriesObservationQualityError,
     SeriesObservationQualityPolicy,
@@ -85,6 +86,11 @@ class CrawlService:
         _PIPELINES.setdefault(
             _ecdc_country_code,
             _PipelineSpec("_execute_ecdc_annual", "ECDCAnnualUpdater"),
+        )
+    for _au_subdivision_code in AU_STATE_SUBDIVISIONS:
+        _PIPELINES.setdefault(
+            _au_subdivision_code,
+            _PipelineSpec("_execute_au_monthly", "AUMonthlyUpdater"),
         )
     _SERIES_SOURCE_IDS: Dict[str, str | Dict[str, str]] = {
         "US": {
@@ -196,6 +202,8 @@ class CrawlService:
         updater_type = updaters[updater_name]
         if updater_name == "ECDCAnnualUpdater":
             return updater_type(country_code or "FR")
+        if updater_name == "AUMonthlyUpdater" and country_code:
+            return updater_type(country_code=country_code)
         return updater_type()
 
     @staticmethod
@@ -210,9 +218,15 @@ class CrawlService:
 
         quality_policy = CrawlService._series_quality_policy(updater)
         country_code = str(getattr(updater, "country_code", "") or "").upper()
+        series_country_code = str(
+            getattr(updater, "series_country_code", "") or country_code
+        ).upper()
         source_id = getattr(updater, "ontology_source_id", None)
         if source_id is None:
-            source_id = CrawlService._SERIES_SOURCE_IDS.get(country_code)
+            source_id = CrawlService._SERIES_SOURCE_IDS.get(
+                country_code,
+                CrawlService._SERIES_SOURCE_IDS.get(series_country_code),
+            )
         geography_key = getattr(updater, "series_geography_key", None)
         geography_from_rows = bool(
             getattr(updater, "series_geography_from_rows", False)
@@ -239,19 +253,19 @@ class CrawlService:
 
             source_series_rows = series_store.enrich_registry_identities(
                 source_series_rows,
-                country_code,
+                series_country_code,
                 source_id=source_id,
             )
             discovery = await disease_mapping_registry_service.discover_rows(
                 db,
-                country_code=country_code,
+                country_code=series_country_code,
                 source_id=source_id,
                 rows=source_series_rows,
                 notify=True,
             )
             logger.info(
                 "Disease Mapping Registry discovery | country={} categories={} new={}",
-                country_code,
+                series_country_code,
                 discovery["source_category_count"],
                 discovery["new_category_count"],
             )
@@ -260,7 +274,7 @@ class CrawlService:
         if bool(getattr(updater, "series_registered_rows_only", False)):
             selection = series_store.select_registry_rows(
                 source_series_rows,
-                updater.country_code,
+                series_country_code,
                 source_id=source_id,
             )
             holding_rows = list(getattr(selection, "unregistered_rows", ()) or ())
@@ -280,7 +294,7 @@ class CrawlService:
                 "Disease source-series Registry selection | country={} "
                 "selected={} retained_unmapped={} omitted_unregistered={} "
                 "omitted_missing={}",
-                updater.country_code,
+                series_country_code,
                 len(selection.rows),
                 len(holding_rows),
                 skipped_unregistered,
@@ -317,7 +331,7 @@ class CrawlService:
             series_result = await series_store.save_rows(
                 db,
                 source_series_rows,
-                updater.country_code,
+                series_country_code,
                 source_id=source_id,
                 geography_key=geography_key,
                 quality_policy=quality_policy,
@@ -326,7 +340,7 @@ class CrawlService:
             logger.error(
                 "Disease source-series batch rejected before transaction commit | "
                 "country={} mode={} report={}",
-                updater.country_code,
+                series_country_code,
                 quality_policy.mode,
                 json.dumps(exc.report.to_dict(), ensure_ascii=False, sort_keys=True),
             )
@@ -348,7 +362,7 @@ class CrawlService:
             "unregistered={} missing={} unmatched={} ambiguous={} invalid={} "
             "registry_not_synced={} holding={} "
             "quality_mode={} quality_issues={} quality_highest={}",
-            updater.country_code,
+            series_country_code,
             series_result.upserted,
             series_result.skipped_unregistered,
             series_result.skipped_missing,
@@ -364,7 +378,7 @@ class CrawlService:
         if quality_report.issues:
             logger.warning(
                 "Disease source-series quality anomalies | country={} report={}",
-                updater.country_code,
+                series_country_code,
                 json.dumps(
                     quality_report.to_dict(), ensure_ascii=False, sort_keys=True
                 ),
@@ -426,6 +440,9 @@ class CrawlService:
         """Resolve per-country guard settings with an operational env override."""
 
         country_code = str(getattr(updater, "country_code", "") or "").upper()
+        series_country_code = str(
+            getattr(updater, "series_country_code", "") or country_code
+        ).upper()
         config = get_country_bootstrap_config(country_code) if country_code else {}
         crawler_config = (
             config.get("crawler_config", {}) if isinstance(config, dict) else {}
@@ -442,7 +459,10 @@ class CrawlService:
         registry_coverage = getattr(updater, "series_registry_coverage", None)
         if registry_coverage:
             raw_policy["registry_coverage"] = registry_coverage
-        elif country_code in CrawlService._SERIES_SOURCE_IDS:
+        elif (
+            country_code in CrawlService._SERIES_SOURCE_IDS
+            or series_country_code in CrawlService._SERIES_SOURCE_IDS
+        ):
             raw_policy.setdefault("registry_coverage", "required")
 
         env_country_code = country_code.replace("-", "_")
@@ -782,6 +802,57 @@ class CrawlService:
         updater,
     ) -> CrawlResult:
         """Compatibility entry point for the Australia monthly pipeline."""
+        from src.services.crawl_pipelines.monthly import CONFIGS
+
+        config = CONFIGS["AU"]
+        updater_country = str(getattr(updater, "country_code", "AU") or "AU").upper()
+        if updater_country != "AU":
+            config = replace(
+                config,
+                country_code=updater_country,
+                raw_dir_name=f"au/subdivisions/{updater_country.lower()}",
+                fetch_description=(
+                    "Launching Playwright to capture Power BI token, then fetching "
+                    f"NINDSS state/territory data for {updater_country}..."
+                ),
+                upsert_description=(
+                    "AU state/territory data is dynamically revised"
+                ),
+                finalizing_description=(
+                    f"Finalizing {updater_country} monthly update and crawl run summary..."
+                ),
+                process_disabled_summary=(
+                    f"Process disabled, refreshed {updater_country} source only."
+                ),
+                imported_summary=lambda count, months, code=updater_country: (
+                    f"{code} NINDSS data upserted: {count} rows across "
+                    f"{months} month(s) updated in database."
+                ),
+                no_rows_summary=(
+                    f"{updater_country} source refreshed; no rows matched disease "
+                    "mapping (check AU mapping config)."
+                ),
+            )
+
+            from src.services.crawl_pipelines.monthly import execute_monthly_pipeline
+
+            return await execute_monthly_pipeline(
+                self,
+                config=config,
+                task=task,
+                source=source,
+                force=force,
+                process=process,
+                save_raw=save_raw,
+                fill_missing=fill_missing,
+                updater=updater,
+                get_database=get_database,
+                task_manager=task_manager,
+                crawl_run_type=CrawlRun,
+                result_type=CrawlResult,
+                logger=logger,
+            )
+
         return await self._execute_configured_monthly(
             "AU",
             task=task,
