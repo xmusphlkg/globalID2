@@ -72,7 +72,7 @@ class ReportFormatter:
 
         lines.extend(["---", "", "*本报告由 GlobalID 自动生成，数值结论来自已存储证据。*", ""])
         markdown_text = "\n".join(str(item) for item in lines)
-        logger.info("Markdown formatted: %s characters", len(markdown_text))
+        logger.info("Markdown formatted: {} characters", len(markdown_text))
         return markdown_text
 
     def format_html(
@@ -88,7 +88,7 @@ class ReportFormatter:
                 template = self.jinja_env.get_template(template_name)
                 return template.render(document=document, sections=document.get("sections") or [], metadata=metadata)
             except Exception as exc:
-                logger.warning("Failed to render template %s: %s", template_name, exc)
+                logger.warning("Failed to render template {}: {}", template_name, exc)
 
         title = self._localized(document.get("title"), "zh", metadata.get("title") or "疾病监测报告")
         parts = [
@@ -125,7 +125,7 @@ class ReportFormatter:
             path.write_bytes(content)
         else:
             path.write_text(str(content), encoding="utf-8")
-        logger.info("Report saved to %s", path)
+        logger.info("Report saved to {}", path)
 
     @staticmethod
     def _document(metadata: dict[str, Any], sections: list[dict[str, Any]]) -> dict[str, Any]:

@@ -103,6 +103,45 @@ def test_classifier_allows_transient_cloudflare_preflight_diagnostic():
     assert result.stage == "release_preflight"
 
 
+def test_classifier_allows_openssl_eof_preflight_diagnostic():
+    failure = ReleasePreflightError(
+        {
+            "blockers": ["Cloudflare Pages project check failed."],
+            "cloudflare": {
+                "error": (
+                    "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] "
+                    "EOF occurred in violation of protocol>"
+                )
+            },
+        }
+    )
+    result = classify_release_failure(failure)
+    assert result.retryable is True
+    assert result.category == "transient_external"
+    assert result.stage == "release_preflight"
+
+
+def test_classifier_keeps_missing_cloudflare_production_branch_terminal():
+    failure = ReleasePreflightError(
+        {
+            "blockers": [
+                "Cloudflare Pages project check failed.",
+                "Cloudflare Pages project has no production branch configured.",
+            ],
+            "cloudflare": {
+                "error": (
+                    "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] "
+                    "EOF occurred in violation of protocol>"
+                )
+            },
+        }
+    )
+    result = classify_release_failure(failure)
+    assert result.retryable is False
+    assert result.category == "permanent"
+    assert result.stage == "release_preflight"
+
+
 def test_only_unattended_release_triggers_are_retry_eligible():
     assert automatic_trigger_eligible(
         {"trigger": "scheduled", "manual_trigger": False}

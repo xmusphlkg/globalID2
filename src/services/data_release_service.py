@@ -307,7 +307,7 @@ class DataReleaseService:
             self._sync_state_schedule(job, state, reset=state.next_run_at is None)
             await schedule_state_repository.save("release", job.job_id, state)
         self._task = asyncio.create_task(self._run_loop(), name="globalid-data-release-scheduler")
-        logger.info("Data release scheduler started with %s configured job(s)", len(await self.load_jobs()))
+        logger.info("Data release scheduler started with {} configured job(s)", len(await self.load_jobs()))
 
     async def stop(self) -> None:
         if self._stop_event is not None:
@@ -336,7 +336,7 @@ class DataReleaseService:
                     if state.next_run_at and now >= state.next_run_at:
                         await self.trigger_job(job.job_id, manual=False, trigger="scheduled")
             except Exception as exc:
-                logger.exception("Data release scheduler tick failed: %s", exc)
+                logger.exception("Data release scheduler tick failed: {}", exc)
             try:
                 await asyncio.wait_for(
                     self._stop_event.wait(), timeout=cfg.poll_interval_seconds
@@ -469,7 +469,7 @@ class DataReleaseService:
                 },
             )
             logger.warning(
-                "Automatic release retry scheduled task=%s job=%s attempt=%s/%s at=%s",
+                "Automatic release retry scheduled task={} job={} attempt={}/{} at={}",
                 task_uuid,
                 job_id,
                 entry_payload["scheduled_attempts"],
@@ -644,7 +644,7 @@ class DataReleaseService:
                 state.last_status = "failed"
                 state.last_error = str(exc)
                 state.next_run_at = self._compute_next_run(job, now=state.last_finished_at)
-                logger.error("Data release job %s failed to queue: %s", job.job_id, exc)
+                logger.error("Data release job {} failed to queue: {}", job.job_id, exc)
                 raise
             finally:
                 await schedule_state_repository.save("release", job.job_id, state)
@@ -717,7 +717,7 @@ class DataReleaseService:
                 state.last_status = "cooldown"
                 state.last_error = cooldown_reason
                 state.last_finished_at = datetime.now(ZoneInfo(job.timezone or self._config().timezone))
-                logger.warning("Auto-triggered data release %s suppressed: %s", job.job_id, cooldown_reason)
+                logger.warning("Auto-triggered data release {} suppressed: {}", job.job_id, cooldown_reason)
                 continue
             try:
                 await self.trigger_job(
@@ -727,7 +727,7 @@ class DataReleaseService:
                     trigger_task_uuid=trigger_task_uuid,
                 )
             except Exception as exc:
-                logger.warning("Auto-triggered data release %s was skipped: %s", job.job_id, exc)
+                logger.warning("Auto-triggered data release {} was skipped: {}", job.job_id, exc)
 
     async def maybe_trigger_after_crawl_completion(self, crawl_task_uuid: str) -> None:
         await self.maybe_trigger_after_task_completion(crawl_task_uuid, TaskType.CRAWL_DATA)
@@ -1469,7 +1469,7 @@ class DataReleaseService:
                 content_type="text",
                 metadata={**metadata, "event": "subscription_options_sync_failed"},
             )
-            logger.warning("Subscription options sync failed in auto mode; release will continue: %s", exc)
+            logger.warning("Subscription options sync failed in auto mode; release will continue: {}", exc)
             return False
 
     def _is_github_ssh_repo_url(self, repo_url: str) -> bool:

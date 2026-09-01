@@ -30,6 +30,7 @@ from src.domain.ai_model_center import AIModelConfig, AIProviderConfig
 from src.domain.country import Country
 from src.domain.report import Report, ReportType
 from src.domain.task import Task, TaskPriority, TaskStatus, TaskType
+from src.services.ai_content_governance_service import ai_content_governance_service
 from src.services.disease_duplicate_audit_service import DiseaseDuplicateAuditService
 from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService, SOURCE_GROUPS, expand_sources
 
@@ -124,6 +125,47 @@ class DiseaseKnowledgeStartResponse(BaseModel):
     requested_disease_ids: List[str]
     created_tasks: List[TaskOut]
     skipped: List[DiseaseKnowledgeTaskSkipped] = Field(default_factory=list)
+
+
+class DiseaseKnowledgeRepairRequest(BaseModel):
+    source: List[str] = Field(default_factory=list, description="Source groups: who / search / wikidata / wikipedia / pubmed / msd")
+    force: bool = False
+    generator: str = Field("ai", description="ai uses the model center for targeted repair")
+    priority: Optional[str] = Field(None, description="Optional override: urgent / high / normal / low")
+    limit: Optional[int] = Field(None, ge=1, le=500)
+
+
+class DiseaseKnowledgeRepairResponse(BaseModel):
+    created_count: int
+    skipped_count: int
+    source_groups: List[str]
+    generator: str
+    force: bool
+    created_tasks: List[TaskOut]
+    skipped: List[DiseaseKnowledgeTaskSkipped] = Field(default_factory=list)
+
+
+class AIContentGovernanceRequest(BaseModel):
+    dry_run: bool = False
+    knowledge_retry_limit: int = Field(50, ge=0, le=500)
+    literature_limit: int = Field(20, ge=0, le=100)
+    literature_article_limit: Optional[int] = Field(None, ge=0, le=100)
+    source_limit: int = Field(30, ge=0, le=200)
+    learning_limit: int = Field(20, ge=0, le=100)
+
+
+class AIContentGovernanceResponse(BaseModel):
+    prompt_version: str
+    dry_run: bool
+    knowledge: Dict[str, Any]
+    literature_articles: Dict[str, Any]
+    literature: Dict[str, Any]
+    knowledge_sources: Dict[str, Any]
+    learning_suggestions: Dict[str, Any]
+
+
+class KnowledgeRepairRetryRequest(BaseModel):
+    limit: int = Field(50, ge=1, le=500)
 
 
 class DiseaseDuplicateAuditRequest(BaseModel):
@@ -420,6 +462,72 @@ async def start_disease_knowledge_tasks(
         requested_disease_ids=requested_ids,
         created_tasks=created_tasks,
         skipped=skipped,
+    )
+
+
+@router.post("/knowledge/repair-runs", response_model=DiseaseKnowledgeRepairResponse, status_code=202)
+async def start_disease_knowledge_repair_tasks(
+    body: DiseaseKnowledgeRepairRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    service = DiseaseKnowledgeUpdateService()
+    source_groups = _normalize_source_groups(body.source)
+    if body.priority is not None:
+        _normalize_priority(body.priority)
+    result = await service.enqueue_repair_tasks(
+        db,
+        source_groups=source_groups,
+        force=body.force,
+        generator_mode=body.generator,
+        priority=body.priority,
+        limit=body.limit,
+        requested_by="ai-control-panel",
+        initiated_via="dashboard-repair",
+    )
+    return DiseaseKnowledgeRepairResponse(
+        created_count=result["created_count"],
+        skipped_count=result["skipped_count"],
+        source_groups=result["source_groups"],
+        generator=result["generator"],
+        force=result["force"],
+        created_tasks=[_task_to_out(task) for task in result["created_tasks"]],
+        skipped=[
+            DiseaseKnowledgeTaskSkipped(
+                disease_id=str(item.get("disease_id") or ""),
+                reason=str(item.get("reason") or "skipped"),
+                existing_task_uuid=item.get("existing_task_uuid"),
+                existing_status=item.get("existing_status"),
+            )
+            for item in result["skipped"]
+        ],
+    )
+
+
+@router.post("/content-governance/run", response_model=AIContentGovernanceResponse)
+async def run_ai_content_governance(
+    body: AIContentGovernanceRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await ai_content_governance_service.run_once(
+        db,
+        dry_run=body.dry_run,
+        knowledge_retry_limit=body.knowledge_retry_limit,
+        literature_limit=body.literature_limit,
+        literature_article_limit=body.literature_article_limit,
+        source_limit=body.source_limit,
+        learning_limit=body.learning_limit,
+    )
+    return AIContentGovernanceResponse(**result)
+
+
+@router.post("/content-governance/knowledge-retries")
+async def requeue_failed_knowledge_repairs(
+    body: KnowledgeRepairRetryRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    return await ai_content_governance_service.requeue_failed_knowledge_repairs(
+        db,
+        limit=body.limit,
     )
 
 

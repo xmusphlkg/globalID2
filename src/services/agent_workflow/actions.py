@@ -155,7 +155,7 @@ async def run_internal_action(
         )
     except Exception as log_exc:
         logger.warning(
-            "Failed to add inline action start log for %s: %s",
+                "Failed to add inline action start log for {}: {}",
             child_task.task_uuid,
             log_exc,
         )
@@ -181,7 +181,7 @@ async def run_internal_action(
             )
         except Exception as log_exc:
             logger.warning(
-                "Failed to add inline action failure log for %s: %s",
+                "Failed to add inline action failure log for {}: {}",
                 child_task.task_uuid,
                 log_exc,
             )
@@ -238,7 +238,7 @@ async def run_internal_action(
         )
     except Exception as log_exc:
         logger.warning(
-            "Failed to add inline action completion log for %s: %s",
+            "Failed to add inline action completion log for {}: {}",
             child_task.task_uuid,
             log_exc,
         )

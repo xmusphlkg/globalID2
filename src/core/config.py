@@ -675,7 +675,7 @@ class TaskWorkerSettings(_BaseEnvSettings):
         description="任务 worker 拉取队列轮询间隔（秒）",
     )
     idle_log_every: int = Field(
-        default=30,
+        default=300,
         validation_alias="TASK_WORKER_IDLE_LOG_EVERY",
         ge=1,
         description="worker 空闲日志输出周期（轮）",

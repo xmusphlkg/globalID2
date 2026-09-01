@@ -22,6 +22,75 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.9.2',
+    date: '2026-09-01',
+    titleEn: 'AI content governance and knowledge repair automation',
+    titleZh: 'AI 内容治理与知识库自动修复',
+    summaryEn:
+      'GIDS now routes knowledge gaps, Research Radar review queues, source review, and learning suggestions through auditable AI governance loops instead of defaulting to manual intervention.',
+    summaryZh:
+      'GIDS 现在将知识库缺口、研究雷达审核队列、来源审核和学习建议接入可审计的 AI 治理闭环，不再默认依赖人工干预。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added AI content governance with model-center JSON review prompts, confidence gates, audit metadata, and fallback-to-hold behavior.',
+            zh: '新增 AI 内容治理服务，包含模型中心 JSON 审核提示词、置信度门槛、审计元数据以及失败时保持待定的保护行为。',
+          },
+          {
+            en: 'Added control-plane endpoints for knowledge repair runs, failed knowledge retries, Research Radar article and summary review, knowledge-source review, and learning-suggestion mapping.',
+            zh: '新增控制面接口，用于知识库修复运行、失败知识任务重试、研究雷达文章和摘要审核、知识来源审核以及学习建议映射。',
+          },
+          {
+            en: 'Added AI-assisted Research Radar article review so high-confidence review-band articles can be published or excluded before summary gates run.',
+            zh: '新增 AI 辅助的研究雷达文章审核，使高置信审核带文章可在摘要发布门槛前自动发布或排除。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Knowledge repair now supports language-targeted retry, allowing single-language failures to regenerate only the affected English or Chinese brief.',
+            zh: '知识库修复现在支持按语言定向重试，单语失败时只重新生成受影响的英文或中文摘要。',
+          },
+          {
+            en: 'Learning suggestions can now resolve obvious placeholders and high-confidence standard disease mappings automatically.',
+            zh: '学习建议现在可以自动处理明显占位项和高置信标准病种映射。',
+          },
+          {
+            en: 'Long-running workers now emit less idle log noise and release Python and libc heap memory after task completion.',
+            zh: '长运行 worker 现在减少空闲日志噪音，并在任务完成后释放 Python 与 libc 堆内存。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Recoverable model-center and partial-language knowledge repair failures can be requeued automatically up to their retry limit.',
+            zh: '可恢复的模型中心错误和单语知识库发布门槛失败现在可在重试上限内自动回队列。',
+          },
+          {
+            en: 'Release retry classification now distinguishes transient OpenSSL EOF preflight diagnostics from permanent Cloudflare production-branch configuration blockers.',
+            zh: '发布重试分类现在可区分临时 OpenSSL EOF 预检诊断与永久性的 Cloudflare 生产分支配置阻断。',
+          },
+          {
+            en: 'Dashboard standalone startup now prunes older retained releases after switching to the active build.',
+            zh: 'Dashboard standalone 启动在切换到活动构建后会清理超出保留数量的旧版本目录。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.9.1',
     date: '2026-08-30',
     titleEn: 'Localized public site and jurisdiction-aware operations',

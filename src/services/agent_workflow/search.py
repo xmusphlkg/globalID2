@@ -93,7 +93,7 @@ def duckduckgo_search(
         response = session.get(WEB_SEARCH_ENDPOINT, params=params, timeout=20)
         response.raise_for_status()
     except Exception as exc:
-        logger.warning("Web search failed for %s: %s", query, exc)
+        logger.warning("Web search failed for {}: {}", query, exc)
         return results
 
     soup = BeautifulSoup(response.text, "html.parser")

@@ -67,7 +67,7 @@ class TaskAlertService:
                 )
             ).scalar_one_or_none()
             if task is None:
-                logger.warning("task_alert_service: task %s not found", task_uuid)
+                logger.warning("task_alert_service: task {} not found", task_uuid)
                 return
 
             # Idempotency guard — don't send a second alert for same task+status.
@@ -91,7 +91,7 @@ class TaskAlertService:
                 task.metadata_ = metadata
                 await db.commit()
                 logger.info(
-                    "Task alert (%s) suppressed for %s; same alert group already sent by %s",
+                    "Task alert ({}) suppressed for {}; same alert group already sent by {}",
                     final_status.value,
                     task_uuid,
                     suppressed_by.task_uuid,
@@ -135,7 +135,7 @@ class TaskAlertService:
             await db.commit()
 
         logger.info(
-            "Task alert (%s) sent for %s to %d recipient(s)",
+            "Task alert ({}) sent for {} to {} recipient(s)",
             status_label,
             task_uuid,
             len(admin_emails),

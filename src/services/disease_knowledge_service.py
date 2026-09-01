@@ -13,7 +13,14 @@ from sqlalchemy import func, select, text
 
 from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
-from src.domain import DiseaseKnowledgeBrief, DiseaseKnowledgeSource, Task, TaskStatus
+from src.domain import (
+    DiseaseKnowledgeBrief,
+    DiseaseKnowledgeSource,
+    Task,
+    TaskPriority,
+    TaskStatus,
+    TaskType,
+)
 from src.knowledge import (
     AIDiseaseBriefGenerator,
     ReviewedDiseaseBriefGenerator,
@@ -57,6 +64,13 @@ SOURCE_GROUPS = {
     "pubmed": ["pubmed"],
     "msd": ["msd"],
 }
+
+ACTIVE_KNOWLEDGE_TASK_STATUSES = (
+    TaskStatus.PENDING,
+    TaskStatus.QUEUED,
+    TaskStatus.RUNNING,
+    TaskStatus.RETRYING,
+)
 
 
 class KnowledgeEvidenceInsufficientError(RuntimeError):
@@ -517,6 +531,92 @@ def _profile_repair_sections(
     return [field for field in ordered_fields if field in targets]
 
 
+def _active_knowledge_tasks_by_disease(tasks: list[Task]) -> dict[str, Task]:
+    """Map active knowledge tasks to their disease IDs for idempotent enqueueing."""
+    result: dict[str, Task] = {}
+    for task in tasks:
+        input_data = dict(getattr(task, "input_data", None) or {})
+        candidates: list[str] = []
+        disease_ids = input_data.get("disease_ids")
+        if isinstance(disease_ids, list):
+            candidates.extend(str(value).strip().upper() for value in disease_ids if str(value).strip())
+        disease_id = input_data.get("disease_id") or input_data.get("disease")
+        if disease_id:
+            candidates.append(str(disease_id).strip().upper())
+        for candidate in candidates:
+            if candidate and candidate not in result:
+                result[candidate] = task
+    return result
+
+
+def _select_knowledge_repair_candidates(
+    catalogue: list[dict[str, Any]],
+    *,
+    active_by_disease: dict[str, Task] | None = None,
+    limit: int | None = None,
+    priorities: set[str] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Return catalogue rows that should continue through automatic repair."""
+    active_by_disease = active_by_disease or {}
+    priorities = priorities or {"urgent", "high"}
+    selected: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+
+    priority_rank = {"urgent": 0, "high": 1, "normal": 2, "none": 3}
+    ordered = sorted(
+        catalogue,
+        key=lambda item: (
+            priority_rank.get(str(item.get("repair_priority") or "none"), 9),
+            str(item.get("disease_id") or ""),
+        ),
+    )
+    for item in ordered:
+        disease_id = str(item.get("disease_id") or "").strip().upper()
+        repair_priority = str(item.get("repair_priority") or "none").strip().lower()
+        repair_sections = [
+            str(section).strip()
+            for section in (item.get("repair_sections") or [])
+            if str(section).strip()
+        ]
+        if not disease_id:
+            continue
+        if repair_priority not in priorities or not repair_sections:
+            continue
+        active_task = active_by_disease.get(disease_id)
+        if active_task is not None:
+            skipped.append(
+                {
+                    "disease_id": disease_id,
+                    "reason": "already_running",
+                    "existing_task_uuid": getattr(active_task, "task_uuid", None),
+                    "existing_status": str(getattr(active_task, "status", "")),
+                }
+            )
+            continue
+        selected.append({**item, "disease_id": disease_id, "repair_sections": repair_sections})
+        if limit is not None and len(selected) >= limit:
+            break
+    return selected, skipped
+
+
+def _knowledge_repair_task_priority(
+    requested: str | TaskPriority | None,
+    repair_priority: str,
+) -> TaskPriority:
+    if isinstance(requested, TaskPriority):
+        return requested
+    requested_value = str(requested or "").strip().lower()
+    mapping = {
+        "urgent": TaskPriority.URGENT,
+        "high": TaskPriority.HIGH,
+        "normal": TaskPriority.NORMAL,
+        "low": TaskPriority.LOW,
+    }
+    if requested_value in mapping:
+        return mapping[requested_value]
+    return TaskPriority.URGENT if repair_priority == "urgent" else TaskPriority.HIGH
+
+
 def _profile_repair_sections_by_language(
     briefs: list[Any],
     disease: dict[str, Any],
@@ -811,6 +911,105 @@ class DiseaseKnowledgeUpdateService:
             return list(self._disease_cache)
         self._disease_cache = load_standard_diseases(self.disease_csv_path)
         return list(self._disease_cache)
+
+    async def enqueue_repair_tasks(
+        self,
+        db,
+        *,
+        source_groups: list[str] | None = None,
+        force: bool = False,
+        generator_mode: str = "ai",
+        priority: str | TaskPriority | None = None,
+        limit: int | None = None,
+        requested_by: str = "knowledge-auto-repair",
+        initiated_via: str = "knowledge-auto-repair",
+    ) -> dict[str, Any]:
+        """Queue automatic model-center repairs for incomplete knowledge profiles."""
+        source_groups = expand_sources(source_groups)
+        result = await db.execute(
+            select(Task)
+            .where(
+                Task.task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE,
+                Task.status.in_(ACTIVE_KNOWLEDGE_TASK_STATUSES),
+            )
+            .order_by(Task.created_at.asc())
+        )
+        active_by_disease = _active_knowledge_tasks_by_disease(
+            list(result.scalars().all())
+        )
+        catalogue = await self.list_catalogue(db)
+        candidates, skipped = _select_knowledge_repair_candidates(
+            catalogue,
+            active_by_disease=active_by_disease,
+            limit=limit,
+        )
+
+        created: list[Task] = []
+        for item in candidates:
+            disease_id = str(item["disease_id"])
+            repair_sections = list(item.get("repair_sections") or [])
+            repair_priority = str(item.get("repair_priority") or "high")
+            task_priority = _knowledge_repair_task_priority(priority, repair_priority)
+            name_en = str(item.get("name_en") or disease_id)
+            task_name = f"Repair {name_en} knowledge profile"
+            description = (
+                f"Automatic knowledge repair for {disease_id}: "
+                f"{', '.join(repair_sections)}"
+            )
+            task = await task_manager.create_task(
+                task_type=TaskType.UPDATE_DISEASE_KNOWLEDGE,
+                task_name=task_name,
+                priority=task_priority,
+                description=description,
+                input_data={
+                    "disease_id": disease_id,
+                    "disease_ids": [disease_id],
+                    "source_groups": source_groups,
+                    "source": source_groups,
+                    "force": force,
+                    "generator": _normalize_generator_mode(generator_mode),
+                    "targeted_repair": True,
+                    "repair_sections": repair_sections,
+                    "repair_priority": repair_priority,
+                    "knowledge_completeness": item.get("knowledge_completeness"),
+                    "knowledge_display_mode": item.get("knowledge_display_mode"),
+                    "initiated_via": initiated_via,
+                    "requested_by": requested_by,
+                },
+                tags=["knowledge", "auto_repair"],
+            )
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Automatic Knowledge Repair Queued",
+                content=(
+                    f"Queued model-center repair for {disease_id}. "
+                    f"Target sections: {', '.join(repair_sections)}."
+                ),
+                content_type="text",
+                metadata={
+                    "disease_id": disease_id,
+                    "repair_sections": repair_sections,
+                    "repair_priority": repair_priority,
+                    "source_groups": source_groups,
+                    "generator": _normalize_generator_mode(generator_mode),
+                    "force": force,
+                    "workflow_stage": "knowledge_repair_queued",
+                },
+            )
+            task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
+            created.append(task)
+
+        return {
+            "created_count": len(created),
+            "skipped_count": len(skipped),
+            "created_tasks": created,
+            "skipped": skipped,
+            "candidate_count": len(candidates),
+            "source_groups": source_groups,
+            "generator": _normalize_generator_mode(generator_mode),
+            "force": force,
+        }
 
     def _find_disease(self, disease_id: str) -> dict[str, Any]:
         wanted = (disease_id or "").strip().upper()
@@ -1180,6 +1379,7 @@ class DiseaseKnowledgeUpdateService:
         enabled_sources: list[str] | None = None,
         force: bool = False,
         generator_mode: str = "auto",
+        target_languages: list[str] | None = None,
         dry_run: bool = False,
         task_uuid: str | None = None,
     ) -> dict[str, Any]:
@@ -1354,6 +1554,17 @@ class DiseaseKnowledgeUpdateService:
                 target_sections_by_language = {
                     language: list(ordered_sections) for language in ("en", "zh")
                 }
+            if target_languages is not None:
+                allowed_languages = {
+                    str(language).strip().lower()
+                    for language in target_languages
+                    if str(language).strip().lower() in {"en", "zh"}
+                }
+                if allowed_languages:
+                    target_sections_by_language = {
+                        language: fields if language in allowed_languages else []
+                        for language, fields in target_sections_by_language.items()
+                    }
             target_set = {
                 field
                 for fields in target_sections_by_language.values()
@@ -1732,12 +1943,18 @@ class DiseaseKnowledgeUpdateService:
             source_groups = [source_groups]
         force = bool(inp.get("force", False))
         generator_mode = str(inp.get("generator", "auto"))
+        target_languages = inp.get("repair_languages") or inp.get("languages")
+        if isinstance(target_languages, str):
+            target_languages = [target_languages]
+        if not isinstance(target_languages, list):
+            target_languages = None
 
         return await self.update_disease(
             disease_id,
             enabled_sources=list(source_groups) if isinstance(source_groups, list) else [],
             force=force,
             generator_mode=generator_mode,
+            target_languages=target_languages,
             dry_run=bool(inp.get("dry_run", False)),
             task_uuid=task.task_uuid,
         )

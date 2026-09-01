@@ -505,7 +505,7 @@ class BaseAgent(ABC):
                     raise
 
                 logger.warning(
-                    "Dropping unsupported completion argument '%s' for model '%s'",
+                    "Dropping unsupported completion argument '{}' for model '{}'",
                     unexpected_kwarg,
                     payload.get("model"),
                 )
@@ -1147,7 +1147,7 @@ class BaseAgent(ABC):
         try:
             return bool(await self.cache.delete(self._make_cache_key(prompt, system)))
         except Exception as exc:
-            logger.warning("Failed to invalidate AI completion cache: %s", exc)
+            logger.warning("Failed to invalidate AI completion cache: {}", exc)
             return False
     
     def get_conversation_history(self) -> List[Dict[str, Any]]:

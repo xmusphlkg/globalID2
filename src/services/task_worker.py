@@ -7,8 +7,12 @@ as queued, and this worker continuously polls and executes them.
 from __future__ import annotations
 
 import asyncio
+import ctypes
+import ctypes.util
 from datetime import datetime, timezone
+import gc
 import signal
+import sys
 from typing import Optional
 
 from sqlalchemy import case, select
@@ -33,6 +37,38 @@ STALE_TASK_SECONDS = TASK_WORKER_CONFIG.stale_task_seconds
 RECOVERY_SCAN_SECONDS = TASK_WORKER_CONFIG.recovery_scan_seconds
 RUNTIME_LEASE_TTL_SECONDS = TASK_WORKER_CONFIG.runtime_lease_ttl_seconds
 RUNTIME_HEARTBEAT_TTL_SECONDS = TASK_WORKER_CONFIG.runtime_heartbeat_ttl_seconds
+
+_LIBC: ctypes.CDLL | None = None
+_LIBC_LOOKUP_DONE = False
+
+
+def _release_task_memory() -> None:
+    """Return cyclic garbage and idle libc heap pages after a task finishes."""
+    global _LIBC, _LIBC_LOOKUP_DONE
+
+    gc.collect()
+    if sys.platform != "linux":
+        return
+
+    if not _LIBC_LOOKUP_DONE:
+        _LIBC_LOOKUP_DONE = True
+        libc_name = ctypes.util.find_library("c")
+        if libc_name:
+            try:
+                _LIBC = ctypes.CDLL(libc_name)
+                _LIBC.malloc_trim.argtypes = [ctypes.c_size_t]
+                _LIBC.malloc_trim.restype = ctypes.c_int
+            except Exception as exc:
+                _LIBC = None
+                logger.debug("libc malloc_trim unavailable: {}", exc)
+
+    if _LIBC is None:
+        return
+
+    try:
+        _LIBC.malloc_trim(0)
+    except Exception as exc:
+        logger.debug("libc malloc_trim failed: {}", exc)
 
 
 async def _claim_next_task_uuid(worker_instance_id: str) -> Optional[str]:
@@ -93,7 +129,7 @@ async def _heartbeat_claimed_task(
             # A short database outage must not terminate the task coroutine.
             # If it lasts past STALE_TASK_SECONDS, the worker singleton lease
             # still prevents a second worker from recovering this live task.
-            logger.warning("Task heartbeat failed for %s: %s", task_uuid, exc)
+            logger.warning("Task heartbeat failed for {}: {}", task_uuid, exc)
             continue
         if not owned:
             # A normal terminal status releases the task lease before this
@@ -101,7 +137,7 @@ async def _heartbeat_claimed_task(
             # informational stop; ownership safety is still enforced by the
             # conditional heartbeat update itself.
             logger.info(
-                "Task lease heartbeat ended (terminal or ownership changed); task_uuid=%s owner=%s",
+                "Task lease heartbeat ended (terminal or ownership changed); task_uuid={} owner={}",
                 task_uuid,
                 worker_instance_id,
             )
@@ -119,9 +155,9 @@ async def _recover_stale_tasks(
                 exclude_owner=worker_instance_id,
             )
             if recovered:
-                logger.warning("Recovered %s stale task(s) during worker sweep", recovered)
+                logger.warning("Recovered {} stale task(s) during worker sweep", recovered)
         except Exception as exc:
-            logger.exception("Stale-task recovery sweep failed: %s", exc)
+            logger.exception("Stale-task recovery sweep failed: {}", exc)
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=RECOVERY_SCAN_SECONDS)
         except asyncio.TimeoutError:
@@ -131,7 +167,7 @@ async def _recover_stale_tasks(
 async def run_worker() -> None:
     """Main worker loop."""
     logger.info(
-        "Task worker started (poll_interval=%ss, concurrency=%s)",
+        "Task worker started (poll_interval={}s, concurrency={})",
         POLL_INTERVAL_SECONDS,
         MAX_CONCURRENT_TASKS,
     )
@@ -149,7 +185,7 @@ async def run_worker() -> None:
         stale_after_seconds=STALE_TASK_SECONDS
     )
     if recovered:
-        logger.warning("Recovered %s interrupted task(s) on worker startup", recovered)
+        logger.warning("Recovered {} interrupted task(s) on worker startup", recovered)
 
     stop_event = asyncio.Event()
     lease_lost = asyncio.Event()
@@ -221,6 +257,7 @@ async def run_worker() -> None:
         finally:
             finished.set()
             await task_heartbeat
+            _release_task_memory()
 
     active_tasks: set[asyncio.Task[None]] = set()
     idle_ticks = 0

@@ -45,6 +45,8 @@ _PERMANENT_PATTERNS = (
     r"\brelease gate\b",
     r"\bvalidation\b.*\bfailed\b",
     r"\bconfiguration\b.*\b(failed|invalid|missing)\b",
+    r"\bno production branch configured\b",
+    r"\bproduction branch\b.*\b(not configured|missing|unconfigured)\b",
     r"\bpreflight\b.*\bsyntax\b",
 )
 
@@ -59,7 +61,8 @@ _TRANSIENT_PATTERNS = (
     r"\bnetwork (?:error|failure|unreachable)\b",
     r"\bsocket hang up\b",
     r"\b(?:econnreset|econnrefused|etimedout|eai_again)\b",
-    r"\bunexpected eof\b",
+    r"\bunexpected[\s_-]*eof\b",
+    r"\beof\b.*\bviolation of protocol\b",
     r"\btls handshake timeout\b",
     r"\bfetch failed\b",
     r"\bworker_transport_error\b",

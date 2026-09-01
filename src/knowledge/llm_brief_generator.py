@@ -658,7 +658,7 @@ class AIDiseaseBriefGenerator:
             try:
                 await invalidate(prompt=prompt, system=system)
             except Exception as exc:
-                logger.warning("Failed to evict rejected knowledge completion: %s", exc)
+                logger.warning("Failed to evict rejected knowledge completion: {}", exc)
 
     @staticmethod
     def _citation_failure_fields(

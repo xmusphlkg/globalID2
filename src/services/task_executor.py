@@ -39,6 +39,7 @@ RECOVERABLE_IDEMPOTENT_TASK_TYPES = frozenset(
         TaskType.SYNC_LITERATURE,
         TaskType.ENRICH_LITERATURE,
         TaskType.DISCOVER_LITERATURE_GAPS,
+        TaskType.UPDATE_DISEASE_KNOWLEDGE,
     }
 )
 
@@ -307,7 +308,7 @@ async def recover_interrupted_tasks_on_startup(
                 )
             except Exception as exc:
                 logger.warning(
-                    "Failed to finalize interrupted CrawlRun country=%s source=%s: %s",
+                    "Failed to finalize interrupted CrawlRun country={} source={}: {}",
                     country_code,
                     source,
                     exc,
@@ -489,7 +490,7 @@ async def _run_crawl(task: Task) -> Dict[str, Any]:
                 )
             except Exception as audit_exc:
                 logger.warning(
-                    "Failed to finalize CrawlRun for task %s: %s",
+                    "Failed to finalize CrawlRun for task {}: {}",
                     task.task_uuid,
                     audit_exc,
                 )

@@ -2,6 +2,37 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing bilingual notes are also available in the website Changelog.
 
+## [0.9.2] - 2026-09-01
+
+### Added
+
+- Added AI content governance for exception-only queues, including model-center JSON review prompts, auditable decision metadata, confidence gates, and safe fallback-to-hold behavior.
+- Added automatic knowledge-base repair discovery and queueing through the AI control plane, with targeted model-center refresh tasks for incomplete or stale disease profiles.
+- Added API endpoints for knowledge repair runs and AI content governance runs, including bounded controls for failed knowledge retries, Research Radar article/summary review, knowledge-source review, and learning-suggestion mapping.
+- Added AI-assisted Research Radar article review so high-confidence review-band articles can be automatically published or excluded before summary publication gates run.
+
+### Changed
+
+- Disease-knowledge repair now supports language-targeted retry, so single-language failures can regenerate only `en` or `zh` instead of rewriting an already healthy paired brief.
+- Research Radar governance now separates deterministic article gates, model-reviewed article decisions, model-reviewed summary decisions, and source-fingerprint checks into an auditable sequence.
+- Disease learning suggestions can now resolve obvious placeholders and high-confidence standard disease mappings automatically instead of remaining in a manual pending queue.
+- Lowered task-worker idle log noise and added memory release after task completion to keep long-running model and ingestion workers steadier.
+- Standardized service logging format across AI agents, report generation, workflow execution, ingestion, release scheduling, settings, and alerts.
+
+### Fixed
+
+- Failed AI knowledge repair tasks that hit recoverable model-center errors or partial-language publication gates can be requeued automatically up to their retry limit.
+- Data-release retry classification now treats transient OpenSSL EOF preflight diagnostics as retryable while preserving missing Cloudflare production-branch configuration as a permanent blocker.
+- Dashboard standalone release startup now prunes older retained releases after switching to the active build.
+- Added weekly AI-review evidence for `2026-W36`, preserving the bilingual-mismatch decision as an explicit editorial-review signal.
+
+### Operations
+
+- Requeued the active recoverable knowledge repair failures and verified the queue was back to no failed tasks before release handoff.
+- Ran a live AI governance smoke test: mapped the pending HIV learning suggestion to the standard catalogue, rejected placeholder unknown-disease suggestions, published three high-confidence Research Radar articles, published one eligible summary, and held ambiguous knowledge-source rows.
+- Added focused tests for AI content governance, knowledge repair candidate selection, worker memory release, worker idle logging, and release retry classification.
+- Updated the website package release version to 0.9.2.
+
 ## [0.9.1] - 2026-08-30
 
 ### Added

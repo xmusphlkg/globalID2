@@ -118,7 +118,7 @@ async def execute_workflow(
                 await db.commit()
             except Exception as memory_exc:
                 logger.warning(
-                    "Workflow memory persistence skipped for %s: %s",
+                    "Workflow memory persistence skipped for {}: {}",
                     task.task_uuid,
                     memory_exc,
                 )
@@ -299,7 +299,7 @@ async def _log_started(
             },
         )
     except Exception as log_exc:
-        logger.warning("Failed to add workflow start log for %s: %s", task.task_uuid, log_exc)
+        logger.warning("Failed to add workflow start log for {}: {}", task.task_uuid, log_exc)
 
 
 async def _log_terminal(
@@ -324,7 +324,7 @@ async def _log_terminal(
         )
     except Exception as log_exc:
         logger.warning(
-            "Failed to add workflow %s log for %s: %s",
+            "Failed to add workflow {} log for {}: {}",
             state.lower(),
             task.task_uuid,
             log_exc,
@@ -353,4 +353,4 @@ async def _log_completed(
             },
         )
     except Exception as log_exc:
-        logger.warning("Failed to add workflow completion log for %s: %s", task.task_uuid, log_exc)
+        logger.warning("Failed to add workflow completion log for {}: {}", task.task_uuid, log_exc)

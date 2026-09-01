@@ -163,14 +163,14 @@ class ReportGenerator:
             report.status = ReportStatus.APPROVED
             report.completed_at = datetime.now(timezone.utc)
             await db.commit()
-            logger.info("Report v4 generation completed: %s", report.id)
+            logger.info("Report v4 generation completed: {}", report.id)
             return report
 
         except TaskCancelledError:
             await self._mark_failed(db, report, "Report generation cancelled")
             raise
         except Exception as exc:
-            logger.error("Report v4 generation failed: %s", exc)
+            logger.error("Report v4 generation failed: {}", exc)
             await self._mark_failed(db, report, str(exc))
             raise
 
@@ -244,7 +244,7 @@ class ReportGenerator:
             ).scalars().all()
             population_by_year = {int(row.year): row for row in pop_rows}
         except Exception as exc:
-            logger.warning("Could not load population denominators: %s", exc)
+            logger.warning("Could not load population denominators: {}", exc)
 
         rows = []
         for record in records:

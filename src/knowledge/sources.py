@@ -273,7 +273,7 @@ class DiseaseKnowledgeFetcher:
                     return key, discovered, outcome, time.monotonic() - started_at
                 except Exception as exc:
                     logger.warning(
-                        "Knowledge source adapter failed for %s/%s: %s",
+                        "Knowledge source adapter failed for {}/{}: {}",
                         disease.get("disease_id"),
                         key,
                         exc,
@@ -337,7 +337,7 @@ class DiseaseKnowledgeFetcher:
         try:
             payload = json.loads(self.source_hints_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            logger.warning("Unable to load knowledge source hints: %s", exc)
+            logger.warning("Unable to load knowledge source hints: {}", exc)
             return {}
         diseases = payload.get("diseases") if isinstance(payload, dict) else None
         if not isinstance(diseases, dict):
@@ -552,7 +552,7 @@ class DiseaseKnowledgeFetcher:
                         page_content = self._extract_html_content(page_response.text, resolved_url=page_response.url or item_url)
                         page_title, page_excerpt = page_content["title"], page_content["excerpt"]
                 if not page_excerpt and not page_title:
-                    logger.debug("Skipping WHO DON item without fetchable page: %s", item_url or title)
+                    logger.debug("Skipping WHO DON item without fetchable page: {}", item_url or title)
                     continue
                 candidates.append(
                     SourceCandidate(
@@ -855,7 +855,7 @@ class DiseaseKnowledgeFetcher:
                         )
                         abstracts_by_pmid[pmid] = abstract_text
             except Exception as exc:
-                logger.debug("PubMed abstract XML parse failed: %s", exc)
+                logger.debug("PubMed abstract XML parse failed: {}", exc)
 
         candidates: list[SourceCandidate] = []
         uid_list = results.get("uids", id_list[:3])
@@ -886,7 +886,7 @@ class DiseaseKnowledgeFetcher:
             )
             if relevance_score < 0.5:
                 logger.debug(
-                    "Skipping weak PubMed match for %s: %s (%.2f)",
+                    "Skipping weak PubMed match for {}: {} ({:.2f})",
                     disease_id,
                     title,
                     relevance_score,
@@ -1291,7 +1291,7 @@ class DiseaseKnowledgeFetcher:
             try:
                 response = self.session.get(url, params=params, timeout=self.timeout)
             except requests.RequestException as exc:
-                logger.debug("Knowledge source request failed: %s (%s)", url, exc)
+                logger.debug("Knowledge source request failed: {} ({})", url, exc)
                 if attempt >= self.max_retries:
                     self._record_request_error()
                     return None

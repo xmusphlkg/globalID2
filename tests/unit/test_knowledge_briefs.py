@@ -50,10 +50,13 @@ from src.knowledge.sources import DiseaseKnowledgeFetcher, SourceCandidate
 from src.services.disease_knowledge_service import (
     DiseaseKnowledgeUpdateService,
     KNOWLEDGE_PIPELINE_VERSION,
+    _active_knowledge_tasks_by_disease,
     _generated_profile_failures,
+    _knowledge_repair_task_priority,
     _merge_repair_payload,
     _profile_repair_sections,
     _profile_repair_sections_by_language,
+    _select_knowledge_repair_candidates,
 )
 
 from scripts.generate_site_data import (
@@ -1136,6 +1139,54 @@ def test_repair_planner_invalidates_profiles_from_old_pipeline_versions() -> Non
         *disease["profile_schema"]["optional_fields"],
     ]
     assert targets == {"en": expected, "zh": expected}
+
+
+def test_repair_enqueue_candidate_selection_is_idempotent_and_priority_ordered() -> None:
+    active = SimpleNamespace(
+        task_uuid="task-d210",
+        status="QUEUED",
+        input_data={"disease_id": "D210"},
+    )
+    catalogue = [
+        {
+            "disease_id": "D211",
+            "repair_priority": "high",
+            "repair_sections": ["surveillance_note"],
+        },
+        {
+            "disease_id": "D209",
+            "repair_priority": "urgent",
+            "repair_sections": ["brief", "definition"],
+        },
+        {
+            "disease_id": "D210",
+            "repair_priority": "high",
+            "repair_sections": ["risk_groups"],
+        },
+        {
+            "disease_id": "D001",
+            "repair_priority": "none",
+            "repair_sections": [],
+        },
+    ]
+
+    selected, skipped = _select_knowledge_repair_candidates(
+        catalogue,
+        active_by_disease=_active_knowledge_tasks_by_disease([active]),
+    )
+
+    assert [item["disease_id"] for item in selected] == ["D209", "D211"]
+    assert skipped == [
+        {
+            "disease_id": "D210",
+            "reason": "already_running",
+            "existing_task_uuid": "task-d210",
+            "existing_status": "QUEUED",
+        }
+    ]
+    assert _knowledge_repair_task_priority(None, "urgent").value == "urgent"
+    assert _knowledge_repair_task_priority(None, "high").value == "high"
+    assert _knowledge_repair_task_priority("normal", "urgent").value == "normal"
 
 
 def test_ontology_context_exposes_scoped_parent_for_course_variant() -> None:
