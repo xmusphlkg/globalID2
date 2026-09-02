@@ -17,6 +17,7 @@ from src.knowledge.catalogue import (
 from src.knowledge.citations import normalize_knowledge_citation_group
 from src.knowledge.profile_schema import resolve_knowledge_profile_schema
 from src.knowledge.quality import (
+    KNOWLEDGE_PUBLICATION_MIN_QUALITY_SCORE,
     KNOWLEDGE_TEXT_FIELDS,
     assess_knowledge_brief,
     strip_unavailable_knowledge_sentences,
@@ -80,8 +81,20 @@ def build_disease_knowledge_fields(
         )
         for language in ("en", "zh")
     }
+
+    def stored_quality_score(language: str) -> float:
+        try:
+            return float((brief_by_language.get(language) or {}).get("quality_score") or 1.0)
+        except (TypeError, ValueError):
+            return 0.0
+
     language_is_public = {
-        language: language_tiers[language] == "published" for language in ("en", "zh")
+        language: (
+            language_tiers[language] == "published"
+            and assessments[language].publishable
+            and stored_quality_score(language) >= KNOWLEDGE_PUBLICATION_MIN_QUALITY_SCORE
+        )
+        for language in ("en", "zh")
     }
 
     raw_knowledge_sources = (

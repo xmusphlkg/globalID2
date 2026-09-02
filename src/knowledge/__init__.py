@@ -25,6 +25,7 @@ from .profile_schema import (
 )
 from .quality import (
     KNOWLEDGE_TEXT_FIELDS,
+    KNOWLEDGE_PUBLICATION_MIN_QUALITY_SCORE,
     KNOWLEDGE_SCHEMA_VERSION,
     EVIDENCE_POLICY_VERSION,
     PROFILE_SECTION_FIELDS,
@@ -49,6 +50,7 @@ __all__ = [
     "SourceCandidate",
     "SourceFetchReport",
     "KNOWLEDGE_TEXT_FIELDS",
+    "KNOWLEDGE_PUBLICATION_MIN_QUALITY_SCORE",
     "KNOWLEDGE_SCHEMA_VERSION",
     "EVIDENCE_POLICY_VERSION",
     "KnowledgeProfileSchema",

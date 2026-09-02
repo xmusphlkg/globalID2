@@ -34,6 +34,12 @@ PROFILE_SECTION_FIELDS = SECTION_FIELDS
 
 KNOWLEDGE_SCHEMA_VERSION = 4
 EVIDENCE_POLICY_VERSION = 2
+KNOWLEDGE_PUBLICATION_MIN_QUALITY_SCORE = 0.85
+QUALITY_REVIEW_NOTE_READY = "AI-generated, source-grounded brief; ready for human spot review."
+QUALITY_REVIEW_NOTE_PARTIAL_PREFIX = (
+    "AI-generated partial brief; unsupported fields were omitted and remain queued for enrichment."
+)
+QUALITY_REVIEW_NOTE_BLOCKED_PREFIX = "AI-generated brief requires review."
 
 FIELD_STATUS_AVAILABLE = "available"
 FIELD_STATUS_MISSING = "missing"
@@ -317,7 +323,13 @@ def assess_knowledge_brief(
         display_mode = "blocked"
 
     has_sources = bool(_raw_value(payload, "source_ids") or _raw_value(payload, "source_attribution"))
-    publishable = profile_available and has_sources
+    publishable = (
+        profile_available
+        and has_sources
+        and not missing_required_fields
+        and not insufficient_fields
+        and not language_mismatch_fields
+    )
     issues: list[str] = []
     if not has_lead:
         issues.append("missing substantive brief or definition")
@@ -393,26 +405,76 @@ def apply_knowledge_quality_gate(
     }
 
     current_status = str(cleaned.get("status") or "draft").strip().lower()
-    if current_status == "published" and not assessment.publishable:
-        cleaned["status"] = "requires_review"
-
     confidence_bonus = {
         "high": 0.12,
         "medium": 0.07,
         "low": 0.02,
     }.get(str(cleaned.get("source_confidence") or "").lower(), 0.0)
     semantic_score = min(0.98, 0.42 + (assessment.completeness * 0.44) + confidence_bonus)
-    if not assessment.publishable:
+    if not assessment.profile_available or not assessment.publishable:
         semantic_score = min(semantic_score, 0.5)
     cleaned["quality_score"] = round(semantic_score, 3)
+    if current_status == "published" and (
+        not assessment.publishable
+        or cleaned["quality_score"] < KNOWLEDGE_PUBLICATION_MIN_QUALITY_SCORE
+    ):
+        cleaned["status"] = "requires_review"
 
-    if assessment.issues:
-        existing_notes = normalize_knowledge_text(cleaned.get("review_notes"))
-        semantic_notes = "; ".join(assessment.issues)
-        cleaned["review_notes"] = (
-            f"{existing_notes}; {semantic_notes}" if existing_notes else semantic_notes
-        )
+    cleaned["review_notes"] = _replace_quality_review_notes(
+        cleaned.get("review_notes"),
+        assessment,
+    )
     return cleaned, assessment
+
+
+def _replace_quality_review_notes(
+    existing_notes: Any,
+    assessment: KnowledgeBriefAssessment,
+) -> str:
+    retained_notes = _strip_existing_quality_review_notes(existing_notes)
+    quality_note = _quality_review_note_for(assessment)
+    if retained_notes:
+        return f"{retained_notes}; {quality_note}"
+    return quality_note
+
+
+def _quality_review_note_for(assessment: KnowledgeBriefAssessment) -> str:
+    if not assessment.profile_available:
+        if assessment.issues:
+            return f"{QUALITY_REVIEW_NOTE_BLOCKED_PREFIX}; {'; '.join(assessment.issues)}"
+        return QUALITY_REVIEW_NOTE_BLOCKED_PREFIX
+    if assessment.issues:
+        return f"{QUALITY_REVIEW_NOTE_PARTIAL_PREFIX}; {'; '.join(assessment.issues)}"
+    return QUALITY_REVIEW_NOTE_READY
+
+
+def _strip_existing_quality_review_notes(existing_notes: Any) -> str | None:
+    text = normalize_knowledge_text(existing_notes)
+    if text is None:
+        return None
+    for note in (
+        QUALITY_REVIEW_NOTE_READY,
+        QUALITY_REVIEW_NOTE_PARTIAL_PREFIX,
+        QUALITY_REVIEW_NOTE_BLOCKED_PREFIX,
+    ):
+        text = text.replace(note, "")
+    segments = [segment.strip() for segment in text.split(";") if segment.strip()]
+    retained: list[str] = []
+    for segment in segments:
+        if _is_quality_issue_segment(segment):
+            continue
+        retained.append(segment)
+    return "; ".join(retained) if retained else None
+
+
+def _is_quality_issue_segment(segment: str) -> bool:
+    return (
+        segment.startswith("missing required sections:")
+        or segment.startswith("missing substantive")
+        or segment.startswith("missing traceable sources")
+        or segment.startswith("language mismatch:")
+        or segment.startswith("insufficient evidence:")
+    )
 
 
 def has_grounding_content(source: Any, *, minimum_characters: int = 80) -> bool:

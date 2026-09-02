@@ -127,6 +127,50 @@ def test_source_adapters_run_in_parallel_and_report_duration() -> None:
     assert report.adapter_durations["pubmed"] >= 0.19
 
 
+def test_source_adapter_timeout_does_not_block_other_results() -> None:
+    fetcher = DiseaseKnowledgeFetcher(
+        min_interval_seconds=0,
+        source_hints_path=None,
+        adapter_timeout_seconds=1,
+    )
+
+    def slow_source(_disease):
+        time.sleep(1.5)
+        return []
+
+    def fast_source(_disease):
+        return [
+            SourceCandidate(
+                disease_id="ANY",
+                source_type="who",
+                source_name="WHO",
+                url="https://www.who.int/example-timeout",
+                status="active",
+                review_status="approved",
+                content_text=(
+                    "This authoritative disease profile describes infection, clinical illness, "
+                    "transmission, epidemiology, prevention and surveillance. " * 12
+                ),
+                metadata={"relevance_score": 1.0},
+            )
+        ]
+
+    fetcher._fetch_who_pages = fast_source  # type: ignore[method-assign]
+    fetcher._fetch_pubmed = slow_source  # type: ignore[method-assign]
+    started_at = time.monotonic()
+
+    report = fetcher.fetch_with_report(
+        {"disease_id": "ANY", "name_en": "Example infection"},
+        enabled_sources=["who", "pubmed"],
+        target_sections=["brief", "prevention"],
+    )
+
+    assert time.monotonic() - started_at < 1.4
+    assert report.candidates
+    assert report.adapter_outcomes["who"] == "success"
+    assert report.adapter_outcomes["pubmed"] == "timeout"
+
+
 def test_fetcher_caches_repeated_get_requests() -> None:
     response = Response()
     response.status_code = 200
@@ -426,9 +470,150 @@ def test_ai_brief_prompt_requires_null_for_unsupported_fields() -> None:
     )
 
     assert "return null for that field" in system_prompt
+    assert "surveillance_note is required" in system_prompt
+    assert "complications, opportunistic infections, co-infections" in system_prompt
     assert "set it to null" in user_prompt
     assert "absence explanation" in user_prompt
     assert AIDiseaseBriefGenerator._field({"prevention": None}, "prevention") is None
+
+
+def test_ai_brief_prompt_uses_configured_evidence_budget(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "src.knowledge.llm_brief_generator.get_config",
+        lambda: SimpleNamespace(
+            ai=SimpleNamespace(
+                knowledge_evidence_max_sources=3,
+                knowledge_evidence_manifest_max_characters=4000,
+            )
+        ),
+    )
+    sources = [
+        {
+            "id": index,
+            "source_type": "who",
+            "source_name": "WHO",
+            "url": f"https://example.org/{index}",
+            "status": "active",
+            "review_status": "approved",
+            "content_text": (
+                "Definition, clinical features, epidemiology, transmission, prevention, "
+                "surveillance and risk groups. "
+                * 40
+            ),
+            "metadata": {"relevance_score": 1.0},
+        }
+        for index in range(1, 7)
+    ]
+
+    payload = AIDiseaseBriefGenerator._prompt_payload(
+        disease={"disease_id": "ANY", "name_en": "Example infection"},
+        sources=sources,
+        language="en",
+    )
+
+    fragments = payload["evidence_manifest"]["fragments"]
+    assert payload["evidence_budget"] == {
+        "max_sources": 3,
+        "max_manifest_characters": 4000,
+    }
+    assert len(payload["sources"]) == 3
+    assert len({fragment["citation_ref"] for fragment in fragments}) <= 3
+    assert sum(len(fragment["text"]) for fragment in fragments) <= 4000
+
+
+def test_ai_generator_translates_zh_from_english_payload_without_evidence_text() -> None:
+    class TranslationAgent:
+        def __init__(self) -> None:
+            self.history = []
+
+        def clear_conversation_history(self) -> None:
+            self.history = []
+
+        async def complete(self, **kwargs) -> str:
+            response = json.dumps(
+                {
+                    "brief": "这是一段基于来源的中文概述，保留引用标记 [1]。",
+                    "definition": None,
+                    "clinical_features": None,
+                    "epidemiology": None,
+                    "transmission": None,
+                    "prevention": "预防措施包括疫苗接种和卫生措施 [1]。",
+                    "surveillance_note": None,
+                    "risk_groups": None,
+                }
+            )
+            self.history.append(
+                {
+                    "model": "test-model",
+                    "provider": "test-provider",
+                    "tokens": {"prompt": 100, "completion": 40, "total": 140},
+                    "duration": 0.01,
+                    "metadata": {"cache_hit": False},
+                    "prompt": kwargs["prompt"],
+                    "response": response,
+                }
+            )
+            return response
+
+        def get_latest_conversation(self) -> dict:
+            return self.history[-1]
+
+        def get_conversation_history(self) -> list[dict]:
+            return self.history
+
+    disease = attach_profile_schema(
+        {
+            "disease_id": "ANY",
+            "name_en": "Example infection",
+            "name_zh": "示例感染",
+            "target_sections": ["brief", "prevention"],
+            "evidence_target_sections": ["brief", "prevention"],
+            "_evidence_packet_prepared": True,
+        }
+    )
+    source = {
+        "id": 10,
+        "source_type": "who",
+        "source_name": "WHO",
+        "url": "https://example.org/source",
+        "status": "active",
+        "review_status": "approved",
+        "content_text": (
+            "This source provides a definition, prevention and control evidence. "
+            "Vaccination and hygiene are supported prevention measures. "
+            * 8
+        ),
+        "metadata": {"relevance_score": 1.0},
+    }
+    manifest = build_evidence_manifest(
+        [source],
+        resolve_knowledge_profile_schema(disease),
+        target_sections=["brief", "prevention"],
+    ).to_dict()
+    english_payload = {
+        "brief": "A source-grounded overview of this infection [1].",
+        "prevention": "Vaccination and hygiene are supported prevention measures [1].",
+        "source_attribution": [{"source_id": 10, "citation_index": 1, "url": "https://example.org/source"}],
+        "metadata": {"evidence_manifest": manifest, "citation_repair": {"final_failures": []}},
+    }
+    agent = TranslationAgent()
+
+    result = asyncio.run(
+        AIDiseaseBriefGenerator(agent=agent).translate_from_payload_with_trace(
+            disease=disease,
+            english_payload=english_payload,
+            sources=[source],
+            target_sections=["brief", "prevention"],
+        )
+    )
+
+    assert result["trace"]["generator"] == "ai_translation"
+    assert result["trace"]["citation_failures"] == []
+    assert result["payload"]["language"] == "zh"
+    assert result["payload"]["status"] == "requires_review"
+    assert result["payload"]["metadata"]["translation_mode"] == "from_en_grounded_payload"
+    assert "evidence_manifest" not in agent.history[0]["prompt"]
+    assert source["content_text"] not in agent.history[0]["prompt"]
 
 
 def test_ai_generator_does_not_create_content_fallback_without_evidence() -> None:
@@ -617,6 +802,30 @@ def test_ai_generator_evicts_completions_when_citation_repair_is_rejected() -> N
     assert len(agent.invalidated) == 2
 
 
+def test_source_refresh_task_forces_source_only(monkeypatch) -> None:
+    captured = {}
+
+    async def fake_update(self, disease_id, **kwargs):
+        captured["disease_id"] = disease_id
+        captured.update(kwargs)
+        return {"source_only": kwargs["source_only"], "disease_id": disease_id}
+
+    monkeypatch.setattr(DiseaseKnowledgeUpdateService, "update_disease", fake_update)
+    task = SimpleNamespace(
+        task_uuid="source-refresh-task",
+        input_data={"disease_id": "D001", "source_groups": ["who"], "force": False},
+    )
+
+    service = object.__new__(DiseaseKnowledgeUpdateService)
+    result = asyncio.run(service.execute_source_refresh_task(task))
+
+    assert result == {"source_only": True, "disease_id": "D001"}
+    assert captured["enabled_sources"] == ["who"]
+    assert captured["force"] is False
+    assert captured["source_only"] is True
+    assert captured["refresh_existing_on_source_change"] is False
+
+
 def test_ai_generator_uses_one_compact_retry_for_invalid_json() -> None:
     class FormattingAgent:
         def __init__(self) -> None:
@@ -727,6 +936,28 @@ def test_quality_gate_rejects_metadata_and_absence_prose() -> None:
     assert cleaned["definition"] is None
     assert cleaned["clinical_features"] is None
     assert cleaned["metadata"]["knowledge_schema_version"] == KNOWLEDGE_SCHEMA_VERSION
+
+
+def test_quality_gate_requires_required_sections_for_publication() -> None:
+    disease = attach_profile_schema({"disease_id": "ANY", "name_en": "Example infection"})
+    payload = {
+        "language": "en",
+        "status": "published",
+        "source_confidence": "high",
+        "brief": "Example infection has a source-grounded public-health profile [1].",
+        "definition": "The supporting source defines the condition [1].",
+        "source_ids": [1],
+        "source_attribution": [{"source_id": 1, "citation_index": 1, "url": "https://example.org"}],
+        "metadata": {"profile_schema": disease["profile_schema"]},
+    }
+
+    cleaned, assessment = apply_knowledge_quality_gate(payload)
+
+    assert assessment.display_mode == "partial"
+    assert assessment.publishable is False
+    assert "clinical_features" in assessment.missing_required_fields
+    assert cleaned["status"] == "requires_review"
+    assert cleaned["quality_score"] < 0.85
 
 
 def test_quality_cleanup_keeps_supported_sentence_and_removes_dominant_limitations() -> None:
@@ -1306,7 +1537,7 @@ def test_generation_completion_gate_requires_non_null_brief() -> None:
     assert "zh: substantive brief is required" in failures
 
 
-def test_generation_completion_gate_accepts_grounded_bilingual_partial_profiles() -> None:
+def test_generation_completion_gate_rejects_grounded_bilingual_partial_profiles() -> None:
     disease = attach_profile_schema({"disease_id": "ANY", "name_en": "Example infection"})
     shared = {
         "disease_id": "ANY",
@@ -1335,12 +1566,14 @@ def test_generation_completion_gate_accepts_grounded_bilingual_partial_profiles(
 
     assert assess_knowledge_brief(en_payload, "en").display_mode == "partial"
     assert assess_knowledge_brief(zh_payload, "zh").display_mode == "partial"
-    assert _generated_profile_failures(
+    failures = _generated_profile_failures(
         [
             {"payload": en_payload, "trace": {"error": None}},
             {"payload": zh_payload, "trace": {"error": None}},
         ]
-    ) == []
+    )
+    assert any("en: missing required sections" in failure for failure in failures)
+    assert any("zh: missing required sections" in failure for failure in failures)
 
 
 def test_citation_validation_requires_inline_and_section_supported_sources() -> None:
@@ -1407,7 +1640,7 @@ def test_site_disease_knowledge_fields_inject_bilingual_brief_and_sources() -> N
     assert enriched["official_definition_en"] == "Definition context."
     assert enriched["clinical_features_en"] == "Clinical context."
     assert enriched["epidemiology_en"] == "Epidemiology context."
-    assert enriched["official_intro_zh"] == "基于来源的流感简介。"
+    assert enriched["official_intro_zh"] is None
     assert enriched["transmission_en"] == "Respiratory transmission context."
     assert enriched["surveillance_note_en"] == "Surveillance note context."
     assert enriched["knowledge_sources"][0]["source_name"] == "WHO"
@@ -1455,7 +1688,7 @@ def test_site_disease_knowledge_fields_block_legacy_catalogue_content() -> None:
     assert enriched["official_definition_en"] is None
 
 
-def test_site_disease_knowledge_fields_show_profile_for_public_non_authoritative_sources() -> None:
+def test_site_disease_knowledge_fields_blocks_partial_public_non_authoritative_sources() -> None:
     disease = {
         "disease_id": "D003",
         "name_en": "SARS",
@@ -1479,16 +1712,16 @@ def test_site_disease_knowledge_fields_show_profile_for_public_non_authoritative
         },
     )
 
-    assert enriched["knowledge_status"] == "published"
-    assert enriched["knowledge_tier"] == "published"
-    assert enriched["knowledge_profile_available"] is True
-    assert enriched["knowledge_profile_reason"] == "partial_profile"
-    assert enriched["knowledge_display_mode"] == "partial"
+    assert enriched["knowledge_status"] == "blocked"
+    assert enriched["knowledge_tier"] == "blocked"
+    assert enriched["knowledge_profile_available"] is False
+    assert enriched["knowledge_profile_reason"] == "insufficient_evidence"
+    assert enriched["knowledge_display_mode"] == "blocked"
     assert enriched["knowledge_has_authoritative_sources"] is False
-    assert enriched["official_intro_en"] == "Public-source SARS brief."
+    assert enriched["official_intro_en"] is None
 
 
-def test_site_disease_knowledge_fields_publish_partial_content_without_placeholders() -> None:
+def test_site_disease_knowledge_fields_blocks_partial_content_without_placeholders() -> None:
     disease = {"disease_id": "D207", "name_en": "Example infection", "name_zh": "示例感染"}
     enriched = apply_disease_knowledge_fields(
         disease,
@@ -1514,8 +1747,8 @@ def test_site_disease_knowledge_fields_publish_partial_content_without_placehold
         },
     )
 
-    assert enriched["knowledge_profile_available"] is True
-    assert enriched["knowledge_display_mode"] == "partial"
+    assert enriched["knowledge_profile_available"] is False
+    assert enriched["knowledge_display_mode"] == "blocked"
     assert enriched["clinical_features_en"] is None
     assert enriched["transmission_en"] is None
     assert enriched["clinical_features_zh"] is None

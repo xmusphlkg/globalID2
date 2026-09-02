@@ -27,6 +27,12 @@ def test_is_recoverable_knowledge_failure_requires_auto_repair_scope() -> None:
     )
     assert is_recoverable_knowledge_failure(task)
 
+    task.last_error = "KnowledgeEvidenceInsufficientError: Agent completion failed after trying models ['qwen3.8-flash']: None"
+    assert is_recoverable_knowledge_failure(task)
+
+    task.last_error = "No candidate model available for agent 'knowledge_brief_generator'"
+    assert is_recoverable_knowledge_failure(task)
+
     task.input_data = {}
     task.tags = []
     assert not is_recoverable_knowledge_failure(task)

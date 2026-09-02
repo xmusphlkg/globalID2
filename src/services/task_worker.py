@@ -19,7 +19,7 @@ from sqlalchemy import case, select
 
 from src.core import get_database, get_logger
 from src.core.config import get_config
-from src.domain import Task, TaskPriority, TaskStatus
+from src.domain import Task, TaskPriority, TaskStatus, TaskType
 from src.services.task_executor import execute_task, recover_interrupted_tasks_on_startup
 from src.services._lifecycle import safe_exception_summary
 from src.control_plane.events import control_plane_events
@@ -32,6 +32,7 @@ TASK_WORKER_CONFIG = get_config().task_worker
 POLL_INTERVAL_SECONDS = TASK_WORKER_CONFIG.poll_interval_seconds
 IDLE_LOG_EVERY = TASK_WORKER_CONFIG.idle_log_every
 MAX_CONCURRENT_TASKS = TASK_WORKER_CONFIG.concurrency
+MAX_CONCURRENT_AI_TASKS = min(TASK_WORKER_CONFIG.ai_concurrency, MAX_CONCURRENT_TASKS)
 TASK_HEARTBEAT_SECONDS = TASK_WORKER_CONFIG.task_heartbeat_seconds
 STALE_TASK_SECONDS = TASK_WORKER_CONFIG.stale_task_seconds
 RECOVERY_SCAN_SECONDS = TASK_WORKER_CONFIG.recovery_scan_seconds
@@ -40,6 +41,16 @@ RUNTIME_HEARTBEAT_TTL_SECONDS = TASK_WORKER_CONFIG.runtime_heartbeat_ttl_seconds
 
 _LIBC: ctypes.CDLL | None = None
 _LIBC_LOOKUP_DONE = False
+
+AI_TASK_TYPES = {
+    TaskType.GENERATE_REPORT,
+    TaskType.GENERATE_SECTION,
+    TaskType.REVIEW_SECTION,
+    TaskType.UPDATE_DISEASE_KNOWLEDGE,
+    TaskType.AGENT_WORKFLOW,
+    TaskType.ENRICH_LITERATURE,
+    TaskType.DISCOVER_LITERATURE_GAPS,
+}
 
 
 def _release_task_memory() -> None:
@@ -71,7 +82,11 @@ def _release_task_memory() -> None:
         logger.debug("libc malloc_trim failed: {}", exc)
 
 
-async def _claim_next_task_uuid(worker_instance_id: str) -> Optional[str]:
+async def _claim_next_task_uuid(
+    worker_instance_id: str,
+    *,
+    blocked_task_types: set[TaskType] | None = None,
+) -> Optional[tuple[str, TaskType]]:
     """Pick one runnable task and return its UUID.
 
     Claim must be atomic across worker processes. We lock one candidate row,
@@ -84,13 +99,16 @@ async def _claim_next_task_uuid(worker_instance_id: str) -> Optional[str]:
             (Task.priority == TaskPriority.NORMAL, 2),
             else_=3,
         )
-        result = await db.execute(
+        query = (
             select(Task)
             .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]))
             .order_by(priority_rank.asc(), Task.created_at.asc())
             .with_for_update(skip_locked=True)
             .limit(1)
         )
+        if blocked_task_types:
+            query = query.where(Task.task_type.notin_(list(blocked_task_types)))
+        result = await db.execute(query)
         task = result.scalar_one_or_none()
         if task is None:
             return None
@@ -106,7 +124,7 @@ async def _claim_next_task_uuid(worker_instance_id: str) -> Optional[str]:
         task.status = TaskStatus.RUNNING
         task.last_error = None
         await db.commit()
-        return task.task_uuid
+        return task.task_uuid, task.task_type
 
 
 async def _heartbeat_claimed_task(
@@ -167,9 +185,10 @@ async def _recover_stale_tasks(
 async def run_worker() -> None:
     """Main worker loop."""
     logger.info(
-        "Task worker started (poll_interval={}s, concurrency={})",
+        "Task worker started (poll_interval={}s, concurrency={}, ai_concurrency={})",
         POLL_INTERVAL_SECONDS,
         MAX_CONCURRENT_TASKS,
+        MAX_CONCURRENT_AI_TASKS,
     )
 
     instance_id = runtime_registry.new_instance_id("worker")
@@ -200,7 +219,10 @@ async def run_worker() -> None:
         instance_id,
         lease_ttl_seconds=RUNTIME_LEASE_TTL_SECONDS,
         heartbeat_ttl_seconds=RUNTIME_HEARTBEAT_TTL_SECONDS,
-        metadata={"concurrency": MAX_CONCURRENT_TASKS},
+        metadata={
+            "concurrency": MAX_CONCURRENT_TASKS,
+            "ai_concurrency": MAX_CONCURRENT_AI_TASKS,
+        },
         on_lease_lost=_threaded_lease_lost,
     )
     recovery_sweep = asyncio.create_task(
@@ -260,16 +282,28 @@ async def run_worker() -> None:
             _release_task_memory()
 
     active_tasks: set[asyncio.Task[None]] = set()
+    active_task_types: dict[asyncio.Task[None], TaskType] = {}
     idle_ticks = 0
     while not stop_event.is_set() or active_tasks:
         while not stop_event.is_set() and len(active_tasks) < MAX_CONCURRENT_TASKS:
-            task_uuid = await _claim_next_task_uuid(instance_id)
-            if not task_uuid:
+            active_ai_tasks = sum(
+                1 for task_type in active_task_types.values() if task_type in AI_TASK_TYPES
+            )
+            blocked_task_types = (
+                AI_TASK_TYPES if active_ai_tasks >= MAX_CONCURRENT_AI_TASKS else None
+            )
+            claimed = await _claim_next_task_uuid(
+                instance_id,
+                blocked_task_types=blocked_task_types,
+            )
+            if not claimed:
                 break
+            task_uuid, task_type = claimed
 
             idle_ticks = 0
             task = asyncio.create_task(_run_claimed_task(task_uuid), name=f"task-{task_uuid}")
             active_tasks.add(task)
+            active_task_types[task] = task_type
 
         if active_tasks:
             done, pending = await asyncio.wait(
@@ -277,6 +311,8 @@ async def run_worker() -> None:
                 timeout=POLL_INTERVAL_SECONDS,
                 return_when=asyncio.FIRST_COMPLETED,
             )
+            for task in done:
+                active_task_types.pop(task, None)
             active_tasks = set(pending)
             if done:
                 idle_ticks = 0

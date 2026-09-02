@@ -24,7 +24,11 @@ from src.generation.site_data_literature import (
 )
 from src.literature.classification import classify_candidate
 from src.literature.clients.crossref import CrossrefClient
-from src.literature.enrichment import LiteratureSummaryGenerator, SUMMARY_FIELDS
+from src.literature.enrichment import (
+    LiteratureEvidenceAgent,
+    LiteratureSummaryGenerator,
+    SUMMARY_FIELDS,
+)
 from src.literature.knowledge_graph import build_knowledge_graph
 from src.literature.normalization import normalize_crossref
 from src.literature.normalization import normalize_europe_pmc
@@ -1058,8 +1062,41 @@ async def test_model_enrichment_rejects_verbatim_overlap_and_stays_reviewable():
     )
     assert result.fields["main_findings"] is None
     assert result.fields["study_design"] == "This was a descriptive surveillance study."
+    assert result.fields["limitations"].startswith("The available evidence is limited to this single article")
+    assert result.evidence_map["limitations"]["fallback"] == "source_scope_limitations"
     assert result.model == "test-model"
     assert "Removed verbatim-overlap fields: main_findings" in result.review_notes
+
+
+@pytest.mark.asyncio
+async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeypatch):
+    captured = {}
+
+    async def fake_complete(self, **kwargs):
+        captured.update(kwargs)
+        return "{}"
+
+    monkeypatch.setattr(
+        "src.literature.enrichment.get_config",
+        lambda: SimpleNamespace(
+            literature=SimpleNamespace(
+                ai_wait_for_model_recovery=True,
+                ai_quota_recovery_rounds=1,
+            )
+        ),
+    )
+    monkeypatch.setattr(LiteratureEvidenceAgent, "complete", fake_complete)
+
+    await LiteratureEvidenceAgent().process(
+        prompt="{}",
+        system="system",
+        preferred_models=["qwen3.8-flash"],
+        timeout_seconds=30,
+    )
+
+    assert captured["wait_for_model_recovery"] is True
+    assert captured["max_quota_recovery_rounds"] == 1
+    assert captured["max_attempts_per_model"] == 1
 
 
 @pytest.mark.asyncio
@@ -1087,6 +1124,7 @@ async def test_chinese_enrichment_requires_and_records_english_semantic_contract
     )
 
     assert result.canonical_summary_fingerprint
+    assert result.fields["limitations"].startswith("可用证据仅限于该单篇文献")
     request = json.loads(agent.calls[-1]["prompt"])
     assert request["canonical_summary_en"] == canonical
     assert "do not add, remove" in agent.calls[-1]["system"]
@@ -1369,6 +1407,11 @@ def test_autopilot_publishes_only_current_well_grounded_model_summaries():
         **fields,
     )
     assert decide_summary(summary, article, _autopilot_config()).action == "publish"
+    summary.limitations = ""
+    missing_limits = decide_summary(summary, article, _autopilot_config())
+    assert missing_limits.action == "hold"
+    assert "limitations" in missing_limits.reasons[0]
+    summary.limitations = fields["limitations"]
     summary.generation_metadata["source_fingerprint"] = "stale"
     assert decide_summary(summary, article, _autopilot_config()).action == "hold"
     summary.status = "published"

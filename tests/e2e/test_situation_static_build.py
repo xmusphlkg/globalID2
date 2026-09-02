@@ -95,7 +95,8 @@ def test_fixture_snapshot_builds_latest_month_week_json_and_seo(tmp_path: Path) 
         sitemap = (ASTRO / "dist" / "sitemaps" / "situation.xml").read_text(encoding="utf-8")
         home = (ASTRO / "dist" / "index.html").read_text(encoding="utf-8")
 
-        assert "A searchable evidence base for global infectious disease surveillance" in home
+        assert "Search official surveillance records" in home
+        assert "Find signals" in home and "Trace sources" in home
         assert "Current attention" in home
         assert "Official events" in home and "Published signals" in home
         assert "Open the full situation review" in home

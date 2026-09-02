@@ -329,7 +329,14 @@ def decide_summary(
             return AutomationDecision("hold", ("bilingual canonical alignment evidence is missing or stale",))
     if "verbatim-overlap" in str(summary.review_notes or "").lower():
         return AutomationDecision("hold", ("verbatim overlap was detected during generation",))
-    required_fields = {"research_question", "study_design", "main_findings", "public_health_relevance", "gids_interpretation"}
+    required_fields = {
+        "research_question",
+        "study_design",
+        "main_findings",
+        "public_health_relevance",
+        "limitations",
+        "gids_interpretation",
+    }
     missing = sorted(field for field in required_fields if not str(getattr(summary, field, None) or "").strip())
     if missing:
         return AutomationDecision("hold", (f"required evidence fields are missing: {', '.join(missing)}",))
