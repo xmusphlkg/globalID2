@@ -33,6 +33,7 @@ class TaskType(str, PyEnum):
     GENERATE_SECTION = "generate_section"  # Section generation task
     REVIEW_SECTION = "review_section"  # Section review task
     UPDATE_DISEASE_KNOWLEDGE = "update_disease_knowledge"  # Disease knowledge refresh task
+    REFRESH_DISEASE_KNOWLEDGE_SOURCES = "refresh_disease_knowledge_sources"  # Fetch and organize disease knowledge sources
     EXPORT_DATA = "export_data"  # Data export task
     SEND_EMAIL = "send_email"  # Email sending task
     AGENT_WORKFLOW = "agent_workflow"  # General multi-expert agent workflow task

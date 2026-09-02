@@ -506,6 +506,62 @@ def test_au_raw_archive_writes_json(tmp_path):
     assert '"measure_property": "Count_Notification"' in archived.read_text(encoding="utf-8")
 
 
+def test_au_state_labels_resolve_to_subdivision_codes():
+    from src.data.crawlers.au import normalize_au_state_code
+
+    assert normalize_au_state_code("NSW") == "AU-NSW"
+    assert normalize_au_state_code("New South Wales") == "AU-NSW"
+    assert normalize_au_state_code("Western Australia") == "AU-WA"
+    assert normalize_au_state_code("AUS") is None
+
+
+def test_au_batch_subdivision_csvs_fetch_once(tmp_path):
+    import csv
+
+    from src.data.crawlers.au import AustraliaNINDSSCrawler
+
+    crawler = AustraliaNINDSSCrawler()
+    fetch_calls = []
+    crawler._load_config = lambda: True  # type: ignore[method-assign]
+    crawler.get_all_diseases = lambda: ["Anthrax", "Cholera"]  # type: ignore[method-assign]
+
+    def fake_fetch(months, diseases):
+        fetch_calls.append((months, diseases))
+        return {
+            (2026, 3, "Anthrax", "AU-NSW"): 4,
+            (2026, 3, "Cholera", "AU-NSW"): 0,
+            (2026, 3, "Anthrax", "AU-VIC"): 9,
+        }
+
+    crawler._fetch_months_concurrent_state_counts = fake_fetch  # type: ignore[method-assign]
+
+    summaries = crawler.crawl_monthly_subdivision_csvs(
+        tmp_path,
+        jurisdiction_codes=["AU-NSW", "AU-VIC"],
+        months=[(2026, 3)],
+    )
+
+    assert fetch_calls == [([(2026, 3)], ["Anthrax", "Cholera"])]
+    assert summaries["AU-NSW"].row_count == 2
+    assert summaries["AU-VIC"].row_count == 1
+
+    nsw_csv = tmp_path / "au-nsw_nindss_monthly.csv"
+    vic_csv = tmp_path / "au-vic_nindss_monthly.csv"
+    assert nsw_csv.exists()
+    assert vic_csv.exists()
+
+    nsw_rows = list(csv.DictReader(nsw_csv.open(encoding="utf-8")))
+    assert [row["Cases"] for row in nsw_rows] == ["4", "0"]
+    assert {row["JurisdictionCode"] for row in nsw_rows} == {"AU-NSW"}
+    assert {row["ParentCountryCode"] for row in nsw_rows} == {"AU"}
+    assert {row["LocationType"] for row in nsw_rows} == {"subdivision"}
+    assert {row["GeographyKey"] for row in nsw_rows} == {"country:AU-NSW:national"}
+
+    vic_rows = list(csv.DictReader(vic_csv.open(encoding="utf-8")))
+    assert vic_rows[0]["ReportingArea"] == "Victoria"
+    assert vic_rows[0]["Geocode"] == "AU-VIC"
+
+
 def test_au_refresh_source_falls_back_to_raw_archive(tmp_path, monkeypatch: pytest.MonkeyPatch):
     import json
 
@@ -540,6 +596,52 @@ def test_au_refresh_source_falls_back_to_raw_archive(tmp_path, monkeypatch: pyte
     }
     assert any("using raw archive" in line for line in result.script_logs)
     assert result.source_csv.exists()
+
+
+def test_au_subdivision_refresh_source_falls_back_to_raw_archive(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import json
+
+    from src.data.processors.au import AUMonthlyUpdater
+
+    raw_root = tmp_path / "raw"
+    month_dir = raw_root / "2026" / "03"
+    month_dir.mkdir(parents=True, exist_ok=True)
+    (month_dir / "Anthrax.json").write_text(
+        json.dumps(
+            {"disease": "Anthrax", "parsed_counts": {"NSW": 4, "VIC": 9, "AUS": 99}},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_crawl_monthly_subdivision_csv(
+        self,
+        output_csv,
+        *,
+        jurisdiction_code,
+        months=None,
+    ):
+        raise RuntimeError("network down")
+
+    monkeypatch.setattr(
+        "src.data.processors.au.AustraliaNINDSSCrawler.crawl_monthly_subdivision_csv",
+        fake_crawl_monthly_subdivision_csv,
+    )
+
+    updater = AUMonthlyUpdater(country_code="AU-NSW", output_csv=tmp_path / "au-nsw.csv")
+    result = updater.refresh_source(months=[(2026, 3)], raw_dir=raw_root)
+
+    assert [(row["RawDiseaseLabel"], row["Cases"]) for row in result.rows] == [
+        ("Anthrax", "4")
+    ]
+    assert result.rows[0]["JurisdictionCode"] == "AU-NSW"
+    assert result.rows[0]["ParentCountryCode"] == "AU"
+    assert result.rows[0]["LocationType"] == "subdivision"
+    assert result.rows[0]["GeographyKey"] == "country:AU-NSW:national"
+    assert any("using raw archive" in line for line in result.script_logs)
 
 
 def test_au_refresh_source_falls_back_to_previous_csv_snapshot(tmp_path, monkeypatch: pytest.MonkeyPatch):

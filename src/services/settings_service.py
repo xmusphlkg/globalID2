@@ -120,7 +120,7 @@ class RuntimeSettingsService:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except Exception as exc:
-            logger.warning("Failed to read runtime settings file %s: %s", path, exc)
+            logger.warning("Failed to read runtime settings file {}: {}", path, exc)
             return {}
 
         return payload if isinstance(payload, dict) else {}
@@ -137,7 +137,7 @@ class RuntimeSettingsService:
         try:
             os.chmod(path, 0o600)
         except OSError as exc:
-            logger.warning("Failed to restrict runtime settings file permissions for %s: %s", path, exc)
+            logger.warning("Failed to restrict runtime settings file permissions for {}: {}", path, exc)
 
     def _merge_snapshot(self) -> tuple[dict[str, Any], dict[str, Any]]:
         defaults = self._default_raw_snapshot()

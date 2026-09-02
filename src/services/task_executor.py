@@ -39,6 +39,8 @@ RECOVERABLE_IDEMPOTENT_TASK_TYPES = frozenset(
         TaskType.SYNC_LITERATURE,
         TaskType.ENRICH_LITERATURE,
         TaskType.DISCOVER_LITERATURE_GAPS,
+        TaskType.UPDATE_DISEASE_KNOWLEDGE,
+        TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
     }
 )
 
@@ -307,7 +309,7 @@ async def recover_interrupted_tasks_on_startup(
                 )
             except Exception as exc:
                 logger.warning(
-                    "Failed to finalize interrupted CrawlRun country=%s source=%s: %s",
+                    "Failed to finalize interrupted CrawlRun country={} source={}: {}",
                     country_code,
                     source,
                     exc,
@@ -430,6 +432,8 @@ async def _dispatch(task: Task) -> Dict[str, Any]:
         return await _run_report(task)
     elif task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE:
         return await _run_disease_knowledge(task)
+    elif task_type == TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES:
+        return await _run_disease_knowledge_sources(task)
     elif task_type == TaskType.EXPORT_DATA:
         return await _run_export(task)
     elif task_type == TaskType.AGENT_WORKFLOW:
@@ -489,7 +493,7 @@ async def _run_crawl(task: Task) -> Dict[str, Any]:
                 )
             except Exception as audit_exc:
                 logger.warning(
-                    "Failed to finalize CrawlRun for task %s: %s",
+                    "Failed to finalize CrawlRun for task {}: {}",
                     task.task_uuid,
                     audit_exc,
                 )
@@ -703,6 +707,23 @@ async def _run_disease_knowledge(task: Task) -> Dict[str, Any]:
     async with task_lifecycle(task, exit_on_cancel=False):
         service = DiseaseKnowledgeUpdateService()
         result = await service.execute_task(task)
+
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+
+        return result
+
+
+async def _run_disease_knowledge_sources(task: Task) -> Dict[str, Any]:
+    """Execute a source-only disease knowledge refresh task."""
+    from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        service = DiseaseKnowledgeUpdateService()
+        result = await service.execute_source_refresh_task(task)
 
         async with get_database() as db:
             task_obj = await db.get(Task, task.id)

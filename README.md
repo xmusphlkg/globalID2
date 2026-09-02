@@ -132,7 +132,7 @@ The shipped example includes these categories:
 - runtime database: `DATABASE_URL`, `DATABASE_URL_SYNC`
 - Situation history database: `SITUATION_HISTORY_DATABASE_ENABLED`, `SITUATION_HISTORY_DATABASE_NAME`, `SITUATION_HISTORY_DATABASE_URL`
 - performance: `MAX_PARALLEL_TASKS`, `MAX_CRAWLER_CONCURRENT`, `TASK_WORKER_CONCURRENCY`
-- AI defaults: `DEFAULT_AI_PROVIDER`, `DEFAULT_MODEL`, `AI__MODEL_CHAIN_RAW`, `AI__KNOWLEDGE_MODEL_SHARDS_RAW`
+- AI bootstrap defaults: `DEFAULT_AI_PROVIDER`, `DEFAULT_MODEL`, `AI__MODEL_CHAIN_RAW`
 - paths: `DATA_DIR`, `LOG_DIR`, `CONFIG_DIR`
 
 For dashboard background tasks, `TASK_WORKER_CONCURRENCY` controls how many queued jobs
@@ -143,10 +143,11 @@ also increase model/API pressure and email/report throughput.
 comfortably above the heartbeat interval. `SCHEDULER_WORKER_GRACE_SECONDS` bounds how long
 the scheduler may remain active without a worker heartbeat.
 
-For disease knowledge building, `AI__KNOWLEDGE_MODEL_SHARDS_RAW` lets us distribute
-tasks across multiple preferred models. The worker deterministically rotates the preferred
-model order per disease/language and still falls back to the rest of `AI__MODEL_CHAIN_RAW`
-if the first choice is rate-limited or unavailable.
+For disease knowledge building, runtime routing comes from the dashboard model
+center. Environment model values only seed the model-center tables during first
+initialization or an explicit forced bootstrap. The worker deterministically
+rotates preferred model-center routes per disease/language and fail-closes when
+no model-center route is active, routable, and out of cooldown.
 
 Situation Room revisions, detector evidence, source checks, synchronization runs, and
 operator audit actions are retained in a dedicated database. When
@@ -201,8 +202,7 @@ python3 scripts/audit_disease_duplicates.py --ai-review --ai-output reports/dise
 
 `--ai-review` uses the same model-center routing used by the management
 dashboard. Configure providers and model routes in `/ai/models`; the audit will
-use the first active, routable model and respect model-center
-cooldown/unavailable state.
+use active, routable model-center routes and respect cooldown/unavailable state.
 
 The AI layer is advisory only: it recommends `merge`, `keep_separate`, or
 `needs_human_review`, but it does not edit mapping CSVs automatically.

@@ -42,6 +42,7 @@ def test_iceland_source_config_is_scope_aware() -> None:
         "is_doh_respiratory",
         "is_doh_history",
         "is_doh_legacy_icd",
+        "ecdc_atlas_annual",
     ]
     assert config.source_options[0].label_en.endswith("All Current Dashboards")
     assert {
@@ -54,6 +55,7 @@ def test_iceland_source_config_is_scope_aware() -> None:
         "is_doh_respiratory": ("current", True),
         "is_doh_history": ("history", False),
         "is_doh_legacy_icd": ("history", False),
+        "ecdc_atlas_annual": ("regional_baseline", True),
     }
 
 
@@ -130,7 +132,7 @@ class _DB:
     def __init__(self, results):
         self.results = [_Result(rows) for rows in results]
 
-    async def execute(self, _statement):
+    async def execute(self, _statement, *_args, **_kwargs):
         assert self.results, "unexpected dashboard query"
         return self.results.pop(0)
 
@@ -204,24 +206,112 @@ async def test_iceland_flow_uses_lossless_series_counts_and_semantics() -> None:
         [
             [],
             series_rows,
+            [],
             definition_rows,
+            [],
             quality_rows,
+            [],
             availability_rows,
+            [],
             [],
             [_country()],
         ]
     )
 
-    flows = await get_sources_flow(country_id=20191, db=db)
+    flows = await get_sources_flow(country_code=None, db=db)
 
-    assert len(flows) == 5
-    assert sum(row.source_series_count for row in flows) == 125
-    assert sum(row.source_observation_count for row in flows) == 9396
-    assert sum(row.source_availability.get("available", 0) for row in flows) == 125
-    assert sum(row.mapping_relations.get("exact", 0) for row in flows) == 125
+    assert len(flows) == 6
+    observed_flows = [row for row in flows if row.source_observation_count]
+    assert len(observed_flows) == 5
+    assert sum(row.source_series_count for row in observed_flows) == 125
+    assert sum(row.source_observation_count for row in observed_flows) == 9396
+    assert sum(row.source_availability.get("available", 0) for row in observed_flows) == 125
+    assert sum(row.mapping_relations.get("exact", 0) for row in observed_flows) == 125
     legacy = next(row for row in flows if row.source_scope == "is_doh_legacy_icd")
     assert legacy.metric_types == {"registered_diagnoses": 30}
     assert legacy.comparability == {"not_comparable": 30}
     assert legacy.record_count == 0
     assert legacy.latest_task_uuid is None
+    assert not db.results
+
+
+@pytest.mark.asyncio
+async def test_australia_subdivision_flow_uses_observation_geography() -> None:
+    country = SimpleNamespace(
+        id=31001,
+        code="AU-NSW",
+        name="New South Wales, Australia",
+        name_en="New South Wales, Australia",
+        name_local="New South Wales",
+        language="en-AU",
+        timezone="Australia/Sydney",
+    )
+    series_rows = [
+        SimpleNamespace(
+            country_id=31001,
+            country_code="AU-NSW",
+            country_name="New South Wales, Australia",
+            source_system="SRC_AU_NINDSS",
+            series_count=68,
+            observation_count=183,
+            earliest_date=datetime(2026, 6, 1, tzinfo=timezone.utc),
+            latest_date=datetime(2026, 8, 1, tzinfo=timezone.utc),
+        )
+    ]
+    definition_rows = [
+        SimpleNamespace(
+            country_id=31001,
+            country_code="AU-NSW",
+            source_system="SRC_AU_NINDSS",
+            availability_status="active",
+            metric_type="case_notifications",
+            mapping_relation="exact",
+            comparability="conditional",
+            count=68,
+        )
+    ]
+    quality_rows = [
+        SimpleNamespace(
+            country_id=31001,
+            country_code="AU-NSW",
+            source_system="SRC_AU_NINDSS",
+            quality_status="revised",
+            count=183,
+        )
+    ]
+    availability_rows = [
+        SimpleNamespace(
+            country_id=31001,
+            country_code="AU-NSW",
+            source_system="SRC_AU_NINDSS",
+            status="available",
+            count=68,
+        )
+    ]
+    db = _DB(
+        [
+            [],
+            [],
+            series_rows,
+            [],
+            definition_rows,
+            [],
+            quality_rows,
+            [],
+            availability_rows,
+            [],
+            [country],
+        ]
+    )
+
+    flows = await get_sources_flow(country_code=None, db=db)
+
+    assert len(flows) == 1
+    flow = flows[0]
+    assert flow.country_code == "AU-NSW"
+    assert flow.source_scope == "all"
+    assert flow.source_series_count == 68
+    assert flow.source_observation_count == 183
+    assert flow.observation_quality == {"revised": 183}
+    assert flow.source_availability == {"available": 68}
     assert not db.results

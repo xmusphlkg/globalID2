@@ -59,7 +59,7 @@ class EmailService:
         pdf_path: Optional[str] = None,
         **kwargs,
     ) -> bool:
-        logger.info("Sending report email: %s", report_title)
+        logger.info("Sending report email: {}", report_title)
 
         subject = f"[GlobalID] {report_title}"
         body_html = f"""
@@ -268,7 +268,7 @@ class EmailService:
         This is the primary method for sending emails to subscribers,
         including reports, alerts, and notifications with optional attachments.
         """
-        logger.info("Sending subscription email to %d recipients: %s", len(to_addrs), subject)
+        logger.info("Sending subscription email to {} recipients: {}", len(to_addrs), subject)
         return self.send(
             to_addrs=to_addrs,
             subject=subject,

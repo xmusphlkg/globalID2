@@ -227,8 +227,38 @@ for _code, _meta in ECDC_BASELINE_COUNTRIES.items():
         ),
     }
 
+for _code, _name in {
+    "AU-ACT": "Australian Capital Territory",
+    "AU-NSW": "New South Wales",
+    "AU-NT": "Northern Territory",
+    "AU-QLD": "Queensland",
+    "AU-SA": "South Australia",
+    "AU-TAS": "Tasmania",
+    "AU-VIC": "Victoria",
+    "AU-WA": "Western Australia",
+}.items():
+    SOURCE_DETAILS_BY_SCOPE[(_code, "all")] = {
+        "label": f"Australia NINDSS — {_name}",
+        "url": "https://www.cdc.gov.au/resources/apps-and-tools/nndss-data-visualisation-tool",
+        "machine_url": "https://nindss.health.gov.au/pbi-dashboard/",
+        "type": "microsoft_bi",
+        "cadence": "monthly",
+        "description": (
+            f"Australian NINDSS monthly state/territory notifications for {_name}, "
+            "kept separate from the Australia national aggregate."
+        ),
+    }
+
 ABOUT_COUNTRY_NAMES_ZH: dict[str, str] = {
     "AU": "澳大利亚",
+    "AU-ACT": "澳大利亚首都领地",
+    "AU-NSW": "澳大利亚新南威尔士州",
+    "AU-NT": "澳大利亚北领地",
+    "AU-QLD": "澳大利亚昆士兰州",
+    "AU-SA": "澳大利亚南澳大利亚州",
+    "AU-TAS": "澳大利亚塔斯马尼亚州",
+    "AU-VIC": "澳大利亚维多利亚州",
+    "AU-WA": "澳大利亚西澳大利亚州",
     "BR": "巴西",
     "CA": "加拿大",
     "CA-ON": "加拿大安大略省",
@@ -285,6 +315,19 @@ for _code, _name_zh in {
     ABOUT_SOURCE_LABELS_ZH[(_code, "ecdc_atlas_annual")] = (
         f"ECDC 传染病监测图谱（{_name_zh}年度基线）"
     )
+for _code in (
+    "AU-ACT",
+    "AU-NSW",
+    "AU-NT",
+    "AU-QLD",
+    "AU-SA",
+    "AU-TAS",
+    "AU-VIC",
+    "AU-WA",
+):
+    ABOUT_SOURCE_LABELS_ZH[(_code, "all")] = (
+        f"澳大利亚 NINDSS（{ABOUT_COUNTRY_NAMES_ZH[_code]}）"
+    )
 
 ABOUT_SOURCE_DESCRIPTIONS_ZH: dict[tuple[str, str], str] = {
     ("AU", "all"): "澳大利亚国家法定传染病监测系统仪表板。",
@@ -338,6 +381,20 @@ for _code, _name_zh in {
         f"{_name_zh}年度成员国报告病例数，来自 ECDC 传染病监测图谱；"
         "缺失的病种/年份单元保持未知，来源明确发布的零值予以保留，"
         "并注明 ECDC 与成员国归属。"
+    )
+for _code in (
+    "AU-ACT",
+    "AU-NSW",
+    "AU-NT",
+    "AU-QLD",
+    "AU-SA",
+    "AU-TAS",
+    "AU-VIC",
+    "AU-WA",
+):
+    ABOUT_SOURCE_DESCRIPTIONS_ZH[(_code, "all")] = (
+        f"澳大利亚 NINDSS 仪表板中的{ABOUT_COUNTRY_NAMES_ZH[_code]}月度病例通报；"
+        "该分区序列与澳大利亚国家级合计分开保留。"
     )
 
 CADENCE_LABELS_ZH: dict[str, str] = {

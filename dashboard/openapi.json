@@ -1,6 +1,106 @@
 {
   "components": {
     "schemas": {
+      "AIContentGovernanceRequest": {
+        "properties": {
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "knowledge_retry_limit": {
+            "default": 50,
+            "maximum": 500.0,
+            "minimum": 0.0,
+            "title": "Knowledge Retry Limit",
+            "type": "integer"
+          },
+          "learning_limit": {
+            "default": 20,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Learning Limit",
+            "type": "integer"
+          },
+          "literature_article_limit": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Literature Article Limit"
+          },
+          "literature_limit": {
+            "default": 20,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Literature Limit",
+            "type": "integer"
+          },
+          "source_limit": {
+            "default": 30,
+            "maximum": 200.0,
+            "minimum": 0.0,
+            "title": "Source Limit",
+            "type": "integer"
+          }
+        },
+        "title": "AIContentGovernanceRequest",
+        "type": "object"
+      },
+      "AIContentGovernanceResponse": {
+        "properties": {
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "knowledge": {
+            "additionalProperties": true,
+            "title": "Knowledge",
+            "type": "object"
+          },
+          "knowledge_sources": {
+            "additionalProperties": true,
+            "title": "Knowledge Sources",
+            "type": "object"
+          },
+          "learning_suggestions": {
+            "additionalProperties": true,
+            "title": "Learning Suggestions",
+            "type": "object"
+          },
+          "literature": {
+            "additionalProperties": true,
+            "title": "Literature",
+            "type": "object"
+          },
+          "literature_articles": {
+            "additionalProperties": true,
+            "title": "Literature Articles",
+            "type": "object"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt_version",
+          "dry_run",
+          "knowledge",
+          "literature_articles",
+          "literature",
+          "knowledge_sources",
+          "learning_suggestions"
+        ],
+        "title": "AIContentGovernanceResponse",
+        "type": "object"
+      },
       "AIConversationOut": {
         "properties": {
           "agent": {
@@ -5483,6 +5583,107 @@
         "title": "DiseaseKnowledgeDetail",
         "type": "object"
       },
+      "DiseaseKnowledgeRepairRequest": {
+        "properties": {
+          "force": {
+            "default": false,
+            "title": "Force",
+            "type": "boolean"
+          },
+          "generator": {
+            "default": "ai",
+            "description": "ai uses the model center for targeted repair",
+            "title": "Generator",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "maximum": 500.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional override: urgent / high / normal / low",
+            "title": "Priority"
+          },
+          "source": {
+            "description": "Source groups: who / search / wikidata / wikipedia / pubmed / msd",
+            "items": {
+              "type": "string"
+            },
+            "title": "Source",
+            "type": "array"
+          }
+        },
+        "title": "DiseaseKnowledgeRepairRequest",
+        "type": "object"
+      },
+      "DiseaseKnowledgeRepairResponse": {
+        "properties": {
+          "created_count": {
+            "title": "Created Count",
+            "type": "integer"
+          },
+          "created_tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskOut"
+            },
+            "title": "Created Tasks",
+            "type": "array"
+          },
+          "force": {
+            "title": "Force",
+            "type": "boolean"
+          },
+          "generator": {
+            "title": "Generator",
+            "type": "string"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/DiseaseKnowledgeTaskSkipped"
+            },
+            "title": "Skipped",
+            "type": "array"
+          },
+          "skipped_count": {
+            "title": "Skipped Count",
+            "type": "integer"
+          },
+          "source_groups": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Groups",
+            "type": "array"
+          }
+        },
+        "required": [
+          "created_count",
+          "skipped_count",
+          "source_groups",
+          "generator",
+          "force",
+          "created_tasks"
+        ],
+        "title": "DiseaseKnowledgeRepairResponse",
+        "type": "object"
+      },
       "DiseaseKnowledgeSourceDetail": {
         "properties": {
           "content_sections": {
@@ -6409,6 +6610,19 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "KnowledgeRepairRetryRequest": {
+        "properties": {
+          "limit": {
+            "default": 50,
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "KnowledgeRepairRetryRequest",
         "type": "object"
       },
       "LiteratureArticleOut": {
@@ -16225,6 +16439,210 @@
         ]
       }
     },
+    "/api/v1/content-governance/knowledge-retries": {
+      "post": {
+        "operationId": "requeue_failed_knowledge_repairs_api_v1_content_governance_knowledge_retries_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeRepairRetryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {},
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Requeue Failed Knowledge Repairs",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/api/v1/content-governance/run": {
+      "post": {
+        "operationId": "run_ai_content_governance_api_v1_content_governance_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIContentGovernanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AIContentGovernanceResponse"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Run Ai Content Governance",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
     "/api/v1/countries": {
       "get": {
         "operationId": "list_countries_api_v1_countries_get",
@@ -17805,6 +18223,109 @@
           }
         },
         "summary": "List Disease Knowledge Catalogue",
+        "tags": [
+          "AI"
+        ]
+      }
+    },
+    "/api/v1/knowledge/repair-runs": {
+      "post": {
+        "operationId": "start_disease_knowledge_repair_tasks_api_v1_knowledge_repair_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiseaseKnowledgeRepairRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DiseaseKnowledgeRepairResponse"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Start Disease Knowledge Repair Tasks",
         "tags": [
           "AI"
         ]

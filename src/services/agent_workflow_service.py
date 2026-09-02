@@ -274,7 +274,7 @@ class AgentWorkflowService:
             try:
                 return [self._plan_node_from_dict(item) for item in list(run.plan_json)]
             except Exception:
-                logger.warning("Existing plan payload for run %s could not be parsed; replanning", run.id)
+                logger.warning("Existing plan payload for run {} could not be parsed; replanning", run.id)
 
         planner = WorkflowAgent(
             name="Planner",
@@ -305,7 +305,7 @@ class AgentWorkflowService:
                 metadata={"task_uuid": task.task_uuid, "risk_level": run.risk_level, "node_count": len(nodes)},
             )
         except Exception as log_exc:
-            logger.warning("Failed to add workflow plan log for %s: %s", task.task_uuid, log_exc)
+            logger.warning("Failed to add workflow plan log for {}: {}", task.task_uuid, log_exc)
         await db.commit()
         return nodes
 

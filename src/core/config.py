@@ -140,16 +140,32 @@ class AISettings(_BaseEnvSettings):
         description="单个知识库语言版本生成的总超时秒数",
     )
     knowledge_model_request_timeout_seconds: int = Field(
-        default=120,
+        default=90,
         ge=10,
         le=600,
         description="知识库生成中单条模型路由请求的超时秒数",
     )
+    knowledge_model_request_timeout_cap_seconds: int = Field(
+        default=120,
+        ge=30,
+        le=600,
+        description="知识库生成单条模型请求的运行时上限，防止旧环境值让个人额度长时间阻塞",
+    )
     knowledge_model_attempts_per_route: int = Field(
-        default=2,
+        default=1,
         ge=1,
         le=3,
         description="知识库生成中单条模型路由的最大尝试次数；额度和超时错误仍立即切换",
+    )
+    knowledge_wait_for_model_recovery: bool = Field(
+        default=True,
+        description="知识库生成在模型中心暂无候选路由时是否等待一次冷却恢复",
+    )
+    knowledge_quota_recovery_rounds: int = Field(
+        default=1,
+        ge=0,
+        le=4,
+        description="知识库生成遇到额度/限流时允许的模型中心恢复等待轮数",
     )
     knowledge_timeout_cooldown_seconds: int = Field(
         default=60,
@@ -168,6 +184,26 @@ class AISettings(_BaseEnvSettings):
         ge=800,
         le=8000,
         description="完整知识画像的最大输出 token，上限会按目标字段数自动下调",
+    )
+    knowledge_evidence_max_sources: int = Field(
+        default=5,
+        ge=2,
+        le=8,
+        description="知识模型单次生成使用的最大来源数量，证据选择会优先覆盖目标字段",
+    )
+    knowledge_evidence_manifest_max_characters: int = Field(
+        default=12000,
+        ge=4000,
+        le=18000,
+        description="知识模型提示词中 evidence_manifest 的最大正文字符数",
+    )
+    knowledge_translate_zh_from_en: bool = Field(
+        default=True,
+        description="中文知识画像优先从已通过引用校验的英文成稿翻译，避免重复消耗完整证据包",
+    )
+    knowledge_refresh_existing_on_source_change: bool = Field(
+        default=False,
+        description="来源指纹变化时是否默认重写已有完整知识画像；关闭时只修复缺失或不合格字段",
     )
     agent_role_models_raw: str = Field(
         default="",
@@ -575,6 +611,16 @@ class LiteratureSettings(_BaseEnvSettings):
         description="Only send abstracts from records identified as open access to an external model route",
     )
     ai_model_request_timeout_seconds: int = Field(default=120, ge=10, le=600)
+    ai_wait_for_model_recovery: bool = Field(
+        default=True,
+        description="Wait once for Model Center route recovery before failing literature AI enrichment",
+    )
+    ai_quota_recovery_rounds: int = Field(
+        default=1,
+        ge=0,
+        le=4,
+        description="Quota/rate-limit recovery rounds allowed for literature AI enrichment",
+    )
     weekly_ai_review_enabled: bool = Field(
         default=False,
         description="Run a distinct, content-bound AI quality review for generated weekly briefs",
@@ -668,6 +714,13 @@ class TaskWorkerSettings(_BaseEnvSettings):
         le=64,
         description="任务 worker 最大并发数",
     )
+    ai_concurrency: int = Field(
+        default=1,
+        validation_alias="TASK_WORKER_AI_CONCURRENCY",
+        ge=1,
+        le=64,
+        description="需要调用 AI/模型中心的任务最大并发数",
+    )
     poll_interval_seconds: float = Field(
         default=2.0,
         validation_alias="TASK_WORKER_POLL_INTERVAL",
@@ -675,7 +728,7 @@ class TaskWorkerSettings(_BaseEnvSettings):
         description="任务 worker 拉取队列轮询间隔（秒）",
     )
     idle_log_every: int = Field(
-        default=30,
+        default=300,
         validation_alias="TASK_WORKER_IDLE_LOG_EVERY",
         ge=1,
         description="worker 空闲日志输出周期（轮）",

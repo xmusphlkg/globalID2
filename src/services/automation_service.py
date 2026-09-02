@@ -249,7 +249,7 @@ class AutomationService:
                         default_retry_threshold=cfg.default_retry_threshold,
                     )
                 except Exception as exc:
-                    logger.warning("Ignoring invalid automation seed job %s: %s", raw_job, exc)
+                    logger.warning("Ignoring invalid automation seed job {}: {}", raw_job, exc)
                     continue
                 db.add(
                     AutomationJob(
@@ -357,7 +357,7 @@ class AutomationService:
             await schedule_state_repository.save("ingestion", job.job_id, state)
         loaded_jobs = await self.load_jobs()
         self._task = asyncio.create_task(self._run_loop(), name="globalid-automation-scheduler")
-        logger.info("Automation scheduler started with %s configured job(s)", len(loaded_jobs))
+        logger.info("Automation scheduler started with {} configured job(s)", len(loaded_jobs))
 
     async def stop(self) -> None:
         if self._stop_event is not None:
@@ -386,7 +386,7 @@ class AutomationService:
                     if state.next_run_at and now >= state.next_run_at:
                         await self.trigger_job(job.job_id, manual=False)
             except Exception as exc:
-                logger.exception("Automation scheduler tick failed: %s", exc)
+                logger.exception("Automation scheduler tick failed: {}", exc)
             try:
                 await asyncio.wait_for(
                     self._stop_event.wait(), timeout=cfg.poll_interval_seconds
@@ -522,7 +522,7 @@ class AutomationService:
                 },
             )
             logger.warning(
-                "Automatic ingestion retry scheduled task=%s job=%s attempt=%s/%s at=%s",
+                "Automatic ingestion retry scheduled task={} job={} attempt={}/{} at={}",
                 task_uuid,
                 job_id,
                 retry_payload["scheduled_attempts"],
@@ -744,7 +744,7 @@ class AutomationService:
                 state.last_status = "failed"
                 state.last_error = str(exc)
                 state.next_run_at = self._compute_next_run(job, now=state.last_finished_at)
-                logger.error("Automation job %s failed: %s", job.job_id, exc)
+                logger.error("Automation job {} failed: {}", job.job_id, exc)
                 raise
             finally:
                 await schedule_state_repository.save("ingestion", job.job_id, state)

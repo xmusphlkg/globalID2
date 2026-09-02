@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from src.ai.agents.base import BaseAgent
+from src.ai.model_center import get_runtime_routes
 from src.core import get_config, get_logger
 from src.knowledge.brief_generator import DISCLAIMER_EN, DISCLAIMER_ZH
 from src.knowledge.citations import (
@@ -96,7 +97,7 @@ class AIDiseaseBriefGenerator:
             profile_schema=profile_schema,
             target_sections=target_sections,
         )
-        preferred_models, shard_index, shard_key = self._preferred_models_for(
+        preferred_models, shard_index, shard_key = await self._preferred_models_for(
             disease_id=str(disease.get("disease_id") or ""),
             language=language,
         )
@@ -405,6 +406,96 @@ class AIDiseaseBriefGenerator:
                 fields=target_sections,
             )
 
+        quality_repair_attempted = False
+        quality_repair_prompt: str | None = None
+        quality_repair_error: str | None = None
+        quality_repair_failures = self._repairable_quality_failures(
+            assessment,
+            target_sections=target_sections,
+            evidence_manifest=evidence_manifest,
+        )
+        if quality_repair_failures and not final_citation_failures and output_repair_budget > 0:
+            output_repair_budget -= 1
+            quality_repair_attempted = True
+            quality_repair_prompt = self._quality_repair_prompt(
+                prompt_payload=prompt_payload,
+                previous_response=response or "",
+                failures=quality_repair_failures,
+            )
+            repair_preferred_models = (
+                [trace_values["model"]]
+                if trace_values.get("model")
+                else preferred_models
+            )
+            try:
+                quality_repair_response = await self._complete_with_policy(
+                    agent,
+                    prompt=quality_repair_prompt,
+                    system=system,
+                    preferred_models=repair_preferred_models,
+                )
+                quality_repair_conversation = agent.get_latest_conversation() or {}
+                repaired = self._parse_json(quality_repair_response)
+                previous_merged = merged
+                merged, assessment, trace_values = assemble_payload(
+                    repaired,
+                    quality_repair_conversation,
+                )
+                repaired_fields = {
+                    str(item["field"])
+                    for item in quality_repair_failures
+                    if item.get("field")
+                }
+                # The repair call is allowed to change only rejected target
+                # fields. Keep already valid prose stable even if the model
+                # returns a sparse or over-broad replacement payload.
+                for field in (
+                    "brief",
+                    "definition",
+                    "clinical_features",
+                    "epidemiology",
+                    "transmission",
+                    "prevention",
+                    "surveillance_note",
+                    "risk_groups",
+                ):
+                    if field in target_sections and field not in repaired_fields:
+                        merged[field] = previous_merged.get(field)
+                merged["clinical_summary"] = merged.get("clinical_features")
+                merged, assessment = apply_knowledge_quality_gate(merged)
+                response = quality_repair_response
+                final_citation_failures = validate_knowledge_citations(
+                    merged,
+                    fields=target_sections,
+                )
+                citation_fallback_fields = self._citation_failure_fields(
+                    final_citation_failures,
+                    target_sections=target_sections,
+                )
+                if citation_fallback_fields:
+                    for field in citation_fallback_fields:
+                        merged[field] = None
+                        if field == "clinical_features":
+                            merged["clinical_summary"] = None
+                    merged = normalize_knowledge_citations(
+                        merged,
+                        marker_mode="position",
+                        prune_uncited_sources=True,
+                    )
+                    merged, assessment = apply_knowledge_quality_gate(merged)
+                    final_citation_failures = validate_knowledge_citations(
+                        merged,
+                        fields=target_sections,
+                    )
+            except Exception as exc:
+                quality_repair_error = str(exc)
+                logger.warning(
+                    "AI quality repair failed for {}/{}: {}",
+                    disease.get("disease_id"),
+                    language,
+                    exc,
+                )
+
         interaction_metrics = self._interaction_metrics(agent)
         if final_citation_failures or not assessment.publishable:
             await self._invalidate_failed_completions(
@@ -416,6 +507,7 @@ class AIDiseaseBriefGenerator:
                         "Repair structure only. Preserve facts and citations. Return JSON only.",
                     ),
                     (repair_prompt, system),
+                    (quality_repair_prompt, system),
                 ],
             )
         merged["metadata"] = {
@@ -432,6 +524,7 @@ class AIDiseaseBriefGenerator:
                 "format_repair_attempted": format_repair_attempted,
                 "format_repair_prompt_characters": len(format_repair_prompt or ""),
                 "citation_repair_prompt_characters": len(repair_prompt or ""),
+                "quality_repair_prompt_characters": len(quality_repair_prompt or ""),
                 "retry_policy": self._retry_policy_metadata(),
             },
             "citation_repair": {
@@ -441,6 +534,11 @@ class AIDiseaseBriefGenerator:
                 "fallback_fields": citation_fallback_fields,
                 "final_failures": final_citation_failures,
                 "error": repair_error,
+            },
+            "quality_repair": {
+                "attempted": quality_repair_attempted,
+                "failures": quality_repair_failures,
+                "error": quality_repair_error,
             },
         }
         if assessment.publishable:
@@ -476,6 +574,260 @@ class AIDiseaseBriefGenerator:
             },
         }
 
+    async def translate_from_payload_with_trace(
+        self,
+        *,
+        disease: dict[str, Any],
+        english_payload: dict[str, Any],
+        sources: list[dict[str, Any]],
+        target_sections: list[str],
+        language: str = "zh",
+    ) -> dict[str, Any]:
+        """Translate a source-grounded English payload without replaying evidence text."""
+        language = "zh" if language == "zh" else language
+        if language != "zh":
+            raise ValueError("Knowledge payload translation currently supports zh only")
+
+        profile_schema = resolve_knowledge_profile_schema(disease)
+        public_sources = (
+            list(sources)
+            if disease.get("_evidence_packet_prepared")
+            else self._usable_public_sources(sources, disease=disease)
+        )
+        scaffold = self._empty_scaffold(
+            disease=disease,
+            sources=public_sources,
+            language=language,
+            profile_schema=profile_schema,
+            target_sections=target_sections,
+        )
+        preferred_models, shard_index, shard_key = await self._preferred_models_for(
+            disease_id=str(disease.get("disease_id") or ""),
+            language=language,
+        )
+        source_ids = [src.get("id") for src in public_sources if src.get("id") is not None]
+        source_attribution = (
+            english_payload.get("source_attribution")
+            if isinstance(english_payload.get("source_attribution"), list)
+            else scaffold["source_attribution"]
+        )
+        english_metadata = (
+            english_payload.get("metadata")
+            if isinstance(english_payload.get("metadata"), dict)
+            else {}
+        )
+        evidence_manifest = (
+            english_metadata.get("evidence_manifest")
+            if isinstance(english_metadata.get("evidence_manifest"), dict)
+            else build_evidence_manifest(
+                public_sources,
+                profile_schema,
+                target_sections=disease.get("evidence_target_sections") or target_sections,
+                max_total_characters=int(get_config().ai.knowledge_evidence_manifest_max_characters),
+            ).to_dict()
+        )
+        translation_payload = {
+            "protocol_version": self.PROMPT_PROTOCOL_VERSION,
+            "output_language": "zh",
+            "target_sections": target_sections,
+            "source_policy": (
+                "Translate only the supplied English JSON. Preserve every citation marker exactly "
+                "where it supports the translated claim. Do not add, infer, remove, merge facts, "
+                "summarize, or shorten sections."
+            ),
+            "disease": {
+                "disease_id": disease.get("disease_id"),
+                "name_en": disease.get("name_en") or disease.get("standard_name_en"),
+                "name_zh": disease.get("name_zh") or disease.get("standard_name_zh"),
+            },
+            "profile_schema": {
+                "profile_type": profile_schema.profile_type,
+                "required_fields": list(profile_schema.required_fields),
+                "optional_fields": list(profile_schema.optional_fields),
+                "not_applicable_fields": list(profile_schema.not_applicable_fields),
+            },
+            "english_json": {
+                field: english_payload.get(field)
+                for field in (
+                    "brief",
+                    "definition",
+                    "clinical_features",
+                    "epidemiology",
+                    "transmission",
+                    "prevention",
+                    "surveillance_note",
+                    "risk_groups",
+                )
+                if field in target_sections
+            },
+        }
+        system = (
+            f"Knowledge-profile protocol {self.PROMPT_PROTOCOL_VERSION}; translation mode. "
+            "Return JSON only with exactly these keys: brief, definition, clinical_features, "
+            "epidemiology, transmission, prevention, surveillance_note, risk_groups. Translate "
+            "English public-health prose into fluent Chinese. Preserve citation markers exactly; "
+            "null stays null. Preserve the source section's level of detail and sentence count "
+            "as closely as Chinese readability allows. Never add facts or citations."
+        )
+        prompt = (
+            "Translate the target_sections in english_json into Chinese. For keys absent from "
+            "english_json, return null. JSON only.\n"
+            f"{json.dumps(translation_payload, ensure_ascii=False, separators=(',', ':'))}"
+        )
+        output_token_budget = self._output_token_budget(target_sections)
+        agent = self._spawn_agent(max_tokens=output_token_budget)
+        started_at = time.time()
+        response: str | None = None
+        latest_conversation: dict[str, Any] = {}
+        try:
+            response = await self._complete_with_policy(
+                agent,
+                prompt=prompt,
+                system=system,
+                preferred_models=preferred_models,
+            )
+            latest_conversation = agent.get_latest_conversation() or {}
+            parsed = self._parse_json(response)
+        except Exception as exc:
+            logger.warning(
+                "AI disease brief translation failed for {}/{}: {}",
+                disease.get("disease_id"),
+                language,
+                exc,
+            )
+            scaffold["review_notes"] = f"AI translation failed: {exc}"
+            scaffold["metadata"] = {
+                **(scaffold.get("metadata") or {}),
+                "ai_translation_failed": str(exc),
+                "preferred_models": preferred_models,
+                "shard_index": shard_index,
+                "shard_key": shard_key,
+            }
+            return {
+                "payload": scaffold,
+                "trace": {
+                    "generator": "ai_translation",
+                    "language": language,
+                    "preferred_models": preferred_models,
+                    "shard_index": shard_index,
+                    "shard_key": shard_key,
+                    "model": self._text_or_none(latest_conversation.get("model")),
+                    "provider": self._text_or_none(latest_conversation.get("provider")),
+                    "token_usage": self._interaction_metrics(agent)["token_usage"],
+                    "duration": time.time() - started_at,
+                    "prompt": prompt,
+                    "system_prompt": system,
+                    "response": response,
+                    "error": str(exc),
+                    "cache_hit": False,
+                    "retry_policy": self._retry_policy_metadata(),
+                },
+            }
+
+        usage = latest_conversation.get("tokens") if isinstance(latest_conversation.get("tokens"), dict) else {}
+        used_model = self._text_or_none(latest_conversation.get("model"))
+        used_provider = self._text_or_none(latest_conversation.get("provider"))
+        conversation_metadata = (
+            latest_conversation.get("metadata")
+            if isinstance(latest_conversation.get("metadata"), dict)
+            else {}
+        )
+        clinical_features = self._field(parsed, "clinical_features")
+        merged = {
+            **scaffold,
+            "brief": self._field(parsed, "brief"),
+            "definition": self._field(parsed, "definition"),
+            "clinical_features": clinical_features,
+            "epidemiology": self._field(parsed, "epidemiology"),
+            "transmission": self._field(parsed, "transmission"),
+            "prevention": self._field(parsed, "prevention"),
+            "surveillance_note": self._field(parsed, "surveillance_note"),
+            "clinical_summary": clinical_features,
+            "risk_groups": self._field(parsed, "risk_groups"),
+            "source_ids": source_ids,
+            "source_attribution": source_attribution,
+            "disclaimer": DISCLAIMER_ZH,
+            "model": used_model or "ai-model-center",
+            "status": "published",
+            "metadata": {
+                **(scaffold.get("metadata") or {}),
+                "generator": "AIDiseaseBriefGenerator",
+                "translation_mode": "from_en_grounded_payload",
+                "translation_source_language": "en",
+                "ai_model": used_model,
+                "ai_provider": used_provider,
+                "preferred_models": preferred_models,
+                "shard_index": shard_index,
+                "shard_key": shard_key,
+                "token_usage": usage,
+                "cache_hit": bool(conversation_metadata.get("cache_hit")),
+                "version": 2,
+                "pipeline_version": 2,
+                "profile_schema": profile_schema.to_dict(),
+                "evidence_manifest": evidence_manifest,
+                "target_sections": target_sections,
+                "evidence_target_sections": list(
+                    disease.get("evidence_target_sections") or target_sections
+                ),
+            },
+        }
+        merged = normalize_knowledge_citations(
+            merged,
+            marker_mode="auto",
+            prune_uncited_sources=True,
+        )
+        merged, assessment = apply_knowledge_quality_gate(merged)
+        citation_failures = validate_knowledge_citations(merged, fields=target_sections)
+        if citation_failures:
+            await self._invalidate_failed_completions(agent, [(prompt, system)])
+        interaction_metrics = self._interaction_metrics(agent)
+        merged["metadata"] = {
+            **(merged.get("metadata") or {}),
+            "prompt_protocol_version": self.PROMPT_PROTOCOL_VERSION,
+            "token_usage": interaction_metrics["token_usage"],
+            "cache_hit": bool(interaction_metrics["cache_hits"]),
+            "ai_interaction": {
+                **interaction_metrics,
+                "system_characters": len(system),
+                "prompt_characters": len(prompt),
+                "estimated_input_tokens": self._estimate_tokens(system, prompt),
+                "max_output_tokens": output_token_budget,
+                "retry_policy": self._retry_policy_metadata(),
+            },
+            "citation_repair": {
+                "attempted": False,
+                "initial_failures": citation_failures,
+                "post_repair_failures": citation_failures,
+                "fallback_fields": [],
+                "final_failures": citation_failures,
+                "error": None,
+            },
+        }
+        if citation_failures:
+            merged["status"] = "requires_review"
+        return {
+            "payload": merged,
+            "trace": {
+                "generator": "ai_translation",
+                "language": language,
+                "preferred_models": preferred_models,
+                "shard_index": shard_index,
+                "shard_key": shard_key,
+                "model": used_model,
+                "provider": used_provider,
+                "token_usage": interaction_metrics["token_usage"],
+                "duration": time.time() - started_at,
+                "prompt": prompt,
+                "system_prompt": system,
+                "response": response,
+                "error": None,
+                "cache_hit": bool(interaction_metrics["cache_hits"]),
+                "citation_failures": citation_failures,
+                "interaction_metrics": interaction_metrics,
+                "retry_policy": self._retry_policy_metadata(),
+            },
+        }
+
     @classmethod
     def _usable_public_sources(
         cls,
@@ -493,7 +845,8 @@ class AIDiseaseBriefGenerator:
             sources,
             schema,
             target_sections=targets,
-            max_sources=8,
+            max_sources=int(get_config().ai.knowledge_evidence_max_sources),
+            max_manifest_characters=int(get_config().ai.knowledge_evidence_manifest_max_characters),
             allowed_source_types=cls.PUBLIC_SOURCE_TYPES,
         )
         return list(packet.sources)
@@ -595,9 +948,9 @@ class AIDiseaseBriefGenerator:
                 system=system,
                 use_cache=True,
                 preferred_models=preferred_models,
-                max_quota_recovery_rounds=0,
-                wait_for_model_recovery=False,
-                model_request_timeout_seconds=config.knowledge_model_request_timeout_seconds,
+                max_quota_recovery_rounds=config.knowledge_quota_recovery_rounds,
+                wait_for_model_recovery=config.knowledge_wait_for_model_recovery,
+                model_request_timeout_seconds=self._effective_model_request_timeout_seconds(),
                 max_attempts_per_model=config.knowledge_model_attempts_per_route,
                 timeout_cooldown_seconds=config.knowledge_timeout_cooldown_seconds,
             ),
@@ -658,7 +1011,7 @@ class AIDiseaseBriefGenerator:
             try:
                 await invalidate(prompt=prompt, system=system)
             except Exception as exc:
-                logger.warning("Failed to evict rejected knowledge completion: %s", exc)
+                logger.warning("Failed to evict rejected knowledge completion: {}", exc)
 
     @staticmethod
     def _citation_failure_fields(
@@ -690,11 +1043,22 @@ class AIDiseaseBriefGenerator:
         config = get_config().ai
         return {
             "attempts_per_route": config.knowledge_model_attempts_per_route,
-            "route_timeout_seconds": config.knowledge_model_request_timeout_seconds,
+            "configured_route_timeout_seconds": config.knowledge_model_request_timeout_seconds,
+            "route_timeout_seconds": AIDiseaseBriefGenerator._effective_model_request_timeout_seconds(),
+            "route_timeout_cap_seconds": config.knowledge_model_request_timeout_cap_seconds,
             "timeout_cooldown_seconds": config.knowledge_timeout_cooldown_seconds,
             "output_repair_attempts": config.knowledge_output_repair_attempts,
-            "quota_recovery_rounds": 0,
+            "wait_for_model_recovery": config.knowledge_wait_for_model_recovery,
+            "quota_recovery_rounds": config.knowledge_quota_recovery_rounds,
         }
+
+    @staticmethod
+    def _effective_model_request_timeout_seconds() -> int:
+        config = get_config().ai
+        return min(
+            int(config.knowledge_model_request_timeout_seconds),
+            int(config.knowledge_model_request_timeout_cap_seconds),
+        )
 
     @staticmethod
     def _text_or_none(value: Any) -> str | None:
@@ -704,8 +1068,25 @@ class AIDiseaseBriefGenerator:
         return text or None
 
     @staticmethod
-    def _preferred_models_for(*, disease_id: str, language: str) -> tuple[list[str], int, str]:
-        shard_models = list(get_config().ai.knowledge_model_shards)
+    async def _preferred_models_for(*, disease_id: str, language: str) -> tuple[list[str], int, str]:
+        try:
+            routes = await get_runtime_routes()
+        except Exception as exc:
+            logger.warning("Failed to load model-center routes for knowledge shard selection: {}", exc)
+            routes = []
+
+        shard_models: list[str] = []
+        for route in routes:
+            if not route.get("has_api_key"):
+                continue
+            if str(route.get("last_check_status") or "").strip().lower() == "unavailable":
+                continue
+            if not route.get("available_for_routing", True):
+                continue
+            model_name = str(route.get("model_name") or "").strip()
+            if model_name and model_name not in shard_models:
+                shard_models.append(model_name)
+
         shard_key = f"{(disease_id or '').strip().upper()}:{language}"
         if not shard_models:
             return [], 0, shard_key
@@ -727,13 +1108,26 @@ class AIDiseaseBriefGenerator:
             "scope boundaries; occupational, injury, poisoning, and violence entities need exposure "
             "mechanisms rather than invented infection language. Do not provide diagnosis, treatment, "
             "dosing, or personal advice. Paraphrase rather than copying source passages.\n"
+            "Epidemiology must describe the target disease/entity itself: occurrence, burden, "
+            "distribution, outbreaks, affected settings, or surveillance-relevant distribution. Do not "
+            "use complications, opportunistic infections, co-infections, or comorbid conditions as the "
+            "main epidemiology unless the target entity is explicitly that condition. If evidence is "
+            "indirect, state only directly supported disease-level facts and leave unsupported details "
+            "null.\n"
+            "surveillance_note is required when the evidence_manifest contains surveillance, reporting, "
+            "outbreak, monitoring, case definition, public-health response, source-data interpretation, "
+            "or country/source-series interpretation signals. If supported, write 2-4 concise sentences "
+            "explaining how this disease/entity should be interpreted in surveillance or public-health "
+            "data. Return null only when no such evidence is present.\n"
             "Citations are mandatory in every non-null field. Use only sequential citation_ref markers "
             "such as [1] or [1][2], immediately after the supported claim. Never cite database IDs.\n"
             "Write fluent scholarly prose in the payload's output_language. Return JSON only with "
             "exactly these keys: "
             "brief, definition, clinical_features, epidemiology, transmission, prevention, "
             "surveillance_note, risk_groups. Values are substantive strings or null. Prefer concise "
-            "2–4 sentence sections; a brief may contain 2–5 sentences."
+            "2-4 sentence sections; a brief may contain 2-5 sentences. For prevention, risk_groups, "
+            "and surveillance_note, avoid one-sentence minimal answers when evidence supports more "
+            "detail."
         )
 
     @classmethod
@@ -755,10 +1149,13 @@ class AIDiseaseBriefGenerator:
             disease.get("evidence_target_sections") or target_sections or profile_schema.required_fields
         )
         evidence_manifest = evidence_manifest or build_evidence_manifest(
-            sources[:8], profile_schema, target_sections=evidence_target_sections
+            sources[: int(get_config().ai.knowledge_evidence_max_sources)],
+            profile_schema,
+            target_sections=evidence_target_sections,
+            max_total_characters=int(get_config().ai.knowledge_evidence_manifest_max_characters),
         )
         source_payload = []
-        for index, src in enumerate(sources[:8], start=1):
+        for index, src in enumerate(sources[: int(get_config().ai.knowledge_evidence_max_sources)], start=1):
             source_metadata = src.get("metadata") if isinstance(src.get("metadata"), dict) else {}
             source_payload.append(
                 {
@@ -798,6 +1195,10 @@ class AIDiseaseBriefGenerator:
                 include_content_hashes=False,
             ),
             "sources": source_payload,
+            "evidence_budget": {
+                "max_sources": int(get_config().ai.knowledge_evidence_max_sources),
+                "max_manifest_characters": int(get_config().ai.knowledge_evidence_manifest_max_characters),
+            },
             # Keep the sole bilingual difference at the end so providers with
             # prefix caching can reuse the long evidence prefix.
             "output_language": language,
@@ -843,6 +1244,57 @@ class AIDiseaseBriefGenerator:
             "Repair the previous JSON using this validation payload. Rewrite an invalid field only "
             "from fragments that explicitly support it, otherwise set it to null. Do not attach a new "
             "citation to an unchanged unsupported claim. Return all eight keys as JSON only.\n"
+            f"{json.dumps(repair_payload, ensure_ascii=False, separators=(',', ':'))}"
+        )
+
+    @staticmethod
+    def _repairable_quality_failures(
+        assessment: Any,
+        *,
+        target_sections: list[str],
+        evidence_manifest: EvidenceManifest,
+    ) -> list[dict[str, str]]:
+        """Return target-field quality gaps that the supplied evidence can repair."""
+        supported = {
+            field
+            for fragment in evidence_manifest.fragments
+            for field in fragment.supported_sections
+        }
+        failures: list[dict[str, str]] = []
+        for field in target_sections:
+            field_assessment = assessment.fields.get(field)
+            if field_assessment is None or field_assessment.available:
+                continue
+            if field not in supported:
+                continue
+            failures.append(
+                {
+                    "field": field,
+                    "status": field_assessment.status,
+                    "reason": field_assessment.reason or "quality_gate_rejected",
+                }
+            )
+        return failures
+
+    @staticmethod
+    def _quality_repair_prompt(
+        *,
+        prompt_payload: dict[str, Any],
+        previous_response: str,
+        failures: list[dict[str, str]],
+    ) -> str:
+        repair_payload = {
+            "output_language": prompt_payload.get("output_language"),
+            "target_sections": prompt_payload.get("target_sections"),
+            "quality_failures": failures,
+            "evidence_manifest": prompt_payload.get("evidence_manifest"),
+            "previous_json": previous_response,
+        }
+        return (
+            "Repair only the fields named in quality_failures. Each named field has explicit "
+            "support in evidence_manifest and must become substantive cited prose in the output "
+            "language. Preserve every valid field, use only supporting fragments, and set a field "
+            "to null if it cannot be supported exactly. Return all eight keys as JSON only.\n"
             f"{json.dumps(repair_payload, ensure_ascii=False, separators=(',', ':'))}"
         )
 

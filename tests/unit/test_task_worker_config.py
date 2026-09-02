@@ -9,6 +9,14 @@ if ROOT not in sys.path:
 
 from src.core.config import TaskWorkerSettings
 from dashboard.api.routers.tasks import _worker_concurrency
+from src.services import task_worker
+
+
+def test_task_worker_idle_logging_defaults_to_low_noise():
+    settings = TaskWorkerSettings()
+
+    assert settings.poll_interval_seconds == 2.0
+    assert settings.idle_log_every == 300
 
 
 def test_task_worker_settings_reads_env_aliases(tmp_path: Path):
@@ -48,3 +56,48 @@ def test_worker_concurrency_uses_unified_config(monkeypatch):
     monkeypatch.setattr("dashboard.api.routers.tasks.get_config", lambda: fake_config)
 
     assert _worker_concurrency() == 7
+
+
+def test_release_task_memory_collects_garbage_without_linux_trim(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(task_worker.gc, "collect", lambda: calls.append("gc"))
+    monkeypatch.setattr(task_worker.sys, "platform", "darwin")
+    monkeypatch.setattr(
+        task_worker.ctypes.util,
+        "find_library",
+        lambda _name: calls.append("lookup"),
+    )
+
+    task_worker._release_task_memory()
+
+    assert calls == ["gc"]
+
+
+def test_release_task_memory_trims_linux_libc_heap(monkeypatch):
+    class FakeMallocTrim:
+        def __init__(self):
+            self.calls = []
+
+        def __call__(self, value):
+            self.calls.append(value)
+            return 1
+
+    class FakeLibC:
+        def __init__(self):
+            self.malloc_trim = FakeMallocTrim()
+
+    fake_libc = FakeLibC()
+    calls = []
+
+    monkeypatch.setattr(task_worker, "_LIBC", None)
+    monkeypatch.setattr(task_worker, "_LIBC_LOOKUP_DONE", False)
+    monkeypatch.setattr(task_worker.gc, "collect", lambda: calls.append("gc"))
+    monkeypatch.setattr(task_worker.sys, "platform", "linux")
+    monkeypatch.setattr(task_worker.ctypes.util, "find_library", lambda _name: "libc.so")
+    monkeypatch.setattr(task_worker.ctypes, "CDLL", lambda _name: fake_libc)
+
+    task_worker._release_task_memory()
+
+    assert calls == ["gc"]
+    assert fake_libc.malloc_trim.calls == [0]

@@ -16,6 +16,16 @@ export default defineConfig({
   },
   vite: {
     optimizeDeps: {
+      rolldownOptions: {
+        // Vite's dependency optimizer can evaluate React's CommonJS runtime
+        // entrypoints while pre-bundling islands. Keep dev JSX imports on
+        // React's development branch so transformed TSX can call jsxDEV.
+        transform: {
+          define: {
+            'process.env.NODE_ENV': '"development"',
+          },
+        },
+      },
       include: [
         '@astrojs/react/client.js',
         'react',

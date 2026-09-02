@@ -100,7 +100,7 @@ class ReportV4Pipeline:
             document=document,
         )
         await context.db.commit()
-        logger.info("Report v4 generated with %s sections", len(persisted_sections))
+        logger.info("Report v4 generated with {} sections", len(persisted_sections))
         return persisted_sections
 
     @staticmethod

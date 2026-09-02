@@ -225,7 +225,7 @@ async def run_logged_command(
                 metadata={**metadata, "event": "command_timeout"},
             )
         except Exception as exc:  # pragma: no cover - lifecycle records the error.
-            logger.warning("Failed to write command timeout workbook entry: %s", exc)
+            logger.warning("Failed to write command timeout workbook entry: {}", exc)
         raise ReleaseCommandError(
             message,
             release_stage=str(metadata.get("event") or "").strip() or None,

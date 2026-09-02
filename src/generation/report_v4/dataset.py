@@ -108,7 +108,7 @@ class DatasetBuilder:
             payload = yaml.safe_load(self.policy_path.read_text(encoding="utf-8")) or {}
             return payload if isinstance(payload, dict) else {}
         except Exception as exc:
-            logger.warning("Failed to load report source policies from %s: %s", self.policy_path, exc)
+            logger.warning("Failed to load report source policies from {}: {}", self.policy_path, exc)
             return {}
 
     @staticmethod

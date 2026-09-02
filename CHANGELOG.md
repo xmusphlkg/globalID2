@@ -2,6 +2,58 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing bilingual notes are also available in the website Changelog.
 
+## [0.9.3] - 2026-09-02
+
+### Added
+
+- Added a bounded quality-repair prompt for evidence-backed disease-knowledge fields. When a generated target field fails deterministic quality checks but the evidence manifest explicitly supports it, the model receives the failed fields, evidence fragments, and prior JSON for one constrained repair pass.
+
+### Changed
+
+- New automatic disease-knowledge repairs now use a source-first workflow by default: refresh and assess targeted evidence before scheduling a model-center generation follow-up.
+- Quality repair preserves all previously valid target fields, allowing the model to modify only the rejected evidence-backed fields.
+
+### Fixed
+
+- Prevented repeated model calls for fields without supporting evidence; unsupported fields remain in review instead of being regenerated from incomplete context.
+- Preserved safe worker handoff during restart: the worker stops claiming new tasks, drains active work, releases its lease, and the replacement worker resumes queued recoverable work.
+
+### Operations
+
+- Restarted the production task worker after the workflow update and verified model-center, Redis, task leases, source-refresh follow-ups, and automatic recoverable-task requeueing.
+- Added focused coverage for the supported-field quality-repair path and verified knowledge and AI-governance test suites.
+
+## [0.9.2] - 2026-09-01
+
+### Added
+
+- Added AI content governance for exception-only queues, including model-center JSON review prompts, auditable decision metadata, confidence gates, and safe fallback-to-hold behavior.
+- Added automatic knowledge-base repair discovery and queueing through the AI control plane, with targeted model-center refresh tasks for incomplete or stale disease profiles.
+- Added API endpoints for knowledge repair runs and AI content governance runs, including bounded controls for failed knowledge retries, Research Radar article/summary review, knowledge-source review, and learning-suggestion mapping.
+- Added AI-assisted Research Radar article review so high-confidence review-band articles can be automatically published or excluded before summary publication gates run.
+
+### Changed
+
+- Disease-knowledge repair now supports language-targeted retry, so single-language failures can regenerate only `en` or `zh` instead of rewriting an already healthy paired brief.
+- Research Radar governance now separates deterministic article gates, model-reviewed article decisions, model-reviewed summary decisions, and source-fingerprint checks into an auditable sequence.
+- Disease learning suggestions can now resolve obvious placeholders and high-confidence standard disease mappings automatically instead of remaining in a manual pending queue.
+- Lowered task-worker idle log noise and added memory release after task completion to keep long-running model and ingestion workers steadier.
+- Standardized service logging format across AI agents, report generation, workflow execution, ingestion, release scheduling, settings, and alerts.
+
+### Fixed
+
+- Failed AI knowledge repair tasks that hit recoverable model-center errors or partial-language publication gates can be requeued automatically up to their retry limit.
+- Data-release retry classification now treats transient OpenSSL EOF preflight diagnostics as retryable while preserving missing Cloudflare production-branch configuration as a permanent blocker.
+- Dashboard standalone release startup now prunes older retained releases after switching to the active build.
+- Added weekly AI-review evidence for `2026-W36`, preserving the bilingual-mismatch decision as an explicit editorial-review signal.
+
+### Operations
+
+- Requeued the active recoverable knowledge repair failures and verified the queue was back to no failed tasks before release handoff.
+- Ran a live AI governance smoke test: mapped the pending HIV learning suggestion to the standard catalogue, rejected placeholder unknown-disease suggestions, published three high-confidence Research Radar articles, published one eligible summary, and held ambiguous knowledge-source rows.
+- Added focused tests for AI content governance, knowledge repair candidate selection, worker memory release, worker idle logging, and release retry classification.
+- Updated the website package release version to 0.9.2.
+
 ## [0.9.1] - 2026-08-30
 
 ### Added

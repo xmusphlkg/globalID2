@@ -210,6 +210,7 @@ def prepare_evidence_packet(
     *,
     target_sections: Iterable[str] = (),
     max_sources: int = 8,
+    max_manifest_characters: int = MAX_EVIDENCE_MANIFEST_CHARACTERS,
     allowed_source_types: set[str] | frozenset[str] | None = None,
 ) -> EvidencePacket:
     """Select, deduplicate and assess the exact source packet used by models."""
@@ -311,7 +312,10 @@ def prepare_evidence_packet(
         selected.append(candidate[2])
 
     manifest = build_evidence_manifest(
-        selected, profile_schema, target_sections=targets
+        selected,
+        profile_schema,
+        target_sections=targets,
+        max_total_characters=max_manifest_characters,
     )
     assessment = assess_knowledge_evidence(selected)
     return EvidencePacket(tuple(selected), manifest, assessment)

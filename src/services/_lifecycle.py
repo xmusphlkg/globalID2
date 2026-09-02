@@ -85,7 +85,7 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
                 )
             except Exception as exc:
                 logger.warning(
-                    "Failed to finalize ingestion retry metadata for %s: %s",
+                    "Failed to finalize ingestion retry metadata for {}: {}",
                     task.task_uuid,
                     exc,
                 )
@@ -133,7 +133,7 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
                 )
             except Exception as retry_exc:
                 logger.warning(
-                    "Failed to evaluate automatic release retry for %s: %s",
+                    "Failed to evaluate automatic release retry for {}: {}",
                     task.task_uuid,
                     retry_exc,
                 )
@@ -147,7 +147,25 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
                 )
             except Exception as retry_exc:
                 logger.warning(
-                    "Failed to evaluate automatic ingestion retry for %s: %s",
+                    "Failed to evaluate automatic ingestion retry for {}: {}",
+                    task.task_uuid,
+                    retry_exc,
+                )
+        elif task.task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE:
+            try:
+                from src.services.ai_content_governance_service import (
+                    ai_content_governance_service,
+                )
+
+                automatic_retry_scheduled = (
+                    await ai_content_governance_service.schedule_knowledge_retry_after_failure(
+                        task.task_uuid,
+                        exc,
+                    )
+                )
+            except Exception as retry_exc:
+                logger.warning(
+                    "Failed to evaluate automatic knowledge repair retry for {}: {}",
                     task.task_uuid,
                     retry_exc,
                 )

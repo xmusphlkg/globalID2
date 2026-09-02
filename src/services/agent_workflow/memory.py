@@ -26,7 +26,7 @@ def create_qdrant_client(config: Any, logger: Any) -> Any:
 
         return QdrantClient(url=config.qdrant.url, api_key=config.qdrant.api_key)
     except Exception as exc:
-        logger.info("Qdrant client unavailable, falling back to Postgres memory: %s", exc)
+        logger.info("Qdrant client unavailable, falling back to Postgres memory: {}", exc)
         return None
 
 
@@ -55,7 +55,7 @@ def ensure_qdrant_collection(client: Any, config: Any, logger: Any) -> None:
             vectors_config=qm.VectorParams(size=int(config.qdrant.vector_size), distance=qm.Distance.COSINE),
         )
     except Exception as exc:
-        logger.debug("Qdrant collection ensure failed: %s", exc)
+        logger.debug("Qdrant collection ensure failed: {}", exc)
 
 
 def qdrant_hits_to_evidence(hits: Any) -> list[EvidenceRef]:
@@ -99,7 +99,7 @@ def search_qdrant_memory(
             with_payload=True,
         )
     except Exception as exc:
-        logger.debug("Qdrant memory search failed: %s", exc)
+        logger.debug("Qdrant memory search failed: {}", exc)
         return []
     return unique_evidence(qdrant_hits_to_evidence(hits))
 
@@ -143,7 +143,7 @@ def upsert_qdrant_memory(
             ],
         )
     except Exception as exc:
-        logger.debug("Qdrant upsert failed: %s", exc)
+        logger.debug("Qdrant upsert failed: {}", exc)
 
 
 def postgres_memory_to_evidence(row: AgentWorkflowMemory) -> EvidenceRef:

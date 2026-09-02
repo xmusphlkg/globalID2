@@ -1,4 +1,13 @@
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from src.knowledge.surveillance_note_overrides import apply_surveillance_note_override
+from src.knowledge.citations import validate_knowledge_citations
+from src.knowledge.quality import apply_knowledge_quality_gate
 
 
 def test_reviewed_source_note_is_appended_and_idempotent() -> None:
@@ -42,3 +51,36 @@ def test_disease_without_override_is_unchanged() -> None:
     }
 
     assert apply_surveillance_note_override(payload) == payload
+
+
+def test_reviewed_source_note_refreshes_quality_and_citation_validation() -> None:
+    payload = {
+        "disease_id": "D017",
+        "language": "en",
+        "status": "published",
+        "source_confidence": "high",
+        "brief": "Cinderella disease is represented in public source data [1].",
+        "definition": "The source defines Cinderella disease as a reportable entity [1].",
+        "clinical_features": "Clinical features are described by the supporting source [1].",
+        "epidemiology": "The disease has reportable source-data context [1].",
+        "transmission": "The source describes transmission context for surveillance interpretation [1].",
+        "prevention": "Prevention context is available in the supporting source [1].",
+        "surveillance_note": None,
+        "risk_groups": "The source identifies affected groups for interpretation [1].",
+        "source_ids": [1],
+        "source_attribution": [{"source_id": 1, "citation_index": 1, "url": "https://example.org"}],
+        "review_notes": (
+            "AI-generated partial brief; unsupported fields were omitted and remain queued for enrichment.; "
+            "missing required sections: surveillance_note"
+        ),
+        "metadata": {},
+    }
+
+    overlaid = apply_surveillance_note_override(payload)
+    cleaned, assessment = apply_knowledge_quality_gate(overlaid)
+
+    assert assessment.display_mode == "full"
+    assert "surveillance_note" not in assessment.missing_required_fields
+    assert "missing required sections: surveillance_note" not in cleaned["review_notes"]
+    assert cleaned["review_notes"] == "AI-generated, source-grounded brief; ready for human spot review."
+    assert validate_knowledge_citations(cleaned, fields=["surveillance_note"]) == []

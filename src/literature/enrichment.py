@@ -18,7 +18,7 @@ from typing import Any
 from sqlalchemy import select
 
 from src.ai.agents.base import BaseAgent
-from src.core import get_db, get_logger
+from src.core import get_config, get_db, get_logger
 from src.core.task_manager import task_manager
 from src.domain import (
     LiteratureArticle,
@@ -53,14 +53,25 @@ class LiteratureEvidenceAgent(BaseAgent):
         )
 
     async def process(self, **kwargs: Any) -> dict[str, Any]:
+        literature_config = get_config().literature
         response = await self.complete(
             prompt=kwargs["prompt"],
             system=kwargs["system"],
             use_cache=True,
             preferred_models=kwargs.get("preferred_models"),
-            wait_for_model_recovery=False,
+            wait_for_model_recovery=bool(
+                kwargs.get(
+                    "wait_for_model_recovery",
+                    literature_config.ai_wait_for_model_recovery,
+                )
+            ),
             max_attempts_per_model=1,
-            max_quota_recovery_rounds=0,
+            max_quota_recovery_rounds=int(
+                kwargs.get(
+                    "max_quota_recovery_rounds",
+                    literature_config.ai_quota_recovery_rounds,
+                )
+            ),
             model_request_timeout_seconds=kwargs.get("timeout_seconds"),
         )
         return {"raw_response": response}
@@ -173,14 +184,16 @@ class LiteratureSummaryGenerator:
             f"GIDS literature evidence protocol {self.PROTOCOL_VERSION}. Use only the supplied single-article evidence. "
             "Do not use outside knowledge, infer causality, provide clinical advice, or claim that surveillance data "
             "confirms the paper. Paraphrase; never reproduce a sentence or a long phrase from the abstract. If evidence "
-            "does not support a field, return null. The output language is "
+            "does not support a field, return null, except limitations: when explicit limitations are absent, write a "
+            "source-scope limitation about reliance on the supplied single-article abstract/metadata. The output language is "
             f"{'Simplified Chinese' if language == 'zh' else 'English'}. Return JSON only."
         )
         if language == "zh":
             system += (
                 " The supplied canonical English summary is the semantic contract. Translate each field "
                 "faithfully: preserve its factual claims, qualifications, comparisons, and null fields; "
-                "do not add, remove, strengthen, or weaken any claim."
+                "do not add, remove, strengthen, or weaken any claim. If the canonical limitations field is null, "
+                "use the same source-scope limitation policy instead of leaving limitations null."
             )
         schema = {
             field: {
@@ -198,7 +211,11 @@ class LiteratureSummaryGenerator:
                 ),
                 "requirements": {
                     "main_findings": "Report findings only when explicitly present in the abstract.",
-                    "limitations": "Include only limitations explicitly stated or directly evident from the supplied study design; otherwise null.",
+                    "limitations": (
+                        "Prefer limitations explicitly stated or directly evident from the supplied study design. "
+                        "If none are available, state that the summary is limited to the supplied single-article "
+                        "abstract/metadata and requires the original paper for decision-grade interpretation."
+                    ),
                     "gids_interpretation": "Explain discoverability/context only; do not connect the paper to a live surveillance signal.",
                     "field_length": "Prefer 1-3 short sentences per non-null field.",
                 },
@@ -227,6 +244,17 @@ class LiteratureSummaryGenerator:
         confidences: list[float] = []
         for field in SUMMARY_FIELDS:
             raw = parsed.get(field)
+            if raw is None and field == "limitations":
+                if language == "zh" and canonical_fields.get(field) not in (None, ""):
+                    raise ValueError(f"bilingual_null_alignment_mismatch:{field}")
+                fields[field] = self._source_scope_limitations(language)
+                confidences.append(0.72)
+                evidence_map[field] = {
+                    "sources": ["abstract", "bibliographic_metadata"],
+                    "confidence": 0.72,
+                    "fallback": "source_scope_limitations",
+                }
+                continue
             if language == "zh" and ((canonical_fields.get(field) is None) != (raw is None)):
                 raise ValueError(f"bilingual_null_alignment_mismatch:{field}")
             if raw is None:
@@ -275,6 +303,19 @@ class LiteratureSummaryGenerator:
                 canonical_summary_fingerprint(canonical_fields)
                 if language == "zh" and canonical_fields else None
             ),
+        )
+
+    @staticmethod
+    def _source_scope_limitations(language: str) -> str:
+        if language == "zh":
+            return (
+                "可用证据仅限于该单篇文献的题录、摘要和分类链接；用于决策级解释前，"
+                "仍需核对原文全文、研究方法细节和作者声明的局限。"
+            )
+        return (
+            "The available evidence is limited to this single article's bibliographic metadata, abstract, "
+            "and classifier links; decision-grade interpretation still requires checking the full paper, "
+            "methods detail, and author-stated limitations."
         )
 
 

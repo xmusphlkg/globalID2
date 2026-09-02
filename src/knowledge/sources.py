@@ -10,7 +10,7 @@ review.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
@@ -163,12 +163,14 @@ class DiseaseKnowledgeFetcher:
         *,
         user_agent: str = DEFAULT_USER_AGENT,
         timeout: int = 12,
+        adapter_timeout_seconds: int = 45,
         max_excerpt_chars: int = 700,
         min_interval_seconds: float = 0.5,
         max_retries: int = 2,
         source_hints_path: Path | None = DEFAULT_SOURCE_HINTS_PATH,
     ) -> None:
         self.timeout = timeout
+        self.adapter_timeout_seconds = max(1, adapter_timeout_seconds)
         self.max_excerpt_chars = max_excerpt_chars
         self.min_interval_seconds = max(0.0, min_interval_seconds)
         self.max_retries = max(0, max_retries)
@@ -273,7 +275,7 @@ class DiseaseKnowledgeFetcher:
                     return key, discovered, outcome, time.monotonic() - started_at
                 except Exception as exc:
                     logger.warning(
-                        "Knowledge source adapter failed for %s/%s: %s",
+                        "Knowledge source adapter failed for {}/{}: {}",
                         disease.get("disease_id"),
                         key,
                         exc,
@@ -283,25 +285,55 @@ class DiseaseKnowledgeFetcher:
             # Adapters are independent discovery paths. The global per-host
             # limiter still serializes calls to one upstream while unrelated
             # WHO, PubMed and Wikipedia requests can overlap.
-            with ThreadPoolExecutor(max_workers=min(4, len(selected))) as executor:
-                futures = [
-                    executor.submit(run_one, key, adapter)
+            executor = ThreadPoolExecutor(max_workers=min(4, len(selected)))
+            futures = {
+                executor.submit(run_one, key, adapter): key
                     for key, adapter in selected
-                ]
-                for future in as_completed(futures):
+            }
+            done, pending = wait(
+                futures,
+                timeout=float(self.adapter_timeout_seconds),
+            )
+            for future in done:
+                try:
                     key, discovered, outcome, elapsed = future.result()
-                    candidates.extend(discovered)
-                    previous = adapter_outcomes.get(key)
-                    if previous == "success" or outcome == "success":
-                        adapter_outcomes[key] = "success"
-                    elif previous == "error" or outcome == "error":
-                        adapter_outcomes[key] = "error"
-                    else:
-                        adapter_outcomes[key] = "success_empty"
-                    adapter_durations[key] = round(
-                        adapter_durations.get(key, 0.0) + elapsed,
-                        3,
+                except Exception as exc:
+                    key = futures[future]
+                    logger.warning(
+                        "Knowledge source adapter future failed for {}/{}: {}",
+                        disease.get("disease_id"),
+                        key,
+                        exc,
                     )
+                    discovered, outcome, elapsed = [], "error", self.adapter_timeout_seconds
+                candidates.extend(discovered)
+                previous = adapter_outcomes.get(key)
+                if previous == "success" or outcome == "success":
+                    adapter_outcomes[key] = "success"
+                elif previous == "error" or outcome == "error":
+                    adapter_outcomes[key] = "error"
+                else:
+                    adapter_outcomes[key] = "success_empty"
+                adapter_durations[key] = round(
+                    adapter_durations.get(key, 0.0) + elapsed,
+                    3,
+                )
+            for future in pending:
+                key = futures[future]
+                future.cancel()
+                previous = adapter_outcomes.get(key)
+                adapter_outcomes[key] = previous or "timeout"
+                adapter_durations[key] = round(
+                    adapter_durations.get(key, 0.0) + self.adapter_timeout_seconds,
+                    3,
+                )
+                logger.warning(
+                    "Knowledge source adapter timed out for {}/{} after {}s",
+                    disease.get("disease_id"),
+                    key,
+                    self.adapter_timeout_seconds,
+                )
+            executor.shutdown(wait=False, cancel_futures=True)
 
         run_adapters(enabled, discovery_round="primary", disease_payload=disease)
 
@@ -337,7 +369,7 @@ class DiseaseKnowledgeFetcher:
         try:
             payload = json.loads(self.source_hints_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            logger.warning("Unable to load knowledge source hints: %s", exc)
+            logger.warning("Unable to load knowledge source hints: {}", exc)
             return {}
         diseases = payload.get("diseases") if isinstance(payload, dict) else None
         if not isinstance(diseases, dict):
@@ -552,7 +584,7 @@ class DiseaseKnowledgeFetcher:
                         page_content = self._extract_html_content(page_response.text, resolved_url=page_response.url or item_url)
                         page_title, page_excerpt = page_content["title"], page_content["excerpt"]
                 if not page_excerpt and not page_title:
-                    logger.debug("Skipping WHO DON item without fetchable page: %s", item_url or title)
+                    logger.debug("Skipping WHO DON item without fetchable page: {}", item_url or title)
                     continue
                 candidates.append(
                     SourceCandidate(
@@ -855,7 +887,7 @@ class DiseaseKnowledgeFetcher:
                         )
                         abstracts_by_pmid[pmid] = abstract_text
             except Exception as exc:
-                logger.debug("PubMed abstract XML parse failed: %s", exc)
+                logger.debug("PubMed abstract XML parse failed: {}", exc)
 
         candidates: list[SourceCandidate] = []
         uid_list = results.get("uids", id_list[:3])
@@ -886,7 +918,7 @@ class DiseaseKnowledgeFetcher:
             )
             if relevance_score < 0.5:
                 logger.debug(
-                    "Skipping weak PubMed match for %s: %s (%.2f)",
+                    "Skipping weak PubMed match for {}: {} ({:.2f})",
                     disease_id,
                     title,
                     relevance_score,
@@ -1291,7 +1323,7 @@ class DiseaseKnowledgeFetcher:
             try:
                 response = self.session.get(url, params=params, timeout=self.timeout)
             except requests.RequestException as exc:
-                logger.debug("Knowledge source request failed: %s (%s)", url, exc)
+                logger.debug("Knowledge source request failed: {} ({})", url, exc)
                 if attempt >= self.max_retries:
                     self._record_request_error()
                     return None

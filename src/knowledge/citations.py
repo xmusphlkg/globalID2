@@ -21,6 +21,10 @@ MarkerMode = Literal["auto", "position", "source_id"]
 
 _CITATION_GROUP_RE = re.compile(r"(?:\[\d+\])+")
 _CITATION_NUMBER_RE = re.compile(r"\[(\d+)\]")
+_SOURCE_DATA_NOTE_MARKERS = (
+    "GlobalID source-data note:",
+    "GlobalID 来源数据说明：",
+)
 
 
 def normalize_knowledge_citations(
@@ -170,6 +174,11 @@ def validate_knowledge_citations(
             continue
         markers = _extract_markers([value])
         if not markers:
+            if field == "surveillance_note" and _is_reviewed_source_data_note(
+                value,
+                metadata,
+            ):
+                continue
             failures.append(f"{field}: missing inline citation")
             continue
         for marker in markers:
@@ -188,6 +197,13 @@ def validate_knowledge_citations(
             + ", ".join(str(marker) for marker in unknown_markers)
         )
     return list(dict.fromkeys(failures))
+
+
+def _is_reviewed_source_data_note(value: str, metadata: dict[str, Any]) -> bool:
+    if not metadata.get("source_data_note_review_version"):
+        return False
+    normalized = " ".join(value.split())
+    return any(marker in normalized for marker in _SOURCE_DATA_NOTE_MARKERS)
 
 
 def _normalize_source_entries(sources: Any) -> list[dict[str, Any]]:

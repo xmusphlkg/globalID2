@@ -53,7 +53,7 @@ class DeepAnalystAgent(BaseAgent):
             parsed = self._parse_json(response)
             return self._normalize(parsed)
         except Exception as exc:
-            logger.warning("Deep analysis failed; using deterministic fallback: %s", exc)
+            logger.warning("Deep analysis failed; using deterministic fallback: {}", exc)
             return self.fallback(evidence_packet, language=language, reason=str(exc))
 
     @staticmethod

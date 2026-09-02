@@ -19,6 +19,35 @@ DASHBOARD_PORT="${GLOBALID_DASHBOARD_PORT:-3000}"
 
 export API_PROXY_TARGET="${API_PROXY_TARGET:-http://${API_PROXY_HOST}:${API_PORT}}"
 
+cleanup_old_dashboard_releases() {
+  local release_root="$1"
+  local active_release="$2"
+  local retain="${GLOBALID_DASHBOARD_RELEASES_RETAIN:-5}"
+
+  if [[ ! "$retain" =~ ^[0-9]+$ ]] || (( retain < 1 )); then
+    return
+  fi
+
+  local kept=0
+  local entry
+  local release_dir
+  while IFS= read -r entry; do
+    release_dir="${entry#* }"
+    if [[ "$release_dir" == "$active_release" ]]; then
+      kept=$((kept + 1))
+      continue
+    fi
+    if (( kept < retain )); then
+      kept=$((kept + 1))
+      continue
+    fi
+    rm -rf -- "$release_dir"
+  done < <(
+    find "$release_root" -mindepth 1 -maxdepth 1 -type d ! -name '.staging.*' -printf '%T@ %p\n' \
+      | sort -nr
+  )
+}
+
 cd "$DASHBOARD_DIR"
 
 needs_build=0
@@ -75,6 +104,8 @@ if [[ -f ".next/standalone/server.js" ]]; then
     staged_release=""
     trap - EXIT
   fi
+
+  cleanup_old_dashboard_releases "$release_root" "$release_dir"
 
   export HOSTNAME="$DASHBOARD_HOST"
   export PORT="$DASHBOARD_PORT"

@@ -78,3 +78,17 @@ def test_ontario_database_metadata_is_subdivision_not_alpha2() -> None:
     assert metadata["location_type"] == "subdivision"
     assert metadata["iso_subdivision_code"] == "CA-ON"
     assert metadata["flag_country_code"] == "CA"
+
+
+def test_australia_state_database_metadata_is_subdivision_not_alpha2() -> None:
+    profile = get_country_profile("AU-NSW")
+    bootstrap = get_country_bootstrap_config("AU-NSW")
+
+    metadata = _build_country_metadata(profile, bootstrap)
+
+    assert profile.name_en == "New South Wales, Australia"
+    assert "iso_alpha2" not in metadata
+    assert metadata["parent_country_code"] == "AU"
+    assert metadata["location_type"] == "subdivision"
+    assert metadata["iso_subdivision_code"] == "AU-NSW"
+    assert metadata["flag_country_code"] == "AU"

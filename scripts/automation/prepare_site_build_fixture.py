@@ -359,6 +359,44 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
         },
         "src/data/research/index.json": research,
         "src/data/research/hotspots.json": hotspots,
+        "src/data/countries/jp.json": {
+            "country_code": "JP",
+            "country_name": "Japan",
+            "country_name_en": "Japan",
+            "country_name_zh": "日本",
+            "total_cases": 12,
+            "total_deaths": 0,
+            "disease_count": 1,
+            "date_range": {"start": "2000-01-01", "end": "2000-02-01"},
+            "disease_series": {
+                "D038": {
+                    "disease_id": "D038",
+                    "name_en": "Influenza",
+                    "name_zh": "流感",
+                    "dates": ["2000-01-01", "2000-01-08", "2000-01-15", "2000-01-22"],
+                    "cases": [1, 3, 2, 6],
+                }
+            },
+        },
+        "src/data/countries/cn.json": {
+            "country_code": "CN",
+            "country_name": "China",
+            "country_name_en": "China",
+            "country_name_zh": "中国",
+            "total_cases": 14,
+            "total_deaths": 0,
+            "disease_count": 1,
+            "date_range": {"start": "2000-01-01", "end": "2000-02-01"},
+            "disease_series": {
+                "D038": {
+                    "disease_id": "D038",
+                    "name_en": "Influenza",
+                    "name_zh": "流感",
+                    "dates": ["2000-01-01", "2000-01-08", "2000-01-15", "2000-01-22"],
+                    "cases": [2, 4, 1, 7],
+                }
+            },
+        },
         "src/data/situation/v3/latest.json": dict(situation),
         "src/data/situation/latest.json": dict(situation),
         "public/site-data/situation/v3/latest.json": dict(situation),

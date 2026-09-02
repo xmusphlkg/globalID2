@@ -3,6 +3,46 @@ AU:
     death_counts: not_reported
     case_scope: national
     rate_basis: unavailable
+AU-ACT:
+  default:
+    death_counts: not_reported
+    case_scope: subnational_jurisdiction
+    rate_basis: unavailable
+AU-NSW:
+  default:
+    death_counts: not_reported
+    case_scope: subnational_jurisdiction
+    rate_basis: unavailable
+AU-NT:
+  default:
+    death_counts: not_reported
+    case_scope: subnational_jurisdiction
+    rate_basis: unavailable
+AU-QLD:
+  default:
+    death_counts: not_reported
+    case_scope: subnational_jurisdiction
+    rate_basis: unavailable
+AU-SA:
+  default:
+    death_counts: not_reported
+    case_scope: subnational_jurisdiction
+    rate_basis: unavailable
+AU-TAS:
+  default:
+    death_counts: not_reported
+    case_scope: subnational_jurisdiction
+    rate_basis: unavailable
+AU-VIC:
+  default:
+    death_counts: not_reported
+    case_scope: subnational_jurisdiction
+    rate_basis: unavailable
+AU-WA:
+  default:
+    death_counts: not_reported
+    case_scope: subnational_jurisdiction
+    rate_basis: unavailable
 BR:
   default:
     death_counts: not_reported

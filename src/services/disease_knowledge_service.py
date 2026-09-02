@@ -11,9 +11,16 @@ from typing import Any, Optional
 
 from sqlalchemy import func, select, text
 
-from src.core import get_database, get_logger
+from src.core import get_config, get_database, get_logger
 from src.core.task_manager import task_manager
-from src.domain import DiseaseKnowledgeBrief, DiseaseKnowledgeSource, Task, TaskStatus
+from src.domain import (
+    DiseaseKnowledgeBrief,
+    DiseaseKnowledgeSource,
+    Task,
+    TaskPriority,
+    TaskStatus,
+    TaskType,
+)
 from src.knowledge import (
     AIDiseaseBriefGenerator,
     ReviewedDiseaseBriefGenerator,
@@ -32,6 +39,7 @@ from src.knowledge import (
     SourceFetchReport,
 )
 from src.knowledge.citations import (
+    KNOWLEDGE_CITATION_FIELDS,
     normalize_knowledge_citations,
     validate_knowledge_citations,
 )
@@ -57,6 +65,21 @@ SOURCE_GROUPS = {
     "pubmed": ["pubmed"],
     "msd": ["msd"],
 }
+
+ACTIVE_KNOWLEDGE_TASK_STATUSES = (
+    TaskStatus.PENDING,
+    TaskStatus.QUEUED,
+    TaskStatus.RUNNING,
+    TaskStatus.RETRYING,
+)
+
+
+def _knowledge_evidence_limits() -> dict[str, int]:
+    config = get_config().ai
+    return {
+        "max_sources": int(config.knowledge_evidence_max_sources),
+        "max_manifest_characters": int(config.knowledge_evidence_manifest_max_characters),
+    }
 
 
 class KnowledgeEvidenceInsufficientError(RuntimeError):
@@ -210,6 +233,44 @@ async def _upsert_brief(db, payload: dict[str, Any]) -> DiseaseKnowledgeBrief:
         prune_uncited_sources=True,
     )
     payload = apply_surveillance_note_override(payload)
+    payload, _ = apply_knowledge_quality_gate(payload)
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    previous_validation = (
+        metadata.get("citation_validation")
+        if isinstance(metadata.get("citation_validation"), dict)
+        else {}
+    )
+    validated_fields = previous_validation.get("validated_fields")
+    validation_fields = (
+        validated_fields
+        if isinstance(validated_fields, list)
+        else [
+            field
+            for field in KNOWLEDGE_CITATION_FIELDS
+            if field != "clinical_summary"
+        ]
+    )
+    citation_failures = validate_knowledge_citations(
+        payload,
+        fields=validation_fields,
+    )
+    payload["metadata"] = {
+        **metadata,
+        "citation_validation": {
+            "valid": not citation_failures,
+            "validated_fields": validation_fields,
+            "failures": citation_failures,
+        },
+    }
+    if citation_failures:
+        payload["status"] = "requires_review"
+        citation_note = "Citation validation failed: " + "; ".join(citation_failures)
+        existing_notes = str(payload.get("review_notes") or "").strip()
+        payload["review_notes"] = (
+            f"{existing_notes}; {citation_note}"
+            if existing_notes and citation_note not in existing_notes
+            else citation_note
+        )
     result = await db.execute(
         select(DiseaseKnowledgeBrief).where(
             DiseaseKnowledgeBrief.disease_id == payload["disease_id"],
@@ -448,10 +509,12 @@ def _generated_profile_failures(results: list[dict[str, Any]]) -> list[str]:
             failures.append(
                 f"{language}: no substantive profile ({'; '.join(assessment.issues) or 'quality gate failed'})"
             )
-        # Partial profiles are a first-class state: once the lead, at least one
-        # substantive section, traceable sources and citation checks pass, keep
-        # the useful result published and queue only its missing sections for a
-        # later targeted repair.
+        if assessment.missing_required_fields:
+            failures.append(
+                f"{language}: missing required sections ("
+                + ", ".join(assessment.missing_required_fields)
+                + ")"
+            )
         citation_validation = (
             payload.get("metadata", {}).get("citation_validation")
             if isinstance(payload.get("metadata"), dict)
@@ -515,6 +578,92 @@ def _profile_repair_sections(
     by_language = _profile_repair_sections_by_language(briefs, disease)
     targets = {field for fields in by_language.values() for field in fields}
     return [field for field in ordered_fields if field in targets]
+
+
+def _active_knowledge_tasks_by_disease(tasks: list[Task]) -> dict[str, Task]:
+    """Map active knowledge tasks to their disease IDs for idempotent enqueueing."""
+    result: dict[str, Task] = {}
+    for task in tasks:
+        input_data = dict(getattr(task, "input_data", None) or {})
+        candidates: list[str] = []
+        disease_ids = input_data.get("disease_ids")
+        if isinstance(disease_ids, list):
+            candidates.extend(str(value).strip().upper() for value in disease_ids if str(value).strip())
+        disease_id = input_data.get("disease_id") or input_data.get("disease")
+        if disease_id:
+            candidates.append(str(disease_id).strip().upper())
+        for candidate in candidates:
+            if candidate and candidate not in result:
+                result[candidate] = task
+    return result
+
+
+def _select_knowledge_repair_candidates(
+    catalogue: list[dict[str, Any]],
+    *,
+    active_by_disease: dict[str, Task] | None = None,
+    limit: int | None = None,
+    priorities: set[str] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Return catalogue rows that should continue through automatic repair."""
+    active_by_disease = active_by_disease or {}
+    priorities = priorities or {"urgent", "high"}
+    selected: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+
+    priority_rank = {"urgent": 0, "high": 1, "normal": 2, "none": 3}
+    ordered = sorted(
+        catalogue,
+        key=lambda item: (
+            priority_rank.get(str(item.get("repair_priority") or "none"), 9),
+            str(item.get("disease_id") or ""),
+        ),
+    )
+    for item in ordered:
+        disease_id = str(item.get("disease_id") or "").strip().upper()
+        repair_priority = str(item.get("repair_priority") or "none").strip().lower()
+        repair_sections = [
+            str(section).strip()
+            for section in (item.get("repair_sections") or [])
+            if str(section).strip()
+        ]
+        if not disease_id:
+            continue
+        if repair_priority not in priorities or not repair_sections:
+            continue
+        active_task = active_by_disease.get(disease_id)
+        if active_task is not None:
+            skipped.append(
+                {
+                    "disease_id": disease_id,
+                    "reason": "already_running",
+                    "existing_task_uuid": getattr(active_task, "task_uuid", None),
+                    "existing_status": str(getattr(active_task, "status", "")),
+                }
+            )
+            continue
+        selected.append({**item, "disease_id": disease_id, "repair_sections": repair_sections})
+        if limit is not None and len(selected) >= limit:
+            break
+    return selected, skipped
+
+
+def _knowledge_repair_task_priority(
+    requested: str | TaskPriority | None,
+    repair_priority: str,
+) -> TaskPriority:
+    if isinstance(requested, TaskPriority):
+        return requested
+    requested_value = str(requested or "").strip().lower()
+    mapping = {
+        "urgent": TaskPriority.URGENT,
+        "high": TaskPriority.HIGH,
+        "normal": TaskPriority.NORMAL,
+        "low": TaskPriority.LOW,
+    }
+    if requested_value in mapping:
+        return mapping[requested_value]
+    return TaskPriority.URGENT if repair_priority == "urgent" else TaskPriority.HIGH
 
 
 def _profile_repair_sections_by_language(
@@ -702,6 +851,112 @@ async def _generate_brief_result(
     )
 
 
+async def _translate_brief_result(
+    generator: Any,
+    *,
+    disease: dict[str, Any],
+    english_payload: dict[str, Any],
+    sources: list[dict[str, Any]],
+    target_sections: list[str],
+) -> dict[str, Any]:
+    translate = getattr(generator, "translate_from_payload_with_trace", None)
+    if not callable(translate):
+        raise AttributeError("Generator does not support grounded translation")
+    return await translate(
+        disease=disease,
+        english_payload=english_payload,
+        sources=sources,
+        target_sections=target_sections,
+        language="zh",
+    )
+
+
+def _translation_source_usable(result: dict[str, Any] | None) -> bool:
+    if not isinstance(result, dict):
+        return False
+    trace = result.get("trace") if isinstance(result.get("trace"), dict) else {}
+    if trace.get("error"):
+        return False
+    payload = result.get("payload") if isinstance(result.get("payload"), dict) else {}
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    citation_repair = metadata.get("citation_repair") if isinstance(metadata.get("citation_repair"), dict) else {}
+    final_failures = citation_repair.get("final_failures")
+    if isinstance(final_failures, list) and final_failures:
+        return False
+    trace_failures = trace.get("citation_failures")
+    if isinstance(trace_failures, list) and trace_failures:
+        return False
+    return bool(payload)
+
+
+def _model_center_route_failure(result: dict[str, Any] | None) -> bool:
+    if not isinstance(result, dict):
+        return False
+    trace = result.get("trace") if isinstance(result.get("trace"), dict) else {}
+    error = str(trace.get("error") or "").lower()
+    return any(
+        marker in error
+        for marker in (
+            "agent completion failed",
+            "no candidate model available",
+            "all models failed",
+            "rate limit",
+            "timeout",
+            "temporarily unavailable",
+        )
+    )
+
+
+def _skipped_language_after_route_failure(
+    *,
+    disease: dict[str, Any],
+    language: str,
+    target_sections: list[str],
+    upstream_language: str,
+) -> dict[str, Any]:
+    payload = {
+        "disease_id": disease.get("disease_id"),
+        "language": language,
+        "brief": None,
+        "definition": None,
+        "clinical_features": None,
+        "clinical_summary": None,
+        "epidemiology": None,
+        "transmission": None,
+        "prevention": None,
+        "surveillance_note": None,
+        "risk_groups": None,
+        "source_ids": [],
+        "source_attribution": [],
+        "model": "ai-model-center",
+        "status": "requires_review",
+        "source_confidence": "low",
+        "quality_score": 0.0,
+        "review_notes": (
+            f"Skipped {language.upper()} generation because "
+            f"{upstream_language.upper()} already failed at the model route."
+        ),
+        "metadata": {
+            "generator": "skipped_after_model_route_failure",
+            "target_sections": target_sections,
+            "profile_schema": disease.get("profile_schema"),
+        },
+    }
+    return {
+        "payload": payload,
+        "trace": {
+            "generator": "skipped_after_model_route_failure",
+            "language": language,
+            "model": None,
+            "provider": None,
+            "token_usage": {},
+            "duration": 0.0,
+            "error": payload["review_notes"],
+            "cache_hit": False,
+        },
+    }
+
+
 def _fetch_sources_with_report(
     fetcher: DiseaseKnowledgeFetcher,
     disease: dict[str, Any],
@@ -811,6 +1066,333 @@ class DiseaseKnowledgeUpdateService:
             return list(self._disease_cache)
         self._disease_cache = load_standard_diseases(self.disease_csv_path)
         return list(self._disease_cache)
+
+    async def enqueue_repair_tasks(
+        self,
+        db,
+        *,
+        source_groups: list[str] | None = None,
+        force: bool = False,
+        generator_mode: str = "ai",
+        priority: str | TaskPriority | None = None,
+        limit: int | None = None,
+        source_first: bool = True,
+        requested_by: str = "knowledge-auto-repair",
+        initiated_via: str = "knowledge-auto-repair",
+    ) -> dict[str, Any]:
+        """Queue automatic model-center repairs for incomplete knowledge profiles."""
+        source_groups = expand_sources(source_groups)
+        result = await db.execute(
+            select(Task)
+            .where(
+                Task.task_type.in_(
+                    [
+                        TaskType.UPDATE_DISEASE_KNOWLEDGE,
+                        TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
+                    ]
+                ),
+                Task.status.in_(ACTIVE_KNOWLEDGE_TASK_STATUSES),
+            )
+            .order_by(Task.created_at.asc())
+        )
+        active_by_disease = _active_knowledge_tasks_by_disease(
+            list(result.scalars().all())
+        )
+        catalogue = await self.list_catalogue(db)
+        candidates, skipped = _select_knowledge_repair_candidates(
+            catalogue,
+            active_by_disease=active_by_disease,
+            limit=limit,
+        )
+
+        created: list[Task] = []
+        for item in candidates:
+            disease_id = str(item["disease_id"])
+            repair_sections = list(item.get("repair_sections") or [])
+            repair_priority = str(item.get("repair_priority") or "high")
+            task_priority = _knowledge_repair_task_priority(priority, repair_priority)
+            name_en = str(item.get("name_en") or disease_id)
+            task_name = f"Repair {name_en} knowledge profile"
+            description = (
+                f"Automatic knowledge repair for {disease_id}: "
+                f"{', '.join(repair_sections)}"
+            )
+            task_type = (
+                TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES
+                if source_first
+                else TaskType.UPDATE_DISEASE_KNOWLEDGE
+            )
+            queued_task_name = f"Refresh sources before {task_name}" if source_first else task_name
+            task = await task_manager.create_task(
+                task_type=task_type,
+                task_name=queued_task_name,
+                priority=task_priority,
+                description=(
+                    f"Source-first stage for {disease_id}; model repair will be queued after "
+                    "evidence quality is confirmed."
+                    if source_first
+                    else description
+                ),
+                input_data={
+                    "disease_id": disease_id,
+                    "disease_ids": [disease_id],
+                    "source_groups": source_groups,
+                    "source": source_groups,
+                    "force": force,
+                    "generator": _normalize_generator_mode(generator_mode),
+                    "targeted_repair": True,
+                    "repair_sections": repair_sections,
+                    "repair_priority": repair_priority,
+                    "knowledge_completeness": item.get("knowledge_completeness"),
+                    "knowledge_display_mode": item.get("knowledge_display_mode"),
+                    "initiated_via": initiated_via,
+                    "requested_by": requested_by,
+                    "source_only": source_first,
+                    "enqueue_ai_after_source_refresh": source_first,
+                },
+                tags=(
+                    ["knowledge", "auto_repair", "source_refresh", "source_first"]
+                    if source_first
+                    else ["knowledge", "auto_repair"]
+                ),
+            )
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title=(
+                    "Knowledge Source Refresh Queued"
+                    if source_first
+                    else "Automatic Knowledge Repair Queued"
+                ),
+                content=(
+                    (
+                        f"Queued source-first refresh for {disease_id}; a model-center repair "
+                        "will follow only when the requested evidence is available. "
+                    )
+                    if source_first
+                    else f"Queued model-center repair for {disease_id}. "
+                ) + f"Target sections: {', '.join(repair_sections)}.",
+                content_type="text",
+                metadata={
+                    "disease_id": disease_id,
+                    "repair_sections": repair_sections,
+                    "repair_priority": repair_priority,
+                    "source_groups": source_groups,
+                    "generator": _normalize_generator_mode(generator_mode),
+                    "force": force,
+                    "workflow_stage": (
+                        "knowledge_source_first_queued"
+                        if source_first
+                        else "knowledge_repair_queued"
+                    ),
+                },
+            )
+            task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
+            created.append(task)
+
+        return {
+            "created_count": len(created),
+            "skipped_count": len(skipped),
+            "created_tasks": created,
+            "skipped": skipped,
+            "candidate_count": len(candidates),
+            "source_groups": source_groups,
+            "generator": _normalize_generator_mode(generator_mode),
+            "force": force,
+        }
+
+    async def enqueue_source_refresh_tasks(
+        self,
+        db,
+        *,
+        disease_ids: list[str] | None = None,
+        source_groups: list[str] | None = None,
+        force: bool = True,
+        priority: str | TaskPriority | None = None,
+        limit: int | None = None,
+        requested_by: str = "knowledge-source-refresh",
+        initiated_via: str = "knowledge-source-refresh",
+    ) -> dict[str, Any]:
+        """Queue source-only refresh work before model-center generation."""
+        source_groups = expand_sources(source_groups)
+        result = await db.execute(
+            select(Task)
+            .where(
+                Task.task_type.in_(
+                    [
+                        TaskType.UPDATE_DISEASE_KNOWLEDGE,
+                        TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
+                    ]
+                ),
+                Task.status.in_(ACTIVE_KNOWLEDGE_TASK_STATUSES),
+            )
+            .order_by(Task.created_at.asc())
+        )
+        active_by_disease = _active_knowledge_tasks_by_disease(
+            list(result.scalars().all())
+        )
+        requested_ids = {
+            str(disease_id).strip().upper()
+            for disease_id in (disease_ids or [])
+            if str(disease_id).strip()
+        }
+        catalogue = await self.list_catalogue(db)
+        candidates = [
+            item
+            for item in catalogue
+            if not requested_ids or str(item.get("disease_id") or "").upper() in requested_ids
+        ]
+        if limit is not None:
+            candidates = candidates[: max(0, int(limit))]
+
+        created: list[Task] = []
+        skipped: list[dict[str, Any]] = []
+        for item in candidates:
+            disease_id = str(item.get("disease_id") or "").strip().upper()
+            if not disease_id:
+                continue
+            active_task = active_by_disease.get(disease_id)
+            if active_task is not None:
+                skipped.append(
+                    {
+                        "disease_id": disease_id,
+                        "reason": "active_task_exists",
+                        "task_uuid": active_task.task_uuid,
+                    }
+                )
+                continue
+            name_en = str(item.get("name_en") or disease_id)
+            task = await task_manager.create_task(
+                task_type=TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
+                task_name=f"Refresh {name_en} knowledge sources",
+                priority=priority or TaskPriority.NORMAL,
+                description=f"Fetch and organize knowledge sources for {disease_id}.",
+                input_data={
+                    "disease_id": disease_id,
+                    "disease_ids": [disease_id],
+                    "source_groups": source_groups,
+                    "source": source_groups,
+                    "force": force,
+                    "source_only": True,
+                    "initiated_via": initiated_via,
+                    "requested_by": requested_by,
+                },
+                tags=["knowledge", "source_refresh"],
+            )
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Knowledge Source Refresh Queued",
+                content=(
+                    f"Queued source-only refresh for {disease_id}. "
+                    f"Source groups: {', '.join(source_groups) or 'default'}."
+                ),
+                content_type="text",
+                metadata={
+                    "disease_id": disease_id,
+                    "source_groups": source_groups,
+                    "force": force,
+                    "workflow_stage": "knowledge_source_refresh_queued",
+                },
+            )
+            task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
+            created.append(task)
+
+        return {
+            "created_count": len(created),
+            "skipped_count": len(skipped),
+            "created_tasks": created,
+            "skipped": skipped,
+            "candidate_count": len(candidates),
+            "source_groups": source_groups,
+            "force": force,
+        }
+
+    async def stage_queued_repairs_as_source_refresh_tasks(
+        self,
+        db,
+        *,
+        limit: int | None = None,
+        requested_by: str = "knowledge-source-first-staging",
+    ) -> dict[str, Any]:
+        """Convert queued AI repairs into source-first refresh tasks."""
+        query = (
+            select(Task)
+            .where(
+                Task.task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE,
+                Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]),
+            )
+            .order_by(Task.created_at.asc())
+            .with_for_update(skip_locked=True)
+        )
+        if limit is not None:
+            query = query.limit(max(0, int(limit)))
+        tasks = list((await db.execute(query)).scalars().all())
+        staged: list[str] = []
+        skipped: list[dict[str, Any]] = []
+        for task in tasks:
+            input_data = dict(task.input_data or {})
+            tags = set(task.tags or [])
+            disease_id = str(
+                input_data.get("disease_id")
+                or input_data.get("disease")
+                or ""
+            ).strip().upper()
+            if not disease_id:
+                skipped.append({"task_uuid": task.task_uuid, "reason": "missing_disease_id"})
+                continue
+            if not input_data.get("targeted_repair") and "auto_repair" not in tags:
+                skipped.append({"task_uuid": task.task_uuid, "reason": "not_auto_repair"})
+                continue
+            if input_data.get("source_only") or "source_refresh" in tags:
+                skipped.append({"task_uuid": task.task_uuid, "reason": "already_source_first"})
+                continue
+
+            input_data["source_only"] = True
+            input_data["enqueue_ai_after_source_refresh"] = True
+            input_data["source_first_staged_from"] = TaskType.UPDATE_DISEASE_KNOWLEDGE.value
+            input_data["source_first_staged_by"] = requested_by
+            input_data["force"] = bool(input_data.get("force", False))
+            metadata = dict(task.metadata_ or {})
+            metadata["source_first_staging"] = {
+                "at": datetime.now(timezone.utc).isoformat(),
+                "requested_by": requested_by,
+                "original_task_type": TaskType.UPDATE_DISEASE_KNOWLEDGE.value,
+            }
+            task.task_type = TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES
+            task.task_name = f"Refresh sources before {task.task_name}"
+            task.description = (
+                f"Source-first stage for {disease_id}; model repair will be queued "
+                "after source quality is known."
+            )
+            task.input_data = input_data
+            task.tags = sorted({*tags, "knowledge", "source_refresh", "source_first"})
+            task.metadata_ = metadata
+            task.retry_count = 0
+            task.max_retries = max(int(task.max_retries or 0), 5)
+            task.last_error = None
+            staged.append(task.task_uuid)
+        await db.commit()
+        for task_uuid in staged:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="info",
+                title="Knowledge Repair Staged As Source Refresh",
+                content=(
+                    "Queued AI repair was converted to a source-first refresh task. "
+                    "A follow-up model repair will be queued only if source evidence is sufficient."
+                ),
+                content_type="text",
+                metadata={
+                    "workflow_stage": "knowledge_source_first_staged",
+                    "requested_by": requested_by,
+                },
+            )
+        return {
+            "staged_count": len(staged),
+            "staged_task_uuids": staged,
+            "skipped": skipped,
+        }
 
     def _find_disease(self, disease_id: str) -> dict[str, Any]:
         wanted = (disease_id or "").strip().upper()
@@ -1180,13 +1762,26 @@ class DiseaseKnowledgeUpdateService:
         enabled_sources: list[str] | None = None,
         force: bool = False,
         generator_mode: str = "auto",
+        target_languages: list[str] | None = None,
         dry_run: bool = False,
         task_uuid: str | None = None,
+        source_only: bool = False,
+        refresh_existing_on_source_change: bool | None = None,
+        source_refreshed_task_uuid: str | None = None,
     ) -> dict[str, Any]:
         disease = self._find_disease(disease_id)
         generator_mode = _normalize_generator_mode(generator_mode)
         enabled_sources = expand_sources(enabled_sources)
         generator = _generator_for_mode(generator_mode, disease["disease_id"])
+        ai_config = get_config().ai
+        refresh_existing_on_source_change = bool(
+            force
+            or (
+                ai_config.knowledge_refresh_existing_on_source_change
+                if refresh_existing_on_source_change is None
+                else refresh_existing_on_source_change
+            )
+        )
 
         await _log_task(
             task_uuid,
@@ -1197,7 +1792,8 @@ class DiseaseKnowledgeUpdateService:
                 f"Source groups: {', '.join(enabled_sources) or 'none'}\n"
                 f"Force refresh: {'yes' if force else 'no'}\n"
                 f"Generator: {generator_mode}\n"
-                f"Dry run: {'yes' if dry_run else 'no'}"
+                f"Dry run: {'yes' if dry_run else 'no'}\n"
+                f"Source-only: {'yes' if source_only else 'no'}"
             ),
             metadata={
                 "disease_id": disease["disease_id"],
@@ -1205,6 +1801,10 @@ class DiseaseKnowledgeUpdateService:
                 "force": force,
                 "generator": generator_mode,
                 "dry_run": dry_run,
+                "source_only": source_only,
+                "refresh_existing_on_source_change": refresh_existing_on_source_change,
+                "source_refreshed_task_uuid": source_refreshed_task_uuid,
+                "evidence_limits": _knowledge_evidence_limits(),
                 "workflow_stage": "knowledge_start",
             },
         )
@@ -1256,10 +1856,24 @@ class DiseaseKnowledgeUpdateService:
                 source_dicts,
                 profile_schema,
                 target_sections=target_sections,
+                **_knowledge_evidence_limits(),
                 allowed_source_types=AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES,
             )
             source_dicts = list(evidence_packet.sources)
             evidence_quality = evidence_packet.assessment
+            if source_only:
+                return {
+                    "disease_id": disease["disease_id"],
+                    "knowledge_profile_type": disease["knowledge_profile_type"],
+                    "target_sections": target_sections,
+                    "fetched_sources": len(candidates),
+                    "selected_sources": len(source_dicts),
+                    "evidence_quality": evidence_quality.to_dict(),
+                    "adapter_outcomes": fetch_report.adapter_outcomes,
+                    "adapter_durations": fetch_report.adapter_durations,
+                    "source_only": True,
+                    "sources": source_dicts,
+                }
             if not evidence_quality.sufficient:
                 reason = _evidence_block_reason(source_dicts)
                 raise KnowledgeEvidenceInsufficientError(
@@ -1354,6 +1968,21 @@ class DiseaseKnowledgeUpdateService:
                 target_sections_by_language = {
                     language: list(ordered_sections) for language in ("en", "zh")
                 }
+            if source_only:
+                target_sections_by_language = {
+                    language: list(ordered_sections) for language in ("en", "zh")
+                }
+            if target_languages is not None:
+                allowed_languages = {
+                    str(language).strip().lower()
+                    for language in target_languages
+                    if str(language).strip().lower() in {"en", "zh"}
+                }
+                if allowed_languages:
+                    target_sections_by_language = {
+                        language: fields if language in allowed_languages else []
+                        for language, fields in target_sections_by_language.items()
+                    }
             target_set = {
                 field
                 for fields in target_sections_by_language.values()
@@ -1365,6 +1994,12 @@ class DiseaseKnowledgeUpdateService:
                 "target_sections": target_sections,
                 "evidence_target_sections": ordered_sections,
             }
+            source_refresh_reusable = (
+                bool(source_refreshed_task_uuid)
+                and not source_only
+                and not force
+                and existing_has_public_sources
+            )
             candidates = []
             fetch_report = SourceFetchReport(
                 candidates=[],
@@ -1373,10 +2008,11 @@ class DiseaseKnowledgeUpdateService:
             )
             if (
                 force
+                or source_only
                 or not existing
                 or not existing_has_public_sources
-                or target_sections
-                or source_refresh_required
+                or (target_sections and not source_refresh_reusable)
+                or (source_refresh_required and not source_refresh_reusable)
             ):
                 fetch_report = await asyncio.to_thread(
                     _fetch_sources_with_report,
@@ -1411,6 +2047,7 @@ class DiseaseKnowledgeUpdateService:
                         "adapter_outcomes": fetch_report.adapter_outcomes,
                         "adapter_durations": fetch_report.adapter_durations,
                         "target_sections": target_sections,
+                        "source_only": source_only,
                         "workflow_stage": "source_fetch_completed",
                     },
                 )
@@ -1426,6 +2063,7 @@ class DiseaseKnowledgeUpdateService:
                     metadata={
                         "disease_id": disease["disease_id"],
                         "reused_sources": len(existing),
+                        "source_refreshed_task_uuid": source_refreshed_task_uuid,
                         "workflow_stage": "source_reuse",
                     },
                 )
@@ -1442,6 +2080,7 @@ class DiseaseKnowledgeUpdateService:
                 source_dicts,
                 profile_schema,
                 target_sections=ordered_sections,
+                **_knowledge_evidence_limits(),
                 allowed_source_types=AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES,
             )
             direct_evidence_quality = direct_packet.assessment
@@ -1450,9 +2089,60 @@ class DiseaseKnowledgeUpdateService:
                 [*direct_packet.sources, *inherited_sources],
                 profile_schema,
                 target_sections=ordered_sections,
+                **_knowledge_evidence_limits(),
                 allowed_source_types=AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES,
             )
             evidence_quality = generation_packet.assessment
+            generation_sources = list(generation_packet.sources)
+            source_packet_manifest_id = generation_packet.manifest.manifest_id
+
+            if source_only:
+                source_gap = not evidence_quality.sufficient
+                await _log_task(
+                    task_uuid,
+                    entry_type="warning" if source_gap else "success",
+                    title=(
+                        "Knowledge Sources Need Enrichment"
+                        if source_gap
+                        else "Knowledge Sources Refreshed"
+                    ),
+                    content=(
+                        f"Refreshed {len(source_dicts)} direct source row(s) for "
+                        f"{disease['disease_id']} without invoking the AI brief generator."
+                    ),
+                    metadata={
+                        "disease_id": disease["disease_id"],
+                        "source_count": len(source_dicts),
+                        "inherited_source_count": len(inherited_sources),
+                        "source_packet_manifest_id": source_packet_manifest_id,
+                        "source_gap": source_gap,
+                        "evidence_quality": evidence_quality.to_dict(),
+                        "direct_evidence_quality": direct_evidence_quality.to_dict(),
+                        "adapter_outcomes": fetch_report.adapter_outcomes,
+                        "adapter_durations": fetch_report.adapter_durations,
+                        "evidence_limits": _knowledge_evidence_limits(),
+                        "workflow_stage": "knowledge_sources_refreshed",
+                    },
+                    success=not source_gap,
+                )
+                await db.commit()
+                if task_uuid:
+                    await task_manager.update_task_progress(task_uuid, 100)
+                return {
+                    "disease_id": disease["disease_id"],
+                    "knowledge_profile_type": disease["knowledge_profile_type"],
+                    "target_sections": ordered_sections,
+                    "fetched_sources": len(candidates),
+                    "total_sources": len(source_dicts),
+                    "inherited_source_count": len(inherited_sources),
+                    "evidence_quality": evidence_quality.to_dict(),
+                    "direct_evidence_quality": direct_evidence_quality.to_dict(),
+                    "adapter_outcomes": fetch_report.adapter_outcomes,
+                    "adapter_durations": fetch_report.adapter_durations,
+                    "source_packet_manifest_id": source_packet_manifest_id,
+                    "source_gap": source_gap,
+                    "source_only": True,
+                }
 
             if not evidence_quality.sufficient:
                 reason = _evidence_block_reason([*source_dicts, *inherited_sources])
@@ -1480,21 +2170,16 @@ class DiseaseKnowledgeUpdateService:
             if task_uuid:
                 await task_manager.update_task_progress(task_uuid, 55)
 
-            generation_sources = list(generation_packet.sources)
-            source_packet_manifest_id = generation_packet.manifest.manifest_id
-
-            # A fresh evidence snapshot invalidates otherwise-complete prose.
-            # This turns source refresh into a real content refresh rather than
-            # merely updating fetched_at timestamps underneath old text.
-            for language in ("en", "zh"):
-                existing_brief = existing_briefs_by_language.get(language)
-                if existing_brief is None:
-                    continue
-                previous_packet_id = _brief_metadata(existing_brief).get(
-                    "source_packet_manifest_id"
-                )
-                if previous_packet_id != source_packet_manifest_id:
-                    target_sections_by_language[language] = list(ordered_sections)
+            if refresh_existing_on_source_change:
+                for language in ("en", "zh"):
+                    existing_brief = existing_briefs_by_language.get(language)
+                    if existing_brief is None:
+                        continue
+                    previous_packet_id = _brief_metadata(existing_brief).get(
+                        "source_packet_manifest_id"
+                    )
+                    if previous_packet_id != source_packet_manifest_id:
+                        target_sections_by_language[language] = list(ordered_sections)
             target_set = {
                 field
                 for fields in target_sections_by_language.values()
@@ -1537,22 +2222,88 @@ class DiseaseKnowledgeUpdateService:
             generation_languages = [
                 language for language in brief_languages if target_sections_by_language[language]
             ]
-            ai_results = []
+            results_by_language: dict[str, dict[str, Any]] = {}
             for language in generation_languages:
-                ai_results.append(
-                    await _generate_brief_result(
-                        generator,
-                        disease={
-                            **disease_payload,
-                            "target_sections": target_sections_by_language[language],
-                        },
-                        sources=generation_sources,
+                language_targets = target_sections_by_language[language]
+                if language == "zh" and _model_center_route_failure(results_by_language.get("en")):
+                    skipped = _skipped_language_after_route_failure(
+                        disease=disease_payload,
                         language=language,
+                        target_sections=language_targets,
+                        upstream_language="en",
                     )
+                    results_by_language[language] = skipped
+                    continue
+                if (
+                    language == "zh"
+                    and ai_config.knowledge_translate_zh_from_en
+                    and callable(getattr(generator, "translate_from_payload_with_trace", None))
+                ):
+                    english_result = results_by_language.get("en")
+                    if english_result is None and "en" not in generation_languages:
+                        existing_en = existing_briefs_by_language.get("en")
+                        if existing_en is not None:
+                            english_result = _locked_existing_brief_result(
+                                existing_en,
+                                disease_payload,
+                            )
+                    if _translation_source_usable(english_result):
+                        translated = await _translate_brief_result(
+                            generator,
+                            disease={
+                                **disease_payload,
+                                "target_sections": language_targets,
+                            },
+                            english_payload=english_result["payload"],
+                            sources=generation_sources,
+                            target_sections=language_targets,
+                        )
+                        translation_trace = (
+                            translated.get("trace")
+                            if isinstance(translated.get("trace"), dict)
+                            else {}
+                        )
+                        translated_payload = (
+                            translated.get("payload")
+                            if isinstance(translated.get("payload"), dict)
+                            else {}
+                        )
+                        if (
+                            not translation_trace.get("error")
+                            and not translation_trace.get("citation_failures")
+                            and str(translated_payload.get("status") or "").strip().lower()
+                            == "published"
+                        ):
+                            results_by_language[language] = translated
+                            continue
+                        await _log_task(
+                            task_uuid,
+                            entry_type="warning",
+                            title="ZH Translation Fallback",
+                            content=(
+                                "Grounded EN-to-ZH translation did not pass validation; "
+                                "falling back to full evidence generation."
+                            ),
+                            metadata={
+                                "disease_id": disease["disease_id"],
+                                "language": language,
+                                "target_sections": language_targets,
+                                "trace_error": translation_trace.get("error"),
+                                "citation_failures": translation_trace.get("citation_failures"),
+                                "workflow_stage": "brief_generation_zh_translation_fallback",
+                            },
+                            success=False,
+                        )
+                generated = await _generate_brief_result(
+                    generator,
+                    disease={
+                        **disease_payload,
+                        "target_sections": language_targets,
+                    },
+                    sources=generation_sources,
+                    language=language,
                 )
-            results_by_language = {
-                language: result for language, result in zip(generation_languages, ai_results)
-            }
+                results_by_language[language] = generated
             for language in brief_languages:
                 if language not in results_by_language:
                     existing_brief = existing_briefs_by_language.get(language)
@@ -1732,15 +2483,104 @@ class DiseaseKnowledgeUpdateService:
             source_groups = [source_groups]
         force = bool(inp.get("force", False))
         generator_mode = str(inp.get("generator", "auto"))
+        source_only = bool(inp.get("source_only", False))
+        refresh_existing_on_source_change = inp.get("refresh_existing_on_source_change")
+        target_languages = inp.get("repair_languages") or inp.get("languages")
+        if isinstance(target_languages, str):
+            target_languages = [target_languages]
+        if not isinstance(target_languages, list):
+            target_languages = None
 
         return await self.update_disease(
             disease_id,
             enabled_sources=list(source_groups) if isinstance(source_groups, list) else [],
             force=force,
             generator_mode=generator_mode,
+            target_languages=target_languages,
             dry_run=bool(inp.get("dry_run", False)),
             task_uuid=task.task_uuid,
+            source_only=source_only,
+            refresh_existing_on_source_change=(
+                None
+                if refresh_existing_on_source_change is None
+                else bool(refresh_existing_on_source_change)
+            ),
+            source_refreshed_task_uuid=inp.get("source_refreshed_task_uuid"),
         )
+
+    async def execute_source_refresh_task(self, task: Task) -> dict[str, Any]:
+        """Execute a source-only task created by the dashboard or scheduler."""
+        inp = dict(task.input_data or {})
+        inp["source_only"] = True
+        source_groups = inp.get("source_groups") or inp.get("source") or []
+        if isinstance(source_groups, str):
+            source_groups = [source_groups]
+        disease_id = str(inp.get("disease_id") or inp.get("disease") or "").strip()
+        if not disease_id:
+            disease_ids = inp.get("disease_ids") or []
+            if isinstance(disease_ids, list) and len(disease_ids) == 1:
+                disease_id = str(disease_ids[0]).strip()
+        if not disease_id:
+            raise ValueError("Knowledge source refresh task is missing disease_id")
+
+        result = await self.update_disease(
+            disease_id,
+            enabled_sources=list(source_groups) if isinstance(source_groups, list) else [],
+            force=bool(inp.get("force", True)),
+            generator_mode=str(inp.get("generator", "auto")),
+            dry_run=bool(inp.get("dry_run", False)),
+            task_uuid=task.task_uuid,
+            source_only=True,
+            refresh_existing_on_source_change=False,
+        )
+        if (
+            inp.get("enqueue_ai_after_source_refresh")
+            and not result.get("source_gap")
+            and not bool(inp.get("dry_run", False))
+        ):
+            repair_input = {
+                **inp,
+                "source_only": False,
+                "force": False,
+                "generator": _normalize_generator_mode(str(inp.get("generator") or "ai")),
+                "targeted_repair": True,
+                "source_refreshed_task_uuid": task.task_uuid,
+                "initiated_via": "knowledge-source-refresh-followup",
+            }
+            repair_input.pop("enqueue_ai_after_source_refresh", None)
+            followup = await task_manager.create_task(
+                task_type=TaskType.UPDATE_DISEASE_KNOWLEDGE,
+                task_name=str(getattr(task, "task_name", "") or f"Repair {disease_id} knowledge profile").replace(
+                    "Refresh sources before ",
+                    "",
+                    1,
+                ),
+                priority=TaskPriority.URGENT,
+                description=(
+                    f"Model-center repair for {disease_id} after source-only refresh "
+                    f"{task.task_uuid}."
+                ),
+                input_data=repair_input,
+                tags=sorted({*(getattr(task, "tags", None) or []), "knowledge", "auto_repair"}),
+            )
+            await task_manager.add_workbook_entry(
+                followup.task_uuid,
+                entry_type="info",
+                title="Knowledge Repair Queued After Source Refresh",
+                content=(
+                    f"Queued model-center repair for {disease_id} after source refresh "
+                    f"{task.task_uuid}."
+                ),
+                content_type="text",
+                metadata={
+                    "disease_id": disease_id,
+                    "source_refreshed_task_uuid": task.task_uuid,
+                    "workflow_stage": "knowledge_repair_after_source_refresh_queued",
+                },
+            )
+            followup = await task_manager.update_task_status(followup.task_uuid, TaskStatus.QUEUED) or followup
+            result["followup_task_uuid"] = followup.task_uuid
+        return result
 
 
 async def render_knowledge_preview(

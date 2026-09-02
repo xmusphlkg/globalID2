@@ -446,6 +446,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/content-governance/knowledge-retries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Requeue Failed Knowledge Repairs */
+        post: operations["requeue_failed_knowledge_repairs_api_v1_content_governance_knowledge_retries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content-governance/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Ai Content Governance */
+        post: operations["run_ai_content_governance_api_v1_content_governance_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/countries": {
         parameters: {
             query?: never;
@@ -702,6 +736,23 @@ export interface paths {
         get: operations["list_disease_knowledge_catalogue_api_v1_knowledge_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge/repair-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Disease Knowledge Repair Tasks */
+        post: operations["start_disease_knowledge_repair_tasks_api_v1_knowledge_repair_runs_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2636,6 +2687,63 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AIContentGovernanceRequest */
+        AIContentGovernanceRequest: {
+            /**
+             * Dry Run
+             * @default false
+             */
+            dry_run: boolean;
+            /**
+             * Knowledge Retry Limit
+             * @default 50
+             */
+            knowledge_retry_limit: number;
+            /**
+             * Learning Limit
+             * @default 20
+             */
+            learning_limit: number;
+            /** Literature Article Limit */
+            literature_article_limit?: number | null;
+            /**
+             * Literature Limit
+             * @default 20
+             */
+            literature_limit: number;
+            /**
+             * Source Limit
+             * @default 30
+             */
+            source_limit: number;
+        };
+        /** AIContentGovernanceResponse */
+        AIContentGovernanceResponse: {
+            /** Dry Run */
+            dry_run: boolean;
+            /** Knowledge */
+            knowledge: {
+                [key: string]: unknown;
+            };
+            /** Knowledge Sources */
+            knowledge_sources: {
+                [key: string]: unknown;
+            };
+            /** Learning Suggestions */
+            learning_suggestions: {
+                [key: string]: unknown;
+            };
+            /** Literature */
+            literature: {
+                [key: string]: unknown;
+            };
+            /** Literature Articles */
+            literature_articles: {
+                [key: string]: unknown;
+            };
+            /** Prompt Version */
+            prompt_version: string;
+        };
         /** AIConversationOut */
         AIConversationOut: {
             /** Agent */
@@ -4544,6 +4652,49 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** DiseaseKnowledgeRepairRequest */
+        DiseaseKnowledgeRepairRequest: {
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
+            /**
+             * Generator
+             * @description ai uses the model center for targeted repair
+             * @default ai
+             */
+            generator: string;
+            /** Limit */
+            limit?: number | null;
+            /**
+             * Priority
+             * @description Optional override: urgent / high / normal / low
+             */
+            priority?: string | null;
+            /**
+             * Source
+             * @description Source groups: who / search / wikidata / wikipedia / pubmed / msd
+             */
+            source?: string[];
+        };
+        /** DiseaseKnowledgeRepairResponse */
+        DiseaseKnowledgeRepairResponse: {
+            /** Created Count */
+            created_count: number;
+            /** Created Tasks */
+            created_tasks: components["schemas"]["TaskOut"][];
+            /** Force */
+            force: boolean;
+            /** Generator */
+            generator: string;
+            /** Skipped */
+            skipped?: components["schemas"]["DiseaseKnowledgeTaskSkipped"][];
+            /** Skipped Count */
+            skipped_count: number;
+            /** Source Groups */
+            source_groups: string[];
+        };
         /** DiseaseKnowledgeSourceDetail */
         DiseaseKnowledgeSourceDetail: {
             /** Content Sections */
@@ -4839,6 +4990,14 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** KnowledgeRepairRetryRequest */
+        KnowledgeRepairRetryRequest: {
+            /**
+             * Limit
+             * @default 50
+             */
+            limit: number;
         };
         /** LiteratureArticleOut */
         LiteratureArticleOut: {
@@ -9501,6 +9660,168 @@ export interface operations {
             };
         };
     };
+    requeue_failed_knowledge_repairs_api_v1_content_governance_knowledge_retries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeRepairRetryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: unknown;
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    run_ai_content_governance_api_v1_content_governance_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIContentGovernanceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["AIContentGovernanceResponse"];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
     list_countries_api_v1_countries_get: {
         parameters: {
             query?: never;
@@ -10465,6 +10786,87 @@ export interface operations {
                     "application/json": {
                         /** Response List Disease Knowledge Catalogue Api V1 Knowledge Get */
                         data: components["schemas"]["DiseaseKnowledgeCatalogueItem"][];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    start_disease_knowledge_repair_tasks_api_v1_knowledge_repair_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiseaseKnowledgeRepairRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["DiseaseKnowledgeRepairResponse"];
                         meta: components["schemas"]["ResponseMeta"];
                     };
                 };

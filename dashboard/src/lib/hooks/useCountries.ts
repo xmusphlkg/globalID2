@@ -17,6 +17,14 @@ export interface Country {
 
 const COUNTRY_NAMES_ZH: Record<string, string> = {
   AU: "澳大利亚",
+  "AU-ACT": "澳大利亚首都领地",
+  "AU-NSW": "澳大利亚新南威尔士州",
+  "AU-NT": "澳大利亚北领地",
+  "AU-QLD": "澳大利亚昆士兰州",
+  "AU-SA": "澳大利亚南澳大利亚州",
+  "AU-TAS": "澳大利亚塔斯马尼亚州",
+  "AU-VIC": "澳大利亚维多利亚州",
+  "AU-WA": "澳大利亚西澳大利亚州",
   BR: "巴西",
   CH: "瑞士",
   CN: "中国",

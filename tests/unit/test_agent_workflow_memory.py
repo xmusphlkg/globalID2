@@ -117,7 +117,7 @@ def test_qdrant_search_failure_degrades_to_empty_result(monkeypatch):
         unique_evidence=lambda items: items,
         logger=logger,
     ) == []
-    assert logger.messages[0][0] == "Qdrant memory search failed: %s"
+    assert logger.messages[0][0] == "Qdrant memory search failed: {}"
     assert isinstance(logger.messages[0][1][0], RuntimeError)
 
 

@@ -189,9 +189,9 @@ class BaseAgent(ABC):
     ) -> Tuple[List[Dict[str, Any]], List[str]]:
         candidates: List[Dict[str, Any]] = []
         chain_used: List[str] = []
-        runtime_model_names: set[str] = set()
+        runtime_model_names: list[str] = []
 
-        if runtime_routes:
+        if runtime_routes is not None:
             for route in runtime_routes:
                 route_key = str(route.get("model_key") or route.get("model_name") or "")
                 model_name = str(route.get("model_name") or "")
@@ -213,32 +213,13 @@ class BaseAgent(ABC):
                         "route": route,
                     }
                 )
-                runtime_model_names.add(model_name)
+                if model_name not in runtime_model_names:
+                    runtime_model_names.append(model_name)
 
-            # Runtime routes are preferred, but a stale model-center health
-            # snapshot must not make generation impossible when the configured
-            # provider chain is still usable. Append direct configuration
-            # routes as model failover candidates; content quality gates remain
-            # unchanged and no generated-text fallback is introduced.
-            chain = BaseAgent.AVAILABLE_MODEL_CHAIN
-            if chain is None:
-                chain = getattr(self.config.ai, "model_chain", None) or []
-            chain_used = list(chain)
-            for model_name in chain:
-                if model_name in runtime_model_names:
-                    continue
-                if not ignore_local_cooldowns and BaseAgent._is_model_cooling_down(model_name):
-                    continue
-                candidates.append(
-                    {
-                        "route_key": model_name,
-                        "model_name": model_name,
-                        "route": None,
-                    }
-                )
-            return candidates, chain_used
+            return candidates, list(runtime_model_names)
 
-        # 若模型中心无可用路由，则回退到配置链路。
+        # Legacy direct mode is kept only for explicit callers that bypass
+        # model-center route loading by passing runtime_routes=None.
         chain = BaseAgent.AVAILABLE_MODEL_CHAIN
         if chain is None:
             chain = getattr(self.config.ai, "model_chain", None) or []
@@ -505,7 +486,7 @@ class BaseAgent(ABC):
                     raise
 
                 logger.warning(
-                    "Dropping unsupported completion argument '%s' for model '%s'",
+                    "Dropping unsupported completion argument '{}' for model '{}'",
                     unexpected_kwarg,
                     payload.get("model"),
                 )
@@ -627,7 +608,7 @@ class BaseAgent(ABC):
             await self.rate_limiter.wait_if_needed()
             self.rate_limiter.record_request()
         
-        # 调用LLM（支持模型中心路由 + 配置链路双模式）
+        # 调用 LLM：运行时路由由模型中心统一管理；env 链路只用于初始化模型中心。
         route_cache_ttl = max(1, int(getattr(self.config.ai, "route_cache_ttl_seconds", 15)))
         runtime_routes = BaseAgent.AVAILABLE_MODEL_ROUTES
         route_cache_expired = (
@@ -645,7 +626,7 @@ class BaseAgent(ABC):
                 BaseAgent.AVAILABLE_MODEL_ROUTES = runtime_routes
                 BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = time.time()
             except Exception as e:
-                logger.warning(f"Failed to load model-center routes, fallback to config chain: {e}")
+                logger.warning(f"Failed to load model-center routes; no direct env fallback will be used: {e}")
                 runtime_routes = []
                 BaseAgent.AVAILABLE_MODEL_ROUTES = None
                 BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
@@ -1147,7 +1128,7 @@ class BaseAgent(ABC):
         try:
             return bool(await self.cache.delete(self._make_cache_key(prompt, system)))
         except Exception as exc:
-            logger.warning("Failed to invalidate AI completion cache: %s", exc)
+            logger.warning("Failed to invalidate AI completion cache: {}", exc)
             return False
     
     def get_conversation_history(self) -> List[Dict[str, Any]]:

@@ -24,6 +24,20 @@
         "model": "configured-review-model",
         "provider": "model-center"
       }
+    },
+    {
+      "week": "2026-W36",
+      "brief_fingerprint": "d30a3a0fa74cc19de3bb47b7fa91e999c9a3894e9928d8748ddbd12cdda85b20",
+      "review": {
+        "verdict": "needs_editorial_review",
+        "issue_codes": [
+          "bilingual_mismatch"
+        ],
+        "reviewed_at": "2026-09-01T05:27:22+00:00",
+        "protocol_version": "research-weekly-ai-review.v1",
+        "model": "configured-review-model",
+        "provider": "model-center"
+      }
     }
   ]
 }

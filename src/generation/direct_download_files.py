@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import csv
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
 from dataclasses import dataclass
 from datetime import date, datetime
 import hashlib
 from io import BytesIO, StringIO
 import json
+import multiprocessing
 import os
 from pathlib import Path
 import shutil
@@ -109,6 +110,13 @@ ROLLING_WINDOW_START = 2030
 ROLLING_WINDOW_YEARS = 5
 _XLSX_TIMESTAMP = (2000, 1, 1, 0, 0, 0)
 DEFAULT_EXPORT_WORKERS = min(4, max(1, os.cpu_count() or 1))
+
+
+def _process_pool_context() -> multiprocessing.context.BaseContext:
+    try:
+        return multiprocessing.get_context("forkserver")
+    except ValueError:
+        return multiprocessing.get_context()
 
 
 @dataclass(frozen=True)
@@ -746,13 +754,15 @@ def _dataset_parts(
 
 
 def _build_dataset_parts_task(
+    *,
+    kind: str,
     dataset: dict,
     rows: list[dict],
     output_dir: Path,
     download_url_base: str,
     max_file_bytes: int,
     existing_parts: dict[str, dict],
-) -> tuple[list[dict], int, set[Path]]:
+) -> dict:
     """Build one dataset tree independently so changed partitions can overlap."""
 
     expected_paths: set[Path] = set()
@@ -765,7 +775,89 @@ def _build_dataset_parts_task(
         expected_paths=expected_paths,
         existing_parts=existing_parts,
     )
-    return parts, changed, expected_paths
+    return {
+        "kind": kind,
+        "dataset": dataset,
+        "row_count": len(rows),
+        "provenance_counts": _row_provenance_counts(rows),
+        "parts": parts,
+        "changed": changed,
+        "paths": expected_paths,
+    }
+
+
+def _build_country_parts_task(
+    country_export: dict,
+    output_dir: Path,
+    download_url_base: str,
+    max_file_bytes: int,
+    existing_parts: dict[str, dict],
+) -> dict:
+    code = country_export["code"]
+    path_id = code.lower()
+    dataset = {
+        "kind": "country",
+        "directory": "countries",
+        "dataset_id": path_id,
+        "path_id": path_id,
+        "slug": path_id,
+        "name": country_export["country_name"],
+    }
+    rows = build_country_download_rows(
+        country_export["country_data"], country_export["source_info"]
+    )
+    result = _build_dataset_parts_task(
+        kind="country",
+        dataset=dataset,
+        rows=rows,
+        output_dir=output_dir,
+        download_url_base=download_url_base,
+        max_file_bytes=max_file_bytes,
+        existing_parts=existing_parts,
+    )
+    result["source_info"] = country_export["source_info"]
+    return result
+
+
+def _build_disease_parts_task(
+    disease_export: dict,
+    country_sources_by_code: dict[str, dict],
+    country_names: dict[str, str],
+    output_dir: Path,
+    download_url_base: str,
+    max_file_bytes: int,
+    existing_parts: dict[str, dict],
+) -> dict:
+    did = disease_export["disease_id"]
+    path_id = did.lower()
+    disease_data = disease_export["disease_data"]
+    dataset = {
+        "kind": "disease",
+        "directory": "diseases",
+        "dataset_id": did,
+        "path_id": path_id,
+        "slug": disease_data.get("slug"),
+        "name": disease_data.get("name_en"),
+    }
+    rows = build_disease_download_rows(
+        disease_data,
+        country_sources_by_code,
+        country_names,
+    )
+    result = _build_dataset_parts_task(
+        kind="disease",
+        dataset=dataset,
+        rows=rows,
+        output_dir=output_dir,
+        download_url_base=download_url_base,
+        max_file_bytes=max_file_bytes,
+        existing_parts=existing_parts,
+    )
+    result["country_codes"] = sorted(
+        (disease_data.get("country_series") or {}).keys()
+    )
+    result["source_info"] = disease_data.get("source_info") or []
+    return result
 
 
 def build_direct_download_files(
@@ -816,103 +908,96 @@ def build_direct_download_files(
     disease_entries_by_id = {
         entry["disease_id"]: entry for entry in context["disease_download_entries"]
     }
-    tasks: list[tuple[str, dict, list[dict], dict[str, dict], dict]] = []
-    for country_export in context["country_exports"]:
-        code = country_export["code"]
-        path_id = code.lower()
-        rows = build_country_download_rows(
-            country_export["country_data"], country_export["source_info"]
-        )
-        tasks.append((
-            "country",
-            {
-                "kind": "country",
-                "directory": "countries",
-                "dataset_id": path_id,
-                "path_id": path_id,
-                "slug": path_id,
-                "name": country_export["country_name"],
-            },
-            rows,
-            existing_country_parts.get(path_id, {}),
-            country_export["source_info"],
-        ))
+    country_exports = context["country_exports"]
+    disease_exports = context["disease_exports"]
+    task_count = len(country_exports) + len(disease_exports)
+    worker_count = min(max(1, workers or DEFAULT_EXPORT_WORKERS), max(1, task_count))
+    results_by_index: dict[int, dict] = {}
 
-    for disease_export in context["disease_exports"]:
-        did = disease_export["disease_id"]
-        path_id = did.lower()
-        disease_data = disease_export["disease_data"]
-        rows = build_disease_download_rows(
-            disease_data,
-            context["country_sources_by_code"],
-            country_names,
-        )
-        tasks.append((
-            "disease",
-            {
-                "kind": "disease",
-                "directory": "diseases",
-                "dataset_id": did,
-                "path_id": path_id,
-                "slug": disease_data.get("slug"),
-                "name": disease_data.get("name_en"),
-            },
-            rows,
-            existing_disease_parts.get(did, {}),
-            disease_data,
-        ))
+    if task_count:
+        with ProcessPoolExecutor(
+            max_workers=worker_count,
+            mp_context=_process_pool_context(),
+        ) as executor:
+            pending: dict[Future, int] = {}
+            next_index = 0
+            max_pending = min(task_count, worker_count * 2)
 
-    worker_count = max(1, workers or DEFAULT_EXPORT_WORKERS)
-    with ThreadPoolExecutor(
-        max_workers=min(worker_count, max(1, len(tasks)))
-    ) as executor:
-        futures = [
-            executor.submit(
-                _build_dataset_parts_task,
-                dataset,
-                rows,
-                output_dir,
-                download_url_base,
-                max_file_bytes,
-                existing_parts,
-            )
-            for _kind, dataset, rows, existing_parts, _detail in tasks
-        ]
-        results = [future.result() for future in futures]
+            def submit_next() -> None:
+                nonlocal next_index
+                index = next_index
+                next_index += 1
+                if index < len(country_exports):
+                    country_export = country_exports[index]
+                    path_id = country_export["code"].lower()
+                    future = executor.submit(
+                        _build_country_parts_task,
+                        country_export,
+                        output_dir,
+                        download_url_base,
+                        max_file_bytes,
+                        existing_country_parts.get(path_id, {}),
+                    )
+                else:
+                    disease_export = disease_exports[index - len(country_exports)]
+                    future = executor.submit(
+                        _build_disease_parts_task,
+                        disease_export,
+                        context["country_sources_by_code"],
+                        country_names,
+                        output_dir,
+                        download_url_base,
+                        max_file_bytes,
+                        existing_disease_parts.get(disease_export["disease_id"], {}),
+                    )
+                pending[future] = index
+
+            while next_index < task_count and len(pending) < max_pending:
+                submit_next()
+
+            while pending:
+                done, _ = wait(pending, return_when=FIRST_COMPLETED)
+                for future in done:
+                    index = pending.pop(future)
+                    results_by_index[index] = future.result()
+                    if next_index < task_count:
+                        submit_next()
 
     country_entries: list[dict] = []
     disease_entries: list[dict] = []
     changed_files = 0
-    for (kind, dataset, rows, _existing_parts, detail), (parts, changed, paths) in zip(tasks, results):
-        expected_paths.update(paths)
-        changed_files += changed
+    for index in range(task_count):
+        result = results_by_index[index]
+        kind = result["kind"]
+        dataset = result["dataset"]
+        expected_paths.update(result["paths"])
+        changed_files += result["changed"]
         if kind == "country":
             entry = dict(country_entries_by_id[dataset["path_id"]])
             entry.update(
                 {
-                    "record_count": len(rows),
-                    **_row_provenance_counts(rows),
+                    "record_count": result["row_count"],
+                    **result["provenance_counts"],
                     "includes_series_provenance": True,
-                    "parts": parts,
-                    "source_info": detail,
+                    "parts": result["parts"],
+                    "source_info": result["source_info"],
                 }
             )
             country_entries.append(entry)
             continue
 
-        disease_data = detail
         entry = dict(disease_entries_by_id[dataset["dataset_id"]])
         entry.update(
             {
-                "record_count": len(rows),
-                **_row_provenance_counts(rows),
+                "record_count": result["row_count"],
+                **result["provenance_counts"],
                 "includes_series_provenance": True,
-                "parts": parts,
+                "parts": result["parts"],
                 "countries": [
                     {"code": code, "name": country_names.get(code)}
-                    for code in sorted((disease_data.get("country_series") or {}).keys())
+                    for code in result["country_codes"]
                 ],
-                "source_info": disease_data.get("source_info") or [],
+                "source_info": result["source_info"],
             }
         )
         disease_entries.append(entry)

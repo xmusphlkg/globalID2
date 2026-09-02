@@ -86,8 +86,12 @@ _SERIES_SOURCE_SCOPE_OVERRIDES = {
     "SRC_US_NNDSS": "nndss_api",
 }
 
-_JURISDICTION_SERIES_SOURCES = frozenset(
-    {"SRC_CN_PROV_DATACENTER", "SRC_CN_PROV_MONTHLY_REPORT"}
+_OBSERVATION_GEOGRAPHY_SERIES_SOURCES = frozenset(
+    {
+        "SRC_AU_NINDSS",
+        "SRC_CN_PROV_DATACENTER",
+        "SRC_CN_PROV_MONTHLY_REPORT",
+    }
 )
 
 
@@ -697,7 +701,7 @@ async def get_sources_flow(
         )
         .where(
             DiseaseSurveillanceSeries.source_system.not_in(
-                _JURISDICTION_SERIES_SOURCES
+                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
             )
         )
         .group_by(
@@ -711,10 +715,11 @@ async def get_sources_flow(
         series_q = series_q.where(Country.id == country_id)
     series_rows = (await db.execute(series_q)).all()
 
-    # Province series are registered by the national publishing authority but
-    # their facts belong to the geography encoded on each observation.  Map
-    # those observations to the child Country row so they appear in region
-    # flows and never inflate China's national flow.
+    # Some source series are registered by the national publishing authority
+    # while their facts belong to the geography encoded on each observation.
+    # Map those observations to the Country row named by geography_key so
+    # regional flows appear under their own jurisdictions without inflating the
+    # parent country's source-series counts.
     observation_country_code = func.split_part(
         DiseaseSeriesObservation.geography_key, ":", 2
     )
@@ -740,9 +745,9 @@ async def get_sources_flow(
         .join(Country, Country.code == observation_country_code)
         .where(
             DiseaseSurveillanceSeries.source_system.in_(
-                _JURISDICTION_SERIES_SOURCES
+                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
             ),
-            DiseaseSeriesObservation.geography_key.like("country:CN-%:national"),
+            DiseaseSeriesObservation.geography_key.like("country:%:national"),
         )
         .group_by(
             Country.id,
@@ -770,7 +775,7 @@ async def get_sources_flow(
         .join(Country, Country.code == DiseaseSurveillanceSeries.country_code)
         .where(
             DiseaseSurveillanceSeries.source_system.not_in(
-                _JURISDICTION_SERIES_SOURCES
+                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
             )
         )
         .group_by(
@@ -808,9 +813,9 @@ async def get_sources_flow(
         .join(Country, Country.code == observation_country_code)
         .where(
             DiseaseSurveillanceSeries.source_system.in_(
-                _JURISDICTION_SERIES_SOURCES
+                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
             ),
-            DiseaseSeriesObservation.geography_key.like("country:CN-%:national"),
+            DiseaseSeriesObservation.geography_key.like("country:%:national"),
         )
         .group_by(
             Country.id,
@@ -845,7 +850,7 @@ async def get_sources_flow(
         )
         .where(
             DiseaseSurveillanceSeries.source_system.not_in(
-                _JURISDICTION_SERIES_SOURCES
+                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
             )
         )
         .group_by(
@@ -875,9 +880,9 @@ async def get_sources_flow(
         .join(Country, Country.code == observation_country_code)
         .where(
             DiseaseSurveillanceSeries.source_system.in_(
-                _JURISDICTION_SERIES_SOURCES
+                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
             ),
-            DiseaseSeriesObservation.geography_key.like("country:CN-%:national"),
+            DiseaseSeriesObservation.geography_key.like("country:%:national"),
         )
         .group_by(
             Country.id,
@@ -902,7 +907,7 @@ async def get_sources_flow(
         .join(Country, Country.code == DiseaseSourceAvailability.country_code)
         .where(
             DiseaseSourceAvailability.source_system.not_in(
-                _JURISDICTION_SERIES_SOURCES
+                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
             )
         )
         .group_by(
@@ -939,9 +944,9 @@ async def get_sources_flow(
         .join(Country, Country.code == observation_country_code)
         .where(
             DiseaseSourceAvailability.source_system.in_(
-                _JURISDICTION_SERIES_SOURCES
+                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
             ),
-            DiseaseSeriesObservation.geography_key.like("country:CN-%:national"),
+            DiseaseSeriesObservation.geography_key.like("country:%:national"),
         )
         .group_by(
             Country.id,
