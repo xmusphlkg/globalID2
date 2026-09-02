@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from src.ai.agents.base import BaseAgent
+from src.ai.model_center import get_runtime_routes
 from src.core import get_config, get_logger
 from src.knowledge.brief_generator import DISCLAIMER_EN, DISCLAIMER_ZH
 from src.knowledge.citations import (
@@ -96,7 +97,7 @@ class AIDiseaseBriefGenerator:
             profile_schema=profile_schema,
             target_sections=target_sections,
         )
-        preferred_models, shard_index, shard_key = self._preferred_models_for(
+        preferred_models, shard_index, shard_key = await self._preferred_models_for(
             disease_id=str(disease.get("disease_id") or ""),
             language=language,
         )
@@ -704,8 +705,25 @@ class AIDiseaseBriefGenerator:
         return text or None
 
     @staticmethod
-    def _preferred_models_for(*, disease_id: str, language: str) -> tuple[list[str], int, str]:
-        shard_models = list(get_config().ai.knowledge_model_shards)
+    async def _preferred_models_for(*, disease_id: str, language: str) -> tuple[list[str], int, str]:
+        try:
+            routes = await get_runtime_routes()
+        except Exception as exc:
+            logger.warning("Failed to load model-center routes for knowledge shard selection: {}", exc)
+            routes = []
+
+        shard_models: list[str] = []
+        for route in routes:
+            if not route.get("has_api_key"):
+                continue
+            if str(route.get("last_check_status") or "").strip().lower() == "unavailable":
+                continue
+            if not route.get("available_for_routing", True):
+                continue
+            model_name = str(route.get("model_name") or "").strip()
+            if model_name and model_name not in shard_models:
+                shard_models.append(model_name)
+
         shard_key = f"{(disease_id or '').strip().upper()}:{language}"
         if not shard_models:
             return [], 0, shard_key

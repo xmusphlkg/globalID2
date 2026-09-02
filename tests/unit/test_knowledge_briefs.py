@@ -1691,14 +1691,30 @@ def test_ai_settings_knowledge_model_shards_falls_back_to_model_chain() -> None:
     assert settings.knowledge_model_shards == ["model-a", "model-b"]
 
 
-def test_ai_brief_preferred_models_follow_shard_rotation(monkeypatch) -> None:
+def test_ai_brief_preferred_models_follow_model_center_shard_rotation(monkeypatch) -> None:
     shard_models = ["model-a", "model-b", "model-c"]
-    fake_config = SimpleNamespace(ai=SimpleNamespace(knowledge_model_shards=shard_models))
-    monkeypatch.setattr("src.knowledge.llm_brief_generator.get_config", lambda: fake_config)
+    routes = [
+        {
+            "model_name": model_name,
+            "has_api_key": True,
+            "available_for_routing": True,
+            "last_check_status": "available",
+        }
+        for model_name in shard_models
+    ]
+    async def fake_runtime_routes() -> list[dict[str, object]]:
+        return routes
 
-    preferred_models, shard_index, shard_key = AIDiseaseBriefGenerator._preferred_models_for(
-        disease_id="D001",
-        language="zh",
+    monkeypatch.setattr(
+        "src.knowledge.llm_brief_generator.get_runtime_routes",
+        fake_runtime_routes,
+    )
+
+    preferred_models, shard_index, shard_key = asyncio.run(
+        AIDiseaseBriefGenerator._preferred_models_for(
+            disease_id="D001",
+            language="zh",
+        )
     )
     expected_key = "D001:zh"
     expected_index = int(hashlib.md5(expected_key.encode("utf-8")).hexdigest()[:8], 16) % len(shard_models)
