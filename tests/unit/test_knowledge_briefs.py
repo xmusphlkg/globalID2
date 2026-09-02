@@ -726,6 +726,89 @@ def test_ai_generator_repairs_invalid_section_citations_once() -> None:
     assert result["payload"]["prevention"].endswith("[1].")
 
 
+def test_ai_generator_repairs_supported_missing_target_section_once() -> None:
+    class QualityRepairingAgent:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.prompts = []
+            self.latest = {}
+
+        def clear_conversation_history(self) -> None:
+            self.latest = {}
+
+        async def complete(self, **kwargs) -> str:
+            self.calls += 1
+            self.prompts.append(kwargs["prompt"])
+            self.latest = {
+                "model": "test-model",
+                "provider": "test-provider",
+                "tokens": {"total": 10},
+                "duration": 0.01,
+                "metadata": {"cache_hit": False},
+            }
+            prevention = (
+                None
+                if self.calls == 1
+                else "Vaccination and hygiene are supported prevention measures [1]."
+            )
+            return json.dumps(
+                {
+                    "brief": "A substantive evidence-grounded overview of this infection [1].",
+                    "definition": None,
+                    "clinical_features": None,
+                    "epidemiology": None,
+                    "transmission": None,
+                    "prevention": prevention,
+                    "surveillance_note": None,
+                    "risk_groups": None,
+                }
+            )
+
+        def get_latest_conversation(self) -> dict:
+            return self.latest
+
+    disease = attach_profile_schema(
+        {
+            "disease_id": "ANY",
+            "name_en": "Example infection",
+            "target_sections": ["brief", "prevention"],
+            "evidence_target_sections": ["brief", "prevention"],
+            "_evidence_packet_prepared": True,
+        }
+    )
+    source = {
+        "id": 10,
+        "source_type": "who",
+        "source_name": "WHO",
+        "url": "https://example.org/source",
+        "status": "active",
+        "review_status": "approved",
+        "content_text": (
+            "Prevention and control include vaccination and hygiene measures. "
+            "This infection is addressed through public-health prevention programmes."
+        ),
+        "metadata": {"relevance_score": 1.0},
+    }
+    agent = QualityRepairingAgent()
+
+    result = asyncio.run(
+        AIDiseaseBriefGenerator(agent=agent).generate_with_trace(
+            disease=disease,
+            sources=[source],
+            language="en",
+        )
+    )
+
+    assert agent.calls == 2
+    assert '"quality_failures"' in agent.prompts[1]
+    assert result["payload"]["metadata"]["quality_repair"] == {
+        "attempted": True,
+        "failures": [{"field": "prevention", "status": "missing", "reason": "empty"}],
+        "error": None,
+    }
+    assert result["payload"]["prevention"].endswith("[1].")
+
+
 def test_ai_generator_evicts_completions_when_citation_repair_is_rejected() -> None:
     class RejectedRepairAgent:
         def __init__(self) -> None:

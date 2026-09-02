@@ -2,6 +2,27 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing bilingual notes are also available in the website Changelog.
 
+## [0.9.3] - 2026-09-02
+
+### Added
+
+- Added a bounded quality-repair prompt for evidence-backed disease-knowledge fields. When a generated target field fails deterministic quality checks but the evidence manifest explicitly supports it, the model receives the failed fields, evidence fragments, and prior JSON for one constrained repair pass.
+
+### Changed
+
+- New automatic disease-knowledge repairs now use a source-first workflow by default: refresh and assess targeted evidence before scheduling a model-center generation follow-up.
+- Quality repair preserves all previously valid target fields, allowing the model to modify only the rejected evidence-backed fields.
+
+### Fixed
+
+- Prevented repeated model calls for fields without supporting evidence; unsupported fields remain in review instead of being regenerated from incomplete context.
+- Preserved safe worker handoff during restart: the worker stops claiming new tasks, drains active work, releases its lease, and the replacement worker resumes queued recoverable work.
+
+### Operations
+
+- Restarted the production task worker after the workflow update and verified model-center, Redis, task leases, source-refresh follow-ups, and automatic recoverable-task requeueing.
+- Added focused coverage for the supported-field quality-repair path and verified knowledge and AI-governance test suites.
+
 ## [0.9.2] - 2026-09-01
 
 ### Added

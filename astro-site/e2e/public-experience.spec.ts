@@ -247,7 +247,7 @@ test('long technical sections use progressive disclosure', async ({ page }, test
   await expect(page.locator('.disease-profile-details')).not.toHaveAttribute('open', '');
   await expect(page.locator('.source-register')).not.toHaveAttribute('open', '');
   await page.goto('/changelog/');
-  await expect(page.locator('.changelog-release-body[open]')).toHaveCount(4);
+  await expect(page.locator('.changelog-release-body[open]')).toHaveCount(5);
   const lastRelease = page.locator('.changelog-release').last();
   const lastId = await lastRelease.getAttribute('id');
   await page.goto(`/changelog/#${lastId}`);

@@ -22,6 +22,59 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.9.3',
+    date: '2026-09-02',
+    titleEn: 'Evidence-backed knowledge repair and source-first automation',
+    titleZh: '证据驱动的知识库修复与来源优先自动化',
+    summaryEn:
+      'GIDS now repairs only evidence-backed knowledge gaps, refreshes targeted sources before new model work, and preserves valid content through a controlled model-center recovery loop.',
+    summaryZh:
+      'GIDS 现在只修复具备明确证据支持的知识库缺口，在新的模型任务前先刷新定向来源，并通过受控的模型中心恢复闭环保护已有有效内容。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added a bounded quality-repair prompt that returns failed fields, source-grounded evidence fragments, and the prior JSON to the model for one constrained repair pass.',
+            zh: '新增受限质量修复提示词，将失败字段、来源支撑的证据片段和上一轮 JSON 一并返回模型，进行一次受控修复。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'New knowledge repairs now refresh and assess targeted sources before scheduling model-center generation, reducing calls that cannot meet publication gates.',
+            zh: '新的知识库修复现在会先刷新并评估定向来源，再调度模型中心生成，减少无法通过发布门槛的调用。',
+          },
+          {
+            en: 'Quality repair locks previously valid fields so the model can change only the rejected evidence-backed sections.',
+            zh: '质量修复会锁定此前有效的字段，使模型只能修改被拒绝且有证据支持的章节。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Unsupported fields now remain in review instead of triggering repeated model calls from incomplete evidence.',
+            zh: '缺乏支撑证据的字段现在会保持待审，不再基于不完整证据反复调用模型。',
+          },
+          {
+            en: 'Worker restart now uses a clean drain-and-lease handoff before the replacement worker resumes recoverable queued work.',
+            zh: 'worker 重启现在采用清晰的排空与租约交接流程，替换进程再继续处理可恢复队列任务。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.9.2',
     date: '2026-09-01',
     titleEn: 'AI content governance and knowledge repair automation',

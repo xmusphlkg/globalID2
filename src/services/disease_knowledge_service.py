@@ -1076,6 +1076,7 @@ class DiseaseKnowledgeUpdateService:
         generator_mode: str = "ai",
         priority: str | TaskPriority | None = None,
         limit: int | None = None,
+        source_first: bool = True,
         requested_by: str = "knowledge-auto-repair",
         initiated_via: str = "knowledge-auto-repair",
     ) -> dict[str, Any]:
@@ -1116,11 +1117,22 @@ class DiseaseKnowledgeUpdateService:
                 f"Automatic knowledge repair for {disease_id}: "
                 f"{', '.join(repair_sections)}"
             )
+            task_type = (
+                TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES
+                if source_first
+                else TaskType.UPDATE_DISEASE_KNOWLEDGE
+            )
+            queued_task_name = f"Refresh sources before {task_name}" if source_first else task_name
             task = await task_manager.create_task(
-                task_type=TaskType.UPDATE_DISEASE_KNOWLEDGE,
-                task_name=task_name,
+                task_type=task_type,
+                task_name=queued_task_name,
                 priority=task_priority,
-                description=description,
+                description=(
+                    f"Source-first stage for {disease_id}; model repair will be queued after "
+                    "evidence quality is confirmed."
+                    if source_first
+                    else description
+                ),
                 input_data={
                     "disease_id": disease_id,
                     "disease_ids": [disease_id],
@@ -1135,17 +1147,31 @@ class DiseaseKnowledgeUpdateService:
                     "knowledge_display_mode": item.get("knowledge_display_mode"),
                     "initiated_via": initiated_via,
                     "requested_by": requested_by,
+                    "source_only": source_first,
+                    "enqueue_ai_after_source_refresh": source_first,
                 },
-                tags=["knowledge", "auto_repair"],
+                tags=(
+                    ["knowledge", "auto_repair", "source_refresh", "source_first"]
+                    if source_first
+                    else ["knowledge", "auto_repair"]
+                ),
             )
             await task_manager.add_workbook_entry(
                 task.task_uuid,
                 entry_type="info",
-                title="Automatic Knowledge Repair Queued",
-                content=(
-                    f"Queued model-center repair for {disease_id}. "
-                    f"Target sections: {', '.join(repair_sections)}."
+                title=(
+                    "Knowledge Source Refresh Queued"
+                    if source_first
+                    else "Automatic Knowledge Repair Queued"
                 ),
+                content=(
+                    (
+                        f"Queued source-first refresh for {disease_id}; a model-center repair "
+                        "will follow only when the requested evidence is available. "
+                    )
+                    if source_first
+                    else f"Queued model-center repair for {disease_id}. "
+                ) + f"Target sections: {', '.join(repair_sections)}.",
                 content_type="text",
                 metadata={
                     "disease_id": disease_id,
@@ -1154,7 +1180,11 @@ class DiseaseKnowledgeUpdateService:
                     "source_groups": source_groups,
                     "generator": _normalize_generator_mode(generator_mode),
                     "force": force,
-                    "workflow_stage": "knowledge_repair_queued",
+                    "workflow_stage": (
+                        "knowledge_source_first_queued"
+                        if source_first
+                        else "knowledge_repair_queued"
+                    ),
                 },
             )
             task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task

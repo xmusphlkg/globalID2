@@ -406,6 +406,96 @@ class AIDiseaseBriefGenerator:
                 fields=target_sections,
             )
 
+        quality_repair_attempted = False
+        quality_repair_prompt: str | None = None
+        quality_repair_error: str | None = None
+        quality_repair_failures = self._repairable_quality_failures(
+            assessment,
+            target_sections=target_sections,
+            evidence_manifest=evidence_manifest,
+        )
+        if quality_repair_failures and not final_citation_failures and output_repair_budget > 0:
+            output_repair_budget -= 1
+            quality_repair_attempted = True
+            quality_repair_prompt = self._quality_repair_prompt(
+                prompt_payload=prompt_payload,
+                previous_response=response or "",
+                failures=quality_repair_failures,
+            )
+            repair_preferred_models = (
+                [trace_values["model"]]
+                if trace_values.get("model")
+                else preferred_models
+            )
+            try:
+                quality_repair_response = await self._complete_with_policy(
+                    agent,
+                    prompt=quality_repair_prompt,
+                    system=system,
+                    preferred_models=repair_preferred_models,
+                )
+                quality_repair_conversation = agent.get_latest_conversation() or {}
+                repaired = self._parse_json(quality_repair_response)
+                previous_merged = merged
+                merged, assessment, trace_values = assemble_payload(
+                    repaired,
+                    quality_repair_conversation,
+                )
+                repaired_fields = {
+                    str(item["field"])
+                    for item in quality_repair_failures
+                    if item.get("field")
+                }
+                # The repair call is allowed to change only rejected target
+                # fields. Keep already valid prose stable even if the model
+                # returns a sparse or over-broad replacement payload.
+                for field in (
+                    "brief",
+                    "definition",
+                    "clinical_features",
+                    "epidemiology",
+                    "transmission",
+                    "prevention",
+                    "surveillance_note",
+                    "risk_groups",
+                ):
+                    if field in target_sections and field not in repaired_fields:
+                        merged[field] = previous_merged.get(field)
+                merged["clinical_summary"] = merged.get("clinical_features")
+                merged, assessment = apply_knowledge_quality_gate(merged)
+                response = quality_repair_response
+                final_citation_failures = validate_knowledge_citations(
+                    merged,
+                    fields=target_sections,
+                )
+                citation_fallback_fields = self._citation_failure_fields(
+                    final_citation_failures,
+                    target_sections=target_sections,
+                )
+                if citation_fallback_fields:
+                    for field in citation_fallback_fields:
+                        merged[field] = None
+                        if field == "clinical_features":
+                            merged["clinical_summary"] = None
+                    merged = normalize_knowledge_citations(
+                        merged,
+                        marker_mode="position",
+                        prune_uncited_sources=True,
+                    )
+                    merged, assessment = apply_knowledge_quality_gate(merged)
+                    final_citation_failures = validate_knowledge_citations(
+                        merged,
+                        fields=target_sections,
+                    )
+            except Exception as exc:
+                quality_repair_error = str(exc)
+                logger.warning(
+                    "AI quality repair failed for {}/{}: {}",
+                    disease.get("disease_id"),
+                    language,
+                    exc,
+                )
+
         interaction_metrics = self._interaction_metrics(agent)
         if final_citation_failures or not assessment.publishable:
             await self._invalidate_failed_completions(
@@ -417,6 +507,7 @@ class AIDiseaseBriefGenerator:
                         "Repair structure only. Preserve facts and citations. Return JSON only.",
                     ),
                     (repair_prompt, system),
+                    (quality_repair_prompt, system),
                 ],
             )
         merged["metadata"] = {
@@ -433,6 +524,7 @@ class AIDiseaseBriefGenerator:
                 "format_repair_attempted": format_repair_attempted,
                 "format_repair_prompt_characters": len(format_repair_prompt or ""),
                 "citation_repair_prompt_characters": len(repair_prompt or ""),
+                "quality_repair_prompt_characters": len(quality_repair_prompt or ""),
                 "retry_policy": self._retry_policy_metadata(),
             },
             "citation_repair": {
@@ -442,6 +534,11 @@ class AIDiseaseBriefGenerator:
                 "fallback_fields": citation_fallback_fields,
                 "final_failures": final_citation_failures,
                 "error": repair_error,
+            },
+            "quality_repair": {
+                "attempted": quality_repair_attempted,
+                "failures": quality_repair_failures,
+                "error": quality_repair_error,
             },
         }
         if assessment.publishable:
@@ -1147,6 +1244,57 @@ class AIDiseaseBriefGenerator:
             "Repair the previous JSON using this validation payload. Rewrite an invalid field only "
             "from fragments that explicitly support it, otherwise set it to null. Do not attach a new "
             "citation to an unchanged unsupported claim. Return all eight keys as JSON only.\n"
+            f"{json.dumps(repair_payload, ensure_ascii=False, separators=(',', ':'))}"
+        )
+
+    @staticmethod
+    def _repairable_quality_failures(
+        assessment: Any,
+        *,
+        target_sections: list[str],
+        evidence_manifest: EvidenceManifest,
+    ) -> list[dict[str, str]]:
+        """Return target-field quality gaps that the supplied evidence can repair."""
+        supported = {
+            field
+            for fragment in evidence_manifest.fragments
+            for field in fragment.supported_sections
+        }
+        failures: list[dict[str, str]] = []
+        for field in target_sections:
+            field_assessment = assessment.fields.get(field)
+            if field_assessment is None or field_assessment.available:
+                continue
+            if field not in supported:
+                continue
+            failures.append(
+                {
+                    "field": field,
+                    "status": field_assessment.status,
+                    "reason": field_assessment.reason or "quality_gate_rejected",
+                }
+            )
+        return failures
+
+    @staticmethod
+    def _quality_repair_prompt(
+        *,
+        prompt_payload: dict[str, Any],
+        previous_response: str,
+        failures: list[dict[str, str]],
+    ) -> str:
+        repair_payload = {
+            "output_language": prompt_payload.get("output_language"),
+            "target_sections": prompt_payload.get("target_sections"),
+            "quality_failures": failures,
+            "evidence_manifest": prompt_payload.get("evidence_manifest"),
+            "previous_json": previous_response,
+        }
+        return (
+            "Repair only the fields named in quality_failures. Each named field has explicit "
+            "support in evidence_manifest and must become substantive cited prose in the output "
+            "language. Preserve every valid field, use only supporting fragments, and set a field "
+            "to null if it cannot be supported exactly. Return all eight keys as JSON only.\n"
             f"{json.dumps(repair_payload, ensure_ascii=False, separators=(',', ':'))}"
         )
 
