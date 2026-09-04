@@ -2780,6 +2780,45 @@
         "title": "CandidateReviewRequest",
         "type": "object"
       },
+      "CapacitySummaryOut": {
+        "properties": {
+          "total_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Bytes"
+          },
+          "used_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Bytes"
+          },
+          "used_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Percent"
+          }
+        },
+        "title": "CapacitySummaryOut",
+        "type": "object"
+      },
       "CloudflareSettingsOut": {
         "properties": {
           "cloudflare_account_id_present": {
@@ -3091,6 +3130,9 @@
             "title": "Schedules",
             "type": "object"
           },
+          "system_resources": {
+            "$ref": "#/components/schemas/SystemResourcesOut"
+          },
           "tasks": {
             "additionalProperties": {
               "type": "integer"
@@ -3104,6 +3146,7 @@
           "tasks",
           "schedules",
           "runtime",
+          "system_resources",
           "action_items",
           "recent_tasks",
           "pipeline"
@@ -3346,6 +3389,39 @@
           "note"
         ],
         "title": "Coverage",
+        "type": "object"
+      },
+      "CpuSummaryOut": {
+        "properties": {
+          "cores": {
+            "default": 0,
+            "title": "Cores",
+            "type": "integer"
+          },
+          "load_1m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Load 1M"
+          },
+          "usage_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage Percent"
+          }
+        },
+        "title": "CpuSummaryOut",
         "type": "object"
       },
       "CurrencySlice": {
@@ -8425,6 +8501,27 @@
         "title": "MonthlyComparisonPoint",
         "type": "object"
       },
+      "NetworkConnectionsOut": {
+        "properties": {
+          "established": {
+            "default": 0,
+            "title": "Established",
+            "type": "integer"
+          },
+          "listening": {
+            "default": 0,
+            "title": "Listening",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "NetworkConnectionsOut",
+        "type": "object"
+      },
       "NotificationCreateRequest": {
         "properties": {
           "batch_size": {
@@ -9212,6 +9309,68 @@
           }
         },
         "title": "ProviderUpdateRequest",
+        "type": "object"
+      },
+      "ProxyLocationOut": {
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "country_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Name"
+          },
+          "endpoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          },
+          "lookup_status": {
+            "title": "Lookup Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "configured",
+          "lookup_status"
+        ],
+        "title": "ProxyLocationOut",
         "type": "object"
       },
       "PublicHealthRisk": {
@@ -12191,6 +12350,34 @@
           "task_type"
         ],
         "title": "StageInfo",
+        "type": "object"
+      },
+      "SystemResourcesOut": {
+        "properties": {
+          "cpu": {
+            "$ref": "#/components/schemas/CpuSummaryOut"
+          },
+          "disk": {
+            "$ref": "#/components/schemas/CapacitySummaryOut"
+          },
+          "memory": {
+            "$ref": "#/components/schemas/CapacitySummaryOut"
+          },
+          "network": {
+            "$ref": "#/components/schemas/NetworkConnectionsOut"
+          },
+          "proxy": {
+            "$ref": "#/components/schemas/ProxyLocationOut"
+          }
+        },
+        "required": [
+          "cpu",
+          "memory",
+          "disk",
+          "network",
+          "proxy"
+        ],
+        "title": "SystemResourcesOut",
         "type": "object"
       },
       "TaskCreateRequest": {

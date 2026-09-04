@@ -3663,6 +3663,15 @@ export interface components {
             /** Reviewer */
             reviewer: string;
         };
+        /** CapacitySummaryOut */
+        CapacitySummaryOut: {
+            /** Total Bytes */
+            total_bytes?: number | null;
+            /** Used Bytes */
+            used_bytes?: number | null;
+            /** Used Percent */
+            used_percent?: number | null;
+        };
         /** CloudflareSettingsOut */
         CloudflareSettingsOut: {
             /** Cloudflare Account Id Present */
@@ -3777,6 +3786,7 @@ export interface components {
             schedules: {
                 [key: string]: number;
             };
+            system_resources: components["schemas"]["SystemResourcesOut"];
             /** Tasks */
             tasks: {
                 [key: string]: number;
@@ -3874,6 +3884,18 @@ export interface components {
             rejection_reasons?: {
                 [key: string]: number;
             };
+        };
+        /** CpuSummaryOut */
+        CpuSummaryOut: {
+            /**
+             * Cores
+             * @default 0
+             */
+            cores: number;
+            /** Load 1M */
+            load_1m?: number | null;
+            /** Usage Percent */
+            usage_percent?: number | null;
         };
         /** CurrencySlice */
         CurrencySlice: {
@@ -5611,6 +5633,24 @@ export interface components {
             /** Year */
             year: number;
         };
+        /** NetworkConnectionsOut */
+        NetworkConnectionsOut: {
+            /**
+             * Established
+             * @default 0
+             */
+            established: number;
+            /**
+             * Listening
+             * @default 0
+             */
+            listening: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
         /** NotificationCreateRequest */
         NotificationCreateRequest: {
             /**
@@ -5931,6 +5971,21 @@ export interface components {
             organization?: string | null;
             /** Priority */
             priority?: number | null;
+        };
+        /** ProxyLocationOut */
+        ProxyLocationOut: {
+            /** Configured */
+            configured: boolean;
+            /** Country Code */
+            country_code?: string | null;
+            /** Country Name */
+            country_name?: string | null;
+            /** Endpoint */
+            endpoint?: string | null;
+            /** Ip */
+            ip?: string | null;
+            /** Lookup Status */
+            lookup_status: string;
         };
         /** PublicHealthRisk */
         PublicHealthRisk: {
@@ -7044,6 +7099,14 @@ export interface components {
             task_type: string;
             /** Task Uuid */
             task_uuid?: string | null;
+        };
+        /** SystemResourcesOut */
+        SystemResourcesOut: {
+            cpu: components["schemas"]["CpuSummaryOut"];
+            disk: components["schemas"]["CapacitySummaryOut"];
+            memory: components["schemas"]["CapacitySummaryOut"];
+            network: components["schemas"]["NetworkConnectionsOut"];
+            proxy: components["schemas"]["ProxyLocationOut"];
         };
         /** TaskCreateRequest */
         TaskCreateRequest: {
