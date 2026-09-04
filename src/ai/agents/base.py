@@ -322,9 +322,9 @@ class BaseAgent(ABC):
             return order_runtime_by_admission(candidates)
 
         preferred_order = {
-            model_name.strip(): index
-            for index, model_name in enumerate(preferred_models)
-            if isinstance(model_name, str) and model_name.strip()
+            value.strip(): index
+            for index, value in enumerate(preferred_models)
+            if isinstance(value, str) and value.strip()
         }
         if not preferred_order:
             return candidates
@@ -334,14 +334,18 @@ class BaseAgent(ABC):
             deferred: list[Dict[str, Any]] = []
             for candidate in group:
                 model_name = str(candidate.get("model_name") or "").strip()
-                if model_name in preferred_order:
+                route_key = str(candidate.get("route_key") or "").strip()
+                if model_name in preferred_order or route_key in preferred_order:
                     prioritized.append(candidate)
                 else:
                     deferred.append(candidate)
             prioritized.sort(
                 key=lambda candidate: preferred_order.get(
-                    str(candidate.get("model_name") or "").strip(),
-                    10**6,
+                    str(candidate.get("route_key") or "").strip(),
+                    preferred_order.get(
+                        str(candidate.get("model_name") or "").strip(),
+                        10**6,
+                    ),
                 )
             )
             return prioritized + deferred
@@ -355,6 +359,7 @@ class BaseAgent(ABC):
             candidate
             for candidate in runtime
             if str(candidate.get("model_name") or "").strip() in preferred_order
+            or str(candidate.get("route_key") or "").strip() in preferred_order
         ]
         deferred_runtime = [candidate for candidate in runtime if candidate not in preferred_runtime]
         # Preference selects a requested shard first; live admission pressure

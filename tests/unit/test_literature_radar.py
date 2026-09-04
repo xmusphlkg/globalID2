@@ -1255,6 +1255,77 @@ async def test_enrichment_generation_failures_record_attempts_and_stop_requeue(m
     assert await pipeline._should_skip(article, language="zh", force=False) is True
 
 
+@pytest.mark.asyncio
+async def test_transient_enrichment_failures_do_not_consume_quality_attempts(monkeypatch):
+    db = _SummaryFailureDB()
+    monkeypatch.setattr(enrichment_module, "get_db", lambda: _SummaryFailureContext(db))
+    article = SimpleNamespace(
+        article_id="lit-transient-model-failure",
+        title="Dengue vaccine evidence",
+        doi="10.1000/transient",
+        journal="Vaccine",
+        published_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+        abstract_text="A sufficiently long abstract about dengue vaccination and surveillance. " * 5,
+        integrity_status="current",
+    )
+    pipeline = LiteratureEnrichmentPipeline(SimpleNamespace(
+        autopilot_enabled=True,
+        ai_max_quality_attempts=2,
+        ai_min_abstract_characters=180,
+    ))
+
+    await pipeline._store_failure(
+        article,
+        language="en",
+        error=RuntimeError("Agent completion failed after trying models ['fast']: Connection error."),
+    )
+
+    assert db.summary.generation_metadata["publication_gate"] == "generation-transient-failure"
+    assert db.summary.generation_metadata["quality_attempts"] == 0
+    assert db.summary.generation_metadata["last_generation_error_transient"] is True
+    assert await pipeline._should_skip(article, language="en", force=False) is False
+
+
+@pytest.mark.asyncio
+async def test_literature_enrichment_prefers_healthy_route_shards(monkeypatch):
+    async def fake_active_routes():
+        return [
+            {
+                "model_key": "provider:flaky",
+                "runtime_failure_streak": 1,
+                "runtime_failure_count": 8,
+                "runtime_latency_ewma_ms": 300,
+                "priority": 1,
+            },
+            {
+                "model_key": "provider:fast",
+                "runtime_failure_streak": 0,
+                "runtime_failure_count": 0,
+                "runtime_latency_ewma_ms": 120,
+                "priority": 2,
+            },
+            {
+                "model_key": "provider:steady",
+                "runtime_failure_streak": 0,
+                "runtime_failure_count": 2,
+                "runtime_latency_ewma_ms": 90,
+                "priority": 1,
+            },
+        ]
+
+    monkeypatch.setattr(enrichment_module, "get_active_model_routes", fake_active_routes)
+    pipeline = LiteratureEnrichmentPipeline(SimpleNamespace())
+
+    preferences = await pipeline._load_route_shard_preferences()
+
+    assert preferences == ["provider:fast", "provider:steady", "provider:flaky"]
+    assert pipeline._rotated_route_preferences(preferences, 1) == [
+        "provider:steady",
+        "provider:flaky",
+        "provider:fast",
+    ]
+
+
 def _autopilot_config():
     return SimpleNamespace(
         autopilot_auto_reject_weak_links=True,

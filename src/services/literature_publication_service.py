@@ -8,6 +8,8 @@ and deploying the complete site.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+import fcntl
 import json
 from pathlib import Path
 from typing import Any
@@ -25,6 +27,18 @@ from src.services.situation_v3.persistence import latest_report_v3
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLIC_DATA_ROOT = ROOT / "astro-site" / "src" / "data"
+PUBLIC_EXPORT_LOCK_PATH = ROOT / "data" / "cache" / "research-public-artifacts.lock"
+
+
+@contextmanager
+def _public_export_lock():
+    PUBLIC_EXPORT_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with PUBLIC_EXPORT_LOCK_PATH.open("a+", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
 def _catalogue(output: Path) -> tuple[dict[str, dict[str, Any]], dict[str, set[str]]]:
@@ -62,7 +76,8 @@ async def export_public_research_artifacts(
         diseases_by_id=diseases_by_id,
     )
     assert_public_research_payload(payload)
-    write_literature_artifacts(payload, output)
+    with _public_export_lock():
+        write_literature_artifacts(payload, output)
     return {
         "articles": len(payload.get("articles") or []),
         "diseases": len(payload.get("disease_articles") or {}),

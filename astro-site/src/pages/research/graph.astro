@@ -9,24 +9,14 @@ const prefix = zh ? '/zh' : '';
 const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 
 const graph: any = (researchData as any).knowledge_graph ?? { nodes: [], edges: [], stats: {}, quality: {} };
-// Export only fields the public graph UI consumes. The source graph also
-// carries indexing metadata that belongs in the catalogue, not in every graph
-// page response.
 const nodes: any[] = (graph.nodes ?? []).map((node: any) => ({
   id: node.id,
   type: node.type,
   label: node.label,
   ...(node.url ? { url: node.url } : {}),
 }));
-const edges: any[] = (graph.edges ?? []).map((edge: any) => ({
-  source: edge.source,
-  relation: edge.relation,
-  target: edge.target,
-  ...(edge.confidence == null ? {} : { confidence: edge.confidence }),
-  ...(edge.provenance ? { provenance: edge.provenance } : {}),
-}));
+const edgeCount = Array.isArray(graph.edges) ? graph.edges.length : 0;
 const nodeTypes = [...new Set(nodes.map((node: any) => String(node.type || 'unknown')))].sort();
-const graphPayload = JSON.stringify({ nodes, edges }).replaceAll('<', '\\u003c');
 const relationLabels: Record<string, { en: string; zh: string }> = {
   ABOUT_DISEASE: { en: 'About disease', zh: '涉及疾病' },
   STUDIED_IN: { en: 'Studied in', zh: '研究地区' },
@@ -63,13 +53,13 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
       <p>{pick('Browse deterministic classifier links and quality-gated summary relationships. The graph does not infer causality or scientific credibility.', '浏览确定性分类关系与通过质量门控的摘要关系。本图谱不推断因果关系或科学可信度。')}</p>
       <dl>
         <div><dt>{pick('Nodes', '节点')}</dt><dd>{graph.stats?.nodes ?? nodes.length}</dd></div>
-        <div><dt>{pick('Relationships', '关系')}</dt><dd>{graph.stats?.edges ?? edges.length}</dd></div>
+        <div><dt>{pick('Relationships', '关系')}</dt><dd>{graph.stats?.edges ?? edgeCount}</dd></div>
         <div><dt>{pick('Articles', '论文')}</dt><dd>{graph.stats?.articles ?? 0}</dd></div>
         <div><dt>{pick('Filtered low-confidence links', '已过滤低置信度关系')}</dt><dd>{graph.quality?.skipped_low_confidence_edges ?? 0}</dd></div>
       </dl>
     </header>
 
-    <section class="card graph-workspace" data-evidence-graph data-graph-locale={locale} data-graph-prefix={prefix}>
+    <section class="card graph-workspace" data-evidence-graph data-graph-locale={locale} data-graph-prefix={prefix} data-graph-src="/site-data/research-graph.json">
       <div class="graph-controls">
         <label>
           <span>{pick('Search nodes', '搜索节点')}</span>
@@ -94,7 +84,7 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
         <section aria-labelledby="graph-relation-heading" class="graph-detail">
           <div class="graph-section-heading"><h2 id="graph-relation-heading">{pick('Selected relationships', '所选关系')}</h2></div>
           <div data-graph-detail>
-            <p>{pick('Choose an entity to inspect every public relationship attached to it.', '选择一个实体，查看与其关联的全部公开关系。')}</p>
+            <p>{pick('Loading evidence graph relationships.', '正在加载证据图谱关系。')}</p>
           </div>
         </section>
       </div>
@@ -106,14 +96,12 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
     </section>
   </div>
 
-  <script is:inline type="application/json" id="research-graph-data" set:html={graphPayload}></script>
   <script is:inline define:vars={{ relationLabels }}>
     (() => {
       const root = document.querySelector('[data-evidence-graph]');
-      const payloadElement = document.getElementById('research-graph-data');
-      if (!root || !payloadElement) return;
-      const graph = JSON.parse(payloadElement.textContent || '{"nodes":[],"edges":[]}');
-      const nodes = new Map((graph.nodes || []).map((node) => [node.id, node]));
+      if (!root) return;
+      let graph = { nodes: [], edges: [] };
+      let nodes = new Map();
       const search = root.querySelector('[data-graph-search]');
       const type = root.querySelector('[data-graph-type]');
       const count = root.querySelector('[data-graph-count]');
@@ -125,6 +113,12 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
 
       const lang = () => root.dataset.graphLocale === 'zh' ? 'zh' : 'en';
       const routePrefix = root.dataset.graphPrefix || '';
+      const setStatus = (en, zh) => {
+        if (!detail) return;
+        const message = document.createElement('p');
+        message.textContent = lang() === 'zh' ? zh : en;
+        detail.replaceChildren(message);
+      };
       const refresh = () => {
         const query = String(search?.value || '').trim().toLowerCase();
         const selectedType = String(type?.value || '');
@@ -183,7 +177,19 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
       search?.addEventListener('input', () => { visibleLimit = 80; refresh(); });
       type?.addEventListener('change', () => { visibleLimit = 80; refresh(); });
       more?.addEventListener('click', () => { visibleLimit += 80; refresh(); });
-      refresh();
+      const loadGraph = async () => {
+        try {
+          const response = await fetch(root.dataset.graphSrc || '/site-data/research-graph.json', { headers: { Accept: 'application/json' } });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          graph = await response.json();
+          nodes = new Map((graph.nodes || []).map((node) => [node.id, node]));
+          refresh();
+          setStatus('Choose an entity to inspect every public relationship attached to it.', '选择一个实体，查看与其关联的全部公开关系。');
+        } catch (error) {
+          setStatus('The evidence graph could not be loaded. Please try again later.', '证据图谱暂时无法加载，请稍后重试。');
+        }
+      };
+      loadGraph();
     })();
   </script>
 </ReportLayout>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import subprocess
 
@@ -8,6 +9,21 @@ import pytest
 
 from scripts import publish_raw_git_archive as archive
 from scripts.verify_raw_git_archive import verify_raw_archive
+
+
+def test_configure_github_ssh_transport_uses_port_443(monkeypatch) -> None:
+    monkeypatch.setenv("GIT_SSH_COMMAND", "ssh -o BatchMode=yes -i /tmp/release-key")
+
+    configured = archive.configure_github_ssh_transport(
+        "git@github.com:xmusphlkg/globalID-data-archive.git"
+    )
+
+    command = os.environ["GIT_SSH_COMMAND"]
+    assert configured is True
+    assert "-o BatchMode=yes" in command
+    assert "-i /tmp/release-key" in command
+    assert "Hostname=ssh.github.com" in command
+    assert "-p 443" in command
 
 
 def _git_log(repository: Path) -> list[str]:

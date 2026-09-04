@@ -44,6 +44,7 @@ COMMIT_BATCH_BYTES = 96 * 1024 * 1024
 DEFAULT_GIT_TIMEOUT_SECONDS = 30 * 60
 PUSH_ATTEMPTS = 4
 PUSH_RETRY_DELAY_SECONDS = 2.0
+GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
 
 # These messages describe transport failures for which retrying the exact same
 # fast-forward push is safe. Authentication, authorization and non-fast-forward
@@ -52,6 +53,7 @@ TRANSIENT_PUSH_ERROR_MARKERS = (
     "gnutls",
     "tls connection",
     "connection reset",
+    "connection closed",
     "connection timed out",
     "could not resolve host",
     "failed to connect",
@@ -154,6 +156,26 @@ def _git_environment() -> dict[str, str]:
     env["GIT_TERMINAL_PROMPT"] = "0"
     env["GIT_CONFIG_NOSYSTEM"] = "1"
     return env
+
+
+def _is_github_ssh_repo(repo_url: str) -> bool:
+    normalized = (repo_url or "").strip().casefold()
+    return any(normalized.startswith(prefix) for prefix in GITHUB_SSH_PREFIXES)
+
+
+def configure_github_ssh_transport(repo_url: str) -> bool:
+    """Route GitHub SSH traffic over port 443 for restricted release networks."""
+
+    if not _is_github_ssh_repo(repo_url):
+        return False
+    current = str(os.environ.get("GIT_SSH_COMMAND") or "ssh").strip()
+    if "Hostname=ssh.github.com" not in current:
+        current += " -o Hostname=ssh.github.com"
+    if " -p 443" not in current and "Port=443" not in current:
+        current += " -p 443"
+    os.environ["GIT_SSH_COMMAND"] = current
+    os.environ["GIT_TERMINAL_PROMPT"] = "0"
+    return True
 
 
 def run_git(
@@ -801,8 +823,10 @@ def publish_raw_archive(
         try:
             fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
-            raise RawArchiveError(f"Another raw archive publisher holds {lock_path}") from exc
+                raise RawArchiveError(f"Another raw archive publisher holds {lock_path}") from exc
 
+        if push:
+            configure_github_ssh_transport(repo_url)
         _ensure_repository(
             repository_root,
             repo_url=repo_url.strip(),

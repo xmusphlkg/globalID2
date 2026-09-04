@@ -29,7 +29,7 @@ def test_literature_capacity_defaults_match_observed_arrival_rate():
     assert config.catch_up_max_exception_backlog == 500
     assert config.ai_enrichment_interval_minutes == 15
     assert config.ai_enrichment_catch_up_interval_minutes == 1
-    assert config.ai_model_request_timeout_seconds == 60
+    assert config.ai_model_request_timeout_seconds == 35
 
 
 def test_catch_up_limit_must_leave_room_for_one_bounded_batch():

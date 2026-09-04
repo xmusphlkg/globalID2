@@ -1,14 +1,35 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { writeBuildRedirects } from './build-redirects.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..', '..');
 const settingsPath = resolve(projectRoot, 'data', 'system-settings.json');
 const researchIndexPath = resolve(import.meta.dirname, '..', 'src', 'data', 'research', 'index.json');
+const researchPublicArtifactLockPath = resolve(projectRoot, 'data', 'cache', 'research-public-artifacts.lock');
 const defaultMeasurementId = 'G-8P39XV52NC';
 const measurementPattern = /^G-[A-Z0-9]{6,20}$/i;
+
+if (process.env.GIDS_RESEARCH_BUILD_LOCKED !== '1') {
+  mkdirSync(resolve(projectRoot, 'data', 'cache'), { recursive: true });
+  const locked = spawnSync('flock', [
+    '-x',
+    researchPublicArtifactLockPath,
+    process.execPath,
+    fileURLToPath(import.meta.url),
+  ], {
+    cwd: resolve(import.meta.dirname, '..'),
+    env: { ...process.env, GIDS_RESEARCH_BUILD_LOCKED: '1' },
+    stdio: 'inherit',
+  });
+  if (locked.error) {
+    process.stderr.write(`${locked.error.message}\n`);
+    process.exit(1);
+  }
+  process.exit(locked.status ?? 1);
+}
 
 function configuredMeasurementId() {
   if (process.env.PUBLIC_GA4_MEASUREMENT_ID !== undefined) {
