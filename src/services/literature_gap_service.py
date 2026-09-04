@@ -31,8 +31,13 @@ from src.domain import (
 )
 from src.generation.site_data_literature import build_surveillance_evidence
 from src.literature.classification import apply_surveillance_relation, classify_candidate
-from src.literature.clients import CrossrefClient, EuropePmcClient
-from src.literature.normalization import apply_europe_pmc, normalize_crossref, normalize_europe_pmc
+from src.literature.clients import CrossrefClient, EuropePmcClient, PubMedClient
+from src.literature.normalization import (
+    apply_europe_pmc,
+    normalize_crossref,
+    normalize_europe_pmc,
+    normalize_pubmed,
+)
 from src.literature.pipeline import _global_country_catalogue
 from src.literature.repository import LiteratureRepository
 from src.services.situation_v3.persistence import latest_report_v3
@@ -489,7 +494,15 @@ class LiteratureGapService:
             timeout_seconds=cfg.request_timeout_seconds,
             retries=cfg.max_retries,
         )
-        exact_crossref, exact_epmc = await asyncio.gather(
+        pubmed = PubMedClient(
+            contact_email=cfg.contact_email,
+            api_key=getattr(cfg, "pubmed_api_key", ""),
+            tool=getattr(cfg, "pubmed_tool", "GIDSResearchRadar"),
+            timeout_seconds=cfg.request_timeout_seconds,
+            retries=cfg.max_retries,
+            min_interval_seconds=getattr(cfg, "pubmed_min_interval_seconds", 0.34),
+        )
+        exact_crossref, exact_epmc, exact_pubmed = await asyncio.gather(
             crossref.search_works(
                 query=str(plan.get("crossref", {}).get("exact") or gap.disease_name),
                 since=since,
@@ -502,13 +515,20 @@ class LiteratureGapService:
                 until=now,
                 max_records=record_limit,
             ) if cfg.europe_pmc_enabled else asyncio.sleep(0, result=[]),
+            pubmed.search_recent(
+                query=str(plan.get("pubmed", {}).get("exact") or plan.get("europe_pmc", {}).get("exact") or _quoted(gap.disease_name)),
+                since=since,
+                until=now,
+                max_records=record_limit,
+            ) if getattr(cfg, "pubmed_enabled", False) else asyncio.sleep(0, result=[]),
         )
-        raw_count = len(exact_crossref) + len(exact_epmc)
+        raw_count = len(exact_crossref) + len(exact_epmc) + len(exact_pubmed)
         context_crossref: list[dict[str, Any]] = []
         context_epmc: list[dict[str, Any]] = []
+        context_pubmed: list[dict[str, Any]] = []
         if raw_count < 3:
             fallback_limit = max(5, record_limit // 3)
-            context_crossref, context_epmc = await asyncio.gather(
+            context_crossref, context_epmc, context_pubmed = await asyncio.gather(
                 crossref.search_works(
                     query=str(plan.get("crossref", {}).get("disease_context") or gap.disease_name),
                     since=since,
@@ -521,8 +541,14 @@ class LiteratureGapService:
                     until=now,
                     max_records=fallback_limit,
                 ) if cfg.europe_pmc_enabled else asyncio.sleep(0, result=[]),
+                pubmed.search_recent(
+                    query=str(plan.get("pubmed", {}).get("disease_context") or plan.get("europe_pmc", {}).get("disease_context") or _quoted(gap.disease_name)),
+                    since=since,
+                    until=now,
+                    max_records=fallback_limit,
+                ) if getattr(cfg, "pubmed_enabled", False) else asyncio.sleep(0, result=[]),
             )
-            raw_count += len(context_crossref) + len(context_epmc)
+            raw_count += len(context_crossref) + len(context_epmc) + len(context_pubmed)
 
         candidates: dict[str, Any] = {}
         for raw in [*exact_crossref, *context_crossref]:
@@ -538,6 +564,11 @@ class LiteratureGapService:
                 apply_europe_pmc(candidates[key], raw)
             else:
                 candidates[key] = candidate
+        for raw in [*exact_pubmed, *context_pubmed]:
+            candidate = normalize_pubmed(raw)
+            if not candidate:
+                continue
+            candidates.setdefault(candidate.doi or candidate.pmid or candidate.article_id, candidate)
 
         target_countries = set(gap.country_codes or [])
         inserted = updated = exact = context = weak = candidate_links = 0

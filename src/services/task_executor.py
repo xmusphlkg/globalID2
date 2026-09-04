@@ -172,6 +172,26 @@ async def recover_interrupted_tasks_on_startup(
             metadata["task_recovery_history"] = history[-10:]
             task.metadata_ = metadata
 
+            cancellation_requested = bool(metadata.get("cancel_requested"))
+            if cancellation_requested:
+                cancellation_reason = str(
+                    metadata.get("cancel_reason") or "Cancellation requested before worker recovery."
+                )
+                task.status = TaskStatus.CANCELLED
+                task.completed_at = now
+                if task.started_at:
+                    started_at = task.started_at
+                    if started_at.tzinfo is None:
+                        started_at = started_at.replace(tzinfo=timezone.utc)
+                    task.actual_duration = int((now - started_at).total_seconds())
+                task.last_error = cancellation_reason
+                lease["terminal_status"] = TaskStatus.CANCELLED.value
+                task.metadata_ = metadata
+                recovered.append(
+                    (task.task_uuid, task.progress or 0, TaskStatus.CANCELLED, cancellation_reason)
+                )
+                continue
+
             if task.task_type == TaskType.SYNC_LITERATURE:
                 await _fail_interrupted_literature_ingest_runs(
                     db,
@@ -403,7 +423,16 @@ async def execute_task(task_uuid: str) -> Dict[str, Any]:
             )
 
     if task.status == TaskStatus.CANCELLED or await task_manager.is_cancel_requested(task_uuid):
-        await task_manager.clear_task_cancel_request(task_uuid)
+        # A worker may claim a task immediately before a user or automated
+        # catalogue rule requests cancellation.  Cancellation is terminal
+        # until an explicit Operations retry clears the marker and requeues it.
+        if task.status == TaskStatus.RUNNING:
+            await task_manager.update_task_status(
+                task_uuid,
+                TaskStatus.CANCELLED,
+                error_message="Cancellation requested before task execution began.",
+            )
+        return {"task_uuid": task_uuid, "cancelled": True}
 
     _running.add(task_uuid)
     try:

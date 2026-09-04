@@ -205,6 +205,65 @@ class AISettings(_BaseEnvSettings):
         default=False,
         description="来源指纹变化时是否默认重写已有完整知识画像；关闭时只修复缺失或不合格字段",
     )
+    knowledge_source_discovery_max_rounds: int = Field(
+        default=4,
+        ge=1,
+        le=12,
+        validation_alias="AI__KNOWLEDGE_SOURCE_DISCOVERY_MAX_ROUNDS",
+        description="知识画像缺少章节证据时允许的定向来源发现轮次",
+    )
+    knowledge_automation_enabled: bool = Field(
+        default=True,
+        validation_alias="AI__KNOWLEDGE_AUTOMATION_ENABLED",
+        description="由控制面持续补齐疾病知识 source-first 修复队列",
+    )
+    knowledge_automation_interval_seconds: int = Field(
+        default=60,
+        ge=15,
+        le=3600,
+        validation_alias="AI__KNOWLEDGE_AUTOMATION_INTERVAL_SECONDS",
+        description="知识库自动修复队列补位的轮询间隔秒数",
+    )
+    knowledge_automation_backlog_target: int = Field(
+        default=12,
+        ge=1,
+        le=128,
+        validation_alias="AI__KNOWLEDGE_AUTOMATION_BACKLOG_TARGET",
+        description="知识库 source-first 活跃任务的受控目标数量",
+    )
+    knowledge_automation_model_backlog_target: int = Field(
+        default=12,
+        ge=1,
+        le=128,
+        validation_alias="AI__KNOWLEDGE_AUTOMATION_MODEL_BACKLOG_TARGET",
+        description="旧证据策略重验证允许占用的模型生成 backlog；真实章节缺口不受此限制",
+    )
+    knowledge_automation_batch_size: int = Field(
+        default=6,
+        ge=1,
+        le=64,
+        validation_alias="AI__KNOWLEDGE_AUTOMATION_BATCH_SIZE",
+        description="单次知识库自动补位最多创建的任务数",
+    )
+    knowledge_automation_revalidate_stale: bool = Field(
+        default=True,
+        validation_alias="AI__KNOWLEDGE_AUTOMATION_REVALIDATE_STALE",
+        description="真实章节缺口清空后，自动复核旧证据策略的已发布画像",
+    )
+    knowledge_automation_evidence_retry_seconds: int = Field(
+        default=21600,
+        ge=300,
+        le=604800,
+        validation_alias="AI__KNOWLEDGE_AUTOMATION_EVIDENCE_RETRY_SECONDS",
+        description="来源发现轮次耗尽后再次自动发现前的退避秒数",
+    )
+    knowledge_automation_source_retry_seconds: int = Field(
+        default=300,
+        ge=30,
+        le=21600,
+        validation_alias="AI__KNOWLEDGE_AUTOMATION_SOURCE_RETRY_SECONDS",
+        description="来源适配器超时或失败后的首次自动重试退避秒数；后续重试指数退避但不会进入人工队列",
+    )
     agent_role_models_raw: str = Field(
         default="",
         description="多专家角色模型偏好，格式 role=model1|model2,role2=model3；为空时回退到 model_chain",
@@ -251,20 +310,14 @@ class AISettings(_BaseEnvSettings):
     @property
     def model_chain(self) -> list[str]:
         """
-        返回去重后的模型优先级列表。
-        
-        优先使用 model_chain_raw；如果未配置，则退回 [default_model, fallback_model]。
+        Return an explicit environment bootstrap chain only.
+
+        Runtime routing belongs to the model center. Leaving this setting empty
+        must not turn legacy default/fallback values into a second routing
+        authority.
         """
         raw = self.model_chain_raw.strip()
-        candidates: list[str] = []
-        if raw:
-            parts = [m.strip() for m in raw.split(",") if m.strip()]
-            candidates.extend(parts)
-        else:
-            if self.default_model:
-                candidates.append(self.default_model)
-            if self.fallback_model and self.fallback_model != self.default_model:
-                candidates.append(self.fallback_model)
+        candidates = [m.strip() for m in raw.split(",") if m.strip()] if raw else []
 
         seen: set[str] = set()
         ordered: list[str] = []
@@ -513,6 +566,19 @@ class LiteratureSettings(_BaseEnvSettings):
     controlled_discovery_max_terms_per_query: int = Field(default=8, ge=1, le=20)
     max_europe_pmc_records: int = Field(default=200, ge=0, le=2000)
     europe_pmc_enabled: bool = Field(default=True)
+    pubmed_enabled: bool = Field(
+        default=True,
+        description="Use PubMed E-utilities as bounded fallback and secondary biomedical discovery",
+    )
+    pubmed_api_key: str = Field(default="", description="Optional NCBI API key for higher PubMed E-utilities limits")
+    pubmed_tool: str = Field(default="GIDSResearchRadar", max_length=80)
+    max_pubmed_records: int = Field(default=200, ge=0, le=2000)
+    pubmed_min_interval_seconds: float = Field(
+        default=0.34,
+        ge=0.0,
+        le=10.0,
+        description="Minimum interval between PubMed E-utilities requests; 0.34 stays under the no-key NCBI limit",
+    )
     official_guidance_enabled: bool = Field(
         default=True,
         description="Discover licensed public-health guidance metadata from WHO IRIS OAI-PMH",
@@ -719,7 +785,47 @@ class TaskWorkerSettings(_BaseEnvSettings):
         validation_alias="TASK_WORKER_AI_CONCURRENCY",
         ge=1,
         le=64,
-        description="需要调用 AI/模型中心的任务最大并发数",
+        description="需要调用 AI/模型中心的任务并发硬上限",
+    )
+    ai_dynamic_concurrency_enabled: bool = Field(
+        default=True,
+        validation_alias="TASK_WORKER_AI_DYNAMIC_CONCURRENCY_ENABLED",
+        description="根据模型中心路由健康度自适应调节 AI 任务并发",
+    )
+    ai_concurrency_min: int = Field(
+        default=1,
+        validation_alias="TASK_WORKER_AI_CONCURRENCY_MIN",
+        ge=1,
+        le=64,
+        description="自适应 AI 并发的保底值",
+    )
+    ai_concurrency_per_route: int = Field(
+        default=2,
+        validation_alias="TASK_WORKER_AI_CONCURRENCY_PER_ROUTE",
+        ge=1,
+        le=16,
+        description="每条健康模型路由在稳定后可承载的最大任务槽位数",
+    )
+    ai_concurrency_scale_up_successes: int = Field(
+        default=2,
+        validation_alias="TASK_WORKER_AI_CONCURRENCY_SCALE_UP_SUCCESSES",
+        ge=1,
+        le=100,
+        description="连续成功多少个 AI 任务后增加一个并发槽位",
+    )
+    ai_concurrency_adjust_seconds: int = Field(
+        default=20,
+        validation_alias="TASK_WORKER_AI_CONCURRENCY_ADJUST_SECONDS",
+        ge=1,
+        le=3600,
+        description="重新读取模型路由和扩容的最小间隔（秒）",
+    )
+    knowledge_source_concurrency: int = Field(
+        default=3,
+        validation_alias="TASK_WORKER_KNOWLEDGE_SOURCE_CONCURRENCY",
+        ge=1,
+        le=64,
+        description="知识库外部来源发现任务的最大并发，避免上游站点超时放大",
     )
     poll_interval_seconds: float = Field(
         default=2.0,
@@ -739,6 +845,13 @@ class TaskWorkerSettings(_BaseEnvSettings):
         ge=5,
         le=300,
         description="正在执行的任务租约心跳间隔（秒）",
+    )
+    shutdown_grace_seconds: int = Field(
+        default=30,
+        validation_alias="TASK_WORKER_SHUTDOWN_GRACE_SECONDS",
+        ge=5,
+        le=600,
+        description="收到停机信号后等待可续跑任务自然收束的最长时间（秒）",
     )
     stale_task_seconds: int = Field(
         default=180,

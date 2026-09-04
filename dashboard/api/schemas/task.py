@@ -80,6 +80,9 @@ class WorkerStatusOut(BaseModel):
     worker_process_running: bool
     worker_pid: Optional[int] = None
     worker_concurrency: int = 1
+    ai_concurrency_current: int = 1
+    ai_concurrency_max: int = 1
+    ai_concurrency_adaptive: bool = False
     queued_tasks: int = 0
     running_tasks: int = 0
     retrying_tasks: int = 0

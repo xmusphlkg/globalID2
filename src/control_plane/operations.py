@@ -200,12 +200,16 @@ class TaskQueryRepository:
         # heartbeat until its TTL elapses. Prefer the newest observation so the
         # operator never sees a dead PID when a replacement is already live.
         workers.sort(key=lambda item: str(item.get("last_seen_at") or ""), reverse=True)
+        worker_metadata = workers[0].get("metadata") if workers and isinstance(workers[0].get("metadata"), dict) else {}
         running = int(row.running_tasks or 0)
         retrying = int(row.retrying_tasks or 0)
         return {
             "worker_process_running": bool(workers),
             "worker_pid": workers[0].get("pid") if workers else None,
             "worker_concurrency": concurrency,
+            "ai_concurrency_current": int(worker_metadata.get("ai_concurrency_current") or 1),
+            "ai_concurrency_max": int(worker_metadata.get("ai_concurrency_max") or 1),
+            "ai_concurrency_adaptive": bool(worker_metadata.get("ai_concurrency_adaptive")),
             "queued_tasks": int(row.queued_tasks or 0),
             "running_tasks": running,
             "retrying_tasks": retrying,

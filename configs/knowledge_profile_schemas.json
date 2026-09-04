@@ -3,8 +3,8 @@
   "default_profile_type": "infectious_disease",
   "schemas": {
     "infectious_disease": {
-      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"],
-      "optional_fields": [],
+      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention"],
+      "optional_fields": ["surveillance_note", "risk_groups"],
       "not_applicable_fields": [],
       "labels": {
         "definition": {"en": "Definition", "zh": "定义"},
@@ -17,8 +17,8 @@
       }
     },
     "classification_scope": {
-      "required_fields": ["definition", "clinical_features", "epidemiology", "surveillance_note"],
-      "optional_fields": ["transmission"],
+      "required_fields": ["definition"],
+      "optional_fields": ["clinical_features", "epidemiology", "transmission", "surveillance_note"],
       "not_applicable_fields": ["prevention", "risk_groups"],
       "labels": {
         "definition": {"en": "Classification definition", "zh": "分类定义"},
@@ -31,8 +31,8 @@
       }
     },
     "surveillance_event": {
-      "required_fields": ["definition", "surveillance_note"],
-      "optional_fields": ["clinical_features", "epidemiology", "transmission", "risk_groups"],
+      "required_fields": ["definition"],
+      "optional_fields": ["clinical_features", "epidemiology", "transmission", "surveillance_note", "risk_groups"],
       "not_applicable_fields": ["prevention"],
       "labels": {
         "definition": {"en": "Surveillance entity definition", "zh": "监测实体定义"},
@@ -45,8 +45,8 @@
       }
     },
     "occupational_condition": {
-      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"],
-      "optional_fields": [],
+      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention"],
+      "optional_fields": ["surveillance_note", "risk_groups"],
       "not_applicable_fields": [],
       "labels": {
         "definition": {"en": "Condition definition", "zh": "职业健康定义"},
@@ -59,8 +59,8 @@
       }
     },
     "injury_poisoning_event": {
-      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"],
-      "optional_fields": [],
+      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention"],
+      "optional_fields": ["surveillance_note", "risk_groups"],
       "not_applicable_fields": [],
       "labels": {
         "definition": {"en": "Event definition", "zh": "事件定义"},
@@ -73,8 +73,8 @@
       }
     },
     "violence_event": {
-      "required_fields": ["definition", "clinical_features", "epidemiology", "prevention", "surveillance_note", "risk_groups"],
-      "optional_fields": [],
+      "required_fields": ["definition", "clinical_features", "epidemiology", "prevention"],
+      "optional_fields": ["surveillance_note", "risk_groups"],
       "not_applicable_fields": ["transmission"],
       "labels": {
         "definition": {"en": "Event definition", "zh": "事件定义"},
@@ -87,8 +87,8 @@
       }
     },
     "clinical_syndrome_outcome": {
-      "required_fields": ["definition", "clinical_features", "epidemiology", "surveillance_note", "risk_groups"],
-      "optional_fields": ["transmission", "prevention"],
+      "required_fields": ["definition", "clinical_features", "epidemiology"],
+      "optional_fields": ["transmission", "prevention", "surveillance_note", "risk_groups"],
       "not_applicable_fields": [],
       "labels": {
         "definition": {"en": "Syndrome or outcome definition", "zh": "综合征或结局定义"},
@@ -101,8 +101,8 @@
       }
     },
     "public_health_intervention": {
-      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"],
-      "optional_fields": [],
+      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention"],
+      "optional_fields": ["surveillance_note", "risk_groups"],
       "not_applicable_fields": [],
       "labels": {
         "definition": {"en": "Intervention definition", "zh": "干预定义"},
@@ -115,8 +115,8 @@
       }
     },
     "outbreak_event": {
-      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"],
-      "optional_fields": [],
+      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention"],
+      "optional_fields": ["surveillance_note", "risk_groups"],
       "not_applicable_fields": [],
       "labels": {
         "definition": {"en": "Event definition", "zh": "事件定义"},
@@ -134,6 +134,11 @@
       "profile_type": "surveillance_event",
       "fields": ["name_en", "standard_name_en", "name_zh", "standard_name_zh", "description"],
       "patterns": ["\\bsurveillance (?:event|reports?|category)\\b", "\\bexposure notification\\b", "\\bevent-based .{0,30}surveillance\\b", "\\bsource-(?:defined|reported).{0,80}surveillance\\b", "监测事件", "暴露通知", "监测报告", "监测类别"]
+    },
+    {
+      "profile_type": "surveillance_event",
+      "fields": ["description"],
+      "patterns": ["\\bSINAN\\b.{0,120}\\b(?:surveillance|occupational health)\\s+concept\\b"]
     },
     {
       "profile_type": "surveillance_event",

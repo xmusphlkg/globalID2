@@ -704,6 +704,11 @@
     background-color: rgb(var(--color-brand) / 0.14);
   }
 
+  .chart-toggle-small {
+    letter-spacing: 0.02em;
+    @apply px-2 py-1 text-[10px];
+  }
+
   .chart-selection-mode {
     @apply inline-flex items-center;
   }
@@ -729,6 +734,28 @@
   .chart-date-range {
     color: rgb(var(--text-muted));
     @apply text-[11px] tabular-nums;
+  }
+
+  .chart-date-shortcuts,
+  .chart-selector-sort,
+  .chart-comparison-frequency {
+    @apply inline-flex items-center;
+  }
+
+  .chart-date-shortcuts .chart-toggle + .chart-toggle,
+  .chart-selector-sort .chart-toggle + .chart-toggle,
+  .chart-comparison-frequency .chart-toggle + .chart-toggle {
+    border-left: none;
+  }
+
+  .chart-control-label {
+    color: rgb(var(--text-muted));
+    @apply mr-1 text-[10px] font-semibold;
+  }
+
+  .chart-toggle:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
   }
 
   .chart-status-line {
@@ -776,6 +803,13 @@
   .chart-source-controls {
     border-top: 1px solid rgb(var(--border) / 0.5);
     @apply pt-3;
+  }
+
+  .chart-source-controls-required {
+    width: 100%;
+    border: 1px solid color-mix(in srgb, #d97706 52%, rgb(var(--border)));
+    background: color-mix(in srgb, #f59e0b 7%, rgb(var(--surface)));
+    @apply px-3 pb-3;
   }
 
   .chart-source-controls-title {

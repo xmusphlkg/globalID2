@@ -127,6 +127,21 @@ class _BoundedEuropePmc:
         ]
 
 
+class _BoundedPubMed:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.calls = []
+        self.fail = fail
+
+    async def search_recent(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.fail:
+            raise RuntimeError("temporary PubMed failure")
+        return [
+            {"uid": f"pubmed-{len(self.calls)}-{index}", "title": "PubMed result"}
+            for index in range(kwargs["max_records"] + 2)
+        ]
+
+
 async def test_controlled_discovery_enforces_network_and_record_caps_with_provenance():
     batches = build_controlled_query_batches(DISEASES, TAXONOMY)
     crossref = _BoundedCrossref()
@@ -154,6 +169,29 @@ async def test_controlled_discovery_enforces_network_and_record_caps_with_proven
         record["_research_radar_discovery"]["query_id"]
         for record in [*result.crossref_records, *result.europe_pmc_records]
     )
+
+
+async def test_controlled_discovery_can_query_pubmed_with_its_own_mesh_syntax():
+    batches = build_controlled_query_batches(DISEASES, TAXONOMY)
+    pubmed = _BoundedPubMed()
+
+    result = await fetch_controlled_discovery(
+        crossref=_BoundedCrossref(),
+        europe_pmc=_BoundedEuropePmc(),
+        pubmed=pubmed,
+        batches=batches,
+        checkpoint=None,
+        since=NOW,
+        until=NOW,
+        max_queries=1,
+        records_per_query=3,
+        max_records=6,
+    )
+
+    assert result.checkpoint["network_calls"] == 3
+    assert result.checkpoint["pubmed_records"] == 2
+    assert result.pubmed_records[0]["_research_radar_discovery"]["provider"] == "pubmed"
+    assert "[MeSH Terms]" in pubmed.calls[0]["query"]
 
 
 async def test_controlled_discovery_provider_failures_are_checkpointed_for_retry():

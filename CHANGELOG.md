@@ -2,6 +2,37 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing bilingual notes are also available in the website Changelog.
 
+## [0.9.4] - 2026-09-04
+
+### Added
+
+- Added a bounded disease-knowledge autopilot that keeps a source-first repair backlog filled, prioritizes true content gaps before stale policy revalidation, persists schedule state, and avoids duplicate active repair work per disease.
+- Added targeted source-discovery recovery for missing disease-profile sections, including per-language repair scopes, source transport backoff, schema-signature invalidation, and automatic handoff from source refresh to model repair only after evidence is ready.
+- Added PubMed E-utilities as a bounded Research Radar source for controlled biomedical discovery and as a fallback when the core Crossref journal sync is temporarily unavailable.
+- Added Model Center runtime-health telemetry, provider/model catalogue discovery, structured test toggles, runtime-route capacity fields, and a richer dashboard workspace for provider, model, and route operations.
+- Added epidemic-curve comparison controls for native cadence, seasonal anomaly index, complete-calendar-year aggregation, quick date-window shortcuts, selected-only filtering, and sortable entity selection.
+
+### Changed
+
+- AI content governance now routes through the shared Model Center agent path, so governance reviews inherit the same admission gates, circuit breakers, route health, and failover behavior as other AI workflows.
+- Knowledge publication gates now treat missing required evidence as an automation state instead of a manual-review shortcut; public disease pages surface an `automating` state while source enrichment is still in progress.
+- Disease-knowledge scoring now weights required profile fields ahead of optional display fields, supports aggregate ontology profile detection, and preserves existing valid fields during narrowed repairs.
+- Task workers now use adaptive AI concurrency, separate knowledge-source concurrency, model-recovery wakeups for stranded repairs, per-disease serialization for knowledge tasks, graceful restart requeueing, and clearer runtime heartbeat metadata.
+- Research Radar discovery accounting now tracks Crossref, Europe PMC, PubMed, optional providers, fallback usage, and source errors separately without advancing Crossref checkpoints during PubMed fallback.
+
+### Fixed
+
+- Prevented non-public aggregate or summary catalogue rows from entering knowledge source/model repair loops, archiving any retained briefs that no longer belong on public disease pages.
+- Prevented stale source-gap, transport-error, or obsolete schema-policy metadata from revoking a previously valid disease profile without a fresh matching source certificate.
+- Hardened disease-knowledge source collection against adapter timeouts, cancellation, metadata-only source leakage, repeated surveillance-note overlays, and citation/quality repair retries that would otherwise persist unsupported content.
+- Improved epidemic-curve tooltips, source-series selection, mixed-cadence comparison behavior, and table rendering so selected source projections and annual aggregates stay aligned with the plotted data.
+- Avoided worker restart storms when another healthy worker owns the Redis singleton lease, while preserving bounded memory limits and stale-task recovery semantics.
+
+### Operations
+
+- Added configuration defaults and documentation for knowledge automation, adaptive AI worker concurrency, PubMed discovery, and Crossref/PubMed fallback policy.
+- Added focused coverage for knowledge automation, Model Center runtime health, PubMed clients and normalization, literature provider failure isolation, adaptive task-worker config, evidence-gated repairs, and epidemic-curve annual aggregation.
+
 ## [0.9.3] - 2026-09-02
 
 ### Added

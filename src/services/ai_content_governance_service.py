@@ -9,20 +9,19 @@ from __future__ import annotations
 
 import json
 import re
-import asyncio
+import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Iterable, Mapping
 
-from anthropic import AsyncAnthropic
-from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.ai.model_center import get_active_model_routes
+from src.ai.agents import WorkflowAgent
 from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
 from src.domain import (
+    DiseaseKnowledgeBrief,
     DiseaseKnowledgeSource,
     DiseaseLearningSuggestion,
     LiteratureArticle,
@@ -51,6 +50,41 @@ _RECOVERABLE_KNOWLEDGE_MARKERS = (
     "profile was not generated",
     "generation did not pass the publication gate",
 )
+_KNOWLEDGE_REPAIR_FIELDS = (
+    "brief",
+    "definition",
+    "clinical_features",
+    "epidemiology",
+    "transmission",
+    "prevention",
+    "surveillance_note",
+    "risk_groups",
+)
+_TRANSIENT_MODEL_MARKERS = (
+    "connection error",
+    "timeout",
+    "temporarily unavailable",
+    "no candidate model available",
+    "agent completion failed",
+    "all models failed",
+    "rate limit",
+    "quota",
+    "profile was not generated",
+    # A truncated or malformed structured response is a transport/output
+    # failure. Retrying only its current model scope is safer than treating
+    # fallback scaffolding as a real content omission.
+    "generator error",
+    "unterminated string",
+    "jsondecodeerror",
+    "invalid json",
+    "json decode",
+)
+_EVIDENCE_BLOCK_MARKERS = (
+    "missing traceable sources",
+    "citation validation failed",
+    "source enrichment exhausted",
+    "insufficient evidence",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +94,17 @@ class ModelDecision:
     confidence: float
     reasons: tuple[str, ...]
     payload: Mapping[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
+class KnowledgeRepairPlan:
+    """A bounded next action derived from a publication-gate failure."""
+
+    category: str
+    sections_by_language: Mapping[str, tuple[str, ...]]
+    languages: tuple[str, ...]
+    fingerprint: str
+    reason: str
 
 
 def _now() -> datetime:
@@ -83,21 +128,6 @@ def _json_payload(text: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("AI governance response must be a JSON object")
     return payload
-
-
-def _response_text(response: Any) -> str:
-    choices = getattr(response, "choices", None)
-    if choices:
-        message = getattr(choices[0], "message", None)
-        content = getattr(message, "content", None)
-        if isinstance(content, str):
-            return content
-        if isinstance(content, list):
-            return "\n".join(str(item.get("text") or "") for item in content if isinstance(item, dict))
-    output_text = getattr(response, "output_text", None)
-    if isinstance(output_text, str):
-        return output_text
-    return str(response)
 
 
 def _coerce_confidence(value: Any) -> float:
@@ -135,11 +165,16 @@ def _decisions(payload: Mapping[str, Any], allowed: set[str]) -> list[ModelDecis
     return result
 
 
-def _route_label(route: Mapping[str, Any]) -> dict[str, Any]:
+def _conversation_route(conversation: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Normalize BaseAgent telemetry to the historic governance route shape."""
+
+    conversation = conversation or {}
+    provider = str(conversation.get("provider") or "").strip() or None
+    model = str(conversation.get("model") or "").strip() or None
     return {
-        "provider": route.get("provider_key"),
-        "model": route.get("model_name"),
-        "model_key": route.get("model_key"),
+        "provider_key": provider,
+        "model_name": model,
+        "model_key": f"{provider}:{model}" if provider and model else model,
     }
 
 
@@ -148,86 +183,245 @@ async def _call_json_model(
     system: str,
     user_payload: Mapping[str, Any],
     max_tokens: int = 3000,
-    route_limit: int = 3,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    routes = (await get_active_model_routes())[:route_limit]
-    if not routes:
-        raise RuntimeError("No active AI model route is available")
+    """Call governance models through the Model Center's shared agent path.
 
+    This deliberately contains no provider clients or environment-key routing.
+    ``BaseAgent.complete`` acquires Model Center admission, records live route
+    health and dynamically fails over, so governance observes the same route
+    state, quotas and circuit breakers as every other AI workflow.
+    """
     user = json.dumps(user_payload, ensure_ascii=False, default=str)
-    errors: list[str] = []
-    for route in routes:
-        try:
-            style = str(route.get("api_style") or "openai_compatible").lower()
-            model_name = str(route.get("model_name") or "")
-            if style == "anthropic":
-                client = AsyncAnthropic(api_key=route.get("api_key"))
-                response = await asyncio.wait_for(
-                    client.messages.create(
-                        model=model_name,
-                        system=system,
-                        messages=[{"role": "user", "content": user}],
-                        temperature=0,
-                        max_tokens=max_tokens,
-                    ),
-                    timeout=90,
-                )
-                text = "\n".join(
-                    str(block.text)
-                    for block in response.content
-                    if getattr(block, "type", None) == "text" and getattr(block, "text", None)
-                )
-            else:
-                client = AsyncOpenAI(
-                    api_key=route.get("api_key"),
-                    base_url=str(route.get("base_url") or "").rstrip("/") or None,
-                    default_headers=route.get("extra_headers") or None,
-                )
-                response = await asyncio.wait_for(
-                    client.chat.completions.create(
-                        model=model_name,
-                        messages=[
-                            {"role": "system", "content": system},
-                            {"role": "user", "content": user},
-                        ],
-                        temperature=0,
-                        max_tokens=max(800, min(max_tokens, int(route.get("max_tokens") or max_tokens))),
-                    ),
-                    timeout=90,
-                )
-                text = _response_text(response)
-            return _json_payload(text), _route_label(route)
-        except Exception as exc:
-            errors.append(f"{route.get('model_key') or route.get('model_name')}: {type(exc).__name__}: {str(exc)[:300]}")
-            logger.warning("AI governance route failed model={} error={}", route.get("model_key"), exc)
-    raise RuntimeError("All active AI model routes failed for content governance: " + " | ".join(errors))
+    agent = WorkflowAgent(
+        name="AIContentGovernance",
+        system_prompt=system,
+        temperature=0.0,
+        max_tokens=max_tokens,
+    )
+    try:
+        text = await agent.complete(
+            prompt=user,
+            system=system,
+            use_cache=False,
+            model_request_timeout_seconds=90,
+            max_attempts_per_model=1,
+            # A governance batch should yield to the worker rather than occupy
+            # a slot through a long quota wait. The scheduler will retry it
+            # after Model Center records the cooling route.
+            wait_for_model_recovery=False,
+        )
+        return _json_payload(text), _conversation_route(agent.get_latest_conversation())
+    except Exception as exc:
+        route = _conversation_route(agent.get_latest_conversation())
+        logger.warning(
+            "AI governance Model Center invocation failed provider={} model={} error={}",
+            route.get("provider_key"),
+            route.get("model_name"),
+            exc,
+        )
+        raise RuntimeError(
+            "Model Center could not complete AI content governance: "
+            f"{type(exc).__name__}: {str(exc)[:500]}"
+        ) from exc
+
+
+def _ordered_sections(values: Iterable[str]) -> tuple[str, ...]:
+    selected = {str(value).strip() for value in values if str(value).strip()}
+    return tuple(field for field in _KNOWLEDGE_REPAIR_FIELDS if field in selected)
+
+
+def _language_sections_from_failure(error: str) -> dict[str, tuple[str, ...]]:
+    """Parse deterministic publication-gate sections without trusting prose."""
+    selected: dict[str, set[str]] = {"en": set(), "zh": set()}
+    for match in re.finditer(
+        # The publication gate emits ``missing repaired target sections`` for
+        # a narrow repair and ``missing required sections`` for a full
+        # profile.  Both are the same deterministic contract: the named
+        # localized fields need another grounded model pass.  Keep them in one
+        # parser so a wording change can never silently turn a content repair
+        # into an unnecessary source refresh.
+        r"\b(?P<language>en|zh):[^|]*?(?:missing repaired target sections|missing required sections|required sections incomplete)\s*\((?P<sections>[^)]*)\)",
+        error,
+        flags=re.IGNORECASE,
+    ):
+        language = match.group("language").lower()
+        values = re.split(r"\s*,\s*", match.group("sections"))
+        selected[language].update(value.strip() for value in values)
+    for match in re.finditer(
+        r"\b(?P<language>en|zh):[^|]*?substantive brief is required",
+        error,
+        flags=re.IGNORECASE,
+    ):
+        selected[match.group("language").lower()].add("brief")
+    return {
+        language: _ordered_sections(fields)
+        for language, fields in selected.items()
+        if _ordered_sections(fields)
+    }
+
+
+def _model_failure_languages(error: str) -> tuple[str, ...]:
+    languages: list[str] = []
+    for match in re.finditer(
+        r"\b(?P<language>en|zh):[^|]*?(?:generator error|agent completion failed|timeout|connection error|no candidate model|profile was not generated)",
+        error,
+        flags=re.IGNORECASE,
+    ):
+        language = match.group("language").lower()
+        if language not in languages:
+            languages.append(language)
+    return tuple(languages)
+
+
+def _publication_status_languages(error: str) -> tuple[str, ...]:
+    """Extract locales whose payload was rejected without field diagnostics."""
+    languages: list[str] = []
+    for match in re.finditer(
+        r"\b(?P<language>en|zh):[^|]*?status is not published",
+        error,
+        flags=re.IGNORECASE,
+    ):
+        language = match.group("language").lower()
+        if language not in languages:
+            languages.append(language)
+    return tuple(languages)
+
+
+def plan_failed_knowledge_repair(error: str | None) -> KnowledgeRepairPlan:
+    """Classify a failed repair into one minimal, deterministic next action.
+
+    The error strings are emitted by the publication gate, not by a model.  We
+    therefore only extract known schema field names and use a stable digest to
+    stop an identical content repair from looping indefinitely.
+    """
+    message = _text(error, limit=5000)
+    normalized = message.lower()
+    sections = _language_sections_from_failure(message)
+    model_languages = _model_failure_languages(message)
+    publication_status_languages = _publication_status_languages(message)
+    has_model_failure = any(marker in normalized for marker in _TRANSIENT_MODEL_MARKERS)
+    has_evidence_block = any(marker in normalized for marker in _EVIDENCE_BLOCK_MARKERS)
+
+    if has_model_failure:
+        category = "model_transient"
+        languages = model_languages
+        reason = "A runtime model route failed before a valid localized repair was produced."
+        # Missing fields from an empty fallback scaffold are not a content plan.
+        sections = {}
+    elif sections:
+        category = "content_gap"
+        languages = tuple(language for language in ("en", "zh") if language in sections)
+        reason = "The publication gate identified explicit localized missing sections."
+    elif publication_status_languages:
+        category = "publication_status"
+        languages = publication_status_languages
+        reason = (
+            "A localized legacy draft was rejected without field-level diagnostics; "
+            "recompute its full profile scope from the current evidence packet."
+        )
+    elif has_evidence_block:
+        category = "evidence_block"
+        languages = ()
+        reason = "The evidence or citation gate blocked publication; regenerating prose would not fix it."
+    else:
+        category = "nonrecoverable"
+        languages = ()
+        reason = "The failure has no deterministic automated repair plan."
+
+    canonical = json.dumps(
+        {
+            "category": category,
+            # Content gaps are repaired from the already certified evidence
+            # packet. Source-first work is reserved for an evidence block.
+            # Version the strategy so an old terminal source-refresh loop can
+            # receive one materially different, bounded model repair.
+            "strategy": "targeted_model_v4" if category == "content_gap" else category,
+            "languages": list(languages),
+            "sections_by_language": {key: list(value) for key, value in sorted(sections.items())},
+        },
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return KnowledgeRepairPlan(
+        category=category,
+        sections_by_language=sections,
+        languages=languages,
+        fingerprint=hashlib.sha256(canonical.encode("ascii")).hexdigest()[:16],
+        reason=reason,
+    )
 
 
 def infer_failed_knowledge_repair_languages(error: str | None) -> list[str]:
-    """Infer whether a failed knowledge repair can be narrowed to one language."""
-    normalized = str(error or "").lower()
-    has_en = "en:" in normalized
-    has_zh = "zh:" in normalized
-    if has_zh and not has_en:
-        return ["zh"]
-    if has_en and not has_zh:
-        return ["en"]
-    return []
+    """Compatibility helper returning only a safely narrowed language scope."""
+    plan = plan_failed_knowledge_repair(error)
+    return list(plan.languages) if len(plan.languages) == 1 else []
 
 
-def is_recoverable_knowledge_failure(task: Task | Any, error: str | None = None) -> bool:
+def _same_recovery_plan_was_attempted(task: Task | Any, plan: KnowledgeRepairPlan) -> bool:
+    history = (getattr(task, "metadata_", None) or {}).get("ai_content_governance_retries")
+    if not isinstance(history, list):
+        return False
+    input_data = dict(getattr(task, "input_data", None) or {})
+    recovery_epoch = input_data.get("model_recovery_epoch")
+    return any(
+        isinstance(item, Mapping)
+        and item.get("category") == plan.category
+        and item.get("failure_fingerprint") == plan.fingerprint
+        and item.get("model_recovery_epoch") == recovery_epoch
+        for item in history
+    )
+
+
+def _all_current_briefs_are_published(statuses: Iterable[Any]) -> bool:
+    normalized = [str(status or "").strip().lower() for status in statuses]
+    return bool(normalized) and all(status == "published" for status in normalized)
+
+
+def is_recoverable_knowledge_failure(
+    task: Task | Any,
+    error: str | None = None,
+    *,
+    allow_running: bool = False,
+) -> bool:
     if getattr(task, "task_type", None) != TaskType.UPDATE_DISEASE_KNOWLEDGE:
         return False
-    if getattr(task, "status", None) != TaskStatus.FAILED:
-        return False
-    if int(getattr(task, "retry_count", 0) or 0) >= int(getattr(task, "max_retries", 0) or 0):
+    status = getattr(task, "status", None)
+    if status != TaskStatus.FAILED and not (
+        allow_running and status == TaskStatus.RUNNING
+    ):
         return False
     input_data = dict(getattr(task, "input_data", None) or {})
     tags = set(getattr(task, "tags", None) or [])
     if not input_data.get("targeted_repair") and "auto_repair" not in tags:
         return False
-    normalized = str(error if error is not None else getattr(task, "last_error", "") or "").lower()
-    return any(marker in normalized for marker in _RECOVERABLE_KNOWLEDGE_MARKERS)
+    plan = plan_failed_knowledge_repair(
+        error if error is not None else getattr(task, "last_error", "") or ""
+    )
+    if plan.category == "content_gap":
+        # One minimal repair can correct an omitted structured field. Repeating
+        # that exact plan has no new information and must remain terminal. It
+        # remains available once even after legacy broad retries are exhausted:
+        # the execution strategy and token budget are materially different.
+        return not _same_recovery_plan_was_attempted(task, plan)
+    if plan.category == "publication_status":
+        # A draft with complete-looking fields can still carry invalid legacy
+        # citations or an obsolete pipeline marker. Recompute it once using
+        # the current profile rather than retaining an opaque terminal state.
+        return not _same_recovery_plan_was_attempted(task, plan)
+    if plan.category == "model_transient":
+        # A model-center admission/circuit deployment materially changes the
+        # execution environment, so an inherited terminal retry budget must
+        # not strand recoverable work. Allow one durable recovery attempt,
+        # then leave the task terminal rather than loop on route instability.
+        return not _same_recovery_plan_was_attempted(task, plan)
+    if plan.category == "evidence_block":
+        # Evidence failures are repaired through the independent source-first
+        # workflow, never by asking a model to fabricate a fuller brief.
+        return not _same_recovery_plan_was_attempted(task, plan)
+    if int(getattr(task, "retry_count", 0) or 0) >= int(getattr(task, "max_retries", 0) or 0):
+        return False
+    return False
 
 
 def _append_note(existing: str | None, note: str) -> str:
@@ -242,24 +436,49 @@ class AIContentGovernanceService:
         self,
         task_uuid: str,
         error: BaseException | str,
+        *,
+        allow_running: bool = False,
     ) -> bool:
+        """Plan a bounded automatic knowledge repair without a false failure state.
+
+        ``allow_running`` is reserved for ``task_lifecycle`` while its worker
+        still owns the task lease. The plan atomically changes that task to
+        QUEUED; the worker then exits normally and the next claim performs the
+        source-first or targeted follow-up.
+        """
         async with get_database() as db:
             task = (
                 await db.execute(
                     select(Task).where(Task.task_uuid == task_uuid).with_for_update()
                 )
             ).scalar_one_or_none()
-            if task is None or not is_recoverable_knowledge_failure(task, str(error)):
+            if task is None or not is_recoverable_knowledge_failure(
+                task,
+                str(error),
+                allow_running=allow_running,
+            ):
                 return False
-            await self._requeue_knowledge_task(db, task, str(error))
+            plan = await self._requeue_knowledge_task(db, task, str(error))
             await db.commit()
         await task_manager.add_workbook_entry(
             task_uuid,
             entry_type="warning",
-            title="Knowledge Repair Automatically Requeued",
-            content="Recoverable model-center or single-language publication failure; task returned to the queue.",
+            title="Knowledge Repair Replanned and Requeued",
+            content=(
+                f"Automated strategy: {plan.category}. {plan.reason} "
+                f"Languages: {', '.join(plan.languages) or 'preserve current scope'}. "
+                f"Sections: {json.dumps({key: list(value) for key, value in plan.sections_by_language.items()}, ensure_ascii=False) or '{}'}"
+            ),
             content_type="text",
-            metadata={"prompt_version": PROMPT_VERSION, "actor": GOVERNANCE_ACTOR},
+            metadata={
+                "prompt_version": PROMPT_VERSION,
+                "actor": GOVERNANCE_ACTOR,
+                "category": plan.category,
+                "failure_fingerprint": plan.fingerprint,
+                "repair_sections_by_language": {
+                    key: list(value) for key, value in plan.sections_by_language.items()
+                },
+            },
         )
         return True
 
@@ -303,25 +522,246 @@ class AIContentGovernanceService:
             )
         return {"requeued_count": len(requeued), "requeued_task_uuids": requeued, "skipped": skipped}
 
-    async def _requeue_knowledge_task(self, db: AsyncSession, task: Task, error: str) -> None:
+    async def requeue_knowledge_repairs_after_model_recovery(
+        self,
+        db: AsyncSession,
+        *,
+        recovery_epoch: str,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Wake bounded terminal repairs after Model Center routes recover.
+
+        A task that exhausted its retry plan while every route was cooling down
+        must not require a person to press retry. The recovery epoch gives the
+        same repair plan one new attempt only after the execution environment
+        has materially changed. Evidence-exhausted source work is deliberately
+        excluded: a model recovery cannot create missing evidence.
+        """
+        tasks = (
+            await db.execute(
+                select(Task)
+                .where(
+                    Task.task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE,
+                    Task.status == TaskStatus.FAILED,
+                )
+                .order_by(Task.updated_at.asc(), Task.created_at.asc())
+                .limit(max(limit * 5, limit))
+                .with_for_update(skip_locked=True)
+            )
+        ).scalars().all()
+        active_tasks = (
+            await db.execute(
+                select(Task).where(
+                    Task.task_type.in_(
+                        (
+                            TaskType.UPDATE_DISEASE_KNOWLEDGE,
+                            TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
+                        )
+                    ),
+                    Task.status.in_(
+                        (
+                            TaskStatus.PENDING,
+                            TaskStatus.QUEUED,
+                            TaskStatus.RUNNING,
+                            TaskStatus.RETRYING,
+                        )
+                    ),
+                )
+            )
+        ).scalars().all()
+        active_disease_ids = {
+            str((task.input_data or {}).get("disease_id") or "").strip().upper()
+            for task in active_tasks
+            if str((task.input_data or {}).get("disease_id") or "").strip()
+        }
+        disease_ids = {
+            str((task.input_data or {}).get("disease_id") or "").strip().upper()
+            for task in tasks
+            if str((task.input_data or {}).get("disease_id") or "").strip()
+        }
+        brief_statuses_by_disease: dict[str, list[str]] = {}
+        if disease_ids:
+            brief_rows = (
+                await db.execute(
+                    select(DiseaseKnowledgeBrief).where(
+                        DiseaseKnowledgeBrief.disease_id.in_(disease_ids)
+                    )
+                )
+            ).scalars().all()
+            for brief in brief_rows:
+                brief_statuses_by_disease.setdefault(str(brief.disease_id).upper(), []).append(
+                    str(brief.status or "")
+                )
+        requeued: list[tuple[str, KnowledgeRepairPlan]] = []
+        skipped: list[dict[str, Any]] = []
+        resumable_categories = {"content_gap", "publication_status", "model_transient"}
+        resumed_disease_ids: set[str] = set()
+        for task in tasks:
+            if len(requeued) >= limit:
+                break
+            input_data = dict(task.input_data or {})
+            tags = {str(tag) for tag in (task.tags or [])}
+            if not input_data.get("targeted_repair") and "auto_repair" not in tags:
+                skipped.append({"task_uuid": task.task_uuid, "reason": "not_auto_repair"})
+                continue
+            disease_id = str(input_data.get("disease_id") or "").strip().upper()
+            if disease_id in active_disease_ids:
+                skipped.append({"task_uuid": task.task_uuid, "reason": "active_task_exists"})
+                continue
+            if _all_current_briefs_are_published(
+                brief_statuses_by_disease.get(disease_id, [])
+            ):
+                skipped.append({"task_uuid": task.task_uuid, "reason": "already_published"})
+                continue
+            plan = plan_failed_knowledge_repair(task.last_error or "")
+            if plan.category not in resumable_categories:
+                skipped.append({"task_uuid": task.task_uuid, "reason": plan.category})
+                continue
+            if disease_id in resumed_disease_ids:
+                skipped.append({"task_uuid": task.task_uuid, "reason": "duplicate_disease_failure"})
+                continue
+            if input_data.get("model_recovery_epoch") == recovery_epoch:
+                skipped.append({"task_uuid": task.task_uuid, "reason": "already_recovered_this_epoch"})
+                continue
+            input_data["model_recovery_epoch"] = recovery_epoch
+            task.input_data = input_data
+            replanned = await self._requeue_knowledge_task(db, task, task.last_error or "")
+            requeued.append((task.task_uuid, replanned))
+            resumed_disease_ids.add(disease_id)
+        await db.commit()
+        for task_uuid, plan in requeued:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="warning",
+                title="Knowledge Repair Resumed After Model Recovery",
+                content=(
+                    "Model Center regained a routable model. The terminal repair was "
+                    f"resumed for recovery epoch {recovery_epoch}: {plan.category}."
+                ),
+                content_type="text",
+                metadata={
+                    "prompt_version": PROMPT_VERSION,
+                    "actor": GOVERNANCE_ACTOR,
+                    "model_recovery_epoch": recovery_epoch,
+                    "category": plan.category,
+                    "failure_fingerprint": plan.fingerprint,
+                },
+            )
+        return {
+            "requeued_count": len(requeued),
+            "requeued_task_uuids": [task_uuid for task_uuid, _plan in requeued],
+            "skipped": skipped,
+            "model_recovery_epoch": recovery_epoch,
+        }
+
+    async def _requeue_knowledge_task(
+        self,
+        db: AsyncSession,
+        task: Task,
+        error: str,
+    ) -> KnowledgeRepairPlan:
+        plan = plan_failed_knowledge_repair(error)
         input_data = dict(task.input_data or {})
-        retry_languages = infer_failed_knowledge_repair_languages(error)
         input_data["generator"] = "ai"
         input_data["targeted_repair"] = True
         input_data["retry_mode"] = "ai_content_governance_repair"
-        if retry_languages:
-            input_data["repair_languages"] = retry_languages
+        source_certificate = str(input_data.get("source_refreshed_task_uuid") or "").strip()
+        source_first_required = plan.category == "evidence_block" or (
+            plan.category == "content_gap" and not source_certificate
+        )
+        if source_first_required:
+            input_data["source_only"] = True
+            input_data["enqueue_ai_after_source_refresh"] = True
+            input_data["force"] = True
+            input_data["source_first_recovery"] = True
+            task.task_type = TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES
+            if not str(task.task_name or "").startswith("Refresh sources before "):
+                task.task_name = f"Refresh sources before {task.task_name}"
+            task.description = (
+                "Source-first evidence recovery after a publication-gate gap; "
+                "a model repair is queued only after the refreshed source packet "
+                "passes evidence and entity-scope checks."
+            )
+            task.tags = sorted({*(task.tags or []), "knowledge", "auto_repair", "source_refresh", "source_first"})
+        elif plan.category == "content_gap":
+            # A complete source packet already proves the requested fields are
+            # grounded. Re-fetching it after a model omission only wastes a
+            # worker slot and can turn one output defect into a source loop.
+            input_data["source_only"] = False
+            input_data["force"] = False
+            input_data.pop("enqueue_ai_after_source_refresh", None)
+            input_data.pop("source_first_recovery", None)
+            task.task_type = TaskType.UPDATE_DISEASE_KNOWLEDGE
+            task.task_name = str(task.task_name or "").replace("Refresh sources before ", "", 1)
+            task.description = (
+                "Targeted Model Center repair using the current certified source packet; "
+                "the publication-gate feedback is included in the generation prompt."
+            )
+            task.tags = sorted(
+                {
+                    tag
+                    for tag in {*(task.tags or []), "knowledge", "auto_repair"}
+                    if tag not in {"source_refresh", "source_first"}
+                }
+            )
+        elif plan.category == "publication_status":
+            # The prior narrow field scope caused a locked legacy draft to be
+            # carried forward. Let the service derive a full repair scope from
+            # the draft's current status and validated evidence packet.
+            input_data.pop("repair_sections_by_language", None)
+            input_data.pop("repair_sections", None)
+        if plan.languages:
+            input_data["repair_languages"] = list(plan.languages)
+        if plan.sections_by_language:
+            sections_by_language = {
+                language: list(sections)
+                for language, sections in plan.sections_by_language.items()
+            }
+            input_data["repair_sections_by_language"] = sections_by_language
+            input_data["repair_reasons_by_language"] = {
+                language: [
+                    plan.reason,
+                    (
+                        "The previous candidate did not satisfy these required fields: "
+                        + ", ".join(sections)
+                        + ". Rewrite them only from directly supporting evidence fragments and place citations immediately after each claim."
+                    ),
+                ]
+                for language, sections in sections_by_language.items()
+            }
+            input_data["repair_sections"] = list(
+                _ordered_sections(
+                    section
+                    for sections in sections_by_language.values()
+                    for section in sections
+                )
+            )
         metadata = dict(task.metadata_ or {})
         history = list(metadata.get("ai_content_governance_retries") or [])
         history.append(
             {
                 "at": _now().isoformat(),
                 "error": _text(error, limit=1000),
-                "repair_languages": retry_languages,
+                "category": plan.category,
+                "reason": plan.reason,
+                "failure_fingerprint": plan.fingerprint,
+                "repair_languages": list(plan.languages),
+                "repair_sections_by_language": {
+                    language: list(sections)
+                    for language, sections in plan.sections_by_language.items()
+                },
                 "retry_count": int(task.retry_count or 0),
+                "model_recovery_epoch": input_data.get("model_recovery_epoch"),
             }
         )
         metadata["ai_content_governance_retries"] = history[-10:]
+        lease = dict(metadata.get("task_lease") or {})
+        if task.status == TaskStatus.RUNNING and lease:
+            now = _now()
+            lease["released_at"] = now.isoformat()
+            lease["release_reason"] = "Automatically replanned by AI content governance."
+            lease["terminal_status"] = TaskStatus.QUEUED.value
+            metadata["task_lease"] = lease
         task.input_data = input_data
         task.metadata_ = metadata
         task.status = TaskStatus.QUEUED
@@ -330,6 +770,7 @@ class AIContentGovernanceService:
         task.completed_at = None
         task.actual_duration = None
         task.last_error = "Automatically requeued by AI content governance"
+        return plan
 
     async def review_literature_summaries(
         self,

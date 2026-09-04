@@ -132,6 +132,32 @@ class TaskManager:
     @staticmethod
     def _task_metadata(task: Task) -> Dict[str, Any]:
         return dict(task.metadata_ or {})
+
+    async def merge_task_metadata(
+        self,
+        task_uuid: str,
+        updates: Dict[str, Any],
+    ) -> Optional[Task]:
+        """Atomically add machine-readable workflow state to a task.
+
+        Task executors are deliberately short-lived and normally hold detached
+        ORM objects.  Persisting recovery state through this method prevents a
+        retry from creating a second child workflow after the first child has
+        already been queued.
+        """
+        async with get_db() as db:
+            result = await db.execute(
+                select(Task).where(Task.task_uuid == task_uuid).with_for_update()
+            )
+            task = result.scalar_one_or_none()
+            if task is None:
+                return None
+            metadata = self._task_metadata(task)
+            metadata.update(updates)
+            task.metadata_ = metadata
+            await db.commit()
+            await db.refresh(task)
+            return task
     
     async def update_task_status(
         self,
@@ -244,6 +270,90 @@ class TaskManager:
             task.metadata_ = metadata
             await db.commit()
             return True
+
+    async def requeue_owned_task_lease(
+        self,
+        task_uuid: str,
+        owner: str,
+        reason: str,
+    ) -> bool:
+        """Release one owned RUNNING task back to the queue without retry debt.
+
+        This is reserved for a controlled worker restart after the execution
+        coroutine has been cancelled. The ownership check prevents an outgoing
+        worker from reviving work claimed by its replacement.
+        """
+        requeued = False
+        cancelled = False
+        async with get_db() as db:
+            result = await db.execute(
+                select(Task).where(Task.task_uuid == task_uuid).with_for_update()
+            )
+            task = result.scalar_one_or_none()
+            if task is None or task.status != TaskStatus.RUNNING:
+                return False
+            metadata = self._task_metadata(task)
+            lease = dict(metadata.get("task_lease") or {})
+            if lease.get("owner") != owner or lease.get("released_at"):
+                return False
+
+            now = datetime.now(timezone.utc)
+            if metadata.get("cancel_requested"):
+                cancellation_reason = str(
+                    metadata.get("cancel_reason")
+                    or "Cancellation requested before worker restart."
+                )
+                lease["released_at"] = now.isoformat()
+                lease["terminal_status"] = TaskStatus.CANCELLED.value
+                metadata["task_lease"] = lease
+                task.metadata_ = metadata
+                task.status = TaskStatus.CANCELLED
+                task.completed_at = now
+                if task.started_at:
+                    started_at = task.started_at
+                    if started_at.tzinfo is None:
+                        started_at = started_at.replace(tzinfo=timezone.utc)
+                    task.actual_duration = int((now - started_at).total_seconds())
+                task.last_error = cancellation_reason
+                await db.commit()
+                cancelled = True
+            else:
+                lease["released_at"] = now.isoformat()
+                lease["release_reason"] = reason
+                lease["terminal_status"] = TaskStatus.QUEUED.value
+                metadata["task_lease"] = lease
+                history = list(metadata.get("worker_restart_requeues") or [])
+                history.append({"at": now.isoformat(), "owner": owner, "reason": reason})
+                metadata["worker_restart_requeues"] = history[-10:]
+                task.metadata_ = metadata
+                task.status = TaskStatus.QUEUED
+                task.started_at = None
+                task.completed_at = None
+                task.actual_duration = None
+                task.last_error = reason
+                await db.commit()
+                requeued = True
+
+        if requeued:
+            await self._broadcast(
+                {
+                    "event": "task_status",
+                    "task_uuid": task_uuid,
+                    "status": TaskStatus.QUEUED.value,
+                    "progress": 0,
+                    "worker_restart_requeue": True,
+                }
+            )
+        elif cancelled:
+            await self._broadcast(
+                {
+                    "event": "task_status",
+                    "task_uuid": task_uuid,
+                    "status": TaskStatus.CANCELLED.value,
+                    "progress": 0,
+                }
+            )
+        return requeued
 
     async def request_task_cancel(
         self,

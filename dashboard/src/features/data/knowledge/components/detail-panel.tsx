@@ -15,6 +15,10 @@ export function DetailPanel({ lang, state }: { lang: "en" | "zh"; state: Knowled
     briefLanguage, setBriefLanguage, detailSources, availableBriefLanguages, selectedBrief, refreshPending,
     handleSingleRefresh, taskLogsHref, detailTabs,
   } = state;
+  const automatingBriefs = (detail?.briefs ?? []).filter((brief) => brief.status === "draft").length;
+  const requiredGaps = detail?.required_gap_sections ?? [];
+  const repairReasons = Object.values(detail?.repair_reasons_by_language ?? {}).flat();
+  const revalidationOnly = repairReasons.length > 0 && repairReasons.every((reason) => reason === "evidence_revalidation");
   return (
           <div ref={detailPanelRef} className="min-w-0 space-y-5">
             <Panel className="overflow-hidden p-0 lg:sticky lg:top-5 lg:max-h-[calc(100vh-2.5rem)]">
@@ -125,9 +129,13 @@ export function DetailPanel({ lang, state }: { lang: "en" | "zh"; state: Knowled
                               {detail.evidence_quality.issues.join(" · ")}
                             </p>
                           ) : null}
-                          {detail.repair_sections?.length ? (
+                          {requiredGaps.length > 0 ? (
                             <p className="mt-1 text-xs text-tremor-content dark:text-dark-tremor-content">
-                              {lang === "zh" ? "定向补全" : "Targeted repair"}: {detail.repair_sections.join(" · ")}
+                              {lang === "zh" ? "必填章节缺口" : "Required chapter gaps"}: {requiredGaps.join(" · ")}
+                            </p>
+                          ) : revalidationOnly ? (
+                            <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                              {lang === "zh" ? "已发布内容正在按当前证据策略复核" : "Published content is queued for current evidence-policy revalidation"}
                             </p>
                           ) : null}
                         </div>
@@ -216,6 +224,7 @@ export function DetailPanel({ lang, state }: { lang: "en" | "zh"; state: Knowled
                                   [lang === "zh" ? "简介数" : "Brief count", detail.summary.brief_count],
                                   [lang === "zh" ? "来源数" : "Source count", detail.summary.source_count],
                                   [lang === "zh" ? "已发布" : "Published", detail.summary.published_briefs],
+                                  [lang === "zh" ? "自动补全中" : "Automating", automatingBriefs],
                                   [lang === "zh" ? "待审核" : "Needs review", detail.summary.review_briefs],
                                 ].map(([label, value]) => (
                                   <div key={String(label)} className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 dark:border-dark-tremor-border dark:bg-dark-tremor-background">

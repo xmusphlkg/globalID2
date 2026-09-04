@@ -19,8 +19,11 @@ from src.ai.model_center import (
     check_all_models,
     check_model_by_id,
     check_provider_by_id,
+    discover_provider_models_by_id,
     get_model_rate_limit_state,
+    get_model_runtime_health_state,
     get_provider_rate_limit_state,
+    get_provider_runtime_health_state,
     get_runtime_routes,
     mask_api_key,
 )
@@ -97,6 +100,9 @@ class DiseaseKnowledgeCatalogueItem(BaseModel):
     knowledge_profile_type: str = "infectious_disease"
     knowledge_profile_schema: Dict[str, Any] = Field(default_factory=dict)
     repair_sections: List[str] = Field(default_factory=list)
+    repair_sections_by_language: Dict[str, List[str]] = Field(default_factory=dict)
+    repair_reasons_by_language: Dict[str, List[str]] = Field(default_factory=dict)
+    required_gap_sections: List[str] = Field(default_factory=list)
     repair_priority: str = "none"
     language_quality: Dict[str, Any] = Field(default_factory=dict)
     source_count: int = 0
@@ -243,6 +249,9 @@ class DiseaseKnowledgeDetail(BaseModel):
     knowledge_profile_type: str = "infectious_disease"
     knowledge_profile_schema: Dict[str, Any] = Field(default_factory=dict)
     repair_sections: List[str] = Field(default_factory=list)
+    repair_sections_by_language: Dict[str, List[str]] = Field(default_factory=dict)
+    repair_reasons_by_language: Dict[str, List[str]] = Field(default_factory=dict)
+    required_gap_sections: List[str] = Field(default_factory=list)
     repair_priority: str = "none"
     language_quality: Dict[str, Any] = Field(default_factory=dict)
     evidence_quality: Dict[str, Any] = Field(default_factory=dict)
@@ -597,6 +606,13 @@ class ProviderOut(BaseModel):
     rate_limit_remaining_seconds: int = 0
     rate_limit_count: int = 0
     last_rate_limit_at: Optional[str] = None
+    runtime_failure_active: bool = False
+    runtime_failure_cooldown_until: Optional[str] = None
+    runtime_failure_remaining_seconds: int = 0
+    runtime_failure_streak: int = 0
+    runtime_timeout_count: int = 0
+    runtime_latency_ewma_ms: Optional[float] = None
+    runtime_last_error: Optional[str] = None
 
 
 class ModelCreateRequest(BaseModel):
@@ -651,6 +667,14 @@ class ModelOut(BaseModel):
     rate_limit_remaining_seconds: int = 0
     rate_limit_count: int = 0
     last_rate_limit_at: Optional[str] = None
+    runtime_failure_active: bool = False
+    runtime_failure_scope: Optional[str] = None
+    runtime_failure_cooldown_until: Optional[str] = None
+    runtime_failure_remaining_seconds: int = 0
+    runtime_failure_streak: int = 0
+    runtime_timeout_count: int = 0
+    runtime_latency_ewma_ms: Optional[float] = None
+    runtime_last_error: Optional[str] = None
 
 
 class RuntimeRouteOut(BaseModel):
@@ -673,6 +697,19 @@ class RuntimeRouteOut(BaseModel):
     rate_limit_remaining_seconds: int = 0
     rate_limit_count: int = 0
     last_rate_limit_at: Optional[str] = None
+    runtime_failure_active: bool = False
+    runtime_failure_scope: Optional[str] = None
+    runtime_failure_cooldown_until: Optional[str] = None
+    runtime_failure_remaining_seconds: int = 0
+    runtime_failure_kind: Optional[str] = None
+    runtime_failure_streak: int = 0
+    runtime_timeout_count: int = 0
+    runtime_latency_ewma_ms: Optional[float] = None
+    runtime_last_error: Optional[str] = None
+    runtime_provider_capacity: int = 1
+    runtime_provider_inflight: int = 0
+    runtime_model_capacity: int = 1
+    runtime_model_inflight: int = 0
 
 
 @router.post("/reports/runs", response_model=TaskOut, status_code=202)
@@ -909,7 +946,11 @@ async def delete_provider(provider_key: str, db: AsyncSession = Depends(get_db))
 
 
 @router.post("/ai/models/providers/{provider_key}/test")
-async def test_provider(provider_key: str, db: AsyncSession = Depends(get_db)):
+async def test_provider(
+    provider_key: str,
+    structured: bool = True,
+    db: AsyncSession = Depends(get_db),
+):
     await bootstrap_model_center_from_env(force=False)
     provider_id = (
         await db.execute(
@@ -918,7 +959,21 @@ async def test_provider(provider_key: str, db: AsyncSession = Depends(get_db)):
     ).scalar_one_or_none()
     if provider_id is None:
         raise HTTPException(404, "Provider not found")
-    return await check_provider_by_id(int(provider_id))
+    return await check_provider_by_id(int(provider_id), structured=structured)
+
+
+@router.post("/ai/models/providers/{provider_key}/discover-models")
+async def discover_provider_models(provider_key: str, db: AsyncSession = Depends(get_db)):
+    """Read the provider API catalogue; discovered models are not auto-enabled."""
+    await bootstrap_model_center_from_env(force=False)
+    provider_id = (
+        await db.execute(
+            select(AIProviderConfig.id).where(AIProviderConfig.provider_key == provider_key)
+        )
+    ).scalar_one_or_none()
+    if provider_id is None:
+        raise HTTPException(404, "Provider not found")
+    return await discover_provider_models_by_id(int(provider_id))
 
 
 @router.get("/ai/models", response_model=List[ModelOut])
@@ -1067,7 +1122,11 @@ async def delete_model(model_key: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/ai/models/{model_key}/test")
-async def test_model(model_key: str, db: AsyncSession = Depends(get_db)):
+async def test_model(
+    model_key: str,
+    structured: bool = True,
+    db: AsyncSession = Depends(get_db),
+):
     await bootstrap_model_center_from_env(force=False)
     model_id = (
         await db.execute(
@@ -1076,13 +1135,13 @@ async def test_model(model_key: str, db: AsyncSession = Depends(get_db)):
     ).scalar_one_or_none()
     if model_id is None:
         raise HTTPException(404, "Model not found")
-    return await check_model_by_id(int(model_id))
+    return await check_model_by_id(int(model_id), structured=structured)
 
 
 @router.post("/ai/models/check-all")
-async def test_all_models():
+async def test_all_models(structured: bool = True):
     await bootstrap_model_center_from_env(force=False)
-    return await check_all_models()
+    return await check_all_models(structured=structured)
 
 
 @router.get("/ai/models/runtime", response_model=List[RuntimeRouteOut])
@@ -1109,6 +1168,19 @@ async def list_runtime_routes():
             rate_limit_remaining_seconds=int(route.get("rate_limit_remaining_seconds") or 0),
             rate_limit_count=int(route.get("rate_limit_count") or 0),
             last_rate_limit_at=route.get("last_rate_limit_at"),
+            runtime_failure_active=bool(route.get("runtime_failure_active")),
+            runtime_failure_scope=route.get("runtime_failure_scope"),
+            runtime_failure_cooldown_until=route.get("runtime_failure_cooldown_until"),
+            runtime_failure_remaining_seconds=int(route.get("runtime_failure_remaining_seconds") or 0),
+            runtime_failure_kind=route.get("runtime_failure_kind"),
+            runtime_failure_streak=int(route.get("runtime_failure_streak") or 0),
+            runtime_timeout_count=int(route.get("runtime_timeout_count") or 0),
+            runtime_latency_ewma_ms=route.get("runtime_latency_ewma_ms"),
+            runtime_last_error=route.get("runtime_last_error"),
+            runtime_provider_capacity=int(route.get("runtime_provider_capacity") or 1),
+            runtime_provider_inflight=int(route.get("runtime_provider_inflight") or 0),
+            runtime_model_capacity=int(route.get("runtime_model_capacity") or 1),
+            runtime_model_inflight=int(route.get("runtime_model_inflight") or 0),
         )
         for route in routes
     ]
@@ -1255,6 +1327,7 @@ def _task_to_out(task: Task) -> TaskOut:
 
 def _provider_to_out(provider: AIProviderConfig) -> ProviderOut:
     rate_limit_meta = get_provider_rate_limit_state(provider)
+    runtime_health = get_provider_runtime_health_state(provider)
     return ProviderOut(
         id=provider.id,
         provider_key=provider.provider_key,
@@ -1277,12 +1350,20 @@ def _provider_to_out(provider: AIProviderConfig) -> ProviderOut:
         rate_limit_remaining_seconds=rate_limit_meta["rate_limit_remaining_seconds"],
         rate_limit_count=rate_limit_meta["rate_limit_count"],
         last_rate_limit_at=rate_limit_meta["last_rate_limit_at"],
+        runtime_failure_active=runtime_health["runtime_failure_active"],
+        runtime_failure_cooldown_until=runtime_health["runtime_failure_cooldown_until"],
+        runtime_failure_remaining_seconds=runtime_health["runtime_failure_remaining_seconds"],
+        runtime_failure_streak=runtime_health["runtime_failure_streak"],
+        runtime_timeout_count=runtime_health["runtime_timeout_count"],
+        runtime_latency_ewma_ms=runtime_health["runtime_latency_ewma_ms"],
+        runtime_last_error=runtime_health["runtime_last_error"],
     )
 
 
 def _model_to_out(model: AIModelConfig) -> ModelOut:
     provider = model.provider
     rate_limit_meta = get_model_rate_limit_state(model, provider)
+    runtime_health = get_model_runtime_health_state(model, provider)
     return ModelOut(
         id=model.id,
         provider_id=model.provider_id,
@@ -1308,4 +1389,12 @@ def _model_to_out(model: AIModelConfig) -> ModelOut:
         rate_limit_remaining_seconds=rate_limit_meta["rate_limit_remaining_seconds"],
         rate_limit_count=rate_limit_meta["rate_limit_count"],
         last_rate_limit_at=rate_limit_meta["last_rate_limit_at"],
+        runtime_failure_active=runtime_health["runtime_failure_active"],
+        runtime_failure_scope=runtime_health.get("runtime_failure_scope"),
+        runtime_failure_cooldown_until=runtime_health["runtime_failure_cooldown_until"],
+        runtime_failure_remaining_seconds=runtime_health["runtime_failure_remaining_seconds"],
+        runtime_failure_streak=runtime_health["runtime_failure_streak"],
+        runtime_timeout_count=runtime_health["runtime_timeout_count"],
+        runtime_latency_ewma_ms=runtime_health["runtime_latency_ewma_ms"],
+        runtime_last_error=runtime_health["runtime_last_error"],
     )

@@ -530,6 +530,56 @@ async def test_stale_literature_task_is_boundedly_requeued_but_fresh_task_is_unt
 
 
 @pytest.mark.asyncio
+async def test_stale_recovery_keeps_a_requested_cancellation_terminal(monkeypatch):
+    now = datetime.now(timezone.utc)
+    task = SimpleNamespace(
+        id=24,
+        task_uuid="cancelled-before-recovery",
+        task_type=TaskType.UPDATE_DISEASE_KNOWLEDGE,
+        status=TaskStatus.RUNNING,
+        started_at=now - timedelta(hours=1),
+        updated_at=now - timedelta(hours=1),
+        created_at=now - timedelta(hours=1),
+        completed_at=None,
+        actual_duration=None,
+        last_error=None,
+        retry_count=0,
+        max_retries=3,
+        report_id=None,
+        output_data={},
+        progress=55,
+        input_data={"disease_id": "D999"},
+        metadata_={
+            "cancel_requested": True,
+            "cancel_reason": "Catalogue item is non-public.",
+            "task_lease": {
+                "owner": "dead-worker",
+                "heartbeat_at": (now - timedelta(minutes=10)).isoformat(),
+            },
+        },
+    )
+    database = _Database([_ScalarResult(many=[task])])
+    monkeypatch.setattr(task_executor_module, "get_database", lambda: database)
+
+    async def noop(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(task_executor_module.task_manager, "add_workbook_entry", noop)
+    monkeypatch.setattr(task_executor_module.task_manager, "_broadcast", noop)
+
+    recovered = await task_executor_module.recover_interrupted_tasks_on_startup(
+        stale_after_seconds=180,
+        now=now,
+    )
+
+    assert recovered == 1
+    assert task.status == TaskStatus.CANCELLED
+    assert task.retry_count == 0
+    assert task.last_error == "Catalogue item is non-public."
+    assert task.metadata_["task_lease"]["terminal_status"] == "cancelled"
+
+
+@pytest.mark.asyncio
 async def test_stale_recovery_can_be_restricted_to_one_dead_owner(monkeypatch):
     now = datetime.now(timezone.utc)
 
@@ -663,6 +713,50 @@ async def test_lifecycle_suppresses_alert_when_ingestion_retry_is_scheduled(
 
     assert statuses == [TaskStatus.RUNNING, TaskStatus.FAILED]
     assert alerts == []
+
+
+@pytest.mark.asyncio
+async def test_lifecycle_requeues_recoverable_knowledge_gap_without_failed_status(
+    monkeypatch,
+):
+    from src.services.ai_content_governance_service import ai_content_governance_service
+
+    task = SimpleNamespace(
+        task_uuid="knowledge-lifecycle",
+        task_type=TaskType.UPDATE_DISEASE_KNOWLEDGE,
+    )
+    statuses = []
+    calls = []
+
+    async def update_status(_task_uuid, status, **_kwargs):
+        statuses.append(status)
+
+    async def add_entry(*_args, **_kwargs):
+        return None
+
+    async def schedule_retry(task_uuid, error, *, allow_running=False):
+        calls.append((task_uuid, str(error), allow_running))
+        return True
+
+    monkeypatch.setattr(lifecycle_module.task_manager, "update_task_status", update_status)
+    monkeypatch.setattr(lifecycle_module.task_manager, "add_workbook_entry", add_entry)
+    monkeypatch.setattr(
+        ai_content_governance_service,
+        "schedule_knowledge_retry_after_failure",
+        schedule_retry,
+    )
+
+    async with lifecycle_module.task_lifecycle(task, exit_on_cancel=False):
+        raise RuntimeError("en: missing required sections (epidemiology)")
+
+    assert statuses == [TaskStatus.RUNNING]
+    assert calls == [
+        (
+            "knowledge-lifecycle",
+            "en: missing required sections (epidemiology)",
+            True,
+        )
+    ]
 
 
 @pytest.mark.asyncio

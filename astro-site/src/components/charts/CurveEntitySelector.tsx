@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import {
   findLatestValue,
@@ -32,6 +32,8 @@ function formatValue(value: number | null | undefined, digits = 0) {
   return digits > 0 ? value.toFixed(digits) : value.toLocaleString();
 }
 
+type SortMode = 'default' | 'latest' | 'total' | 'name';
+
 export default function CurveEntitySelector({
   density = 'full',
   series,
@@ -50,6 +52,8 @@ export default function CurveEntitySelector({
   onReset,
 }: Props) {
   const isCompact = density === 'compact';
+  const [sortMode, setSortMode] = useState<SortMode>('default');
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const totalCasesRange = useMemo(() => {
     if (eligibleIds.length === 0) return { min: 0, max: 0 };
     return eligibleIds.reduce(
@@ -67,7 +71,25 @@ export default function CurveEntitySelector({
   const entityName = entityType === 'country'
     ? { en: 'country', enPlural: 'countries', zh: '国家' }
     : { en: 'disease', enPlural: 'diseases', zh: '疾病' };
-  const displayedIds = visibleIds;
+  const displayedIds = useMemo(() => {
+    const candidates = showSelectedOnly
+      ? visibleIds.filter((id) => activeIdSet.has(id))
+      : visibleIds;
+    const rankById = new Map(eligibleIds.map((id, index) => [id, index]));
+    const latestValue = (id: string) => findLatestValue(getMetricValues(series[id], metric)) ?? -Infinity;
+    return [...candidates].sort((left, right) => {
+      const selectedOrder = Number(activeIdSet.has(right)) - Number(activeIdSet.has(left));
+      if (selectedOrder !== 0) return selectedOrder;
+      if (sortMode === 'latest') return latestValue(right) - latestValue(left);
+      if (sortMode === 'total') return (series[right]?.total_cases ?? 0) - (series[left]?.total_cases ?? 0);
+      if (sortMode === 'name') {
+        const leftName = lang === 'zh' ? series[left]?.name_zh : series[left]?.name_en;
+        const rightName = lang === 'zh' ? series[right]?.name_zh : series[right]?.name_en;
+        return (leftName ?? '').localeCompare(rightName ?? '', lang === 'zh' ? 'zh' : 'en');
+      }
+      return (rankById.get(left) ?? 0) - (rankById.get(right) ?? 0);
+    });
+  }, [activeIdSet, eligibleIds, lang, metric, series, showSelectedOnly, sortMode, visibleIds]);
 
   return (
     <div className={`chart-sidebar ${isCompact ? 'chart-sidebar-compact' : ''}`}>
@@ -109,8 +131,36 @@ export default function CurveEntitySelector({
       />
 
       <div className="chart-toolbar">
+        <div className="chart-selector-sort" role="group" aria-label={lang === 'zh' ? '排序方式' : 'Sort items'}>
+          {([
+            ['default', lang === 'zh' ? '默认' : 'Default'],
+            ['latest', lang === 'zh' ? '最新值' : 'Latest'],
+            ['total', lang === 'zh' ? '累计' : 'Total'],
+            ['name', lang === 'zh' ? '名称' : 'Name'],
+          ] as Array<[SortMode, string]>).map(([mode, label]) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setSortMode(mode)}
+              aria-pressed={sortMode === mode}
+              className={`chart-toggle chart-toggle-small ${sortMode === mode ? 'chart-toggle-active' : ''}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {selectionMode === 'multiple' && activeIds.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowSelectedOnly((current) => !current)}
+            aria-pressed={showSelectedOnly}
+            className={`chart-toggle chart-toggle-small ${showSelectedOnly ? 'chart-toggle-active' : ''}`}
+          >
+            {lang === 'zh' ? '仅已选' : 'Selected'}
+          </button>
+        )}
         {selectionMode === 'multiple' && activeIds.length > 1 && (
-          <button type="button" onClick={onReset} className="chart-toggle">
+          <button type="button" onClick={onReset} className="chart-toggle chart-toggle-small">
             {lang === 'zh' ? '清除比较' : 'Clear comparison'}
           </button>
         )}

@@ -6,6 +6,7 @@ import pytest
 
 from src.domain import TaskStatus, TaskType
 from src.literature.clients.crossref import CrossrefIncrementalResult
+from src.literature.clients.pubmed import PubMedResult
 from src.literature.pipeline import LiteraturePipeline, _hold_degraded_enrichment_for_review
 from src.literature.types import ArticleCandidate, Classification
 from src.services import _lifecycle as lifecycle_module
@@ -187,6 +188,132 @@ async def test_crossref_connect_failure_still_fails_the_whole_run(monkeypatch, t
     with pytest.raises(httpx.ConnectError):
         await pipeline.execute()
     assert finished == [("failed", {"error": "ConnectError"})]
+
+
+async def test_crossref_connect_failure_uses_pubmed_fallback_without_advancing_crossref_checkpoint(
+    monkeypatch,
+    tmp_path,
+):
+    journals = tmp_path / "journals.json"
+    journals.write_text(
+        json.dumps({"journals": [{"name": "Test Journal", "issn": "1234-5678"}]}),
+        encoding="utf-8",
+    )
+    config = SimpleNamespace(
+        journals_path=journals,
+        taxonomy_path="configs/literature/taxonomy.json",
+        index_overlap_days=0,
+        contact_email="tests@example.org",
+        request_timeout_seconds=5,
+        max_retries=1,
+        max_records_per_run=10,
+        max_pubmed_records=10,
+        source_concurrency=1,
+        pubmed_enabled=True,
+        pubmed_api_key="",
+        pubmed_tool="GIDSTest",
+        pubmed_min_interval_seconds=0,
+        europe_pmc_enabled=False,
+        controlled_discovery_enabled=False,
+        official_guidance_enabled=False,
+        springer_nature_enabled=False,
+        elsevier_enabled=False,
+        preprint_discovery_enabled=False,
+        publisher_rss_enabled=False,
+        unpaywall_enabled=False,
+        openalex_enabled=False,
+        autopilot_enabled=False,
+        auto_publish_min_score=0.72,
+    )
+
+    class FailingCrossref:
+        def __init__(self, **_kwargs) -> None:
+            pass
+
+        async def fetch_incremental(self, **_kwargs):
+            raise httpx.ConnectError("", request=httpx.Request("GET", "https://api.crossref.example/works"))
+
+    class FallbackPubMed:
+        def __init__(self, **_kwargs) -> None:
+            pass
+
+        async def fetch_incremental(self, **_kwargs):
+            return PubMedResult(
+                records=[{
+                    "uid": "123",
+                    "title": "Dengue surveillance",
+                    "pubdate": "2026",
+                    "articleids": [{"idtype": "doi", "value": "10.1000/pubmed-fallback"}],
+                }],
+                checkpoint={"provider": "pubmed", "records_returned": 1, "truncated": False},
+            )
+
+    class FakeDb:
+        async def commit(self):
+            return None
+
+    class FakeDbContext:
+        async def __aenter__(self):
+            return FakeDb()
+
+        async def __aexit__(self, *_args):
+            return False
+
+    class FakeRepository:
+        def __init__(self, _db) -> None:
+            pass
+
+        async def upsert(self, *_args, **_kwargs):
+            return True
+
+    pipeline = LiteraturePipeline(config)
+    finished = []
+
+    async def resolve_start(_now, _task):
+        from datetime import datetime, timezone
+        return datetime(2026, 8, 1, tzinfo=timezone.utc), None
+
+    async def create_run(*_args, **_kwargs):
+        return None
+
+    async def finish_run(_run_uuid, status, **kwargs):
+        finished.append((status, kwargs))
+
+    async def classify_catalogues():
+        return [], []
+
+    async def enrich_candidates(_candidates):
+        return {
+            "europe_pmc_enriched": 0,
+            "unpaywall_enriched": 0,
+            "openalex_enriched": 0,
+            "europe_pmc_errors": 0,
+            "unpaywall_errors": 0,
+            "openalex_errors": 0,
+            "enrichment_errors": 0,
+            "enrichment_failed_providers": [],
+            "enrichment_degraded_review": 0,
+        }
+
+    monkeypatch.setattr("src.literature.pipeline.CrossrefClient", FailingCrossref)
+    monkeypatch.setattr("src.literature.pipeline.PubMedClient", FallbackPubMed)
+    monkeypatch.setattr("src.literature.pipeline.get_db", lambda: FakeDbContext())
+    monkeypatch.setattr("src.literature.pipeline.LiteratureRepository", FakeRepository)
+    monkeypatch.setattr("src.literature.pipeline.classify_candidate", lambda *_, **__: Classification())
+    monkeypatch.setattr(pipeline, "_resolve_start", resolve_start)
+    monkeypatch.setattr(pipeline, "_create_run", create_run)
+    monkeypatch.setattr(pipeline, "_finish_run", finish_run)
+    monkeypatch.setattr(pipeline, "_classification_catalogues", classify_catalogues)
+    monkeypatch.setattr(pipeline, "_enrich_candidates", enrich_candidates)
+
+    result = await pipeline.execute()
+
+    assert result["pubmed_core_fallback_used"] == 1
+    assert result["crossref_source_errors"] == 1
+    assert result["through_indexed_at"] == "2026-08-01T00:00:00+00:00"
+    assert finished[0][0] == "completed"
+    assert finished[0][1]["checkpoint"]["strategy"] == "pubmed-fallback-no-crossref-advance-v1"
+    assert finished[0][1]["source"].startswith("pubmed-fallback+pubmed")
 
 
 async def test_full_pipeline_autopilot_cannot_publish_crossref_record_when_openalex_is_down(

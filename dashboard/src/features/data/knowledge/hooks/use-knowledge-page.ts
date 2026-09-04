@@ -8,11 +8,11 @@ import {
 } from "@/features/ai/api";
 import { useTaskEventStream } from "@/features/operations/tasks/api";
 
-export type KnowledgeStatusFilter = "all" | "published" | "requires_review" | "blocked";
+export type KnowledgeStatusFilter = "all" | "published" | "automating" | "requires_review" | "blocked";
 export type KnowledgeDisplayFilter = "all" | "full" | "partial" | "blocked";
 export type RefreshPriority = "low" | "normal" | "high" | "urgent";
 export type RefreshGenerator = "ai" | "auto";
-export type SourceGroup = "who" | "search" | "wikidata" | "wikipedia" | "pubmed" | "msd";
+export type SourceGroup = "who" | "search" | "wikidata" | "wikipedia" | "pubmed";
 export type DetailTab = "briefs" | "sources" | "meta";
 
 export const SOURCE_GROUPS: Array<{
@@ -22,11 +22,10 @@ export const SOURCE_GROUPS: Array<{
   color: Color;
 }> = [
   { value: "who", label: "WHO", note: "health topics, fact sheets, and outbreak news", color: "teal" },
-  { value: "search", label: "Search discovery", note: "trusted web discovery across CDC, NIH, WHO, BMJ, MSD, and Wikipedia", color: "indigo" },
+  { value: "search", label: "Search discovery", note: "trusted web discovery across CDC, NIH, WHO, BMJ, and Wikipedia", color: "indigo" },
   { value: "wikidata", label: "Wikidata", note: "structured identifiers and aliases", color: "violet" },
   { value: "wikipedia", label: "Wikipedia", note: "article text and section structure", color: "sky" },
   { value: "pubmed", label: "PubMed", note: "review article abstracts for supplementary knowledge", color: "rose" },
-  { value: "msd", label: "MSD metadata", note: "links and metadata only, not public text", color: "amber" },
 ];
 
 export function useKnowledgePage(lang: "en" | "zh") {

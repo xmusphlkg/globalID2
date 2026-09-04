@@ -79,6 +79,28 @@ function formatTooltipValue(value: unknown, metric: EpidemicMetric) {
     : numericValue.toLocaleString();
 }
 
+function formatTooltipDelta(value: number, metric: EpidemicMetric, lang: 'en' | 'zh') {
+  const prefix = value > 0 ? '+' : '';
+  const formatted = formatTooltipValue(value, metric);
+  return lang === 'zh' ? `较上一期 ${prefix}${formatted}` : `vs previous ${prefix}${formatted}`;
+}
+
+function formatTooltipMetadata(value: string | undefined, maxLength = 32) {
+  const formatted = String(value ?? '').trim().replaceAll('_', ' ');
+  if (!formatted) return null;
+  return formatted.length > maxLength ? `${formatted.slice(0, maxLength - 1)}…` : formatted;
+}
+
+function escapeTooltipText(value: unknown) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character] ?? character);
+}
+
 const GRANULARITY_ORDER = ['annual', 'quarterly', 'monthly', 'weekly', 'daily', 'unknown'];
 
 export default function EpidemicCurvePlot({
@@ -306,6 +328,9 @@ export default function EpidemicCurvePlot({
       title: [...mainTitle, ...panelTitles],
       tooltip: {
         trigger: 'axis',
+        confine: true,
+        padding: [9, 11],
+        extraCssText: 'max-width:260px;box-shadow:0 8px 20px rgba(15,23,42,.16);',
         axisPointer: {
           type: 'line' as const,
           lineStyle: { color: colors.line, type: 'solid' as const },
@@ -314,20 +339,61 @@ export default function EpidemicCurvePlot({
         borderColor: colors.hoverBorder,
         borderWidth: 1,
         textStyle: { color: colors.hoverFont, fontSize: 12 },
-          formatter: (params: any[]) => {
-            const date = params[0]?.axisValueLabel ?? params[0]?.axisValue ?? '';
-            const visibleParams = params.filter((param) => (
-              !String(param.seriesName ?? '').startsWith('__reference_')
-            ));
+        formatter: (params: any[]) => {
+          const visibleParams = params.filter((param) => (
+            !String(param.seriesName ?? '').startsWith('__reference_')
+          ));
+          if (visibleParams.length === 0) return '';
+          const date = visibleParams[0]?.axisValueLabel ?? visibleParams[0]?.axisValue ?? '';
+          const panelLine = lines.find((line) => line.id === visibleParams[0]?.seriesId);
+          const cadence = panelLine
+            ? normalizeTemporalGranularity(panelLine.granularity) === 'unknown'
+              ? (lang === 'zh' ? '频率未注明' : 'Cadence unspecified')
+              : formatTemporalGranularity(panelLine.granularity, lang)
+            : null;
+          const rows = visibleParams.map((param) => {
+            const line = lines.find((candidate) => candidate.id === param.seriesId);
+            const value = Number(param.value?.[1] ?? param.value);
+            const pointDate = String(param.value?.[0] ?? date).slice(0, 10);
+            const pointIndex = line?.dates.indexOf(pointDate) ?? -1;
+            const previousValue = pointIndex > 0 && line
+              ? [...line.values.slice(0, pointIndex)].reverse().find((candidate) => Number.isFinite(candidate))
+              : undefined;
+            const delta = Number.isFinite(value) && typeof previousValue === 'number'
+              ? value - previousValue
+              : null;
+            const expected = pointIndex >= 0 ? line?.reference?.expected[pointIndex] : null;
+            const lower = pointIndex >= 0 ? line?.reference?.lower[pointIndex] : null;
+            const upper = pointIndex >= 0 ? line?.reference?.upper[pointIndex] : null;
+            const context = [
+              formatTooltipMetadata(line?.reportingBasis),
+              formatTooltipMetadata(line?.timeBasis),
+            ].filter(Boolean).join(' · ');
+            const reference = expected != null
+              ? (lang === 'zh'
+                  ? `历史预期 ${formatTooltipValue(expected, metric)}${lower != null && upper != null ? ` (${formatTooltipValue(lower, metric)}-${formatTooltipValue(upper, metric)})` : ''}`
+                  : `Historical expected ${formatTooltipValue(expected, metric)}${lower != null && upper != null ? ` (${formatTooltipValue(lower, metric)}-${formatTooltipValue(upper, metric)})` : ''}`)
+              : null;
+            const provisional = line?.provisionalFrom && pointDate >= line.provisionalFrom
+              ? (lang === 'zh' ? '暂定，可能修订' : 'Provisional; may be revised')
+              : null;
             return [
-              `<b>${date}</b>`,
-            ...visibleParams.map((param) => (
-              `${param.marker}${param.seriesName}: <b>${formatTooltipValue(param.value?.[1] ?? param.value, metric)}</b>`
-            )),
-          ].join('<br/>');
+              `<div style="margin-top:7px">${param.marker}<b>${escapeTooltipText(param.seriesName)}</b><span style="float:right;margin-left:16px"><b>${formatTooltipValue(value, metric)}</b></span></div>`,
+              delta != null ? `<div style="color:${colors.font};padding-left:17px">${formatTooltipDelta(delta, metric, lang)}</div>` : null,
+              reference ? `<div style="color:${colors.font};padding-left:17px">${reference}</div>` : null,
+              context ? `<div style="color:${colors.font};padding-left:17px">${escapeTooltipText(context)}</div>` : null,
+              provisional ? `<div style="color:${colors.font};padding-left:17px">${provisional}</div>` : null,
+            ].filter(Boolean).join('');
+          });
+          return [
+            `<div style="display:flex;justify-content:space-between;gap:16px"><b>${escapeTooltipText(date)}</b>${cadence ? `<span style="color:${colors.font}">${escapeTooltipText(cadence)}</span>` : ''}</div>`,
+            ...rows,
+          ].join('');
         },
       },
-      axisPointer: multiPanel ? { link: [{ xAxisIndex: 'all' }] } : undefined,
+      // Linked pointers make ECharts merge values from distinct cadence panels
+      // into one tooltip. Each panel therefore owns its own hover context.
+      axisPointer: undefined,
       grid: grids,
       xAxis: xAxes,
       yAxis: yAxes,
@@ -531,7 +597,7 @@ export default function EpidemicCurvePlot({
         })
       )),
     };
-  }, [activePointCount, analysisMode, colors, dateWindow, lang, lineGroups, metric, metricLabel, title]);
+  }, [activePointCount, analysisMode, colors, dateWindow, lang, lineGroups, lines, metric, metricLabel, title]);
 
   return (
     <div ref={plotRef} className="epidemic-curve-plot" style={{ height }}>

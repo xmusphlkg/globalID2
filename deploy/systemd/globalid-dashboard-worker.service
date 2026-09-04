@@ -16,6 +16,9 @@ EnvironmentFile=-__PROJECT_DIR__/.env
 ExecStart=__PROJECT_DIR__/scripts/run_dashboard_worker_service.sh
 Restart=on-failure
 RestartSec=10
+# Exit 75 means another healthy worker currently owns the Redis singleton
+# lease. Do not turn that expected ownership race into a restart storm.
+RestartPreventExitStatus=75
 # Contain an accidental unbounded ORM/JSON allocation inside the worker
 # cgroup. Normal concurrent crawler + literature load stays well below the
 # soft limit; a hard-limit restart is recovered through persisted task leases.

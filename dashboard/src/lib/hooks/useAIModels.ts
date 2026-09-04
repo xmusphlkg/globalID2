@@ -23,6 +23,17 @@ export interface AIProviderItem {
   rate_limit_remaining_seconds: number;
   rate_limit_count: number;
   last_rate_limit_at: string | null;
+  runtime_failure_active: boolean;
+  runtime_failure_cooldown_until: string | null;
+  runtime_failure_remaining_seconds: number;
+  runtime_failure_streak: number;
+  runtime_timeout_count: number;
+  runtime_latency_ewma_ms: number | null;
+  runtime_last_error: string | null;
+  runtime_provider_capacity: number;
+  runtime_provider_inflight: number;
+  runtime_model_capacity: number;
+  runtime_model_inflight: number;
 }
 
 export interface AIModelItem {
@@ -50,6 +61,14 @@ export interface AIModelItem {
   rate_limit_remaining_seconds: number;
   rate_limit_count: number;
   last_rate_limit_at: string | null;
+  runtime_failure_active: boolean;
+  runtime_failure_scope: string | null;
+  runtime_failure_cooldown_until: string | null;
+  runtime_failure_remaining_seconds: number;
+  runtime_failure_streak: number;
+  runtime_timeout_count: number;
+  runtime_latency_ewma_ms: number | null;
+  runtime_last_error: string | null;
 }
 
 export interface AIRuntimeRoute {
@@ -72,6 +91,19 @@ export interface AIRuntimeRoute {
   rate_limit_remaining_seconds: number;
   rate_limit_count: number;
   last_rate_limit_at: string | null;
+  runtime_failure_active: boolean;
+  runtime_failure_scope: string | null;
+  runtime_failure_cooldown_until: string | null;
+  runtime_failure_remaining_seconds: number;
+  runtime_failure_kind: string | null;
+  runtime_failure_streak: number;
+  runtime_timeout_count: number;
+  runtime_latency_ewma_ms: number | null;
+  runtime_last_error: string | null;
+  runtime_provider_capacity: number;
+  runtime_provider_inflight: number;
+  runtime_model_capacity: number;
+  runtime_model_inflight: number;
 }
 
 export interface ProviderPayload {
@@ -130,6 +162,14 @@ export interface ModelUpdatePayload {
 
 export interface ProviderBootstrapPayload {
   force?: boolean;
+}
+
+export interface ProviderModelDiscoveryResult {
+  success: boolean;
+  status: string;
+  message: string;
+  models: string[];
+  base_url?: string;
 }
 
 function invalidateAIModelQueries(queryClient: ReturnType<typeof useQueryClient>) {
@@ -202,6 +242,18 @@ export function useTestAIProvider() {
   });
 }
 
+export function useDiscoverAIProviderModels() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (providerKey: string) =>
+      apiFetch<ProviderModelDiscoveryResult>(`/ai/models/providers/${encodeURIComponent(providerKey)}/discover-models`, {
+        method: "POST",
+        timeoutMs: 20_000,
+      }),
+    onSuccess: () => invalidateAIModelQueries(queryClient),
+  });
+}
+
 export function useRebuildAIProviders() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -218,7 +270,7 @@ export function useCreateAIModel() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: ModelPayload) =>
-      apiFetch("/ai/models", {
+      apiFetch<AIModelItem>("/ai/models", {
         method: "POST",
         body: JSON.stringify(payload),
       }),

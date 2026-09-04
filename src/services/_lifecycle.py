@@ -105,6 +105,29 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
             sys.exit(130)
 
     except Exception as exc:
+        # Knowledge publication gaps have a durable, deterministic recovery
+        # path. Plan it while the worker still owns the RUNNING lease so the
+        # task transitions directly to QUEUED instead of briefly presenting a
+        # false terminal failure to the control plane.
+        if task.task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE:
+            try:
+                from src.services.ai_content_governance_service import (
+                    ai_content_governance_service,
+                )
+
+                if await ai_content_governance_service.schedule_knowledge_retry_after_failure(
+                    task.task_uuid,
+                    exc,
+                    allow_running=True,
+                ):
+                    return
+            except Exception as retry_exc:
+                logger.warning(
+                    "Failed to plan in-flight knowledge repair retry for {}: {}",
+                    task.task_uuid,
+                    retry_exc,
+                )
+
         error_summary = safe_exception_summary(exc)
         logger.error(f"Task {task.task_uuid} failed: {error_summary}")
         try:

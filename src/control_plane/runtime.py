@@ -20,6 +20,8 @@ from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 
+RuntimeMetadata = dict[str, Any] | Callable[[], dict[str, Any]]
+
 
 class ThreadedRuntimeGuard:
     """Renew worker ownership outside an event loop that legacy crawlers block."""
@@ -33,7 +35,7 @@ class ThreadedRuntimeGuard:
         instance_id: str,
         lease_ttl_seconds: int,
         heartbeat_ttl_seconds: int,
-        metadata: dict[str, Any] | None,
+        metadata: RuntimeMetadata | None,
         on_lease_lost: Callable[[], None],
     ) -> None:
         self.redis_url = redis_url
@@ -59,6 +61,11 @@ class ThreadedRuntimeGuard:
         self._thread.join(timeout=5)
 
     def _heartbeat_payload(self) -> str:
+        try:
+            metadata = self.metadata() if callable(self.metadata) else self.metadata
+        except Exception as exc:
+            logger.warning("Runtime heartbeat metadata callback failed: {}", exc)
+            metadata = {}
         return json.dumps(
             {
                 "service": self.service,
@@ -67,7 +74,7 @@ class ThreadedRuntimeGuard:
                 "host": socket.gethostname(),
                 "pid": os.getpid(),
                 "last_seen_at": datetime.now(timezone.utc).isoformat(),
-                "metadata": self.metadata,
+                "metadata": metadata,
             },
             ensure_ascii=False,
             default=str,
@@ -351,6 +358,45 @@ class RuntimeRegistry:
             logger.warning("Stopped runtime instance cleanup failed: {}", exc)
             return False
 
+    async def release_dead_local_instance_lease(self, name: str) -> bool:
+        """Release a lease only when its same-host owner PID is provably gone.
+
+        A forced systemd restart can leave a Redis TTL behind even though its
+        worker process has already exited.  This compare-and-delete recovery
+        avoids an unnecessary TTL wait without ever touching a remote owner or
+        a live/reused local PID.
+        """
+
+        owner, available = await self.lease_owner(name)
+        if not available or not owner:
+            return False
+        prefix = f"{name}-{socket.gethostname()}-"
+        if not owner.startswith(prefix):
+            return False
+        raw_pid, separator, _suffix = owner[len(prefix) :].partition("-")
+        if not separator:
+            return False
+        try:
+            pid = int(raw_pid)
+        except ValueError:
+            return False
+        if pid <= 0 or pid == os.getpid():
+            return False
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            released = await self.release_stopped_instance(name, owner)
+            if released:
+                logger.warning(
+                    "Released stale local runtime lease '{}' owned by dead PID {}",
+                    name,
+                    pid,
+                )
+            return released
+        except PermissionError:
+            return False
+        return False
+
     async def remove_heartbeat(self, service: str, instance_id: str) -> bool:
         """Remove one exact runtime heartbeat during graceful shutdown."""
         client = await self._client()
@@ -441,7 +487,7 @@ class RuntimeRegistry:
         *,
         lease_ttl_seconds: int,
         heartbeat_ttl_seconds: int,
-        metadata: dict[str, Any] | None,
+        metadata: RuntimeMetadata | None,
         on_lease_lost: Callable[[], None],
     ) -> ThreadedRuntimeGuard:
         guard = ThreadedRuntimeGuard(

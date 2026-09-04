@@ -41,6 +41,31 @@ def _install_bootstrap_fakes(monkeypatch, *, engine=None):
     return current_engine, calls, lambda: schema_calls
 
 
+def test_structured_workload_probe_accepts_the_contract_payload() -> None:
+    model_center._validate_structured_test_response(
+        '{"status":"globalid-structured-probe-ok","items":[{"id":1,"summary":"ok"}]}'
+    )
+
+
+def test_model_catalogue_extraction_is_stable_and_deduplicated() -> None:
+    payload = {"data": [{"id": "qwen3.8-flash"}, {"id": "qwen3.6-flash"}, {"id": "qwen3.8-flash"}, {"missing": "id"}]}
+
+    assert model_center._model_ids_from_catalogue(payload) == ["qwen3.6-flash", "qwen3.8-flash"]
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        "not json",
+        '{"status":"unexpected","items":[{}]}',
+        '{"status":"globalid-structured-probe-ok","items":[]}',
+    ],
+)
+def test_structured_workload_probe_rejects_invalid_payloads(response: str) -> None:
+    with pytest.raises(RuntimeError):
+        model_center._validate_structured_test_response(response)
+
+
 @pytest.mark.asyncio
 async def test_initial_empty_bootstrap_is_single_flight_and_fresh_calls_skip_db(
     monkeypatch,

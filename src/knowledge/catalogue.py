@@ -31,7 +31,10 @@ def public_disease_page_exclusion_reason(disease: Any) -> str | None:
         return "summary_category"
     if name_en in {"total", "summary"}:
         return "summary_name"
-    if any(phrase in description for phrase in NON_PUBLIC_DESCRIPTION_PHRASES):
+    if any(
+        phrase in description or phrase in name_en
+        for phrase in NON_PUBLIC_DESCRIPTION_PHRASES
+    ):
         return "deprecated_or_aggregate_description"
     return None
 
@@ -49,6 +52,8 @@ def knowledge_brief_publication_tier(brief: Any) -> str:
         return "blocked"
     if status == "published":
         return "published"
+    if status in {"draft", "awaiting_evidence"}:
+        return "automating"
     return status or "blocked"
 
 
@@ -64,6 +69,7 @@ def knowledge_brief_block_reason(brief: Any) -> str | None:
 def resolve_disease_knowledge_status(briefs: Iterable[Any]) -> str:
     """Resolve disease-level status as published, reviewable, or blocked."""
     has_review = False
+    has_automation = False
     has_blocked = False
 
     for brief in briefs:
@@ -72,11 +78,15 @@ def resolve_disease_knowledge_status(briefs: Iterable[Any]) -> str:
             return "published"
         if tier == "blocked":
             has_blocked = True
+        elif tier == "automating":
+            has_automation = True
         elif tier:
             has_review = True
 
     if has_review:
         return "requires_review"
+    if has_automation:
+        return "automating"
     if has_blocked:
         return "blocked"
     return "blocked"

@@ -194,6 +194,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/models/providers/{provider_key}/discover-models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Discover Provider Models
+         * @description Read the provider API catalogue; discovered models are not auto-enabled.
+         */
+        post: operations["discover_provider_models_api_v1_ai_models_providers__provider_key__discover_models_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/models/providers/{provider_key}/test": {
         parameters: {
             query?: never;
@@ -7885,7 +7905,9 @@ export interface operations {
     };
     test_all_models_api_v1_ai_models_check_all_post: {
         parameters: {
-            query?: never;
+            query?: {
+                structured?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -7940,13 +7962,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Problem detail */
+            /** @description Validation Error */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
             /** @description Problem detail */
@@ -8362,9 +8384,90 @@ export interface operations {
             };
         };
     };
-    test_provider_api_v1_ai_models_providers__provider_key__test_post: {
+    discover_provider_models_api_v1_ai_models_providers__provider_key__discover_models_post: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                provider_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: unknown;
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    test_provider_api_v1_ai_models_providers__provider_key__test_post: {
+        parameters: {
+            query?: {
+                structured?: boolean;
+            };
             header?: never;
             path: {
                 provider_key: string;
@@ -8683,7 +8786,9 @@ export interface operations {
     };
     test_model_api_v1_ai_models__model_key__test_post: {
         parameters: {
-            query?: never;
+            query?: {
+                structured?: boolean;
+            };
             header?: never;
             path: {
                 model_key: string;

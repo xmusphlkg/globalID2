@@ -16,6 +16,7 @@ from anthropic import AsyncAnthropic
 
 from src.core import get_cache, get_config, get_logger, RateLimiter
 from src.ai.model_center import (
+    acquire_runtime_route_admission,
     clear_route_rate_limit,
     extract_retry_after_seconds,
     get_active_model_routes,
@@ -23,8 +24,11 @@ from src.ai.model_center import (
     is_model_unavailable_error,
     is_rate_limit_error,
     mark_model_unavailable_by_name,
+    record_route_runtime_failure,
+    record_route_runtime_success,
     mark_route_rate_limited,
     mark_route_unavailable,
+    runtime_route_admission_score,
 )
 
 logger = get_logger(__name__)
@@ -56,6 +60,17 @@ class BaseAgent(ABC):
         "last_rate_limit_at",
         "last_recovered_at",
         "rate_limit_count",
+        "runtime_cooldown_until",
+        "runtime_failure_streak",
+        "runtime_failure_count",
+        "runtime_timeout_count",
+        "runtime_success_count",
+        "runtime_latency_ewma_ms",
+        "runtime_last_latency_ms",
+        "last_runtime_failure_kind",
+        "last_runtime_failure_at",
+        "last_runtime_success_at",
+        "last_runtime_error",
     }
     
     def __init__(
@@ -106,7 +121,13 @@ class BaseAgent(ABC):
         self.clients = {}
         self._init_clients()
         
-        logger.info(f"Agent '{name}' initialized with provider '{self.provider}' and model '{self.model}'")
+        logger.info(
+            "Agent '{}' initialized with bootstrap provider '{}' and model '{}'; "
+            "live completions are routed by Model Center.",
+            name,
+            self.provider,
+            self.model,
+        )
 
     @classmethod
     def _purge_expired_cooldowns(cls) -> None:
@@ -172,6 +193,13 @@ class BaseAgent(ABC):
                 if db_wait > 0:
                     waits.append(db_wait)
 
+                try:
+                    runtime_wait = int(route.get("runtime_failure_remaining_seconds") or 0)
+                except (TypeError, ValueError):
+                    runtime_wait = 0
+                if runtime_wait > 0:
+                    waits.append(runtime_wait)
+
         for model_name in chain or []:
             model_wait = cls._cooldown_remaining_seconds(cls.MODEL_COOLDOWNS.get(model_name))
             if model_wait > 0:
@@ -200,7 +228,21 @@ class BaseAgent(ABC):
                 route_status = str(route.get("last_check_status") or "").strip().lower()
                 if route_status == "unavailable":
                     continue
-                if not ignore_local_cooldowns and not bool(route.get("available_for_routing", True)):
+                # A final in-process probe may ignore only transient local
+                # cooldown markers. It must never bypass a durable Model
+                # Center rate-limit or runtime circuit.
+                durably_blocked = bool(route.get("runtime_failure_active")) or bool(
+                    route.get("rate_limit_active")
+                )
+                try:
+                    durably_blocked = durably_blocked or int(
+                        route.get("rate_limit_remaining_seconds") or 0
+                    ) > 0
+                except (TypeError, ValueError):
+                    pass
+                if not bool(route.get("available_for_routing", True)) and (
+                    not ignore_local_cooldowns or durably_blocked
+                ):
                     continue
                 if not ignore_local_cooldowns and BaseAgent._is_route_cooling_down(route_key):
                     continue
@@ -265,8 +307,19 @@ class BaseAgent(ABC):
         candidates: List[Dict[str, Any]],
         preferred_models: Optional[List[str]],
     ) -> List[Dict[str, Any]]:
-        if not candidates or not preferred_models:
+        if not candidates:
             return candidates
+
+        def order_runtime_by_admission(group: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            runtime = [candidate for candidate in group if candidate.get("route") is not None]
+            direct = [candidate for candidate in group if candidate.get("route") is None]
+            runtime.sort(
+                key=lambda candidate: runtime_route_admission_score(candidate["route"]),
+            )
+            return runtime + direct
+
+        if not preferred_models:
+            return order_runtime_by_admission(candidates)
 
         preferred_order = {
             model_name.strip(): index
@@ -298,7 +351,19 @@ class BaseAgent(ABC):
         # current healthy status; preference reorders within each route class.
         runtime = [candidate for candidate in candidates if candidate.get("route") is not None]
         direct = [candidate for candidate in candidates if candidate.get("route") is None]
-        return order_group(runtime) + order_group(direct)
+        preferred_runtime = [
+            candidate
+            for candidate in runtime
+            if str(candidate.get("model_name") or "").strip() in preferred_order
+        ]
+        deferred_runtime = [candidate for candidate in runtime if candidate not in preferred_runtime]
+        # Preference selects a requested shard first; live admission pressure
+        # balances routes only within that preference band.
+        return (
+            order_runtime_by_admission(order_group(preferred_runtime))
+            + order_runtime_by_admission(order_group(deferred_runtime))
+            + order_group(direct)
+        )
     
     def _init_clients(self):
         """Initialize clients for supported AI providers."""
@@ -391,7 +456,11 @@ class BaseAgent(ABC):
         for key, value in (params or {}).items():
             if isinstance(key, str) and key in cls.INTERNAL_COMPLETION_PARAM_KEYS:
                 continue
-            if isinstance(key, str) and (key.startswith("routing_") or key.startswith("rate_limit_")):
+            if isinstance(key, str) and (
+                key.startswith("routing_")
+                or key.startswith("rate_limit_")
+                or key.startswith("runtime_")
+            ):
                 continue
             sanitized[key] = value
         return sanitized
@@ -401,6 +470,30 @@ class BaseAgent(ABC):
         """Parse unexpected keyword argument name from Python TypeError."""
         match = re.search(r"unexpected keyword argument '([^']+)'", str(error))
         return match.group(1) if match else None
+
+    @staticmethod
+    def _extract_unsupported_optional_param(
+        error: Exception,
+        payload: Dict[str, Any],
+    ) -> Optional[str]:
+        """Identify optional OpenAI-compatible parameters rejected by a proxy.
+
+        Some compatible endpoints accept normal chat completions but reject
+        ``response_format``.  That capability difference must not make an
+        otherwise healthy Model Center route unavailable.
+        """
+        message = str(error or "").lower()
+        if "response_format" not in payload or "response_format" not in message:
+            return None
+        rejection_markers = (
+            "unsupported",
+            "unknown parameter",
+            "invalid parameter",
+            "unexpected",
+            "not allowed",
+            "unrecognized",
+        )
+        return "response_format" if any(marker in message for marker in rejection_markers) else None
 
     @staticmethod
     def _completion_content_to_text(content: Any) -> str:
@@ -491,6 +584,16 @@ class BaseAgent(ABC):
                     payload.get("model"),
                 )
                 payload.pop(unexpected_kwarg, None)
+            except Exception as exc:
+                unsupported_param = self._extract_unsupported_optional_param(exc, payload)
+                if not unsupported_param:
+                    raise
+                logger.warning(
+                    "Dropping unsupported completion argument '{}' for model '{}'",
+                    unsupported_param,
+                    payload.get("model"),
+                )
+                payload.pop(unsupported_param, None)
 
         # Should be unreachable because loop returns or raises.
         return await client.chat.completions.create(**payload)
@@ -704,11 +807,16 @@ class BaseAgent(ABC):
             start_time = time.time()
 
             while retry_count < attempt_limit:
+                attempt_started_at = time.perf_counter()
                 try:
                     if route:
                         provider = str(route.get("provider_key") or route.get("provider_name") or "runtime")
                         request = self._complete_with_runtime_route(
-                            route, prompt, system, **kwargs
+                            route,
+                            prompt,
+                            system,
+                            request_timeout_seconds=model_request_timeout_seconds,
+                            **kwargs,
                         )
                     else:
                         # Determine which provider to use for this model
@@ -716,13 +824,36 @@ class BaseAgent(ABC):
                         request = self._complete_with_provider(
                             provider, prompt, system, **kwargs
                         )
-                    if model_request_timeout_seconds is not None:
+                    # Runtime-route admission is intentional local
+                    # backpressure.  Its wait is outside the provider request
+                    # deadline, which is enforced inside the admitted call.
+                    if model_request_timeout_seconds is not None and not route:
                         response_text, token_usage = await asyncio.wait_for(
                             request,
                             timeout=max(0.01, float(model_request_timeout_seconds)),
                         )
                     else:
                         response_text, token_usage = await request
+                    if not isinstance(response_text, str) or not response_text.strip():
+                        raise RuntimeError("Model returned an empty completion response")
+                    attempt_duration_seconds = time.perf_counter() - attempt_started_at
+                    if route:
+                        try:
+                            await record_route_runtime_success(
+                                route,
+                                duration_seconds=getattr(
+                                    self,
+                                    "_runtime_route_request_duration_seconds",
+                                    None,
+                                )
+                                or attempt_duration_seconds,
+                            )
+                        except Exception as health_exc:
+                            logger.warning(
+                                "Failed to persist runtime success for route '{}': {}",
+                                route_key,
+                                health_exc,
+                            )
                     if route and (
                         route.get("rate_limit_count")
                         or route.get("last_check_status") == "rate_limited"
@@ -740,6 +871,18 @@ class BaseAgent(ABC):
 
                     # 记录对话历史
                     duration = time.time() - start_time
+                    interaction_metadata = {"cache_hit": False}
+                    if route:
+                        interaction_metadata["runtime_route"] = {
+                            key: route.get(key)
+                            for key in (
+                                "model_id",
+                                "provider_id",
+                                "model_key",
+                                "model_name",
+                                "provider_key",
+                            )
+                        }
                     self._append_conversation_entry(
                         prompt=prompt,
                         system=system,
@@ -747,6 +890,7 @@ class BaseAgent(ABC):
                         provider=provider,
                         token_usage=token_usage,
                         duration=duration,
+                        metadata=interaction_metadata,
                     )
 
                     # 缓存结果
@@ -771,6 +915,41 @@ class BaseAgent(ABC):
                 except Exception as e:
                     last_error = e
                     retry_count += 1
+
+                    if route:
+                        try:
+                            runtime_failure = await record_route_runtime_failure(
+                                route,
+                                e,
+                                duration_seconds=getattr(
+                                    self,
+                                    "_runtime_route_request_duration_seconds",
+                                    None,
+                                )
+                                or (time.perf_counter() - attempt_started_at),
+                                cooldown_seconds=max(
+                                    5,
+                                    int(
+                                        timeout_cooldown_seconds
+                                        or getattr(
+                                            self.config.ai,
+                                            "rate_limit_cooldown_seconds",
+                                            60,
+                                        )
+                                    ),
+                                ),
+                            )
+                            if runtime_failure.get("recorded"):
+                                # A following task must read the durable model-center
+                                # circuit, not reuse this process's stale route cache.
+                                BaseAgent.AVAILABLE_MODEL_ROUTES = None
+                                BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
+                        except Exception as health_exc:
+                            logger.warning(
+                                "Failed to persist runtime failure for route '{}': {}",
+                                route_key,
+                                health_exc,
+                            )
 
                     quota_related = is_rate_limit_error(e)
                     unavailable_related = is_model_unavailable_error(e)
@@ -920,9 +1099,43 @@ class BaseAgent(ABC):
         route: Dict[str, Any],
         prompt: str,
         system: Optional[str] = None,
+        request_timeout_seconds: Optional[float] = None,
         **kwargs,
     ) -> Tuple[str, Dict[str, int]]:
-        """Generate using model-center runtime route (provider+credential+style)."""
+        """Generate through a permit; timeout and telemetry cover only the API call."""
+        self._runtime_route_request_duration_seconds = None
+        admission = await acquire_runtime_route_admission(route)
+        request_started_at = time.perf_counter()
+        try:
+            request = self._complete_with_admitted_runtime_route(
+                route,
+                prompt,
+                system,
+                **kwargs,
+            )
+            if request_timeout_seconds is not None:
+                response = await asyncio.wait_for(
+                    request,
+                    timeout=max(0.01, float(request_timeout_seconds)),
+                )
+            else:
+                response = await request
+        except BaseException:
+            self._runtime_route_request_duration_seconds = time.perf_counter() - request_started_at
+            await admission.release(success=False)
+            raise
+        self._runtime_route_request_duration_seconds = time.perf_counter() - request_started_at
+        await admission.release(success=True)
+        return response
+
+    async def _complete_with_admitted_runtime_route(
+        self,
+        route: Dict[str, Any],
+        prompt: str,
+        system: Optional[str] = None,
+        **kwargs,
+    ) -> Tuple[str, Dict[str, int]]:
+        """Issue the provider request after Model Center admission succeeds."""
         style = str(route.get("api_style") or "openai_compatible").lower()
         model_name = str(route.get("model_name") or self.model)
         route_temperature = route.get("temperature")

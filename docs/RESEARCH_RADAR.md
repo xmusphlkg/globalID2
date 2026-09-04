@@ -14,7 +14,10 @@ surveillance observations.
    rotating controlled-query plan searches disease aliases, named pathogens,
    MeSH terms, vaccines, and antimicrobial-resistance terms in Crossref and
    Europe PMC; its nested checkpoint prevents a large vocabulary from making a
-   single run unbounded.
+   single run unbounded. PubMed E-utilities supplies a bounded secondary
+   biomedical search path and can fall back for the curated journal registry
+   when the Crossref core sync is temporarily unavailable, without advancing
+   the Crossref index-date checkpoint.
 2. WHO IRIS OAI-PMH supplies licensed Dublin Core metadata for official
    guidance and technical documents. The client is pinned to the reviewed WHO
    HTTPS endpoint, reads metadata only, never follows document links, resumes
