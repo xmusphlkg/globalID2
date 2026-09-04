@@ -86,10 +86,14 @@ test('weekly briefs render a human reviewer only for an explicit reviewed status
 
 test('evidence graph ships a compact payload and renders only visible nodes', () => {
   const graph = readSource('pages/research/graph.astro');
+  const graphEndpoint = readSource('pages/site-data/research-graph.json.ts');
 
   assert.match(graph, /const nodes: any\[\] = \(graph\.nodes \?\? \[\]\)\.map/);
-  assert.match(graph, /const edges: any\[\] = \(graph\.edges \?\? \[\]\)\.map/);
+  assert.match(graph, /data-graph-src="\/site-data\/research-graph\.json"/);
+  assert.match(graph, /await fetch\(root\.dataset\.graphSrc/);
+  assert.match(graphEndpoint, /const edges: any\[\] = \(graph\.edges \?\? \[\]\)\.map/);
   assert.match(graph, /nodeList\.replaceChildren\(fragment\)/);
   assert.match(graph, /matching\.slice\(0, visibleLimit\)/);
   assert.doesNotMatch(graph, /\{nodes\.map\(node => \(/);
+  assert.doesNotMatch(graph, /type="application\/json" id="research-graph-data"/);
 });

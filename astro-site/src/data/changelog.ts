@@ -67,6 +67,10 @@ export const changelogReleases: ChangelogRelease[] = [
             en: 'Research Radar summary enrichment now includes non-open-access records when a usable abstract is available and spreads concurrent requests across active Model Center route shards.',
             zh: '研究雷达摘要补全现在会纳入非开放获取但已有可用摘要的记录，并将并发请求分散到活跃的模型中心路由分片。',
           },
+          {
+            en: 'The Research evidence graph now loads relationships from a dedicated static JSON endpoint, keeping localized HTML pages inside performance budgets as the catalogue grows.',
+            zh: '研究证据图谱现在从专用静态 JSON 端点加载关系数据，随着目录增长也能让中英文 HTML 页面保持在性能预算内。',
+          },
         ],
       },
       {
@@ -85,6 +89,10 @@ export const changelogReleases: ChangelogRelease[] = [
           {
             en: 'Transient model connectivity failures no longer consume Research Radar summary quality-attempt budgets, keeping affected abstracts retryable.',
             zh: '临时模型连接失败不再消耗研究雷达摘要质量尝试次数，受影响摘要会继续保持可重试。',
+          },
+          {
+            en: 'Research Radar public exports and Astro builds now share a release lock, preventing continuous summary catch-up from changing source data midway through a site build.',
+            zh: '研究雷达公开导出与 Astro 构建现在共享发布锁，避免连续摘要补全在站点构建中途改写源数据。',
           },
         ],
       },
