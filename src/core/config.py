@@ -663,9 +663,21 @@ class LiteratureSettings(_BaseEnvSettings):
         description="Continuously process the next eligible summary batch on the scheduler",
     )
     ai_enrichment_interval_minutes: int = Field(default=60, ge=15, le=10080)
-    ai_enrichment_batch_size: int = Field(default=8, ge=1, le=50)
+    ai_enrichment_batch_size: int = Field(default=32, ge=1, le=50)
+    ai_enrichment_concurrency: int = Field(
+        default=6,
+        ge=1,
+        le=24,
+        description="Maximum article-level concurrency within one Research Radar AI enrichment task",
+    )
+    ai_enrichment_candidate_scan_limit: int = Field(
+        default=10000,
+        ge=100,
+        le=100000,
+        description="Maximum eligible article candidates scanned to fill one AI enrichment batch",
+    )
     ai_max_quality_attempts: int = Field(
-        default=2,
+        default=5,
         ge=1,
         le=5,
         description="Maximum automatic generations per unchanged article/language before exception review",

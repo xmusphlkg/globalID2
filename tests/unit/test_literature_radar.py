@@ -1134,17 +1134,22 @@ async def test_chinese_enrichment_requires_and_records_english_semantic_contract
 
 
 @pytest.mark.asyncio
-async def test_chinese_enrichment_rejects_different_null_field_topology():
+async def test_chinese_enrichment_repairs_different_null_field_topology():
     candidate = normalize_crossref(_crossref_payload())
     assert candidate is not None
     canonical = {field: f"Canonical {field}." for field in SUMMARY_FIELDS}
+    agent = _FakeLiteratureAgent()
 
-    with pytest.raises(ValueError, match="bilingual_null_alignment_mismatch:population_setting"):
-        await LiteratureSummaryGenerator(agent=_FakeLiteratureAgent()).generate(
-            article=candidate, language="zh", diseases=["Dengue"], countries=["Japan"],
-            topics=["Surveillance"], timeout_seconds=10, preferred_models=[],
-            canonical_fields=canonical,
-        )
+    result = await LiteratureSummaryGenerator(agent=agent).generate(
+        article=candidate, language="zh", diseases=["Dengue"], countries=["Japan"],
+        topics=["Surveillance"], timeout_seconds=10, preferred_models=[],
+        canonical_fields=canonical,
+    )
+
+    assert len(agent.calls) == 2
+    assert result.canonical_summary_fingerprint
+    assert result.fields["population_setting"].startswith("人群与场景按英文规范摘要保留同等含义")
+    assert result.evidence_map["population_setting"]["fallback"] == "canonical_english_contract"
 
 
 class _ScalarResult:
