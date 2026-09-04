@@ -15,6 +15,7 @@ const nodes: any[] = (graph.nodes ?? []).map((node: any) => ({
   label: node.label,
   ...(node.url ? { url: node.url } : {}),
 }));
+const edgeCount = Array.isArray(graph.edges) ? graph.edges.length : 0;
 const nodeTypes = [...new Set(nodes.map((node: any) => String(node.type || 'unknown')))].sort();
 const relationLabels: Record<string, { en: string; zh: string }> = {
   ABOUT_DISEASE: { en: 'About disease', zh: '涉及疾病' },
@@ -52,7 +53,7 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
       <p>{pick('Browse deterministic classifier links and quality-gated summary relationships. The graph does not infer causality or scientific credibility.', '浏览确定性分类关系与通过质量门控的摘要关系。本图谱不推断因果关系或科学可信度。')}</p>
       <dl>
         <div><dt>{pick('Nodes', '节点')}</dt><dd>{graph.stats?.nodes ?? nodes.length}</dd></div>
-        <div><dt>{pick('Relationships', '关系')}</dt><dd>{graph.stats?.edges ?? edges.length}</dd></div>
+        <div><dt>{pick('Relationships', '关系')}</dt><dd>{graph.stats?.edges ?? edgeCount}</dd></div>
         <div><dt>{pick('Articles', '论文')}</dt><dd>{graph.stats?.articles ?? 0}</dd></div>
         <div><dt>{pick('Filtered low-confidence links', '已过滤低置信度关系')}</dt><dd>{graph.quality?.skipped_low_confidence_edges ?? 0}</dd></div>
       </dl>
