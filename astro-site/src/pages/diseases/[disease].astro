@@ -185,12 +185,16 @@ const knowledgeUpdatedEn = knowledgeUpdatedAt
 const knowledgeUpdatedZh = knowledgeUpdatedAt
   ? new Date(knowledgeUpdatedAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })
   : null;
-const profileUnavailableMessageEn = knowledgeStatus === 'requires_review'
-  ? 'The available material does not yet pass the evidence-quality threshold for a public disease profile. Verified surveillance data, coding information, and downloads remain available.'
-  : 'Source-backed disease background is not available yet. Verified surveillance data, coding information, and downloads remain available.';
-const profileUnavailableMessageZh = knowledgeStatus === 'requires_review'
-  ? '现有材料尚未达到公开疾病画像的证据质量门槛。已核验的监测数据、疾病编码和下载功能仍可正常使用。'
-  : '当前暂无基于可追溯来源的疾病背景信息。已核验的监测数据、疾病编码和下载功能仍可正常使用。';
+const profileUnavailableMessageEn = knowledgeStatus === 'automating'
+  ? 'Evidence enrichment is in progress for this disease profile. Verified surveillance data, coding information, and downloads remain available.'
+  : knowledgeStatus === 'requires_review'
+    ? 'The available material does not yet pass the evidence-quality threshold for a public disease profile. Verified surveillance data, coding information, and downloads remain available.'
+    : 'Source-backed disease background is not available yet. Verified surveillance data, coding information, and downloads remain available.';
+const profileUnavailableMessageZh = knowledgeStatus === 'automating'
+  ? '该疾病画像正在自动补全可追溯证据。已核验的监测数据、疾病编码和下载功能仍可正常使用。'
+  : knowledgeStatus === 'requires_review'
+    ? '现有材料尚未达到公开疾病画像的证据质量门槛。已核验的监测数据、疾病编码和下载功能仍可正常使用。'
+    : '当前暂无基于可追溯来源的疾病背景信息。已核验的监测数据、疾病编码和下载功能仍可正常使用。';
 
 function fmtNum(n: number | null | undefined) {
   if (!n) return '0';

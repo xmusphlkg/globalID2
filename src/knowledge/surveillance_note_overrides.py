@@ -44,10 +44,14 @@ def apply_surveillance_note_override(payload: dict[str, Any]) -> dict[str, Any]:
 
     marker = _MARKERS[language]
     current = str(result.get("surveillance_note") or "").strip()
-    # Regeneration may receive an existing overlaid note through repair mode.
-    # Remove only our prior terminal block, never curator/AI prose above it.
+    # Persisted briefs pass through a whitespace normalizer, so a prior block
+    # may be separated by either newlines or plain spaces. Remove only the
+    # exact reviewed block, wherever it appears, while preserving model prose
+    # before it. This also repairs historic rows in which the old newline-only
+    # matcher appended the same block on every refresh.
+    reviewed_pattern = re.escape(reviewed_note.strip()).replace(r"\ ", r"\s+")
     current = re.sub(
-        rf"\n\n{re.escape(marker)}\s.*\Z",
+        rf"\s*{re.escape(marker)}\s*{reviewed_pattern}",
         "",
         current,
         flags=re.DOTALL,

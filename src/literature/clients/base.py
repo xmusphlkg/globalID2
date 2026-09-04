@@ -86,5 +86,47 @@ class LiteratureHttpClient:
         assert last_error is not None
         raise last_error
 
+    async def get_text(
+        self,
+        client: httpx.AsyncClient,
+        url: str,
+        *,
+        params: dict[str, Any],
+        accept: str,
+    ) -> str:
+        last_error: Exception | None = None
+        attempts = max(1, self.retries)
+        for attempt in range(attempts):
+            response: httpx.Response | None = None
+            try:
+                response = await client.get(
+                    url,
+                    params=params,
+                    headers={"User-Agent": self.user_agent, "Accept": accept},
+                    timeout=self.timeout_seconds,
+                )
+                response.raise_for_status()
+                declared_size = int(response.headers.get("Content-Length") or 0)
+                if declared_size > self.max_response_bytes or len(response.content) > self.max_response_bytes:
+                    raise ValueError("Literature API response exceeds the configured size limit")
+                return response.text
+            except (httpx.HTTPError, ValueError) as exc:
+                last_error = exc
+                status_code = response.status_code if response is not None else None
+                retryable = (
+                    isinstance(exc, (httpx.RequestError, ValueError))
+                    or status_code in _RETRYABLE_STATUS_CODES
+                )
+                if not retryable or attempt + 1 >= attempts:
+                    raise
+                retry_after = response.headers.get("Retry-After") if response is not None else None
+                try:
+                    server_delay = float(retry_after) if retry_after is not None else 0.0
+                except ValueError:
+                    server_delay = 0.0
+                await asyncio.sleep(min(60.0, max(server_delay, 0.5 * (2**attempt))))
+        assert last_error is not None
+        raise last_error
+
 
 __all__ = ["AsyncRequestLimiter", "LiteratureHttpClient", "ProviderNotConfiguredError"]

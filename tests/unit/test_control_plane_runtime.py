@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import socket
 import threading
 import time
 
 import pytest
 
 from src.control_plane.events import ControlPlaneEventBus
+from src.control_plane import runtime as runtime_module
 from src.control_plane.runtime import RuntimeRegistry, ThreadedRuntimeGuard
 
 
@@ -101,6 +103,26 @@ async def test_stopped_instance_cleanup_is_exact_owner_scoped() -> None:
     assert await registry.release_stopped_instance("worker", "worker-other") is False
     assert fake_redis.values[lease_key] == "worker-1"
     assert await registry.release_stopped_instance("worker", "worker-1") is True
+    assert lease_key not in fake_redis.values
+    assert heartbeat_key not in fake_redis.values
+
+
+@pytest.mark.asyncio
+async def test_dead_local_owner_lease_is_released_without_waiting_for_ttl(monkeypatch) -> None:
+    registry = RuntimeRegistry()
+    fake_redis = FakeRedis()
+    registry._redis = fake_redis  # type: ignore[assignment]
+    owner = f"worker-{socket.gethostname()}-987654-dead"
+    lease_key = f"{registry.key_prefix}:lease:worker"
+    heartbeat_key = f"{registry.key_prefix}:worker:{owner}"
+    fake_redis.values = {lease_key: owner, heartbeat_key: '{"service":"worker"}'}
+
+    def dead_process(_pid: int, _signal: int) -> None:
+        raise ProcessLookupError
+
+    monkeypatch.setattr(runtime_module.os, "kill", dead_process)
+
+    assert await registry.release_dead_local_instance_lease("worker") is True
     assert lease_key not in fake_redis.values
     assert heartbeat_key not in fake_redis.values
 

@@ -25,6 +25,7 @@ from .clients import (
     OfficialGuidanceOaiClient,
     OpenAlexClient,
     PublisherRssClient,
+    PubMedClient,
     SpringerNatureClient,
     UnpaywallClient,
 )
@@ -32,6 +33,7 @@ from .controlled_discovery import build_controlled_query_batches, fetch_controll
 from .normalization import (
     apply_europe_pmc,
     apply_openalex,
+    apply_pubmed_abstract,
     apply_unpaywall,
     normalize_crossref,
     normalize_biorxiv,
@@ -39,6 +41,7 @@ from .normalization import (
     normalize_europe_pmc,
     normalize_official_guidance,
     normalize_publisher_rss,
+    normalize_pubmed,
     normalize_springer_nature,
 )
 from .repository import LiteratureRepository
@@ -257,21 +260,56 @@ class LiteraturePipeline:
                 timeout_seconds=self.config.request_timeout_seconds,
                 retries=self.config.max_retries,
             )
-            source_result = await crossref.fetch_incremental(
-                journals=journals,
-                since=since,
-                until=now,
-                max_records=self.config.max_records_per_run,
-                concurrency=self.config.source_concurrency,
-                resume_after=resume_after,
-            )
-            raw_records = source_result.records
+            source_result = None
+            raw_records: list[dict[str, Any]] = []
+            crossref_error: str | None = None
+            pubmed_core_result = None
+            pubmed_core_records: list[dict[str, Any]] = []
+            pubmed_core_error: str | None = None
+            try:
+                source_result = await crossref.fetch_incremental(
+                    journals=journals,
+                    since=since,
+                    until=now,
+                    max_records=self.config.max_records_per_run,
+                    concurrency=self.config.source_concurrency,
+                    resume_after=resume_after,
+                )
+                raw_records = source_result.records
+            except Exception as exc:
+                crossref_error = type(exc).__name__ or "Exception"
+                if not getattr(self.config, "pubmed_enabled", False):
+                    raise
+                logger.warning(
+                    "Crossref core journal sync failed; attempting PubMed fallback error_type={}",
+                    crossref_error,
+                )
+                pubmed_core_result, pubmed_core_error = await _isolate_optional_source(
+                    "pubmed",
+                    PubMedClient(
+                        contact_email=self.config.contact_email,
+                        api_key=getattr(self.config, "pubmed_api_key", ""),
+                        tool=getattr(self.config, "pubmed_tool", "GIDSResearchRadar"),
+                        timeout_seconds=self.config.request_timeout_seconds,
+                        retries=self.config.max_retries,
+                        min_interval_seconds=getattr(self.config, "pubmed_min_interval_seconds", 0.34),
+                    ).fetch_incremental(
+                        journals=journals,
+                        since=since,
+                        until=now,
+                        max_records=getattr(self.config, "max_pubmed_records", self.config.max_records_per_run),
+                    ),
+                )
+                if pubmed_core_result is None:
+                    raise
+                pubmed_core_records = pubmed_core_result.records
             taxonomy = _load_json(ROOT / self.config.taxonomy_path)
             diseases, countries = await self._classification_catalogues()
 
             controlled_result = None
             controlled_crossref_records: list[dict[str, Any]] = []
             controlled_europe_pmc_records: list[dict[str, Any]] = []
+            controlled_pubmed_records: list[dict[str, Any]] = []
             if getattr(self.config, "controlled_discovery_enabled", False):
                 controlled_checkpoint = await self._resolve_nested_checkpoint("controlled_discovery")
                 query_batches = build_controlled_query_batches(
@@ -293,6 +331,18 @@ class LiteraturePipeline:
                         if self.config.europe_pmc_enabled
                         else None
                     ),
+                    pubmed=(
+                        PubMedClient(
+                            contact_email=self.config.contact_email,
+                            api_key=getattr(self.config, "pubmed_api_key", ""),
+                            tool=getattr(self.config, "pubmed_tool", "GIDSResearchRadar"),
+                            timeout_seconds=self.config.request_timeout_seconds,
+                            retries=self.config.max_retries,
+                            min_interval_seconds=getattr(self.config, "pubmed_min_interval_seconds", 0.34),
+                        )
+                        if getattr(self.config, "pubmed_enabled", False)
+                        else None
+                    ),
                     batches=query_batches,
                     checkpoint=controlled_checkpoint,
                     since=since,
@@ -312,6 +362,7 @@ class LiteraturePipeline:
                 )
                 controlled_crossref_records = controlled_result.crossref_records
                 controlled_europe_pmc_records = controlled_result.europe_pmc_records
+                controlled_pubmed_records = controlled_result.pubmed_records
 
             official_guidance_result = None
             official_guidance_records: list[dict[str, Any]] = []
@@ -440,6 +491,7 @@ class LiteraturePipeline:
                 rss_records = rss_result.records
             source_candidates = [
                 *[candidate for item in raw_records if (candidate := normalize_crossref(item))],
+                *[candidate for item in pubmed_core_records if (candidate := normalize_pubmed(item))],
                 *[candidate for item in rss_records if (candidate := normalize_publisher_rss(item))],
                 *[candidate for item in springer_records if (candidate := normalize_springer_nature(item))],
                 *[candidate for item in elsevier_records if (candidate := normalize_elsevier(item))],
@@ -453,6 +505,11 @@ class LiteraturePipeline:
                     candidate
                     for item in controlled_europe_pmc_records
                     if (candidate := normalize_europe_pmc(item))
+                ],
+                *[
+                    candidate
+                    for item in controlled_pubmed_records
+                    if (candidate := normalize_pubmed(item))
                 ],
                 *[
                     candidate
@@ -524,21 +581,31 @@ class LiteraturePipeline:
             counts = {
                 "fetched": (
                     len(raw_records)
+                    + len(pubmed_core_records)
                     + len(rss_records)
                     + len(controlled_crossref_records)
                     + len(controlled_europe_pmc_records)
+                    + len(controlled_pubmed_records)
                     + len(official_guidance_records)
                     + len(springer_records)
                     + len(elsevier_records)
                     + len(preprint_records)
                 ),
                 "crossref_fetched": len(raw_records) + len(controlled_crossref_records),
+                "crossref_source_errors": int(crossref_error is not None),
+                "pubmed_fetched": len(pubmed_core_records) + len(controlled_pubmed_records),
+                "pubmed_core_fetched": len(pubmed_core_records),
+                "pubmed_core_fallback_used": int(source_result is None and pubmed_core_result is not None),
+                "pubmed_source_errors": int(pubmed_core_error is not None),
                 "publisher_rss_fetched": len(rss_records),
                 "controlled_discovery_fetched": (
-                    len(controlled_crossref_records) + len(controlled_europe_pmc_records)
+                    len(controlled_crossref_records)
+                    + len(controlled_europe_pmc_records)
+                    + len(controlled_pubmed_records)
                 ),
                 "controlled_discovery_crossref_fetched": len(controlled_crossref_records),
                 "controlled_discovery_europe_pmc_fetched": len(controlled_europe_pmc_records),
+                "controlled_discovery_pubmed_fetched": len(controlled_pubmed_records),
                 "official_guidance_fetched": len(official_guidance_records),
                 "official_guidance_records_seen": int(
                     (official_guidance_result.checkpoint if official_guidance_result else {}).get("records_seen") or 0
@@ -573,23 +640,23 @@ class LiteraturePipeline:
                 "autopilot_skipped_degraded_enrichment": int(
                     self.config.autopilot_enabled and enrichment_degraded
                 ),
-                "source_records_seen": int(source_result.checkpoint.get("records_seen") or len(raw_records)),
-                "source_records_returned": int(source_result.checkpoint.get("records_returned") or len(raw_records)),
+                "source_records_seen": int((source_result.checkpoint if source_result else {}).get("records_seen") or len(raw_records)),
+                "source_records_returned": int((source_result.checkpoint if source_result else {}).get("records_returned") or len(raw_records)),
                 "source_records_prefetched": int(
-                    source_result.checkpoint.get("records_prefetched") or len(raw_records)
+                    (source_result.checkpoint if source_result else {}).get("records_prefetched") or len(raw_records)
                 ),
                 "source_lookahead_records": int(
-                    source_result.checkpoint.get("lookahead_records") or 0
+                    (source_result.checkpoint if source_result else {}).get("lookahead_records") or 0
                 ),
                 "source_pages_fetched": int(
-                    source_result.checkpoint.get("pages_fetched") or 0
+                    (source_result.checkpoint if source_result else {}).get("pages_fetched") or 0
                 ),
-                "source_truncated": int(bool(source_result.checkpoint.get("truncated"))),
+                "source_truncated": int(bool((source_result.checkpoint if source_result else {}).get("truncated"))),
                 "source_catch_up_required": int(
-                    bool(source_result.checkpoint.get("catch_up_required"))
+                    bool((source_result.checkpoint if source_result else {}).get("catch_up_required"))
                 ),
                 "source_remaining_index_span_seconds": int(
-                    source_result.checkpoint.get("remaining_index_span_seconds") or 0
+                    (source_result.checkpoint if source_result else {}).get("remaining_index_span_seconds") or 0
                 ),
                 "publisher_rss_records_seen": int((rss_result.checkpoint if rss_result else {}).get("records_seen") or 0),
                 "publisher_rss_feeds_modified": int((rss_result.checkpoint if rss_result else {}).get("feeds_modified") or 0),
@@ -598,7 +665,13 @@ class LiteraturePipeline:
                 "publisher_rss_truncated": int(bool((rss_result.checkpoint if rss_result else {}).get("truncated"))),
                 **enrichment_counts,
             }
-            through_indexed_at = _parse_checkpoint_datetime(source_result.checkpoint.get("through_indexed_at")) or now
+            source_checkpoint = source_result.checkpoint if source_result else {
+                "strategy": "pubmed-fallback-no-crossref-advance-v1",
+                "crossref_error": crossref_error,
+                "through_indexed_at": since.isoformat(),
+                "truncated": False,
+            }
+            through_indexed_at = _parse_checkpoint_datetime(source_checkpoint.get("through_indexed_at")) or since
             springer_next_checkpoint = _preserve_optional_checkpoint(
                 springer_result,
                 springer_checkpoint,
@@ -612,7 +685,8 @@ class LiteraturePipeline:
                 preprint_checkpoint,
             )
             checkpoint = {
-                **source_result.checkpoint,
+                **source_checkpoint,
+                **({"pubmed_core": pubmed_core_result.checkpoint} if pubmed_core_result else {}),
                 **({"rss": rss_result.checkpoint} if rss_result else {}),
                 **(
                     {"controlled_discovery": controlled_result.checkpoint}
@@ -646,6 +720,11 @@ class LiteraturePipeline:
                 counts=counts,
                 checkpoint=checkpoint,
                 through_indexed_at=through_indexed_at,
+                source=(
+                    self._source_label(crossref=False, pubmed_fallback=True)
+                    if source_result is None and pubmed_core_result is not None
+                    else None
+                ),
             )
             if task:
                 await task_manager.update_task_progress(task.task_uuid, 100)
@@ -667,9 +746,11 @@ class LiteraturePipeline:
             "europe_pmc_enriched": 0,
             "unpaywall_enriched": 0,
             "openalex_enriched": 0,
+            "pubmed_abstract_enriched": 0,
             "europe_pmc_errors": 0,
             "unpaywall_errors": 0,
             "openalex_errors": 0,
+            "pubmed_abstract_errors": 0,
             "enrichment_errors": 0,
             "enrichment_failed_providers": [],
             "enrichment_degraded_review": 0,
@@ -697,6 +778,32 @@ class LiteraturePipeline:
                         apply_europe_pmc(candidate, enrichment[candidate.doi])
             except Exception as exc:
                 record_failure("europe_pmc", exc)
+
+        if getattr(self.config, "pubmed_enabled", False):
+            try:
+                minimum_abstract_length = int(getattr(self.config, "ai_min_abstract_characters", 180))
+                pmids = list(dict.fromkeys(
+                    candidate.pmid
+                    for candidate in candidates
+                    if candidate.pmid
+                    and len(candidate.abstract_text or "") < minimum_abstract_length
+                ))
+                abstracts = await PubMedClient(
+                    contact_email=self.config.contact_email,
+                    api_key=getattr(self.config, "pubmed_api_key", ""),
+                    tool=getattr(self.config, "pubmed_tool", "GIDSResearchRadar"),
+                    timeout_seconds=self.config.request_timeout_seconds,
+                    retries=self.config.max_retries,
+                    min_interval_seconds=getattr(self.config, "pubmed_min_interval_seconds", 0.34),
+                ).fetch_abstracts(
+                    pmids[: getattr(self.config, "max_pubmed_records", 200)]
+                )
+                counts["pubmed_abstract_enriched"] = len(abstracts)
+                for candidate in candidates:
+                    if candidate.pmid and candidate.pmid in abstracts:
+                        apply_pubmed_abstract(candidate, abstracts[candidate.pmid])
+            except Exception as exc:
+                record_failure("pubmed_abstract", exc)
 
         # Unpaywall is the dedicated legal-OA source, so it gets first chance
         # to fill OA gaps after the two core sources.
@@ -852,30 +959,11 @@ class LiteraturePipeline:
         *,
         task: Task | None = None,
     ) -> None:
-        sources = ["crossref"]
-        if self.config.europe_pmc_enabled:
-            sources.append("europe-pmc")
-        if getattr(self.config, "openalex_enabled", False):
-            sources.append("openalex")
-        if getattr(self.config, "unpaywall_enabled", False):
-            sources.append("unpaywall")
-        if getattr(self.config, "publisher_rss_enabled", False):
-            sources.append("publisher-rss")
-        if getattr(self.config, "springer_nature_enabled", False):
-            sources.append("springer-nature")
-        if getattr(self.config, "elsevier_enabled", False):
-            sources.append("elsevier")
-        if getattr(self.config, "preprint_discovery_enabled", False):
-            sources.append("biorxiv-api")
-        if getattr(self.config, "official_guidance_enabled", False):
-            sources.append("who-iris-oai")
-        if getattr(self.config, "controlled_discovery_enabled", False):
-            sources.append("controlled-query")
         async with get_db() as db:
             db.add(LiteratureIngestRun(
                 run_uuid=run_uuid,
                 task_uuid=task.task_uuid if task is not None else None,
-                source="+".join(sources),
+                source=self._source_label(),
                 status="running",
                 started_at=datetime.now(timezone.utc),
                 from_indexed_at=since,
@@ -899,6 +987,7 @@ class LiteraturePipeline:
         checkpoint: dict[str, Any] | None = None,
         through_indexed_at: datetime | None = None,
         error: str | None = None,
+        source: str | None = None,
     ) -> None:
         async with get_db() as db:
             run = (
@@ -906,6 +995,8 @@ class LiteraturePipeline:
             ).scalar_one()
             run.status = status
             run.completed_at = datetime.now(timezone.utc)
+            if source is not None:
+                run.source = source
             if through_indexed_at is not None:
                 run.through_indexed_at = through_indexed_at
             if checkpoint is not None:
@@ -919,6 +1010,32 @@ class LiteraturePipeline:
             run.counts = counts or {}
             run.error = error
             await db.commit()
+
+    def _source_label(self, *, crossref: bool = True, pubmed_fallback: bool = False) -> str:
+        sources = ["crossref" if crossref else "pubmed-fallback"]
+        if getattr(self.config, "europe_pmc_enabled", False):
+            sources.append("europe-pmc")
+        if getattr(self.config, "pubmed_enabled", False):
+            sources.append("pubmed")
+        if getattr(self.config, "openalex_enabled", False):
+            sources.append("openalex")
+        if getattr(self.config, "unpaywall_enabled", False):
+            sources.append("unpaywall")
+        if getattr(self.config, "publisher_rss_enabled", False):
+            sources.append("publisher-rss")
+        if getattr(self.config, "springer_nature_enabled", False):
+            sources.append("springer-nature")
+        if getattr(self.config, "elsevier_enabled", False):
+            sources.append("elsevier")
+        if getattr(self.config, "preprint_discovery_enabled", False):
+            sources.append("biorxiv-api")
+        if getattr(self.config, "official_guidance_enabled", False):
+            sources.append("who-iris-oai")
+        if getattr(self.config, "controlled_discovery_enabled", False):
+            sources.append("controlled-query")
+        if pubmed_fallback:
+            sources.append("crossref-unavailable")
+        return "+".join(sources)
 
 
 __all__ = ["LiteraturePipeline"]

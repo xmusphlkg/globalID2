@@ -32,8 +32,8 @@ KNOWLEDGE_TEXT_FIELDS = (
 )
 PROFILE_SECTION_FIELDS = SECTION_FIELDS
 
-KNOWLEDGE_SCHEMA_VERSION = 4
-EVIDENCE_POLICY_VERSION = 2
+KNOWLEDGE_SCHEMA_VERSION = 6
+EVIDENCE_POLICY_VERSION = 4
 KNOWLEDGE_PUBLICATION_MIN_QUALITY_SCORE = 0.85
 QUALITY_REVIEW_NOTE_READY = "AI-generated, source-grounded brief; ready for human spot review."
 QUALITY_REVIEW_NOTE_PARTIAL_PREFIX = (
@@ -62,6 +62,10 @@ _UNAVAILABLE_EN_RE = re.compile(
     r"(?:sources?|snippets?|materials?|payload|evidence|records?|excerpts?|metadata)\b.{0,80}?"
     r"(?:do\s+not|does\s+not|did\s+not|cannot|can't|lack)\s+"
     r"(?:provide|describe|identify|include|support|state|supply|contain|define|report|specify|establish)|"
+    r"no\s+(?:population[- ]level\s+)?(?:incidence|prevalence|burden)"
+    r"(?:\s+or\s+(?:incidence|prevalence|burden))?"
+    r"(?:\s+(?:estimate|data|detail|information))?\s+"
+    r"(?:is|are)\s+(?:present|available|provided|described|stated|identified|reported|specified)|"
     r"cannot\s+be\s+(?:stated|confirmed|inferred|determined)|"
     r"no\s+.{0,180}(?:can\s+be\s+(?:stated|confirmed|inferred)|"
     r"(?:is|are)\s+(?:available|provided|described|stated|identified|reported|specified))|"
@@ -410,7 +414,32 @@ def apply_knowledge_quality_gate(
         "medium": 0.07,
         "low": 0.02,
     }.get(str(cleaned.get("source_confidence") or "").lower(), 0.0)
-    semantic_score = min(0.98, 0.42 + (assessment.completeness * 0.44) + confidence_bonus)
+    # ``completeness`` includes optional sections for display progress. It is
+    # not a publication requirement: surveillance events, classifications, and
+    # other narrow schemas may be fully valid with several optional fields
+    # intentionally absent. Score required coverage as the decisive signal and
+    # let optional coverage contribute only a small quality bonus.
+    required_fields = tuple(assessment.required_fields)
+    required_coverage = (
+        sum(1 for field in required_fields if assessment.fields[field].available)
+        / len(required_fields)
+        if required_fields
+        else 1.0
+    )
+    optional_fields = tuple(assessment.optional_fields)
+    optional_coverage = (
+        sum(1 for field in optional_fields if assessment.fields[field].available)
+        / len(optional_fields)
+        if optional_fields
+        else 0.0
+    )
+    semantic_score = min(
+        0.98,
+        0.44
+        + (required_coverage * 0.40)
+        + (optional_coverage * 0.06)
+        + confidence_bonus,
+    )
     if not assessment.profile_available or not assessment.publishable:
         semantic_score = min(semantic_score, 0.5)
     cleaned["quality_score"] = round(semantic_score, 3)
@@ -418,7 +447,14 @@ def apply_knowledge_quality_gate(
         not assessment.publishable
         or cleaned["quality_score"] < KNOWLEDGE_PUBLICATION_MIN_QUALITY_SCORE
     ):
-        cleaned["status"] = "requires_review"
+        # Missing evidence is a machine-actionable workflow state, not a
+        # request for a person to approve unsupported health content.
+        cleaned["status"] = "draft"
+        cleaned["metadata"] = {
+            **cleaned["metadata"],
+            "automation_state": "awaiting_evidence",
+            "block_reason": "missing_required_sections",
+        }
 
     cleaned["review_notes"] = _replace_quality_review_notes(
         cleaned.get("review_notes"),
@@ -699,6 +735,16 @@ def _raw_value(obj: Any, key: str) -> Any:
 
 
 def _sentence_is_unavailable(sentence: str, language: str) -> bool:
+    return is_unavailable_knowledge_sentence(sentence, language)
+
+
+def is_unavailable_knowledge_sentence(sentence: str, language: str) -> bool:
+    """Return whether a sentence says the requested evidence is unavailable.
+
+    Evidence selection uses the same semantic boundary as profile publication.
+    This prevents a source disclaimer from being mistaken for support merely
+    because it repeats a section keyword such as ``incidence`` or ``burden``.
+    """
     unavailable_pattern = _UNAVAILABLE_ZH_RE if language == "zh" else _UNAVAILABLE_EN_RE
     metadata_pattern = _METADATA_ONLY_ZH_RE if language == "zh" else _METADATA_ONLY_EN_RE
     return bool(unavailable_pattern.search(sentence) or metadata_pattern.search(sentence))

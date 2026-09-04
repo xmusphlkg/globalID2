@@ -39,6 +39,7 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
                 >
                   <option value="all">{lang === "zh" ? "全部状态" : "All statuses"}</option>
                   <option value="published">{lang === "zh" ? "已发布" : "Published"}</option>
+                  <option value="automating">{lang === "zh" ? "自动补全中" : "Automating"}</option>
                   <option value="requires_review">{lang === "zh" ? "待审核" : "Needs review"}</option>
                   <option value="blocked">{lang === "zh" ? "证据阻断" : "Blocked"}</option>
                 </select>
@@ -342,6 +343,12 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
                               </div>
                             </td>
                             <td className="px-3 py-3 align-top">
+                              {(() => {
+                                const requiredGaps = item.required_gap_sections ?? [];
+                                const reasons = Object.values(item.repair_reasons_by_language ?? {}).flat();
+                                const revalidationOnly = reasons.length > 0 && reasons.every((reason) => reason === "evidence_revalidation");
+                                return (
+                                  <>
                               <Badge color={statusColor(item.knowledge_status)}>
                                 {item.knowledge_status}
                               </Badge>
@@ -353,6 +360,16 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
                                   {lang === "zh" ? "字段完整度" : "Field coverage"} {Math.round(item.knowledge_completeness * 100)}%
                                 </span>
                               </div>
+                              {requiredGaps.length > 0 ? (
+                                <div className="mt-2 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+                                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                  <span>{lang === "zh" ? "必填缺口" : "Required gaps"}: {requiredGaps.join(" · ")}</span>
+                                </div>
+                              ) : revalidationOnly ? (
+                                <div className="mt-2 text-xs text-blue-700 dark:text-blue-300">
+                                  {lang === "zh" ? "证据策略复核中" : "Evidence policy revalidation"}
+                                </div>
+                              ) : null}
                               <div className="mt-2 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
                                 {item.brief_statuses && Object.keys(item.brief_statuses).length > 0 ? (
                                   <div className="space-y-1">
@@ -369,6 +386,9 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
                                   <span>{lang === "zh" ? "暂无简介" : "No brief yet"}</span>
                                 )}
                               </div>
+                                  </>
+                                );
+                              })()}
                             </td>
                             <td className="px-3 py-3 align-top">
                               <div className="flex flex-wrap gap-1.5">

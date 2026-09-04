@@ -53,6 +53,41 @@ class RuntimeSummaryOut(BaseModel):
     services: list[RuntimeServiceOut]
 
 
+class CapacitySummaryOut(BaseModel):
+    total_bytes: int | None = None
+    used_bytes: int | None = None
+    used_percent: float | None = None
+
+
+class CpuSummaryOut(BaseModel):
+    usage_percent: float | None = None
+    cores: int = 0
+    load_1m: float | None = None
+
+
+class NetworkConnectionsOut(BaseModel):
+    total: int = 0
+    established: int = 0
+    listening: int = 0
+
+
+class ProxyLocationOut(BaseModel):
+    configured: bool
+    endpoint: str | None = None
+    ip: str | None = None
+    country_code: str | None = None
+    country_name: str | None = None
+    lookup_status: str
+
+
+class SystemResourcesOut(BaseModel):
+    cpu: CpuSummaryOut
+    memory: CapacitySummaryOut
+    disk: CapacitySummaryOut
+    network: NetworkConnectionsOut
+    proxy: ProxyLocationOut
+
+
 class ActionItemOut(BaseModel):
     id: str
     severity: str
@@ -86,6 +121,7 @@ class ControlPlaneOverviewOut(BaseModel):
     tasks: dict[str, int]
     schedules: dict[str, int]
     runtime: RuntimeSummaryOut
+    system_resources: SystemResourcesOut
     action_items: list[ActionItemOut]
     recent_tasks: list[RecentTaskOut]
     pipeline: list[PipelineStageOut]
@@ -95,11 +131,16 @@ ResponseMeta.model_rebuild()
 
 __all__ = [
     "ActionItemOut",
+    "CapacitySummaryOut",
     "ControlPlaneOverviewOut",
+    "CpuSummaryOut",
     "DataResponse",
+    "NetworkConnectionsOut",
     "PaginationMeta",
     "ProblemDetail",
+    "ProxyLocationOut",
     "ResponseMeta",
     "RuntimeServiceOut",
     "RuntimeSummaryOut",
+    "SystemResourcesOut",
 ]

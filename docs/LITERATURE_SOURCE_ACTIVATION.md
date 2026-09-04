@@ -37,6 +37,10 @@ is therefore:
 
 1. keep Crossref as required discovery;
 2. keep Europe PMC/PubMed as biomedical identifier and metadata enrichment;
+   PubMed E-utilities is also enabled as a bounded secondary discovery source
+   and as a fallback when the Crossref core journal sync is temporarily
+   unavailable. PubMed fallback runs do not advance the Crossref index-date
+   checkpoint.
 3. keep both credential-gated publisher APIs disabled while credentials are
    unavailable and the audit returns
    `core_sources_sufficient_for_curated_scope`;

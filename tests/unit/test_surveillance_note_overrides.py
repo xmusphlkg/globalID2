@@ -27,6 +27,27 @@ def test_reviewed_source_note_is_appended_and_idempotent() -> None:
     assert first["metadata"]["source_data_note_review_version"]
 
 
+def test_reviewed_source_note_deduplicates_whitespace_normalized_legacy_blocks() -> None:
+    payload = {
+        "disease_id": "D026",
+        "language": "en",
+        "surveillance_note": "Existing source-grounded interpretation [1].",
+        "metadata": {},
+    }
+    overlaid = apply_surveillance_note_override(payload)
+    flattened_legacy = {
+        **overlaid,
+        "surveillance_note": " ".join([overlaid["surveillance_note"]] * 4),
+    }
+
+    repaired = apply_surveillance_note_override(flattened_legacy)
+
+    assert repaired["surveillance_note"].count("GlobalID source-data note:") == 1
+    assert repaired["surveillance_note"].startswith(
+        "Existing source-grounded interpretation [1]."
+    )
+
+
 def test_reviewed_source_note_uses_bilingual_text() -> None:
     result = apply_surveillance_note_override(
         {

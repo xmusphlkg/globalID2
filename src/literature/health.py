@@ -461,6 +461,16 @@ async def collect_health_snapshot(
             "completed_at": task.completed_at,
             "updated_at": task.updated_at,
             "retry_count": _safe_int(task.retry_count),
+            "enrichment": {
+                key: ((task.output_data or {}).get("summaries") or {}).get(key)
+                for key in ("articles", "generated", "skipped", "failed")
+                if (
+                    _enum_value(task.task_type) == TaskType.ENRICH_LITERATURE.value
+                    and isinstance(task.output_data, Mapping)
+                    and isinstance(task.output_data.get("summaries"), Mapping)
+                    and key in task.output_data["summaries"]
+                )
+            },
             "catch_up": {
                 key: (task.output_data or {}).get(key)
                 for key in (
@@ -1080,10 +1090,25 @@ def _operations_checks(
         same_kind = [task for task in snapshot.tasks if _enum_value(task.get("type")) == kind]
         if any(_enum_value(task.get("status")) == "failed" for task in same_kind[1:]):
             recovered_types += 1
+    latest_enrichment = latest_by_type.get(TaskType.ENRICH_LITERATURE.value)
+    latest_enrichment_counts = (
+        latest_enrichment.get("enrichment")
+        if isinstance(latest_enrichment, Mapping)
+        and isinstance(latest_enrichment.get("enrichment"), Mapping)
+        else {}
+    )
+    latest_enrichment_failed = _safe_int(latest_enrichment_counts.get("failed"))
+    completed_with_enrichment_failures = int(
+        bool(
+            latest_enrichment
+            and _enum_value(latest_enrichment.get("status")) == "completed"
+            and latest_enrichment_failed > 0
+        )
+    )
     task_status = "critical" if (
         latest_failed > thresholds.max_latest_failed_task_types or stale_active
     ) else (
-        "warning" if latest_failed or recovered_types else "pass"
+        "warning" if latest_failed or recovered_types or completed_with_enrichment_failures else "pass"
     )
 
     autopilot = next(
@@ -1176,11 +1201,20 @@ def _operations_checks(
                 "latest_failed_task_types": latest_failed,
                 "recent_failed_task_count": recent_failures,
                 "recovered_task_types": recovered_types,
+                "latest_enrichment_failed_summaries": latest_enrichment_failed,
+                "completed_with_enrichment_failures": completed_with_enrichment_failures,
             },
             {
                 "max_stale_task_minutes": thresholds.max_stale_task_minutes,
                 "max_latest_failed_task_types": thresholds.max_latest_failed_task_types,
             },
+            next_action_code=(
+                "inspect_enrichment_generation_failures"
+                if completed_with_enrichment_failures
+                else "inspect_background_tasks"
+                if task_status != "pass"
+                else "none"
+            ),
         ),
         _check(
             "exception_backlog",

@@ -21,6 +21,18 @@ export interface ComparisonAssessment {
   commonWindow: DateWindow | null;
 }
 
+export interface CompleteYearAggregation {
+  dates: string[];
+  values: (number | null)[];
+  excludedYears: number[];
+}
+
+export interface AnnualAggregationAssessment {
+  eligible: boolean;
+  reasons: string[];
+  excludedYearsBySeries: number[][];
+}
+
 export interface DateWindow {
   startDate: string;
   endDate: string;
@@ -611,6 +623,92 @@ export function assessComparison(
       ? 'direct'
       : 'conditional';
   return { level, reasons: [...reasons], commonWindow };
+}
+
+function expectedPointsInCalendarYear(year: number, granularity: string) {
+  const normalized = normalizeTemporalGranularity(granularity);
+  if (normalized === 'daily') {
+    return new Date(Date.UTC(year, 1, 29)).getUTCMonth() === 1 ? 366 : 365;
+  }
+  if (normalized === 'weekly') return 52;
+  if (normalized === 'monthly') return 12;
+  if (normalized === 'quarterly') return 4;
+  if (normalized === 'annual') return 1;
+  return null;
+}
+
+function hasNonAdditivePeriodPolicy(item: CurveSeries) {
+  const policies = getSelectedSourceSeries(item).flatMap((source) => [
+    source.aggregation_policy,
+    source.metric_type,
+  ]).filter((value): value is string => Boolean(value));
+  return policies.some((value) => (
+    /cumulative|rolling|moving|average|mean|rate|prevalence|stock/i.test(value)
+  ));
+}
+
+/**
+ * Aggregate only fully observed calendar years. Periods retain the reporting
+ * date assigned by the source; values are never interpolated or split.
+ */
+export function aggregateToCompleteCalendarYears(
+  dates: string[],
+  values: (number | null)[],
+  granularity: string,
+): CompleteYearAggregation {
+  const expectedPoints = new Map<number, number>();
+  const totals = new Map<number, { value: number; observed: number }>();
+  dates.forEach((date, index) => {
+    const year = Number.parseInt(date.slice(0, 4), 10);
+    const value = values[index];
+    if (!Number.isFinite(year)) return;
+    const expected = expectedPointsInCalendarYear(year, granularity);
+    if (expected == null) return;
+    expectedPoints.set(year, expected);
+    if (value == null || !Number.isFinite(value)) return;
+    const current = totals.get(year) ?? { value: 0, observed: 0 };
+    totals.set(year, { value: current.value + value, observed: current.observed + 1 });
+  });
+
+  const excludedYears: number[] = [];
+  const complete = [...expectedPoints.keys()].sort((left, right) => left - right).flatMap((year) => {
+    const expected = expectedPoints.get(year) ?? 0;
+    const total = totals.get(year);
+    if (!total || total.observed < expected) {
+      excludedYears.push(year);
+      return [];
+    }
+    return [{ date: `${year}-01-01`, value: total.value }];
+  });
+  return {
+    dates: complete.map((point) => point.date),
+    values: complete.map((point) => point.value),
+    excludedYears,
+  };
+}
+
+export function assessAnnualAggregation(
+  items: CurveSeries[],
+  metric: EpidemicMetric,
+): AnnualAggregationAssessment {
+  const reasons = new Set<string>();
+  if (!['cases', 'deaths'].includes(metric)) reasons.add('metric_not_additive');
+  const excludedYearsBySeries = items.map((item) => {
+    const granularity = getSeriesGranularity(item);
+    if (expectedPointsInCalendarYear(2024, granularity) == null) {
+      reasons.add('unsupported_granularity');
+      return [];
+    }
+    if (hasNonAdditivePeriodPolicy(item)) reasons.add('non_additive_period_policy');
+    const aggregate = aggregateToCompleteCalendarYears(
+      item.dates,
+      getMetricValues(item, metric),
+      granularity,
+    );
+    if (aggregate.dates.length === 0) reasons.add('no_complete_calendar_year');
+    return aggregate.excludedYears;
+  });
+  return { eligible: reasons.size === 0, reasons: [...reasons], excludedYearsBySeries };
 }
 
 export function clipToDateWindow<T>(

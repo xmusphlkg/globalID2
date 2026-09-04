@@ -3,6 +3,8 @@ import test from 'node:test';
 import {
   DEFAULT_METRIC,
   INITIAL_CURVE_VIEW_STATE,
+  aggregateToCompleteCalendarYears,
+  assessAnnualAggregation,
   buildStableSeriesColorMap,
   assessComparison,
   buildHistoricalReference,
@@ -140,6 +142,41 @@ test('incidence labels retain the source-period denominator', () => {
     formatIncidenceMetricLabel(['weekly', 'annual'], 'en'),
     'Cases per 100k per respective source period'
   );
+});
+
+test('annual aggregation sums only fully observed source years without interpolation', () => {
+  const monthlyDates = Array.from({ length: 15 }, (_, index) => {
+    const date = new Date(Date.UTC(2023, index, 1));
+    return date.toISOString().slice(0, 10);
+  });
+  const aggregate = aggregateToCompleteCalendarYears(
+    monthlyDates,
+    monthlyDates.map(() => 2),
+    'monthly',
+  );
+
+  assert.deepEqual(aggregate.dates, ['2023-01-01']);
+  assert.deepEqual(aggregate.values, [24]);
+  assert.deepEqual(aggregate.excludedYears, [2024]);
+});
+
+test('annual aggregation rejects rates and rolling or cumulative source policies', () => {
+  const additive = {
+    ...series('monthly'),
+    dates: Array.from({ length: 12 }, (_, index) => `2023-${String(index + 1).padStart(2, '0')}-01`),
+    cases: Array.from({ length: 12 }, () => 1),
+  };
+  const rateAssessment = assessAnnualAggregation([additive], 'incidence_rates');
+  assert.equal(rateAssessment.eligible, false);
+  assert.ok(rateAssessment.reasons.includes('metric_not_additive'));
+
+  const rolling = {
+    ...additive,
+    source_series: [{ aggregation_policy: 'rolling_7_day_sum' }],
+  };
+  const rollingAssessment = assessAnnualAggregation([rolling], 'cases');
+  assert.equal(rollingAssessment.eligible, false);
+  assert.ok(rollingAssessment.reasons.includes('non_additive_period_policy'));
 });
 
 test('selected source cases retain incidence calculation using reference population', () => {

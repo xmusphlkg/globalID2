@@ -10,7 +10,7 @@ review.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
@@ -37,6 +37,7 @@ DEFAULT_USER_AGENT = (
 )
 
 SOURCE_LICENSES = {
+    "registry_definition": "Controlled registry definition; cite the canonical registry URL",
     "who": "WHO website terms; cite WHO URL; non-commercial/permission rules may apply",
     "who_don": "WHO Disease Outbreak News API; cite WHO URL; non-commercial/permission rules may apply",
     "wikidata": "Wikidata structured data; CC0 unless source-specific references apply",
@@ -47,6 +48,13 @@ SOURCE_LICENSES = {
 }
 
 TRUSTED_SOURCE_REGISTRY = (
+    {
+        "source_type": "registry_definition",
+        "label": "Controlled registry definition",
+        "trust_level": "high",
+        "republish_policy": "classification definition only",
+        "notes": "A section-scoped source for controlled classification or surveillance entities; never medical narrative evidence.",
+    },
     {
         "source_type": "who",
         "label": "WHO official pages",
@@ -98,9 +106,16 @@ TRUSTED_SOURCE_REGISTRY = (
     },
 )
 TRUSTED_SOURCE_TYPES = tuple(item["source_type"] for item in TRUSTED_SOURCE_REGISTRY)
-SOURCE_FETCH_ORDER = tuple(item["source_type"] for item in TRUSTED_SOURCE_REGISTRY)
+# MSD is available when explicitly selected for provenance inspection, but is
+# metadata-only by policy and therefore cannot improve a source-grounded brief.
+SOURCE_FETCH_ORDER = tuple(
+    item["source_type"]
+    for item in TRUSTED_SOURCE_REGISTRY
+    if item["source_type"] not in {"msd", "registry_definition"}
+)
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SOURCE_HINTS_PATH = ROOT / "configs" / "knowledge_source_hints.json"
+KNOWLEDGE_SOURCE_STRATEGY_VERSION = 10
 
 
 @dataclass
@@ -153,10 +168,37 @@ class DiseaseKnowledgeFetcher:
         ("health.gov.au", "Australian Department of Health", True),
         ("canada.ca", "Government of Canada", True),
         ("gov.uk", "UK Government", True),
+        ("mhlw.go.jp", "Japan Ministry of Health, Labour and Welfare", True),
+        ("niid.go.jp", "Japan National Institute of Infectious Diseases", True),
         ("bmj.com", "BMJ", False),
         ("msdmanuals.com", "MSD Manual", False),
         ("wikipedia.org", "Wikipedia", True),
     )
+    # All source refreshes in one worker share these reservations.  Without a
+    # shared limit, a temporarily slow public endpoint can receive dozens of
+    # identical requests from parallel repair tasks, turning one timeout into
+    # a self-amplifying backlog.  This is deliberately process-local: it
+    # protects an upstream during a worker run without making source health a
+    # durable correctness boundary.
+    _adapter_health_lock = threading.Lock()
+    _adapter_health: dict[str, dict[str, float | int]] = {}
+    _ADAPTER_INFLIGHT_LIMITS = {
+        "who": 2,
+        "who_don": 1,
+        "wikidata": 2,
+        "web_search": 2,
+        "wikipedia": 1,
+        "pubmed": 2,
+        "msd": 1,
+    }
+    _ADAPTER_COOLDOWN_SECONDS = (15, 30, 60, 120, 300)
+
+    @classmethod
+    def reset_adapter_health(cls) -> None:
+        """Clear process-local transport state for a controlled lifecycle/test reset."""
+
+        with cls._adapter_health_lock:
+            cls._adapter_health.clear()
 
     def __init__(
         self,
@@ -164,6 +206,8 @@ class DiseaseKnowledgeFetcher:
         user_agent: str = DEFAULT_USER_AGENT,
         timeout: int = 12,
         adapter_timeout_seconds: int = 45,
+        targeted_request_timeout_seconds: int = 6,
+        targeted_adapter_timeout_seconds: int = 18,
         max_excerpt_chars: int = 700,
         min_interval_seconds: float = 0.5,
         max_retries: int = 2,
@@ -171,6 +215,12 @@ class DiseaseKnowledgeFetcher:
     ) -> None:
         self.timeout = timeout
         self.adapter_timeout_seconds = max(1, adapter_timeout_seconds)
+        self.targeted_request_timeout_seconds = max(
+            1, min(targeted_request_timeout_seconds, self.timeout)
+        )
+        self.targeted_adapter_timeout_seconds = max(
+            1, min(targeted_adapter_timeout_seconds, self.adapter_timeout_seconds)
+        )
         self.max_excerpt_chars = max_excerpt_chars
         self.min_interval_seconds = max(0.0, min_interval_seconds)
         self.max_retries = max(0, max_retries)
@@ -179,6 +229,7 @@ class DiseaseKnowledgeFetcher:
         self._request_error_count = 0
         self._request_error_lock = threading.Lock()
         self._adapter_request_state = threading.local()
+        self._response_cache_lock = threading.Lock()
         self._response_cache: dict[str, requests.Response] = {}
         self.session = requests.Session()
         self.session.headers.update(
@@ -189,17 +240,78 @@ class DiseaseKnowledgeFetcher:
             }
         )
 
+    @classmethod
+    def _reserve_adapter(cls, adapter: str) -> str | None:
+        """Reserve bounded adapter capacity, returning a non-error skip state."""
+
+        now = time.monotonic()
+        with cls._adapter_health_lock:
+            state = cls._adapter_health.setdefault(
+                adapter,
+                {"in_flight": 0, "failure_count": 0, "retry_after": 0.0},
+            )
+            if float(state.get("retry_after") or 0.0) > now:
+                return "cooldown"
+            limit = cls._ADAPTER_INFLIGHT_LIMITS.get(adapter, 1)
+            if int(state.get("in_flight") or 0) >= limit:
+                return "busy"
+            state["in_flight"] = int(state.get("in_flight") or 0) + 1
+        return None
+
+    @classmethod
+    def _finish_adapter(cls, adapter: str, outcome: str) -> None:
+        """Release an adapter reservation and update a short transport circuit."""
+
+        now = time.monotonic()
+        with cls._adapter_health_lock:
+            state = cls._adapter_health.setdefault(
+                adapter,
+                {"in_flight": 0, "failure_count": 0, "retry_after": 0.0},
+            )
+            state["in_flight"] = max(0, int(state.get("in_flight") or 0) - 1)
+            if outcome in {"success", "success_empty"}:
+                state["failure_count"] = 0
+                state["retry_after"] = 0.0
+                return
+            if outcome != "error":
+                return
+            failures = min(8, int(state.get("failure_count") or 0) + 1)
+            cooldown = cls._ADAPTER_COOLDOWN_SECONDS[
+                min(failures - 1, len(cls._ADAPTER_COOLDOWN_SECONDS) - 1)
+            ]
+            state["failure_count"] = failures
+            state["retry_after"] = max(float(state.get("retry_after") or 0.0), now + cooldown)
+
+    @classmethod
+    def _record_adapter_timeout(cls, adapter: str) -> None:
+        """Open the circuit promptly while a timed-out request unwinds."""
+
+        now = time.monotonic()
+        with cls._adapter_health_lock:
+            state = cls._adapter_health.setdefault(
+                adapter,
+                {"in_flight": 0, "failure_count": 0, "retry_after": 0.0},
+            )
+            failures = min(8, int(state.get("failure_count") or 0) + 1)
+            cooldown = cls._ADAPTER_COOLDOWN_SECONDS[
+                min(failures - 1, len(cls._ADAPTER_COOLDOWN_SECONDS) - 1)
+            ]
+            state["failure_count"] = failures
+            state["retry_after"] = max(float(state.get("retry_after") or 0.0), now + cooldown)
+
     def fetch(
         self,
         disease: dict[str, Any],
         *,
         enabled_sources: Iterable[str] | None = None,
         target_sections: Iterable[str] | None = None,
+        cancel_event: threading.Event | None = None,
     ) -> list[SourceCandidate]:
         return self.fetch_with_report(
             disease,
             enabled_sources=enabled_sources,
             target_sections=target_sections,
+            cancel_event=cancel_event,
         ).candidates
 
     def fetch_with_report(
@@ -208,6 +320,7 @@ class DiseaseKnowledgeFetcher:
         *,
         enabled_sources: Iterable[str] | None = None,
         target_sections: Iterable[str] | None = None,
+        cancel_event: threading.Event | None = None,
     ) -> SourceFetchReport:
         enabled = list(enabled_sources or SOURCE_FETCH_ORDER)
         target_sections = self._unique_strings(target_sections or ())
@@ -226,11 +339,39 @@ class DiseaseKnowledgeFetcher:
         adapter_outcomes: dict[str, str] = {}
         adapter_durations: dict[str, float] = {}
 
+        def is_cancelled() -> bool:
+            return bool(cancel_event and cancel_event.is_set())
+
+        registry_definition = self._build_registry_definition_source(disease)
+        if registry_definition is not None:
+            candidates.append(registry_definition)
+            adapter_outcomes["registry_definition"] = "success"
+            adapter_durations["registry_definition"] = 0.0
+
+            # A registry definition is deliberately permitted only for an
+            # entity whose whole required profile is the same scoped field.
+            # Once that contract is met, remote discovery cannot improve this
+            # task: it can only add unrelated medical prose and make a
+            # definition-only refresh wait for slow PubMed/Wikipedia calls.
+            # Keep the short-circuit narrow so infectious and other
+            # multi-section profiles always retain the normal evidence sweep.
+            if self._registry_definition_covers_request(
+                registry_definition,
+                disease=disease,
+                target_sections=target_sections,
+            ):
+                return SourceFetchReport(
+                    candidates=[registry_definition],
+                    adapter_outcomes=adapter_outcomes,
+                    adapter_durations=adapter_durations,
+                )
+
         candidates.extend(
             self._fetch_configured_sources(
                 disease,
                 source_hints.get("sources") or [],
                 enabled_sources=enabled,
+                cancel_event=cancel_event,
             )
         )
 
@@ -250,13 +391,37 @@ class DiseaseKnowledgeFetcher:
             discovery_round: str,
             disease_payload: dict[str, Any],
         ) -> None:
-            selected = [(key, adapters[key]) for key in keys if key in adapters]
+            selected = []
+            for key in keys:
+                adapter = adapters.get(key)
+                if adapter is None:
+                    continue
+                reservation_state = self._reserve_adapter(key)
+                if reservation_state is not None:
+                    adapter_outcomes[key] = reservation_state
+                    adapter_durations.setdefault(key, 0.0)
+                    continue
+                selected.append((key, adapter))
             if not selected:
+                return
+            if is_cancelled():
+                for key, _adapter in selected:
+                    self._finish_adapter(key, "cancelled")
                 return
 
             def run_one(key: str, adapter: Any) -> tuple[str, list[SourceCandidate], str, float]:
                 self._adapter_request_state.error_count = 0
+                # Targeted recovery is intentionally fail-fast. A subsequent
+                # discovery round gets a fresh chance, while this task avoids
+                # multiplying one unavailable upstream into minute-long work.
+                targeted = bool(target_sections)
+                self._adapter_request_state.request_timeout_seconds = (
+                    self.targeted_request_timeout_seconds if targeted else self.timeout
+                )
+                self._adapter_request_state.max_retries = 0 if targeted else self.max_retries
+                self._adapter_request_state.is_adapter_worker = True
                 started_at = time.monotonic()
+                outcome = "error"
                 try:
                     discovered = adapter(disease_payload)
                     for candidate in discovered:
@@ -281,6 +446,9 @@ class DiseaseKnowledgeFetcher:
                         exc,
                     )
                     return key, [], "error", time.monotonic() - started_at
+                finally:
+                    self._finish_adapter(key, outcome)
+                    self._close_adapter_session()
 
             # Adapters are independent discovery paths. The global per-host
             # limiter still serializes calls to one upstream while unrelated
@@ -290,10 +458,24 @@ class DiseaseKnowledgeFetcher:
                 executor.submit(run_one, key, adapter): key
                     for key, adapter in selected
             }
-            done, pending = wait(
-                futures,
-                timeout=float(self.adapter_timeout_seconds),
+            adapter_timeout_seconds = (
+                self.targeted_adapter_timeout_seconds
+                if target_sections
+                else self.adapter_timeout_seconds
             )
+            deadline = time.monotonic() + float(adapter_timeout_seconds)
+            pending = set(futures)
+            done: set[Any] = set()
+            while pending and not is_cancelled():
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                completed, pending = wait(
+                    pending,
+                    timeout=min(0.25, remaining),
+                    return_when=FIRST_COMPLETED,
+                )
+                done.update(completed)
             for future in done:
                 try:
                     key, discovered, outcome, elapsed = future.result()
@@ -305,7 +487,7 @@ class DiseaseKnowledgeFetcher:
                         key,
                         exc,
                     )
-                    discovered, outcome, elapsed = [], "error", self.adapter_timeout_seconds
+                    discovered, outcome, elapsed = [], "error", adapter_timeout_seconds
                 candidates.extend(discovered)
                 previous = adapter_outcomes.get(key)
                 if previous == "success" or outcome == "success":
@@ -322,20 +504,40 @@ class DiseaseKnowledgeFetcher:
                 key = futures[future]
                 future.cancel()
                 previous = adapter_outcomes.get(key)
-                adapter_outcomes[key] = previous or "timeout"
-                adapter_durations[key] = round(
-                    adapter_durations.get(key, 0.0) + self.adapter_timeout_seconds,
-                    3,
-                )
-                logger.warning(
-                    "Knowledge source adapter timed out for {}/{} after {}s",
-                    disease.get("disease_id"),
-                    key,
-                    self.adapter_timeout_seconds,
-                )
+                if is_cancelled():
+                    adapter_outcomes[key] = previous or "cancelled"
+                    adapter_durations[key] = round(
+                        adapter_durations.get(key, 0.0),
+                        3,
+                    )
+                    logger.info(
+                        "Knowledge source adapter cancelled for {}/{} during worker shutdown",
+                        disease.get("disease_id"),
+                        key,
+                    )
+                else:
+                    adapter_outcomes[key] = previous or "timeout"
+                    self._record_adapter_timeout(key)
+                    adapter_durations[key] = round(
+                        adapter_durations.get(key, 0.0) + adapter_timeout_seconds,
+                        3,
+                    )
+                    logger.warning(
+                        "Knowledge source adapter timed out for {}/{} after {}s",
+                        disease.get("disease_id"),
+                        key,
+                        adapter_timeout_seconds,
+                    )
             executor.shutdown(wait=False, cancel_futures=True)
 
         run_adapters(enabled, discovery_round="primary", disease_payload=disease)
+
+        if is_cancelled():
+            return SourceFetchReport(
+                candidates=self._rank_candidates(self._dedupe(candidates)),
+                adapter_outcomes=adapter_outcomes,
+                adapter_durations=adapter_durations,
+            )
 
         # A restricted or weak first pass must not silently fall back to a
         # catalogue template. Automatically broaden discovery to substantive
@@ -344,11 +546,29 @@ class DiseaseKnowledgeFetcher:
             discovered_aliases = self._discovered_query_aliases(disease, candidates)
             enriched_disease = {
                 **disease,
-                "query_aliases": discovered_aliases,
+                # Reviewed ontology/source-series aliases are the entity
+                # boundary. Discovery can extend them, but must never replace
+                # them with a broad label from a related condition.
+                "query_aliases": self._unique_strings(
+                    [
+                        *(disease.get("query_aliases") or []),
+                        *discovered_aliases,
+                    ]
+                )[:12],
             }
             enrichment_sources = ["who", "web_search", "wikipedia", "pubmed"]
             if not discovered_aliases:
                 enrichment_sources = [key for key in enrichment_sources if key not in enabled]
+            else:
+                # Retrying a timed-out/failed upstream within the same task
+                # creates no new evidence and previously doubled the worst
+                # case from one adapter deadline to two. A later bounded
+                # source-discovery round retries it after cooldown.
+                enrichment_sources = [
+                    key
+                    for key in enrichment_sources
+                    if adapter_outcomes.get(key) not in {"timeout", "error"}
+                ]
             run_adapters(
                 enrichment_sources,
                 discovery_round="enrichment",
@@ -360,6 +580,181 @@ class DiseaseKnowledgeFetcher:
             adapter_outcomes=adapter_outcomes,
             adapter_durations=adapter_durations,
         )
+
+    @staticmethod
+    def _registry_definition_covers_request(
+        candidate: SourceCandidate,
+        *,
+        disease: dict[str, Any],
+        target_sections: Iterable[str],
+    ) -> bool:
+        """Return whether one official registry source satisfies this request.
+
+        The source builder already limits registry candidates to a
+        definition-only profile. Rechecking the persisted scope here makes the
+        early return explicit and resilient to future registry types.
+        """
+        schema = disease.get("profile_schema")
+        required = schema.get("required_fields") if isinstance(schema, dict) else None
+        requested = DiseaseKnowledgeFetcher._unique_strings(target_sections)
+        allowed = DiseaseKnowledgeFetcher._unique_strings(
+            (candidate.metadata or {}).get("allowed_sections") or ()
+        )
+        coverage = requested or DiseaseKnowledgeFetcher._unique_strings(required or ())
+        return (
+            candidate.source_type == "registry_definition"
+            and candidate.review_status == "approved"
+            and bool(coverage)
+            and set(coverage).issubset(allowed)
+            and list(required or ()) == allowed
+        )
+
+    @staticmethod
+    def _build_registry_definition_source(
+        disease: dict[str, Any],
+    ) -> SourceCandidate | None:
+        """Create narrow controlled-registry evidence for a non-clinical entity.
+
+        Registry provenance is never promoted into medical evidence. It can
+        define only a profile whose sole required field is its registry
+        definition, such as an ICD residual category or a named SINAN
+        surveillance concept from the controlled catalogue.
+        """
+        schema = disease.get("profile_schema")
+        required = schema.get("required_fields") if isinstance(schema, dict) else None
+        if list(required or ()) != ["definition"]:
+            return None
+        name = " ".join(
+            str(disease.get("name_en") or disease.get("standard_name_en") or "").split()
+        ).strip()
+        disease_id = str(disease.get("disease_id") or "").strip()
+        provenance = " ".join(str(disease.get("source") or "").split()).strip()
+        description = " ".join(str(disease.get("description") or "").split()).strip()
+        if not name or not disease_id:
+            return None
+
+        if provenance.casefold() == "icd-10":
+            code = " ".join(str(disease.get("icd_10") or "").split()).strip()
+            if not code:
+                return None
+            url = f"https://icd.who.int/browse10/2019/en#/{quote(code)}"
+            content = (
+                f"WHO ICD-10 classification entry {code}: {name}. "
+                "This official entry is used only to define the classification entity."
+            )
+            return SourceCandidate(
+                disease_id=disease_id,
+                source_type="registry_definition",
+                source_name="WHO ICD-10",
+                url=url,
+                resolved_url=url,
+                title=f"ICD-10 {code}: {name}",
+                license=SOURCE_LICENSES["registry_definition"],
+                raw_excerpt=content,
+                content_text=content,
+                review_status="approved",
+                metadata={
+                    "authority_level": "high",
+                    "content_kind": "registry_definition",
+                    "registry_definition": True,
+                    "registry_kind": "icd10",
+                    "section_scoped": True,
+                    "allowed_sections": ["definition"],
+                    "relevance_score": 1.0,
+                },
+            )
+
+        ontology_context = disease.get("ontology_context")
+        ontology_context = ontology_context if isinstance(ontology_context, dict) else {}
+        ontology_definition = " ".join(
+            str(ontology_context.get("definition") or "").split()
+        ).strip()
+        facet_tags = ontology_context.get("facet_tags")
+        facet_tags = facet_tags if isinstance(facet_tags, dict) else {}
+        surveillance_scope = facet_tags.get("surveillance_scope")
+        if not isinstance(surveillance_scope, (list, tuple, set)):
+            surveillance_scope = [surveillance_scope]
+        is_aggregate_scope = "surveillance_scope.aggregate" in {
+            str(value or "").strip().casefold()
+            for value in surveillance_scope
+            if str(value or "").strip()
+        }
+        if ontology_definition and is_aggregate_scope:
+            url = "https://github.com/xmusphlkg/globalID2/blob/development/configs/disease_ontology.json"
+            content = (
+                f"GlobalID controlled disease ontology concept {disease_id}: {name}. "
+                f"Definition: {ontology_definition} "
+                "This source defines the non-additive classification scope only; it does not "
+                "supply clinical, epidemiological, exposure, or prevention claims."
+            )
+            return SourceCandidate(
+                disease_id=disease_id,
+                source_type="registry_definition",
+                source_name="GlobalID Disease Ontology",
+                url=url,
+                resolved_url=url,
+                title=f"GlobalID ontology concept {disease_id}: {name}",
+                license=SOURCE_LICENSES["registry_definition"],
+                raw_excerpt=content,
+                content_text=content,
+                review_status="approved",
+                metadata={
+                    "authority_level": "controlled",
+                    "content_kind": "registry_definition",
+                    "registry_definition": True,
+                    "registry_kind": "globalid_aggregate_concept",
+                    "catalogue_provenance": provenance,
+                    "section_scoped": True,
+                    "allowed_sections": ["definition"],
+                    "relevance_score": 1.0,
+                },
+            )
+
+        sinan_concept = re.search(
+            r"\bSINAN\b.{0,120}\b(?:surveillance|occupational health)\s+concept\b",
+            description,
+            flags=re.IGNORECASE,
+        )
+        if "brazil datasus sinan" not in provenance.casefold() or not sinan_concept:
+            return None
+        url = "https://www.gov.br/saude/pt-br/composicao/svsa/sistemas-de-informacao/sinan"
+        content = (
+            "Brazil Ministry of Health describes SINAN as the national notification "
+            "and investigation system for diseases and health events. "
+            f"The controlled GlobalID catalogue records the Brazil DATASUS SINAN registry label "
+            f"'{name}' with provenance statement: {description}. "
+            "This source is used only to define the surveillance entity, not clinical, "
+            "epidemiological, exposure, or prevention claims."
+        )
+        return SourceCandidate(
+            disease_id=disease_id,
+            source_type="registry_definition",
+            source_name="Brazil Ministry of Health SINAN",
+            url=url,
+            resolved_url=url,
+            title=f"SINAN registry entity: {name}",
+            license=SOURCE_LICENSES["registry_definition"],
+            raw_excerpt=content,
+            content_text=content,
+            review_status="approved",
+            metadata={
+                "authority_level": "high",
+                "content_kind": "registry_definition",
+                "registry_definition": True,
+                "registry_kind": "sinan_catalogue_provenance",
+                "catalogue_provenance": provenance,
+                "section_scoped": True,
+                "allowed_sections": ["definition"],
+                "relevance_score": 1.0,
+            },
+        )
+
+    @staticmethod
+    def _build_icd10_definition_source(
+        disease: dict[str, Any],
+    ) -> SourceCandidate | None:
+        """Compatibility entry point for the ICD-only source builder."""
+        return DiseaseKnowledgeFetcher._build_registry_definition_source(disease)
 
     def _source_hints(self, disease: dict[str, Any]) -> dict[str, Any]:
         """Load optional, reviewed aliases and official entry URLs."""
@@ -383,6 +778,7 @@ class DiseaseKnowledgeFetcher:
         hints: Iterable[dict[str, Any]],
         *,
         enabled_sources: Iterable[str],
+        cancel_event: threading.Event | None = None,
     ) -> list[SourceCandidate]:
         """Crawl reviewed official URLs before relying on search discovery."""
 
@@ -390,6 +786,8 @@ class DiseaseKnowledgeFetcher:
         disease_id = str(disease["disease_id"])
         candidates: list[SourceCandidate] = []
         for hint in hints:
+            if cancel_event and cancel_event.is_set():
+                break
             if not isinstance(hint, dict):
                 continue
             source_type = str(hint.get("source_type") or "web_search").strip()
@@ -444,6 +842,39 @@ class DiseaseKnowledgeFetcher:
                             "content_kind": "reviewed_source_summary",
                         },
                     )
+            else:
+                # A reviewed source hint is a concise, source-faithful map of
+                # a long official page.  Keep the live capture for provenance
+                # and freshness, but retain those reviewed sections as well:
+                # otherwise a parser layout change or an early prompt excerpt
+                # can hide a known, citable section such as surveillance.
+                reviewed_text = self._clip(hint.get("content_text"), limit=12_000)
+                reviewed_sections = hint.get("content_sections")
+                if reviewed_text:
+                    existing_text = str(candidate.content_text or "").strip()
+                    if reviewed_text not in existing_text:
+                        candidate.content_text = "\n\n".join(
+                            value
+                            for value in (reviewed_text, existing_text)
+                            if value
+                        )
+                if isinstance(reviewed_sections, list):
+                    candidate.content_sections = [
+                        *[
+                            dict(section)
+                            for section in reviewed_sections
+                            if isinstance(section, dict)
+                        ],
+                        *(candidate.content_sections or []),
+                    ]
+                candidate.metadata = {
+                    **(candidate.metadata or {}),
+                    "configured_source_hint": True,
+                    "configured_reviewed_summary": bool(reviewed_text),
+                    "configured_title": hint.get("title"),
+                    "matched_aliases": disease.get("query_aliases") or [],
+                    "relevance_score": 1.0,
+                }
             if candidate is not None:
                 candidates.append(candidate)
         return candidates
@@ -497,7 +928,11 @@ class DiseaseKnowledgeFetcher:
         disease_id = str(disease["disease_id"])
         names = self._query_candidates(disease)
         urls: list[tuple[str, str]] = []
-        for name in names[:5]:
+        # A section repair needs focused grounding, not a broad catalogue
+        # crawl. Keeping this bounded also prevents one slow WHO endpoint from
+        # consuming the whole source-refresh deadline.
+        max_names = 2 if disease.get("target_sections") else 5
+        for name in names[:max_names]:
             slug = self._slug(name)
             if not slug or len(slug) < 3:
                 continue
@@ -948,7 +1383,7 @@ class DiseaseKnowledgeFetcher:
                     content_sections=[
                         {"heading": "Abstract", "text": self._clip(abstract) or ""}
                     ] if abstract else [],
-                    review_status="approved" if abstract else "requires_review",
+                    review_status="approved" if abstract else "rejected",
                     metadata={
                         "pmid": str(pmid),
                         "doi": doi,
@@ -959,6 +1394,7 @@ class DiseaseKnowledgeFetcher:
                         "query_candidates": query_candidates[:8],
                         "search_term": search_term_used,
                         "content_kind": "abstract" if abstract else "scholarly_metadata",
+                        "qualification_reason": None if abstract else "metadata_only",
                         "relevance_score": relevance_score,
                     },
                 )
@@ -970,16 +1406,25 @@ class DiseaseKnowledgeFetcher:
         """Search trusted public-health domains when direct source adapters miss a disease concept."""
         disease_id = str(disease["disease_id"])
         query_terms = self._query_candidates(disease)
-        candidates = self._fetch_crossref_metadata(disease_id=disease_id, query_terms=query_terms)
+        target_sections = disease.get("target_sections") or ()
+        # Crossref title metadata cannot ground a missing profile section. Do
+        # not spend two remote requests on it during targeted recovery.
+        candidates = (
+            []
+            if target_sections
+            else self._fetch_crossref_metadata(disease_id=disease_id, query_terms=query_terms)
+        )
+        candidate_limit = 3 if target_sections else 6
+        max_results = 2 if target_sections else 5
 
         seen_urls: set[str] = set()
         for candidate in candidates:
             seen_urls.add(candidate.url)
         for query in self._web_search_queries(
             query_terms,
-            disease.get("target_sections") or (),
+            target_sections,
         ):
-            for item in self._duckduckgo_search(query, max_results=5):
+            for item in self._duckduckgo_search(query, max_results=max_results):
                 url = item["url"]
                 if url in seen_urls:
                     continue
@@ -1036,11 +1481,11 @@ class DiseaseKnowledgeFetcher:
                         raw_excerpt=self._clip(snippet),
                         content_text=self._clip(content_text, 2000),
                         content_sections=content_sections,
-                        review_status="approved" if may_store_page_text else "requires_review",
+                        review_status="approved" if may_store_page_text else "rejected",
                         metadata=metadata,
                     )
                 )
-                if len(candidates) >= 6:
+                if len(candidates) >= candidate_limit:
                     return candidates
         return candidates
 
@@ -1104,7 +1549,7 @@ class DiseaseKnowledgeFetcher:
                         raw_excerpt=self._clip(content_text),
                         content_text=self._clip(content_text, 2000),
                         content_sections=[{"heading": "Scholarly metadata", "text": self._clip(content_text) or ""}],
-                        review_status="approved" if abstract else "requires_review",
+                        review_status="approved" if abstract else "rejected",
                         metadata={
                             "adapter": "web_search",
                             "provider": "crossref",
@@ -1116,6 +1561,7 @@ class DiseaseKnowledgeFetcher:
                             "crossref_type": item.get("type"),
                             "crossref_score": item.get("score"),
                             "content_kind": "scholarly_metadata",
+                            "qualification_reason": "metadata_only" if not abstract else None,
                             "relevance_score": score,
                         },
                     )
@@ -1139,8 +1585,12 @@ class DiseaseKnowledgeFetcher:
                 raw_excerpt="Metadata-only fallback. Public reuse of MSD Manual text requires permission or manual review.",
                 content_text=None,
                 content_sections=[],
-                review_status="requires_review",
-                metadata={"matched_name": name, "metadata_only": True},
+                review_status="rejected",
+                metadata={
+                    "matched_name": name,
+                    "metadata_only": True,
+                    "qualification_reason": "metadata_only",
+                },
             )
         ]
 
@@ -1230,20 +1680,26 @@ class DiseaseKnowledgeFetcher:
         terms = query_terms[:8]
         if not terms:
             return []
-        queries = [f'"{term}" disease' for term in terms[:3]]
         primary = terms[0]
+        hints = DiseaseKnowledgeFetcher._section_query_hints(target_sections)
+        if hints:
+            # Recovery rounds are already scoped to known missing sections.
+            # A few section-specific official-domain queries provide stronger
+            # evidence than repeating the broad discovery sweep (11 queries).
+            targeted = [
+                f'"{primary}" {hint} site:who.int OR site:cdc.gov OR site:health.gov.au OR site:gov.uk OR site:canada.ca OR site:mhlw.go.jp OR site:niid.go.jp'
+                for hint in hints[:2]
+            ]
+            targeted.append(f'"{primary}" site:who.int OR site:cdc.gov OR site:health.gov.au OR site:mhlw.go.jp OR site:niid.go.jp')
+            return DiseaseKnowledgeFetcher._unique_strings(targeted)[:3]
+        queries = [f'"{term}" disease' for term in terms[:3]]
         queries.extend(
             [
                 f'"{primary}" site:who.int',
                 f'"{primary}" site:cdc.gov',
                 f'"{primary}" site:nih.gov OR site:ncbi.nlm.nih.gov',
-                f'"{primary}" site:ecdc.europa.eu OR site:gov.uk OR site:canada.ca',
+                f'"{primary}" site:ecdc.europa.eu OR site:health.gov.au OR site:gov.uk OR site:canada.ca OR site:mhlw.go.jp OR site:niid.go.jp',
             ]
-        )
-        hints = DiseaseKnowledgeFetcher._section_query_hints(target_sections)
-        queries.extend(
-            f'"{primary}" {hint} site:who.int OR site:cdc.gov OR site:gov.uk OR site:canada.ca'
-            for hint in hints[:4]
         )
         return DiseaseKnowledgeFetcher._unique_strings(queries)[:11]
 
@@ -1276,7 +1732,13 @@ class DiseaseKnowledgeFetcher:
         hints = DiseaseKnowledgeFetcher._section_query_hints(target_sections)
         if hints:
             section_clause = " OR ".join(f'"{hint}"[Title/Abstract]' for hint in hints[:4])
-            terms_out.insert(0, f"({title_abstract}) AND ({section_clause})")
+            # Two concise attempts are sufficient for a repair: targeted
+            # reviews first, then a generic review fallback. The legacy five
+            # queries amplified upstream timeouts under parallel repair load.
+            return [
+                f"({title_abstract}) AND ({section_clause}) AND (review[pt] OR systematic review[pt] OR guideline[pt])",
+                f"({title_abstract}) AND (review[pt] OR systematic review[pt] OR guideline[pt])",
+            ]
         return terms_out
 
     @staticmethod
@@ -1314,23 +1776,31 @@ class DiseaseKnowledgeFetcher:
 
     def _get(self, url: str, params: dict[str, str] | None = None) -> requests.Response | None:
         cache_key = Request("GET", url, params=params).prepare().url or url
-        cached = self._response_cache.get(cache_key)
+        with self._response_cache_lock:
+            cached = self._response_cache.get(cache_key)
         if cached is not None:
             return cached
 
-        for attempt in range(self.max_retries + 1):
+        request_timeout = int(
+            getattr(self._adapter_request_state, "request_timeout_seconds", self.timeout)
+        )
+        max_retries = int(
+            getattr(self._adapter_request_state, "max_retries", self.max_retries)
+        )
+        session = self._request_session()
+        for attempt in range(max_retries + 1):
             self._throttle(url)
             try:
-                response = self.session.get(url, params=params, timeout=self.timeout)
+                response = session.get(url, params=params, timeout=request_timeout)
             except requests.RequestException as exc:
                 logger.debug("Knowledge source request failed: {} ({})", url, exc)
-                if attempt >= self.max_retries:
+                if attempt >= max_retries:
                     self._record_request_error()
                     return None
                 time.sleep(0.35 * (attempt + 1))
                 continue
 
-            if response.status_code in {429, 500, 502, 503, 504} and attempt < self.max_retries:
+            if response.status_code in {429, 500, 502, 503, 504} and attempt < max_retries:
                 retry_after = response.headers.get("Retry-After")
                 delay = float(retry_after) if retry_after and retry_after.isdigit() else 0.5 * (attempt + 1)
                 time.sleep(delay)
@@ -1339,9 +1809,39 @@ class DiseaseKnowledgeFetcher:
             if response.status_code in {429, 500, 502, 503, 504}:
                 self._record_request_error()
 
-            self._response_cache[cache_key] = response
+            with self._response_cache_lock:
+                self._response_cache[cache_key] = response
             return response
         return None
+
+    def _request_session(self) -> requests.Session | Any:
+        """Use a per-adapter Session while preserving injectable test clients."""
+        if not getattr(self._adapter_request_state, "is_adapter_worker", False):
+            return self.session
+        if not isinstance(self.session, requests.Session):
+            return self.session
+        session = getattr(self._adapter_request_state, "session", None)
+        if session is None:
+            session = requests.Session()
+            session.headers.update(self.session.headers)
+            self._adapter_request_state.session = session
+        return session
+
+    def _close_adapter_session(self) -> None:
+        session = getattr(self._adapter_request_state, "session", None)
+        if session is not None:
+            try:
+                session.close()
+            except requests.RequestException:
+                pass
+        for attribute in (
+            "session",
+            "is_adapter_worker",
+            "request_timeout_seconds",
+            "max_retries",
+        ):
+            if hasattr(self._adapter_request_state, attribute):
+                delattr(self._adapter_request_state, attribute)
 
     def _record_request_error(self) -> None:
         with self._request_error_lock:
@@ -1506,10 +2006,18 @@ class DiseaseKnowledgeFetcher:
                 continue
             if candidate.source_type in {"wikipedia", "wikidata"}:
                 title = re.sub(r"\s*[-–—]\s*Wikipedia\s*$", "", candidate.title or "", flags=re.I).strip()
-                if 3 <= len(title) <= 100 and title.lower() not in existing_keys:
+                if (
+                    3 <= len(title) <= 100
+                    and title.lower() not in existing_keys
+                    and cls._relevance_score(existing, "", title, "") >= 0.7
+                ):
                     aliases.append(title)
                 metadata_title = str((candidate.metadata or {}).get("candidate_title") or "").strip()
-                if 3 <= len(metadata_title) <= 100 and metadata_title.lower() not in existing_keys:
+                if (
+                    3 <= len(metadata_title) <= 100
+                    and metadata_title.lower() not in existing_keys
+                    and cls._relevance_score(existing, "", metadata_title, "") >= 0.7
+                ):
                     aliases.append(metadata_title)
 
             excerpt = " ".join(
@@ -1707,6 +2215,7 @@ class DiseaseKnowledgeFetcher:
             "wikipedia": 70,
             "wikidata": 58,
             "msd": 20,
+            "registry_definition": 96,
         }
 
         def score(candidate: SourceCandidate) -> tuple[float, int, str]:

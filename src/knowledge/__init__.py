@@ -4,7 +4,9 @@ from .evidence import (
     EvidenceFragment,
     EvidenceManifest,
     EvidencePacket,
+    KnowledgeSectionCoverage,
     MAX_EVIDENCE_MANIFEST_CHARACTERS,
+    assess_evidence_section_coverage,
     build_evidence_manifest,
     prepare_evidence_packet,
 )
@@ -34,10 +36,16 @@ from .quality import (
     assess_knowledge_brief,
     assess_knowledge_field,
     has_grounding_content,
+    is_unavailable_knowledge_sentence,
     sanitize_knowledge_brief,
     strip_unavailable_knowledge_sentences,
 )
-from .sources import DiseaseKnowledgeFetcher, SourceCandidate, SourceFetchReport
+from .sources import (
+    DiseaseKnowledgeFetcher,
+    KNOWLEDGE_SOURCE_STRATEGY_VERSION,
+    SourceCandidate,
+    SourceFetchReport,
+)
 
 __all__ = [
     "AIDiseaseBriefGenerator",
@@ -46,7 +54,9 @@ __all__ = [
     "EvidenceFragment",
     "EvidenceManifest",
     "EvidencePacket",
+    "KnowledgeSectionCoverage",
     "MAX_EVIDENCE_MANIFEST_CHARACTERS",
+    "KNOWLEDGE_SOURCE_STRATEGY_VERSION",
     "SourceCandidate",
     "SourceFetchReport",
     "KNOWLEDGE_TEXT_FIELDS",
@@ -58,6 +68,7 @@ __all__ = [
     "apply_knowledge_quality_gate",
     "attach_profile_schema",
     "assess_knowledge_evidence",
+    "assess_evidence_section_coverage",
     "assess_knowledge_brief",
     "assess_knowledge_field",
     "build_evidence_manifest",
@@ -69,6 +80,7 @@ __all__ = [
     "profile_schema_from_payload",
     "resolve_knowledge_profile_schema",
     "has_grounding_content",
+    "is_unavailable_knowledge_sentence",
     "sanitize_knowledge_brief",
     "strip_unavailable_knowledge_sentences",
     "should_generate_public_disease_page",

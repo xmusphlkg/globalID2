@@ -4,6 +4,7 @@ from .openalex import OpenAlexClient
 from .oai import OfficialGuidanceOaiClient
 from .preprints import BiorxivClient
 from .publisher_apis import ElsevierClient, SpringerNatureClient
+from .pubmed import PubMedClient
 from .rss import PublisherRssClient
 from .unpaywall import UnpaywallClient
 
@@ -15,6 +16,7 @@ __all__ = [
     "OfficialGuidanceOaiClient",
     "OpenAlexClient",
     "PublisherRssClient",
+    "PubMedClient",
     "SpringerNatureClient",
     "UnpaywallClient",
 ]

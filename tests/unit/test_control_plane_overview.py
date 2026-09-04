@@ -6,6 +6,7 @@ from src.control_plane.overview import (
     _failure_signature,
     _pipeline_stage_status,
 )
+from src.control_plane.system_resources import system_resources
 from src.domain import TaskType
 
 
@@ -58,3 +59,14 @@ def test_pipeline_status_does_not_mark_ai_active_for_crawl_work() -> None:
         active_types={TaskType.CRAWL_DATA},
         idle_when_clear=True,
     ) == "idle"
+
+
+def test_system_resources_snapshot_contains_sidebar_metrics() -> None:
+    snapshot = system_resources()
+
+    assert {"cpu", "memory", "disk", "network"}.issubset(snapshot)
+    assert snapshot["cpu"]["cores"] >= 0
+    assert snapshot["network"]["total"] >= snapshot["network"]["established"]
+    assert snapshot["network"]["total"] >= snapshot["network"]["listening"]
+    assert set(snapshot["memory"]) == {"total_bytes", "used_bytes", "used_percent"}
+    assert set(snapshot["disk"]) == {"total_bytes", "used_bytes", "used_percent"}

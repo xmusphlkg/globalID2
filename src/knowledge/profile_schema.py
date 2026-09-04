@@ -8,6 +8,7 @@ were an infectious disease.
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from dataclasses import dataclass
 from functools import lru_cache
@@ -71,6 +72,8 @@ def resolve_knowledge_profile_schema(disease: Any) -> KnowledgeProfileSchema:
     config = _profile_config()
     profile_type = explicit if explicit in config["schemas"] else None
     if profile_type is None:
+        profile_type = _profile_type_from_ontology_context(disease)
+    if profile_type is None:
         for rule in config.get("rules") or []:
             fields = rule.get("fields") or (
                 "name_en",
@@ -94,6 +97,32 @@ def resolve_knowledge_profile_schema(disease: Any) -> KnowledgeProfileSchema:
         not_applicable_fields=tuple(raw.get("not_applicable_fields") or ()),
         labels={str(key): dict(value) for key, value in (raw.get("labels") or {}).items()},
     )
+
+
+def _profile_type_from_ontology_context(disease: Any) -> str | None:
+    """Use canonical ontology facets before falling back to catalogue prose.
+
+    An aggregate surveillance entity is not a pathogen-specific disease page.
+    This semantic distinction comes from ontology facets rather than a
+    disease-ID exception list or an imprecise text pattern.
+    """
+    context = _raw_value(disease, "ontology_context")
+    if not isinstance(context, dict):
+        return None
+    facets = context.get("facet_tags")
+    if not isinstance(facets, dict):
+        return None
+    scope_values = facets.get("surveillance_scope")
+    if not isinstance(scope_values, (list, tuple, set)):
+        scope_values = [scope_values]
+    normalized = {
+        str(value or "").strip().casefold()
+        for value in scope_values
+        if str(value or "").strip()
+    }
+    if "surveillance_scope.aggregate" in normalized:
+        return "classification_scope"
+    return None
 
 
 def profile_schema_from_payload(payload: Any) -> KnowledgeProfileSchema:
@@ -121,6 +150,24 @@ def profile_schema_from_payload(payload: Any) -> KnowledgeProfileSchema:
 def attach_profile_schema(disease: dict[str, Any]) -> dict[str, Any]:
     schema = resolve_knowledge_profile_schema(disease)
     return {**disease, "knowledge_profile_type": schema.profile_type, "profile_schema": schema.to_dict()}
+
+
+def knowledge_profile_schema_signature(disease: Any) -> str:
+    """Return a stable fingerprint for the resolved publication contract.
+
+    Source discovery must be retried when an entity is reclassified, even when
+    its global source/evidence policy versions are unchanged.  The signature
+    captures the resolved schema rather than a mutable disease ID exception.
+    """
+
+    schema = resolve_knowledge_profile_schema(disease)
+    encoded = json.dumps(
+        schema.to_dict(),
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:16]
 
 
 def _validate_fields(profile_type: str, raw: dict[str, Any]) -> None:

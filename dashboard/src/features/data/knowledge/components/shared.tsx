@@ -66,6 +66,7 @@ export function fieldValue(value: unknown): string {
 export function statusColor(status: string): Color {
   switch (status) {
     case "published": return "emerald";
+    case "automating": return "blue";
     case "requires_review": return "amber";
     case "draft": return "blue";
     case "blocked": return "slate";
@@ -76,6 +77,7 @@ export function statusColor(status: string): Color {
 export function briefStatusColor(status: string): Color {
   switch (status) {
     case "published": return "emerald";
+    case "automating": return "blue";
     case "requires_review": return "amber";
     case "draft": return "blue";
     default: return "slate";

@@ -67,7 +67,7 @@ class DiseaseKnowledgeBrief(BaseModel):
     source_attribution = Column(JSON, nullable=False, default=list, comment="Public source attribution entries")
     disclaimer: Mapped[Optional[str]] = mapped_column(Text, comment="Public information disclaimer")
     model: Mapped[Optional[str]] = mapped_column(String(120), comment="Model used to generate brief")
-    status: Mapped[str] = mapped_column(String(30), default="draft", nullable=False, comment="draft/published/requires_review")
+    status: Mapped[str] = mapped_column(String(30), default="draft", nullable=False, comment="draft/published/requires_review/archived")
     source_confidence: Mapped[str] = mapped_column(String(30), default="medium", nullable=False, comment="high/medium/low")
     quality_score: Mapped[Optional[float]] = mapped_column(Float, comment="0-1 quality score")
     review_notes: Mapped[Optional[str]] = mapped_column(Text, comment="Review notes")

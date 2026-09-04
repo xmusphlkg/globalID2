@@ -32,12 +32,14 @@ class ControlledQueryBatch:
     terms: tuple[str, ...]
     crossref_query: str | None
     europe_pmc_query: str | None
+    pubmed_query: str | None
 
 
 @dataclass(frozen=True, slots=True)
 class ControlledDiscoveryResult:
     crossref_records: list[dict[str, Any]]
     europe_pmc_records: list[dict[str, Any]]
+    pubmed_records: list[dict[str, Any]]
     checkpoint: dict[str, Any]
 
 
@@ -68,6 +70,10 @@ def _mesh_expression(names: tuple[str, ...]) -> str:
     return " OR ".join(f'MESH:"{name}"' for name in names)
 
 
+def _pubmed_mesh_expression(names: tuple[str, ...]) -> str:
+    return " OR ".join(f'"{name}"[MeSH Terms]' for name in names)
+
+
 def _batch(
     *,
     query_id: str,
@@ -79,13 +85,16 @@ def _batch(
         return None
     lexical = _quoted_or(terms)
     mesh = _mesh_expression(mesh_terms)
+    pubmed_mesh = _pubmed_mesh_expression(mesh_terms)
     europe_pmc = f"({lexical}) OR ({mesh})" if mesh else f"({lexical})"
+    pubmed = f"({lexical}) OR ({pubmed_mesh})" if pubmed_mesh else f"({lexical})"
     return ControlledQueryBatch(
         query_id=query_id,
         categories=categories,
         terms=terms,
         crossref_query=lexical,
         europe_pmc_query=europe_pmc,
+        pubmed_query=pubmed,
     )
 
 
@@ -188,6 +197,7 @@ def _plan_fingerprint(batches: list[ControlledQueryBatch]) -> str:
             "terms": batch.terms,
             "crossref": batch.crossref_query,
             "europe_pmc": batch.europe_pmc_query,
+            "pubmed": batch.pubmed_query,
         }
         for batch in batches
     ]
@@ -255,6 +265,7 @@ def select_controlled_query_batches(
                 "terms": list(batch.terms),
                 "crossref": batch.crossref_query,
                 "europe_pmc": batch.europe_pmc_query,
+                "pubmed": batch.pubmed_query,
             }
             for batch in selected
         ],
@@ -268,6 +279,7 @@ async def fetch_controlled_discovery(
     *,
     crossref: Any,
     europe_pmc: Any | None,
+    pubmed: Any | None = None,
     batches: list[ControlledQueryBatch],
     checkpoint: dict[str, Any] | None,
     since: datetime,
@@ -280,7 +292,7 @@ async def fetch_controlled_discovery(
     """Execute a query window with hard query, request, and record limits."""
 
     total_cap = max(0, int(max_records))
-    provider_count = 2 if europe_pmc is not None else 1
+    provider_count = 1 + int(europe_pmc is not None) + int(pubmed is not None)
     effective_query_cap = min(
         max(0, int(max_queries)),
         total_cap // provider_count,
@@ -296,6 +308,8 @@ async def fetch_controlled_discovery(
         call_specs.append((batch, "crossref"))
         if europe_pmc is not None and batch.europe_pmc_query:
             call_specs.append((batch, "europe_pmc"))
+        if pubmed is not None and batch.pubmed_query:
+            call_specs.append((batch, "pubmed"))
 
     # Give every selected provider/query pair one result slot before spreading
     # the remainder. This prevents a low global cap from silently advancing a
@@ -333,7 +347,7 @@ async def fetch_controlled_discovery(
                 )
 
             calls.append((batch, provider, request_cap, request_crossref))
-        else:
+        elif provider == "europe_pmc":
             async def request_europe_pmc(
                 current: ControlledQueryBatch = batch,
                 cap: int = request_cap,
@@ -346,6 +360,19 @@ async def fetch_controlled_discovery(
                 )
 
             calls.append((batch, provider, request_cap, request_europe_pmc))
+        else:
+            async def request_pubmed(
+                current: ControlledQueryBatch = batch,
+                cap: int = request_cap,
+            ) -> list[dict[str, Any]]:
+                return await pubmed.search_recent(
+                    query=str(current.pubmed_query or ""),
+                    since=since,
+                    until=until,
+                    max_records=cap,
+                )
+
+            calls.append((batch, provider, request_cap, request_pubmed))
 
     semaphore = asyncio.Semaphore(max(1, int(concurrency)))
 
@@ -359,6 +386,7 @@ async def fetch_controlled_discovery(
     results = await asyncio.gather(*(execute_call(call) for _, _, _, call in calls))
     crossref_records: list[dict[str, Any]] = []
     europe_pmc_records: list[dict[str, Any]] = []
+    pubmed_records: list[dict[str, Any]] = []
     failed_ids: set[str] = set()
     errors: list[dict[str, str]] = []
     for (batch, provider, request_cap, _), result in zip(calls, results, strict=True):
@@ -370,7 +398,13 @@ async def fetch_controlled_discovery(
                 "error": str(result)[:500],
             })
             continue
-        destination = crossref_records if provider == "crossref" else europe_pmc_records
+        destination = (
+            crossref_records
+            if provider == "crossref"
+            else europe_pmc_records
+            if provider == "europe_pmc"
+            else pubmed_records
+        )
         for raw in result[:request_cap]:
             if not isinstance(raw, dict):
                 continue
@@ -389,9 +423,10 @@ async def fetch_controlled_discovery(
         "query_errors": errors,
         "network_calls": len(calls),
         "records_requested": sum(cap for _, _, cap, _ in calls),
-        "records_returned": len(crossref_records) + len(europe_pmc_records),
+        "records_returned": len(crossref_records) + len(europe_pmc_records) + len(pubmed_records),
         "crossref_records": len(crossref_records),
         "europe_pmc_records": len(europe_pmc_records),
+        "pubmed_records": len(pubmed_records),
         "max_queries": max_queries,
         "records_per_query": records_per_query,
         "max_records": max_records,
@@ -399,6 +434,7 @@ async def fetch_controlled_discovery(
     return ControlledDiscoveryResult(
         crossref_records=crossref_records,
         europe_pmc_records=europe_pmc_records,
+        pubmed_records=pubmed_records,
         checkpoint=state,
     )
 

@@ -434,8 +434,8 @@ function AIPageContent() {
           {workerStatus && (
             <span>
               {lang === "zh"
-                ? `Worker 并发 ${workerStatus.worker_concurrency}，排队 ${workerStatus.queued_tasks}`
-              : `Worker concurrency ${workerStatus.worker_concurrency}, queued ${workerStatus.queued_tasks}`}
+                ? `Worker 并发 ${workerStatus.worker_concurrency}，AI ${workerStatus.ai_concurrency_current}/${workerStatus.ai_concurrency_max}${workerStatus.ai_concurrency_adaptive ? "（自适应）" : ""}，排队 ${workerStatus.queued_tasks}`
+                : `Worker ${workerStatus.worker_concurrency}, AI ${workerStatus.ai_concurrency_current}/${workerStatus.ai_concurrency_max}${workerStatus.ai_concurrency_adaptive ? " (adaptive)" : ""}, queued ${workerStatus.queued_tasks}`}
             </span>
           )}
       </div>

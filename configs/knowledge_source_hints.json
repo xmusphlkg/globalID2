@@ -1,6 +1,218 @@
 {
   "schema_version": 1,
   "diseases": {
+    "D062": {
+      "aliases": ["Herpesviral infections", "Herpes simplex virus infection", "Herpesvirus infection"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "CDC information relevant to herpesviral [herpes simplex] infections",
+        "url": "https://www.cdc.gov/herpes/about/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC explains herpes simplex infection, its clinical manifestations, sexual or oral exposure routes, and prevention measures.",
+        "content_text": "This reviewed CDC summary supports the ICD-10 B00 herpesviral [herpes simplex] infections category. Definition: herpes simplex virus type 1 and type 2 can cause oral or genital herpes infection. Clinical features: infection can cause painful sores, and some people have no symptoms. Epidemiology: genital herpes is a common sexually transmitted infection; burden and presentation vary by virus type and population. Transmission: infection can spread through contact with sores, saliva, genital fluids, or oral or genital skin, including when a partner has no visible sore. Prevention: avoiding sexual exposure, correct condom use, avoiding sex during symptoms, and clinician-directed suppressive antiviral treatment can reduce transmission risk.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "Herpes simplex virus types 1 and 2 can cause oral or genital herpes; infection can cause painful sores or be asymptomatic."}, {"heading": "Transmission and epidemiology", "text": "Genital herpes is a common sexually transmitted infection and can spread through contact with infectious sores, saliva, genital fluids, or oral or genital skin."}, {"heading": "Prevention", "text": "Risk reduction includes avoiding exposure during symptoms, correct condom use, and clinician-directed suppressive antiviral treatment."}]
+      }]
+    },
+    "D077": {
+      "aliases": ["Plasmodium falciparum malaria", "P. falciparum malaria", "falciparum malaria"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "CDC malaria clinical features, transmission, and prevention",
+        "url": "https://www.cdc.gov/malaria/hcp/clinical-features/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC identifies Plasmodium falciparum as a severe malaria species and describes clinical features, mosquito transmission, endemic settings, and prevention.",
+        "content_text": "This reviewed CDC malaria summary supports Plasmodium falciparum malaria. Definition: malaria is caused by Plasmodium parasites, and P. falciparum infection can progress rapidly to severe or life-threatening disease. Clinical features: fever, chills, headache, gastrointestinal symptoms, anemia, neurologic manifestations, and severe organ complications can occur. Epidemiology: P. falciparum is common in many countries in sub-Saharan Africa and severe disease risk is greatest with substantial exposure in endemic settings. Transmission: most malaria follows bites from infected female Anopheles mosquitoes, with rare blood, organ, needle, or congenital transmission. Prevention: avoiding mosquito bites and taking indicated antimalarial prophylaxis are key travel-prevention measures.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "P. falciparum malaria can progress rapidly to severe disease with fever, anemia, neurologic manifestations, or organ complications."}, {"heading": "Epidemiology and transmission", "text": "P. falciparum is common in many endemic settings, especially sub-Saharan Africa, and is mainly transmitted by infected female Anopheles mosquitoes."}, {"heading": "Prevention", "text": "Mosquito-bite avoidance and indicated antimalarial prophylaxis reduce malaria risk."}]
+      }]
+    },
+    "D079": {
+      "aliases": ["Plasmodium malariae malaria", "P. malariae malaria"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "CDC malaria clinical features and transmission",
+        "url": "https://www.cdc.gov/malaria/hcp/clinical-features/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC malaria guidance describes P. malariae as a human malaria species, including clinical presentation, longer incubation, mosquito transmission, and prevention.",
+        "content_text": "This reviewed CDC malaria summary supports Plasmodium malariae malaria. Definition: malaria is caused by Plasmodium parasites, including P. malariae. Clinical features: malaria may produce fever, chills, headache, malaise, nausea, anemia, jaundice, and in chronic or repeated P. malariae infection nephrotic syndrome can occur. Epidemiology: malaria risk occurs in endemic settings, and incubation periods are generally longer with P. malariae than with P. falciparum. Transmission: infection is mainly acquired from bites of infected female Anopheles mosquitoes, with rare blood-borne or congenital routes. Prevention: mosquito-bite avoidance and indicated antimalarial prophylaxis are central prevention measures.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "P. malariae is a malaria parasite; malaria can cause febrile illness, anemia, and, with chronic or repeated P. malariae infection, nephrotic syndrome."}, {"heading": "Epidemiology and transmission", "text": "Risk occurs in malaria-endemic settings, incubation can be longer with P. malariae, and transmission is chiefly by infected female Anopheles mosquitoes."}, {"heading": "Prevention", "text": "Avoiding mosquito bites and using indicated prophylaxis reduce malaria risk."}]
+      }]
+    },
+    "D131": {
+      "aliases": ["Vancomycin-intermediate Staphylococcus aureus infection", "VISA", "Vancomycin intermediate S. aureus"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "About vancomycin-resistant Staphylococcus aureus",
+        "url": "https://www.cdc.gov/staphylococcus-aureus/about/vancomycin-resistant-staph.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes VISA and VRSA as rare resistant S. aureus infections and addresses manifestations, healthcare-associated spread, infection prevention, and surveillance.",
+        "content_text": "This reviewed CDC summary supports vancomycin-intermediate Staphylococcus aureus infection (VISA). Definition: VISA is a type of antimicrobial-resistant S. aureus with reduced vancomycin susceptibility. Clinical features: infection can resemble other staphylococcal skin, wound, bloodstream, or other S. aureus infections. Epidemiology: vancomycin resistance in S. aureus is exceptionally rare and healthcare patients with devices, prior antibiotic exposure, or underlying conditions are at increased risk. Transmission: resistant S. aureus can spread through close physical contact or contaminated wound material, particularly in healthcare settings. Prevention: hand hygiene, avoiding contact with wounds or contaminated material, and recommended healthcare infection-control precautions reduce spread.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "VISA is antimicrobial-resistant S. aureus with reduced vancomycin susceptibility and can cause staphylococcal infections including skin or wound infection."}, {"heading": "Epidemiology and transmission", "text": "VISA is rare; healthcare exposure, invasive devices, antibiotic exposure, and contact with contaminated wound material are relevant risk or spread contexts."}, {"heading": "Prevention", "text": "Hand hygiene and healthcare infection-control precautions reduce spread."}]
+      }]
+    },
+    "D132": {
+      "aliases": ["Vancomycin-resistant Staphylococcus aureus infection", "VRSA", "Vancomycin resistant S. aureus"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "About vancomycin-resistant Staphylococcus aureus",
+        "url": "https://www.cdc.gov/staphylococcus-aureus/about/vancomycin-resistant-staph.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes VRSA and VISA as rare resistant S. aureus infections and addresses manifestations, healthcare-associated spread, infection prevention, and surveillance.",
+        "content_text": "This reviewed CDC summary supports vancomycin-resistant Staphylococcus aureus infection (VRSA). Definition: VRSA is a type of antimicrobial-resistant S. aureus that is resistant to vancomycin. Clinical features: infection can present as skin, wound, or other staphylococcal infection. Epidemiology: VRSA infections are exceptionally rare and risk is concentrated among people with relevant healthcare exposure, invasive devices, underlying conditions, or prior antibiotic exposure. Transmission: VRSA could spread through close physical contact or contaminated material in ways similar to other resistant S. aureus. Prevention: hand hygiene, avoiding contact with wounds or contaminated material, and recommended hospital precautions reduce spread.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "VRSA is vancomycin-resistant S. aureus and can cause skin, wound, or other staphylococcal infection."}, {"heading": "Epidemiology and transmission", "text": "VRSA is exceptionally rare; healthcare exposure and contact with contaminated wound material are relevant contexts."}, {"heading": "Prevention", "text": "Hand hygiene and healthcare infection-control precautions reduce spread."}]
+      }]
+    },
+    "D149": {
+      "aliases": [
+        "Flavivirus infection (unspecified)",
+        "Unspecified flavivirus infection",
+        "Australian flavivirus infection unspecified case definition"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "Australian Government Department of Health and Aged Care",
+        "title": "Flavivirus infection (unspecified) including Zika virus - surveillance case definition",
+        "url": "https://www1.health.gov.au/internet/main/publishing.nsf/Content/cda-cdi4002l.htm",
+        "authority_level": "high",
+        "raw_excerpt": "The Australian national surveillance definition uses flavivirus infection (unspecified) when a human flavivirus infection cannot be assigned to one specific virus and specifies the notification and laboratory-clinical classification boundary.",
+        "content_text": "This reviewed Australian Government summary supports the surveillance concept Flavivirus infection (unspecified). Definition: the category is used for a human flavivirus infection that cannot be attributed to a single known flavivirus because available laboratory results are non-specific, cannot identify the virus, or identify a flavivirus not otherwise classified. Surveillance and reporting: the national definition requires the stated laboratory and clinical evidence for a confirmed notification and retains separate handling for Zika virus classifications. Clinical context: the definition describes non-encephalitic febrile illness and encephalitic illness as compatible clinical presentations. Interpretation: this is a surveillance category with a laboratory-classification boundary, not a claim that all flavivirus infections have the same clinical course or prevention measures.",
+        "content_sections": [
+          {
+            "heading": "Definition and classification boundary",
+            "text": "Flavivirus infection (unspecified) is an Australian surveillance category for human infection that cannot be assigned to one specific flavivirus because available testing is non-specific, cannot identify the virus, or identifies a flavivirus not otherwise classified."
+          },
+          {
+            "heading": "Notification and clinical context",
+            "text": "The national definition specifies laboratory and clinical evidence for confirmed notification and describes compatible febrile or encephalitic clinical presentations."
+          },
+          {
+            "heading": "Surveillance interpretation",
+            "text": "The category is a reporting and laboratory-classification boundary; trend interpretation should preserve the current case-definition scope and distinct Zika virus handling."
+          }
+        ]
+      }]
+    },
+    "D136": {
+      "aliases": ["Chlamydial pneumonia", "Chlamydia pneumoniae infection", "Chlamydophila pneumoniae infection"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "About Chlamydia pneumoniae infection",
+        "url": "https://www.cdc.gov/cpneumoniae/about/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes C. pneumoniae respiratory infection, including symptoms, occurrence, droplet transmission, and hygiene-based prevention.",
+        "content_text": "This reviewed CDC summary supports chlamydial pneumonia caused by Chlamydia pneumoniae. Definition: C. pneumoniae is a bacterium that can infect the upper or lower respiratory tract and cause bronchitis or pneumonia. Clinical features: fatigue, headache, hoarseness, low-grade fever, runny nose, sore throat, and slowly worsening cough are common; serious complications are uncommon. Epidemiology: first infection commonly occurs in school-aged children or young adults, while reinfection and severe disease are more common in older adults and outbreaks can occur in crowded settings. Transmission: people spread the bacteria by coughing or sneezing respiratory droplets, and contaminated droplets can reach the mouth or nose. Prevention: covering coughs and sneezes and regular hand hygiene help reduce spread; no vaccine is available.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "C. pneumoniae can cause upper or lower respiratory infection, bronchitis, or pneumonia with cough, fever, or other respiratory symptoms."}, {"heading": "Epidemiology and transmission", "text": "Infection often begins in school-aged children or young adults; respiratory droplets and contaminated hands or surfaces can spread bacteria."}, {"heading": "Prevention", "text": "Cough etiquette and hand hygiene help reduce spread; no vaccine is available."}]
+      }]
+    },
+    "D143": {
+      "aliases": ["Roseola", "Roseola infantum", "Exanthem subitum", "Sixth disease"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "NIH MedlinePlus",
+        "title": "Roseola medical encyclopedia",
+        "url": "https://medlineplus.gov/ency/article/000968.htm",
+        "authority_level": "high",
+        "raw_excerpt": "MedlinePlus describes roseola as a viral infection in young children and notes its symptoms and hand-hygiene prevention advice.",
+        "content_text": "This reviewed NIH MedlinePlus summary supports roseola, also called exanthem subitum or sixth disease. Definition: roseola is a viral infection that commonly affects infants and young children. Clinical features: illness typically includes several days of high fever followed by a rash as the fever resolves; febrile seizures can occur. Epidemiology: roseola is a common childhood infection, especially in infants and young children. Transmission: human herpesviruses associated with roseola spread between close contacts, including through saliva or respiratory secretions. Prevention: careful handwashing helps reduce spread of viruses that cause roseola.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "Roseola is a viral illness of infants and young children marked by high fever followed by a rash; febrile seizures can occur."}, {"heading": "Epidemiology and transmission", "text": "Roseola is common in early childhood and associated viruses can spread among close contacts through saliva or respiratory secretions."}, {"heading": "Prevention", "text": "Careful handwashing helps reduce spread."}]
+      }]
+    },
+    "D171": {
+      "aliases": ["Herpes B virus infection", "B virus infection", "Macacine herpesvirus 1 infection"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "About B virus",
+        "url": "https://www.cdc.gov/herpes-b-virus/about/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes B virus as a rare, potentially fatal macaque-associated infection and provides clinical, exposure, prevention, and first-aid information.",
+        "content_text": "This reviewed CDC summary supports herpes B virus infection. Definition: B virus is a macaque-associated alphaherpesvirus that can cause rare but severe infection in people. Clinical features: early fever and chills can progress to local blisters, neurologic disease, respiratory compromise, or death. Epidemiology: risk is very low for the general public but greater for people who work with or are exposed to macaques. Transmission: infection can follow macaque bites or scratches, contact of infected tissue or fluid with broken skin or mucosa, contaminated sharps, or relevant animal-facility exposure. Prevention: avoid contact with macaques, follow laboratory and animal-facility protocols, and immediately wash exposed skin and obtain medical assessment after a possible exposure.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "B virus is a rare macaque-associated infection that can progress from febrile illness to severe neurologic or respiratory disease."}, {"heading": "Epidemiology and transmission", "text": "Risk is concentrated in people exposed to macaques; bites, scratches, infected fluids, and contaminated sharps can transmit infection."}, {"heading": "Prevention", "text": "Avoid macaque contact, use appropriate facility protocols, and immediately wash and seek care after exposure."}]
+      }]
+    },
+    "D180": {
+      "aliases": ["Enterovirus infection with severe complications", "Severe non-polio enterovirus infection", "Enterovirus infection with complications"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "About Non-Polio Enteroviruses",
+        "url": "https://www.cdc.gov/non-polio-enterovirus/about/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes non-polio enterovirus infections, including serious complications, routes of spread, seasonal occurrence, and hygiene-based prevention.",
+        "content_text": "This reviewed CDC summary supports the enterovirus infection with severe complications surveillance concept. Definition: non-polio enteroviruses are common viruses that can cause mild illness or serious complications. Clinical features: fever, respiratory symptoms, rash, mouth blisters, and muscle aches can occur; complications can include viral meningitis, encephalitis, myocarditis, pericarditis, acute flaccid paralysis, or severe neonatal sepsis. Epidemiology: CDC estimates 10 to 15 million non-polio enterovirus infections and tens of thousands of hospitalizations annually in the United States; infections are common in summer and fall, and infants, children, and immunocompromised people have greater complication risk. Transmission: virus can spread for weeks through respiratory or oral secretions, blister fluid, stool, close contact, contaminated surfaces, diaper changing, or contaminated drinking water. Prevention: wash hands with soap and water, clean and disinfect shared surfaces, avoid close contact with infected people, and note that no vaccine protects against non-polio enterovirus infection.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "Non-polio enteroviruses can cause mild illness or serious complications including meningitis, encephalitis, myocarditis, paralysis, or severe neonatal sepsis."}, {"heading": "Epidemiology and transmission", "text": "CDC estimates 10 to 15 million U.S. infections annually, often in summer and fall; virus can spread through respiratory or oral secretions, blister fluid, stool, close contact, contaminated surfaces, diaper changing, or contaminated water."}, {"heading": "Prevention", "text": "Handwashing with soap and water, cleaning and disinfection, and avoiding close contact reduce spread; no vaccine protects against non-polio enterovirus infection."}]
+      }]
+    },
+    "D181": {
+      "aliases": ["Severe complicated COVID-19", "Severe COVID-19", "Severe SARS-CoV-2 infection"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "CDC clinical presentation of COVID-19",
+        "url": "https://www.cdc.gov/covid/hcp/clinical-care/covid19-presentation.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes severe COVID-19 risk, clinical presentation, SARS-CoV-2 transmission, and vaccine-based prevention.",
+        "content_text": "This reviewed CDC summary supports the severe complicated COVID-19 surveillance concept. Definition: COVID-19 is caused by SARS-CoV-2, and severe illness is a serious clinical presentation requiring prompt assessment. Clinical features: severe disease can include lower respiratory involvement, hypoxemia, respiratory distress, or need for hospitalization. Epidemiology: older age, immunocompromise, and certain underlying conditions increase the risk of severe outcomes. Transmission: people with SARS-CoV-2 infection can transmit virus before symptoms, with symptoms, or without symptoms, chiefly through respiratory particles in close or poorly ventilated settings. Prevention: staying up to date with COVID-19 vaccination and following respiratory-virus guidance reduce risks of infection, hospitalization, and death.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "Severe COVID-19 is a serious SARS-CoV-2 clinical presentation that can involve lower respiratory disease, hypoxemia, or hospitalization."}, {"heading": "Epidemiology and transmission", "text": "Older age, immunocompromise, and underlying conditions increase severe-outcome risk; SARS-CoV-2 can spread through respiratory particles from symptomatic or asymptomatic people."}, {"heading": "Prevention", "text": "Vaccination and respiratory-virus precautions reduce infection and severe-outcome risk."}]
+      }]
+    },
+    "D211": {
+      "aliases": ["Chronic hepatitis C", "Hepatitis C chronic", "Chronic HCV infection"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "Hepatitis C basics",
+        "url": "https://www.cdc.gov/hepatitis-c/about/",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes chronic hepatitis C, its often limited symptoms, blood-borne transmission, prevention, and testing.",
+        "content_text": "This reviewed CDC summary supports chronic hepatitis C. Definition: hepatitis C is infection with hepatitis C virus, and more than half of infections become chronic. Clinical features: chronic infection is often asymptomatic or associated with nonspecific fatigue or depression, but untreated infection can cause liver disease, liver failure, or liver cancer. Epidemiology: chronic hepatitis C is a public-health concern because many infected people do not know they are infected. Transmission: HCV spreads when infected blood enters another person's body, particularly through sharing contaminated injection equipment; childbirth and some other blood exposures are less common routes. Prevention: there is no vaccine, so prevention emphasizes avoiding blood exposure, not sharing needles or items contaminated with blood, and recommended testing and treatment.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "More than half of hepatitis C infections become chronic; many people have no symptoms, but untreated infection can lead to severe liver disease."}, {"heading": "Epidemiology and transmission", "text": "Many infected people are unaware of infection; HCV is chiefly transmitted through blood exposure, especially shared injection equipment."}, {"heading": "Prevention", "text": "There is no vaccine; avoiding blood exposure, testing, and treatment are central prevention measures."}]
+      }]
+    },
+    "D212": {
+      "aliases": ["Perinatal hepatitis C", "Perinatal HCV", "Hepatitis C perinatal"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "CDC recommendations for perinatally exposed infants and children",
+        "url": "https://www.cdc.gov/mmwr/volumes/72/rr/rr7204a1.htm",
+        "authority_level": "high",
+        "raw_excerpt": "CDC provides evidence and testing recommendations for infants and children exposed to hepatitis C virus during pregnancy or childbirth.",
+        "content_text": "This reviewed CDC summary supports perinatal hepatitis C. Definition: perinatal HCV infection concerns infants or children exposed to hepatitis C virus during pregnancy or childbirth. Clinical features: infection may not be apparent in infancy, so recommended testing is important to identify children with infection and guide care. Epidemiology: maternal detectable HCV RNA is a known risk factor for perinatal transmission, and public-health recommendations address testing of exposed children. Transmission: HCV can be transmitted from a pregnant person with viremic infection to an infant around birth; delivery and exposure factors can influence risk. Prevention: hepatitis C testing during pregnancy, appropriate pregnancy and delivery management, and timely testing of perinatally exposed infants support prevention of missed infection and later complications.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "Perinatal hepatitis C concerns infant exposure around pregnancy or childbirth and can require testing because infection may not be clinically apparent."}, {"heading": "Epidemiology and transmission", "text": "Maternal detectable HCV RNA is a known risk factor, and transmission can occur from a viremic pregnant person around birth."}, {"heading": "Prevention", "text": "Pregnancy testing, appropriate care, and timely testing of exposed infants support prevention and early identification."}]
+      }]
+    },
+    "D225": {
+      "aliases": ["Severe invasive streptococcal infection", "Severe invasive group A streptococcal infection", "STSS", "TSLS"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "Clinical considerations for group A Streptococcus",
+        "url": "https://www.cdc.gov/group-a-strep/hcp/clinical-guidance/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes invasive group A streptococcal disease, serious manifestations, transmission, prevention, and surveillance.",
+        "content_text": "This reviewed CDC summary supports severe invasive streptococcal infection. Definition: group A Streptococcus can cause invasive disease when bacteria affect normally sterile body sites. Clinical features: invasive disease includes severe cellulitis with bloodstream infection, pneumonia, necrotizing fasciitis, and streptococcal toxic shock syndrome. Epidemiology: CDC tracks invasive group A streptococcal disease, and rates are highest in older adults with documented outbreaks in healthcare and long-term-care settings. Transmission: group A strep most often spreads person to person through respiratory droplets or contact with secretions, with healthcare-associated spread documented. Prevention: limiting exposure, prompt diagnosis and treatment, appropriate infection-control precautions, and targeted prophylaxis in selected situations help prevent spread; no vaccine is currently available.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "Invasive group A strep affects normally sterile sites and can include pneumonia, necrotizing fasciitis, or streptococcal toxic shock syndrome."}, {"heading": "Epidemiology and transmission", "text": "CDC tracks invasive disease; older adults and healthcare or long-term-care settings are important occurrence contexts, and respiratory droplets or secretions can spread bacteria."}, {"heading": "Prevention", "text": "Prompt diagnosis, treatment, infection-control precautions, and selected prophylaxis support prevention; no vaccine is available."}]
+      }]
+    },
+    "D229": {
+      "aliases": ["Multidrug-resistant Pseudomonas aeruginosa infection", "MDR Pseudomonas aeruginosa", "Multi-drug-resistant Pseudomonas aeruginosa"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "About Pseudomonas aeruginosa",
+        "url": "https://www.cdc.gov/pseudomonas-aeruginosa/about/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes multidrug-resistant P. aeruginosa, healthcare-associated infection, transmission contexts, and infection prevention.",
+        "content_text": "This reviewed CDC summary supports multidrug-resistant Pseudomonas aeruginosa infection. Definition: P. aeruginosa is an environmental bacterium that can cause human infection, and multidrug-resistant forms are difficult to treat because of resistance to many antibiotics. Clinical features: infections can affect the bloodstream, lungs, urinary tract, wounds, or surgical sites. Epidemiology: infections typically occur in healthcare settings; patients using ventilators or catheters and people with surgical wounds or burns are at elevated risk. Transmission: exposure can involve contaminated surfaces, equipment, soil or water, or contaminated hands. Prevention: hand hygiene, core infection-prevention and control practices, environmental cleaning, and healthcare water-management measures reduce risk.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "MDR P. aeruginosa is a difficult-to-treat resistant form that can cause bloodstream, lung, urinary, wound, or surgical-site infection."}, {"heading": "Epidemiology and transmission", "text": "Healthcare patients with devices, wounds, or burns are at elevated risk; contaminated equipment, surfaces, water, soil, or hands can be exposure routes."}, {"heading": "Prevention", "text": "Hand hygiene, infection-control practices, environmental cleaning, and water management reduce risk."}]
+      }]
+    },
     "D232": {
       "aliases": [
         "Infectious syphilis less than two years duration",
@@ -30,8 +242,44 @@
               "text": "The duration boundary is a national reporting classification. Comparisons should preserve the definition version, confirmed-versus-probable scope, and jurisdictional notification practice."
             }
           ]
+        },
+        {
+          "source_type": "web_search",
+          "source_name": "US Centers for Disease Control and Prevention",
+          "title": "About syphilis",
+          "url": "https://www.cdc.gov/syphilis/about/",
+          "authority_level": "high",
+          "raw_excerpt": "CDC describes syphilis stages, clinical manifestations, sexual and congenital transmission, and prevention.",
+          "content_text": "This reviewed CDC summary supplements the Australian less-than-two-years surveillance definition for infectious syphilis. Definition: syphilis is a sexually transmitted infection that progresses through primary, secondary, latent, and tertiary stages; primary, secondary, and early latent infection make up the infectious early-duration context. Clinical features: stages have different manifestations, including sores in primary infection and other signs in secondary infection. Epidemiology: syphilis is a common sexually transmitted infection, and surveillance interpretation should retain the Australian less-than-two-years duration definition. Transmission: infection spreads through sexual contact with infectious lesions and can also pass during pregnancy. Prevention: reducing sexual exposure risk, correct condom use, testing, and timely treatment help prevent transmission.",
+          "content_sections": [{"heading": "Definition and clinical features", "text": "The Australian early-duration surveillance category includes primary, secondary, and early latent syphilis; stages have different clinical manifestations."}, {"heading": "Epidemiology and transmission", "text": "Syphilis is a common sexually transmitted infection; it spreads through sexual contact with infectious lesions and can pass during pregnancy."}, {"heading": "Prevention", "text": "Testing, timely treatment, risk reduction, and correct condom use help prevent transmission."}]
         }
       ]
+    },
+    "D247": {
+      "aliases": ["Paralytic shellfish poisoning", "PSP", "Saxitoxin shellfish poisoning"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "Food poisoning from marine toxins",
+        "url": "https://www.cdc.gov/yellow-book/hcp/environmental-hazards-risks/food-poisoning-from-marine-toxins.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC identifies paralytic shellfish poisoning as a severe foodborne toxin syndrome caused by saxitoxin-contaminated shellfish and describes worldwide occurrence and clinical manifestations.",
+        "content_text": "This reviewed CDC Yellow Book summary supports paralytic shellfish poisoning. Definition: paralytic shellfish poisoning is a foodborne marine-toxin syndrome caused by eating shellfish contaminated with saxitoxins produced by dinoflagellates. Clinical features: symptoms can include gastrointestinal, neurologic, cardiovascular, or respiratory effects, with severe cases causing ataxia, paralysis, respiratory failure, or death. Epidemiology: PSP occurs worldwide and is especially reported in temperate waters off Atlantic and Pacific North America, including Alaska, with cases also reported in the Americas, Asia, Europe, Australia, and New Zealand. Exposure and prevention context: illness follows contaminated shellfish consumption, so monitoring shellfish harvesting areas and avoiding unsafe or unregulated shellfish are central public-health controls.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "PSP follows consumption of saxitoxin-contaminated shellfish and can cause gastrointestinal, neurologic, cardiovascular, or respiratory illness including paralysis."}, {"heading": "Epidemiology", "text": "PSP occurs worldwide, including temperate waters of North America and reported regions in the Americas, Asia, Europe, Australia, and New Zealand."}, {"heading": "Exposure and prevention context", "text": "Public-health control relies on shellfish monitoring and avoiding unsafe or unregulated shellfish consumption."}]
+      }]
+    },
+    "D249": {
+      "aliases": ["Infectious syphilis", "Primary secondary and early latent syphilis", "Early syphilis"],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "About syphilis",
+        "url": "https://www.cdc.gov/syphilis/about/",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes syphilis stages, manifestations, sexual and congenital transmission, and prevention.",
+        "content_text": "This reviewed CDC summary supports infectious syphilis, including primary, secondary, and early latent stages. Definition: syphilis is a sexually transmitted infection with primary, secondary, latent, and tertiary stages; early stages are the infectious clinical context. Clinical features: primary disease can cause one or more sores, while secondary disease can have different systemic or mucocutaneous signs; stage-specific symptoms vary. Epidemiology: syphilis is a common sexually transmitted infection and observed notification patterns depend on screening and surveillance definitions. Transmission: infection spreads through sexual contact with infectious lesions and can pass from a pregnant person to a fetus. Prevention: testing, timely treatment, reducing sexual exposure risk, and correct condom use help prevent transmission, though lesions outside condom coverage can still transmit infection.",
+        "content_sections": [{"heading": "Definition and clinical features", "text": "Infectious syphilis includes early-stage primary, secondary, and early latent infection, with stage-specific sores and other manifestations."}, {"heading": "Epidemiology and transmission", "text": "Syphilis is a common sexually transmitted infection that spreads through contact with infectious lesions and can pass during pregnancy."}, {"heading": "Prevention", "text": "Testing, prompt treatment, risk reduction, and correct condom use help prevent transmission."}]
+      }]
     },
     "D233": {
       "aliases": [
@@ -116,6 +364,368 @@
             {
               "heading": "Reporting boundary",
               "text": "E. coli enteritis including EHEC has been notifiable to MSIS since 1989, and diagnostic expansion affects trends. EHEC/STEC is a distinct component from other diarrheagenic pathotypes."
+            }
+          ]
+        }
+      ]
+    },
+    "D100": {
+      "aliases": [
+        "Haemophilus influenzae",
+        "H. influenzae disease",
+        "Invasive Haemophilus influenzae disease"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "Clinical Overview of Haemophilus influenzae Disease",
+        "url": "https://www.cdc.gov/hi-disease/hcp/clinicians/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes H. influenzae disease, including respiratory-droplet transmission, the possibility of neonatal exposure, and prevention measures for Hib disease.",
+        "content_text": "This reviewed CDC summary supports Haemophilus influenzae disease. Transmission: people with symptomatic infection and nasopharyngeal carriage can spread H. influenzae through respiratory droplets generated by coughing or sneezing; newborn infection can follow aspiration of infected amniotic fluid or contact with infected genital-tract secretions. Prevention: CDC recommends Hib chemoprophylaxis for specified close contacts and advises clinicians to follow current prevention guidance.",
+        "content_sections": [
+          {
+            "heading": "Transmission",
+            "text": "Haemophilus influenzae transmission usually occurs when a person breathes in or directly contacts respiratory droplets containing the bacteria. Symptomatic people and nasopharyngeal carriers can spread bacteria by coughing or sneezing; newborn exposure can occur around delivery."
+          },
+          {
+            "heading": "Prevention context",
+            "text": "CDC recommends chemoprophylaxis for specified close contacts of Hib cases and directs clinicians to current prevention guidance."
+          }
+        ]
+      }]
+    },
+    "D138": {
+      "aliases": [
+        "Erythema infectiosum",
+        "Fifth disease",
+        "Parvovirus B19 infection"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "Preventing Parvovirus B19",
+        "url": "https://www.cdc.gov/parvovirus-b19/prevention-treatment/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC explains how parvovirus B19 spreads, its seasonal and outbreak pattern, and respiratory-virus prevention measures.",
+        "content_text": "This reviewed CDC summary supports erythema infectiosum (fifth disease), a manifestation of parvovirus B19 infection. Epidemiology: in the United States, parvovirus B19 infection occurs more often in late winter, spring, and early summer, and minor outbreaks occur about every three to four years. Transmission: parvovirus B19 spreads from person to person through respiratory particles, can spread through blood or blood products, and can pass during pregnancy from mother to baby. Prevention: there is no vaccine to prevent parvovirus B19 infection; good hygiene, cleaner air, and actions to prevent respiratory-virus spread reduce transmission risk.",
+        "content_sections": [
+          {
+            "heading": "Epidemiology",
+            "text": "In the United States, parvovirus B19 infection occurs more often in late winter, spring, and early summer. Minor outbreaks occur about every three to four years."
+          },
+          {
+            "heading": "Transmission",
+            "text": "Parvovirus B19 can spread person to person through respiratory particles, through blood or blood products, and during pregnancy from mother to baby."
+          },
+          {
+            "heading": "Prevention",
+            "text": "There is no vaccine to prevent parvovirus B19 infection. Good hygiene, cleaner air, and actions to prevent respiratory-virus spread help reduce transmission risk."
+          }
+        ]
+      }]
+    },
+    "D144": {
+      "aliases": [
+        "Creutzfeldt-Jakob disease",
+        "CJD",
+        "Classic CJD"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "Classic Creutzfeldt-Jakob Disease",
+        "url": "https://www.cdc.gov/creutzfeldt-jakob/about/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC explains that most classic CJD is sporadic, while rare iatrogenic cases have been linked to healthcare or biological-product exposure and have declined after decontamination-procedure changes.",
+        "content_text": "This reviewed CDC summary supports classic Creutzfeldt-Jakob disease (CJD). Prevention: classic CJD is most often sporadic, but rare iatrogenic cases have followed exposure to prions in healthcare settings or biological products. CDC reports that cases linked to contaminated surgical or medical equipment have not been reported since changes in equipment decontamination procedures; prevention therefore depends on appropriate prion-control procedures for relevant instruments and tissues.",
+        "content_sections": [
+          {
+            "heading": "Prevention of iatrogenic transmission",
+            "text": "Rare iatrogenic CJD has followed contact with prions in healthcare settings or biological products. CDC reports no known cases from contaminated surgical or medical equipment since procedure changes to decontaminate equipment, supporting prion-control prevention for relevant instruments and tissues."
+          }
+        ]
+      }]
+    },
+    "D146": {
+      "aliases": [
+        "Disseminated cryptococcosis",
+        "Cryptococcosis",
+        "Cryptococcal infection"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "Reducing Risk for Cryptococcosis",
+        "url": "https://www.cdc.gov/cryptococcosis/prevention/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes Cryptococcus exposure, the higher risk among people with weakened immunity, and targeted screening that can prevent severe cryptococcosis in people with HIV.",
+        "content_text": "This reviewed CDC summary supports disseminated cryptococcosis. Prevention: Cryptococcus is difficult to avoid in the environment and CDC gives no formal general recommendation to prevent infection. For people with advanced HIV, targeted cryptococcal-antigen screening followed by antifungal treatment when indicated can prevent severe or life-threatening cryptococcosis.",
+        "content_sections": [
+          {
+            "heading": "Prevention and targeted screening",
+            "text": "CDC has no formal general recommendation to prevent cryptococcal infection because exposure in the environment is difficult to avoid. Targeted cryptococcal-antigen screening in people with advanced HIV, with treatment when antigen is detected, can prevent severe cryptococcosis."
+          }
+        ]
+      }]
+    },
+    "D157": {
+      "aliases": [
+        "Invasive group A streptococcal infection",
+        "Invasive group A strep disease",
+        "Invasive GAS infection"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "Clinical Considerations for Group A Streptococcus",
+        "url": "https://www.cdc.gov/group-a-strep/hcp/clinical-guidance/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes group A streptococcal transmission through droplets or secretions and prevention through limiting exposure, treatment, infection control, and selected prophylaxis.",
+        "content_text": "This reviewed CDC summary supports invasive group A streptococcal infection. Transmission: group A Streptococcus most often spreads directly person to person through respiratory droplets and can also spread through contact with infected saliva, wound drainage, or nasal secretions. Prevention: prevention activities include limiting exposure and spread, treating group A streptococcal infections, applying infection-control precautions, and using preventive antibiotics when appropriate; no vaccine is currently available.",
+        "content_sections": [
+          {
+            "heading": "Transmission",
+            "text": "Group A Streptococcus is most often transmitted directly person to person through respiratory droplets. Contact with infected saliva, wound drainage, or nasal secretions can also spread bacteria."
+          },
+          {
+            "heading": "Prevention",
+            "text": "Prevention includes limiting exposure and spread, prompt treatment, appropriate infection-control precautions, and preventive antibiotics when appropriate. No vaccine is currently available."
+          }
+        ]
+      }]
+    },
+    "D159": {
+      "aliases": [
+        "Rickettsial disease",
+        "Rickettsial diseases",
+        "Rickettsiosis"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "Rickettsial Diseases - CDC Yellow Book",
+        "url": "https://www.cdc.gov/yellow-book/hcp/travel-associated-infections-diseases/rickettsial-diseases.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes arthropod transmission of rickettsial diseases and prevention approaches for travelers at risk of vector exposure.",
+        "content_text": "This reviewed CDC Yellow Book summary supports rickettsial diseases. Prevention: prevention focuses on avoiding bites and contact with arthropod vectors such as ticks, fleas, lice, and mites, using the vector-specific protective measures described for travel and exposure settings.",
+        "content_sections": [
+          {
+            "heading": "Prevention of vector exposure",
+            "text": "Rickettsial disease prevention focuses on avoiding exposure to arthropod vectors, including ticks, fleas, lice, and mites, with protective measures appropriate to the travel or exposure setting."
+          }
+        ]
+      }]
+    },
+    "D170": {
+      "aliases": [
+        "Complicated varicella",
+        "Chickenpox complications",
+        "Severe varicella"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "Clinical Overview of Chickenpox (Varicella)",
+        "url": "https://www.cdc.gov/chickenpox/hcp/clinical-overview/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes the epidemiologic impact of varicella vaccination and identifies complication patterns that can require clinical care.",
+        "content_text": "This reviewed CDC summary supports complicated varicella. Epidemiology: routine varicella vaccination has substantially reduced varicella illness, hospitalizations, and deaths in the United States, but infections and complications still occur. Complication patterns differ by age, with bacterial skin and soft-tissue infection common among affected children and pneumonia common among affected adults.",
+        "content_sections": [
+          {
+            "heading": "Epidemiology and complication patterns",
+            "text": "Varicella vaccination has substantially reduced illness, hospitalizations, and deaths in the United States, although infections and complications continue to occur. Bacterial skin and soft-tissue infection is a common complication in children and pneumonia is common in adults."
+          }
+        ]
+      }]
+    },
+    "D172": {
+      "aliases": [
+        "Severe complicated influenza",
+        "Severe influenza complications",
+        "Influenza with complications"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "About Influenza",
+        "url": "https://www.cdc.gov/flu/about/index.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes influenza as a contagious respiratory illness, including droplet transmission and the less common role of contaminated surfaces.",
+        "content_text": "This reviewed CDC summary supports severe complicated influenza. Transmission: influenza viruses mainly spread through droplets made when a person with influenza coughs, sneezes, or talks; less often, a person can become infected after touching a contaminated surface or object and then touching the mouth, nose, or eyes.",
+        "content_sections": [
+          {
+            "heading": "Transmission",
+            "text": "Influenza viruses mainly spread through respiratory droplets produced when people cough, sneeze, or talk. Less commonly, contaminated surfaces or objects can contribute to exposure when people touch their mouth, nose, or eyes."
+          }
+        ]
+      }]
+    },
+    "D183": {
+      "aliases": [
+        "Epidemic typhus fever",
+        "Epidemic typhus",
+        "Louse-borne typhus"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "About Epidemic Typhus",
+        "url": "https://www.cdc.gov/typhus/about/epidemic.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC defines epidemic typhus as louse-borne Rickettsia prowazekii infection, describes its crowding-associated occurrence, and provides prevention information.",
+        "content_text": "This reviewed CDC summary supports epidemic typhus fever. Definition: epidemic typhus, also called louse-borne typhus, is an uncommon infection caused by the bacterium Rickettsia prowazekii. Epidemiology: it is now rare but can occur where extreme overcrowding allows body lice to move from person to person; rare United States cases can follow exposure to flying squirrels and their nests. Transmission: people acquire infection through contact with infected body lice. Prevention: no vaccine is available; preventing and controlling body-lice infestation, including access to bathing and clean clothes, reduces risk.",
+        "content_sections": [
+          {
+            "heading": "Definition and epidemiology",
+            "text": "Epidemic typhus, also called louse-borne typhus, is an uncommon Rickettsia prowazekii infection. It is now rare but can occur in overcrowded settings where body lice move between people; rare United States cases have followed flying-squirrel exposure."
+          },
+          {
+            "heading": "Transmission",
+            "text": "Epidemic typhus is transmitted through contact with infected body lice."
+          },
+          {
+            "heading": "Prevention",
+            "text": "No vaccine is available for epidemic typhus. Prevention focuses on controlling body lice and improving access to bathing and clean clothing."
+          }
+        ]
+      }]
+    },
+    "D185": {
+      "aliases": [
+        "Work accident with biological material",
+        "Occupational exposure to biological material",
+        "Occupational blood and body fluid exposure",
+        "Needlestick or sharps injury"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention, NIOSH",
+        "title": "Bloodborne Infectious Disease Risk Factors for Healthcare Workers",
+        "url": "https://www.cdc.gov/niosh/healthcare/risk-factors/bloodborne-infectious-diseases.html",
+        "authority_level": "high",
+        "raw_excerpt": "CDC/NIOSH defines occupational blood and body-fluid exposure routes, identifies healthcare workers at risk, and describes immediate reporting, post-exposure care, and prevention measures.",
+        "content_text": "This reviewed CDC/NIOSH summary supports a work accident with biological material, an occupational exposure concept. Definition: a work accident with biological material can involve a needlestick puncture, another sharps injury, or contact of blood or potentially infectious body fluids with a worker. Clinical assessment: the exposure can place a worker at risk of bloodborne infection, including hepatitis B, hepatitis C, or HIV, and requires prompt occupational-health evaluation rather than being a single disease with fixed symptoms. Epidemiology: healthcare workers are an at-risk occupational population because blood and body-fluid exposures occur in clinical work settings. Transmission: bloodborne pathogens can be transmitted after a needlestick, sharps injury, or contact with patient blood or other body fluids. Prevention: Standard Precautions, safer devices, personal protective equipment, immediate washing and reporting of an exposure, risk assessment, and indicated post-exposure prophylaxis reduce occupational infection risk.",
+        "content_sections": [
+          {
+            "heading": "Definition and clinical assessment",
+            "text": "A work accident with biological material includes a needlestick puncture, another sharps injury, or contact with blood or potentially infectious body fluids. It can place a worker at risk of bloodborne infection and requires prompt occupational-health evaluation."
+          },
+          {
+            "heading": "Occupational epidemiology and transmission",
+            "text": "Healthcare workers are an at-risk occupational population for blood and body-fluid exposure. Bloodborne pathogens can be transmitted after a needlestick, another sharps injury, or contact with patient blood or other body fluids."
+          },
+          {
+            "heading": "Prevention and response",
+            "text": "Standard Precautions, safer devices, personal protective equipment, immediate washing and reporting, risk assessment, and indicated post-exposure prophylaxis reduce occupational infection risk."
+          }
+        ]
+      }]
+    },
+    "D242": {
+      "aliases": [
+        "Lymphogranuloma venereum",
+        "LGV",
+        "Chlamydia infection, lymphogranuloma venereum"
+      ],
+      "sources": [{
+        "source_type": "web_search",
+        "source_name": "US Centers for Disease Control and Prevention",
+        "title": "Lymphogranuloma Venereum (LGV) - STI Treatment Guidelines",
+        "url": "https://www.cdc.gov/std/treatment-guidelines/lgv.htm",
+        "authority_level": "high",
+        "raw_excerpt": "CDC describes LGV diagnosis and management, including treatment, follow-up, sex-partner evaluation and treatment, and measures that prevent ongoing transmission or tissue damage.",
+        "content_text": "This reviewed CDC STI Treatment Guidelines summary supports lymphogranuloma venereum (LGV). Definition: LGV is a sexually transmitted infection caused by invasive L1, L2, or L3 strains of Chlamydia trachomatis. Clinical context: LGV can present with genital or colorectal disease and lymphadenopathy or proctocolitis syndromes. Prevention: prompt evaluation, recommended treatment, follow-up testing, and evaluation and presumptive treatment of recent sex partners help prevent ongoing transmission and complications; patients are advised to avoid sex until treatment is complete and symptoms have resolved. Surveillance context: LGV diagnosis should also prompt testing for other sexually transmitted infections according to the guidance.",
+        "content_sections": [
+          {
+            "heading": "Definition and clinical context",
+            "text": "LGV is a sexually transmitted infection caused by invasive L1, L2, or L3 strains of Chlamydia trachomatis and can present with genital or colorectal syndromes and lymphadenopathy."
+          },
+          {
+            "heading": "Prevention and partner management",
+            "text": "Prompt recommended treatment, follow-up testing, evaluation and presumptive treatment of recent sex partners, and avoiding sex until treatment is complete and symptoms resolve help prevent ongoing transmission and complications."
+          },
+          {
+            "heading": "Associated STI testing",
+            "text": "CDC guidance recommends testing people diagnosed with LGV for other sexually transmitted infections, with follow-up after treatment."
+          }
+        ]
+      }]
+    },
+    "D117": {
+      "aliases": [
+        "Cronobacter infection",
+        "Cronobacter sakazakii infection",
+        "Invasive Cronobacter infection"
+      ],
+      "sources": [
+        {
+          "source_type": "web_search",
+          "source_name": "US Centers for Disease Control and Prevention",
+          "title": "About Cronobacter Infection",
+          "url": "https://www.cdc.gov/cronobacter/about/index.html",
+          "authority_level": "high",
+          "raw_excerpt": "CDC describes Cronobacter infection as a rare but potentially life-threatening infection in infants, including its exposure routes, clinical manifestations, prevention, and reporting context.",
+          "content_text": "This reviewed summary reflects the CDC overview of Cronobacter infection. Cronobacter sakazakii and related species are environmental bacteria that can contaminate dry foods, especially powdered infant formula, and infant feeding items. Infection is rare but may be severe in newborns and young infants. In infants, early symptoms can include fever, poor feeding, excessive crying, very low energy, or seizures; serious outcomes include bloodstream infection, meningitis, urinary tract infection, and wound infection. Exposure can occur when powdered formula, water, feeding items, or preparation surfaces are contaminated. CDC identifies safe preparation and storage of formula, hand and surface hygiene, and cleaning and sanitizing feeding items as prevention measures. CDC notes that historic reporting coverage limited incidence estimates in the United States, while invasive infant infection became nationally notifiable in 2024.",
+          "content_sections": [
+            {
+              "heading": "Definition and epidemiology",
+              "text": "Cronobacter are environmental bacteria that can contaminate powdered infant formula and feeding items. Infection is rare, disproportionately severe in newborns and young infants, and historical reporting coverage limited United States incidence estimates before invasive infant infection became nationally notifiable in 2024."
+            },
+            {
+              "heading": "Clinical features and transmission",
+              "text": "Infants may develop fever, poor feeding, excessive crying, low energy, or seizures. Severe disease can include sepsis or meningitis. Exposure can follow contamination of powdered formula, water, feeding items, or preparation surfaces."
+            },
+            {
+              "heading": "Prevention and surveillance",
+              "text": "CDC prevention guidance emphasizes safe formula preparation and storage, hand and surface hygiene, and cleaning and sanitizing feeding items. Invasive infant infection is a nationally notifiable condition in the United States."
+            }
+          ]
+        }
+      ]
+    },
+    "D222": {
+      "aliases": [
+        "Japanese spotted fever",
+        "Rickettsia japonica infection",
+        "Japanese spotted fever rickettsiosis"
+      ],
+      "sources": [
+        {
+          "source_type": "web_search",
+          "source_name": "Japan Ministry of Health, Labour and Welfare",
+          "title": "Japanese spotted fever notification criteria",
+          "url": "https://www.mhlw.go.jp/bunya/kenkou/kekkaku-kansenshou11/01-04-23.html",
+          "authority_level": "high",
+          "raw_excerpt": "Japan's Ministry of Health, Labour and Welfare defines Japanese spotted fever, describes infection through hard-tick bites and clinical characteristics, and specifies notification criteria.",
+          "content_text": "This reviewed summary reflects the Japanese Ministry of Health, Labour and Welfare notification page for Japanese spotted fever. The condition is infection caused by Rickettsia japonica. It is acquired through bites from infected hard ticks. Illness can begin about two to eight days after a bite with headache, malaise, high fever, and a red maculopapular rash that can begin on the extremities; the page also notes laboratory abnormalities and potential severe progression. Physicians are required to notify cases meeting the clinical and laboratory criteria under the Infectious Diseases Control Law.",
+          "content_sections": [
+            {
+              "heading": "Definition, clinical features, and transmission",
+              "text": "Japanese spotted fever is infection caused by Rickettsia japonica and is acquired through bites from infected hard ticks. Symptoms can include headache, malaise, high fever, and a maculopapular rash; severe progression can occur."
+            },
+            {
+              "heading": "Surveillance",
+              "text": "Physicians notify cases meeting the specified clinical and laboratory criteria under Japan's Infectious Diseases Control Law."
+            }
+          ]
+        },
+        {
+          "source_type": "web_search",
+          "source_name": "Japan National Institute of Infectious Diseases",
+          "title": "Scrub typhus and Japanese spotted fever in Japan, 2006-2009",
+          "url": "https://idsc.niid.go.jp/iasr/31/363/tpc363.html",
+          "authority_level": "high",
+          "raw_excerpt": "NIID reports Japanese spotted fever surveillance patterns in Japan, tick-bite acquisition, clinical signs, and the need for epidemiological analysis and public information for prevention.",
+          "content_text": "This reviewed summary reflects the National Institute of Infectious Diseases surveillance review of Japanese spotted fever in Japan. The disease is a representative rickettsiosis caused by Rickettsia japonica and acquired through infected tick bites during outdoor activity. In 2006 through 2009, reported cases increased from 49 to 129 annually, with reporting concentrated in western Pacific-side prefectures and new endemic areas identified. Fever, rash, and eschar are important clinical signs, and severe or fatal cases can occur. NIID states that epidemiological analysis and appropriate information for local people and medical facilities are necessary for infection prevention, prompt treatment, and strengthened surveillance.",
+          "content_sections": [
+            {
+              "heading": "Epidemiology and clinical features",
+              "text": "Japanese spotted fever reports increased from 49 to 129 annually in Japan from 2006 through 2009, with cases concentrated in western Pacific-side prefectures and new endemic areas identified. Fever, rash, and eschar are important signs, and severe or fatal cases can occur."
+            },
+            {
+              "heading": "Transmission and prevention",
+              "text": "Japanese spotted fever is acquired through infected tick bites during outdoor activity. NIID identifies epidemiological analysis and appropriate information for local people and medical facilities as necessary for prevention and timely treatment."
             }
           ]
         }

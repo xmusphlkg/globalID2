@@ -22,6 +22,67 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.9.4',
+    date: '2026-09-04',
+    titleEn: 'Autonomous knowledge repair, PubMed discovery, and richer curve comparison',
+    titleZh: '知识库自动修复、PubMed 发现与更丰富的曲线比较',
+    summaryEn:
+      'GIDS now keeps source-first knowledge repairs moving through the control plane, adds PubMed as a bounded Research Radar source, exposes Model Center runtime health, and gives public disease curves safer comparison tools.',
+    summaryZh:
+      'GIDS 现在通过控制面维持来源优先的知识库修复队列，新增 PubMed 作为受限的研究雷达来源，展示模型中心运行健康，并为公开疾病曲线提供更安全的比较工具。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added a disease-knowledge autopilot that prioritizes real evidence gaps, refreshes targeted sources first, and queues model repair only after the evidence packet is ready.',
+            zh: '新增疾病知识库自动驾驶流程，优先处理真实证据缺口，先刷新定向来源，并且只在证据包就绪后调度模型修复。',
+          },
+          {
+            en: 'Added PubMed E-utilities for bounded biomedical discovery and Crossref fallback in Research Radar.',
+            zh: '新增 PubMed E-utilities，用于研究雷达中的受限生物医学发现和 Crossref 临时不可用时的回退。',
+          },
+          {
+            en: 'Added public curve controls for seasonal anomaly comparison, complete-calendar-year totals, quick date ranges, selected-only filtering, and sortable entity lists.',
+            zh: '新增公开曲线控件，支持同期异常比较、完整自然年总量、快捷时间范围、仅看已选对象和实体排序。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Model governance now uses the shared Model Center path, including runtime health, route admission, failover, and provider/model catalogue discovery.',
+            zh: '模型治理现在使用共享模型中心路径，包含运行健康、路由准入、失败切换以及 provider/model 目录发现。',
+          },
+          {
+            en: 'Knowledge profiles now show an automating state while required evidence is still being enriched instead of sending unsupported content to manual review.',
+            zh: '当必需证据仍在补全时，知识画像现在显示自动处理中状态，而不是把缺乏支撑的内容直接推给人工审核。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Prevented aggregate or non-public catalogue rows, stale source-gap metadata, adapter timeouts, and repeated overlay notes from destabilizing knowledge publication.',
+            zh: '防止聚合或非公开目录项、过期来源缺口元数据、适配器超时和重复覆盖说明影响知识发布稳定性。',
+          },
+          {
+            en: 'Improved task-worker restart behavior with adaptive AI concurrency, per-disease knowledge serialization, model-recovery wakeups, and safer singleton lease handling.',
+            zh: '改进任务 worker 重启行为，加入自适应 AI 并发、按疾病串行化知识任务、模型恢复唤醒和更安全的单例租约处理。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.9.3',
     date: '2026-09-02',
     titleEn: 'Evidence-backed knowledge repair and source-first automation',

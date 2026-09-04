@@ -36,6 +36,9 @@ export interface WorkerStatus {
   worker_process_running: boolean;
   worker_pid: number | null;
   worker_concurrency: number;
+  ai_concurrency_current: number;
+  ai_concurrency_max: number;
+  ai_concurrency_adaptive: boolean;
   queued_tasks: number;
   running_tasks: number;
   retrying_tasks: number;

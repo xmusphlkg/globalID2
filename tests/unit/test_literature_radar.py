@@ -25,13 +25,16 @@ from src.generation.site_data_literature import (
 from src.literature.classification import classify_candidate
 from src.literature.clients.crossref import CrossrefClient
 from src.literature.enrichment import (
+    LiteratureEnrichmentPipeline,
     LiteratureEvidenceAgent,
     LiteratureSummaryGenerator,
     SUMMARY_FIELDS,
 )
+import src.literature.enrichment as enrichment_module
 from src.literature.knowledge_graph import build_knowledge_graph
 from src.literature.normalization import normalize_crossref
 from src.literature.normalization import normalize_europe_pmc
+from src.domain import LiteratureSummary
 from src.services.literature_gap_service import build_gap_query_plan
 from src.services.literature_automation_service import (
     decide_article,
@@ -1131,17 +1134,125 @@ async def test_chinese_enrichment_requires_and_records_english_semantic_contract
 
 
 @pytest.mark.asyncio
-async def test_chinese_enrichment_rejects_different_null_field_topology():
+async def test_chinese_enrichment_repairs_different_null_field_topology():
     candidate = normalize_crossref(_crossref_payload())
     assert candidate is not None
     canonical = {field: f"Canonical {field}." for field in SUMMARY_FIELDS}
+    agent = _FakeLiteratureAgent()
 
-    with pytest.raises(ValueError, match="bilingual_null_alignment_mismatch:population_setting"):
-        await LiteratureSummaryGenerator(agent=_FakeLiteratureAgent()).generate(
-            article=candidate, language="zh", diseases=["Dengue"], countries=["Japan"],
-            topics=["Surveillance"], timeout_seconds=10, preferred_models=[],
-            canonical_fields=canonical,
-        )
+    result = await LiteratureSummaryGenerator(agent=agent).generate(
+        article=candidate, language="zh", diseases=["Dengue"], countries=["Japan"],
+        topics=["Surveillance"], timeout_seconds=10, preferred_models=[],
+        canonical_fields=canonical,
+    )
+
+    assert len(agent.calls) == 2
+    assert result.canonical_summary_fingerprint
+    assert result.fields["population_setting"].startswith("人群与场景按英文规范摘要保留同等含义")
+    assert result.evidence_map["population_setting"]["fallback"] == "canonical_english_contract"
+
+
+@pytest.mark.asyncio
+async def test_chinese_enrichment_recovers_malformed_json_from_canonical_contract():
+    candidate = normalize_crossref(_crossref_payload())
+    assert candidate is not None
+    canonical = {field: f"Canonical {field}." for field in SUMMARY_FIELDS}
+    canonical["population_setting"] = None
+
+    class MalformedJsonAgent(_FakeLiteratureAgent):
+        async def process(self, **_kwargs):
+            self.calls.append(_kwargs)
+            return {"raw_response": '{"research_question":{"text":"broken"'}
+
+    result = await LiteratureSummaryGenerator(agent=MalformedJsonAgent()).generate(
+        article=candidate, language="zh", diseases=["Dengue"], countries=["Japan"],
+        topics=["Surveillance"], timeout_seconds=10, preferred_models=[],
+        canonical_fields=canonical,
+    )
+
+    assert result.canonical_summary_fingerprint
+    assert result.fields["research_question"].startswith("研究问题按英文规范摘要保留同等含义")
+    assert result.fields["population_setting"] is None
+    assert result.evidence_map["research_question"]["fallback"] == "canonical_english_contract"
+    assert "Recovered malformed Chinese JSON" in result.review_notes
+
+
+class _ScalarResult:
+    def __init__(self, value):
+        self.value = value
+
+    def scalar_one_or_none(self):
+        return self.value
+
+
+class _SummaryFailureDB:
+    def __init__(self):
+        self.summary = None
+        self.commits = 0
+
+    async def execute(self, _statement):
+        return _ScalarResult(self.summary)
+
+    def add(self, summary):
+        self.summary = summary
+
+    async def commit(self):
+        self.commits += 1
+
+
+class _SummaryFailureContext:
+    def __init__(self, db):
+        self.db = db
+
+    async def __aenter__(self):
+        return self.db
+
+    async def __aexit__(self, _exc_type, _exc, _tb):
+        return False
+
+
+@pytest.mark.asyncio
+async def test_enrichment_generation_failures_record_attempts_and_stop_requeue(monkeypatch):
+    db = _SummaryFailureDB()
+    monkeypatch.setattr(enrichment_module, "get_db", lambda: _SummaryFailureContext(db))
+    article = SimpleNamespace(
+        article_id="lit-failed-zh",
+        title="Dengue vaccine evidence",
+        doi="10.1000/dengue",
+        journal="Vaccine",
+        published_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+        abstract_text="A sufficiently long abstract about dengue vaccination and surveillance. " * 5,
+        integrity_status="current",
+    )
+    pipeline = LiteratureEnrichmentPipeline(SimpleNamespace(
+        autopilot_enabled=True,
+        ai_max_quality_attempts=2,
+        ai_min_abstract_characters=180,
+    ))
+
+    await pipeline._store_failure(
+        article,
+        language="zh",
+        error=ValueError("bilingual_null_alignment_mismatch:main_findings"),
+    )
+
+    assert isinstance(db.summary, LiteratureSummary)
+    assert db.summary.status == "review"
+    assert db.summary.language == "zh"
+    assert db.summary.generated_by == "literature-evidence-agent"
+    assert db.summary.generation_metadata["publication_gate"] == "generation-failed"
+    assert db.summary.generation_metadata["quality_attempts"] == 1
+    assert db.summary.generation_metadata["last_generation_error"] == "ValueError"
+    assert await pipeline._should_skip(article, language="zh", force=False) is False
+
+    await pipeline._store_failure(
+        article,
+        language="zh",
+        error=ValueError("bilingual_null_alignment_mismatch:main_findings"),
+    )
+
+    assert db.summary.generation_metadata["quality_attempts"] == 2
+    assert await pipeline._should_skip(article, language="zh", force=False) is True
 
 
 def _autopilot_config():

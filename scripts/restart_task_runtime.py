@@ -179,7 +179,7 @@ async def _restart(args: argparse.Namespace) -> int:
         # heartbeat immediately instead of waiting for its TTL.
         await runtime_registry.remove_heartbeat("worker", old_owner)
     hard_stop = stop_result not in {"", "success"}
-    if old_owner and (owner_was_cleaned or hard_stop):
+    if old_owner:
         _recover_owner(old_owner)
 
     if args.include_api:

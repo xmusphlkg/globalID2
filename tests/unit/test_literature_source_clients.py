@@ -6,10 +6,13 @@ import pytest
 from src.literature.clients.base import ProviderNotConfiguredError
 from src.literature.clients.preprints import BiorxivClient
 from src.literature.clients.publisher_apis import ElsevierClient, SpringerNatureClient
+from src.literature.clients.pubmed import PubMedClient
 from src.literature.clients.rss import PublisherRssClient, validate_feed_whitelist
 from src.literature.normalization import (
+    apply_pubmed_abstract,
     normalize_biorxiv,
     normalize_elsevier,
+    normalize_pubmed,
     normalize_springer_nature,
 )
 from src.literature.pipeline import (
@@ -160,6 +163,148 @@ async def test_preprint_cursor_pagination_is_bounded_and_every_record_is_marked_
     )
     assert cursors == [0, 2, 3]
     assert resumed.checkpoint["truncated"] is False
+
+
+@pytest.mark.asyncio
+async def test_pubmed_esearch_esummary_uses_ncbi_metadata_contract_and_normalizes_ids():
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        assert request.url.params["tool"] == "GIDSTest"
+        assert request.url.params["email"] == "tests@example.org"
+        assert request.url.params["api_key"] == "test-key"
+        if request.url.path.endswith("/esearch.fcgi"):
+            assert request.url.params["db"] == "pubmed"
+            assert request.url.params["datetype"] == "pdat"
+            assert '"1080-6040"[ISSN]' in request.url.params["term"]
+            return httpx.Response(
+                200,
+                json={"esearchresult": {"count": "2", "idlist": ["101", "102"]}},
+                request=request,
+            )
+        return httpx.Response(
+            200,
+            json={
+                "result": {
+                    "uids": ["101", "102"],
+                    "101": {
+                        "uid": "101",
+                        "title": "Dengue vaccine surveillance",
+                        "fulljournalname": "Emerging Infectious Diseases",
+                        "pubdate": "2026 Aug 20",
+                        "authors": [{"name": "A Researcher"}],
+                        "articleids": [
+                            {"idtype": "doi", "value": "10.1000/pubmed"},
+                            {"idtype": "pmc", "value": "PMC123"},
+                        ],
+                        "issn": "1080-6040",
+                    },
+                    "102": {
+                        "uid": "102",
+                        "title": "Pertussis surveillance",
+                        "fulljournalname": "Emerging Infectious Diseases",
+                    },
+                },
+            },
+            request=request,
+        )
+
+    client = PubMedClient(
+        contact_email="tests@example.org",
+        api_key="test-key",
+        tool="GIDSTest",
+        retries=1,
+        min_interval_seconds=0,
+        transport=httpx.MockTransport(handler),
+    )
+    result = await client.fetch_incremental(
+        journals=[{"name": "Emerging Infectious Diseases", "issn": "1080-6040"}],
+        since=SINCE,
+        until=UNTIL,
+        max_records=2,
+    )
+
+    assert len(result.records) == 2
+    assert result.checkpoint["provider"] == "pubmed"
+    assert result.checkpoint["records_returned"] == 2
+    assert [request.url.path.rsplit("/", 1)[-1] for request in requests] == [
+        "esearch.fcgi",
+        "esummary.fcgi",
+    ]
+    candidate = normalize_pubmed(result.records[0])
+    assert candidate is not None
+    assert candidate.pmid == "101"
+    assert candidate.doi == "10.1000/pubmed"
+    assert candidate.pmcid == "PMC123"
+    assert candidate.source_urls["pubmed"] == "https://pubmed.ncbi.nlm.nih.gov/101/"
+
+
+@pytest.mark.asyncio
+async def test_pubmed_efetch_extracts_structured_abstracts_for_enrichment():
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        assert request.url.path.endswith("/efetch.fcgi")
+        assert request.url.params["db"] == "pubmed"
+        assert request.url.params["retmode"] == "xml"
+        assert request.url.params["id"] == "101,102"
+        return httpx.Response(
+            200,
+            text="""
+            <PubmedArticleSet>
+              <PubmedArticle>
+                <MedlineCitation>
+                  <PMID>101</PMID>
+                  <Article>
+                    <Abstract>
+                      <AbstractText Label="BACKGROUND">Dengue surveillance needs timely vaccination evidence.</AbstractText>
+                      <AbstractText Label="METHODS">We reviewed public-health reports.</AbstractText>
+                    </Abstract>
+                  </Article>
+                </MedlineCitation>
+              </PubmedArticle>
+              <PubmedArticle>
+                <MedlineCitation>
+                  <PMID>102</PMID>
+                  <Article>
+                    <Abstract>
+                      <AbstractText>Unlabelled pertussis surveillance abstract.</AbstractText>
+                    </Abstract>
+                  </Article>
+                </MedlineCitation>
+              </PubmedArticle>
+            </PubmedArticleSet>
+            """,
+            request=request,
+        )
+
+    client = PubMedClient(
+        contact_email="tests@example.org",
+        tool="GIDSTest",
+        retries=1,
+        min_interval_seconds=0,
+        transport=httpx.MockTransport(handler),
+    )
+    abstracts = await client.fetch_abstracts(["101", "102", "101"])
+
+    assert list(abstracts) == ["101", "102"]
+    assert abstracts["101"]["abstractText"].startswith("BACKGROUND: Dengue surveillance")
+    assert "METHODS: We reviewed public-health reports." in abstracts["101"]["abstractText"]
+    assert abstracts["102"]["abstractText"] == "Unlabelled pertussis surveillance abstract."
+    assert len(requests) == 1
+
+    candidate = normalize_pubmed({
+        "uid": "101",
+        "title": "Dengue vaccine surveillance",
+        "pubdate": "2026 Aug 20",
+    })
+    assert candidate is not None
+    apply_pubmed_abstract(candidate, abstracts["101"])
+    assert candidate.abstract_text == abstracts["101"]["abstractText"]
+    assert candidate.abstract_license == "PubMed abstract metadata"
+    assert candidate.source_payload["pubmed_efetch"]["source"] == "pubmed-efetch"
 
 
 def test_preprint_registry_marking_survives_higher_priority_provider_deduplication():

@@ -128,12 +128,40 @@ class TimeoutFallbackAgent(BaseAgent):
         return "fast-response", {"prompt": 1, "completion": 1, "total": 2}
 
     async def _complete_with_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
-        return await self._complete_with_provider(
+        request_timeout_seconds = kwargs.pop("request_timeout_seconds", None)
+        request = self._complete_with_provider(
             str(route.get("provider_key") or "runtime"),
             prompt,
             system,
             **kwargs,
         )
+        if request_timeout_seconds is not None:
+            return await asyncio.wait_for(request, timeout=request_timeout_seconds)
+        return await request
+
+
+class AdmissionBoundaryAgent(BaseAgent):
+    async def process(self, **kwargs):
+        return {}
+
+    async def _complete_with_admitted_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
+        return "admitted-response", {"prompt": 1, "completion": 1, "total": 2}
+
+
+class EmptyResponseFallbackAgent(BaseAgent):
+    def __init__(self):
+        super().__init__(name="EmptyResponseFallback", model="empty-model", provider="dummy-provider")
+        self.call_models = []
+
+    async def process(self, **kwargs):
+        return {}
+
+    async def _complete_with_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
+        model_name = str(route.get("model_name") or self.model)
+        self.call_models.append(model_name)
+        if model_name == "empty-model":
+            return "", {"prompt": 1, "completion": 0, "total": 1}
+        return "fallback-response", {"prompt": 1, "completion": 1, "total": 2}
 
 
 def runtime_route(model_name: str, *, available: bool = True, status: str = "available") -> dict[str, object]:
@@ -148,6 +176,19 @@ def runtime_route(model_name: str, *, available: bool = True, status: str = "ava
         "last_check_status": status,
         "has_api_key": True,
     }
+
+
+@pytest.fixture(autouse=True)
+def _stub_persisted_runtime_health(monkeypatch):
+    """Keep agent unit tests focused on routing decisions, not the database."""
+    async def _success(*_args, **_kwargs):
+        return {"recorded": True}
+
+    async def _failure(*_args, **_kwargs):
+        return {"recorded": True}
+
+    monkeypatch.setattr("src.ai.agents.base.record_route_runtime_success", _success)
+    monkeypatch.setattr("src.ai.agents.base.record_route_runtime_failure", _failure)
 
 
 def test_runtime_candidates_do_not_include_configured_model_failover(monkeypatch):
@@ -186,6 +227,22 @@ def test_preferred_direct_fallback_does_not_jump_ahead_of_healthy_runtime_route(
     )
 
     assert ordered == [runtime_route, direct_fallback]
+
+
+def test_empty_candidate_wait_uses_model_center_runtime_cooldown() -> None:
+    wait_seconds = BaseAgent._estimate_wait_seconds_for_empty_candidates(
+        runtime_routes=[
+            {
+                "model_key": "runtime:cooling",
+                "model_name": "cooling",
+                "runtime_failure_remaining_seconds": 47,
+            }
+        ],
+        chain=[],
+        wait_cap_seconds=90,
+    )
+
+    assert wait_seconds == 47
 
 
 @pytest.mark.asyncio
@@ -245,6 +302,7 @@ async def test_live_completion_caches_structured_payload(monkeypatch):
     }
     assert len(agent.conversation_history) == 1
     assert agent.conversation_history[0]["tokens"]["total"] == 9
+    assert agent.conversation_history[0]["metadata"]["runtime_route"]["model_name"] == "dummy-model"
 
 
 @pytest.mark.asyncio
@@ -397,6 +455,57 @@ async def test_per_route_timeout_falls_through_to_next_model(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_runtime_request_timeout_starts_after_model_center_admission(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    agent = AdmissionBoundaryAgent(name="AdmissionBoundary", model="dummy", provider="dummy")
+
+    class Lease:
+        async def release(self, *, success: bool):
+            assert success is True
+
+    async def delayed_admission(_route):
+        await asyncio.sleep(0.03)
+        return Lease()
+
+    monkeypatch.setattr("src.ai.agents.base.acquire_runtime_route_admission", delayed_admission)
+
+    result = await agent._complete_with_runtime_route(
+        runtime_route("dummy"),
+        "hello",
+        request_timeout_seconds=0.01,
+    )
+
+    assert result[0] == "admitted-response"
+    assert 0 <= agent._runtime_route_request_duration_seconds < 0.01
+
+
+@pytest.mark.asyncio
+async def test_empty_runtime_completion_falls_through_to_next_model(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    routes = [runtime_route("empty-model"), runtime_route("fallback-model")]
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", routes, raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_CHAIN", [], raising=False)
+    monkeypatch.setattr(BaseAgent, "MODEL_COOLDOWNS", {}, raising=False)
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {}, raising=False)
+
+    agent = EmptyResponseFallbackAgent()
+    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
+
+    result = await agent.complete(
+        prompt="hello",
+        system="system",
+        max_attempts_per_model=1,
+        max_quota_recovery_rounds=0,
+        wait_for_model_recovery=False,
+    )
+
+    assert result == "fallback-response"
+    assert agent.call_models == ["empty-model", "fallback-model"]
+
+
+@pytest.mark.asyncio
 async def test_per_model_attempt_limit_avoids_blind_transient_retries(monkeypatch):
     monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
     monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [runtime_route("dummy-model")], raising=False)
@@ -467,7 +576,7 @@ async def test_quota_recovery_waits_long_and_retries_multiple_rounds(monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_probe_candidates_tries_later_model_when_first_is_rate_limited(monkeypatch):
+async def test_probe_candidates_never_bypass_durable_rate_limit_cooldown(monkeypatch):
     monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
     monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_CHAIN", [], raising=False)
     monkeypatch.setattr(BaseAgent, "MODEL_COOLDOWNS", {}, raising=False)
@@ -516,8 +625,8 @@ async def test_probe_candidates_tries_later_model_when_first_is_rate_limited(mon
     monkeypatch.setattr(agent.config.ai, "rate_limit_wait_cap_seconds", 120, raising=False)
     monkeypatch.setattr(agent.config.ai, "rate_limit_recovery_max_rounds", 0, raising=False)
 
-    result = await agent.complete(prompt="hello", system="system")
+    with pytest.raises(Exception, match="Agent completion failed"):
+        await agent.complete(prompt="hello", system="system")
 
-    assert result == "glm-ok"
-    assert agent.call_models == ["qwen-flash-character", "glm-5"]
+    assert agent.call_models == []
     assert waited

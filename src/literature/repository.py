@@ -215,11 +215,14 @@ class LiteratureRepository:
         await self._replace_links(candidate.article_id, classification)
         has_rss = "rss" in candidate.source_payload
         has_official_guidance = "official_guidance" in candidate.source_payload
+        has_pubmed = "pubmed" in candidate.source_payload
         has_crossref = any(key in candidate.source_payload for key in ("DOI", "indexed", "container-title"))
         event_source = (
             "crossref+publisher-rss" if has_rss and has_crossref
             else "publisher-rss" if has_rss
             else "who-iris-oai" if has_official_guidance
+            else "crossref+pubmed" if has_pubmed and has_crossref
+            else "pubmed" if has_pubmed
             else "crossref"
         )
         if inserted:

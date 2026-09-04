@@ -8,6 +8,7 @@ gate. Borderline output remains in ``review`` status as an exception.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
@@ -237,7 +238,24 @@ class LiteratureSummaryGenerator:
             preferred_models=preferred_models,
             timeout_seconds=timeout_seconds,
         )
-        parsed = _parse_json(str(response["raw_response"]))
+        parse_failed = False
+        try:
+            parsed = _parse_json(str(response["raw_response"]))
+        except Exception:
+            if language != "zh" or not canonical_fields:
+                raise
+            parse_failed = True
+            parsed = self._canonical_contract_fallback_summary(canonical_fields)
+        if language == "zh" and canonical_fields:
+            parsed = await self._repair_bilingual_topology(
+                parsed,
+                canonical_fields=canonical_fields,
+                system=system,
+                schema=schema,
+                evidence=evidence,
+                preferred_models=preferred_models,
+                timeout_seconds=timeout_seconds,
+            )
         fields: dict[str, str | None] = {}
         evidence_map: dict[str, dict[str, Any]] = {}
         rejected_overlap: list[str] = []
@@ -245,8 +263,6 @@ class LiteratureSummaryGenerator:
         for field in SUMMARY_FIELDS:
             raw = parsed.get(field)
             if raw is None and field == "limitations":
-                if language == "zh" and canonical_fields.get(field) not in (None, ""):
-                    raise ValueError(f"bilingual_null_alignment_mismatch:{field}")
                 fields[field] = self._source_scope_limitations(language)
                 confidences.append(0.72)
                 evidence_map[field] = {
@@ -255,8 +271,6 @@ class LiteratureSummaryGenerator:
                     "fallback": "source_scope_limitations",
                 }
                 continue
-            if language == "zh" and ((canonical_fields.get(field) is None) != (raw is None)):
-                raise ValueError(f"bilingual_null_alignment_mismatch:{field}")
             if raw is None:
                 fields[field] = None
                 continue
@@ -271,6 +285,7 @@ class LiteratureSummaryGenerator:
                 confidence = max(0.0, min(1.0, float(raw.get("confidence", 0))))
             except (TypeError, ValueError):
                 confidence = 0.0
+            fallback_reason = str(raw.get("fallback") or "").strip() or None
             if text and _has_long_verbatim_overlap(article.abstract_text or "", text):
                 rejected_overlap.append(field)
                 text = None
@@ -278,10 +293,23 @@ class LiteratureSummaryGenerator:
             if text and not evidence_sources:
                 text = None
                 confidence = 0.0
+            if (
+                not text
+                and language == "zh"
+                and canonical_fields
+                and canonical_fields.get(field) not in (None, "")
+            ):
+                fallback = self._canonical_contract_fallback(field, canonical_fields.get(field))
+                text = str(fallback["text"])
+                evidence_sources = list(fallback["evidence"])
+                confidence = float(fallback["confidence"])
+                fallback_reason = "canonical_english_contract"
             fields[field] = text
             if text:
                 confidences.append(confidence)
                 evidence_map[field] = {"sources": evidence_sources, "confidence": round(confidence, 3)}
+                if fallback_reason:
+                    evidence_map[field]["fallback"] = fallback_reason
 
         coverage = sum(value is not None for value in fields.values()) / len(SUMMARY_FIELDS)
         mean_confidence = sum(confidences) / len(confidences) if confidences else 0.0
@@ -290,6 +318,8 @@ class LiteratureSummaryGenerator:
         notes = "Generated from one article for editorial review; not public until approved."
         if rejected_overlap:
             notes += f" Removed verbatim-overlap fields: {', '.join(rejected_overlap)}."
+        if parse_failed:
+            notes += " Recovered malformed Chinese JSON from the canonical English contract."
         return EnrichmentResult(
             fields=fields,
             evidence_map=evidence_map,
@@ -304,6 +334,103 @@ class LiteratureSummaryGenerator:
                 if language == "zh" and canonical_fields else None
             ),
         )
+
+    async def _repair_bilingual_topology(
+        self,
+        parsed: dict[str, Any],
+        *,
+        canonical_fields: dict[str, str | None],
+        system: str,
+        schema: dict[str, dict[str, Any]],
+        evidence: dict[str, Any],
+        preferred_models: list[str],
+        timeout_seconds: int,
+    ) -> dict[str, Any]:
+        missing = [
+            field for field in SUMMARY_FIELDS
+            if canonical_fields.get(field) not in (None, "")
+            and self._raw_field_is_null(parsed.get(field))
+        ]
+        for field in SUMMARY_FIELDS:
+            if canonical_fields.get(field) in (None, "") and not self._raw_field_is_null(parsed.get(field)):
+                parsed[field] = None
+        if missing:
+            repair_request = {
+                "task": "Repair a Simplified Chinese field-aligned summary response.",
+                "requirements": {
+                    "repair_only_fields": missing,
+                    "semantic_contract": "Each repaired field must preserve the corresponding canonical English field.",
+                    "return_schema": "Return JSON containing only repaired fields as objects with text, evidence, and confidence.",
+                },
+                "canonical_summary_en": {
+                    field: canonical_fields.get(field) for field in missing
+                },
+                "previous_response": {
+                    field: parsed.get(field) for field in SUMMARY_FIELDS
+                },
+                "output_schema": {field: schema[field] for field in missing},
+                "evidence": evidence,
+            }
+            try:
+                response = await self.agent.process(
+                    prompt=json.dumps(repair_request, ensure_ascii=False, separators=(",", ":")),
+                    system=(
+                        system
+                        + " Repair mode: return non-null Simplified Chinese objects for every requested field. "
+                        "Use the canonical English field as the semantic contract."
+                    ),
+                    preferred_models=preferred_models,
+                    timeout_seconds=timeout_seconds,
+                )
+                repaired = _parse_json(str(response["raw_response"]))
+                for field in missing:
+                    if isinstance(repaired.get(field), dict) and not self._raw_field_is_null(repaired.get(field)):
+                        parsed[field] = repaired[field]
+            except Exception as exc:
+                logger.warning("Literature zh topology repair failed: {}", exc)
+        for field in missing:
+            if self._raw_field_is_null(parsed.get(field)):
+                parsed[field] = self._canonical_contract_fallback(field, canonical_fields.get(field))
+        return parsed
+
+    @staticmethod
+    def _raw_field_is_null(raw: Any) -> bool:
+        if raw is None:
+            return True
+        if not isinstance(raw, dict):
+            return False
+        return not str(raw.get("text") or "").strip()
+
+    @staticmethod
+    def _canonical_contract_fallback(field: str, canonical_text: str | None) -> dict[str, Any]:
+        label = {
+            "research_question": "研究问题",
+            "study_design": "研究设计",
+            "population_setting": "人群与场景",
+            "main_findings": "主要发现",
+            "public_health_relevance": "公共卫生意义",
+            "limitations": "局限性",
+            "gids_interpretation": "GIDS 解读",
+        }.get(field, "摘要字段")
+        return {
+            "text": f"{label}按英文规范摘要保留同等含义：{canonical_text}",
+            "evidence": ["abstract", "bibliographic_metadata"],
+            "confidence": 0.55,
+            "fallback": "canonical_english_contract",
+        }
+
+    def _canonical_contract_fallback_summary(
+        self,
+        canonical_fields: dict[str, str | None],
+    ) -> dict[str, Any]:
+        return {
+            field: (
+                None
+                if canonical_fields.get(field) in (None, "")
+                else self._canonical_contract_fallback(field, canonical_fields.get(field))
+            )
+            for field in SUMMARY_FIELDS
+        }
 
     @staticmethod
     def _source_scope_limitations(language: str) -> str:
@@ -345,43 +472,64 @@ class LiteratureEnrichmentPipeline:
             languages=languages,
             force=force,
         )
-        generator = LiteratureSummaryGenerator()
         counts = {"articles": len(articles), "generated": 0, "skipped": 0, "failed": 0}
         errors: list[dict[str, str]] = []
         total = max(1, len(articles) * max(1, len(languages)))
         step = 0
-        for article in articles:
-            canonical_fields = context[article.article_id].get("canonical_en")
-            for language in languages:
+        progress_lock = asyncio.Lock()
+        counts_lock = asyncio.Lock()
+        concurrency = min(
+            max(1, int(getattr(self.config, "ai_enrichment_concurrency", 1))),
+            max(1, len(articles)),
+        )
+        semaphore = asyncio.Semaphore(concurrency)
+        preferred_models = list(input_data.get("preferred_models") or [])
+
+        async def record_progress() -> None:
+            nonlocal step
+            async with progress_lock:
                 step += 1
-                if await task_manager.is_cancel_requested(task.task_uuid):
-                    raise RuntimeError("Literature enrichment cancelled")
-                try:
-                    if await self._should_skip(article, language=language, force=force):
-                        counts["skipped"] += 1
-                        continue
-                    result = await generator.generate(
-                        article=article,
-                        language=language,
-                        diseases=context[article.article_id]["diseases"],
-                        countries=context[article.article_id]["countries"],
-                        topics=context[article.article_id]["topics"],
-                        timeout_seconds=self.config.ai_model_request_timeout_seconds,
-                        preferred_models=list(input_data.get("preferred_models") or []),
-                        canonical_fields=canonical_fields if language == "zh" else None,
-                    )
-                    await self._store(article.article_id, language=language, result=result)
-                    if language == "en":
-                        canonical_fields = dict(result.fields)
-                    counts["generated"] += 1
-                except Exception as exc:
-                    if language == "en":
-                        canonical_fields = None
-                    logger.warning("Literature enrichment failed for {}/{}: {}", article.article_id, language, exc)
-                    counts["failed"] += 1
-                    errors.append({"article_id": article.article_id, "language": language, "error": str(exc)[:500]})
-                finally:
-                    await task_manager.update_task_progress(task.task_uuid, min(99, int(100 * step / total)))
+                await task_manager.update_task_progress(task.task_uuid, min(99, int(100 * step / total)))
+
+        async def process_article(article: LiteratureArticle) -> None:
+            generator = LiteratureSummaryGenerator()
+            canonical_fields = context[article.article_id].get("canonical_en")
+            async with semaphore:
+                for language in languages:
+                    if await task_manager.is_cancel_requested(task.task_uuid):
+                        raise RuntimeError("Literature enrichment cancelled")
+                    try:
+                        if await self._should_skip(article, language=language, force=force):
+                            async with counts_lock:
+                                counts["skipped"] += 1
+                            continue
+                        result = await generator.generate(
+                            article=article,
+                            language=language,
+                            diseases=context[article.article_id]["diseases"],
+                            countries=context[article.article_id]["countries"],
+                            topics=context[article.article_id]["topics"],
+                            timeout_seconds=self.config.ai_model_request_timeout_seconds,
+                            preferred_models=preferred_models,
+                            canonical_fields=canonical_fields if language == "zh" else None,
+                        )
+                        await self._store(article.article_id, language=language, result=result)
+                        if language == "en":
+                            canonical_fields = dict(result.fields)
+                        async with counts_lock:
+                            counts["generated"] += 1
+                    except Exception as exc:
+                        if language == "en":
+                            canonical_fields = None
+                        logger.warning("Literature enrichment failed for {}/{}: {}", article.article_id, language, exc)
+                        await self._store_failure(article, language=language, error=exc)
+                        async with counts_lock:
+                            counts["failed"] += 1
+                            errors.append({"article_id": article.article_id, "language": language, "error": str(exc)[:500]})
+                    finally:
+                        await record_progress()
+
+        await asyncio.gather(*(process_article(article) for article in articles))
         await task_manager.update_task_progress(task.task_uuid, 100)
         automation = None
         if self.config.autopilot_enabled:
@@ -399,7 +547,7 @@ class LiteratureEnrichmentPipeline:
         force: bool,
     ) -> tuple[list[LiteratureArticle], dict[str, dict[str, list[str]]]]:
         async with get_db() as db:
-            query = (
+            base_query = (
                 select(LiteratureArticle)
                 .where(
                     LiteratureArticle.publication_status.in_(("review", "published")),
@@ -407,25 +555,12 @@ class LiteratureEnrichmentPipeline:
                     LiteratureArticle.abstract_text.is_not(None),
                 )
                 .order_by(LiteratureArticle.discovery_score.desc(), LiteratureArticle.indexed_at.desc())
-                # Pull beyond one batch so completed top-ranked records do not
-                # starve lower-ranked records in scheduled operation.
-                .limit(limit if requested_ids else max(100, limit * 20))
             )
             if self.config.ai_require_open_access:
-                query = query.where(LiteratureArticle.open_access_status == "open")
+                base_query = base_query.where(LiteratureArticle.open_access_status == "open")
             if requested_ids:
-                query = query.where(LiteratureArticle.article_id.in_(requested_ids))
-            candidates = list((await db.execute(query)).scalars().all())
-            candidate_ids = [article.article_id for article in candidates]
-            existing_summaries = (
-                await db.execute(
-                    select(LiteratureSummary).where(LiteratureSummary.article_id.in_(candidate_ids))
-                )
-            ).scalars().all() if candidate_ids else []
-            summaries_by_key = {
-                (summary.article_id, summary.language): summary
-                for summary in existing_summaries
-            }
+                base_query = base_query.where(LiteratureArticle.article_id.in_(requested_ids))
+            summaries_by_key: dict[tuple[str, str], LiteratureSummary] = {}
 
             def needs_work(article: LiteratureArticle) -> bool:
                 if len(article.abstract_text or "") < self.config.ai_min_abstract_characters:
@@ -452,14 +587,60 @@ class LiteratureEnrichmentPipeline:
                         return True
                 return False
 
-            articles = [article for article in candidates if needs_work(article)][:limit]
+            articles: list[LiteratureArticle] = []
+            scan_batch_size = limit if requested_ids else max(100, limit * 20)
+            max_scan = (
+                limit
+                if requested_ids
+                else max(scan_batch_size, int(getattr(self.config, "ai_enrichment_candidate_scan_limit", 5000)))
+            )
+            scanned = 0
+            offset = 0
+            while len(articles) < limit and scanned < max_scan:
+                remaining_scan = max_scan - scanned
+                batch_query = base_query.limit(min(scan_batch_size, remaining_scan))
+                if not requested_ids:
+                    batch_query = batch_query.offset(offset)
+                candidates = list((await db.execute(batch_query)).scalars().all())
+                if not candidates:
+                    break
+                scanned += len(candidates)
+                offset += len(candidates)
+                candidate_ids = [article.article_id for article in candidates]
+                existing_summaries = list(
+                    (
+                        await db.execute(
+                            select(LiteratureSummary).where(LiteratureSummary.article_id.in_(candidate_ids))
+                        )
+                    ).scalars().all()
+                ) if candidate_ids else []
+                summaries_by_key.update(
+                    {
+                        (summary.article_id, summary.language): summary
+                        for summary in existing_summaries
+                    }
+                )
+                for article in candidates:
+                    if needs_work(article):
+                        articles.append(article)
+                        if len(articles) >= limit:
+                            break
+                if requested_ids or len(candidates) < scan_batch_size:
+                    break
             article_ids = [article.article_id for article in articles]
+            selected_summaries = list(
+                (
+                    await db.execute(
+                        select(LiteratureSummary).where(LiteratureSummary.article_id.in_(article_ids))
+                    )
+                ).scalars().all()
+            ) if article_ids else []
             context: dict[str, dict[str, Any]] = {
                 article_id: {"diseases": [], "countries": [], "topics": [], "canonical_en": None}
                 for article_id in article_ids
             }
             if article_ids:
-                for summary in existing_summaries:
+                for summary in selected_summaries:
                     if summary.article_id in context and summary.language == "en":
                         context[summary.article_id]["canonical_en"] = {
                             field: getattr(summary, field) for field in SUMMARY_FIELDS
@@ -557,6 +738,41 @@ class LiteratureEnrichmentPipeline:
                 }
             summary.generated_at = datetime.now(timezone.utc)
             summary.review_notes = result.review_notes
+            await db.commit()
+
+    async def _store_failure(self, article: LiteratureArticle, *, language: str, error: Exception) -> None:
+        async with get_db() as db:
+            summary = (
+                await db.execute(
+                    select(LiteratureSummary).where(
+                        LiteratureSummary.article_id == article.article_id,
+                        LiteratureSummary.language == language,
+                    )
+                )
+            ).scalar_one_or_none()
+            if summary is None:
+                summary = LiteratureSummary(article_id=article.article_id, language=language)
+                db.add(summary)
+            existing_metadata = dict(summary.generation_metadata or {})
+            if summary.generated_by == "control-plane-editor" or existing_metadata.get("editorial_reviewed_at"):
+                return
+            if summary.status == "published" and not existing_metadata.get("autopilot"):
+                return
+            attempts = int(existing_metadata.get("quality_attempts") or 0) + 1
+            summary.status = "review"
+            summary.generated_by = summary.generated_by or "literature-evidence-agent"
+            summary.generation_metadata = {
+                **existing_metadata,
+                "protocol_version": LiteratureSummaryGenerator.PROTOCOL_VERSION,
+                "source_fingerprint": source_fingerprint(article),
+                "publication_gate": "generation-failed",
+                "quality_attempts": attempts,
+                "last_generation_error": type(error).__name__,
+            }
+            summary.review_notes = (
+                f"{summary.review_notes or ''} Generation failed for {language}: {str(error)[:240]}"
+            ).strip()
+            summary.generated_at = datetime.now(timezone.utc)
             await db.commit()
 
 

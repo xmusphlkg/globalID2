@@ -326,6 +326,22 @@ def _flexible_date(value: Any) -> datetime | None:
     return None
 
 
+def _pubmed_date(value: Any) -> datetime | None:
+    text = compact_text(value)
+    if not text:
+        return None
+    normalized = text.replace("/", "-")
+    if parsed := _flexible_date(normalized.split()[0]):
+        return parsed
+    for fmt in ("%Y %b %d", "%Y %B %d", "%Y %b", "%Y %B", "%Y"):
+        try:
+            parsed = datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+        return parsed.replace(tzinfo=timezone.utc)
+    return None
+
+
 def _stable_identity(doi: str | None, title: str, published_at: datetime | None) -> tuple[str, str]:
     source = doi or f"{title.lower()}|{published_at.year if published_at else 'unknown'}"
     digest = hashlib.sha256(source.encode("utf-8")).hexdigest()
@@ -492,6 +508,19 @@ def apply_europe_pmc(candidate: ArticleCandidate, payload: dict[str, Any]) -> Ar
     return candidate
 
 
+def apply_pubmed_abstract(candidate: ArticleCandidate, payload: dict[str, Any]) -> ArticleCandidate:
+    abstract = compact_text(payload.get("abstractText"))
+    if abstract and len(abstract) > len(candidate.abstract_text or ""):
+        candidate.abstract_text = abstract
+        candidate.abstract_license = candidate.abstract_license or "PubMed abstract metadata"
+    pmid = compact_text(payload.get("pmid"))
+    if pmid:
+        candidate.pmid = candidate.pmid or pmid
+        candidate.source_urls["pubmed"] = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+    candidate.source_payload = {**candidate.source_payload, "pubmed_efetch": payload}
+    return candidate
+
+
 def apply_unpaywall(candidate: ArticleCandidate, payload: dict[str, Any]) -> ArticleCandidate:
     location = payload.get("best_oa_location")
     if not isinstance(location, dict):
@@ -609,6 +638,72 @@ def normalize_europe_pmc(payload: dict[str, Any]) -> ArticleCandidate | None:
         open_access_url=f"https://europepmc.org/articles/{pmcid}" if is_open and pmcid else None,
         peer_review_status="preprint" if is_preprint else "peer_reviewed",
         source_payload={"europe_pmc": payload},
+    )
+
+
+def normalize_pubmed(payload: dict[str, Any]) -> ArticleCandidate | None:
+    """Normalize PubMed ESummary metadata into the shared candidate shape."""
+
+    title = compact_text(payload.get("title"))
+    if not title:
+        return None
+    article_ids = [item for item in payload.get("articleids") or [] if isinstance(item, dict)]
+    ids_by_type = {
+        str(item.get("idtype") or "").casefold(): compact_text(item.get("value"))
+        for item in article_ids
+        if compact_text(item.get("value"))
+    }
+    pmid = compact_text(payload.get("uid")) or ids_by_type.get("pubmed") or ids_by_type.get("pmid") or None
+    doi = normalize_doi(ids_by_type.get("doi"))
+    pmcid = ids_by_type.get("pmc") or ids_by_type.get("pmcid") or None
+    published_at = next(
+        (
+            value
+            for value in (
+                _pubmed_date(payload.get("epubdate")),
+                _pubmed_date(payload.get("pubdate")),
+                _pubmed_date(payload.get("sortpubdate")),
+            )
+            if value is not None
+        ),
+        None,
+    )
+    article_id, slug = _stable_identity(doi, title, published_at)
+    authors = [
+        {"name": name}
+        for author in payload.get("authors") or []
+        if isinstance(author, dict) and (name := compact_text(author.get("name")))
+    ]
+    publication_types = [compact_text(value).casefold() for value in payload.get("pubtype") or []]
+    is_preprint = any("preprint" in value for value in publication_types)
+    issn = sorted({
+        compact_text(value).upper()
+        for value in (payload.get("issn"), payload.get("essn"))
+        if compact_text(value)
+    })
+    return ArticleCandidate(
+        article_id=article_id,
+        slug=slug,
+        doi=doi,
+        pmid=pmid,
+        pmcid=pmcid,
+        title=title,
+        journal=compact_text(payload.get("fulljournalname") or payload.get("source")) or None,
+        issn=issn,
+        publisher=compact_text(payload.get("publisher")) or None,
+        authors=authors,
+        article_type="preprint" if is_preprint else "journal-article",
+        published_at=published_at,
+        indexed_at=published_at,
+        source_urls={
+            **({"doi": f"https://doi.org/{doi}"} if doi else {}),
+            **({"pubmed": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"} if pmid else {}),
+            **({"pmc": f"https://pmc.ncbi.nlm.nih.gov/articles/{pmcid}/"} if pmcid else {}),
+        },
+        open_access_status="unknown",
+        open_access_url=f"https://pmc.ncbi.nlm.nih.gov/articles/{pmcid}/" if pmcid else None,
+        peer_review_status="preprint" if is_preprint else "peer_reviewed",
+        source_payload={"pubmed": payload},
     )
 
 
@@ -960,6 +1055,7 @@ def normalize_official_guidance(payload: dict[str, Any]) -> ArticleCandidate | N
 __all__ = [
     "apply_europe_pmc",
     "apply_openalex",
+    "apply_pubmed_abstract",
     "apply_unpaywall",
     "compact_text",
     "crossref_version_relations",
@@ -971,6 +1067,7 @@ __all__ = [
     "normalize_official_guidance",
     "normalize_oa_url",
     "normalize_openalex_id",
+    "normalize_pubmed",
     "normalize_publisher_rss",
     "normalize_springer_nature",
     "sanitize_openalex_metadata",

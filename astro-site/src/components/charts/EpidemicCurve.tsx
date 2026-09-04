@@ -8,10 +8,11 @@ import { useCountryDataset, useCountrySourceSeries } from './useCountryDataset';
 import { useEpidemicCurveState } from './useEpidemicCurveState';
 import {
   METRIC_LABELS,
+  aggregateToCompleteCalendarYears,
+  assessAnnualAggregation,
   assessComparison,
   buildHistoricalReference,
   buildStableSeriesColorMap,
-  buildTableRows,
   clipToDateWindow,
   findLatestValue,
   formatIncidenceMetricLabel,
@@ -79,6 +80,19 @@ function formatMetadataValue(value: string | null | undefined) {
 
 function uniqueValues(values: Array<string | null | undefined>) {
   return [...new Set(values.map(formatMetadataValue).filter((value): value is string => Boolean(value)))];
+}
+
+function trailingDateWindow(dates: string[], months: number) {
+  if (dates.length === 0) return null;
+  const endDate = dates[dates.length - 1];
+  const end = new Date(`${endDate}T00:00:00Z`);
+  if (!Number.isFinite(end.getTime())) return null;
+  end.setUTCMonth(end.getUTCMonth() - months);
+  const cutoff = end.toISOString().slice(0, 10);
+  return {
+    startDate: dates.find((date) => date >= cutoff) ?? dates[0],
+    endDate,
+  };
 }
 
 function provisionalDisplayScope(item: CurveSeries): 'none' | 'tail' | 'series' {
@@ -176,6 +190,9 @@ export default function EpidemicCurve({
   const sourceSeries = useCountrySourceSeries(sourceSeriesUrl, !hasInitialSeries);
   const [sourceSelectionById, setSourceSelectionById] = useState<Record<string, string>>({});
   const [analysisMode, setAnalysisMode] = useState<EpidemicAnalysisMode>('monitor');
+  const [comparisonFrequencyMode, setComparisonFrequencyMode] = useState<
+    'native' | 'seasonal_index' | 'annual_total'
+  >('native');
   const enrichedSeries = useMemo(() => Object.fromEntries(
     Object.entries(baseSeries).map(([id, item]) => {
       const observations = sourceSeries.data[id] ?? [];
@@ -275,14 +292,67 @@ export default function EpidemicCurve({
     () => curveState.activeIds.map((id) => series[id]).filter(Boolean),
     [curveState.activeIds, series]
   );
-  const comparisonAssessment = useMemo(
-    () => assessComparison(activeItems, curveState.metric),
+  const seasonalComparisonAvailable = useMemo(() => (
+    activeItems.length >= 2
+    && activeItems.every((item) => (
+      getMetricValues(item, 'historical_index').some((value) => value != null)
+    ))
+  ), [activeItems]);
+  const annualAggregation = useMemo(
+    () => assessAnnualAggregation(activeItems, curveState.metric),
     [activeItems, curveState.metric]
   );
+  const annualAggregatesById = useMemo(() => new Map(
+    curveState.activeIds.map((id) => {
+      const item = series[id];
+      return [id, aggregateToCompleteCalendarYears(
+        item.dates,
+        getMetricValues(item, curveState.metric),
+        getSeriesGranularity(item),
+      )];
+    })
+  ), [curveState.activeIds, curveState.metric, series]);
+  const annualCommonWindow = useMemo(() => {
+    const aggregates = curveState.activeIds.map((id) => annualAggregatesById.get(id));
+    if (aggregates.some((aggregate) => !aggregate) || aggregates.length === 0) return null;
+    const commonDates = aggregates.slice(1).reduce(
+      (shared, aggregate) => new Set([...shared].filter((date) => aggregate!.dates.includes(date))),
+      new Set(aggregates[0]!.dates),
+    );
+    const dates = [...commonDates].sort();
+    return dates.length > 0 ? { startDate: dates[0], endDate: dates[dates.length - 1] } : null;
+  }, [annualAggregatesById, curveState.activeIds]);
+  const effectiveComparisonFrequencyMode = comparisonFrequencyMode === 'seasonal_index'
+    && !seasonalComparisonAvailable
+      ? 'native'
+      : comparisonFrequencyMode === 'annual_total' && !annualAggregation.eligible
+        ? 'native'
+        : comparisonFrequencyMode;
+  const effectiveMetric = analysisMode === 'compare'
+    && effectiveComparisonFrequencyMode === 'seasonal_index'
+      ? 'historical_index'
+      : curveState.metric;
+  useEffect(() => {
+    if (comparisonFrequencyMode === 'seasonal_index' && !seasonalComparisonAvailable) {
+      setComparisonFrequencyMode('native');
+    }
+    if (comparisonFrequencyMode === 'annual_total' && !annualAggregation.eligible) {
+      setComparisonFrequencyMode('native');
+    }
+  }, [annualAggregation.eligible, comparisonFrequencyMode, seasonalComparisonAvailable]);
+  const comparisonAssessment = useMemo(
+    () => assessComparison(activeItems, effectiveMetric),
+    [activeItems, effectiveMetric]
+  );
   const comparisonBlocked = analysisMode === 'compare'
-    && comparisonAssessment.level === 'blocked';
+    && (
+      comparisonAssessment.level === 'blocked'
+      || (effectiveComparisonFrequencyMode === 'annual_total' && !annualCommonWindow)
+    );
   const comparisonWindow = analysisMode === 'compare'
-    ? comparisonAssessment.commonWindow
+    ? effectiveComparisonFrequencyMode === 'annual_total'
+      ? annualCommonWindow
+      : comparisonAssessment.commonWindow
     : null;
   const outbreakEligibility = activeItems.length === 1
     ? getOutbreakEligibility(activeItems[0])
@@ -294,11 +364,15 @@ export default function EpidemicCurve({
       const item = series[id];
       const selectedSources = getSelectedSourceSeries(item);
       const primarySource = selectedSources[0];
-      const rawValues = getMetricValues(item, curveState.metric);
-      const clipped = clipToDateWindow(item.dates, rawValues, comparisonWindow);
+      const annualAggregate = effectiveComparisonFrequencyMode === 'annual_total'
+        ? annualAggregatesById.get(id)
+        : null;
+      const sourceDates = annualAggregate?.dates ?? item.dates;
+      const rawValues = annualAggregate?.values ?? getMetricValues(item, effectiveMetric);
+      const clipped = clipToDateWindow(sourceDates, rawValues, comparisonWindow);
       const clippedPointGranularities = clipToDateWindow(
-        item.dates,
-        item.point_granularities ?? [],
+        sourceDates,
+        annualAggregate ? [] : item.point_granularities ?? [],
         comparisonWindow
       ).values;
       const historicalReference = buildHistoricalReference(
@@ -323,17 +397,17 @@ export default function EpidemicCurve({
         color: colorById.get(id) ?? SERIES_COLORS[0],
         dates: clipped.dates,
         values: clipped.values,
-        granularity: getSeriesGranularity(item),
+        granularity: annualAggregate ? 'annual' : getSeriesGranularity(item),
         pointGranularities: clippedPointGranularities,
         reportingBasis: primarySource?.reporting_basis ?? item.reporting_basis ?? undefined,
         timeBasis: primarySource?.time_basis ?? item.time_basis ?? undefined,
         sourceLabel: primarySource?.source_label,
         // A source-wide provisional declaration is communicated in the status
         // line. Painting the whole plotting area adds no temporal information.
-        provisionalFrom: provisionalScope === 'tail' ? provisionalFrom : null,
+        provisionalFrom: annualAggregate ? null : provisionalScope === 'tail' ? provisionalFrom : null,
         events: analysisMode === 'compare' ? [] : buildCurveEvents(item, lang),
         reference: analysisMode === 'monitor'
-          && curveState.metric === 'cases'
+          && effectiveMetric === 'cases'
           && historicalReference.eligiblePointCount > 0
           ? {
               expected: clippedExpected,
@@ -346,7 +420,7 @@ export default function EpidemicCurve({
       line.values.length === line.dates.length
       && line.values.some((value) => value != null)
     ))
-  ), [analysisMode, colorById, comparisonBlocked, comparisonWindow, curveState.activeIds, curveState.metric, lang, outbreakBlocked, series]);
+  ), [analysisMode, annualAggregatesById, colorById, comparisonBlocked, comparisonWindow, curveState.activeIds, effectiveComparisonFrequencyMode, effectiveMetric, lang, outbreakBlocked, series]);
   const plottedDates = useMemo(
     () => Array.from(new Set(lines.flatMap((line) => line.dates))).sort(),
     [lines]
@@ -431,8 +505,8 @@ export default function EpidemicCurve({
     [lines]
   );
   const hiddenMetricSeriesCount = curveState.activeIds.length - lines.length;
-  const facetByGranularity = ['cases', 'deaths', 'incidence_rates'].includes(curveState.metric)
-    && activeGranularities.size > 1;
+  const facetByGranularity = activeGranularities.size > 1
+    && (analysisMode === 'compare' || ['cases', 'deaths', 'incidence_rates'].includes(effectiveMetric));
   const chartHeight = facetByGranularity && typeof height === 'number'
     ? Math.max(height, (activeGranularities.size * 180) + 80)
     : height;
@@ -499,13 +573,19 @@ export default function EpidemicCurve({
   const hasActivePublicProjection = curveState.activeIds.some(
     (id) => !effectiveSourceSelection[id] && hasPublicProjection(enrichedSeries[id])
   );
-  const metricDisplayLabel = curveState.metric === 'incidence_rates'
+  const metricDisplayLabel = effectiveMetric === 'incidence_rates'
     ? formatIncidenceMetricLabel(Array.from(activeGranularities), lang)
-    : curveState.metric === 'cases' && hasActiveSourceSelection
+    : effectiveMetric === 'historical_index' && effectiveComparisonFrequencyMode === 'seasonal_index'
+      ? (lang === 'zh' ? '相对历史同期预期（%）' : 'Observed / historical expected (%)')
+      : effectiveMetric === 'cases' && effectiveComparisonFrequencyMode === 'annual_total'
+        ? (lang === 'zh' ? '完整自然年报告病例总数' : 'Complete calendar-year reported cases')
+      : effectiveMetric === 'deaths' && effectiveComparisonFrequencyMode === 'annual_total'
+        ? (lang === 'zh' ? '完整自然年报告死亡总数' : 'Complete calendar-year reported deaths')
+      : effectiveMetric === 'cases' && hasActiveSourceSelection
       ? hasActivePublicProjection
         ? (lang === 'zh' ? '来源序列／公开投影期间值' : 'Source-series / public-projection period values')
         : (lang === 'zh' ? '所选来源序列期间值' : 'Selected source-series period values')
-      : METRIC_LABELS[curveState.metric][lang];
+      : METRIC_LABELS[effectiveMetric][lang];
   const referencePointCount = lines.reduce(
     (total, line) => total + (line.reference?.expected.filter((value) => value != null).length ?? 0),
     0
@@ -531,17 +611,27 @@ export default function EpidemicCurve({
   ));
   const setMode = (nextMode: EpidemicAnalysisMode) => {
     setAnalysisMode(nextMode);
+    if (nextMode !== 'compare') setComparisonFrequencyMode('native');
     curveState.setSelectionMode(nextMode === 'compare' ? 'multiple' : 'single');
-    if (nextMode === 'compare' && curveState.availableMetrics.includes('historical_index')) {
-      curveState.setMetric('historical_index');
-    } else {
+    if (nextMode === 'outbreak') {
       curveState.setMetric('cases');
+    } else if (
+      nextMode === 'compare'
+      && ['trend_index', 'weekly_equiv_cases'].includes(curveState.metric)
+    ) {
+      curveState.setMetric(
+        curveState.availableMetrics.includes('historical_index') ? 'historical_index' : 'cases'
+      );
     }
   };
   const emptyMessage = comparisonBlocked
-    ? (lang === 'zh'
-        ? '所选序列不满足直接叠加条件；请移除不可比来源或改用单序列监测。'
-        : 'The selected series do not meet overlay requirements; remove non-comparable sources or use single-series surveillance.')
+    ? (effectiveComparisonFrequencyMode === 'annual_total' && !annualCommonWindow
+        ? (lang === 'zh'
+            ? '所选序列没有共同的完整自然年，不能进行年度总量比较。'
+            : 'The selected series have no shared complete calendar year for annual-total comparison.')
+        : (lang === 'zh'
+            ? '所选序列不满足直接叠加条件；请移除不可比来源或改用单序列监测。'
+            : 'The selected series do not meet overlay requirements; remove non-comparable sources or use single-series surveillance.'))
     : outbreakBlocked
       ? (lang === 'zh'
           ? '当前数据不满足按发病时间绘制日／周暴发曲线的条件。'
@@ -553,13 +643,21 @@ export default function EpidemicCurve({
       statusMessages.push(lang === 'zh'
         ? '再选择一个对象即可开始比较'
         : 'Select one more item to begin comparison');
+    } else if (effectiveComparisonFrequencyMode === 'annual_total' && !annualCommonWindow) {
+      statusMessages.push(lang === 'zh'
+        ? '没有共同的完整自然年，无法生成年度总量比较'
+        : 'No shared complete calendar year is available for annual-total comparison');
     } else if (comparisonAssessment.level === 'blocked') {
       const primaryReason = comparisonAssessment.reasons[0];
       statusMessages.push(primaryReason
         ? `${lang === 'zh' ? '无法直接叠加' : 'Overlay blocked'}: ${comparisonReasonLabel(primaryReason, lang)}`
         : (lang === 'zh' ? '所选序列无法直接叠加' : 'The selected series cannot be overlaid'));
     } else if (comparisonAssessment.level === 'conditional') {
-      statusMessages.push(facetByGranularity
+      statusMessages.push(effectiveComparisonFrequencyMode === 'annual_total'
+        ? (lang === 'zh'
+            ? '报告频率已按完整自然年对齐；来源口径差异仍需谨慎解读'
+            : 'Reporting cadence is aligned to complete calendar years; interpret remaining source differences cautiously')
+        : facetByGranularity
         ? (lang === 'zh'
             ? '来源或频率不同，已分面显示；请谨慎解读'
             : 'Sources or cadences differ; panels are separated. Interpret cautiously')
@@ -568,7 +666,19 @@ export default function EpidemicCurve({
             : 'Source definitions differ; this is a conditional comparison'));
     }
   }
-  if (curveState.metric === 'incidence_rates') {
+  if (effectiveComparisonFrequencyMode === 'seasonal_index') {
+    statusMessages.push(lang === 'zh'
+      ? '按各序列自身历史同期中位数标准化；用于比较异常强度，不用于比较绝对负担'
+      : 'Normalized to each series’ historical median for the same period; compare anomaly intensity, not absolute burden');
+  }
+  if (effectiveComparisonFrequencyMode === 'annual_total') {
+    const excludedCount = annualAggregation.excludedYearsBySeries
+      .reduce((total, years) => total + years.length, 0);
+    statusMessages.push(lang === 'zh'
+      ? `仅汇总完整自然年；不插值、不拆分跨期报告${excludedCount > 0 ? `，已排除 ${excludedCount} 个不完整年份` : ''}`
+      : `Only complete calendar years are summed; no interpolation or cross-period splitting${excludedCount > 0 ? `; ${excludedCount} incomplete year entries excluded` : ''}`);
+  }
+  if (effectiveMetric === 'incidence_rates') {
     statusMessages.push(lang === 'zh'
       ? '按病例数 ÷ 同年人口 × 100,000 计算；不作年化'
       : 'Calculated as cases ÷ same-year population × 100,000; not annualized');
@@ -583,21 +693,90 @@ export default function EpidemicCurve({
       ? `${provisionalSeriesCount} 条序列由来源整体标为暂定／可修订（不铺设整图阴影）`
       : `${provisionalSeriesCount} series are source-wide provisional/revisable (no full-chart shading)`);
   }
-  if (curveState.metric === 'historical_index' && !comparisonBlocked && hiddenMetricSeriesCount > 0) {
+  if (effectiveMetric === 'historical_index' && !comparisonBlocked && hiddenMetricSeriesCount > 0) {
     statusMessages.push(lang === 'zh'
       ? `${hiddenMetricSeriesCount} 条序列因历史不足未纳入比较`
       : `${hiddenMetricSeriesCount} series are omitted because their history is insufficient`);
   }
   if (sourceOnlySelectionRequired) {
     statusMessages.push(lang === 'zh'
-      ? '需要在“高级分析与数据来源”中选择一条来源序列'
-      : 'Choose a source series under “Advanced analysis & data source”');
+      ? '请先选择一条来源序列以绘制曲线'
+      : 'Choose a source series to plot the curve');
   }
   if (outbreakBlocked) {
     statusMessages.push(lang === 'zh'
       ? '当前数据已不满足暴发曲线条件，请返回趋势视图'
       : 'The data no longer meet outbreak-curve requirements; return to trend view');
   }
+
+  const sourceControlPanel = sourceControls.length > 0 ? (
+    <div className={`chart-source-controls ${sourceOnlySelectionRequired ? 'chart-source-controls-required' : ''}`}>
+      <div className="chart-source-controls-title">
+        {lang === 'zh'
+          ? `具体来源序列（${sourceControls.length} 个当前对象）`
+          : `Specific source series (${sourceControls.length} active items)`}
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {sourceControls.map((control) => {
+          const source = control.displaySource;
+          return (
+            <label key={control.id} className="block min-w-0 text-xs text-[rgb(var(--text-muted))]">
+              <span className="mb-1 block truncate font-medium text-[rgb(var(--text-strong))]">
+                {lang === 'zh' ? control.item.name_zh : control.item.name_en}
+              </span>
+              <select
+                id={`epidemic-curve-source-${control.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
+                name={`epidemic-curve-source-${control.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
+                className="site-control-input w-full rounded-none border px-2 py-1.5 text-xs"
+                value={control.selectedCode}
+                onChange={(event) => {
+                  const nextCode = event.target.value;
+                  setSourceSelectionById((current) => {
+                    const next = { ...current };
+                    if (nextCode) next[control.id] = nextCode;
+                    else delete next[control.id];
+                    return next;
+                  });
+                  if (!curveState.availableMetrics.includes(curveState.metric)) {
+                    curveState.setMetric('cases');
+                  }
+                }}
+                aria-label={lang === 'zh'
+                  ? `${control.item.name_zh}曲线来源序列`
+                  : `${control.item.name_en} curve source series`}
+              >
+                {control.publicProjectionAvailable ? (
+                  <option value="">{lang === 'zh' ? '公开投影（默认）' : 'Public projection (default)'}</option>
+                ) : (
+                  <option value="" disabled>{lang === 'zh' ? '请选择来源序列' : 'Select a source series'}</option>
+                )}
+                {control.sources.map((candidate) => (
+                  <option key={candidate.series_code} value={candidate.series_code}>
+                    {candidate.source_label ?? candidate.series_code}
+                  </option>
+                ))}
+              </select>
+              {source && (
+                <span className="mt-1 block leading-5">
+                  {lang === 'zh' ? '指标' : 'Metric'}: {(source.metric_type ?? 'unknown').replaceAll('_', ' ')}
+                  {' · '}
+                  {lang === 'zh' ? '报告粒度' : 'Grain'}: {formatTemporalGranularity(source.temporal_granularity, lang)}
+                  {' · '}
+                  {lang === 'zh' ? '报告口径' : 'Basis'}: {(source.reporting_basis ?? 'unknown').replaceAll('_', ' ')}
+                  {' · '}
+                  {lang === 'zh' ? '时间基准' : 'Time basis'}: {(source.time_basis ?? 'unknown').replaceAll('_', ' ')}
+                  {' · '}
+                  {lang === 'zh' ? '可比性' : 'Comparability'}: {(source.comparability ?? 'unknown').replaceAll('_', ' ')}
+                  {' · '}
+                  {lang === 'zh' ? '可用状态' : 'Availability'}: {(source.availability_status ?? 'unknown').replaceAll('_', ' ')}
+                </span>
+              )}
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
 
   const toolbar = (
     <>
@@ -622,31 +801,101 @@ export default function EpidemicCurve({
             {lang === 'zh' ? '开始比较' : 'Start comparison'}
           </button>
         </div>
+        {analysisMode === 'compare' && (
+          <div className="chart-comparison-frequency" role="group" aria-label={lang === 'zh' ? '比较对齐方式' : 'Comparison alignment'}>
+            <span className="chart-control-label">{lang === 'zh' ? '对齐' : 'Align'}</span>
+            <button
+              type="button"
+              onClick={() => setComparisonFrequencyMode('native')}
+              aria-pressed={effectiveComparisonFrequencyMode === 'native'}
+              className={`chart-toggle chart-toggle-small ${effectiveComparisonFrequencyMode === 'native' ? 'chart-toggle-active' : ''}`}
+              title={lang === 'zh' ? '保留原始报告频率，并按频率分面' : 'Keep native reporting cadence and facet by frequency'}
+            >
+              {lang === 'zh' ? '原频率' : 'Native'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setComparisonFrequencyMode('seasonal_index')}
+              disabled={!seasonalComparisonAvailable}
+              aria-pressed={effectiveComparisonFrequencyMode === 'seasonal_index'}
+              className={`chart-toggle chart-toggle-small ${effectiveComparisonFrequencyMode === 'seasonal_index' ? 'chart-toggle-active' : ''}`}
+              title={lang === 'zh' ? '相对各自历史同期预期的异常强度' : 'Anomaly intensity relative to each series’ historical expectation'}
+            >
+              {lang === 'zh' ? '同期异常' : 'Seasonal'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setComparisonFrequencyMode('annual_total')}
+              disabled={!annualAggregation.eligible}
+              aria-pressed={effectiveComparisonFrequencyMode === 'annual_total'}
+              className={`chart-toggle chart-toggle-small ${effectiveComparisonFrequencyMode === 'annual_total' ? 'chart-toggle-active' : ''}`}
+              title={lang === 'zh' ? '仅聚合完整自然年的可加报告计数' : 'Sum additive reported counts for complete calendar years only'}
+            >
+              {lang === 'zh' ? '完整年度' : 'Annual'}
+            </button>
+          </div>
+        )}
         <label className="chart-metric-select">
           <span>{lang === 'zh' ? '指标' : 'Metric'}</span>
           <select
             id="epidemic-curve-metric"
             name="epidemic-curve-metric"
             className="site-control-input rounded-none border px-2 py-1.5 text-xs"
-            value={curveState.metric}
-            onChange={(event) => curveState.setMetric(event.target.value as typeof curveState.metric)}
+            value={effectiveMetric}
+            onChange={(event) => {
+              setComparisonFrequencyMode('native');
+              curveState.setMetric(event.target.value as typeof curveState.metric);
+            }}
           >
             {displayedPrimaryMetrics.map((metric) => (
               <option key={metric} value={metric}>
-                {metric === curveState.metric ? metricDisplayLabel : METRIC_LABELS[metric][lang]}
+                {metric === effectiveMetric ? metricDisplayLabel : METRIC_LABELS[metric][lang]}
               </option>
             ))}
           </select>
         </label>
         {plottedDateWindow && (
-          <span className="chart-date-range">
-            {analysisMode === 'compare' && curveState.activeIds.length >= 2
-              ? (lang === 'zh' ? '共同时间窗 ' : 'Common window ')
-              : ''}
-            {plottedDateWindow.startDate} → {plottedDateWindow.endDate}
-          </span>
+          <>
+            <div className="chart-date-shortcuts" role="group" aria-label={lang === 'zh' ? '时间范围' : 'Time range'}>
+              {[
+                [6, lang === 'zh' ? '近6月' : '6M'],
+                [12, lang === 'zh' ? '近12月' : '12M'],
+                [36, lang === 'zh' ? '近3年' : '3Y'],
+              ].map(([months, label]) => {
+                const nextWindow = trailingDateWindow(plottedDates, months as number);
+                const isActive = nextWindow?.startDate === plottedDateWindow.startDate
+                  && nextWindow.endDate === plottedDateWindow.endDate;
+                return (
+                  <button
+                    key={months}
+                    type="button"
+                    onClick={() => nextWindow && curveState.setDateWindow(nextWindow)}
+                    aria-pressed={isActive}
+                    className={`chart-toggle chart-toggle-small ${isActive ? 'chart-toggle-active' : ''}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => curveState.setDateWindow({ startDate: plottedDates[0], endDate: plottedDates[plottedDates.length - 1] })}
+                aria-pressed={plottedDateWindow.startDate === plottedDates[0] && plottedDateWindow.endDate === plottedDates[plottedDates.length - 1]}
+                className={`chart-toggle chart-toggle-small ${plottedDateWindow.startDate === plottedDates[0] && plottedDateWindow.endDate === plottedDates[plottedDates.length - 1] ? 'chart-toggle-active' : ''}`}
+              >
+                {lang === 'zh' ? '全部' : 'All'}
+              </button>
+            </div>
+            <span className="chart-date-range">
+              {analysisMode === 'compare' && curveState.activeIds.length >= 2
+                ? (lang === 'zh' ? '共同时间窗 ' : 'Common window ')
+                : ''}
+              {plottedDateWindow.startDate} → {plottedDateWindow.endDate}
+            </span>
+          </>
         )}
       </div>
+      {sourceOnlySelectionRequired && sourceControlPanel}
       {statusMessages.length > 0 && (
         <div
           className={`chart-status-line ${comparisonAssessment.level !== 'direct' || sourceOnlySelectionRequired || outbreakBlocked ? 'chart-status-line-warning' : ''}`}
@@ -695,70 +944,7 @@ export default function EpidemicCurve({
             </p>
           )}
           {sourceControls.length > 0 && (
-            <div className="chart-source-controls">
-              <div className="chart-source-controls-title">
-                {lang === 'zh'
-                  ? `具体来源序列（${sourceControls.length} 个当前对象）`
-                  : `Specific source series (${sourceControls.length} active items)`}
-              </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {sourceControls.map((control) => {
-                  const source = control.displaySource;
-                  return (
-                    <label key={control.id} className="block min-w-0 text-xs text-[rgb(var(--text-muted))]">
-                      <span className="mb-1 block truncate font-medium text-[rgb(var(--text-strong))]">
-                        {lang === 'zh' ? control.item.name_zh : control.item.name_en}
-                      </span>
-                      <select
-                        id={`epidemic-curve-source-${control.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
-                        name={`epidemic-curve-source-${control.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
-                        className="site-control-input w-full rounded-none border px-2 py-1.5 text-xs"
-                        value={control.selectedCode}
-                        onChange={(event) => {
-                          const nextCode = event.target.value;
-                          setSourceSelectionById((current) => {
-                            const next = { ...current };
-                            if (nextCode) next[control.id] = nextCode;
-                            else delete next[control.id];
-                            return next;
-                          });
-                          curveState.setMetric('cases');
-                        }}
-                        aria-label={lang === 'zh'
-                          ? `${control.item.name_zh}曲线来源序列`
-                          : `${control.item.name_en} curve source series`}
-                      >
-                        {control.publicProjectionAvailable ? (
-                          <option value="">{lang === 'zh' ? '公开投影（默认）' : 'Public projection (default)'}</option>
-                        ) : (
-                          <option value="" disabled>{lang === 'zh' ? '请选择来源序列' : 'Select a source series'}</option>
-                        )}
-                        {control.sources.map((candidate) => (
-                          <option key={candidate.series_code} value={candidate.series_code}>
-                            {candidate.source_label ?? candidate.series_code}
-                          </option>
-                        ))}
-                      </select>
-                      {source && (
-                        <span className="mt-1 block leading-5">
-                          {lang === 'zh' ? '指标' : 'Metric'}: {(source.metric_type ?? 'unknown').replaceAll('_', ' ')}
-                          {' · '}
-                          {lang === 'zh' ? '报告粒度' : 'Grain'}: {formatTemporalGranularity(source.temporal_granularity, lang)}
-                          {' · '}
-                          {lang === 'zh' ? '报告口径' : 'Basis'}: {(source.reporting_basis ?? 'unknown').replaceAll('_', ' ')}
-                          {' · '}
-                          {lang === 'zh' ? '时间基准' : 'Time basis'}: {(source.time_basis ?? 'unknown').replaceAll('_', ' ')}
-                          {' · '}
-                          {lang === 'zh' ? '可比性' : 'Comparability'}: {(source.comparability ?? 'unknown').replaceAll('_', ' ')}
-                          {' · '}
-                          {lang === 'zh' ? '可用状态' : 'Availability'}: {(source.availability_status ?? 'unknown').replaceAll('_', ' ')}
-                        </span>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
+            !sourceOnlySelectionRequired && sourceControlPanel
           )}
         </div>
       </details>
@@ -779,14 +965,14 @@ export default function EpidemicCurve({
               <div>
                 <div className="chart-legend-name">{line.name}</div>
                 <div className="chart-legend-meta">
-                  {lang === 'zh' ? '最新值' : 'Latest'} {formatCellValue(findLatestValue(line.values), ['incidence_rates', 'historical_index', 'trend_index'].includes(curveState.metric) ? 2 : 0)}
+                  {lang === 'zh' ? '最新值' : 'Latest'} {formatCellValue(findLatestValue(line.values), ['incidence_rates', 'historical_index', 'trend_index'].includes(effectiveMetric) ? 2 : 0)}
                   {' · '}
                   {formatTemporalGranularity(line.granularity, lang)}
                   {line.timeBasis ? <> · {lang === 'zh' ? '时间' : 'Time'}: {line.timeBasis}</> : null}
                   {line.reference ? <> · {lang === 'zh' ? '含历史参照带' : 'historical reference shown'}</> : null}
-                  {curveState.metric === 'cases' || curveState.metric === 'weekly_equiv_cases' ? (
+                  {effectiveMetric === 'cases' || effectiveMetric === 'weekly_equiv_cases' ? (
                     <> · {lang === 'zh' ? '累计病例' : 'Reported total'} {(source.total_cases ?? 0).toLocaleString()}</>
-                  ) : curveState.metric === 'deaths' ? (
+                  ) : effectiveMetric === 'deaths' ? (
                     <> · {lang === 'zh' ? '累计死亡' : 'Reported total'} {(source.total_deaths ?? 0).toLocaleString()}</>
                   ) : null}
                 </div>
@@ -822,7 +1008,7 @@ export default function EpidemicCurve({
     activeIds: curveState.activeIds,
     activeIdSet: curveState.activeIdSet,
     colorById,
-    metric: curveState.metric,
+    metric: effectiveMetric,
     entityType,
     lang,
     query: curveState.query,
@@ -845,15 +1031,17 @@ export default function EpidemicCurve({
   );
 
   const renderTable = () => {
-    const plottedIds = lines.map((line) => line.id);
-    const tableRows = buildTableRows(series, plottedIds, curveState.metric).filter((row) => (
-      !comparisonWindow
-      || (row.date >= comparisonWindow.startDate && row.date <= comparisonWindow.endDate)
-    ));
+    const tableRows = Array.from(new Set(lines.flatMap((line) => line.dates))).sort().map((date) => ({
+      date,
+      values: lines.map((line) => {
+        const pointIndex = line.dates.indexOf(date);
+        return pointIndex >= 0 ? line.values[pointIndex] : null;
+      }),
+    }));
     return (
       <>
         <div className="data-preview-meta">
-          {['historical_index', 'trend_index'].includes(curveState.metric)
+          {['historical_index', 'trend_index'].includes(effectiveMetric)
             ? (lang === 'zh'
                 ? `${metricDisplayLabel} · ${tableRows.length} 行`
                 : `${metricDisplayLabel} · ${tableRows.length} rows`)
@@ -874,7 +1062,7 @@ export default function EpidemicCurve({
                 <td className="is-sticky">{row.date}</td>
                 {row.values.map((value, index) => (
                   <td key={`${row.date}-${lines[index].id}`}>
-                    {formatCellValue(value, ['incidence_rates', 'historical_index', 'trend_index'].includes(curveState.metric) ? 2 : 0)}
+                    {formatCellValue(value, ['incidence_rates', 'historical_index', 'trend_index'].includes(effectiveMetric) ? 2 : 0)}
                   </td>
                 ))}
               </tr>
@@ -895,7 +1083,7 @@ export default function EpidemicCurve({
           activeDates={plottedDates}
           dateWindow={plottedDateWindow}
           onDateWindowChange={curveState.setDateWindow}
-          metric={curveState.metric}
+          metric={effectiveMetric}
           metricLabel={metricDisplayLabel}
           lang={lang}
           colors={colors}

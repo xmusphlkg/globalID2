@@ -78,8 +78,11 @@ async def _stale_rows(stale_after_seconds: int, *, owner: str | None = None) -> 
                 continue
             retry_count = int(task.retry_count or 0)
             max_retries = int(task.max_retries or 0)
+            metadata = task.metadata_ if isinstance(task.metadata_, dict) else {}
             action = (
-                "requeue"
+                "cancel"
+                if metadata.get("cancel_requested")
+                else "requeue"
                 if task.task_type in RECOVERABLE_IDEMPOTENT_TASK_TYPES
                 and retry_count < max_retries
                 else "fail"

@@ -131,13 +131,18 @@ The shipped example includes these categories:
 - application settings: `APP_ENV`, `APP_NAME`, `DEBUG`, `LOG_LEVEL`
 - runtime database: `DATABASE_URL`, `DATABASE_URL_SYNC`
 - Situation history database: `SITUATION_HISTORY_DATABASE_ENABLED`, `SITUATION_HISTORY_DATABASE_NAME`, `SITUATION_HISTORY_DATABASE_URL`
-- performance: `MAX_PARALLEL_TASKS`, `MAX_CRAWLER_CONCURRENT`, `TASK_WORKER_CONCURRENCY`
+- performance: `MAX_PARALLEL_TASKS`, `MAX_CRAWLER_CONCURRENT`, `TASK_WORKER_CONCURRENCY`, `TASK_WORKER_AI_CONCURRENCY`
 - AI bootstrap defaults: `DEFAULT_AI_PROVIDER`, `DEFAULT_MODEL`, `AI__MODEL_CHAIN_RAW`
 - paths: `DATA_DIR`, `LOG_DIR`, `CONFIG_DIR`
 
 For dashboard background tasks, `TASK_WORKER_CONCURRENCY` controls how many queued jobs
 the standalone worker consumes in parallel. Increase it carefully because higher values
 also increase model/API pressure and email/report throughput.
+`TASK_WORKER_AI_CONCURRENCY` is the AI-task hard ceiling. With
+`TASK_WORKER_AI_DYNAMIC_CONCURRENCY_ENABLED=true`, the worker starts from the
+healthy-model-route baseline, then adds slots up to
+`TASK_WORKER_AI_CONCURRENCY_PER_ROUTE` after consecutive successful AI tasks.
+It immediately backs off on model quota, rate-limit, or model-call timeout signals.
 `TASK_WORKER_TASK_HEARTBEAT_SECONDS`, `TASK_WORKER_STALE_TASK_SECONDS`, and
 `TASK_WORKER_RECOVERY_SCAN_SECONDS` control task-lease recovery; keep the stale threshold
 comfortably above the heartbeat interval. `SCHEDULER_WORKER_GRACE_SECONDS` bounds how long

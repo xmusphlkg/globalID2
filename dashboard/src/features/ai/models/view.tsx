@@ -13,9 +13,11 @@ import {
   MessageSquareText,
   Pencil,
   Plus,
+  Power,
   RefreshCw,
   Search,
   ShieldCheck,
+  Star,
   Trash2,
 } from "lucide-react";
 
@@ -27,6 +29,7 @@ import {
   type AIModelItem,
   type AIProviderItem,
   type AIRuntimeRoute,
+  type ProviderModelDiscoveryResult,
   useAIModels,
   useAIProviders,
   useAIRuntimeRoutes,
@@ -35,6 +38,7 @@ import {
   useCreateAIProvider,
   useDeleteAIModel,
   useDeleteAIProvider,
+  useDiscoverAIProviderModels,
   useRebuildAIProviders,
   useTestAIModel,
   useTestAIProvider,
@@ -51,6 +55,8 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 
 type HealthFilter = "all" | "healthy" | "attention" | "checking";
 type DrawerMode = "create" | "edit" | null;
+type DiscoveryImportResult = { status: string; message: string };
+type WorkspaceView = "providers" | "models" | "runtime";
 
 const inputClass =
   "h-10 w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted disabled:bg-tremor-background-subtle disabled:text-tremor-content-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong";
@@ -96,9 +102,9 @@ function matchesQuery(fields: Array<string | number | null | undefined>, query: 
 function providerMatchesFilter(provider: AIProviderItem, filter: HealthFilter): boolean {
   const status = (provider.last_check_status || "").toLowerCase();
   if (filter === "all") return true;
-  if (filter === "healthy") return provider.is_active && provider.has_api_key && status === "available" && !provider.rate_limit_active;
+  if (filter === "healthy") return provider.is_active && provider.has_api_key && status === "available" && !provider.rate_limit_active && !provider.runtime_failure_active;
   if (filter === "attention") {
-    return !provider.is_active || !provider.has_api_key || provider.rate_limit_active || ["unavailable", "failed", "rate_limited"].includes(status);
+    return !provider.is_active || !provider.has_api_key || provider.rate_limit_active || provider.runtime_failure_active || ["unavailable", "failed", "rate_limited"].includes(status);
   }
   return status === "checking";
 }
@@ -106,9 +112,9 @@ function providerMatchesFilter(provider: AIProviderItem, filter: HealthFilter): 
 function modelMatchesFilter(model: AIModelItem, filter: HealthFilter): boolean {
   const status = (model.last_check_status || "").toLowerCase();
   if (filter === "all") return true;
-  if (filter === "healthy") return model.is_enabled && status === "available" && !model.rate_limit_active;
+  if (filter === "healthy") return model.is_enabled && status === "available" && !model.rate_limit_active && !model.runtime_failure_active;
   if (filter === "attention") {
-    return !model.is_enabled || model.rate_limit_active || ["unavailable", "failed", "rate_limited"].includes(status);
+    return !model.is_enabled || model.rate_limit_active || model.runtime_failure_active || ["unavailable", "failed", "rate_limited"].includes(status);
   }
   return status === "checking";
 }
@@ -116,7 +122,7 @@ function modelMatchesFilter(model: AIModelItem, filter: HealthFilter): boolean {
 function routeMatchesFilter(route: AIRuntimeRoute, filter: HealthFilter): boolean {
   if (filter === "all") return true;
   if (filter === "healthy") return route.available_for_routing;
-  if (filter === "attention") return !route.available_for_routing || route.rate_limit_active || !route.has_api_key;
+  if (filter === "attention") return !route.available_for_routing || route.rate_limit_active || route.runtime_failure_active || !route.has_api_key;
   return (route.last_check_status || "").toLowerCase() === "checking";
 }
 
@@ -136,6 +142,8 @@ function ActionButton({
   onClick,
   type = "button",
   className,
+  title,
+  ariaLabel,
 }: {
   children: ReactNode;
   icon?: ReactNode;
@@ -144,6 +152,8 @@ function ActionButton({
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   type?: "button" | "submit";
   className?: string;
+  title?: string;
+  ariaLabel?: string;
 }) {
   const toneClass =
     tone === "primary"
@@ -157,6 +167,8 @@ function ActionButton({
       type={type}
       disabled={disabled}
       onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
       className={cn(
         "inline-flex h-9 items-center justify-center gap-2 rounded-tremor-default border px-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-55",
         toneClass,
@@ -166,6 +178,34 @@ function ActionButton({
       {icon}
       {children}
     </button>
+  );
+}
+
+function IconActionButton({
+  icon,
+  label,
+  tone = "neutral",
+  disabled,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  tone?: "neutral" | "danger";
+  disabled?: boolean;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+}) {
+  return (
+    <ActionButton
+      tone={tone}
+      className="h-8 w-8 px-0"
+      disabled={disabled}
+      onClick={onClick}
+      icon={icon}
+      title={label}
+      ariaLabel={label}
+    >
+      <span className="sr-only">{label}</span>
+    </ActionButton>
   );
 }
 
@@ -196,9 +236,9 @@ function AlertBox({ tone, children }: { tone: "danger" | "warning"; children: Re
   return <div className={cn("rounded-tremor-default border px-4 py-3 text-sm", toneClass)}>{children}</div>;
 }
 
-function LastCheckCell({ checkedAt, message }: { checkedAt?: string | null; message?: string | null }) {
+function LastCheckCell({ checkedAt, message, compact = false }: { checkedAt?: string | null; message?: string | null; compact?: boolean }) {
   return (
-    <div className="min-w-[220px] max-w-[360px]">
+    <div className={compact ? "min-w-[180px] max-w-[280px]" : "min-w-[220px] max-w-[360px]"}>
       <p className="whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
         {formatDateTime(checkedAt)}
       </p>
@@ -224,6 +264,7 @@ export default function AIModelsPage() {
   const updateProvider = useUpdateAIProvider();
   const deleteProvider = useDeleteAIProvider();
   const testProvider = useTestAIProvider();
+  const discoverProviderModels = useDiscoverAIProviderModels();
   const rebuildProviders = useRebuildAIProviders();
 
   const createModel = useCreateAIModel();
@@ -238,8 +279,13 @@ export default function AIModelsPage() {
   const [editingModelId, setEditingModelId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
+  const [activeView, setActiveView] = useState<WorkspaceView>("providers");
   const [deletingProviderId, setDeletingProviderId] = useState<string | null>(null);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
+  const [discoveryResult, setDiscoveryResult] = useState<{ provider: AIProviderItem; result: ProviderModelDiscoveryResult } | null>(null);
+  const [discoverySelection, setDiscoverySelection] = useState<string[]>([]);
+  const [discoveryImportResults, setDiscoveryImportResults] = useState<Record<string, DiscoveryImportResult>>({});
+  const [isImportingDiscoveredModels, setIsImportingDiscoveredModels] = useState(false);
 
   const [providerForm, setProviderForm] = useState({
     provider_key: "",
@@ -281,6 +327,7 @@ export default function AIModelsPage() {
         enabledModels: "启用模型",
         keys: "已配密钥",
         routes: "运行路由",
+        runtime: "运行时",
         defaults: "默认模型",
         searchPlaceholder: "搜索 provider、model、base url 或 route key",
         all: "全部",
@@ -298,6 +345,15 @@ export default function AIModelsPage() {
         create: "创建",
         reset: "重置",
         test: "对话测试",
+        discoverModels: "发现模型",
+        modelCatalogue: "模型目录",
+        discoveredModels: "已发现模型",
+        catalogueNotRead: "尚未读取",
+        noDiscoveredModels: "该提供商未返回可用模型目录。",
+        selectAll: "全选",
+        addAndTest: "添加并测试",
+        alreadyConfigured: "已配置",
+        importing: "正在添加并测试",
         edit: "编辑",
         delete: "删除",
         enable: "启用",
@@ -306,6 +362,9 @@ export default function AIModelsPage() {
         credential: "凭证",
         noCredential: "未配置",
         priority: "优先级",
+        params: "参数",
+        ready: "就绪",
+        runtimeHealth: "运行健康",
         lastCheck: "最近检查",
         lastMessage: "最近消息",
         cooldown: "冷却",
@@ -340,6 +399,7 @@ export default function AIModelsPage() {
         enabledModels: "Enabled Models",
         keys: "Configured Keys",
         routes: "Runtime Routes",
+        runtime: "Runtime",
         defaults: "Default Models",
         searchPlaceholder: "Search provider, model, base url, or route key",
         all: "All",
@@ -357,6 +417,15 @@ export default function AIModelsPage() {
         create: "Create",
         reset: "Reset",
         test: "Chat Test",
+        discoverModels: "Discover Models",
+        modelCatalogue: "Model catalogue",
+        discoveredModels: "Discovered models",
+        catalogueNotRead: "Not read yet",
+        noDiscoveredModels: "This provider returned no available model catalogue.",
+        selectAll: "Select all",
+        addAndTest: "Add and test",
+        alreadyConfigured: "Already configured",
+        importing: "Adding and testing",
         edit: "Edit",
         delete: "Delete",
         enable: "Enable",
@@ -365,6 +434,9 @@ export default function AIModelsPage() {
         credential: "Credential",
         noCredential: "Not configured",
         priority: "Priority",
+        params: "Params",
+        ready: "Ready",
+        runtimeHealth: "Runtime Health",
         lastCheck: "Last check",
         lastMessage: "Last message",
         cooldown: "Cooling",
@@ -450,12 +522,27 @@ export default function AIModelsPage() {
     [healthFilter, runtimeRoutes, searchQuery],
   );
 
+  const configuredDiscoveredModels = useMemo(
+    () => new Set(
+      discoveryResult
+        ? (models ?? []).filter((model) => model.provider_id === discoveryResult.provider.id).map((model) => model.model_name)
+        : [],
+    ),
+    [discoveryResult, models],
+  );
+
+  const selectableDiscoveredModels = useMemo(
+    () => discoveryResult?.result.models.filter((model) => !configuredDiscoveredModels.has(model) && !discoveryImportResults[model]) ?? [],
+    [configuredDiscoveredModels, discoveryImportResults, discoveryResult],
+  );
+
   const operationError =
     createProvider.error ??
     updateProvider.error ??
     deleteProvider.error ??
     rebuildProviders.error ??
     testProvider.error ??
+    discoverProviderModels.error ??
     createModel.error ??
     updateModel.error ??
     testModel.error ??
@@ -631,15 +718,70 @@ export default function AIModelsPage() {
     rebuildProviders.mutate({ force: true });
   };
 
+  const onDiscoverProviderModels = (provider: AIProviderItem) => {
+    setDiscoveryResult(null);
+    setDiscoverySelection([]);
+    setDiscoveryImportResults({});
+    discoverProviderModels.mutate(provider.provider_key, {
+      onSuccess: (result) => {
+        const configuredModels = new Set(
+          (models ?? []).filter((model) => model.provider_id === provider.id).map((model) => model.model_name),
+        );
+        setDiscoverySelection(result.models.filter((model) => !configuredModels.has(model)));
+        setDiscoveryResult({ provider, result });
+      },
+    });
+  };
+
+  const onAddDiscoveredModels = async () => {
+    if (!discoveryResult || !discoverySelection.length) return;
+
+    const { provider } = discoveryResult;
+    const selectedModels = [...discoverySelection];
+    setIsImportingDiscoveredModels(true);
+    setDiscoveryImportResults({});
+
+    for (const modelName of selectedModels) {
+      setDiscoveryImportResults((current) => ({ ...current, [modelName]: { status: "checking", message: copy.importing } }));
+      try {
+        const createdModel = await createModel.mutateAsync({
+          provider_key: provider.provider_key,
+          model_name: modelName,
+          display_name: modelName,
+          model_type: "chat",
+          is_enabled: true,
+          priority: provider.priority,
+        });
+        const checkResult = await testModel.mutateAsync(createdModel.model_key) as { success?: boolean; status?: string; message?: string };
+        setDiscoveryImportResults((current) => ({
+          ...current,
+          [modelName]: {
+            status: checkResult.status || (checkResult.success ? "available" : "failed"),
+            message: checkResult.message || (checkResult.success ? "" : "Model test failed"),
+          },
+        }));
+      } catch (error) {
+        setDiscoveryImportResults((current) => ({
+          ...current,
+          [modelName]: { status: "failed", message: mutationErrorText(error, lang) },
+        }));
+      }
+    }
+
+    setDiscoverySelection([]);
+    setIsImportingDiscoveredModels(false);
+  };
+
   const providerColumns = useMemo<DataTableColumn<AIProviderItem>[]>(
     () => [
       {
         key: "status",
         header: isZh ? "状态" : "Status",
         render: (provider) => (
-          <div className="space-y-1">
+          <div className="flex max-w-[148px] flex-wrap gap-1">
             <StatusBadge tone={provider.is_active ? "success" : "neutral"}>{provider.is_active ? "active" : "inactive"}</StatusBadge>
             <StatusBadge tone={statusTone(provider.last_check_status)}>{provider.last_check_status || "unknown"}</StatusBadge>
+            {provider.runtime_failure_active ? <StatusBadge tone="warning">{copy.cooldown}</StatusBadge> : null}
           </div>
         ),
       },
@@ -666,16 +808,38 @@ export default function AIModelsPage() {
       {
         key: "credential",
         header: copy.credential,
+        className: "w-[118px]",
+        headerClassName: "w-[118px]",
         render: (provider) => (
-          <div className="min-w-[150px]">
-            <StatusBadge tone={provider.has_api_key ? "success" : "danger"}>
+          <div className="w-[104px]">
+            <StatusBadge className="w-full" tone={provider.has_api_key ? "success" : "danger"}>
               {provider.api_key_hint || copy.noCredential}
             </StatusBadge>
-            <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            <p className="mt-1 whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
               {modelCountByProvider.get(provider.id) ?? 0} {copy.models}
             </p>
           </div>
         ),
+      },
+      {
+        key: "catalogue",
+        header: copy.modelCatalogue,
+        render: (provider) => {
+          const discovery = provider.extra_config?.model_discovery;
+          const metadata = discovery && typeof discovery === "object" ? discovery as Record<string, unknown> : null;
+          const count = typeof metadata?.count === "number" ? metadata.count : null;
+          const checkedAt = typeof metadata?.checked_at === "string" ? metadata.checked_at : null;
+          const status = typeof metadata?.status === "string" ? metadata.status : "";
+          return (
+            <div className="min-w-[150px]">
+              <StatusBadge tone={statusTone(status)}>{status || copy.catalogueNotRead}</StatusBadge>
+              <p className="mt-1 whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                {count == null ? "-" : `${count} ${copy.models}`}
+              </p>
+              {checkedAt ? <p className="mt-1 whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{formatDateTime(checkedAt)}</p> : null}
+            </div>
+          );
+        },
       },
       {
         key: "last-check",
@@ -692,29 +856,44 @@ export default function AIModelsPage() {
       {
         key: "actions",
         header: "",
-        className: "text-right",
+        className: "w-[216px] text-right",
+        headerClassName: "w-[216px]",
         render: (provider) => (
-          <div className="flex min-w-[310px] justify-end gap-2">
-            <ActionButton disabled={testProvider.isPending} onClick={() => testProvider.mutate(provider.provider_key)}>{copy.test}</ActionButton>
-            <ActionButton onClick={() => openEditProvider(provider)} icon={<Pencil className="h-4 w-4" />}>{copy.edit}</ActionButton>
-            <ActionButton
+          <div className="flex justify-end gap-1">
+            <IconActionButton
+              disabled={discoverProviderModels.isPending}
+              onClick={() => onDiscoverProviderModels(provider)}
+              icon={<Search className="h-4 w-4" />}
+              label={copy.discoverModels}
+            />
+            <IconActionButton
+              disabled={testProvider.isPending}
+              onClick={() => testProvider.mutate(provider.provider_key)}
+              icon={<ShieldCheck className="h-4 w-4" />}
+              label={copy.test}
+            />
+            <IconActionButton
+              onClick={() => openEditProvider(provider)}
+              icon={<Pencil className="h-4 w-4" />}
+              label={copy.edit}
+            />
+            <IconActionButton
               onClick={() => updateProvider.mutate({ providerKey: provider.provider_key, payload: { is_active: !provider.is_active } })}
-            >
-              {provider.is_active ? copy.disable : copy.enable}
-            </ActionButton>
-            <ActionButton
+              icon={<Power className="h-4 w-4" />}
+              label={provider.is_active ? copy.disable : copy.enable}
+            />
+            <IconActionButton
               tone="danger"
               disabled={deleteProvider.isPending && deletingProviderId === provider.provider_key}
               onClick={() => onDeleteProvider(provider)}
               icon={<Trash2 className="h-4 w-4" />}
-            >
-              {copy.delete}
-            </ActionButton>
+              label={copy.delete}
+            />
           </div>
         ),
       },
     ],
-    [copy, deleteProvider.isPending, deletingProviderId, isZh, modelCountByProvider, testProvider.isPending, updateProvider],
+    [copy, deleteProvider.isPending, deletingProviderId, discoverProviderModels.isPending, isZh, modelCountByProvider, testProvider.isPending, updateProvider],
   );
 
   const modelColumns = useMemo<DataTableColumn<AIModelItem>[]>(
@@ -722,11 +901,14 @@ export default function AIModelsPage() {
       {
         key: "status",
         header: isZh ? "状态" : "Status",
+        className: "w-[144px]",
+        headerClassName: "w-[144px]",
         render: (model) => (
-          <div className="space-y-1">
+          <div className="flex w-[144px] flex-wrap gap-1">
             <StatusBadge tone={model.is_enabled ? "success" : "neutral"}>{model.is_enabled ? "enabled" : "disabled"}</StatusBadge>
             {model.is_default ? <StatusBadge tone="primary">default</StatusBadge> : null}
             <StatusBadge tone={statusTone(model.last_check_status)}>{model.last_check_status || "unknown"}</StatusBadge>
+            {model.runtime_failure_active ? <StatusBadge tone="warning">{copy.cooldown}</StatusBadge> : null}
           </div>
         ),
       },
@@ -734,7 +916,7 @@ export default function AIModelsPage() {
         key: "model",
         header: copy.models,
         render: (model) => (
-          <div className="min-w-[240px] max-w-[420px]">
+          <div className="min-w-[190px] max-w-[320px]">
             <p className="truncate font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{model.display_name}</p>
             <p className="mt-1 truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{model.model_key}</p>
           </div>
@@ -744,7 +926,7 @@ export default function AIModelsPage() {
         key: "provider",
         header: copy.providers,
         render: (model) => (
-          <div className="min-w-[140px]">
+          <div className="min-w-[120px]">
             <p className="truncate text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{model.provider_key}</p>
             <p className="mt-1 truncate text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{model.provider_name}</p>
           </div>
@@ -752,7 +934,9 @@ export default function AIModelsPage() {
       },
       {
         key: "params",
-        header: isZh ? "参数" : "Params",
+        header: copy.params,
+        className: "hidden 2xl:table-cell",
+        headerClassName: "hidden 2xl:table-cell",
         render: (model) => (
           <div className="min-w-[140px] text-sm text-tremor-content dark:text-dark-tremor-content">
             <p>{model.model_type || "chat"}</p>
@@ -766,7 +950,7 @@ export default function AIModelsPage() {
         key: "last-check",
         header: copy.lastCheck,
         render: (model) => (
-          <LastCheckCell checkedAt={model.last_checked_at} message={model.last_check_message} />
+          <LastCheckCell compact checkedAt={model.last_checked_at} message={model.last_check_message} />
         ),
       },
       {
@@ -777,25 +961,40 @@ export default function AIModelsPage() {
       {
         key: "actions",
         header: "",
-        className: "text-right",
+        className: "sticky right-0 z-10 w-[200px] bg-tremor-background text-right shadow-[-8px_0_12px_-12px_rgba(23,33,31,0.32)] dark:bg-dark-tremor-background",
+        headerClassName: "sticky right-0 z-20 w-[200px] bg-tremor-background-subtle/95 text-right dark:bg-dark-tremor-background-subtle/95",
         render: (model) => (
-          <div className="flex min-w-[360px] justify-end gap-2">
-            <ActionButton disabled={testModel.isPending} onClick={() => testModel.mutate(model.model_key)}>{copy.test}</ActionButton>
-            <ActionButton onClick={() => openEditModel(model)} icon={<Pencil className="h-4 w-4" />}>{copy.edit}</ActionButton>
-            <ActionButton onClick={() => updateModel.mutate({ modelKey: model.model_key, payload: { is_enabled: !model.is_enabled } })}>
-              {model.is_enabled ? copy.disable : copy.enable}
-            </ActionButton>
+          <div className="flex justify-end gap-1">
+            <IconActionButton
+              disabled={testModel.isPending}
+              onClick={() => testModel.mutate(model.model_key)}
+              icon={<ShieldCheck className="h-4 w-4" />}
+              label={copy.test}
+            />
+            <IconActionButton
+              onClick={() => openEditModel(model)}
+              icon={<Pencil className="h-4 w-4" />}
+              label={copy.edit}
+            />
+            <IconActionButton
+              onClick={() => updateModel.mutate({ modelKey: model.model_key, payload: { is_enabled: !model.is_enabled } })}
+              icon={<Power className="h-4 w-4" />}
+              label={model.is_enabled ? copy.disable : copy.enable}
+            />
             {!model.is_default ? (
-              <ActionButton onClick={() => updateModel.mutate({ modelKey: model.model_key, payload: { is_default: true } })}>{copy.setDefault}</ActionButton>
+              <IconActionButton
+                onClick={() => updateModel.mutate({ modelKey: model.model_key, payload: { is_default: true } })}
+                icon={<Star className="h-4 w-4" />}
+                label={copy.setDefault}
+              />
             ) : null}
-            <ActionButton
+            <IconActionButton
               tone="danger"
               disabled={deleteModel.isPending && deletingModelId === model.model_key}
               onClick={() => onDeleteModel(model)}
               icon={<Trash2 className="h-4 w-4" />}
-            >
-              {copy.delete}
-            </ActionButton>
+              label={copy.delete}
+            />
           </div>
         ),
       },
@@ -827,12 +1026,12 @@ export default function AIModelsPage() {
       },
       {
         key: "ready",
-        header: "Ready",
+        header: copy.ready,
         render: (route) => (
           <div className="flex flex-wrap gap-1.5">
             <StatusBadge tone={route.has_api_key ? "success" : "danger"}>{route.has_api_key ? "key ready" : copy.noCredential}</StatusBadge>
-            <StatusBadge tone={route.available_for_routing ? "success" : route.rate_limit_active ? "warning" : "neutral"}>
-              {route.available_for_routing ? "routable" : route.rate_limit_active ? copy.cooldown : "disabled"}
+            <StatusBadge tone={route.available_for_routing ? "success" : route.rate_limit_active || route.runtime_failure_active ? "warning" : "neutral"}>
+              {route.available_for_routing ? "routable" : route.rate_limit_active || route.runtime_failure_active ? copy.cooldown : "disabled"}
             </StatusBadge>
           </div>
         ),
@@ -842,12 +1041,32 @@ export default function AIModelsPage() {
         header: "Cooldown",
         render: (route) => (
           <span className="whitespace-nowrap text-sm text-tremor-content dark:text-dark-tremor-content">
-            {route.rate_limit_active ? formatDuration(route.rate_limit_remaining_seconds, lang) : "-"}
+            {route.rate_limit_active
+              ? formatDuration(route.rate_limit_remaining_seconds, lang)
+              : route.runtime_failure_active
+                ? formatDuration(route.runtime_failure_remaining_seconds, lang)
+                : "-"}
           </span>
         ),
       },
+      {
+        key: "runtime-health",
+        header: copy.runtimeHealth,
+        render: (route) => (
+          <div className="min-w-[150px] text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            <p>{route.runtime_latency_ewma_ms == null ? "-" : `${Math.round(route.runtime_latency_ewma_ms)} ms EWMA`}</p>
+            <p className="mt-1">{isZh ? "超时" : "timeouts"}: {route.runtime_timeout_count}</p>
+            <p className="mt-1">
+              {isZh ? "准入" : "admission"}: {route.runtime_provider_inflight}/{route.runtime_provider_capacity}
+              {" "}{isZh ? "提供商" : "provider"}, {route.runtime_model_inflight}/{route.runtime_model_capacity}
+              {" "}{isZh ? "模型" : "model"}
+            </p>
+            {route.runtime_last_error ? <p className="mt-1 max-w-[220px] truncate" title={route.runtime_last_error}>{route.runtime_last_error}</p> : null}
+          </div>
+        ),
+      },
     ],
-    [copy, lang],
+    [copy, isZh, lang],
   );
 
   return (
@@ -930,72 +1149,200 @@ export default function AIModelsPage() {
           <option value="attention">{copy.attention}</option>
           <option value="checking">{copy.checking}</option>
         </select>
-        <ActionButton tone="primary" onClick={openCreateProvider} icon={<Plus className="h-4 w-4" />}>{copy.newProvider}</ActionButton>
-        <ActionButton tone="primary" onClick={openCreateModel} icon={<Plus className="h-4 w-4" />}>{copy.newModel}</ActionButton>
+        {activeView === "providers" ? (
+          <ActionButton tone="primary" onClick={openCreateProvider} icon={<Plus className="h-4 w-4" />}>{copy.newProvider}</ActionButton>
+        ) : null}
+        {activeView === "models" ? (
+          <ActionButton tone="primary" onClick={openCreateModel} icon={<Plus className="h-4 w-4" />}>{copy.newModel}</ActionButton>
+        ) : null}
       </FilterToolbar>
 
-      <section className="space-y-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.providers}</h2>
-            <p className="text-sm text-tremor-content dark:text-dark-tremor-content">Inspect connectivity, credentials, and base endpoints.</p>
-          </div>
-          <StatusBadge tone="neutral">{filteredProviders.length}</StatusBadge>
+      <section className="space-y-3" aria-label={isZh ? "模型中心资源" : "Model Center resources"}>
+        <div
+          role="tablist"
+          aria-label={isZh ? "模型中心视图" : "Model Center views"}
+          className="flex w-full overflow-x-auto rounded-tremor-default border border-tremor-border bg-tremor-background p-1 dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+        >
+          {[
+            { id: "providers" as const, label: copy.providers, count: filteredProviders.length, icon: <ShieldCheck className="h-4 w-4" /> },
+            { id: "models" as const, label: copy.models, count: filteredModels.length, icon: <Cpu className="h-4 w-4" /> },
+            { id: "runtime" as const, label: copy.runtime, count: filteredRuntimeRoutes.length, icon: <GitBranch className="h-4 w-4" /> },
+          ].map((view) => {
+            const selected = activeView === view.id;
+            return (
+              <button
+                key={view.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-controls={`model-center-${view.id}-panel`}
+                onClick={() => setActiveView(view.id)}
+                className={cn(
+                  "inline-flex h-9 min-w-[132px] flex-1 items-center justify-center gap-2 rounded px-3 text-sm font-medium transition sm:flex-none",
+                  selected
+                    ? "bg-tremor-brand text-tremor-brand-inverted shadow-sm"
+                    : "text-tremor-content hover:bg-tremor-background-subtle hover:text-tremor-content-strong dark:text-dark-tremor-content dark:hover:bg-dark-tremor-background-subtle dark:hover:text-dark-tremor-content-strong",
+                )}
+              >
+                {view.icon}
+                <span>{view.label}</span>
+                <span className={cn("rounded px-1.5 py-0.5 text-xs tabular-nums", selected ? "bg-white/20" : "bg-tremor-background-muted text-tremor-content-subtle dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-subtle")}>{view.count}</span>
+              </button>
+            );
+          })}
         </div>
-        {loadingProviders ? (
-          <SkeletonRows />
-        ) : (
-          <DataTable
-            columns={providerColumns}
-            rows={filteredProviders}
-            getRowKey={(provider) => provider.id}
-            emptyState={<EmptyState icon={<ShieldCheck className="h-10 w-10" />} title={copy.noProviders} />}
-          />
-        )}
-      </section>
 
-      <section className="space-y-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.models}</h2>
-            <p className="text-sm text-tremor-content dark:text-dark-tremor-content">Review default routes, enablement state, and runtime parameters.</p>
+        {activeView === "providers" ? (
+          <div id="model-center-providers-panel" role="tabpanel" className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.providers}</h2>
+              <StatusBadge tone="neutral">{filteredProviders.length}</StatusBadge>
+            </div>
+            {loadingProviders ? (
+              <SkeletonRows />
+            ) : (
+              <>
+                <div className="space-y-2 md:hidden">
+                  {filteredProviders.length ? filteredProviders.map((provider) => (
+                    <article key={provider.id} className="space-y-3 rounded-tremor-default border border-tremor-border bg-tremor-background p-3 shadow-[0_1px_2px_rgba(23,33,31,0.04)] dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{provider.display_name}</p>
+                          <p className="mt-1 truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{provider.provider_key}</p>
+                        </div>
+                        <span className="shrink-0 text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">P{provider.priority}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        <StatusBadge tone={provider.is_active ? "success" : "neutral"}>{provider.is_active ? "active" : "inactive"}</StatusBadge>
+                        <StatusBadge tone={statusTone(provider.last_check_status)}>{provider.last_check_status || "unknown"}</StatusBadge>
+                        <StatusBadge tone={provider.has_api_key ? "success" : "danger"}>{provider.api_key_hint || copy.noCredential}</StatusBadge>
+                        {provider.runtime_failure_active ? <StatusBadge tone="warning">{copy.cooldown}</StatusBadge> : null}
+                      </div>
+                      <p className="truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{provider.base_url || "-"}</p>
+                      <div className="flex justify-end gap-1 border-t border-tremor-border pt-3 dark:border-dark-tremor-border">
+                        <IconActionButton disabled={discoverProviderModels.isPending} onClick={() => onDiscoverProviderModels(provider)} icon={<Search className="h-4 w-4" />} label={copy.discoverModels} />
+                        <IconActionButton disabled={testProvider.isPending} onClick={() => testProvider.mutate(provider.provider_key)} icon={<ShieldCheck className="h-4 w-4" />} label={copy.test} />
+                        <IconActionButton onClick={() => openEditProvider(provider)} icon={<Pencil className="h-4 w-4" />} label={copy.edit} />
+                        <IconActionButton onClick={() => updateProvider.mutate({ providerKey: provider.provider_key, payload: { is_active: !provider.is_active } })} icon={<Power className="h-4 w-4" />} label={provider.is_active ? copy.disable : copy.enable} />
+                        <IconActionButton tone="danger" disabled={deleteProvider.isPending && deletingProviderId === provider.provider_key} onClick={() => onDeleteProvider(provider)} icon={<Trash2 className="h-4 w-4" />} label={copy.delete} />
+                      </div>
+                    </article>
+                  )) : <EmptyState icon={<ShieldCheck className="h-10 w-10" />} title={copy.noProviders} />}
+                </div>
+                <div className="hidden md:block">
+                  <DataTable
+                    columns={providerColumns}
+                    rows={filteredProviders}
+                    getRowKey={(provider) => provider.id}
+                    emptyState={<EmptyState icon={<ShieldCheck className="h-10 w-10" />} title={copy.noProviders} />}
+                  />
+                </div>
+              </>
+            )}
           </div>
-          <StatusBadge tone="neutral">{filteredModels.length}</StatusBadge>
-        </div>
-        {loadingModels ? (
-          <SkeletonRows />
-        ) : (
-          <DataTable
-            columns={modelColumns}
-            rows={filteredModels}
-            getRowKey={(model) => model.id}
-            emptyState={<EmptyState icon={<Cpu className="h-10 w-10" />} title={copy.noModels} />}
-          />
-        )}
-      </section>
+        ) : null}
 
-      <section className="space-y-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.routes}</h2>
-            <p className="text-sm text-tremor-content dark:text-dark-tremor-content">The system tries routes from top to bottom based on priority.</p>
+        {activeView === "models" ? (
+          <div id="model-center-models-panel" role="tabpanel" className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.models}</h2>
+              <StatusBadge tone="neutral">{filteredModels.length}</StatusBadge>
+            </div>
+            {loadingModels ? (
+              <SkeletonRows />
+            ) : (
+              <>
+                <div className="space-y-2 md:hidden">
+                  {filteredModels.length ? filteredModels.map((model) => (
+                    <article key={model.id} className="space-y-3 rounded-tremor-default border border-tremor-border bg-tremor-background p-3 shadow-[0_1px_2px_rgba(23,33,31,0.04)] dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{model.display_name}</p>
+                          <p className="mt-1 truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{model.model_key}</p>
+                        </div>
+                        <span className="shrink-0 text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">P{model.priority}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        <StatusBadge tone={model.is_enabled ? "success" : "neutral"}>{model.is_enabled ? "enabled" : "disabled"}</StatusBadge>
+                        {model.is_default ? <StatusBadge tone="primary">default</StatusBadge> : null}
+                        <StatusBadge tone={statusTone(model.last_check_status)}>{model.last_check_status || "unknown"}</StatusBadge>
+                        {model.runtime_failure_active ? <StatusBadge tone="warning">{copy.cooldown}</StatusBadge> : null}
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                        <span className="truncate">{model.provider_key}</span>
+                        <span className="shrink-0">{model.model_type || "chat"}</span>
+                      </div>
+                      <div className="flex justify-end gap-1 border-t border-tremor-border pt-3 dark:border-dark-tremor-border">
+                        <IconActionButton disabled={testModel.isPending} onClick={() => testModel.mutate(model.model_key)} icon={<ShieldCheck className="h-4 w-4" />} label={copy.test} />
+                        <IconActionButton onClick={() => openEditModel(model)} icon={<Pencil className="h-4 w-4" />} label={copy.edit} />
+                        <IconActionButton onClick={() => updateModel.mutate({ modelKey: model.model_key, payload: { is_enabled: !model.is_enabled } })} icon={<Power className="h-4 w-4" />} label={model.is_enabled ? copy.disable : copy.enable} />
+                        {!model.is_default ? <IconActionButton onClick={() => updateModel.mutate({ modelKey: model.model_key, payload: { is_default: true } })} icon={<Star className="h-4 w-4" />} label={copy.setDefault} /> : null}
+                        <IconActionButton tone="danger" disabled={deleteModel.isPending && deletingModelId === model.model_key} onClick={() => onDeleteModel(model)} icon={<Trash2 className="h-4 w-4" />} label={copy.delete} />
+                      </div>
+                    </article>
+                  )) : <EmptyState icon={<Cpu className="h-10 w-10" />} title={copy.noModels} />}
+                </div>
+                <div className="hidden md:block">
+                  <DataTable
+                    columns={modelColumns}
+                    rows={filteredModels}
+                    getRowKey={(model) => model.id}
+                    emptyState={<EmptyState icon={<Cpu className="h-10 w-10" />} title={copy.noModels} />}
+                  />
+                </div>
+              </>
+            )}
           </div>
-          <StatusBadge tone={summary.routeCoverage >= 80 ? "success" : summary.routeCoverage >= 40 ? "warning" : "danger"}>
-            {summary.routeCoverage}%
-          </StatusBadge>
-        </div>
-        {loadingRuntimeRoutes ? (
-          <SkeletonRows />
-        ) : runtimeRoutesError ? (
-          <AlertBox tone="danger">{queryErrorText(runtimeRoutesError, lang)}</AlertBox>
-        ) : (
-          <DataTable
-            columns={routeColumns}
-            rows={filteredRuntimeRoutes}
-            getRowKey={(route) => route.model_key}
-            emptyState={<EmptyState icon={<GitBranch className="h-10 w-10" />} title={copy.noRoutes} />}
-          />
-        )}
+        ) : null}
+
+        {activeView === "runtime" ? (
+          <div id="model-center-runtime-panel" role="tabpanel" className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.routes}</h2>
+              <StatusBadge tone={summary.routeCoverage >= 80 ? "success" : summary.routeCoverage >= 40 ? "warning" : "danger"}>
+                {summary.routeCoverage}%
+              </StatusBadge>
+            </div>
+            {loadingRuntimeRoutes ? (
+              <SkeletonRows />
+            ) : runtimeRoutesError ? (
+              <AlertBox tone="danger">{queryErrorText(runtimeRoutesError, lang)}</AlertBox>
+            ) : (
+              <>
+                <div className="space-y-2 md:hidden">
+                  {filteredRuntimeRoutes.length ? filteredRuntimeRoutes.map((route) => (
+                    <article key={route.model_key} className="space-y-3 rounded-tremor-default border border-tremor-border bg-tremor-background p-3 shadow-[0_1px_2px_rgba(23,33,31,0.04)] dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{route.model_name}</p>
+                          <p className="mt-1 truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{route.provider_key}</p>
+                        </div>
+                        <span className="shrink-0 text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">P{route.priority ?? "-"}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        <StatusBadge tone={route.available_for_routing ? "success" : route.rate_limit_active || route.runtime_failure_active ? "warning" : "neutral"}>{route.available_for_routing ? "routable" : route.rate_limit_active || route.runtime_failure_active ? copy.cooldown : "disabled"}</StatusBadge>
+                        {route.runtime_failure_active ? <StatusBadge tone="warning">{formatDuration(route.runtime_failure_remaining_seconds, lang)}</StatusBadge> : null}
+                        {route.rate_limit_active ? <StatusBadge tone="warning">{formatDuration(route.rate_limit_remaining_seconds, lang)}</StatusBadge> : null}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 border-t border-tremor-border pt-3 text-xs text-tremor-content-subtle dark:border-dark-tremor-border dark:text-dark-tremor-content-subtle">
+                        <span>{route.runtime_latency_ewma_ms == null ? "-" : `${Math.round(route.runtime_latency_ewma_ms)} ms`}</span>
+                        <span className="text-right">{route.runtime_provider_inflight}/{route.runtime_provider_capacity} provider</span>
+                      </div>
+                    </article>
+                  )) : <EmptyState icon={<GitBranch className="h-10 w-10" />} title={copy.noRoutes} />}
+                </div>
+                <div className="hidden md:block">
+                  <DataTable
+                    columns={routeColumns}
+                    rows={filteredRuntimeRoutes}
+                    getRowKey={(route) => route.model_key}
+                    emptyState={<EmptyState icon={<GitBranch className="h-10 w-10" />} title={copy.noRoutes} />}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
       </section>
 
       <DetailDrawer
@@ -1112,6 +1459,74 @@ export default function AIModelsPage() {
             </ActionButton>
           </div>
         </form>
+      </DetailDrawer>
+
+      <DetailDrawer
+        open={discoveryResult !== null}
+        title={copy.discoveredModels}
+        subtitle={discoveryResult ? discoveryResult.provider.display_name : undefined}
+        onClose={() => setDiscoveryResult(null)}
+      >
+        {discoveryResult ? (
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge tone={statusTone(discoveryResult.result.status)}>{discoveryResult.result.status}</StatusBadge>
+              <span className="text-sm text-tremor-content dark:text-dark-tremor-content">{discoveryResult.result.models.length} {copy.models}</span>
+            </div>
+            <p className="text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">{discoveryResult.result.message}</p>
+            {discoveryResult.result.base_url ? <p className="break-all font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{discoveryResult.result.base_url}</p> : null}
+            {discoveryResult.result.models.length ? (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-y border-tremor-border py-3 dark:border-dark-tremor-border">
+                  <label className="flex items-center gap-2 text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                    <input
+                      type="checkbox"
+                      checked={selectableDiscoveredModels.length > 0 && discoverySelection.length === selectableDiscoveredModels.length}
+                      disabled={isImportingDiscoveredModels || selectableDiscoveredModels.length === 0}
+                      onChange={(event) => setDiscoverySelection(event.target.checked ? selectableDiscoveredModels : [])}
+                    />
+                    {copy.selectAll}
+                  </label>
+                  <ActionButton
+                    tone="primary"
+                    disabled={isImportingDiscoveredModels || discoverySelection.length === 0}
+                    onClick={() => void onAddDiscoveredModels()}
+                    icon={<CheckCircle2 className="h-4 w-4" />}
+                  >
+                    {isImportingDiscoveredModels ? copy.importing : `${copy.addAndTest} (${discoverySelection.length})`}
+                  </ActionButton>
+                </div>
+                <ul className="divide-y divide-tremor-border border-b border-tremor-border dark:divide-dark-tremor-border dark:border-dark-tremor-border">
+                  {discoveryResult.result.models.map((model) => {
+                    const isConfigured = configuredDiscoveredModels.has(model);
+                    const importResult = discoveryImportResults[model];
+                    return (
+                      <li key={model} className="flex min-h-11 items-center gap-3 px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={isConfigured || discoverySelection.includes(model)}
+                          disabled={isConfigured || isImportingDiscoveredModels || Boolean(importResult)}
+                          onChange={(event) => setDiscoverySelection((current) => (
+                            event.target.checked ? [...current, model] : current.filter((item) => item !== model)
+                          ))}
+                          aria-label={model}
+                        />
+                        <span className="min-w-0 flex-1 truncate font-mono text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">{model}</span>
+                        {isConfigured ? <StatusBadge tone="neutral">{copy.alreadyConfigured}</StatusBadge> : null}
+                        {importResult ? (
+                          <span className="flex max-w-[260px] items-center gap-2">
+                            <StatusBadge tone={statusTone(importResult.status)}>{importResult.status}</StatusBadge>
+                            {importResult.message ? <span className="truncate text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle" title={importResult.message}>{importResult.message}</span> : null}
+                          </span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            ) : <EmptyState icon={<Cpu className="h-8 w-8" />} title={copy.noDiscoveredModels} />}
+          </div>
+        ) : null}
       </DetailDrawer>
     </div>
   );

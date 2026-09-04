@@ -722,6 +722,29 @@ def test_every_health_check_exposes_a_stable_next_action_code() -> None:
     assert {check["next_action_code"] for check in report["checks"]} == {"none"}
 
 
+def test_completed_enrichment_with_generation_failures_is_visible_warning() -> None:
+    snapshot = _healthy_snapshot()
+    tasks = tuple(
+        {
+            **task,
+            **(
+                {"enrichment": {"articles": 8, "generated": 0, "skipped": 8, "failed": 8}}
+                if task["type"] == "enrich_literature"
+                else {}
+            ),
+        }
+        for task in snapshot.tasks
+    )
+
+    report = evaluate_health(replace(snapshot, tasks=tasks))
+    background = _checks(report)["background_tasks"]
+
+    assert background["status"] == "warning"
+    assert background["next_action_code"] == "inspect_enrichment_generation_failures"
+    assert background["observed"]["latest_enrichment_failed_summaries"] == 8
+    assert background["observed"]["completed_with_enrichment_failures"] == 1
+
+
 def test_cli_stdout_is_exactly_one_json_document_without_log_noise(tmp_path) -> None:
     invalid_thresholds = tmp_path / "invalid-thresholds.json"
     invalid_thresholds.write_text('{"unknown_slo": 1}', encoding="utf-8")

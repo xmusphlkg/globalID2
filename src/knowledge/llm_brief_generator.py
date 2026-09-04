@@ -9,7 +9,7 @@ import time
 from typing import Any
 
 from src.ai.agents.base import BaseAgent
-from src.ai.model_center import get_runtime_routes
+from src.ai.model_center import get_runtime_routes, record_route_runtime_failure
 from src.core import get_config, get_logger
 from src.knowledge.brief_generator import DISCLAIMER_EN, DISCLAIMER_ZH
 from src.knowledge.citations import (
@@ -49,9 +49,11 @@ class KnowledgeBriefAgent(BaseAgent):
 class AIDiseaseBriefGenerator:
     """Generate source-grounded disease briefs with model-center routing."""
 
-    PROMPT_PROTOCOL_VERSION = 3
-    PUBLIC_SOURCE_TYPES = {"who", "who_don", "web_search", "wikidata", "wikipedia", "pubmed"}
-    AUTHORITATIVE_SOURCE_TYPES = {"who", "who_don"}
+    # v5 adds independent, targeted semantic repair after format and citation
+    # recovery. Keep it explicit so task traces distinguish earlier drafts.
+    PROMPT_PROTOCOL_VERSION = 5
+    PUBLIC_SOURCE_TYPES = {"registry_definition", "who", "who_don", "web_search", "wikidata", "wikipedia", "pubmed"}
+    AUTHORITATIVE_SOURCE_TYPES = {"registry_definition", "who", "who_don"}
 
     def __init__(self, agent: KnowledgeBriefAgent | None = None) -> None:
         self.agent = agent
@@ -127,6 +129,7 @@ class AIDiseaseBriefGenerator:
             public_sources,
             profile_schema,
             target_sections=evidence_target_sections,
+            entity_aliases=disease.get("evidence_entity_aliases") or (),
         )
         system = self._system_prompt(language)
         prompt_payload = self._prompt_payload(
@@ -147,7 +150,17 @@ class AIDiseaseBriefGenerator:
         response: str | None = None
         format_repair_prompt: str | None = None
         format_repair_attempted = False
-        output_repair_budget = int(get_config().ai.knowledge_output_repair_attempts)
+        repair_attempts = max(
+            0,
+            int(get_config().ai.knowledge_output_repair_attempts),
+        )
+        # Syntax, citation, and semantic omission are independent failure
+        # classes. Sharing one attempt lets an early, recoverable citation
+        # repair suppress the later field-completion repair even when the
+        # evidence packet explicitly supports the missing field.
+        format_repair_budget = repair_attempts
+        citation_repair_budget = repair_attempts
+        quality_repair_budget = repair_attempts
 
         try:
             response = await self._complete_with_policy(
@@ -196,14 +209,51 @@ class AIDiseaseBriefGenerator:
         try:
             parsed = self._parse_json(response)
         except (json.JSONDecodeError, ValueError) as parse_exc:
-            if output_repair_budget <= 0:
-                logger.warning(
-                    "AI JSON parsing failed for {}/{} and output repair is disabled: {}",
-                    disease.get("disease_id"),
-                    language,
-                    parse_exc,
+            # A malformed answer must never remain reusable from the response
+            # cache, and the responsible Model Center route receives a short
+            # structured-output cooldown. The next repair therefore starts on
+            # a different healthy route when one exists.
+            await self._invalidate_failed_completions(agent, [(prompt, system)])
+            await self._record_structured_output_failure(
+                latest_conversation,
+                parse_exc,
+            )
+            repair_exc: Exception = parse_exc
+            while format_repair_budget > 0:
+                format_repair_budget -= 1
+                format_repair_attempted = True
+                format_repair_prompt = self._json_format_repair_prompt(
+                    previous_response=response or "",
+                    language=language,
+                    target_sections=target_sections,
                 )
-                scaffold["review_notes"] = f"AI JSON parsing failed: {parse_exc}"
+                repair_model = self._text_or_none(latest_conversation.get("model"))
+                try:
+                    response = await self._complete_with_policy(
+                        agent,
+                        prompt=format_repair_prompt,
+                        system=(
+                            "Repair JSON structure only. Preserve supported facts and citation markers. "
+                            "Every non-target field must be null. Return JSON only."
+                        ),
+                        preferred_models=self._repair_preferred_models(
+                            preferred_models,
+                            repair_model,
+                        ),
+                    )
+                    latest_conversation = agent.get_latest_conversation() or {}
+                    parsed = self._parse_json(response)
+                    break
+                except Exception as exc:
+                    repair_exc = exc
+                    logger.warning(
+                        "AI JSON format repair failed for {}/{}: {}",
+                        disease.get("disease_id"),
+                        language,
+                        exc,
+                    )
+            else:
+                scaffold["review_notes"] = f"AI JSON format repair failed: {repair_exc}"
                 return {
                     "payload": scaffold,
                     "trace": {
@@ -214,51 +264,6 @@ class AIDiseaseBriefGenerator:
                         "shard_key": shard_key,
                         "model": self._text_or_none(latest_conversation.get("model")),
                         "provider": self._text_or_none(latest_conversation.get("provider")),
-                        "token_usage": {},
-                        "duration": time.time() - started_at,
-                        "prompt": prompt,
-                        "system_prompt": system,
-                        "response": response,
-                        "error": str(parse_exc),
-                        "cache_hit": False,
-                        "format_repair_attempted": False,
-                        "retry_policy": self._retry_policy_metadata(),
-                    },
-                }
-            output_repair_budget -= 1
-            format_repair_attempted = True
-            format_repair_prompt = self._json_format_repair_prompt(
-                previous_response=response,
-                language=language,
-            )
-            repair_model = self._text_or_none(latest_conversation.get("model"))
-            try:
-                response = await self._complete_with_policy(
-                    agent,
-                    prompt=format_repair_prompt,
-                    system="Repair structure only. Preserve facts and citations. Return JSON only.",
-                    preferred_models=[repair_model] if repair_model else preferred_models,
-                )
-                latest_conversation = agent.get_latest_conversation() or {}
-                parsed = self._parse_json(response)
-            except Exception as repair_exc:
-                logger.warning(
-                    "AI JSON format repair failed for {}/{}: {}",
-                    disease.get("disease_id"),
-                    language,
-                    repair_exc,
-                )
-                scaffold["review_notes"] = f"AI JSON format repair failed: {repair_exc}"
-                return {
-                    "payload": scaffold,
-                    "trace": {
-                        "generator": "ai",
-                        "language": language,
-                        "preferred_models": preferred_models,
-                        "shard_index": shard_index,
-                        "shard_key": shard_key,
-                        "model": repair_model,
-                        "provider": self._text_or_none(latest_conversation.get("provider")),
                         "token_usage": self._interaction_metrics(agent)["token_usage"],
                         "duration": time.time() - started_at,
                         "prompt": prompt,
@@ -267,7 +272,7 @@ class AIDiseaseBriefGenerator:
                         "response": response,
                         "error": str(repair_exc),
                         "cache_hit": False,
-                        "format_repair_attempted": True,
+                        "format_repair_attempted": format_repair_attempted,
                         "retry_policy": self._retry_policy_metadata(),
                     },
                 }
@@ -292,6 +297,7 @@ class AIDiseaseBriefGenerator:
             clinical_features = self._field(generated, "clinical_features")
             result = {
                 **scaffold,
+                "status": "published",
                 "brief": self._field(generated, "brief"),
                 "definition": self._field(generated, "definition"),
                 "clinical_features": clinical_features,
@@ -316,7 +322,7 @@ class AIDiseaseBriefGenerator:
                     "token_usage": usage,
                     "cache_hit": was_cache_hit,
                     "version": 2,
-                    "pipeline_version": 2,
+                    "pipeline_version": 3,
                     "profile_schema": profile_schema.to_dict(),
                     "evidence_manifest": evidence_manifest.to_dict(),
                     "target_sections": target_sections,
@@ -345,18 +351,17 @@ class AIDiseaseBriefGenerator:
         final_citation_failures = list(initial_citation_failures)
         repair_prompt: str | None = None
         repair_error: str | None = None
-        if initial_citation_failures and output_repair_budget > 0:
-            output_repair_budget -= 1
+        if initial_citation_failures and citation_repair_budget > 0:
+            citation_repair_budget -= 1
             citation_repair_attempted = True
             repair_prompt = self._citation_repair_prompt(
                 prompt_payload=prompt_payload,
                 previous_response=response or "",
                 failures=initial_citation_failures,
             )
-            repair_preferred_models = (
-                [trace_values["model"]]
-                if trace_values.get("model")
-                else preferred_models
+            repair_preferred_models = self._repair_preferred_models(
+                preferred_models,
+                trace_values.get("model"),
             )
             try:
                 repair_response = await self._complete_with_policy(
@@ -414,30 +419,46 @@ class AIDiseaseBriefGenerator:
             target_sections=target_sections,
             evidence_manifest=evidence_manifest,
         )
-        if quality_repair_failures and not final_citation_failures and output_repair_budget > 0:
-            output_repair_budget -= 1
+        initial_quality_repair_failures = list(quality_repair_failures)
+        quality_repair_attempt_count = 0
+        while (
+            quality_repair_failures
+            and not final_citation_failures
+            and quality_repair_budget > 0
+        ):
+            quality_repair_budget -= 1
             quality_repair_attempted = True
+            quality_repair_attempt_count += 1
             quality_repair_prompt = self._quality_repair_prompt(
                 prompt_payload=prompt_payload,
-                previous_response=response or "",
                 failures=quality_repair_failures,
             )
-            repair_preferred_models = (
-                [trace_values["model"]]
-                if trace_values.get("model")
-                else preferred_models
+            repair_preferred_models = self._repair_preferred_models(
+                preferred_models,
+                trace_values.get("model"),
             )
             try:
                 quality_repair_response = await self._complete_with_policy(
                     agent,
                     prompt=quality_repair_prompt,
-                    system=system,
+                    system=(
+                        "Targeted knowledge-field repair mode. Return a JSON object containing "
+                        "only the fields named in quality_failures. Each value must be substantive "
+                        "source-grounded prose with valid citation_ref markers, or null when the "
+                        "provided evidence cannot support it. Do not return unrelated keys."
+                    ),
                     preferred_models=repair_preferred_models,
                 )
                 quality_repair_conversation = agent.get_latest_conversation() or {}
                 repaired = self._parse_json(quality_repair_response)
                 previous_merged = merged
-                merged, assessment, trace_values = assemble_payload(
+                # The semantic-repair protocol is intentionally sparse: it
+                # returns only failed fields. Build a fresh payload only to
+                # collect the route trace, then patch those fields onto the
+                # quality-checked profile. Re-assembling a sparse JSON object
+                # would temporarily erase valid sections and makes the
+                # preservation rule unnecessarily indirect.
+                _, _, repair_trace_values = assemble_payload(
                     repaired,
                     quality_repair_conversation,
                 )
@@ -446,6 +467,20 @@ class AIDiseaseBriefGenerator:
                     for item in quality_repair_failures
                     if item.get("field")
                 }
+                merged = {
+                    **previous_merged,
+                    "metadata": {
+                        **(previous_merged.get("metadata") or {}),
+                        "ai_model": repair_trace_values.get("model"),
+                        "ai_provider": repair_trace_values.get("provider"),
+                        "token_usage": repair_trace_values.get("token_usage") or {},
+                        "cache_hit": bool(repair_trace_values.get("cache_hit")),
+                        "quality_repair_model": repair_trace_values.get("model"),
+                        "quality_repair_provider": repair_trace_values.get("provider"),
+                    },
+                }
+                if repair_trace_values.get("model"):
+                    merged["model"] = repair_trace_values["model"]
                 # The repair call is allowed to change only rejected target
                 # fields. Keep already valid prose stable even if the model
                 # returns a sparse or over-broad replacement payload.
@@ -459,10 +494,16 @@ class AIDiseaseBriefGenerator:
                     "surveillance_note",
                     "risk_groups",
                 ):
-                    if field in target_sections and field not in repaired_fields:
-                        merged[field] = previous_merged.get(field)
+                    if field in repaired_fields:
+                        merged[field] = self._field(repaired, field)
                 merged["clinical_summary"] = merged.get("clinical_features")
+                merged = normalize_knowledge_citations(
+                    merged,
+                    marker_mode="position",
+                    prune_uncited_sources=True,
+                )
                 merged, assessment = apply_knowledge_quality_gate(merged)
+                trace_values = repair_trace_values
                 response = quality_repair_response
                 final_citation_failures = validate_knowledge_citations(
                     merged,
@@ -487,6 +528,11 @@ class AIDiseaseBriefGenerator:
                         merged,
                         fields=target_sections,
                     )
+                quality_repair_failures = self._repairable_quality_failures(
+                    assessment,
+                    target_sections=target_sections,
+                    evidence_manifest=evidence_manifest,
+                )
             except Exception as exc:
                 quality_repair_error = str(exc)
                 logger.warning(
@@ -495,6 +541,18 @@ class AIDiseaseBriefGenerator:
                     language,
                     exc,
                 )
+                break
+
+        # Citation fallback can deliberately remove unsupported optional
+        # fields. If that leaves a schema-complete, grounded payload, the
+        # earlier quality gate may still carry its pre-fallback ``draft``
+        # status. Promote the repaired payload explicitly; otherwise a valid
+        # result is retried forever as a misleading publication-status error.
+        self._promote_publishable_payload(
+            merged,
+            assessment=assessment,
+            citation_failures=final_citation_failures,
+        )
 
         interaction_metrics = self._interaction_metrics(agent)
         if final_citation_failures or not assessment.publishable:
@@ -525,6 +583,7 @@ class AIDiseaseBriefGenerator:
                 "format_repair_prompt_characters": len(format_repair_prompt or ""),
                 "citation_repair_prompt_characters": len(repair_prompt or ""),
                 "quality_repair_prompt_characters": len(quality_repair_prompt or ""),
+                "quality_repair_attempt_count": quality_repair_attempt_count,
                 "retry_policy": self._retry_policy_metadata(),
             },
             "citation_repair": {
@@ -537,7 +596,7 @@ class AIDiseaseBriefGenerator:
             },
             "quality_repair": {
                 "attempted": quality_repair_attempted,
-                "failures": quality_repair_failures,
+                "failures": initial_quality_repair_failures,
                 "error": quality_repair_error,
             },
         }
@@ -568,6 +627,7 @@ class AIDiseaseBriefGenerator:
                 "cache_hit": bool(interaction_metrics["cache_hits"]),
                 "format_repair_attempted": format_repair_attempted,
                 "citation_repair_attempted": citation_repair_attempted,
+                "quality_repair_attempt_count": quality_repair_attempt_count,
                 "citation_failures": final_citation_failures,
                 "interaction_metrics": interaction_metrics,
                 "retry_policy": self._retry_policy_metadata(),
@@ -623,6 +683,7 @@ class AIDiseaseBriefGenerator:
                 public_sources,
                 profile_schema,
                 target_sections=disease.get("evidence_target_sections") or target_sections,
+                entity_aliases=disease.get("evidence_entity_aliases") or (),
                 max_total_characters=int(get_config().ai.knowledge_evidence_manifest_max_characters),
             ).to_dict()
         )
@@ -762,7 +823,7 @@ class AIDiseaseBriefGenerator:
                 "token_usage": usage,
                 "cache_hit": bool(conversation_metadata.get("cache_hit")),
                 "version": 2,
-                "pipeline_version": 2,
+                "pipeline_version": 3,
                 "profile_schema": profile_schema.to_dict(),
                 "evidence_manifest": evidence_manifest,
                 "target_sections": target_sections,
@@ -804,7 +865,12 @@ class AIDiseaseBriefGenerator:
             },
         }
         if citation_failures:
-            merged["status"] = "requires_review"
+            merged["status"] = "draft"
+            merged["metadata"] = {
+                **(merged.get("metadata") or {}),
+                "automation_state": "awaiting_evidence",
+                "block_reason": "citation_validation_failed",
+            }
         return {
             "payload": merged,
             "trace": {
@@ -845,6 +911,7 @@ class AIDiseaseBriefGenerator:
             sources,
             schema,
             target_sections=targets,
+            entity_aliases=disease.get("evidence_entity_aliases") or (),
             max_sources=int(get_config().ai.knowledge_evidence_max_sources),
             max_manifest_characters=int(get_config().ai.knowledge_evidence_manifest_max_characters),
             allowed_source_types=cls.PUBLIC_SOURCE_TYPES,
@@ -912,7 +979,7 @@ class AIDiseaseBriefGenerator:
             "source_attribution": attribution,
             "disclaimer": DISCLAIMER_ZH if language == "zh" else DISCLAIMER_EN,
             "model": "ai-model-center",
-            "status": "requires_review",
+            "status": "draft",
             "source_confidence": confidence,
             "quality_score": 0.0,
             "review_notes": "Awaiting evidence-grounded AI generation.",
@@ -922,6 +989,7 @@ class AIDiseaseBriefGenerator:
                 "version": 1,
                 "profile_schema": profile_schema.to_dict(),
                 "target_sections": target_sections,
+                "automation_state": "awaiting_evidence",
             },
         }
 
@@ -942,6 +1010,10 @@ class AIDiseaseBriefGenerator:
         preferred_models: list[str],
     ) -> str:
         config = get_config().ai
+        output_token_budget = max(
+            1,
+            int(getattr(agent, "max_tokens", config.knowledge_max_output_tokens)),
+        )
         return await asyncio.wait_for(
             agent.complete(
                 prompt=prompt,
@@ -950,12 +1022,33 @@ class AIDiseaseBriefGenerator:
                 preferred_models=preferred_models,
                 max_quota_recovery_rounds=config.knowledge_quota_recovery_rounds,
                 wait_for_model_recovery=config.knowledge_wait_for_model_recovery,
-                model_request_timeout_seconds=self._effective_model_request_timeout_seconds(),
+                model_request_timeout_seconds=self._effective_model_request_timeout_seconds(
+                    output_token_budget=output_token_budget,
+                ),
                 max_attempts_per_model=config.knowledge_model_attempts_per_route,
                 timeout_cooldown_seconds=config.knowledge_timeout_cooldown_seconds,
+                response_format={"type": "json_object"},
             ),
             timeout=float(config.knowledge_generation_timeout_seconds),
         )
+
+    @staticmethod
+    async def _record_structured_output_failure(
+        conversation: dict[str, Any],
+        error: BaseException,
+    ) -> None:
+        metadata = conversation.get("metadata") if isinstance(conversation, dict) else None
+        route = metadata.get("runtime_route") if isinstance(metadata, dict) else None
+        if not isinstance(route, dict) or not route.get("model_id") or not route.get("provider_id"):
+            return
+        try:
+            await record_route_runtime_failure(
+                route,
+                RuntimeError(f"Malformed structured response: {error}"),
+                cooldown_seconds=max(5, int(get_config().ai.knowledge_timeout_cooldown_seconds)),
+            )
+        except Exception as exc:
+            logger.warning("Failed to record malformed structured output for Model Center: {}", exc)
 
     @staticmethod
     def _interaction_metrics(agent: Any) -> dict[str, Any]:
@@ -1014,6 +1107,30 @@ class AIDiseaseBriefGenerator:
                 logger.warning("Failed to evict rejected knowledge completion: {}", exc)
 
     @staticmethod
+    def _promote_publishable_payload(
+        payload: dict[str, Any],
+        *,
+        assessment: Any,
+        citation_failures: list[str],
+    ) -> None:
+        """Restore publication after a bounded repair made the payload valid."""
+
+        if citation_failures or not bool(getattr(assessment, "publishable", False)):
+            return
+        payload["status"] = "published"
+        metadata = payload.get("metadata")
+        if not isinstance(metadata, dict):
+            return
+        if metadata.get("automation_state") == "awaiting_evidence":
+            metadata.pop("automation_state", None)
+        if metadata.get("block_reason") in {
+            "missing_required_sections",
+            "citation_validation_failed",
+        }:
+            metadata.pop("block_reason", None)
+        metadata["publication_status_recovered"] = "post_repair_quality_gate"
+
+    @staticmethod
     def _citation_failure_fields(
         failures: list[str],
         *,
@@ -1053,11 +1170,35 @@ class AIDiseaseBriefGenerator:
         }
 
     @staticmethod
-    def _effective_model_request_timeout_seconds() -> int:
+    def _effective_model_request_timeout_seconds(
+        *,
+        output_token_budget: int | None = None,
+    ) -> int:
+        """Bound route patience to the actual structured-output workload.
+
+        A complete bilingual profile legitimately needs more time than a
+        one-field retry.  Giving both the same 120-second route timeout turns
+        a missing `surveillance_note` into a costly full-workload failure.
+        The budget is linearly interpolated between a measured viable floor
+        for a compact structured response and the configured full-profile cap.
+        """
         config = get_config().ai
-        return min(
+        maximum = min(
             int(config.knowledge_model_request_timeout_seconds),
             int(config.knowledge_model_request_timeout_cap_seconds),
+        )
+        if output_token_budget is None:
+            return maximum
+        full_profile_budget = max(800, int(config.knowledge_max_output_tokens))
+        compact_budget = min(800, full_profile_budget)
+        compact_timeout = min(maximum, 55)
+        normalized_budget = max(compact_budget, min(int(output_token_budget), full_profile_budget))
+        if full_profile_budget == compact_budget:
+            return maximum
+        fraction = (normalized_budget - compact_budget) / (full_profile_budget - compact_budget)
+        return max(
+            compact_timeout,
+            min(maximum, round(compact_timeout + ((maximum - compact_timeout) * fraction))),
         )
 
     @staticmethod
@@ -1075,7 +1216,8 @@ class AIDiseaseBriefGenerator:
             logger.warning("Failed to load model-center routes for knowledge shard selection: {}", exc)
             routes = []
 
-        shard_models: list[str] = []
+        reliable_models: list[str] = []
+        fallback_models: list[str] = []
         for route in routes:
             if not route.get("has_api_key"):
                 continue
@@ -1084,17 +1226,70 @@ class AIDiseaseBriefGenerator:
             if not route.get("available_for_routing", True):
                 continue
             model_name = str(route.get("model_name") or "").strip()
-            if model_name and model_name not in shard_models:
-                shard_models.append(model_name)
+            if not model_name or model_name in reliable_models or model_name in fallback_models:
+                continue
+            if AIDiseaseBriefGenerator._is_reliable_knowledge_route(route):
+                reliable_models.append(model_name)
+            else:
+                fallback_models.append(model_name)
 
         shard_key = f"{(disease_id or '').strip().upper()}:{language}"
+        shard_models = reliable_models or fallback_models
         if not shard_models:
             return [], 0, shard_key
 
         digest = hashlib.md5(shard_key.encode("utf-8")).hexdigest()
         shard_index = int(digest[:8], 16) % len(shard_models)
         ordered = shard_models[shard_index:] + shard_models[:shard_index]
+        if reliable_models:
+            return [*ordered, *fallback_models], shard_index, shard_key
         return ordered, shard_index, shard_key
+
+    @staticmethod
+    def _is_reliable_knowledge_route(route: dict[str, Any]) -> bool:
+        """Keep sticky knowledge shards off routes with repeated live timeouts.
+
+        A one-off transport fault remains a fallback candidate. Repeated real
+        production failures, however, should not receive new primary work just
+        because a cooldown expired. The complete route list remains available
+        to BaseAgent as a final fallback, so this does not turn health scoring
+        into a hard model exclusion.
+        """
+
+        def metric(name: str) -> int:
+            try:
+                return max(0, int(route.get(name) or 0))
+            except (TypeError, ValueError):
+                return 0
+
+        failure_streak = metric("runtime_failure_streak")
+        failures = metric("runtime_failure_count")
+        timeouts = metric("runtime_timeout_count")
+        successes = metric("runtime_success_count")
+        total_outcomes = successes + failures
+        failure_ratio = failures / total_outcomes if total_outcomes else 0.0
+
+        if failure_streak > 0:
+            return False
+        # A route with a small history remains eligible while it warms up. Once
+        # enough live calls exist, a timeout-heavy route is retained only as a
+        # fallback until it demonstrates a successful recovery.
+        return not (
+            failures >= 6
+            and timeouts >= 3
+            and failure_ratio >= 0.35
+        )
+
+    @staticmethod
+    def _repair_preferred_models(
+        preferred_models: list[str],
+        failed_model: str | None,
+    ) -> list[str]:
+        """Try a different live route before retrying a malformed response."""
+        if not failed_model:
+            return list(preferred_models)
+        alternatives = [model for model in preferred_models if model != failed_model]
+        return [*alternatives, failed_model]
 
     @staticmethod
     def _system_prompt(_language: str) -> str:
@@ -1127,7 +1322,8 @@ class AIDiseaseBriefGenerator:
             "surveillance_note, risk_groups. Values are substantive strings or null. Prefer concise "
             "2-4 sentence sections; a brief may contain 2-5 sentences. For prevention, risk_groups, "
             "and surveillance_note, avoid one-sentence minimal answers when evidence supports more "
-            "detail."
+            "detail. Every key outside target_sections must be null; do not expand a narrow repair "
+            "into a full profile."
         )
 
     @classmethod
@@ -1152,6 +1348,7 @@ class AIDiseaseBriefGenerator:
             sources[: int(get_config().ai.knowledge_evidence_max_sources)],
             profile_schema,
             target_sections=evidence_target_sections,
+            entity_aliases=disease.get("evidence_entity_aliases") or (),
             max_total_characters=int(get_config().ai.knowledge_evidence_manifest_max_characters),
         )
         source_payload = []
@@ -1189,6 +1386,7 @@ class AIDiseaseBriefGenerator:
                 "not_applicable_fields": list(profile_schema.not_applicable_fields),
             },
             "target_sections": target_sections,
+            "repair_context": list(disease.get("repair_context") or [])[:3],
             "evidence_manifest": evidence_manifest.to_dict(
                 include_text=True,
                 include_source_ids=False,
@@ -1220,9 +1418,11 @@ class AIDiseaseBriefGenerator:
             evidence_manifest=evidence_manifest,
         )
         return (
-            "Generate only target_sections. Use evidence_manifest as the sole factual boundary; "
+            "Generate only target_sections; every other key must be null. Use evidence_manifest as the sole factual boundary; "
             "sources contains attribution labels only. If no allowed fragment supports a field, set it "
-            "to null—never guess or add an absence explanation. JSON only.\n"
+            "to null—never guess or add an absence explanation. When repair_context is present, treat it as "
+            "deterministic validation feedback: correct exactly the named target fields and citations, without "
+            "inventing new facts. JSON only.\n"
             f"{json.dumps(payload, ensure_ascii=False, separators=(',', ':'))}"
         )
 
@@ -1280,32 +1480,53 @@ class AIDiseaseBriefGenerator:
     def _quality_repair_prompt(
         *,
         prompt_payload: dict[str, Any],
-        previous_response: str,
         failures: list[dict[str, str]],
     ) -> str:
+        failure_fields = {
+            str(item.get("field") or "").strip()
+            for item in failures
+            if str(item.get("field") or "").strip()
+        }
+        manifest = prompt_payload.get("evidence_manifest")
+        fragments = manifest.get("fragments") if isinstance(manifest, dict) else []
+        targeted_fragments = [
+            fragment
+            for fragment in fragments
+            if isinstance(fragment, dict)
+            and failure_fields.intersection(
+                str(section) for section in fragment.get("supported_sections") or []
+            )
+        ]
         repair_payload = {
             "output_language": prompt_payload.get("output_language"),
-            "target_sections": prompt_payload.get("target_sections"),
             "quality_failures": failures,
-            "evidence_manifest": prompt_payload.get("evidence_manifest"),
-            "previous_json": previous_response,
+            "evidence_manifest": {
+                "target_sections": sorted(failure_fields),
+                "fragments": targeted_fragments,
+            },
         }
         return (
             "Repair only the fields named in quality_failures. Each named field has explicit "
-            "support in evidence_manifest and must become substantive cited prose in the output "
-            "language. Preserve every valid field, use only supporting fragments, and set a field "
-            "to null if it cannot be supported exactly. Return all eight keys as JSON only.\n"
+            "support in this minimal evidence_manifest and must become substantive cited prose in "
+            "the output language. Use only supporting fragments, and set a field to null if it "
+            "cannot be supported exactly. Return a JSON object containing only named failure fields.\n"
             f"{json.dumps(repair_payload, ensure_ascii=False, separators=(',', ':'))}"
         )
 
     @staticmethod
-    def _json_format_repair_prompt(*, previous_response: str, language: str) -> str:
+    def _json_format_repair_prompt(
+        *,
+        previous_response: str,
+        language: str,
+        target_sections: list[str],
+    ) -> str:
         return (
             "Convert the supplied model response into one valid JSON object with exactly these keys: "
             "brief, definition, clinical_features, epidemiology, transmission, prevention, "
-            "surveillance_note, risk_groups. Preserve wording and citation markers; do not add facts. "
-            "Use null for missing values and output JSON only. "
-            f"Language: {language}. Response: {previous_response}"
+            "surveillance_note, risk_groups. Preserve wording and citation markers for target_sections "
+            "only; do not add facts. All non-target keys must be null. Use null for missing values and "
+            "output JSON only. "
+            f"Language: {language}. Target sections: {json.dumps(target_sections)}. Response: {previous_response}"
         )
 
     @staticmethod
@@ -1317,10 +1538,23 @@ class AIDiseaseBriefGenerator:
         try:
             parsed = json.loads(text)
         except json.JSONDecodeError:
-            match = re.search(r"\{.*\}", text, flags=re.S)
-            if not match:
+            # Some otherwise-valid providers append a short natural-language
+            # acknowledgement after the requested object.  A greedy regex
+            # joins that acknowledgement (or a second object) into invalid
+            # JSON.  Decode one complete object instead, accepting only the
+            # first structurally valid object in the response.
+            decoder = json.JSONDecoder()
+            parsed = None
+            for match in re.finditer(r"\{", text):
+                try:
+                    candidate, _ = decoder.raw_decode(text, match.start())
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(candidate, dict):
+                    parsed = candidate
+                    break
+            if parsed is None:
                 raise
-            parsed = json.loads(match.group(0))
         if not isinstance(parsed, dict):
             raise ValueError("AI response was not a JSON object")
         return parsed

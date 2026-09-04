@@ -959,6 +959,8 @@ async def test_pipeline_applies_core_then_unpaywall_then_openalex(monkeypatch):
         "europe_pmc_errors": 0,
         "unpaywall_errors": 0,
         "openalex_errors": 0,
+        "pubmed_abstract_enriched": 0,
+        "pubmed_abstract_errors": 0,
         "enrichment_errors": 0,
         "enrichment_failed_providers": [],
         "enrichment_degraded_review": 0,

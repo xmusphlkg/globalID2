@@ -59,7 +59,10 @@ export interface DiseaseKnowledgeCatalogueItem {
   knowledge_profile_type: string;
   knowledge_profile_schema: Record<string, unknown>;
   repair_sections: string[];
-  repair_priority: "none" | "high" | "urgent";
+  repair_sections_by_language: Record<string, string[]>;
+  repair_reasons_by_language: Record<string, string[]>;
+  required_gap_sections: string[];
+  repair_priority: "none" | "normal" | "high" | "urgent";
   language_quality: Record<string, KnowledgeBriefQuality>;
   source_count: number;
   brief_statuses: Record<string, string>;
@@ -153,7 +156,10 @@ export interface DiseaseKnowledgeDetail {
   knowledge_profile_type: string;
   knowledge_profile_schema: Record<string, unknown>;
   repair_sections: string[];
-  repair_priority: "none" | "high" | "urgent";
+  repair_sections_by_language: Record<string, string[]>;
+  repair_reasons_by_language: Record<string, string[]>;
+  required_gap_sections: string[];
+  repair_priority: "none" | "normal" | "high" | "urgent";
   language_quality: Record<string, KnowledgeBriefQuality>;
   evidence_quality: {
     sufficient: boolean;

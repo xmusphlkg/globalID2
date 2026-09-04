@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -9,6 +10,7 @@ from sqlalchemy import Text, and_, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.control_plane.runtime import runtime_registry
+from src.control_plane.system_resources import proxy_location, system_resources
 from src.domain import AutomationJob, DataReleaseJob, Task, TaskStatus, TaskType
 
 
@@ -235,11 +237,19 @@ class ControlPlaneOverviewService:
         }
 
     async def overview(self) -> dict[str, Any]:
+        resources_task = asyncio.create_task(asyncio.to_thread(system_resources))
+        proxy_task = asyncio.create_task(proxy_location())
+        # SQLAlchemy AsyncSession permits only one in-flight database operation.
         task_counts = await self.task_counts()
         schedules = await self.schedule_counts()
-        services, heartbeat_available = await runtime_registry.list_services()
+        runtime = await runtime_registry.list_services()
         actions = await self.action_items(limit=8)
-        failed_types, active_types = await self.pipeline_task_types()
+        pipeline_types = await self.pipeline_task_types()
+        recent_tasks = await self.recent_tasks()
+        resources, proxy = await asyncio.gather(resources_task, proxy_task)
+        services, heartbeat_available = runtime
+        failed_types, active_types = pipeline_types
+        resources["proxy"] = proxy
         return {
             "generated_at": datetime.now(timezone.utc),
             "tasks": task_counts,
@@ -248,8 +258,9 @@ class ControlPlaneOverviewService:
                 "heartbeat_available": heartbeat_available,
                 "services": services,
             },
+            "system_resources": resources,
             "action_items": actions,
-            "recent_tasks": await self.recent_tasks(),
+            "recent_tasks": recent_tasks,
             "pipeline": [
                 {
                     "id": "ingestion",

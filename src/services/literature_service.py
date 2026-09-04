@@ -173,6 +173,11 @@ class LiteratureService:
                 except Exception:
                     logger.exception("Research Radar scheduled synchronization failed")
             if (cfg.ai_enrichment_enabled or cfg.weekly_ai_review_enabled) and cfg.ai_enrichment_schedule_enabled:
+                enrichment_persisted = (
+                    await schedule_state_repository.load("literature")
+                ).get(self.ENRICHMENT_JOB_ID, {})
+                if enrichment_persisted.get("next_run_at") is not None:
+                    self._enrichment_state.next_run_at = enrichment_persisted["next_run_at"]
                 if self._enrichment_state.next_run_at is None:
                     self._enrichment_state.next_run_at = self._next_enrichment_run(now)
                 if now >= self._enrichment_state.next_run_at:
@@ -207,6 +212,13 @@ class LiteratureService:
         current = now or datetime.now(ZoneInfo(cfg.timezone))
         return current + timedelta(minutes=cfg.ai_enrichment_interval_minutes)
 
+    def _next_enrichment_catch_up_run(self, now: datetime | None = None) -> datetime:
+        cfg = self._config()
+        current = now or datetime.now(ZoneInfo(cfg.timezone))
+        return current + timedelta(
+            minutes=getattr(cfg, "ai_enrichment_catch_up_interval_minutes", 1)
+        )
+
     async def trigger_job(self, job_id: str, *, manual: bool, since: datetime | None = None) -> dict[str, Any]:
         if job_id != self.JOB_ID:
             raise ValueError(f"Literature job not found: {job_id}")
@@ -237,6 +249,7 @@ class LiteratureService:
                     task_type=TaskType.SYNC_LITERATURE,
                     task_name="Refresh GIDS Research Radar",
                     priority=TaskPriority.NORMAL,
+                    status=TaskStatus.QUEUED,
                     description="Incremental Crossref and Europe PMC metadata synchronization",
                     input_data={
                         "literature_job_id": self.JOB_ID,
@@ -246,7 +259,6 @@ class LiteratureService:
                     },
                     tags=["research-radar", "literature"],
                 )
-                task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
                 self._state.last_task_uuid = task.task_uuid
                 self._state.last_status = "queued"
                 self._state.last_finished_at = datetime.now(ZoneInfo(self._config().timezone))
@@ -400,7 +412,7 @@ class LiteratureService:
                 ).scalar_one_or_none()
             if active is not None:
                 if not manual:
-                    self._enrichment_state.next_run_at = self._next_enrichment_run()
+                    self._enrichment_state.next_run_at = self._next_enrichment_catch_up_run()
                     await schedule_state_repository.save(
                         "literature", self.ENRICHMENT_JOB_ID, self._enrichment_state
                     )
@@ -433,6 +445,7 @@ class LiteratureService:
                         else "Generate Research Radar evidence summaries"
                     ),
                     priority=TaskPriority.NORMAL,
+                    status=TaskStatus.QUEUED,
                     description=(
                         "Content-bound public-evidence AI review; never an editorial signature"
                         if weekly_only
@@ -455,7 +468,6 @@ class LiteratureService:
                         "autopilot",
                     ],
                 )
-                task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
                 self._enrichment_state.last_task_uuid = task.task_uuid
                 self._enrichment_state.last_status = "queued"
                 self._enrichment_state.last_finished_at = datetime.now(ZoneInfo(cfg.timezone))
@@ -501,8 +513,84 @@ class LiteratureService:
                     apply=True,
                 )
                 if output["weekly_ai_review"]["counts"]["failed"]:
-                    raise RuntimeError("weekly_brief_ai_review_failed_closed")
+                    output["weekly_ai_review"]["status"] = "failed_closed"
+                    output["weekly_ai_review"]["error"] = "weekly_brief_ai_review_failed_closed"
+                    if mode == "weekly_ai_review":
+                        raise RuntimeError("weekly_brief_ai_review_failed_closed")
+                    logger.warning(
+                        "Research Radar weekly AI review failed during combined enrichment; summary catch-up will continue"
+                    )
+        await self._schedule_enrichment_catch_up_if_needed(task, output)
         return output
+
+    async def _schedule_enrichment_catch_up_if_needed(
+        self,
+        task: Task,
+        output: dict[str, Any],
+    ) -> None:
+        cfg = self._config()
+        output["ai_enrichment_catch_up_required"] = 0
+        output["ai_enrichment_catch_up_scheduled"] = 0
+        output["ai_enrichment_catch_up_status"] = "not_required"
+        output["ai_enrichment_catch_up_next_action_code"] = "none"
+        if not (cfg.ai_enrichment_enabled and cfg.ai_enrichment_schedule_enabled):
+            output["ai_enrichment_catch_up_status"] = "disabled"
+            return
+        input_data = task.input_data or {}
+        if input_data.get("article_ids") or bool(input_data.get("force", False)):
+            output["ai_enrichment_catch_up_status"] = "targeted_run"
+            return
+        summaries = output.get("summaries")
+        if not isinstance(summaries, dict):
+            return
+        selected = int(summaries.get("articles") or 0)
+        requested_limit = min(
+            max(1, int(input_data.get("limit") or cfg.ai_enrichment_batch_size)),
+            cfg.ai_enrichment_batch_size,
+        )
+        output["ai_enrichment_catch_up_selected_articles"] = selected
+        output["ai_enrichment_catch_up_batch_limit"] = requested_limit
+        if selected < requested_limit:
+            return
+
+        output["ai_enrichment_catch_up_required"] = 1
+        now = datetime.now(ZoneInfo(cfg.timezone))
+        next_run_at = self._next_enrichment_catch_up_run(now)
+        advanced = await schedule_state_repository.schedule_earlier(
+            "literature",
+            self.ENRICHMENT_JOB_ID,
+            next_run_at,
+        )
+        if advanced:
+            self._enrichment_state.next_run_at = next_run_at
+            output["ai_enrichment_catch_up_scheduled"] = 1
+            output["ai_enrichment_catch_up_status"] = "scheduled"
+            output["ai_enrichment_catch_up_next_action_code"] = "await_accelerated_enrichment"
+            output["ai_enrichment_catch_up_next_run_at"] = _iso(next_run_at)
+            logger.info(
+                "Research Radar enrichment catch-up scheduled next_run_at={} selected_articles={} batch_limit={}",
+                next_run_at.isoformat(),
+                selected,
+                requested_limit,
+            )
+            return
+
+        persisted = (await schedule_state_repository.load("literature")).get(
+            self.ENRICHMENT_JOB_ID,
+            {},
+        )
+        persisted_next_run = persisted.get("next_run_at")
+        if _at_or_before(persisted_next_run, next_run_at):
+            self._enrichment_state.next_run_at = persisted_next_run
+            output["ai_enrichment_catch_up_status"] = "already_scheduled"
+            output["ai_enrichment_catch_up_next_action_code"] = "await_accelerated_enrichment"
+            output["ai_enrichment_catch_up_next_run_at"] = _iso(persisted_next_run)
+        else:
+            output["ai_enrichment_catch_up_status"] = "schedule_persistence_unavailable"
+            output["ai_enrichment_catch_up_next_action_code"] = "inspect_scheduler_persistence"
+            logger.warning(
+                "Research Radar enrichment catch-up could not confirm a durable earlier schedule"
+            )
 
     async def trigger_gap_discovery(
         self,
@@ -543,6 +631,7 @@ class LiteratureService:
                     task_type=TaskType.DISCOVER_LITERATURE_GAPS,
                     task_name="Discover evidence for Research Radar gaps",
                     priority=TaskPriority.HIGH,
+                    status=TaskStatus.QUEUED,
                     description="Targeted Crossref and Europe PMC discovery with automatic evidence gates",
                     input_data={
                         "literature_job_id": self.GAP_DISCOVERY_JOB_ID,
@@ -553,7 +642,6 @@ class LiteratureService:
                     },
                     tags=["research-radar", "literature", "evidence-gap", "autopilot"],
                 )
-                task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
                 self._gap_state.last_task_uuid = task.task_uuid
                 self._gap_state.last_status = "queued"
                 self._gap_state.last_finished_at = datetime.now(ZoneInfo(cfg.timezone))
@@ -737,6 +825,31 @@ class LiteratureService:
                 "source": "Model Center evidence agent",
                 "batch_size": cfg.ai_enrichment_batch_size,
                 "languages": cfg.ai_enrichment_languages,
+                "catch_up_interval_minutes": getattr(
+                    cfg,
+                    "ai_enrichment_catch_up_interval_minutes",
+                    None,
+                ),
+                "catch_up_required": bool(
+                    (latest_enrichment.output_data or {}).get("ai_enrichment_catch_up_required")
+                    if latest_enrichment is not None and isinstance(latest_enrichment.output_data, dict)
+                    else False
+                ),
+                "catch_up_status": (
+                    (latest_enrichment.output_data or {}).get("ai_enrichment_catch_up_status")
+                    if latest_enrichment is not None and isinstance(latest_enrichment.output_data, dict)
+                    else "unknown"
+                ),
+                "catch_up_next_action_code": (
+                    (latest_enrichment.output_data or {}).get("ai_enrichment_catch_up_next_action_code")
+                    if latest_enrichment is not None and isinstance(latest_enrichment.output_data, dict)
+                    else "inspect_latest_enrichment_result"
+                ),
+                "catch_up_next_run_at": (
+                    (latest_enrichment.output_data or {}).get("ai_enrichment_catch_up_next_run_at")
+                    if latest_enrichment is not None and isinstance(latest_enrichment.output_data, dict)
+                    else None
+                ),
                 "weekly_ai_review_enabled": cfg.weekly_ai_review_enabled,
                 "weekly_ai_review_batch_size": cfg.weekly_ai_review_batch_size,
                 "review_required": not cfg.autopilot_enabled,

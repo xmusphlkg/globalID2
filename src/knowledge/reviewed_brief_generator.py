@@ -118,6 +118,7 @@ class ReviewedDiseaseBriefGenerator:
                 or target_sections
                 or profile_schema.required_fields
             ),
+            entity_aliases=disease.get("evidence_entity_aliases") or (),
         )
         payload = {
             **scaffold,
@@ -132,7 +133,7 @@ class ReviewedDiseaseBriefGenerator:
                 **(scaffold.get("metadata") or {}),
                 "generator": "ReviewedDiseaseBriefGenerator",
                 "reviewed_profile_version": entry.get("version", 1),
-                "pipeline_version": 2,
+                "pipeline_version": 3,
                 "profile_schema": profile_schema.to_dict(),
                 "target_sections": target_sections,
                 "source_urls": ordered_urls or [],
