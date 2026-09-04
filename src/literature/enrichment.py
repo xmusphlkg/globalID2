@@ -238,7 +238,14 @@ class LiteratureSummaryGenerator:
             preferred_models=preferred_models,
             timeout_seconds=timeout_seconds,
         )
-        parsed = _parse_json(str(response["raw_response"]))
+        parse_failed = False
+        try:
+            parsed = _parse_json(str(response["raw_response"]))
+        except Exception:
+            if language != "zh" or not canonical_fields:
+                raise
+            parse_failed = True
+            parsed = self._canonical_contract_fallback_summary(canonical_fields)
         if language == "zh" and canonical_fields:
             parsed = await self._repair_bilingual_topology(
                 parsed,
@@ -311,6 +318,8 @@ class LiteratureSummaryGenerator:
         notes = "Generated from one article for editorial review; not public until approved."
         if rejected_overlap:
             notes += f" Removed verbatim-overlap fields: {', '.join(rejected_overlap)}."
+        if parse_failed:
+            notes += " Recovered malformed Chinese JSON from the canonical English contract."
         return EnrichmentResult(
             fields=fields,
             evidence_map=evidence_map,
@@ -408,6 +417,19 @@ class LiteratureSummaryGenerator:
             "evidence": ["abstract", "bibliographic_metadata"],
             "confidence": 0.55,
             "fallback": "canonical_english_contract",
+        }
+
+    def _canonical_contract_fallback_summary(
+        self,
+        canonical_fields: dict[str, str | None],
+    ) -> dict[str, Any]:
+        return {
+            field: (
+                None
+                if canonical_fields.get(field) in (None, "")
+                else self._canonical_contract_fallback(field, canonical_fields.get(field))
+            )
+            for field in SUMMARY_FIELDS
         }
 
     @staticmethod

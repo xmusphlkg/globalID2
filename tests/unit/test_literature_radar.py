@@ -1152,6 +1152,31 @@ async def test_chinese_enrichment_repairs_different_null_field_topology():
     assert result.evidence_map["population_setting"]["fallback"] == "canonical_english_contract"
 
 
+@pytest.mark.asyncio
+async def test_chinese_enrichment_recovers_malformed_json_from_canonical_contract():
+    candidate = normalize_crossref(_crossref_payload())
+    assert candidate is not None
+    canonical = {field: f"Canonical {field}." for field in SUMMARY_FIELDS}
+    canonical["population_setting"] = None
+
+    class MalformedJsonAgent(_FakeLiteratureAgent):
+        async def process(self, **_kwargs):
+            self.calls.append(_kwargs)
+            return {"raw_response": '{"research_question":{"text":"broken"'}
+
+    result = await LiteratureSummaryGenerator(agent=MalformedJsonAgent()).generate(
+        article=candidate, language="zh", diseases=["Dengue"], countries=["Japan"],
+        topics=["Surveillance"], timeout_seconds=10, preferred_models=[],
+        canonical_fields=canonical,
+    )
+
+    assert result.canonical_summary_fingerprint
+    assert result.fields["research_question"].startswith("研究问题按英文规范摘要保留同等含义")
+    assert result.fields["population_setting"] is None
+    assert result.evidence_map["research_question"]["fallback"] == "canonical_english_contract"
+    assert "Recovered malformed Chinese JSON" in result.review_notes
+
+
 class _ScalarResult:
     def __init__(self, value):
         self.value = value
