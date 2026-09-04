@@ -33,6 +33,7 @@ from .controlled_discovery import build_controlled_query_batches, fetch_controll
 from .normalization import (
     apply_europe_pmc,
     apply_openalex,
+    apply_pubmed_abstract,
     apply_unpaywall,
     normalize_crossref,
     normalize_biorxiv,
@@ -745,9 +746,11 @@ class LiteraturePipeline:
             "europe_pmc_enriched": 0,
             "unpaywall_enriched": 0,
             "openalex_enriched": 0,
+            "pubmed_abstract_enriched": 0,
             "europe_pmc_errors": 0,
             "unpaywall_errors": 0,
             "openalex_errors": 0,
+            "pubmed_abstract_errors": 0,
             "enrichment_errors": 0,
             "enrichment_failed_providers": [],
             "enrichment_degraded_review": 0,
@@ -775,6 +778,32 @@ class LiteraturePipeline:
                         apply_europe_pmc(candidate, enrichment[candidate.doi])
             except Exception as exc:
                 record_failure("europe_pmc", exc)
+
+        if getattr(self.config, "pubmed_enabled", False):
+            try:
+                minimum_abstract_length = int(getattr(self.config, "ai_min_abstract_characters", 180))
+                pmids = list(dict.fromkeys(
+                    candidate.pmid
+                    for candidate in candidates
+                    if candidate.pmid
+                    and len(candidate.abstract_text or "") < minimum_abstract_length
+                ))
+                abstracts = await PubMedClient(
+                    contact_email=self.config.contact_email,
+                    api_key=getattr(self.config, "pubmed_api_key", ""),
+                    tool=getattr(self.config, "pubmed_tool", "GIDSResearchRadar"),
+                    timeout_seconds=self.config.request_timeout_seconds,
+                    retries=self.config.max_retries,
+                    min_interval_seconds=getattr(self.config, "pubmed_min_interval_seconds", 0.34),
+                ).fetch_abstracts(
+                    pmids[: getattr(self.config, "max_pubmed_records", 200)]
+                )
+                counts["pubmed_abstract_enriched"] = len(abstracts)
+                for candidate in candidates:
+                    if candidate.pmid and candidate.pmid in abstracts:
+                        apply_pubmed_abstract(candidate, abstracts[candidate.pmid])
+            except Exception as exc:
+                record_failure("pubmed_abstract", exc)
 
         # Unpaywall is the dedicated legal-OA source, so it gets first chance
         # to fill OA gaps after the two core sources.

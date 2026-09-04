@@ -135,6 +135,56 @@ async def test_optional_provider_failures_are_isolated_and_other_providers_conti
     assert "http" not in serialized_counts
 
 
+async def test_pubmed_efetch_enriches_short_abstract_candidates(monkeypatch):
+    class AbstractPubMed:
+        calls = []
+
+        def __init__(self, **_kwargs) -> None:
+            pass
+
+        async def fetch_abstracts(self, pmids):
+            type(self).calls.append(list(pmids))
+            return {
+                "123": {
+                    "pmid": "123",
+                    "abstractText": "Detailed PubMed abstract " * 20,
+                    "source": "pubmed-efetch",
+                }
+            }
+
+    monkeypatch.setattr("src.literature.pipeline.PubMedClient", AbstractPubMed)
+    config = SimpleNamespace(
+        **{
+            **_config().__dict__,
+            "pubmed_enabled": True,
+            "pubmed_api_key": "",
+            "pubmed_tool": "GIDSTest",
+            "pubmed_min_interval_seconds": 0,
+            "max_pubmed_records": 10,
+            "ai_min_abstract_characters": 180,
+            "unpaywall_enabled": False,
+            "openalex_enabled": False,
+        }
+    )
+    candidate = _candidate()
+    candidate.pmid = "123"
+    candidate.abstract_text = "Short"
+    complete = _candidate()
+    complete.article_id = "complete"
+    complete.slug = "complete"
+    complete.doi = "10.1000/complete"
+    complete.pmid = "456"
+    complete.abstract_text = "Long " * 80
+
+    counts = await LiteraturePipeline(config)._enrich_candidates([candidate, complete])
+
+    assert AbstractPubMed.calls == [["123"]]
+    assert counts["pubmed_abstract_enriched"] == 1
+    assert candidate.abstract_text.startswith("Detailed PubMed abstract")
+    assert candidate.source_payload["pubmed_efetch"]["source"] == "pubmed-efetch"
+    assert complete.abstract_text == "Long " * 80
+
+
 def test_degraded_enrichment_holds_publishable_thin_candidate_for_review():
     classification = Classification(publication_status="published")
     assert _hold_degraded_enrichment_for_review(classification, enrichment_degraded=True) is True

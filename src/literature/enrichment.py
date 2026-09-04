@@ -400,7 +400,7 @@ class LiteratureEnrichmentPipeline:
         force: bool,
     ) -> tuple[list[LiteratureArticle], dict[str, dict[str, list[str]]]]:
         async with get_db() as db:
-            query = (
+            base_query = (
                 select(LiteratureArticle)
                 .where(
                     LiteratureArticle.publication_status.in_(("review", "published")),
@@ -408,25 +408,12 @@ class LiteratureEnrichmentPipeline:
                     LiteratureArticle.abstract_text.is_not(None),
                 )
                 .order_by(LiteratureArticle.discovery_score.desc(), LiteratureArticle.indexed_at.desc())
-                # Pull beyond one batch so completed top-ranked records do not
-                # starve lower-ranked records in scheduled operation.
-                .limit(limit if requested_ids else max(100, limit * 20))
             )
             if self.config.ai_require_open_access:
-                query = query.where(LiteratureArticle.open_access_status == "open")
+                base_query = base_query.where(LiteratureArticle.open_access_status == "open")
             if requested_ids:
-                query = query.where(LiteratureArticle.article_id.in_(requested_ids))
-            candidates = list((await db.execute(query)).scalars().all())
-            candidate_ids = [article.article_id for article in candidates]
-            existing_summaries = (
-                await db.execute(
-                    select(LiteratureSummary).where(LiteratureSummary.article_id.in_(candidate_ids))
-                )
-            ).scalars().all() if candidate_ids else []
-            summaries_by_key = {
-                (summary.article_id, summary.language): summary
-                for summary in existing_summaries
-            }
+                base_query = base_query.where(LiteratureArticle.article_id.in_(requested_ids))
+            summaries_by_key: dict[tuple[str, str], LiteratureSummary] = {}
 
             def needs_work(article: LiteratureArticle) -> bool:
                 if len(article.abstract_text or "") < self.config.ai_min_abstract_characters:
@@ -453,14 +440,60 @@ class LiteratureEnrichmentPipeline:
                         return True
                 return False
 
-            articles = [article for article in candidates if needs_work(article)][:limit]
+            articles: list[LiteratureArticle] = []
+            scan_batch_size = limit if requested_ids else max(100, limit * 20)
+            max_scan = (
+                limit
+                if requested_ids
+                else max(scan_batch_size, int(getattr(self.config, "ai_enrichment_candidate_scan_limit", 5000)))
+            )
+            scanned = 0
+            offset = 0
+            while len(articles) < limit and scanned < max_scan:
+                remaining_scan = max_scan - scanned
+                batch_query = base_query.limit(min(scan_batch_size, remaining_scan))
+                if not requested_ids:
+                    batch_query = batch_query.offset(offset)
+                candidates = list((await db.execute(batch_query)).scalars().all())
+                if not candidates:
+                    break
+                scanned += len(candidates)
+                offset += len(candidates)
+                candidate_ids = [article.article_id for article in candidates]
+                existing_summaries = list(
+                    (
+                        await db.execute(
+                            select(LiteratureSummary).where(LiteratureSummary.article_id.in_(candidate_ids))
+                        )
+                    ).scalars().all()
+                ) if candidate_ids else []
+                summaries_by_key.update(
+                    {
+                        (summary.article_id, summary.language): summary
+                        for summary in existing_summaries
+                    }
+                )
+                for article in candidates:
+                    if needs_work(article):
+                        articles.append(article)
+                        if len(articles) >= limit:
+                            break
+                if requested_ids or len(candidates) < scan_batch_size:
+                    break
             article_ids = [article.article_id for article in articles]
+            selected_summaries = list(
+                (
+                    await db.execute(
+                        select(LiteratureSummary).where(LiteratureSummary.article_id.in_(article_ids))
+                    )
+                ).scalars().all()
+            ) if article_ids else []
             context: dict[str, dict[str, Any]] = {
                 article_id: {"diseases": [], "countries": [], "topics": [], "canonical_en": None}
                 for article_id in article_ids
             }
             if article_ids:
-                for summary in existing_summaries:
+                for summary in selected_summaries:
                     if summary.article_id in context and summary.language == "en":
                         context[summary.article_id]["canonical_en"] = {
                             field: getattr(summary, field) for field in SUMMARY_FIELDS

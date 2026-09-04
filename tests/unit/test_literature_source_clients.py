@@ -9,6 +9,7 @@ from src.literature.clients.publisher_apis import ElsevierClient, SpringerNature
 from src.literature.clients.pubmed import PubMedClient
 from src.literature.clients.rss import PublisherRssClient, validate_feed_whitelist
 from src.literature.normalization import (
+    apply_pubmed_abstract,
     normalize_biorxiv,
     normalize_elsevier,
     normalize_pubmed,
@@ -237,6 +238,73 @@ async def test_pubmed_esearch_esummary_uses_ncbi_metadata_contract_and_normalize
     assert candidate.doi == "10.1000/pubmed"
     assert candidate.pmcid == "PMC123"
     assert candidate.source_urls["pubmed"] == "https://pubmed.ncbi.nlm.nih.gov/101/"
+
+
+@pytest.mark.asyncio
+async def test_pubmed_efetch_extracts_structured_abstracts_for_enrichment():
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        assert request.url.path.endswith("/efetch.fcgi")
+        assert request.url.params["db"] == "pubmed"
+        assert request.url.params["retmode"] == "xml"
+        assert request.url.params["id"] == "101,102"
+        return httpx.Response(
+            200,
+            text="""
+            <PubmedArticleSet>
+              <PubmedArticle>
+                <MedlineCitation>
+                  <PMID>101</PMID>
+                  <Article>
+                    <Abstract>
+                      <AbstractText Label="BACKGROUND">Dengue surveillance needs timely vaccination evidence.</AbstractText>
+                      <AbstractText Label="METHODS">We reviewed public-health reports.</AbstractText>
+                    </Abstract>
+                  </Article>
+                </MedlineCitation>
+              </PubmedArticle>
+              <PubmedArticle>
+                <MedlineCitation>
+                  <PMID>102</PMID>
+                  <Article>
+                    <Abstract>
+                      <AbstractText>Unlabelled pertussis surveillance abstract.</AbstractText>
+                    </Abstract>
+                  </Article>
+                </MedlineCitation>
+              </PubmedArticle>
+            </PubmedArticleSet>
+            """,
+            request=request,
+        )
+
+    client = PubMedClient(
+        contact_email="tests@example.org",
+        tool="GIDSTest",
+        retries=1,
+        min_interval_seconds=0,
+        transport=httpx.MockTransport(handler),
+    )
+    abstracts = await client.fetch_abstracts(["101", "102", "101"])
+
+    assert list(abstracts) == ["101", "102"]
+    assert abstracts["101"]["abstractText"].startswith("BACKGROUND: Dengue surveillance")
+    assert "METHODS: We reviewed public-health reports." in abstracts["101"]["abstractText"]
+    assert abstracts["102"]["abstractText"] == "Unlabelled pertussis surveillance abstract."
+    assert len(requests) == 1
+
+    candidate = normalize_pubmed({
+        "uid": "101",
+        "title": "Dengue vaccine surveillance",
+        "pubdate": "2026 Aug 20",
+    })
+    assert candidate is not None
+    apply_pubmed_abstract(candidate, abstracts["101"])
+    assert candidate.abstract_text == abstracts["101"]["abstractText"]
+    assert candidate.abstract_license == "PubMed abstract metadata"
+    assert candidate.source_payload["pubmed_efetch"]["source"] == "pubmed-efetch"
 
 
 def test_preprint_registry_marking_survives_higher_priority_provider_deduplication():

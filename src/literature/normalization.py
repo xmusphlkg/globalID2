@@ -508,6 +508,19 @@ def apply_europe_pmc(candidate: ArticleCandidate, payload: dict[str, Any]) -> Ar
     return candidate
 
 
+def apply_pubmed_abstract(candidate: ArticleCandidate, payload: dict[str, Any]) -> ArticleCandidate:
+    abstract = compact_text(payload.get("abstractText"))
+    if abstract and len(abstract) > len(candidate.abstract_text or ""):
+        candidate.abstract_text = abstract
+        candidate.abstract_license = candidate.abstract_license or "PubMed abstract metadata"
+    pmid = compact_text(payload.get("pmid"))
+    if pmid:
+        candidate.pmid = candidate.pmid or pmid
+        candidate.source_urls["pubmed"] = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+    candidate.source_payload = {**candidate.source_payload, "pubmed_efetch": payload}
+    return candidate
+
+
 def apply_unpaywall(candidate: ArticleCandidate, payload: dict[str, Any]) -> ArticleCandidate:
     location = payload.get("best_oa_location")
     if not isinstance(location, dict):
@@ -1042,6 +1055,7 @@ def normalize_official_guidance(payload: dict[str, Any]) -> ArticleCandidate | N
 __all__ = [
     "apply_europe_pmc",
     "apply_openalex",
+    "apply_pubmed_abstract",
     "apply_unpaywall",
     "compact_text",
     "crossref_version_relations",
