@@ -379,6 +379,7 @@ class LiteratureEnrichmentPipeline:
                         canonical_fields = None
                     logger.warning("Literature enrichment failed for {}/{}: {}", article.article_id, language, exc)
                     counts["failed"] += 1
+                    await self._store_failure(article, language=language, error=exc)
                     errors.append({"article_id": article.article_id, "language": language, "error": str(exc)[:500]})
                 finally:
                     await task_manager.update_task_progress(task.task_uuid, min(99, int(100 * step / total)))
@@ -557,6 +558,41 @@ class LiteratureEnrichmentPipeline:
                 }
             summary.generated_at = datetime.now(timezone.utc)
             summary.review_notes = result.review_notes
+            await db.commit()
+
+    async def _store_failure(self, article: LiteratureArticle, *, language: str, error: Exception) -> None:
+        async with get_db() as db:
+            summary = (
+                await db.execute(
+                    select(LiteratureSummary).where(
+                        LiteratureSummary.article_id == article.article_id,
+                        LiteratureSummary.language == language,
+                    )
+                )
+            ).scalar_one_or_none()
+            if summary is None:
+                summary = LiteratureSummary(article_id=article.article_id, language=language)
+                db.add(summary)
+            existing_metadata = dict(summary.generation_metadata or {})
+            if summary.generated_by == "control-plane-editor" or existing_metadata.get("editorial_reviewed_at"):
+                return
+            if summary.status == "published" and not existing_metadata.get("autopilot"):
+                return
+            attempts = int(existing_metadata.get("quality_attempts") or 0) + 1
+            summary.status = "review"
+            summary.generated_by = summary.generated_by or "literature-evidence-agent"
+            summary.generation_metadata = {
+                **existing_metadata,
+                "protocol_version": LiteratureSummaryGenerator.PROTOCOL_VERSION,
+                "source_fingerprint": source_fingerprint(article),
+                "publication_gate": "generation-failed",
+                "quality_attempts": attempts,
+                "last_generation_error": type(error).__name__,
+            }
+            summary.review_notes = (
+                f"{summary.review_notes or ''} Generation failed for {language}: {str(error)[:240]}"
+            ).strip()
+            summary.generated_at = datetime.now(timezone.utc)
             await db.commit()
 
 

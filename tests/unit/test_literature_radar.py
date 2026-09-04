@@ -25,13 +25,16 @@ from src.generation.site_data_literature import (
 from src.literature.classification import classify_candidate
 from src.literature.clients.crossref import CrossrefClient
 from src.literature.enrichment import (
+    LiteratureEnrichmentPipeline,
     LiteratureEvidenceAgent,
     LiteratureSummaryGenerator,
     SUMMARY_FIELDS,
 )
+import src.literature.enrichment as enrichment_module
 from src.literature.knowledge_graph import build_knowledge_graph
 from src.literature.normalization import normalize_crossref
 from src.literature.normalization import normalize_europe_pmc
+from src.domain import LiteratureSummary
 from src.services.literature_gap_service import build_gap_query_plan
 from src.services.literature_automation_service import (
     decide_article,
@@ -1142,6 +1145,84 @@ async def test_chinese_enrichment_rejects_different_null_field_topology():
             topics=["Surveillance"], timeout_seconds=10, preferred_models=[],
             canonical_fields=canonical,
         )
+
+
+class _ScalarResult:
+    def __init__(self, value):
+        self.value = value
+
+    def scalar_one_or_none(self):
+        return self.value
+
+
+class _SummaryFailureDB:
+    def __init__(self):
+        self.summary = None
+        self.commits = 0
+
+    async def execute(self, _statement):
+        return _ScalarResult(self.summary)
+
+    def add(self, summary):
+        self.summary = summary
+
+    async def commit(self):
+        self.commits += 1
+
+
+class _SummaryFailureContext:
+    def __init__(self, db):
+        self.db = db
+
+    async def __aenter__(self):
+        return self.db
+
+    async def __aexit__(self, _exc_type, _exc, _tb):
+        return False
+
+
+@pytest.mark.asyncio
+async def test_enrichment_generation_failures_record_attempts_and_stop_requeue(monkeypatch):
+    db = _SummaryFailureDB()
+    monkeypatch.setattr(enrichment_module, "get_db", lambda: _SummaryFailureContext(db))
+    article = SimpleNamespace(
+        article_id="lit-failed-zh",
+        title="Dengue vaccine evidence",
+        doi="10.1000/dengue",
+        journal="Vaccine",
+        published_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+        abstract_text="A sufficiently long abstract about dengue vaccination and surveillance. " * 5,
+        integrity_status="current",
+    )
+    pipeline = LiteratureEnrichmentPipeline(SimpleNamespace(
+        autopilot_enabled=True,
+        ai_max_quality_attempts=2,
+        ai_min_abstract_characters=180,
+    ))
+
+    await pipeline._store_failure(
+        article,
+        language="zh",
+        error=ValueError("bilingual_null_alignment_mismatch:main_findings"),
+    )
+
+    assert isinstance(db.summary, LiteratureSummary)
+    assert db.summary.status == "review"
+    assert db.summary.language == "zh"
+    assert db.summary.generated_by == "literature-evidence-agent"
+    assert db.summary.generation_metadata["publication_gate"] == "generation-failed"
+    assert db.summary.generation_metadata["quality_attempts"] == 1
+    assert db.summary.generation_metadata["last_generation_error"] == "ValueError"
+    assert await pipeline._should_skip(article, language="zh", force=False) is False
+
+    await pipeline._store_failure(
+        article,
+        language="zh",
+        error=ValueError("bilingual_null_alignment_mismatch:main_findings"),
+    )
+
+    assert db.summary.generation_metadata["quality_attempts"] == 2
+    assert await pipeline._should_skip(article, language="zh", force=False) is True
 
 
 def _autopilot_config():
