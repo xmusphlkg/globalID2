@@ -3663,6 +3663,15 @@ export interface components {
             /** Reviewer */
             reviewer: string;
         };
+        /** CapacitySummaryOut */
+        CapacitySummaryOut: {
+            /** Total Bytes */
+            total_bytes?: number | null;
+            /** Used Bytes */
+            used_bytes?: number | null;
+            /** Used Percent */
+            used_percent?: number | null;
+        };
         /** CloudflareSettingsOut */
         CloudflareSettingsOut: {
             /** Cloudflare Account Id Present */
@@ -3777,6 +3786,7 @@ export interface components {
             schedules: {
                 [key: string]: number;
             };
+            system_resources: components["schemas"]["SystemResourcesOut"];
             /** Tasks */
             tasks: {
                 [key: string]: number;
@@ -3874,6 +3884,18 @@ export interface components {
             rejection_reasons?: {
                 [key: string]: number;
             };
+        };
+        /** CpuSummaryOut */
+        CpuSummaryOut: {
+            /**
+             * Cores
+             * @default 0
+             */
+            cores: number;
+            /** Load 1M */
+            load_1m?: number | null;
+            /** Usage Percent */
+            usage_percent?: number | null;
         };
         /** CurrencySlice */
         CurrencySlice: {
@@ -4577,8 +4599,18 @@ export interface components {
              * @default none
              */
             repair_priority: string;
+            /** Repair Reasons By Language */
+            repair_reasons_by_language?: {
+                [key: string]: string[];
+            };
             /** Repair Sections */
             repair_sections?: string[];
+            /** Repair Sections By Language */
+            repair_sections_by_language?: {
+                [key: string]: string[];
+            };
+            /** Required Gap Sections */
+            required_gap_sections?: string[];
             /** Slug */
             slug?: string | null;
             /**
@@ -4656,8 +4688,18 @@ export interface components {
              * @default none
              */
             repair_priority: string;
+            /** Repair Reasons By Language */
+            repair_reasons_by_language?: {
+                [key: string]: string[];
+            };
             /** Repair Sections */
             repair_sections?: string[];
+            /** Repair Sections By Language */
+            repair_sections_by_language?: {
+                [key: string]: string[];
+            };
+            /** Required Gap Sections */
+            required_gap_sections?: string[];
             /** Slug */
             slug?: string | null;
             /**
@@ -5519,6 +5561,34 @@ export interface components {
             rate_limit_remaining_seconds: number;
             /** Rate Limit Scope */
             rate_limit_scope?: string | null;
+            /**
+             * Runtime Failure Active
+             * @default false
+             */
+            runtime_failure_active: boolean;
+            /** Runtime Failure Cooldown Until */
+            runtime_failure_cooldown_until?: string | null;
+            /**
+             * Runtime Failure Remaining Seconds
+             * @default 0
+             */
+            runtime_failure_remaining_seconds: number;
+            /** Runtime Failure Scope */
+            runtime_failure_scope?: string | null;
+            /**
+             * Runtime Failure Streak
+             * @default 0
+             */
+            runtime_failure_streak: number;
+            /** Runtime Last Error */
+            runtime_last_error?: string | null;
+            /** Runtime Latency Ewma Ms */
+            runtime_latency_ewma_ms?: number | null;
+            /**
+             * Runtime Timeout Count
+             * @default 0
+             */
+            runtime_timeout_count: number;
             /** Temperature */
             temperature?: number | null;
         };
@@ -5562,6 +5632,24 @@ export interface components {
             mortality_rate?: number | null;
             /** Year */
             year: number;
+        };
+        /** NetworkConnectionsOut */
+        NetworkConnectionsOut: {
+            /**
+             * Established
+             * @default 0
+             */
+            established: number;
+            /**
+             * Listening
+             * @default 0
+             */
+            listening: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
         };
         /** NotificationCreateRequest */
         NotificationCreateRequest: {
@@ -5827,6 +5915,32 @@ export interface components {
              * @default 0
              */
             rate_limit_remaining_seconds: number;
+            /**
+             * Runtime Failure Active
+             * @default false
+             */
+            runtime_failure_active: boolean;
+            /** Runtime Failure Cooldown Until */
+            runtime_failure_cooldown_until?: string | null;
+            /**
+             * Runtime Failure Remaining Seconds
+             * @default 0
+             */
+            runtime_failure_remaining_seconds: number;
+            /**
+             * Runtime Failure Streak
+             * @default 0
+             */
+            runtime_failure_streak: number;
+            /** Runtime Last Error */
+            runtime_last_error?: string | null;
+            /** Runtime Latency Ewma Ms */
+            runtime_latency_ewma_ms?: number | null;
+            /**
+             * Runtime Timeout Count
+             * @default 0
+             */
+            runtime_timeout_count: number;
         };
         /** ProviderUpdateRequest */
         ProviderUpdateRequest: {
@@ -5857,6 +5971,21 @@ export interface components {
             organization?: string | null;
             /** Priority */
             priority?: number | null;
+        };
+        /** ProxyLocationOut */
+        ProxyLocationOut: {
+            /** Configured */
+            configured: boolean;
+            /** Country Code */
+            country_code?: string | null;
+            /** Country Name */
+            country_name?: string | null;
+            /** Endpoint */
+            endpoint?: string | null;
+            /** Ip */
+            ip?: string | null;
+            /** Lookup Status */
+            lookup_status: string;
         };
         /** PublicHealthRisk */
         PublicHealthRisk: {
@@ -6364,6 +6493,56 @@ export interface components {
             rate_limit_remaining_seconds: number;
             /** Rate Limit Scope */
             rate_limit_scope?: string | null;
+            /**
+             * Runtime Failure Active
+             * @default false
+             */
+            runtime_failure_active: boolean;
+            /** Runtime Failure Cooldown Until */
+            runtime_failure_cooldown_until?: string | null;
+            /** Runtime Failure Kind */
+            runtime_failure_kind?: string | null;
+            /**
+             * Runtime Failure Remaining Seconds
+             * @default 0
+             */
+            runtime_failure_remaining_seconds: number;
+            /** Runtime Failure Scope */
+            runtime_failure_scope?: string | null;
+            /**
+             * Runtime Failure Streak
+             * @default 0
+             */
+            runtime_failure_streak: number;
+            /** Runtime Last Error */
+            runtime_last_error?: string | null;
+            /** Runtime Latency Ewma Ms */
+            runtime_latency_ewma_ms?: number | null;
+            /**
+             * Runtime Model Capacity
+             * @default 1
+             */
+            runtime_model_capacity: number;
+            /**
+             * Runtime Model Inflight
+             * @default 0
+             */
+            runtime_model_inflight: number;
+            /**
+             * Runtime Provider Capacity
+             * @default 1
+             */
+            runtime_provider_capacity: number;
+            /**
+             * Runtime Provider Inflight
+             * @default 0
+             */
+            runtime_provider_inflight: number;
+            /**
+             * Runtime Timeout Count
+             * @default 0
+             */
+            runtime_timeout_count: number;
         };
         /** RuntimeServiceOut */
         RuntimeServiceOut: {
@@ -6921,6 +7100,14 @@ export interface components {
             /** Task Uuid */
             task_uuid?: string | null;
         };
+        /** SystemResourcesOut */
+        SystemResourcesOut: {
+            cpu: components["schemas"]["CpuSummaryOut"];
+            disk: components["schemas"]["CapacitySummaryOut"];
+            memory: components["schemas"]["CapacitySummaryOut"];
+            network: components["schemas"]["NetworkConnectionsOut"];
+            proxy: components["schemas"]["ProxyLocationOut"];
+        };
         /** TaskCreateRequest */
         TaskCreateRequest: {
             /** Country Code */
@@ -7207,6 +7394,21 @@ export interface components {
              * @default 0
              */
             active_tasks: number;
+            /**
+             * Ai Concurrency Adaptive
+             * @default false
+             */
+            ai_concurrency_adaptive: boolean;
+            /**
+             * Ai Concurrency Current
+             * @default 1
+             */
+            ai_concurrency_current: number;
+            /**
+             * Ai Concurrency Max
+             * @default 1
+             */
+            ai_concurrency_max: number;
             /** Latest Completed At */
             latest_completed_at?: string | null;
             /** Latest Created At */
