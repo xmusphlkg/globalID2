@@ -19,6 +19,7 @@ from typing import Any
 from sqlalchemy import select
 
 from src.ai.agents.base import BaseAgent
+from src.ai.model_center import get_active_model_routes
 from src.core import get_config, get_db, get_logger
 from src.core.task_manager import task_manager
 from src.domain import (
@@ -137,6 +138,28 @@ def _has_long_verbatim_overlap(source: str, output: str, *, words: int = 12) -> 
     return any(
         tuple(output_words[index : index + words]) in source_ngrams
         for index in range(len(output_words) - words + 1)
+    )
+
+
+def _is_transient_generation_error(error: Exception) -> bool:
+    if isinstance(error, (TimeoutError, asyncio.TimeoutError)):
+        return True
+    message = str(error or "").lower()
+    return any(
+        marker in message
+        for marker in (
+            "agent completion failed",
+            "canonical_english_summary_required",
+            "connection error",
+            "connect error",
+            "gateway timeout",
+            "no candidate model available",
+            "rate limit",
+            "service unavailable",
+            "temporarily unavailable",
+            "timed out",
+            "timeout",
+        )
     )
 
 
@@ -484,6 +507,11 @@ class LiteratureEnrichmentPipeline:
         )
         semaphore = asyncio.Semaphore(concurrency)
         preferred_models = list(input_data.get("preferred_models") or [])
+        route_preferences = (
+            preferred_models
+            if preferred_models
+            else await self._load_route_shard_preferences()
+        )
 
         async def record_progress() -> None:
             nonlocal step
@@ -491,11 +519,11 @@ class LiteratureEnrichmentPipeline:
                 step += 1
                 await task_manager.update_task_progress(task.task_uuid, min(99, int(100 * step / total)))
 
-        async def process_article(article: LiteratureArticle) -> None:
+        async def process_article(article_index: int, article: LiteratureArticle) -> None:
             generator = LiteratureSummaryGenerator()
             canonical_fields = context[article.article_id].get("canonical_en")
             async with semaphore:
-                for language in languages:
+                for language_index, language in enumerate(languages):
                     if await task_manager.is_cancel_requested(task.task_uuid):
                         raise RuntimeError("Literature enrichment cancelled")
                     try:
@@ -510,7 +538,10 @@ class LiteratureEnrichmentPipeline:
                             countries=context[article.article_id]["countries"],
                             topics=context[article.article_id]["topics"],
                             timeout_seconds=self.config.ai_model_request_timeout_seconds,
-                            preferred_models=preferred_models,
+                            preferred_models=self._rotated_route_preferences(
+                                route_preferences,
+                                article_index * max(1, len(languages)) + language_index
+                            ),
                             canonical_fields=canonical_fields if language == "zh" else None,
                         )
                         await self._store(article.article_id, language=language, result=result)
@@ -529,7 +560,7 @@ class LiteratureEnrichmentPipeline:
                     finally:
                         await record_progress()
 
-        await asyncio.gather(*(process_article(article) for article in articles))
+        await asyncio.gather(*(process_article(index, article) for index, article in enumerate(articles)))
         await task_manager.update_task_progress(task.task_uuid, 100)
         automation = None
         if self.config.autopilot_enabled:
@@ -537,6 +568,46 @@ class LiteratureEnrichmentPipeline:
 
             automation = await literature_automation_service.reconcile()
         return {**counts, "languages": languages, "errors": errors[:20], "automation": automation}
+
+    @staticmethod
+    def _rotated_route_preferences(route_preferences: list[str], offset: int) -> list[str]:
+        if len(route_preferences) <= 1:
+            return list(route_preferences)
+        position = offset % len(route_preferences)
+        return route_preferences[position:] + route_preferences[:position]
+
+    async def _load_route_shard_preferences(self) -> list[str]:
+        try:
+            routes = await get_active_model_routes()
+        except Exception as exc:
+            logger.warning("Failed to load active model routes for literature shard rotation: {}", exc)
+            return []
+
+        preferences: list[tuple[int, int, float, int, str]] = []
+        seen: set[str] = set()
+        for route in routes:
+            route_key = str(route.get("model_key") or route.get("model_name") or "").strip()
+            if not route_key or route_key in seen:
+                continue
+            seen.add(route_key)
+            try:
+                failure_streak = int(route.get("runtime_failure_streak") or 0)
+            except (TypeError, ValueError):
+                failure_streak = 0
+            try:
+                failure_count = int(route.get("runtime_failure_count") or 0)
+            except (TypeError, ValueError):
+                failure_count = 0
+            try:
+                latency = float(route.get("runtime_latency_ewma_ms"))
+            except (TypeError, ValueError):
+                latency = float("inf")
+            try:
+                priority = int(route.get("priority") or 10**6)
+            except (TypeError, ValueError):
+                priority = 10**6
+            preferences.append((failure_streak, failure_count, latency, priority, route_key))
+        return [route_key for *_metrics, route_key in sorted(preferences)]
 
     async def _load_articles(
         self,
@@ -758,16 +829,19 @@ class LiteratureEnrichmentPipeline:
                 return
             if summary.status == "published" and not existing_metadata.get("autopilot"):
                 return
-            attempts = int(existing_metadata.get("quality_attempts") or 0) + 1
+            previous_attempts = int(existing_metadata.get("quality_attempts") or 0)
+            transient = _is_transient_generation_error(error)
+            attempts = previous_attempts if transient else previous_attempts + 1
             summary.status = "review"
             summary.generated_by = summary.generated_by or "literature-evidence-agent"
             summary.generation_metadata = {
                 **existing_metadata,
                 "protocol_version": LiteratureSummaryGenerator.PROTOCOL_VERSION,
                 "source_fingerprint": source_fingerprint(article),
-                "publication_gate": "generation-failed",
+                "publication_gate": "generation-transient-failure" if transient else "generation-failed",
                 "quality_attempts": attempts,
                 "last_generation_error": type(error).__name__,
+                "last_generation_error_transient": transient,
             }
             summary.review_notes = (
                 f"{summary.review_notes or ''} Generation failed for {language}: {str(error)[:240]}"

@@ -229,6 +229,26 @@ def test_preferred_direct_fallback_does_not_jump_ahead_of_healthy_runtime_route(
     assert ordered == [runtime_route, direct_fallback]
 
 
+def test_preferred_runtime_route_key_selects_matching_shard() -> None:
+    slow_shard = {
+        "route_key": "provider-a:model-shared",
+        "model_name": "model-shared",
+        "route": {"model_name": "model-shared"},
+    }
+    preferred_shard = {
+        "route_key": "provider-b:model-shared",
+        "model_name": "model-shared",
+        "route": {"model_name": "model-shared"},
+    }
+
+    ordered = BaseAgent._prioritize_candidates(
+        [slow_shard, preferred_shard],
+        ["provider-b:model-shared"],
+    )
+
+    assert ordered == [preferred_shard, slow_shard]
+
+
 def test_empty_candidate_wait_uses_model_center_runtime_cooldown() -> None:
     wait_seconds = BaseAgent._estimate_wait_seconds_for_empty_candidates(
         runtime_routes=[

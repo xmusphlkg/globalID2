@@ -694,7 +694,7 @@ class LiteratureSettings(_BaseEnvSettings):
         default=False,
         description="Send any eligible abstract to an external model route, regardless of open-access status",
     )
-    ai_model_request_timeout_seconds: int = Field(default=60, ge=10, le=600)
+    ai_model_request_timeout_seconds: int = Field(default=35, ge=10, le=600)
     ai_wait_for_model_recovery: bool = Field(
         default=True,
         description="Wait once for Model Center route recovery before failing literature AI enrichment",

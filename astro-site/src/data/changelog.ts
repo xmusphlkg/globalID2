@@ -63,6 +63,10 @@ export const changelogReleases: ChangelogRelease[] = [
             en: 'Knowledge profiles now show an automating state while required evidence is still being enriched instead of sending unsupported content to manual review.',
             zh: '当必需证据仍在补全时，知识画像现在显示自动处理中状态，而不是把缺乏支撑的内容直接推给人工审核。',
           },
+          {
+            en: 'Research Radar summary enrichment now includes non-open-access records when a usable abstract is available and spreads concurrent requests across active Model Center route shards.',
+            zh: '研究雷达摘要补全现在会纳入非开放获取但已有可用摘要的记录，并将并发请求分散到活跃的模型中心路由分片。',
+          },
         ],
       },
       {
@@ -77,6 +81,10 @@ export const changelogReleases: ChangelogRelease[] = [
           {
             en: 'Improved task-worker restart behavior with adaptive AI concurrency, per-disease knowledge serialization, model-recovery wakeups, and safer singleton lease handling.',
             zh: '改进任务 worker 重启行为，加入自适应 AI 并发、按疾病串行化知识任务、模型恢复唤醒和更安全的单例租约处理。',
+          },
+          {
+            en: 'Transient model connectivity failures no longer consume Research Radar summary quality-attempt budgets, keeping affected abstracts retryable.',
+            zh: '临时模型连接失败不再消耗研究雷达摘要质量尝试次数，受影响摘要会继续保持可重试。',
           },
         ],
       },

@@ -22,6 +22,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Research Radar discovery accounting now tracks Crossref, Europe PMC, PubMed, optional providers, fallback usage, and source errors separately without advancing Crossref checkpoints during PubMed fallback.
 - Research Radar AI enrichment now scans deeper through already-processed high-ranking records so lower-ranked articles with complete abstracts are not starved by the default batch size.
 - Research Radar AI enrichment now processes article batches concurrently, uses a shorter per-route model timeout, and schedules one-minute catch-up runs while summary batches remain full.
+- Research Radar AI enrichment now includes any review/published article with a sufficiently detailed abstract, regardless of `open_access_status`, and rotates active Model Center route shards across concurrent summary requests.
 
 ### Fixed
 
@@ -34,6 +35,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Kept Research Radar summary generation moving when weekly AI review fails closed during a combined enrichment run; weekly review still records its own failures without failing the summary task.
 - Recovered malformed Chinese summary JSON from the canonical English summary contract when a validated English summary is already available.
 - Queued Research Radar tasks atomically at creation time so fast workers cannot claim a new task before the scheduler finishes marking it queued.
+- Kept transient model-route failures, connection outages, and English-summary dependency misses from consuming article quality-attempt budgets so eligible abstracts remain in the retry queue.
 
 ### Operations
 
@@ -41,6 +43,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Added focused coverage for knowledge automation, Model Center runtime health, PubMed clients and normalization, literature provider failure isolation, adaptive task-worker config, evidence-gated repairs, and epidemic-curve annual aggregation.
 - Backfilled PubMed abstracts for 189 existing published/review records, restarted the task runtime, and verified a control-plane-triggered enrichment task generated 6 summaries from 8 selected articles after the queue-selection fix.
 - Restarted the production task runtime after the summary catch-up fixes and verified consecutive control-plane/scheduler enrichment batches of 32 articles with zero summary-generation failures after the malformed-JSON fallback was deployed.
+- Reopened 39 transient Research Radar summary failures that were caused by model connectivity or bilingual dependency issues, then restarted the production worker and scheduler with route-shard rotation enabled.
 
 ## [0.9.3] - 2026-09-02
 
