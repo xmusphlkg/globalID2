@@ -42,6 +42,7 @@ class TaskManager:
         report_id: Optional[int] = None,
         parent_task_id: Optional[int] = None,
         priority: TaskPriority = TaskPriority.NORMAL,
+        status: TaskStatus = TaskStatus.PENDING,
         input_data: Optional[Dict[str, Any]] = None,
         tags: Optional[List[str]] = None,
         description: Optional[str] = None,
@@ -56,6 +57,7 @@ class TaskManager:
             report_id: 报告ID
             parent_task_id: 父任务ID
             priority: 优先级
+            status: 初始状态
             input_data: 输入数据
             tags: 标签列表
             description: 任务描述
@@ -73,6 +75,7 @@ class TaskManager:
                 task_name=task_name,
                 description=description,
                 priority=priority,
+                status=status,
                 country_id=country_id,
                 report_id=report_id,
                 parent_task_id=parent_task_id,

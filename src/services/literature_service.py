@@ -249,6 +249,7 @@ class LiteratureService:
                     task_type=TaskType.SYNC_LITERATURE,
                     task_name="Refresh GIDS Research Radar",
                     priority=TaskPriority.NORMAL,
+                    status=TaskStatus.QUEUED,
                     description="Incremental Crossref and Europe PMC metadata synchronization",
                     input_data={
                         "literature_job_id": self.JOB_ID,
@@ -258,7 +259,6 @@ class LiteratureService:
                     },
                     tags=["research-radar", "literature"],
                 )
-                task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
                 self._state.last_task_uuid = task.task_uuid
                 self._state.last_status = "queued"
                 self._state.last_finished_at = datetime.now(ZoneInfo(self._config().timezone))
@@ -445,6 +445,7 @@ class LiteratureService:
                         else "Generate Research Radar evidence summaries"
                     ),
                     priority=TaskPriority.NORMAL,
+                    status=TaskStatus.QUEUED,
                     description=(
                         "Content-bound public-evidence AI review; never an editorial signature"
                         if weekly_only
@@ -467,7 +468,6 @@ class LiteratureService:
                         "autopilot",
                     ],
                 )
-                task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
                 self._enrichment_state.last_task_uuid = task.task_uuid
                 self._enrichment_state.last_status = "queued"
                 self._enrichment_state.last_finished_at = datetime.now(ZoneInfo(cfg.timezone))
@@ -631,6 +631,7 @@ class LiteratureService:
                     task_type=TaskType.DISCOVER_LITERATURE_GAPS,
                     task_name="Discover evidence for Research Radar gaps",
                     priority=TaskPriority.HIGH,
+                    status=TaskStatus.QUEUED,
                     description="Targeted Crossref and Europe PMC discovery with automatic evidence gates",
                     input_data={
                         "literature_job_id": self.GAP_DISCOVERY_JOB_ID,
@@ -641,7 +642,6 @@ class LiteratureService:
                     },
                     tags=["research-radar", "literature", "evidence-gap", "autopilot"],
                 )
-                task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
                 self._gap_state.last_task_uuid = task.task_uuid
                 self._gap_state.last_status = "queued"
                 self._gap_state.last_finished_at = datetime.now(ZoneInfo(cfg.timezone))
