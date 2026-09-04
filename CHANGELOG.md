@@ -21,6 +21,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Task workers now use adaptive AI concurrency, separate knowledge-source concurrency, model-recovery wakeups for stranded repairs, per-disease serialization for knowledge tasks, graceful restart requeueing, and clearer runtime heartbeat metadata.
 - Research Radar discovery accounting now tracks Crossref, Europe PMC, PubMed, optional providers, fallback usage, and source errors separately without advancing Crossref checkpoints during PubMed fallback.
 - Research Radar AI enrichment now scans deeper through already-processed high-ranking records so lower-ranked articles with complete abstracts are not starved by the default batch size.
+- Research Radar AI enrichment now processes article batches concurrently, uses a shorter per-route model timeout, and schedules one-minute catch-up runs while summary batches remain full.
 
 ### Fixed
 
@@ -30,12 +31,16 @@ This file records release-level changes to the GIDS application and its data ope
 - Improved epidemic-curve tooltips, source-series selection, mixed-cadence comparison behavior, and table rendering so selected source projections and annual aggregates stay aligned with the plotted data.
 - Avoided worker restart storms when another healthy worker owns the Redis singleton lease, while preserving bounded memory limits and stale-task recovery semantics.
 - Fixed a Research Radar enrichment stall where top-ranked records with completed summaries could make a scheduled AI batch select zero articles even when eligible unsummarized articles existed later in the queue.
+- Kept Research Radar summary generation moving when weekly AI review fails closed during a combined enrichment run; weekly review still records its own failures without failing the summary task.
+- Recovered malformed Chinese summary JSON from the canonical English summary contract when a validated English summary is already available.
+- Queued Research Radar tasks atomically at creation time so fast workers cannot claim a new task before the scheduler finishes marking it queued.
 
 ### Operations
 
 - Added configuration defaults and documentation for knowledge automation, adaptive AI worker concurrency, PubMed discovery, and Crossref/PubMed fallback policy.
 - Added focused coverage for knowledge automation, Model Center runtime health, PubMed clients and normalization, literature provider failure isolation, adaptive task-worker config, evidence-gated repairs, and epidemic-curve annual aggregation.
 - Backfilled PubMed abstracts for 189 existing published/review records, restarted the task runtime, and verified a control-plane-triggered enrichment task generated 6 summaries from 8 selected articles after the queue-selection fix.
+- Restarted the production task runtime after the summary catch-up fixes and verified consecutive control-plane/scheduler enrichment batches of 32 articles with zero summary-generation failures after the malformed-JSON fallback was deployed.
 
 ## [0.9.3] - 2026-09-02
 
