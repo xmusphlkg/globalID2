@@ -662,7 +662,13 @@ class LiteratureSettings(_BaseEnvSettings):
         default=False,
         description="Continuously process the next eligible summary batch on the scheduler",
     )
-    ai_enrichment_interval_minutes: int = Field(default=60, ge=15, le=10080)
+    ai_enrichment_interval_minutes: int = Field(default=15, ge=15, le=10080)
+    ai_enrichment_catch_up_interval_minutes: int = Field(
+        default=1,
+        ge=1,
+        le=1440,
+        description="Accelerated follow-up cadence while Research Radar AI summary batches are still full",
+    )
     ai_enrichment_batch_size: int = Field(default=32, ge=1, le=50)
     ai_enrichment_concurrency: int = Field(
         default=6,
@@ -688,7 +694,7 @@ class LiteratureSettings(_BaseEnvSettings):
         default=True,
         description="Only send abstracts from records identified as open access to an external model route",
     )
-    ai_model_request_timeout_seconds: int = Field(default=120, ge=10, le=600)
+    ai_model_request_timeout_seconds: int = Field(default=60, ge=10, le=600)
     ai_wait_for_model_recovery: bool = Field(
         default=True,
         description="Wait once for Model Center route recovery before failing literature AI enrichment",

@@ -27,6 +27,9 @@ def test_literature_capacity_defaults_match_observed_arrival_rate():
     assert config.catch_up_enabled is True
     assert config.catch_up_interval_minutes == 5
     assert config.catch_up_max_exception_backlog == 500
+    assert config.ai_enrichment_interval_minutes == 15
+    assert config.ai_enrichment_catch_up_interval_minutes == 1
+    assert config.ai_model_request_timeout_seconds == 60
 
 
 def test_catch_up_limit_must_leave_room_for_one_bounded_batch():
@@ -559,6 +562,67 @@ async def test_failed_schedule_persistence_is_not_reported_as_scheduled(monkeypa
     assert result["catch_up_scheduled"] == 0
     assert result["catch_up_status"] == "schedule_persistence_unavailable"
     assert result["catch_up_next_action_code"] == "inspect_scheduler_persistence"
+
+
+async def test_enrichment_full_batch_schedules_accelerated_catch_up(monkeypatch):
+    config = SimpleNamespace(
+        ai_enrichment_enabled=True,
+        ai_enrichment_schedule_enabled=True,
+        ai_enrichment_batch_size=32,
+        ai_enrichment_interval_minutes=15,
+        ai_enrichment_catch_up_interval_minutes=1,
+        weekly_ai_review_enabled=False,
+        timezone="UTC",
+    )
+    service = LiteratureService()
+    advanced = []
+
+    class FakeEnrichmentPipeline:
+        def __init__(self, supplied_config):
+            assert supplied_config is config
+
+        async def execute(self, supplied_task):
+            assert supplied_task.input_data["limit"] == 32
+            return {
+                "articles": 32,
+                "generated": 64,
+                "skipped": 0,
+                "failed": 0,
+                "languages": ["en", "zh"],
+            }
+
+    async def schedule_earlier(job_kind, job_id, next_run_at):
+        advanced.append((job_kind, job_id, next_run_at))
+        return True
+
+    monkeypatch.setattr(service, "_config", lambda: config)
+    monkeypatch.setattr(
+        literature_service_module,
+        "LiteratureEnrichmentPipeline",
+        FakeEnrichmentPipeline,
+    )
+    monkeypatch.setattr(
+        literature_service_module.schedule_state_repository,
+        "schedule_earlier",
+        schedule_earlier,
+    )
+
+    before = datetime.now(timezone.utc)
+    result = await service.execute_enrichment_task(
+        SimpleNamespace(input_data={"mode": "summaries", "limit": 32})
+    )
+    after = datetime.now(timezone.utc)
+
+    assert result["ai_enrichment_catch_up_required"] == 1
+    assert result["ai_enrichment_catch_up_scheduled"] == 1
+    assert result["ai_enrichment_catch_up_status"] == "scheduled"
+    assert result["ai_enrichment_catch_up_next_action_code"] == "await_accelerated_enrichment"
+    assert len(advanced) == 1
+    job_kind, job_id, next_run_at = advanced[0]
+    assert (job_kind, job_id) == ("literature", service.ENRICHMENT_JOB_ID)
+    assert before.replace(tzinfo=None) < next_run_at.replace(tzinfo=None)
+    assert 50 <= (next_run_at - after).total_seconds() <= 60
+    assert service._enrichment_state.next_run_at == next_run_at
 
 
 async def test_status_snapshot_does_not_roll_forward_overdue_persisted_run(monkeypatch):

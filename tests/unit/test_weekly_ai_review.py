@@ -218,3 +218,25 @@ async def test_enrichment_worker_rejects_unknown_mode_and_surfaces_weekly_failur
     monkeypatch.setattr("src.literature.weekly_ai_review.review_weekly_brief_files", failed)
     with pytest.raises(RuntimeError, match="weekly_brief_ai_review_failed_closed"):
         await service.execute_enrichment_task(SimpleNamespace(input_data={"mode": "weekly_ai_review"}))
+
+    cfg.ai_enrichment_enabled = True
+    cfg.ai_enrichment_schedule_enabled = False
+    cfg.ai_enrichment_batch_size = 2
+
+    class FakeEnrichmentPipeline:
+        def __init__(self, supplied_config):
+            assert supplied_config is cfg
+
+        async def execute(self, _task):
+            return {"articles": 2, "generated": 4, "skipped": 0, "failed": 0}
+
+    monkeypatch.setattr(
+        "src.services.literature_service.LiteratureEnrichmentPipeline",
+        FakeEnrichmentPipeline,
+    )
+    output = await service.execute_enrichment_task(
+        SimpleNamespace(input_data={"mode": "summaries_and_weekly_ai_review"})
+    )
+    assert output["summaries"]["generated"] == 4
+    assert output["weekly_ai_review"]["status"] == "failed_closed"
+    assert output["ai_enrichment_catch_up_status"] == "disabled"
