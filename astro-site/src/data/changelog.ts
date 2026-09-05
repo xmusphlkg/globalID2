@@ -52,6 +52,10 @@ export const changelogReleases: ChangelogRelease[] = [
             en: 'Chronically failing Model Center routes are no longer used as active summary candidates until a structured health check proves recovery.',
             zh: '连续生产调用失败的模型中心路由不再进入摘要 active 候选，直到结构化健康检查证明已恢复。',
           },
+          {
+            en: 'Provider 403/no-access responses, including Chinese no-access messages, now mark the affected model route unavailable instead of retrying it for every summary.',
+            zh: 'Provider 返回 403/无权限（包括中文无权访问提示）时，现在会把对应模型路由标记为不可用，不再让每篇摘要重复踩同一个失败路由。',
+          },
         ],
       },
       {

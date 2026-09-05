@@ -68,6 +68,15 @@ def test_is_model_unavailable_error_detects_invalid_model_message() -> None:
     assert is_model_unavailable_error(error) is True
 
 
+def test_is_model_unavailable_error_detects_chinese_no_access_message() -> None:
+    error = DummyRateLimitError(
+        "Error code: 403 - {'error': {'message': '无权访问 gemini特惠 分组'}}",
+        status_code=403,
+    )
+
+    assert is_model_unavailable_error(error) is True
+
+
 def test_is_model_unavailable_error_does_not_match_quota_error() -> None:
     error = DummyRateLimitError("insufficient_quota: please upgrade your plan")
 

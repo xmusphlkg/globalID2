@@ -1155,14 +1155,19 @@ def is_model_unavailable_error(error: Any) -> bool:
             "model does not exist",
             "does not exist or you do not have access",
             "you do not have access to it",
+            "access denied",
+            "permission denied",
             "invalid model",
             "unsupported model",
             "unknown model",
+            "无权访问",
+            "没有权限",
+            "无访问权限",
         ]
     )
 
     # 404 + model-related message usually means route/model is invalid for this provider key.
-    if normalized_status == 404 and message_hit:
+    if normalized_status in {403, 404} and message_hit:
         return True
 
     return message_hit
