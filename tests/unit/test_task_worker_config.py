@@ -163,6 +163,11 @@ def test_release_export_and_literature_ai_tasks_do_not_overlap():
     assert task_worker._release_memory_blocked_task_types([TaskType.ENRICH_LITERATURE]) == {
         TaskType.EXPORT_DATA
     }
+    assert task_worker._release_memory_blocked_task_types([], release_waiting=True) >= {
+        TaskType.ENRICH_LITERATURE,
+        TaskType.SYNC_LITERATURE,
+        TaskType.UPDATE_DISEASE_KNOWLEDGE,
+    }
     assert task_worker._release_memory_blocked_task_types([TaskType.CRAWL_DATA]) == set()
 
 

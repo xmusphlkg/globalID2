@@ -81,11 +81,15 @@ GRACEFUL_REQUEUE_TASK_TYPES = AI_TASK_TYPES | KNOWLEDGE_SOURCE_TASK_TYPES
 ModelRouteLoader = Callable[[], Awaitable[list[dict[str, Any]]]]
 
 
-def _release_memory_blocked_task_types(active_task_types: Iterable[TaskType]) -> set[TaskType]:
+def _release_memory_blocked_task_types(
+    active_task_types: Iterable[TaskType],
+    *,
+    release_waiting: bool = False,
+) -> set[TaskType]:
     """Keep memory-heavy release export and literature/AI work from overlapping."""
     active = set(active_task_types)
     blocked: set[TaskType] = set()
-    if active & RELEASE_EXCLUSIVE_TASK_TYPES:
+    if release_waiting or active & RELEASE_EXCLUSIVE_TASK_TYPES:
         blocked.update(RELEASE_SHARED_BLOCKED_TASK_TYPES)
     if active & RELEASE_SHARED_BLOCKED_TASK_TYPES:
         blocked.update(RELEASE_EXCLUSIVE_TASK_TYPES)
@@ -320,7 +324,20 @@ async def _claim_next_task_uuid(
                 )
             )
         ).scalars().all()
-        memory_blocked_task_types = _release_memory_blocked_task_types(active_task_types)
+        release_waiting = (
+            await db.execute(
+                select(Task.id)
+                .where(
+                    Task.task_type.in_(RELEASE_EXCLUSIVE_TASK_TYPES),
+                    Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]),
+                )
+                .limit(1)
+            )
+        ).scalar_one_or_none() is not None
+        memory_blocked_task_types = _release_memory_blocked_task_types(
+            active_task_types,
+            release_waiting=release_waiting,
+        )
         blocked_task_types = set(blocked_task_types or set()) | memory_blocked_task_types
 
         priority_rank = case(

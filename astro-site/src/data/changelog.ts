@@ -76,6 +76,10 @@ export const changelogReleases: ChangelogRelease[] = [
             zh: '控制面 worker 现在会让站点发布与高内存的研究雷达/AI 任务错峰运行。',
           },
           {
+            en: 'Queued site releases now hold off new Research Radar catch-up work so publication is not starved by continuous summary batches.',
+            zh: '站点发布排队后会暂停领取新的研究雷达 catch-up 任务，避免发布被连续摘要批次饿住。',
+          },
+          {
             en: 'Release commands now drain verbose Astro/Node output by byte chunks so builds cannot stall on a full stdout pipe.',
             zh: '发布命令现在按字节块消费 Astro/Node 的详细输出，避免构建因 stdout 管道写满而停住。',
           },
