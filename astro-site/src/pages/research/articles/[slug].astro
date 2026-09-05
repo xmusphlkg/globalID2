@@ -93,7 +93,12 @@ const descriptionContext = zh
   : 'Review the study design, main findings, important limitations, source identifiers, and related surveillance context.';
 const pageDescription = clampSeoDescription(`${whyItMatters} ${descriptionContext}`);
 const titleSuffix = zh ? ' | GIDS 中文证据摘要' : ' | GIDS';
-const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length)}${titleSuffix}`;
+const doiSuffix = article.doi ? String(article.doi).split('/').filter(Boolean).at(-1) : '';
+const shortIdentifier = doiSuffix && [...doiSuffix].length <= 18
+  ? doiSuffix
+  : (article.pmid ? `PMID ${article.pmid}` : String(article.slug).slice(-8));
+const titleDisambiguator = ` · ${shortIdentifier}`;
+const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - titleDisambiguator.length)}${titleDisambiguator}${titleSuffix}`;
 ---
 
 <ReportLayout

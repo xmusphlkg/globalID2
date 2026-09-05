@@ -16,12 +16,15 @@ This file records release-level changes to the GIDS application and its data ope
 - Prevented queued site releases from being starved by newly claimed Research Radar catch-up tasks.
 - Drained release subprocess output by byte chunks instead of newline-delimited reads so verbose Astro/Node commands cannot block on a full stdout pipe.
 - Treated provider 403/no-access responses, including Chinese `无权访问` messages, as unavailable model routes so they are removed from the summary retry chain.
+- Kept large Research Radar disease, country, and topic collection pages within release HTML budgets by rendering the first page of articles server-side and loading additional cards from the compact research catalogue on demand.
+- Added compact source identifiers to Research Radar article SEO titles so long distinct article titles do not collide after SEO truncation.
 
 ### Operations
 
 - Reconciled the Research Radar catalogue after the non-public-domain fix: the blocking `animal_only` Nature Communications article was returned to review, public export validation passed, and the public Research Radar export rebuilt with 964 articles and 334 weekly briefs.
 - Restored 1959 autopilot-published rows that were briefly over-revalidated by score-threshold drift during diagnosis, while keeping 13 hard public-boundary demotions in review.
 - Verified the targeted Research Radar automation, enrichment, release-validation, data-release, Model Center runtime-health, site-data orchestration, and task-worker suites with 110+ passing tests.
+- Verified the full Astro production build after the collection-page slimming and SEO-title disambiguation; performance-budget and SEO-output release checks pass for 4116 generated pages.
 
 ## [0.9.4] - 2026-09-04
 

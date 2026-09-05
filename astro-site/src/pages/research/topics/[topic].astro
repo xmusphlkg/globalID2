@@ -27,5 +27,7 @@ const descriptionZh = `通过可审计分类流程与“${facet.name}”主题�
   descriptionZh={descriptionZh}
   canonicalPath={`/research/topics/${facet.slug}/`}
   articles={payload.articles ?? []}
+  clientCollectionScope="topic"
+  clientCollectionValue={facet.slug}
   locale={locale}
 />
