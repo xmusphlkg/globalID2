@@ -15,7 +15,7 @@ import signal
 import sys
 import time
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Awaitable, Callable, Iterable, Optional
 
 from sqlalchemy import case, select
 
@@ -67,12 +67,29 @@ KNOWLEDGE_SERIAL_TASK_TYPES = {
     TaskType.UPDATE_DISEASE_KNOWLEDGE,
     TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
 }
+RELEASE_EXCLUSIVE_TASK_TYPES = {TaskType.EXPORT_DATA}
+RELEASE_SHARED_BLOCKED_TASK_TYPES = (
+    AI_TASK_TYPES
+    | KNOWLEDGE_SOURCE_TASK_TYPES
+    | {TaskType.SYNC_LITERATURE}
+)
 # These operations persist their checkpoints and are designed to be resumed.
 # On a controlled worker restart, returning them to QUEUED is preferable to
 # waiting for a long model timeout or treating the deployment as a failure.
 GRACEFUL_REQUEUE_TASK_TYPES = AI_TASK_TYPES | KNOWLEDGE_SOURCE_TASK_TYPES
 
 ModelRouteLoader = Callable[[], Awaitable[list[dict[str, Any]]]]
+
+
+def _release_memory_blocked_task_types(active_task_types: Iterable[TaskType]) -> set[TaskType]:
+    """Keep memory-heavy release export and literature/AI work from overlapping."""
+    active = set(active_task_types)
+    blocked: set[TaskType] = set()
+    if active & RELEASE_EXCLUSIVE_TASK_TYPES:
+        blocked.update(RELEASE_SHARED_BLOCKED_TASK_TYPES)
+    if active & RELEASE_SHARED_BLOCKED_TASK_TYPES:
+        blocked.update(RELEASE_EXCLUSIVE_TASK_TYPES)
+    return blocked
 
 
 @dataclass
@@ -296,6 +313,16 @@ async def _claim_next_task_uuid(
     mark it RUNNING in the same transaction, and then return the UUID.
     """
     async with get_database() as db:
+        active_task_types = (
+            await db.execute(
+                select(Task.task_type).where(
+                    Task.status.in_([TaskStatus.RUNNING, TaskStatus.RETRYING])
+                )
+            )
+        ).scalars().all()
+        memory_blocked_task_types = _release_memory_blocked_task_types(active_task_types)
+        blocked_task_types = set(blocked_task_types or set()) | memory_blocked_task_types
+
         priority_rank = case(
             (Task.priority == TaskPriority.URGENT, 0),
             (Task.priority == TaskPriority.HIGH, 1),

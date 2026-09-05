@@ -12,6 +12,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Kept transient Cloudflare Pages API failures from being misclassified as a missing production-branch configuration during release preflight.
 - Kept chronically failing Model Center routes out of active summary candidates after repeated production-call failures, while allowing a successful structured health check to restore the route.
 - Made partitioned download generation respect the service cgroup memory guardrail so site releases do not stall under `mem_cgroup_handle_over_high` pressure.
+- Prevented site release exports from being claimed concurrently with memory-heavy Research Radar and AI tasks in the dashboard worker.
 
 ### Operations
 

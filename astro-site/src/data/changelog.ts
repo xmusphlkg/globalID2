@@ -67,6 +67,10 @@ export const changelogReleases: ChangelogRelease[] = [
             en: 'Site-data export now scales partitioned download workers to the service memory guardrail, preventing releases from stalling under cgroup memory pressure.',
             zh: '站点数据导出现在会按服务内存水位收敛分区下载 worker，避免发布在 cgroup 内存压力下停住。',
           },
+          {
+            en: 'The dashboard worker now keeps site releases from overlapping with memory-heavy Research Radar and AI jobs.',
+            zh: '控制面 worker 现在会让站点发布与高内存的研究雷达/AI 任务错峰运行。',
+          },
         ],
       },
     ],
