@@ -79,7 +79,7 @@ async def test_run_logged_command_timeout_terminates_process_group_and_records_e
     terminated = []
 
     class BlockingStream:
-        async def readline(self):
+        async def read(self, _size=-1):
             await asyncio.Event().wait()
 
     class FakeProcess:
@@ -184,7 +184,7 @@ async def test_run_logged_command_cancellation_terminates_process(monkeypatch, t
     terminated = []
 
     class FakeStream:
-        async def readline(self):
+        async def read(self, _size=-1):
             return b""
 
     class FakeProcess:
@@ -232,7 +232,7 @@ async def test_run_logged_command_failure_includes_output_tail(monkeypatch, tmp_
         def __init__(self):
             self.lines = iter((b"first line\n", b"failure detail\n", b""))
 
-        async def readline(self):
+        async def read(self, _size=-1):
             return next(self.lines)
 
     class FakeProcess:
@@ -282,7 +282,7 @@ async def test_run_logged_command_compacts_verbose_output_and_keeps_final_tail(
             lines[0] = b"\x1b[32mline 1\x1b[0m\n"
             self.lines = iter((*lines, b""))
 
-        async def readline(self):
+        async def read(self, _size=-1):
             return next(self.lines)
 
     class FakeProcess:
@@ -326,6 +326,52 @@ async def test_run_logged_command_compacts_verbose_output_and_keeps_final_tail(
     assert completed["metadata"]["stored_output_chunks"] == 2
     assert completed["metadata"]["suppressed_output_chunks"] == 2
     assert completed["metadata"]["output_compacted"] is True
+
+
+@pytest.mark.asyncio
+async def test_run_logged_command_drains_output_chunks_without_newlines(
+    monkeypatch,
+    tmp_path,
+):
+    service = DataReleaseService()
+    entries = []
+
+    class FakeStream:
+        def __init__(self):
+            self.chunks = iter((b"x" * 9000, b"done", b""))
+
+        async def read(self, _size=-1):
+            return next(self.chunks)
+
+    class FakeProcess:
+        pid = 9754
+        returncode = 0
+        stdout = FakeStream()
+
+    async def create_subprocess(*_args, **_kwargs):
+        return FakeProcess()
+
+    async def add_workbook_entry(_task_uuid, **kwargs):
+        entries.append(kwargs)
+
+    async def is_cancel_requested(_task_uuid):
+        return False
+
+    monkeypatch.setattr(release_module.asyncio, "create_subprocess_exec", create_subprocess)
+    monkeypatch.setattr(release_module.task_manager, "add_workbook_entry", add_workbook_entry)
+    monkeypatch.setattr(release_module.task_manager, "is_cancel_requested", is_cancel_requested)
+
+    await service._run_logged_command(
+        "task-chunks",
+        title="Chunky Command",
+        cmd=["command"],
+        cwd=tmp_path,
+    )
+
+    output_entries = [entry for entry in entries if " Output #" in entry["title"]]
+    assert output_entries
+    assert "x" * 4000 in output_entries[0]["content"]
+    assert entries[-1]["title"] == "Chunky Command Completed"
 
 
 @pytest.mark.asyncio
