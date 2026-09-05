@@ -625,6 +625,61 @@ async def test_enrichment_full_batch_schedules_accelerated_catch_up(monkeypatch)
     assert service._enrichment_state.next_run_at == next_run_at
 
 
+async def test_enrichment_provider_auth_failure_blocks_accelerated_catch_up(monkeypatch):
+    config = SimpleNamespace(
+        ai_enrichment_enabled=True,
+        ai_enrichment_schedule_enabled=True,
+        ai_enrichment_batch_size=32,
+        ai_enrichment_interval_minutes=15,
+        ai_enrichment_catch_up_interval_minutes=1,
+        weekly_ai_review_enabled=False,
+        timezone="UTC",
+    )
+    service = LiteratureService()
+
+    class FakeEnrichmentPipeline:
+        def __init__(self, supplied_config):
+            assert supplied_config is config
+
+        async def execute(self, _supplied_task):
+            return {
+                "articles": 32,
+                "generated": 0,
+                "skipped": 0,
+                "failed": 64,
+                # This flag is produced from all failures, rather than the
+                # diagnostic errors list that is capped for task output.
+                "provider_auth_failure": 1,
+                "provider_auth_failure_count": 64,
+                "errors": [],
+            }
+
+    async def unexpected_schedule(*_args):
+        raise AssertionError("provider auth failures must not schedule one-minute catch-up")
+
+    monkeypatch.setattr(service, "_config", lambda: config)
+    monkeypatch.setattr(
+        literature_service_module,
+        "LiteratureEnrichmentPipeline",
+        FakeEnrichmentPipeline,
+    )
+    monkeypatch.setattr(
+        literature_service_module.schedule_state_repository,
+        "schedule_earlier",
+        unexpected_schedule,
+    )
+
+    result = await service.execute_enrichment_task(
+        SimpleNamespace(input_data={"mode": "summaries", "limit": 32})
+    )
+
+    assert result["ai_enrichment_catch_up_required"] == 1
+    assert result["ai_enrichment_catch_up_scheduled"] == 0
+    assert result["ai_enrichment_catch_up_blocked_provider_auth"] == 1
+    assert result["ai_enrichment_catch_up_status"] == "blocked_provider_auth"
+    assert result["ai_enrichment_catch_up_next_action_code"] == "refresh_credentials_and_test"
+
+
 async def test_status_snapshot_does_not_roll_forward_overdue_persisted_run(monkeypatch):
     overdue = datetime(2026, 8, 17, 11, 55, tzinfo=timezone.utc)
     config = SimpleNamespace(

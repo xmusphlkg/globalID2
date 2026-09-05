@@ -111,11 +111,37 @@ ROLLING_WINDOW_YEARS = 5
 _XLSX_TIMESTAMP = (2000, 1, 1, 0, 0, 0)
 
 
-def _read_cgroup_memory_limit_bytes() -> int | None:
-    """Return the tightest cgroup memory guardrail when the exporter is service-bound."""
-    candidates = (
-        Path("/sys/fs/cgroup/memory.high"),
-        Path("/sys/fs/cgroup/memory.max"),
+def _read_cgroup_memory_limit_bytes(
+    *,
+    cgroup_root: Path | None = None,
+    membership_path: Path | None = None,
+) -> int | None:
+    """Return the tightest cgroup memory guardrail for this process.
+
+    A systemd service usually runs below a child cgroup, while the cgroup v2
+    mount root remains unlimited.  Reading only ``/sys/fs/cgroup/memory.*``
+    therefore misses the service's actual ``memory.high`` limit and can make
+    a memory-heavy export choose too many workers.
+    """
+    cgroup_root = cgroup_root or Path("/sys/fs/cgroup")
+    membership_path = membership_path or Path("/proc/self/cgroup")
+    roots = [cgroup_root]
+    try:
+        for line in membership_path.read_text(encoding="utf-8").splitlines():
+            hierarchy, controllers, relative_path = line.split(":", 2)
+            if hierarchy != "0" or controllers:
+                continue
+            normalized = relative_path.strip().lstrip("/")
+            if normalized:
+                roots.insert(0, cgroup_root / normalized)
+            break
+    except (OSError, ValueError):
+        pass
+
+    candidates = tuple(
+        root / setting
+        for root in roots
+        for setting in ("memory.high", "memory.max")
     )
     values: list[int] = []
     for path in candidates:

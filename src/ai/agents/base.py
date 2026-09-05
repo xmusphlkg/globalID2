@@ -22,8 +22,10 @@ from src.ai.model_center import (
     get_active_model_routes,
     get_runtime_routes,
     is_model_unavailable_error,
+    is_provider_authentication_error,
     is_rate_limit_error,
     mark_model_unavailable_by_name,
+    mark_provider_authentication_failed,
     record_route_runtime_failure,
     record_route_runtime_success,
     mark_route_rate_limited,
@@ -301,6 +303,15 @@ class BaseAgent(ABC):
             )
 
         return candidates, chain_used
+
+    @staticmethod
+    def _runtime_provider_identity(route: Dict[str, Any]) -> str:
+        """Return a stable provider identity for one completion pass."""
+        provider_id = route.get("provider_id")
+        if provider_id is not None and str(provider_id).strip():
+            return f"provider-id:{provider_id}"
+        provider_key = str(route.get("provider_key") or route.get("provider_name") or "").strip()
+        return f"provider-key:{provider_key}" if provider_key else "provider:unknown"
 
     @staticmethod
     def _prioritize_candidates(
@@ -801,12 +812,26 @@ class BaseAgent(ABC):
         last_error = None
         saw_quota_failure = False
         quota_wait_candidates: List[int] = []
+        attempted_models: List[str] = []
+        authentication_failed_providers: set[str] = set()
         original_model = self.model
 
         for candidate in candidates:
             model_name = candidate["model_name"]
             route = candidate["route"]
             route_key = candidate["route_key"]
+            provider_identity = (
+                self._runtime_provider_identity(route)
+                if route
+                else f"legacy:{self.get_provider_for_model(model_name)}"
+            )
+            if provider_identity in authentication_failed_providers:
+                logger.warning(
+                    "Skipping model '{}' because provider '{}' already rejected its credentials in this completion.",
+                    model_name,
+                    provider_identity,
+                )
+                continue
             self.model = model_name
             retry_count = 0
             start_time = time.time()
@@ -814,6 +839,8 @@ class BaseAgent(ABC):
             while retry_count < attempt_limit:
                 attempt_started_at = time.perf_counter()
                 try:
+                    if model_name not in attempted_models:
+                        attempted_models.append(model_name)
                     if route:
                         provider = str(route.get("provider_key") or route.get("provider_name") or "runtime")
                         request = self._complete_with_runtime_route(
@@ -920,8 +947,9 @@ class BaseAgent(ABC):
                 except Exception as e:
                     last_error = e
                     retry_count += 1
+                    authentication_related = is_provider_authentication_error(e)
 
-                    if route:
+                    if route and not authentication_related:
                         try:
                             runtime_failure = await record_route_runtime_failure(
                                 route,
@@ -982,6 +1010,29 @@ class BaseAgent(ABC):
                             f"Model '{self.model}' exceeded its per-route request timeout; "
                             "switching to the next candidate."
                         )
+                        break
+
+                    if authentication_related:
+                        authentication_failed_providers.add(provider_identity)
+                        logger.warning(
+                            "Provider '{}' rejected credentials for model '{}'. "
+                            "Blocking sibling routes and continuing only with another provider.",
+                            provider_identity,
+                            self.model,
+                        )
+                        if route:
+                            try:
+                                await mark_provider_authentication_failed(route, e)
+                            except Exception as auth_exc:
+                                logger.warning(
+                                    "Failed to persist provider authentication failure for route '{}': {}",
+                                    route_key,
+                                    auth_exc,
+                                )
+                        BaseAgent.AVAILABLE_MODEL_ROUTES = None
+                        BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
+                        # Credentials cannot recover through retry/backoff; a
+                        # fresh, explicitly tested credential is required.
                         break
 
                     if quota_related:
@@ -1092,9 +1143,6 @@ class BaseAgent(ABC):
             )
 
         logger.error(f"All models failed for agent '{self.name}': {last_error}")
-        attempted_models = [c.get("model_name") for c in candidates if c.get("model_name")]
-        if not attempted_models and self.model:
-            attempted_models = [self.model]
         raise Exception(
             f"Agent completion failed after trying models {attempted_models}: {last_error}"
         )

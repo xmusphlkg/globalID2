@@ -1,7 +1,9 @@
 from types import SimpleNamespace
 
 from src.ai.model_center import (
+    _effective_route_check_status,
     extract_retry_after_seconds,
+    is_provider_authentication_error,
     is_model_unavailable_error,
     is_rate_limit_error,
 )
@@ -33,6 +35,46 @@ def test_is_rate_limit_error_detects_provider_code_2003() -> None:
     )
 
     assert is_rate_limit_error(error) is True
+
+
+def test_is_provider_authentication_error_detects_http_401_invalid_token() -> None:
+    error = DummyRateLimitError(
+        "Error code: 401 - {'error': {'message': 'Invalid token'}}",
+        status_code=401,
+    )
+
+    assert is_provider_authentication_error(error) is True
+
+
+def test_is_provider_authentication_error_detects_invalid_token_message() -> None:
+    error = DummyRateLimitError("Authentication failed: invalid token")
+
+    assert is_provider_authentication_error(error) is True
+
+
+def test_is_provider_authentication_error_does_not_treat_model_acl_as_credentials() -> None:
+    error = DummyRateLimitError(
+        "Error code: 403 - {'error': {'message': '无权访问 gemini特惠 分组'}}",
+        status_code=403,
+    )
+
+    assert is_provider_authentication_error(error) is False
+
+
+def test_is_provider_authentication_error_does_not_treat_rate_limit_as_credentials() -> None:
+    error = DummyRateLimitError("Too many requests", status_code=429)
+
+    assert is_provider_authentication_error(error) is False
+
+
+def test_model_unavailable_error_does_not_mask_provider_authentication_failure() -> None:
+    error = DummyRateLimitError("permission denied: invalid token", status_code=401)
+
+    assert is_model_unavailable_error(error) is False
+
+
+def test_provider_unavailable_dominates_older_model_available_status() -> None:
+    assert _effective_route_check_status("available", "unavailable") == "unavailable"
 
 
 def test_extract_retry_after_seconds_reads_retry_after_header() -> None:

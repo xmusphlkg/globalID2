@@ -66,6 +66,25 @@ def test_direct_download_default_workers_respect_tight_cgroup_memory() -> None:
     assert direct_download_files._default_export_workers(16, 16 * gib) == 4
 
 
+def test_direct_download_reads_the_service_cgroup_memory_guardrail(tmp_path) -> None:
+    gib = 1024 * 1024 * 1024
+    cgroup_root = tmp_path / "cgroup"
+    service_cgroup = cgroup_root / "system.slice" / "globalid-dashboard-worker.service"
+    service_cgroup.mkdir(parents=True)
+    (service_cgroup / "memory.high").write_text(str(4 * gib), encoding="utf-8")
+    (service_cgroup / "memory.max").write_text(str(6 * gib), encoding="utf-8")
+    membership = tmp_path / "self.cgroup"
+    membership.write_text(
+        "0::/system.slice/globalid-dashboard-worker.service\n",
+        encoding="utf-8",
+    )
+
+    assert direct_download_files._read_cgroup_memory_limit_bytes(
+        cgroup_root=cgroup_root,
+        membership_path=membership,
+    ) == 4 * gib
+
+
 def test_direct_download_default_workers_fall_back_to_cpu_without_memory_limit() -> None:
     assert direct_download_files._default_export_workers(16, None) == 4
     assert direct_download_files._default_export_workers(1, None) == 1

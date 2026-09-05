@@ -37,6 +37,10 @@ _DEFAULT_PROVIDER_ADMISSION_MAX_CONCURRENCY = 2
 _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY = 1
 _DEFAULT_ADMISSION_SUCCESS_SCALE_UP = 2
 _MODEL_TEST_MARKER = "globalid-model-test-ok"
+_PROVIDER_AUTHENTICATION_FAILURE_MESSAGE = (
+    "Provider credentials were rejected. Update the credentials and run a provider "
+    "connection test before routing requests again."
+)
 _MODEL_TEST_PROMPT = (
     "This is a production model-center health check. "
     f"Reply with exactly this text and nothing else: {_MODEL_TEST_MARKER}"
@@ -1104,6 +1108,65 @@ def is_rate_limit_error(error: Any) -> bool:
     )
 
 
+def is_provider_authentication_error(error: Any) -> bool:
+    """Detect a provider credential rejection without treating model ACLs as auth failures.
+
+    A 401 means the shared provider credential cannot authenticate any sibling
+    model route. In contrast, a model-specific 403 (for example, no access to
+    one catalogue entry) remains a model-unavailable condition so healthy
+    siblings can still be used.
+    """
+    status_code = getattr(error, "status_code", None)
+    response = getattr(error, "response", None)
+    if status_code is None and response is not None:
+        status_code = getattr(response, "status_code", None)
+
+    try:
+        normalized_status = int(status_code) if status_code is not None else None
+    except (TypeError, ValueError):
+        normalized_status = None
+
+    if normalized_status == 401:
+        return True
+    if normalized_status == 403:
+        # Preserve the existing model-level ACL fallback behaviour. A provider
+        # that returns 403 for one restricted model may still serve siblings.
+        return False
+
+    code_candidates = _extract_error_codes(error)
+    if any(
+        code in {
+            "invalid_token",
+            "invalid_api_key",
+            "invalid_api-key",
+            "incorrect_api_key",
+            "authentication_error",
+            "authentication_failed",
+            "invalid_credentials",
+            "unauthorized",
+        }
+        for code in code_candidates
+    ):
+        return True
+
+    message = str(error or "").lower()
+    return any(
+        marker in message
+        for marker in (
+            "invalid token",
+            "invalid api key",
+            "invalid api-key",
+            "invalid_api_key",
+            "api key is invalid",
+            "incorrect api key",
+            "invalid credentials",
+            "authentication failed",
+            "authentication error",
+            "credential rejected",
+        )
+    )
+
+
 def _extract_error_codes(error: Any) -> List[str]:
     codes: List[str] = []
 
@@ -1133,6 +1196,9 @@ def _extract_error_codes(error: Any) -> List[str]:
 
 def is_model_unavailable_error(error: Any) -> bool:
     """Detect unrecoverable model-level errors (missing model or no access)."""
+    if is_provider_authentication_error(error):
+        return False
+
     status_code = getattr(error, "status_code", None)
     response = getattr(error, "response", None)
     if status_code is None and response is not None:
@@ -1171,6 +1237,15 @@ def is_model_unavailable_error(error: Any) -> bool:
         return True
 
     return message_hit
+
+
+def _effective_route_check_status(model_status: Any, provider_status: Any) -> str:
+    """Return the route status, with provider-wide outages taking precedence."""
+    normalized_provider = str(provider_status or "").strip().lower()
+    normalized_model = str(model_status or "").strip().lower()
+    if normalized_provider == "unavailable":
+        return "unavailable"
+    return normalized_model or normalized_provider
 
 
 def extract_retry_after_seconds(error: Any) -> Optional[int]:
@@ -1237,7 +1312,8 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
             runtime_health_state = _combined_route_runtime_health_state(model, provider)
             provider_status = str(provider.last_check_status or "").strip().lower()
             model_status = str(model.last_check_status or "").strip().lower()
-            status_routable = provider_status != "unavailable" and model_status != "unavailable"
+            effective_status = _effective_route_check_status(model_status, provider_status)
+            status_routable = effective_status != "unavailable"
 
             route = {
                     "model_id": model.id,
@@ -1256,7 +1332,10 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
                     "temperature": model.temperature,
                     "max_tokens": model.max_tokens,
                     "has_api_key": bool(provider.api_key),
-                    "last_check_status": model.last_check_status or provider.last_check_status,
+                    # Provider credential failures apply to every model under
+                    # the provider. Preserve that durable state even when a
+                    # sibling has an older model-level "available" result.
+                    "last_check_status": effective_status,
                     "available_for_routing": bool(provider.api_key)
                     and status_routable
                     and not rate_limit_state["rate_limit_active"]
@@ -1579,8 +1658,16 @@ async def update_provider_check_result(provider_id: int, status: str, message: s
         provider = await db.get(AIProviderConfig, provider_id)
         if provider is None:
             return
+        # Provider responses may include an echoed token or authorization
+        # header. Keep the control-plane status actionable without persisting
+        # any upstream credential detail.
+        safe_message = (
+            _PROVIDER_AUTHENTICATION_FAILURE_MESSAGE
+            if is_provider_authentication_error(message)
+            else message
+        )
         provider.last_check_status = status
-        provider.last_check_message = message
+        provider.last_check_message = safe_message
         provider.last_checked_at = _utcnow()
         if status == "available":
             provider.extra_config = _write_runtime_success(
@@ -1776,6 +1863,44 @@ async def mark_route_unavailable(
             model.last_checked_at = now
             model.extra_params = _clear_payload_rate_limit(model.extra_params, now)
             await db.commit()
+
+
+async def mark_provider_authentication_failed(
+    route: Dict[str, Any],
+    error: BaseException | str | None = None,
+) -> Dict[str, Any]:
+    """Durably block every route sharing rejected provider credentials.
+
+    The database intentionally stores a generic remediation message instead
+    of the upstream error because provider errors can echo credential material.
+    Provider activation is left unchanged so an operator can update the
+    credential and explicitly recover the provider through its connection test.
+    """
+    try:
+        provider_id = int(route.get("provider_id"))
+    except (TypeError, ValueError):
+        return {"recorded": False, "reason": "route_has_no_provider_id"}
+
+    now = _utcnow()
+    async with get_db() as db:
+        provider = await db.get(AIProviderConfig, provider_id)
+        if provider is None:
+            return {"recorded": False, "reason": "provider_not_found"}
+
+        provider.last_check_status = "unavailable"
+        provider.last_check_message = _PROVIDER_AUTHENTICATION_FAILURE_MESSAGE
+        provider.last_checked_at = now
+        provider.extra_config = _clear_payload_rate_limit(provider.extra_config, now)
+        await db.commit()
+
+    # Keep the parameter for an expressive call site while ensuring raw
+    # upstream errors never enter durable provider status fields.
+    del error
+    return {
+        "recorded": True,
+        "provider_id": provider_id,
+        "status": "unavailable",
+    }
 
 
 async def mark_model_unavailable_by_name(

@@ -19,7 +19,7 @@ from typing import Any
 from sqlalchemy import select
 
 from src.ai.agents.base import BaseAgent
-from src.ai.model_center import get_active_model_routes
+from src.ai.model_center import get_active_model_routes, is_provider_authentication_error
 from src.core import get_config, get_db, get_logger
 from src.core.task_manager import task_manager
 from src.domain import (
@@ -143,6 +143,8 @@ def _has_long_verbatim_overlap(source: str, output: str, *, words: int = 12) -> 
 
 def _is_transient_generation_error(error: Exception) -> bool:
     if isinstance(error, (TimeoutError, asyncio.TimeoutError)):
+        return True
+    if is_provider_authentication_error(error):
         return True
     message = str(error or "").lower()
     return any(
@@ -527,6 +529,7 @@ class LiteratureEnrichmentPipeline:
         )
         counts = {"articles": len(articles), "generated": 0, "skipped": 0, "failed": 0}
         errors: list[dict[str, str]] = []
+        provider_auth_failure_count = 0
         total = max(1, len(articles) * max(1, len(languages)))
         step = 0
         progress_lock = asyncio.Lock()
@@ -550,6 +553,7 @@ class LiteratureEnrichmentPipeline:
                 await task_manager.update_task_progress(task.task_uuid, min(99, int(100 * step / total)))
 
         async def process_article(article_index: int, article: LiteratureArticle) -> None:
+            nonlocal provider_auth_failure_count
             generator = LiteratureSummaryGenerator()
             canonical_fields = context[article.article_id].get("canonical_en")
             async with semaphore:
@@ -586,6 +590,8 @@ class LiteratureEnrichmentPipeline:
                         await self._store_failure(article, language=language, error=exc)
                         async with counts_lock:
                             counts["failed"] += 1
+                            if is_provider_authentication_error(exc):
+                                provider_auth_failure_count += 1
                             errors.append({"article_id": article.article_id, "language": language, "error": str(exc)[:500]})
                     finally:
                         await record_progress()
@@ -597,7 +603,17 @@ class LiteratureEnrichmentPipeline:
             from src.services.literature_automation_service import literature_automation_service
 
             automation = await literature_automation_service.reconcile()
-        return {**counts, "languages": languages, "errors": errors[:20], "automation": automation}
+        return {
+            **counts,
+            "languages": languages,
+            "errors": errors[:20],
+            # This count is intentionally collected before the diagnostic
+            # error list is truncated, so schedule decisions see failures
+            # from the full enrichment batch.
+            "provider_auth_failure": int(provider_auth_failure_count > 0),
+            "provider_auth_failure_count": provider_auth_failure_count,
+            "automation": automation,
+        }
 
     @staticmethod
     def _rotated_route_preferences(route_preferences: list[str], offset: int) -> list[str]:
