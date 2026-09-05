@@ -27,9 +27,9 @@ export const changelogReleases: ChangelogRelease[] = [
     titleEn: 'Research Radar publication-boundary repair',
     titleZh: '研究雷达公开边界修复',
     summaryEn:
-      'GIDS now revalidates autopilot-published Research Radar records against hard public-boundary rules, recovers non-public-domain leaks, and keeps model summaries flowing when a field is returned as prose instead of a structured object.',
+      'GIDS now revalidates autopilot-published Research Radar records against hard public-boundary rules, keeps model summaries flowing when a field is returned as prose, and avoids slow-route/export-memory stalls during publication.',
     summaryZh:
-      'GIDS 现在会用硬性公开边界规则重新校验自动发布的研究雷达记录，回收非公开研究域泄漏，并在模型把字段返回为普通文本而非结构对象时继续保留摘要结果。',
+      'GIDS 现在会用硬性公开边界规则重新校验自动发布的研究雷达记录，在模型把字段返回为普通文本时继续保留摘要结果，并避免慢模型路由与导出内存压力拖住发布。',
     sections: [
       {
         kind: 'fixed',
@@ -48,6 +48,10 @@ export const changelogReleases: ChangelogRelease[] = [
             en: 'Summary enrichment now accepts scalar/list model fields as conservative evidence objects, reducing avoidable failures from otherwise usable model responses.',
             zh: '摘要补全现在会把模型返回的文本或列表字段保守转换为证据对象，减少可用回答因结构轻微偏差而失败。',
           },
+          {
+            en: 'Chronically failing Model Center routes are no longer used as active summary candidates until a structured health check proves recovery.',
+            zh: '连续生产调用失败的模型中心路由不再进入摘要 active 候选，直到结构化健康检查证明已恢复。',
+          },
         ],
       },
       {
@@ -58,6 +62,10 @@ export const changelogReleases: ChangelogRelease[] = [
           {
             en: 'The repaired Research Radar export passes public-release validation again, with 964 public articles and 334 weekly briefs after recovery.',
             zh: '修复后的研究雷达导出已重新通过公开发布校验，恢复后包含 964 篇公开文章和 334 份周报。',
+          },
+          {
+            en: 'Site-data export now scales partitioned download workers to the service memory guardrail, preventing releases from stalling under cgroup memory pressure.',
+            zh: '站点数据导出现在会按服务内存水位收敛分区下载 worker，避免发布在 cgroup 内存压力下停住。',
           },
         ],
       },

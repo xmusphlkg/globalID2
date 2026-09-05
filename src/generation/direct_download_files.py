@@ -109,7 +109,43 @@ BRIDGE_WINDOW_END = 2029
 ROLLING_WINDOW_START = 2030
 ROLLING_WINDOW_YEARS = 5
 _XLSX_TIMESTAMP = (2000, 1, 1, 0, 0, 0)
-DEFAULT_EXPORT_WORKERS = min(4, max(1, os.cpu_count() or 1))
+
+
+def _read_cgroup_memory_limit_bytes() -> int | None:
+    """Return the tightest cgroup memory guardrail when the exporter is service-bound."""
+    candidates = (
+        Path("/sys/fs/cgroup/memory.high"),
+        Path("/sys/fs/cgroup/memory.max"),
+    )
+    values: list[int] = []
+    for path in candidates:
+        try:
+            raw = path.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if not raw or raw == "max":
+            continue
+        try:
+            values.append(int(raw))
+        except ValueError:
+            continue
+    return min(values) if values else None
+
+
+def _default_export_workers(cpu_count: int | None, memory_limit_bytes: int | None) -> int:
+    cpu_workers = min(4, max(1, cpu_count or 1))
+    if not memory_limit_bytes:
+        return cpu_workers
+
+    gib = 1024 * 1024 * 1024
+    if memory_limit_bytes <= 4 * gib:
+        return 1
+    if memory_limit_bytes <= 8 * gib:
+        return min(cpu_workers, 2)
+    return cpu_workers
+
+
+DEFAULT_EXPORT_WORKERS = _default_export_workers(os.cpu_count(), _read_cgroup_memory_limit_bytes())
 
 
 def _process_pool_context() -> multiprocessing.context.BaseContext:

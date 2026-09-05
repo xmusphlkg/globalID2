@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from src.ai.model_center import (
     _combined_route_runtime_health_state,
+    _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD,
     _runtime_health_state,
     _utcnow,
     _write_provider_runtime_failure,
@@ -60,6 +61,36 @@ def test_provider_health_can_temporarily_block_an_otherwise_healthy_model() -> N
     assert combined["runtime_failure_active"] is True
     assert combined["runtime_failure_scope"] == "provider"
     assert combined["runtime_failure_kind"] == "connection"
+
+
+def test_chronic_model_failures_keep_route_out_of_active_candidates() -> None:
+    now = _utcnow()
+    payload = {}
+    for index in range(_MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD):
+        payload = _write_runtime_failure(
+            payload,
+            kind="timeout",
+            error="request timed out",
+            occurred_at=now - timedelta(minutes=30, seconds=index),
+            duration_seconds=35.0,
+            cooldown_seconds=30,
+        )
+
+    model = SimpleNamespace(extra_params=payload)
+    provider = SimpleNamespace(extra_config={})
+    combined = _combined_route_runtime_health_state(model, provider)
+
+    assert combined["runtime_failure_active"] is False
+    assert combined["runtime_degraded"] is True
+    assert combined["runtime_degraded_scope"] == "model"
+    assert combined["runtime_degraded_reason"] == "chronic_model_failure_streak"
+
+    recovered = _write_runtime_success(payload, occurred_at=now, duration_seconds=1.0)
+    recovered_combined = _combined_route_runtime_health_state(
+        SimpleNamespace(extra_params=recovered),
+        provider,
+    )
+    assert recovered_combined["runtime_degraded"] is False
 
 
 def test_active_provider_circuit_does_not_extend_its_recovery_window() -> None:

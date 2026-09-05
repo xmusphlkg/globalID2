@@ -32,6 +32,7 @@ _RUNTIME_FAILURE_KINDS = {"timeout", "connection", "upstream", "structured_outpu
 _RUNTIME_FAILURE_COOLDOWN_CAP_SECONDS = 600
 _PROVIDER_TIMEOUT_CIRCUIT_THRESHOLD = 2
 _PROVIDER_FAILURE_RECENCY_WINDOW = timedelta(minutes=10)
+_MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD = 8
 _DEFAULT_PROVIDER_ADMISSION_MAX_CONCURRENCY = 2
 _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY = 1
 _DEFAULT_ADMISSION_SUCCESS_SCALE_UP = 2
@@ -425,6 +426,12 @@ def _combined_route_runtime_health_state(
         model_state["runtime_failure_streak"],
         provider_state["runtime_failure_streak"],
     )
+    degraded_scope: Optional[str] = None
+    degraded_reason: Optional[str] = None
+    if model_state["runtime_failure_streak"] >= _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD:
+        degraded_scope = "model"
+        degraded_reason = "chronic_model_failure_streak"
+
     return {
         "runtime_failure_active": bool(active),
         "runtime_failure_scope": scope,
@@ -441,6 +448,9 @@ def _combined_route_runtime_health_state(
         "runtime_failure_count": model_state["runtime_failure_count"],
         "runtime_timeout_count": model_state["runtime_timeout_count"],
         "runtime_success_count": model_state["runtime_success_count"],
+        "runtime_degraded": degraded_scope is not None,
+        "runtime_degraded_scope": degraded_scope,
+        "runtime_degraded_reason": degraded_reason,
         "runtime_latency_ewma_ms": latency,
         "runtime_last_latency_ms": model_state["runtime_last_latency_ms"],
         "runtime_last_failure_at": (
@@ -1245,7 +1255,8 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
                     "available_for_routing": bool(provider.api_key)
                     and status_routable
                     and not rate_limit_state["rate_limit_active"]
-                    and not runtime_health_state["runtime_failure_active"],
+                    and not runtime_health_state["runtime_failure_active"]
+                    and not runtime_health_state["runtime_degraded"],
                     **rate_limit_state,
                     **runtime_health_state,
             }
@@ -1550,7 +1561,11 @@ async def update_model_check_result(model_id: int, status: str, message: str) ->
         model.last_check_message = message
         model.last_checked_at = _utcnow()
         if status == "available":
-            model.extra_params = _clear_payload_rate_limit(model.extra_params, model.last_checked_at)
+            model.extra_params = _write_runtime_success(
+                _clear_payload_rate_limit(model.extra_params, model.last_checked_at),
+                occurred_at=model.last_checked_at,
+                duration_seconds=None,
+            )
         await db.commit()
 
 
@@ -1563,7 +1578,11 @@ async def update_provider_check_result(provider_id: int, status: str, message: s
         provider.last_check_message = message
         provider.last_checked_at = _utcnow()
         if status == "available":
-            provider.extra_config = _clear_payload_rate_limit(provider.extra_config, provider.last_checked_at)
+            provider.extra_config = _write_runtime_success(
+                _clear_payload_rate_limit(provider.extra_config, provider.last_checked_at),
+                occurred_at=provider.last_checked_at,
+                duration_seconds=None,
+            )
         await db.commit()
 
 

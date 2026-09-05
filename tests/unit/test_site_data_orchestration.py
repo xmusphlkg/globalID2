@@ -3,7 +3,12 @@ import inspect
 from types import SimpleNamespace
 
 from scripts import generate_site_data as legacy_api
-from src.generation import site_data_catalogue, site_data_export, site_data_knowledge
+from src.generation import (
+    direct_download_files,
+    site_data_catalogue,
+    site_data_export,
+    site_data_knowledge,
+)
 
 
 def _called_names(function: object) -> list[str]:
@@ -51,6 +56,19 @@ def test_export_public_signature_remains_stable() -> None:
         "direct_download_max_file_bytes",
         "direct_download_workers",
     ]
+
+
+def test_direct_download_default_workers_respect_tight_cgroup_memory() -> None:
+    gib = 1024 * 1024 * 1024
+
+    assert direct_download_files._default_export_workers(16, 4 * gib) == 1
+    assert direct_download_files._default_export_workers(16, 8 * gib) == 2
+    assert direct_download_files._default_export_workers(16, 16 * gib) == 4
+
+
+def test_direct_download_default_workers_fall_back_to_cpu_without_memory_limit() -> None:
+    assert direct_download_files._default_export_workers(16, None) == 4
+    assert direct_download_files._default_export_workers(1, None) == 1
 
 
 def test_export_side_effect_sequence_is_explicit_and_stable() -> None:

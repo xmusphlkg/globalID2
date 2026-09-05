@@ -10,12 +10,14 @@ This file records release-level changes to the GIDS application and its data ope
 - Reopened autopilot-published summaries when their parent article is demoted back to review, and archived them when the parent article is excluded.
 - Accepted scalar or list-shaped model fields during Research Radar summary enrichment by coercing them into conservative evidence objects, avoiding avoidable summary failures when models return prose instead of `{ text, evidence, confidence }`.
 - Kept transient Cloudflare Pages API failures from being misclassified as a missing production-branch configuration during release preflight.
+- Kept chronically failing Model Center routes out of active summary candidates after repeated production-call failures, while allowing a successful structured health check to restore the route.
+- Made partitioned download generation respect the service cgroup memory guardrail so site releases do not stall under `mem_cgroup_handle_over_high` pressure.
 
 ### Operations
 
 - Reconciled the Research Radar catalogue after the non-public-domain fix: the blocking `animal_only` Nature Communications article was returned to review, public export validation passed, and the public Research Radar export rebuilt with 964 articles and 334 weekly briefs.
 - Restored 1959 autopilot-published rows that were briefly over-revalidated by score-threshold drift during diagnosis, while keeping 13 hard public-boundary demotions in review.
-- Verified the targeted Research Radar automation, enrichment, release-validation, and task-worker suites with 77 passing tests.
+- Verified the targeted Research Radar automation, enrichment, release-validation, data-release, Model Center runtime-health, site-data orchestration, and task-worker suites with 110+ passing tests.
 
 ## [0.9.4] - 2026-09-04
 
