@@ -22,6 +22,48 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.9.5',
+    date: '2026-09-05',
+    titleEn: 'Research Radar publication-boundary repair',
+    titleZh: '研究雷达公开边界修复',
+    summaryEn:
+      'GIDS now revalidates autopilot-published Research Radar records against hard public-boundary rules, recovers non-public-domain leaks, and keeps model summaries flowing when a field is returned as prose instead of a structured object.',
+    summaryZh:
+      'GIDS 现在会用硬性公开边界规则重新校验自动发布的研究雷达记录，回收非公开研究域泄漏，并在模型把字段返回为普通文本而非结构对象时继续保留摘要结果。',
+    sections: [
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Autopilot-managed articles with animal-only, basic-research, or plant-only classification evidence can no longer remain in the public Research Radar catalogue.',
+            zh: '带有动物实验、基础研究或植物研究分类证据的自动发布文章不再能停留在公开研究雷达目录中。',
+          },
+          {
+            en: 'Automatically published summaries now return to review or archive when their parent article is removed from the public boundary.',
+            zh: '当父文章离开公开边界时，自动发布的摘要现在会回到待审或归档状态。',
+          },
+          {
+            en: 'Summary enrichment now accepts scalar/list model fields as conservative evidence objects, reducing avoidable failures from otherwise usable model responses.',
+            zh: '摘要补全现在会把模型返回的文本或列表字段保守转换为证据对象，减少可用回答因结构轻微偏差而失败。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'The repaired Research Radar export passes public-release validation again, with 964 public articles and 334 weekly briefs after recovery.',
+            zh: '修复后的研究雷达导出已重新通过公开发布校验，恢复后包含 964 篇公开文章和 334 份周报。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.9.4',
     date: '2026-09-04',
     titleEn: 'Autonomous knowledge repair, PubMed discovery, and richer curve comparison',

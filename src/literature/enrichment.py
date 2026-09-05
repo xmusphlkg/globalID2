@@ -282,6 +282,7 @@ class LiteratureSummaryGenerator:
         fields: dict[str, str | None] = {}
         evidence_map: dict[str, dict[str, Any]] = {}
         rejected_overlap: list[str] = []
+        coerced_fields: list[str] = []
         confidences: list[float] = []
         for field in SUMMARY_FIELDS:
             raw = parsed.get(field)
@@ -298,7 +299,11 @@ class LiteratureSummaryGenerator:
                 fields[field] = None
                 continue
             if not isinstance(raw, dict):
-                raise ValueError(f"Literature enrichment field '{field}' must be an object or null")
+                raw = self._coerce_field_payload(raw)
+                if raw is None:
+                    fields[field] = None
+                    continue
+                coerced_fields.append(field)
             text = str(raw.get("text") or "").strip() or None
             evidence_sources = [
                 value for value in raw.get("evidence") or []
@@ -343,6 +348,8 @@ class LiteratureSummaryGenerator:
             notes += f" Removed verbatim-overlap fields: {', '.join(rejected_overlap)}."
         if parse_failed:
             notes += " Recovered malformed Chinese JSON from the canonical English contract."
+        if coerced_fields:
+            notes += f" Coerced scalar fields into evidence objects: {', '.join(coerced_fields)}."
         return EnrichmentResult(
             fields=fields,
             evidence_map=evidence_map,
@@ -415,6 +422,29 @@ class LiteratureSummaryGenerator:
             if self._raw_field_is_null(parsed.get(field)):
                 parsed[field] = self._canonical_contract_fallback(field, canonical_fields.get(field))
         return parsed
+
+    @staticmethod
+    def _coerce_field_payload(raw: Any) -> dict[str, Any] | None:
+        if isinstance(raw, str):
+            text = raw.strip()
+        elif isinstance(raw, list):
+            parts: list[str] = []
+            for item in raw:
+                if isinstance(item, str):
+                    parts.append(item.strip())
+                elif isinstance(item, dict):
+                    parts.append(str(item.get("text") or item.get("value") or "").strip())
+            text = " ".join(part for part in parts if part)
+        else:
+            return None
+        if not text or text.lower() in {"null", "none", "n/a", "not applicable", "not available"}:
+            return None
+        return {
+            "text": text,
+            "evidence": ["abstract"],
+            "confidence": 0.7,
+            "fallback": "coerced_scalar_field",
+        }
 
     @staticmethod
     def _raw_field_is_null(raw: Any) -> bool:

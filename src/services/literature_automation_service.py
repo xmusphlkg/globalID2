@@ -50,6 +50,7 @@ class AutomationDecision:
 
 _CORRECTION_TITLE = re.compile(r"^\s*(?:correction|corrigendum|erratum)\s*(?::|to\b)", re.IGNORECASE)
 _STRICT_ANIMAL_ONLY_MAX_SCORE = 0.20
+_NON_PUBLIC_RESEARCH_DOMAINS = frozenset({"animal_only", "basic_research", "plant_only"})
 _POLICY_OVERRIDE_FIELDS = frozenset({"autopilot_article_min_score"})
 _SCORED_REASON = re.compile(r"^(?:discovery score|summary quality)\s+[0-9.]+")
 
@@ -101,6 +102,18 @@ def _persisted_autopilot_decision(metadata: Any) -> str | None:
         return None
     decision = automation.get("decision")
     return decision if decision in {"defer", "archive"} else None
+
+
+def _is_autopilot_managed(metadata: Any) -> bool:
+    if not isinstance(metadata, Mapping):
+        return False
+    automation = metadata.get("autopilot")
+    if not isinstance(automation, Mapping):
+        return False
+    return (
+        automation.get("policy_version") == POLICY_VERSION
+        and automation.get("actor") == AUTOPILOT_ACTOR
+    )
 
 
 def _now() -> datetime:
@@ -236,14 +249,25 @@ def decide_article(
             ("correction/corrigendum record has an explicit parent DOI",),
         )
     score = float(article.discovery_score or 0.0)
+    research_domain = _research_domain(article)
+    if research_domain == "plant_only":
+        return AutomationDecision(
+            "exclude",
+            ("research domain is plant_only and is outside the public health catalogue",),
+        )
     if (
-        _research_domain(article) == "animal_only"
+        research_domain == "animal_only"
         and max_disease_confidence <= 0.0
         and score <= min(float(config.autopilot_article_exclude_below_score), _STRICT_ANIMAL_ONLY_MAX_SCORE)
     ):
         return AutomationDecision(
             "exclude",
             ("strict animal-only record has no disease link and extremely low discovery score",),
+        )
+    if research_domain in _NON_PUBLIC_RESEARCH_DOMAINS:
+        return AutomationDecision(
+            "hold",
+            (f"research domain is {research_domain} and requires editorial review",),
         )
     hold_reasons = _article_hold_reasons(article, now=now)
     if hold_reasons:
@@ -307,7 +331,7 @@ def decide_summary(
         or (summary.generation_metadata or {}).get("editorial_reviewed_at")
     ):
         return AutomationDecision("hold", ("summary is already published",))
-    if article.publication_status == "excluded" and summary.status in {"review", "archived"}:
+    if article.publication_status == "excluded":
         return AutomationDecision("archive", ("parent article is excluded",))
     if article.publication_status != "published":
         return AutomationDecision("defer", ("article decision is not final for public release",))
@@ -362,6 +386,25 @@ def decide_summary(
     )
 
 
+def _published_revalidation_status(article: Any, decision: AutomationDecision, *, now: datetime) -> str:
+    """Return a replacement status only for hard public-boundary failures."""
+    research_domain = _research_domain(article)
+    if research_domain == "plant_only":
+        return "excluded"
+    if research_domain in {"animal_only", "basic_research"}:
+        return "review"
+    if str(article.integrity_status) in {"retracted", "expression_of_concern"}:
+        return "excluded"
+    if _has_explicit_correction_parent(article):
+        return "excluded"
+    published_at = _aware(article.published_at)
+    if published_at is not None and published_at > now:
+        return "review"
+    if decision.action == "publish":
+        return "published"
+    return "published"
+
+
 def _audit_payload(decision: AutomationDecision, *, at: datetime, config: Any) -> dict[str, Any]:
     return {
         "policy_version": POLICY_VERSION,
@@ -411,6 +454,7 @@ class LiteratureAutomationService:
             "articles_published": 0,
             "articles_excluded": 0,
             "articles_deferred": 0,
+            "articles_reopened": 0,
             "article_exceptions": 0,
             "links_confirmed": 0,
             "links_rejected": 0,
@@ -485,18 +529,18 @@ class LiteratureAutomationService:
                             LiteratureArticle,
                             LiteratureArticle.article_id == LiteratureDiseaseLink.article_id,
                         )
-                        .where(LiteratureArticle.publication_status == "review")
+                        .where(LiteratureArticle.publication_status.in_(("review", "published")))
                         .group_by(LiteratureDiseaseLink.article_id)
                     )
                 ).all()
             }
-            # Only review articles are eligible for an article decision. Loading
-            # every article also materializes abstracts and multi-provider JSON;
-            # at production scale that exceeded 9 GiB even for a dry run.
+            # Review rows are candidates for first publication. Autopilot-owned
+            # published rows are revalidated so stale policy or classification
+            # evidence cannot remain on the public boundary indefinitely.
             articles = (
                 await db.execute(
                     select(LiteratureArticle).where(
-                        LiteratureArticle.publication_status == "review"
+                        LiteratureArticle.publication_status.in_(("review", "published"))
                     )
                 )
             ).scalars().all()
@@ -506,7 +550,9 @@ class LiteratureAutomationService:
                 for article_id, article in article_by_id.items()
             }
             for article in articles:
-                if article.publication_status != "review":
+                was_published = article.publication_status == "published"
+                autopilot_managed = _is_autopilot_managed(article.metadata_)
+                if was_published and not autopilot_managed:
                     continue
                 confirmed_levels = {
                     link.relation_level
@@ -521,7 +567,16 @@ class LiteratureAutomationService:
                     now=at,
                 )
                 record_reason("articles", decision)
-                if decision.action == "publish":
+                if was_published:
+                    desired = _published_revalidation_status(article, decision, now=at)
+                    if desired == "published":
+                        effective_article_status[article.article_id] = desired
+                        continue
+                    if desired == "excluded":
+                        counts["articles_excluded"] += 1
+                    else:
+                        counts["articles_reopened"] += 1
+                elif decision.action == "publish":
                     desired = "published"
                     counts["articles_published"] += 1
                     published_article_ids.append(article.article_id)
@@ -628,8 +683,10 @@ class LiteratureAutomationService:
                     counts["summaries_deferred"] += 1
                     if summary.status == "archived":
                         counts["summaries_restored"] += 1
+                    elif summary.status == "published" and (summary.generation_metadata or {}).get("autopilot"):
+                        counts["summaries_reopened"] += 1
                     if not dry_run:
-                        if summary.status == "archived":
+                        if summary.status in {"archived", "published"}:
                             summary.status = "review"
                         summary.generation_metadata = {
                             **(summary.generation_metadata or {}),
@@ -699,6 +756,7 @@ class LiteratureAutomationService:
                 counts[key]
                 for key in (
                     "articles_published", "articles_excluded", "links_confirmed", "links_rejected",
+                    "articles_reopened",
                     "summaries_published", "summaries_archived", "summaries_restored",
                     "summaries_reopened",
                     "gaps_covered", "gaps_reopened",

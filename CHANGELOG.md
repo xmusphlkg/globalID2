@@ -2,6 +2,20 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing bilingual notes are also available in the website Changelog.
 
+## [0.9.5] - 2026-09-05
+
+### Fixed
+
+- Prevented autopilot-managed Research Radar articles with non-public research domains from remaining on the public boundary after newer classification evidence marks them as `animal_only`, `basic_research`, or `plant_only`.
+- Reopened autopilot-published summaries when their parent article is demoted back to review, and archived them when the parent article is excluded.
+- Accepted scalar or list-shaped model fields during Research Radar summary enrichment by coercing them into conservative evidence objects, avoiding avoidable summary failures when models return prose instead of `{ text, evidence, confidence }`.
+
+### Operations
+
+- Reconciled the Research Radar catalogue after the non-public-domain fix: the blocking `animal_only` Nature Communications article was returned to review, public export validation passed, and the public Research Radar export rebuilt with 964 articles and 334 weekly briefs.
+- Restored 1959 autopilot-published rows that were briefly over-revalidated by score-threshold drift during diagnosis, while keeping 13 hard public-boundary demotions in review.
+- Verified the targeted Research Radar automation, enrichment, release-validation, and task-worker suites with 77 passing tests.
+
 ## [0.9.4] - 2026-09-04
 
 ### Added
