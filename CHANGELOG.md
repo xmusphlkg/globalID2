@@ -9,6 +9,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Prevented autopilot-managed Research Radar articles with non-public research domains from remaining on the public boundary after newer classification evidence marks them as `animal_only`, `basic_research`, or `plant_only`.
 - Reopened autopilot-published summaries when their parent article is demoted back to review, and archived them when the parent article is excluded.
 - Accepted scalar or list-shaped model fields during Research Radar summary enrichment by coercing them into conservative evidence objects, avoiding avoidable summary failures when models return prose instead of `{ text, evidence, confidence }`.
+- Kept transient Cloudflare Pages API failures from being misclassified as a missing production-branch configuration during release preflight.
 
 ### Operations
 

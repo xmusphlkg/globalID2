@@ -543,6 +543,85 @@ async def test_release_preflight_checks_direct_download_repo_when_enabled(
     assert any("worktree is not clean" in item for item in dirty_checks["blockers"])
 
 
+@pytest.mark.asyncio
+async def test_release_preflight_does_not_invent_production_branch_blocker_on_cloudflare_api_failure(
+    monkeypatch, tmp_path
+):
+    service = DataReleaseService()
+    python_path = tmp_path / "python"
+    python_path.touch()
+    job = release_module.DataReleaseJobConfig(
+        job_id="site-release",
+        name="Site Release",
+        include_git_push=True,
+        include_cloudflare_deploy=True,
+    )
+
+    async def no_op():
+        return None
+
+    async def load_jobs():
+        return [job]
+
+    async def no_paths():
+        return []
+
+    async def command_available(*_args, **_kwargs):
+        return {"returncode": 0, "stdout": "4.0.0"}
+
+    async def clean_worktree():
+        return []
+
+    async def direct_repo_check(*_args, **_kwargs):
+        return {
+            "payload": {
+                "repo_url": "git@example/data.git",
+                "branch": "main",
+                "raw_base_url": "https://raw.example/data/main",
+                "read_access_ok": True,
+                "write_access_ok": True,
+                "read_check_output": "ok",
+                "write_check_output": "ok",
+                "ssh_transport": "default",
+            },
+            "blockers": [],
+        }
+
+    async def cloudflare_eof(*_args, **_kwargs):
+        return {
+            "payload": {
+                "project_access_ok": False,
+                "production_branch": None,
+                "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING]>",
+            },
+            "blockers": ["Cloudflare Pages project check failed."],
+        }
+
+    async def raw_archive_check():
+        return {"payload": {"enabled": False}, "blockers": []}
+
+    monkeypatch.setattr(service, "ensure_storage", no_op)
+    monkeypatch.setattr(service, "load_jobs", load_jobs)
+    monkeypatch.setattr(service, "_git_status_paths", clean_worktree)
+    monkeypatch.setattr(service, "_run_capture", command_available)
+    monkeypatch.setattr(service, "_cloudflare_check", cloudflare_eof)
+    monkeypatch.setattr(service, "_tracked_generated_paths", no_paths)
+    monkeypatch.setattr(service, "_download_repo_check", direct_repo_check)
+    monkeypatch.setattr(service, "_raw_archive_check", raw_archive_check)
+    monkeypatch.setattr(service, "_download_repo_url", lambda: "git@example/data.git")
+    monkeypatch.setattr(
+        service,
+        "_download_repo_raw_base",
+        lambda _job: "https://data.example/releases/test-release",
+    )
+    monkeypatch.setattr(service, "_python_executable", lambda: python_path)
+
+    checks = await service.integration_checks("site-release")
+
+    assert checks["overall_ready"] is False
+    assert checks["blockers"] == ["Cloudflare Pages project check failed."]
+
+
 def test_download_publish_command_uses_incremental_partition_publisher(tmp_path):
     service = DataReleaseService()
     command = service._publish_download_repo_command(

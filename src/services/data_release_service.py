@@ -1021,7 +1021,11 @@ class DataReleaseService:
             blockers.append(f"Situation Room refresh command is unavailable: {detail}")
         if job.include_cloudflare_deploy and wrangler_check["returncode"] != 0:
             blockers.append("Wrangler CLI is unavailable.")
-        if job.include_cloudflare_deploy and not cloudflare["payload"].get("production_branch"):
+        if (
+            job.include_cloudflare_deploy
+            and cloudflare["payload"].get("project_access_ok")
+            and not cloudflare["payload"].get("production_branch")
+        ):
             blockers.append("Cloudflare Pages project has no production branch configured.")
         if job.require_clean_worktree and worktree:
             blockers.append(
