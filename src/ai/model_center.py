@@ -1591,6 +1591,23 @@ async def update_provider_check_result(provider_id: int, status: str, message: s
         await db.commit()
 
 
+def _provider_check_result_from_model_results(results: List[Dict[str, Any]]) -> tuple[str, str]:
+    """Summarize sibling model checks without letting one bad model poison the provider."""
+    successful = next((item for item in results if item.get("success")), None)
+    if successful is not None:
+        return "available", str(successful.get("message") or "At least one enabled provider model is available")
+
+    rate_limited = next((item for item in results if item.get("status") == "rate_limited"), None)
+    if rate_limited is not None:
+        return "rate_limited", str(rate_limited.get("message") or "At least one enabled provider model is rate-limited")
+
+    failures = [
+        f"{item.get('model_name') or item.get('model_key') or 'model'}: {item.get('message') or 'unavailable'}"
+        for item in results
+    ]
+    return "unavailable", "All enabled provider models failed: " + " | ".join(failures)
+
+
 async def mark_route_rate_limited(
     route: Dict[str, Any],
     message: str,
@@ -1858,7 +1875,8 @@ async def check_model_by_id(model_id: int, *, structured: bool = True) -> Dict[s
 
     result = await test_route_connection(route, structured=structured)
     await update_model_check_result(model_id, result["status"], result["message"])
-    await update_provider_check_result(route["provider_id"], result["status"], result["message"])
+    if result.get("success"):
+        await update_provider_check_result(route["provider_id"], result["status"], result["message"])
     return result
 
 
@@ -1900,6 +1918,7 @@ async def check_all_models(*, structured: bool = True) -> List[Dict[str, Any]]:
     """Test all enabled runtime routes and persist statuses."""
     routes = await get_runtime_routes()
     results: List[Dict[str, Any]] = []
+    provider_results: Dict[int, List[Dict[str, Any]]] = {}
     for route in routes:
         result = await test_route_connection(route, structured=structured)
         if result["status"] == "rate_limited":
@@ -1909,7 +1928,6 @@ async def check_all_models(*, structured: bool = True) -> List[Dict[str, Any]]:
                 retry_after_seconds=result.get("retry_after_seconds"),
             )
         await update_model_check_result(route["model_id"], result["status"], result["message"])
-        await update_provider_check_result(route["provider_id"], result["status"], result["message"])
         result.update(
             {
                 "model_id": route["model_id"],
@@ -1918,4 +1936,8 @@ async def check_all_models(*, structured: bool = True) -> List[Dict[str, Any]]:
             }
         )
         results.append(result)
+        provider_results.setdefault(int(route["provider_id"]), []).append(result)
+    for provider_id, provider_model_results in provider_results.items():
+        status, message = _provider_check_result_from_model_results(provider_model_results)
+        await update_provider_check_result(provider_id, status, message)
     return results

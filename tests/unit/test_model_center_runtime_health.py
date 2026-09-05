@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from src.ai.model_center import (
     _combined_route_runtime_health_state,
     _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD,
+    _provider_check_result_from_model_results,
     _runtime_health_state,
     _utcnow,
     _write_provider_runtime_failure,
@@ -199,3 +200,47 @@ def test_runtime_admission_waits_for_capacity_without_raising_a_model_timeout() 
     import asyncio
 
     asyncio.run(exercise())
+
+
+def test_provider_check_stays_available_when_any_sibling_model_succeeds() -> None:
+    status, message = _provider_check_result_from_model_results(
+        [
+            {
+                "success": False,
+                "status": "unavailable",
+                "model_name": "bad-model",
+                "message": "model does not exist or you do not have access",
+            },
+            {
+                "success": True,
+                "status": "available",
+                "model_name": "good-model",
+                "message": "Structured workload probe successful",
+            },
+        ]
+    )
+
+    assert status == "available"
+    assert message == "Structured workload probe successful"
+
+
+def test_provider_check_rate_limited_only_when_no_sibling_succeeds() -> None:
+    status, message = _provider_check_result_from_model_results(
+        [
+            {
+                "success": False,
+                "status": "unavailable",
+                "model_name": "bad-model",
+                "message": "model unavailable",
+            },
+            {
+                "success": False,
+                "status": "rate_limited",
+                "model_name": "limited-model",
+                "message": "quota exhausted",
+            },
+        ]
+    )
+
+    assert status == "rate_limited"
+    assert message == "quota exhausted"

@@ -18,6 +18,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Treated provider 403/no-access responses, including Chinese `无权访问` messages, as unavailable model routes so they are removed from the summary retry chain.
 - Kept large Research Radar disease, country, and topic collection pages within release HTML budgets by rendering the first page of articles server-side and loading additional cards from the compact research catalogue on demand.
 - Added compact source identifiers to Research Radar article SEO titles so long distinct article titles do not collide after SEO truncation.
+- Kept Model Center provider health from being overwritten by an individual sibling model failure; provider checks now remain routable when at least one enabled model succeeds.
 
 ### Operations
 
@@ -25,6 +26,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Restored 1959 autopilot-published rows that were briefly over-revalidated by score-threshold drift during diagnosis, while keeping 13 hard public-boundary demotions in review.
 - Verified the targeted Research Radar automation, enrichment, release-validation, data-release, Model Center runtime-health, site-data orchestration, and task-worker suites with 110+ passing tests.
 - Verified the full Astro production build after the collection-page slimming and SEO-title disambiguation; performance-budget and SEO-output release checks pass for 4116 generated pages.
+- Raised the healthy `centos_cn:qwen3.6-flash` runtime admission budget to two concurrent in-flight calls while other routes remain excluded by quota, permission, or chronic timeout state.
 
 ## [0.9.4] - 2026-09-04
 
