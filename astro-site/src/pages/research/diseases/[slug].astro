@@ -44,6 +44,8 @@ const descriptionZh = `${facet.name_zh ?? facet.name_en}已发布研究、可审
   descriptionZh={descriptionZh}
   canonicalPath={`/research/diseases/${facet.slug}/`}
   articles={research.articles ?? []}
+  clientCollectionScope="disease"
+  clientCollectionValue={String(facet.disease_id).toLowerCase()}
   locale={locale}
 >
   <section slot="context" class="card evidence-timeline">

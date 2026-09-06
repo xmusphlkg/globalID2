@@ -2,6 +2,32 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing bilingual notes are also available in the website Changelog.
 
+## [0.9.5] - 2026-09-05
+
+### Fixed
+
+- Prevented autopilot-managed Research Radar articles with non-public research domains from remaining on the public boundary after newer classification evidence marks them as `animal_only`, `basic_research`, or `plant_only`.
+- Reopened autopilot-published summaries when their parent article is demoted back to review, and archived them when the parent article is excluded.
+- Accepted scalar or list-shaped model fields during Research Radar summary enrichment by coercing them into conservative evidence objects, avoiding avoidable summary failures when models return prose instead of `{ text, evidence, confidence }`.
+- Kept transient Cloudflare Pages API failures from being misclassified as a missing production-branch configuration during release preflight.
+- Kept chronically failing Model Center routes out of active summary candidates after repeated production-call failures, while allowing a successful structured health check to restore the route.
+- Made partitioned download generation respect the service cgroup memory guardrail so site releases do not stall under `mem_cgroup_handle_over_high` pressure.
+- Prevented site release exports from being claimed concurrently with memory-heavy Research Radar and AI tasks in the dashboard worker.
+- Prevented queued site releases from being starved by newly claimed Research Radar catch-up tasks.
+- Drained release subprocess output by byte chunks instead of newline-delimited reads so verbose Astro/Node commands cannot block on a full stdout pipe.
+- Treated provider 403/no-access responses, including Chinese `无权访问` messages, as unavailable model routes so they are removed from the summary retry chain.
+- Kept large Research Radar disease, country, and topic collection pages within release HTML budgets by rendering the first page of articles server-side and loading additional cards from the compact research catalogue on demand.
+- Added compact source identifiers to Research Radar article SEO titles so long distinct article titles do not collide after SEO truncation.
+- Kept Model Center provider health from being overwritten by an individual sibling model failure; provider checks now remain routable when at least one enabled model succeeds.
+
+### Operations
+
+- Reconciled the Research Radar catalogue after the non-public-domain fix: the blocking `animal_only` Nature Communications article was returned to review, public export validation passed, and the public Research Radar export rebuilt with 964 articles and 334 weekly briefs.
+- Restored 1959 autopilot-published rows that were briefly over-revalidated by score-threshold drift during diagnosis, while keeping 13 hard public-boundary demotions in review.
+- Verified the targeted Research Radar automation, enrichment, release-validation, data-release, Model Center runtime-health, site-data orchestration, and task-worker suites with 110+ passing tests.
+- Verified the full Astro production build after the collection-page slimming and SEO-title disambiguation; performance-budget and SEO-output release checks pass for 4116 generated pages.
+- Raised the healthy `centos_cn:qwen3.6-flash` runtime admission budget to two concurrent in-flight calls while other routes remain excluded by quota, permission, or chronic timeout state.
+
 ## [0.9.4] - 2026-09-04
 
 ### Added

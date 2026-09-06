@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, or_, select, union
 
 from src.control_plane.schedule_state import schedule_state_repository
+from src.ai.model_center import is_provider_authentication_error
 from src.core import get_config, get_database, get_logger
 from src.core.task_manager import task_manager
 from src.domain import (
@@ -531,6 +532,7 @@ class LiteratureService:
         cfg = self._config()
         output["ai_enrichment_catch_up_required"] = 0
         output["ai_enrichment_catch_up_scheduled"] = 0
+        output["ai_enrichment_catch_up_blocked_provider_auth"] = 0
         output["ai_enrichment_catch_up_status"] = "not_required"
         output["ai_enrichment_catch_up_next_action_code"] = "none"
         if not (cfg.ai_enrichment_enabled and cfg.ai_enrichment_schedule_enabled):
@@ -554,6 +556,22 @@ class LiteratureService:
             return
 
         output["ai_enrichment_catch_up_required"] = 1
+        provider_auth_failure = bool(summaries.get("provider_auth_failure"))
+        if not provider_auth_failure:
+            provider_auth_failure = any(
+                is_provider_authentication_error(item.get("error"))
+                for item in summaries.get("errors", [])
+                if isinstance(item, dict)
+            )
+        if provider_auth_failure:
+            output["ai_enrichment_catch_up_blocked_provider_auth"] = 1
+            output["ai_enrichment_catch_up_status"] = "blocked_provider_auth"
+            output["ai_enrichment_catch_up_next_action_code"] = "refresh_credentials_and_test"
+            logger.warning(
+                "Research Radar enrichment catch-up blocked because provider credentials were rejected"
+            )
+            return
+
         now = datetime.now(ZoneInfo(cfg.timezone))
         next_run_at = self._next_enrichment_catch_up_run(now)
         advanced = await schedule_state_repository.schedule_earlier(

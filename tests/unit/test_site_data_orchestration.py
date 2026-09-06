@@ -3,7 +3,12 @@ import inspect
 from types import SimpleNamespace
 
 from scripts import generate_site_data as legacy_api
-from src.generation import site_data_catalogue, site_data_export, site_data_knowledge
+from src.generation import (
+    direct_download_files,
+    site_data_catalogue,
+    site_data_export,
+    site_data_knowledge,
+)
 
 
 def _called_names(function: object) -> list[str]:
@@ -51,6 +56,38 @@ def test_export_public_signature_remains_stable() -> None:
         "direct_download_max_file_bytes",
         "direct_download_workers",
     ]
+
+
+def test_direct_download_default_workers_respect_tight_cgroup_memory() -> None:
+    gib = 1024 * 1024 * 1024
+
+    assert direct_download_files._default_export_workers(16, 4 * gib) == 1
+    assert direct_download_files._default_export_workers(16, 8 * gib) == 2
+    assert direct_download_files._default_export_workers(16, 16 * gib) == 4
+
+
+def test_direct_download_reads_the_service_cgroup_memory_guardrail(tmp_path) -> None:
+    gib = 1024 * 1024 * 1024
+    cgroup_root = tmp_path / "cgroup"
+    service_cgroup = cgroup_root / "system.slice" / "globalid-dashboard-worker.service"
+    service_cgroup.mkdir(parents=True)
+    (service_cgroup / "memory.high").write_text(str(4 * gib), encoding="utf-8")
+    (service_cgroup / "memory.max").write_text(str(6 * gib), encoding="utf-8")
+    membership = tmp_path / "self.cgroup"
+    membership.write_text(
+        "0::/system.slice/globalid-dashboard-worker.service\n",
+        encoding="utf-8",
+    )
+
+    assert direct_download_files._read_cgroup_memory_limit_bytes(
+        cgroup_root=cgroup_root,
+        membership_path=membership,
+    ) == 4 * gib
+
+
+def test_direct_download_default_workers_fall_back_to_cpu_without_memory_limit() -> None:
+    assert direct_download_files._default_export_workers(16, None) == 4
+    assert direct_download_files._default_export_workers(1, None) == 1
 
 
 def test_export_side_effect_sequence_is_explicit_and_stable() -> None:

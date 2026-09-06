@@ -37,6 +37,7 @@ from src.literature.normalization import normalize_europe_pmc
 from src.domain import LiteratureSummary
 from src.services.literature_gap_service import build_gap_query_plan
 from src.services.literature_automation_service import (
+    _published_revalidation_status,
     decide_article,
     decide_evidence_link,
     decide_summary,
@@ -1072,6 +1073,41 @@ async def test_model_enrichment_rejects_verbatim_overlap_and_stays_reviewable():
 
 
 @pytest.mark.asyncio
+async def test_model_enrichment_coerces_scalar_field_payloads():
+    candidate = normalize_crossref(_crossref_payload())
+    assert candidate is not None
+
+    class ScalarFieldAgent(_FakeLiteratureAgent):
+        async def process(self, **_kwargs):
+            self.calls.append(_kwargs)
+            return {"raw_response": """{
+              "research_question": {"text": "What patterns were observed?", "evidence": ["abstract"], "confidence": 0.8},
+              "study_design": "A descriptive abstract-only study.",
+              "population_setting": ["National surveillance records."],
+              "main_findings": {"text": "The abstract reports the observed pattern.", "evidence": ["abstract"], "confidence": 0.8},
+              "public_health_relevance": {"text": "The record is relevant to outbreak surveillance.", "evidence": ["classifier_links"], "confidence": 0.7},
+              "limitations": null,
+              "gids_interpretation": {"text": "Use the original article before applying its findings.", "evidence": ["bibliographic_metadata"], "confidence": 0.8}
+            }"""}
+
+    result = await LiteratureSummaryGenerator(agent=ScalarFieldAgent()).generate(
+        article=candidate,
+        language="en",
+        diseases=["Dengue"],
+        countries=["Japan"],
+        topics=["Surveillance"],
+        timeout_seconds=10,
+        preferred_models=[],
+    )
+
+    assert result.fields["study_design"] == "A descriptive abstract-only study."
+    assert result.evidence_map["study_design"]["fallback"] == "coerced_scalar_field"
+    assert result.fields["population_setting"] == "National surveillance records."
+    assert result.evidence_map["population_setting"]["fallback"] == "coerced_scalar_field"
+    assert "Coerced scalar fields" in result.review_notes
+
+
+@pytest.mark.asyncio
 async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeypatch):
     captured = {}
 
@@ -1509,6 +1545,83 @@ def test_animal_only_exclusion_requires_no_disease_link_and_extremely_low_score(
     assert decision(score=0.15, disease_confidence=0.0).action == "exclude"
     assert decision(score=0.15, disease_confidence=0.80).action == "hold"
     assert decision(score=0.30, disease_confidence=0.0).action == "hold"
+    assert decision(score=0.74, disease_confidence=0.95).action == "hold"
+
+
+def test_non_public_research_domains_cannot_auto_publish():
+    for domain in ("animal_only", "basic_research"):
+        article = _autopilot_article(
+            discovery_score=0.95,
+            metadata_={"classification_evidence": {"research_domain": {"value": domain}}},
+        )
+        decision = decide_article(
+            article,
+            _autopilot_config(),
+            max_disease_confidence=0.99,
+            confirmed_relation_levels={"exact_disease_geography"},
+            now=datetime(2026, 8, 17, tzinfo=timezone.utc),
+        )
+        assert decision.action == "hold"
+        assert domain in decision.reasons[0]
+
+    plant = _autopilot_article(
+        discovery_score=0.95,
+        metadata_={"classification_evidence": {"research_domain": {"value": "plant_only"}}},
+    )
+    assert decide_article(
+        plant,
+        _autopilot_config(),
+        max_disease_confidence=0.99,
+        confirmed_relation_levels={"exact_disease_geography"},
+        now=datetime(2026, 8, 17, tzinfo=timezone.utc),
+    ).action == "exclude"
+
+
+def test_published_revalidation_only_reopens_hard_public_boundary_failures():
+    config = _autopilot_config()
+    now = datetime(2026, 8, 17, tzinfo=timezone.utc)
+    borderline = _autopilot_article(
+        publication_status="published",
+        discovery_score=0.65,
+        metadata_={"classification_evidence": {"research_domain": {"value": "human_health"}}},
+    )
+    borderline_decision = decide_article(
+        borderline,
+        config,
+        max_disease_confidence=0.95,
+        confirmed_relation_levels=set(),
+        now=now,
+    )
+    assert borderline_decision.action == "hold"
+    assert _published_revalidation_status(borderline, borderline_decision, now=now) == "published"
+
+    animal_only = _autopilot_article(
+        publication_status="published",
+        discovery_score=0.95,
+        metadata_={"classification_evidence": {"research_domain": {"value": "animal_only"}}},
+    )
+    animal_decision = decide_article(
+        animal_only,
+        config,
+        max_disease_confidence=0.99,
+        confirmed_relation_levels={"exact_disease_geography"},
+        now=now,
+    )
+    assert _published_revalidation_status(animal_only, animal_decision, now=now) == "review"
+
+    plant_only = _autopilot_article(
+        publication_status="published",
+        discovery_score=0.95,
+        metadata_={"classification_evidence": {"research_domain": {"value": "plant_only"}}},
+    )
+    plant_decision = decide_article(
+        plant_only,
+        config,
+        max_disease_confidence=0.99,
+        confirmed_relation_levels={"exact_disease_geography"},
+        now=now,
+    )
+    assert _published_revalidation_status(plant_only, plant_decision, now=now) == "excluded"
 
 
 def test_relevance_exception_band_remains_fail_closed_for_human_health_research():
@@ -1531,6 +1644,16 @@ def test_relevance_exception_band_remains_fail_closed_for_human_health_research(
 
 def test_non_public_summary_review_is_deferred_or_archived_by_article_state():
     summary = SimpleNamespace(status="review", generation_metadata={})
+    autopublished = SimpleNamespace(
+        status="published",
+        generated_by="literature-evidence-agent",
+        generation_metadata={
+            "autopilot": {
+                "policy_version": "research-radar-autopilot.v1",
+                "actor": "research-radar-autopilot",
+            }
+        },
+    )
     archived = SimpleNamespace(
         status="archived",
         generation_metadata={"autopilot": {"decision": "archive"}},
@@ -1549,6 +1672,16 @@ def test_non_public_summary_review_is_deferred_or_archived_by_article_state():
 
     assert excluded.action == "archive"
     assert pending.action == "defer"
+    assert decide_summary(
+        autopublished,
+        _autopilot_article(publication_status="excluded"),
+        _autopilot_config(),
+    ).action == "archive"
+    assert decide_summary(
+        autopublished,
+        _autopilot_article(publication_status="review"),
+        _autopilot_config(),
+    ).action == "defer"
     assert decide_summary(
         archived,
         _autopilot_article(publication_status="excluded"),

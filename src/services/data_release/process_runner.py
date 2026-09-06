@@ -26,6 +26,7 @@ OUTPUT_CHUNK_MAX_CHARS = 4000
 MAX_PERSISTED_OUTPUT_CHUNKS = 2
 OUTPUT_TAIL_MAX_LINES = 120
 COMPLETION_TAIL_LINES = 12
+OUTPUT_READ_CHUNK_BYTES = 8192
 ANSI_ESCAPE_RE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
@@ -180,6 +181,18 @@ async def run_logged_command(
     persisted_output_chunks = 0
     suppressed_output_chunks = 0
     suppressed_output_lines = 0
+    pending_output_fragment = ""
+
+    def record_output_text(value: str) -> None:
+        nonlocal output_tail, total_output_lines
+        text = clean_output_line(value)
+        if not text:
+            return
+        chunk_lines.append(text)
+        output_tail.append(text)
+        total_output_lines += 1
+        if len(output_tail) > OUTPUT_TAIL_MAX_LINES:
+            output_tail = output_tail[-OUTPUT_TAIL_MAX_LINES:]
 
     async def flush_chunk(force: bool = False) -> None:
         nonlocal chunk_lines, chunk_index, persisted_output_chunks
@@ -244,22 +257,30 @@ async def run_logged_command(
             await fail_on_timeout()
 
         try:
-            line = await asyncio.wait_for(
-                proc.stdout.readline(),
+            chunk = await asyncio.wait_for(
+                proc.stdout.read(OUTPUT_READ_CHUNK_BYTES),
                 timeout=min(cancel_poll_seconds, remaining_seconds),
             )
         except asyncio.TimeoutError:
             if loop.time() >= deadline:
                 await fail_on_timeout()
             continue
-        if not line:
+        if not chunk:
             break
-        text = clean_output_line(line.decode("utf-8", errors="replace"))
-        chunk_lines.append(text)
-        output_tail.append(text)
-        total_output_lines += 1
-        if len(output_tail) > OUTPUT_TAIL_MAX_LINES:
-            output_tail = output_tail[-OUTPUT_TAIL_MAX_LINES:]
+
+        decoded = pending_output_fragment + chunk.decode("utf-8", errors="replace")
+        lines = decoded.splitlines(keepends=True)
+        pending_output_fragment = ""
+        for line in lines:
+            if line.endswith(("\n", "\r")):
+                record_output_text(line)
+            else:
+                pending_output_fragment = line
+
+        if pending_output_fragment and len(pending_output_fragment) >= OUTPUT_CHUNK_MAX_CHARS:
+            record_output_text(pending_output_fragment)
+            pending_output_fragment = ""
+
         if (
             len(chunk_lines) >= OUTPUT_CHUNK_MAX_LINES
             or sum(len(item) for item in chunk_lines) >= OUTPUT_CHUNK_MAX_CHARS
@@ -276,6 +297,8 @@ async def run_logged_command(
             await fail_on_timeout()
 
     returncode = proc.returncode
+    if pending_output_fragment:
+        record_output_text(pending_output_fragment)
     await flush_chunk(force=True)
 
     if returncode != 0:

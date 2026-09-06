@@ -79,7 +79,7 @@ async def test_run_logged_command_timeout_terminates_process_group_and_records_e
     terminated = []
 
     class BlockingStream:
-        async def readline(self):
+        async def read(self, _size=-1):
             await asyncio.Event().wait()
 
     class FakeProcess:
@@ -184,7 +184,7 @@ async def test_run_logged_command_cancellation_terminates_process(monkeypatch, t
     terminated = []
 
     class FakeStream:
-        async def readline(self):
+        async def read(self, _size=-1):
             return b""
 
     class FakeProcess:
@@ -232,7 +232,7 @@ async def test_run_logged_command_failure_includes_output_tail(monkeypatch, tmp_
         def __init__(self):
             self.lines = iter((b"first line\n", b"failure detail\n", b""))
 
-        async def readline(self):
+        async def read(self, _size=-1):
             return next(self.lines)
 
     class FakeProcess:
@@ -282,7 +282,7 @@ async def test_run_logged_command_compacts_verbose_output_and_keeps_final_tail(
             lines[0] = b"\x1b[32mline 1\x1b[0m\n"
             self.lines = iter((*lines, b""))
 
-        async def readline(self):
+        async def read(self, _size=-1):
             return next(self.lines)
 
     class FakeProcess:
@@ -326,6 +326,52 @@ async def test_run_logged_command_compacts_verbose_output_and_keeps_final_tail(
     assert completed["metadata"]["stored_output_chunks"] == 2
     assert completed["metadata"]["suppressed_output_chunks"] == 2
     assert completed["metadata"]["output_compacted"] is True
+
+
+@pytest.mark.asyncio
+async def test_run_logged_command_drains_output_chunks_without_newlines(
+    monkeypatch,
+    tmp_path,
+):
+    service = DataReleaseService()
+    entries = []
+
+    class FakeStream:
+        def __init__(self):
+            self.chunks = iter((b"x" * 9000, b"done", b""))
+
+        async def read(self, _size=-1):
+            return next(self.chunks)
+
+    class FakeProcess:
+        pid = 9754
+        returncode = 0
+        stdout = FakeStream()
+
+    async def create_subprocess(*_args, **_kwargs):
+        return FakeProcess()
+
+    async def add_workbook_entry(_task_uuid, **kwargs):
+        entries.append(kwargs)
+
+    async def is_cancel_requested(_task_uuid):
+        return False
+
+    monkeypatch.setattr(release_module.asyncio, "create_subprocess_exec", create_subprocess)
+    monkeypatch.setattr(release_module.task_manager, "add_workbook_entry", add_workbook_entry)
+    monkeypatch.setattr(release_module.task_manager, "is_cancel_requested", is_cancel_requested)
+
+    await service._run_logged_command(
+        "task-chunks",
+        title="Chunky Command",
+        cmd=["command"],
+        cwd=tmp_path,
+    )
+
+    output_entries = [entry for entry in entries if " Output #" in entry["title"]]
+    assert output_entries
+    assert "x" * 4000 in output_entries[0]["content"]
+    assert entries[-1]["title"] == "Chunky Command Completed"
 
 
 @pytest.mark.asyncio
@@ -541,6 +587,85 @@ async def test_release_preflight_checks_direct_download_repo_when_enabled(
     assert dirty_checks["overall_ready"] is False
     assert dirty_checks["git"]["dirty_blocking_paths"] == ["CHANGELOG.md"]
     assert any("worktree is not clean" in item for item in dirty_checks["blockers"])
+
+
+@pytest.mark.asyncio
+async def test_release_preflight_does_not_invent_production_branch_blocker_on_cloudflare_api_failure(
+    monkeypatch, tmp_path
+):
+    service = DataReleaseService()
+    python_path = tmp_path / "python"
+    python_path.touch()
+    job = release_module.DataReleaseJobConfig(
+        job_id="site-release",
+        name="Site Release",
+        include_git_push=True,
+        include_cloudflare_deploy=True,
+    )
+
+    async def no_op():
+        return None
+
+    async def load_jobs():
+        return [job]
+
+    async def no_paths():
+        return []
+
+    async def command_available(*_args, **_kwargs):
+        return {"returncode": 0, "stdout": "4.0.0"}
+
+    async def clean_worktree():
+        return []
+
+    async def direct_repo_check(*_args, **_kwargs):
+        return {
+            "payload": {
+                "repo_url": "git@example/data.git",
+                "branch": "main",
+                "raw_base_url": "https://raw.example/data/main",
+                "read_access_ok": True,
+                "write_access_ok": True,
+                "read_check_output": "ok",
+                "write_check_output": "ok",
+                "ssh_transport": "default",
+            },
+            "blockers": [],
+        }
+
+    async def cloudflare_eof(*_args, **_kwargs):
+        return {
+            "payload": {
+                "project_access_ok": False,
+                "production_branch": None,
+                "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING]>",
+            },
+            "blockers": ["Cloudflare Pages project check failed."],
+        }
+
+    async def raw_archive_check():
+        return {"payload": {"enabled": False}, "blockers": []}
+
+    monkeypatch.setattr(service, "ensure_storage", no_op)
+    monkeypatch.setattr(service, "load_jobs", load_jobs)
+    monkeypatch.setattr(service, "_git_status_paths", clean_worktree)
+    monkeypatch.setattr(service, "_run_capture", command_available)
+    monkeypatch.setattr(service, "_cloudflare_check", cloudflare_eof)
+    monkeypatch.setattr(service, "_tracked_generated_paths", no_paths)
+    monkeypatch.setattr(service, "_download_repo_check", direct_repo_check)
+    monkeypatch.setattr(service, "_raw_archive_check", raw_archive_check)
+    monkeypatch.setattr(service, "_download_repo_url", lambda: "git@example/data.git")
+    monkeypatch.setattr(
+        service,
+        "_download_repo_raw_base",
+        lambda _job: "https://data.example/releases/test-release",
+    )
+    monkeypatch.setattr(service, "_python_executable", lambda: python_path)
+
+    checks = await service.integration_checks("site-release")
+
+    assert checks["overall_ready"] is False
+    assert checks["blockers"] == ["Cloudflare Pages project check failed."]
 
 
 def test_download_publish_command_uses_incremental_partition_publisher(tmp_path):

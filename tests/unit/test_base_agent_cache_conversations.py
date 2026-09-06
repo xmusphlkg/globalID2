@@ -72,6 +72,22 @@ class UnavailableFallbackAgent(BaseAgent):
         )
 
 
+class ProviderAuthenticationFallbackAgent(BaseAgent):
+    def __init__(self):
+        super().__init__(name="ProviderAuthenticationFallback", model="bad-a", provider="bad-provider")
+        self.call_models = []
+
+    async def process(self, **kwargs):
+        return {}
+
+    async def _complete_with_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
+        model_name = str(route.get("model_name") or self.model)
+        self.call_models.append(model_name)
+        if model_name in {"bad-a", "bad-b"}:
+            raise RuntimeError("Error code: 401 - {'error': {'message': 'Invalid token'}}")
+        return "healthy-provider-response", {"prompt": 1, "completion": 1, "total": 2}
+
+
 class QuotaRecoveryAgent(BaseAgent):
     def __init__(self):
         super().__init__(name="QuotaRecovery", model="hunyuan-pro", provider="dummy-provider")
@@ -164,14 +180,21 @@ class EmptyResponseFallbackAgent(BaseAgent):
         return "fallback-response", {"prompt": 1, "completion": 1, "total": 2}
 
 
-def runtime_route(model_name: str, *, available: bool = True, status: str = "available") -> dict[str, object]:
+def runtime_route(
+    model_name: str,
+    *,
+    available: bool = True,
+    status: str = "available",
+    provider_key: str = "runtime",
+    provider_id: int = 999999,
+) -> dict[str, object]:
     return {
-        "model_key": f"runtime:{model_name}",
+        "model_key": f"{provider_key}:{model_name}",
         "model_name": model_name,
-        "provider_key": "runtime",
-        "provider_name": "runtime",
+        "provider_key": provider_key,
+        "provider_name": provider_key,
         "model_id": 999999,
-        "provider_id": 999999,
+        "provider_id": provider_id,
         "available_for_routing": available,
         "last_check_status": status,
         "has_api_key": True,
@@ -442,6 +465,63 @@ async def test_model_not_found_fast_falls_through_to_next_model(monkeypatch):
     assert agent.call_models == ["bad-model", "good-model"]
     assert persisted
     assert persisted[0][0] == "bad-model"
+
+
+@pytest.mark.asyncio
+async def test_provider_auth_failure_skips_siblings_without_retry_and_uses_other_provider(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    monkeypatch.setattr(
+        BaseAgent,
+        "AVAILABLE_MODEL_ROUTES",
+        [
+            runtime_route("bad-a", provider_key="rejected", provider_id=10),
+            runtime_route("bad-b", provider_key="rejected", provider_id=10),
+            runtime_route("healthy-model", provider_key="healthy", provider_id=20),
+        ],
+        raising=False,
+    )
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_CHAIN", [], raising=False)
+    monkeypatch.setattr(BaseAgent, "MODEL_COOLDOWNS", {}, raising=False)
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {}, raising=False)
+
+    persisted = []
+
+    async def _fake_mark_provider_authentication_failed(route, error=None):
+        persisted.append((route["provider_id"], str(error)))
+        return {"recorded": True}
+
+    async def _unexpected_sleep(_seconds):
+        raise AssertionError("credential failures must not retry or back off")
+
+    async def _unexpected_runtime_failure_record(*_args, **_kwargs):
+        raise AssertionError("credential failures must not be recorded as transport failures")
+
+    monkeypatch.setattr(
+        "src.ai.agents.base.mark_provider_authentication_failed",
+        _fake_mark_provider_authentication_failed,
+    )
+    monkeypatch.setattr(
+        "src.ai.agents.base.record_route_runtime_failure",
+        _unexpected_runtime_failure_record,
+    )
+    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", _unexpected_sleep)
+
+    agent = ProviderAuthenticationFallbackAgent()
+    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
+
+    result = await agent.complete(
+        prompt="hello",
+        system="system",
+        max_attempts_per_model=3,
+        max_quota_recovery_rounds=0,
+        wait_for_model_recovery=False,
+    )
+
+    assert result == "healthy-provider-response"
+    assert agent.call_models == ["bad-a", "healthy-model"]
+    assert persisted == [(10, "Error code: 401 - {'error': {'message': 'Invalid token'}}")]
 
 
 @pytest.mark.asyncio

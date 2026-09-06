@@ -154,6 +154,23 @@ def test_adaptive_ai_concurrency_pauses_when_model_center_has_no_routes():
     assert controller.record_result(success=False, error=RuntimeError("connection error")) == 0
 
 
+def test_release_export_and_literature_ai_tasks_do_not_overlap():
+    assert task_worker._release_memory_blocked_task_types([TaskType.EXPORT_DATA]) >= {
+        TaskType.ENRICH_LITERATURE,
+        TaskType.SYNC_LITERATURE,
+        TaskType.UPDATE_DISEASE_KNOWLEDGE,
+    }
+    assert task_worker._release_memory_blocked_task_types([TaskType.ENRICH_LITERATURE]) == {
+        TaskType.EXPORT_DATA
+    }
+    assert task_worker._release_memory_blocked_task_types([], release_waiting=True) >= {
+        TaskType.ENRICH_LITERATURE,
+        TaskType.SYNC_LITERATURE,
+        TaskType.UPDATE_DISEASE_KNOWLEDGE,
+    }
+    assert task_worker._release_memory_blocked_task_types([TaskType.CRAWL_DATA]) == set()
+
+
 def test_knowledge_task_disease_id_uses_single_task_resource():
     direct = SimpleNamespace(input_data={"disease_id": "d018"})
     fallback = SimpleNamespace(input_data={"disease_ids": ["d019"]})

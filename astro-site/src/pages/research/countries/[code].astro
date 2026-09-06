@@ -27,5 +27,7 @@ const descriptionZh = `与${facet.name_zh ?? facet.name_en}形成高置信度地
   descriptionZh={descriptionZh}
   canonicalPath={`/research/countries/${facet.slug}/`}
   articles={payload.articles ?? []}
+  clientCollectionScope="country"
+  clientCollectionValue={String(facet.code).toLowerCase()}
   locale={locale}
 />

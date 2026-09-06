@@ -17,6 +17,8 @@ interface Props {
   feedPath?: string;
   feedLabel?: string;
   feedLabelZh?: string;
+  clientCollectionScope?: 'disease' | 'country' | 'topic';
+  clientCollectionValue?: string;
   locale?: 'en' | 'zh';
 }
 
@@ -34,6 +36,8 @@ const {
   feedPath = '/research/rss.xml',
   feedLabel = 'RSS feed',
   feedLabelZh = 'RSS 订阅',
+  clientCollectionScope,
+  clientCollectionValue,
   locale = 'en',
 } = Astro.props;
 const zh = locale === 'zh';
@@ -42,6 +46,8 @@ const localeHref = (href: string) => `${prefix}${href}`;
 const localizedCanonicalPath = localeHref(canonicalPath);
 const collectionIndexable = isIndexableResearchCollection(articles.length);
 const initialVisibleArticles = 30;
+const useClientCollectionCatalogue = Boolean(clientCollectionScope && clientCollectionValue && articles.length > initialVisibleArticles);
+const serverRenderedArticles = useClientCollectionCatalogue ? articles.slice(0, initialVisibleArticles) : articles;
 const initialResultCount = articles.length > initialVisibleArticles
   ? (zh ? `显示 ${articles.length} 篇文献中的 ${initialVisibleArticles} 篇` : `${initialVisibleArticles} of ${articles.length} publications shown`)
   : (zh ? `${articles.length} 篇文献` : `${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}`);
@@ -114,8 +120,17 @@ const structuredData = {
         ? (
           <>
             <p id="collection-result-count" class="collection-result-count" aria-live="polite">{initialResultCount}</p>
-            <div id="collection-list" class="collection-list" data-initial-visible={initialVisibleArticles} data-collection-locale={locale}>
-              {articles.map((article: any, index: number) => (
+            <div
+              id="collection-list"
+              class="collection-list"
+              data-initial-visible={initialVisibleArticles}
+              data-collection-locale={locale}
+              data-collection-total={articles.length}
+              data-collection-client-catalogue={useClientCollectionCatalogue ? 'true' : 'false'}
+              data-collection-scope={clientCollectionScope}
+              data-collection-value={clientCollectionValue}
+            >
+              {serverRenderedArticles.map((article: any, index: number) => (
                 <ResearchArticleCard article={article} index={index} initialVisible={initialVisibleArticles} locale={locale} />
               ))}
             </div>
@@ -143,24 +158,233 @@ const structuredData = {
   const count = document.querySelector<HTMLElement>('#collection-result-count');
   const loadMore = document.querySelector<HTMLButtonElement>('#collection-load-more');
   const initialVisible = Number(list?.dataset.initialVisible ?? 30);
+  const totalArticles = Number(list?.dataset.collectionTotal ?? cards.length);
+  const useClientCatalogue = list?.dataset.collectionClientCatalogue === 'true';
+  const collectionScope = list?.dataset.collectionScope ?? '';
+  const collectionValue = (list?.dataset.collectionValue ?? '').toLowerCase();
   const locale = list?.dataset.collectionLocale === 'zh' ? 'zh' : 'en';
+  const routePrefix = locale === 'zh' ? '/zh' : '';
   let visibleLimit = initialVisible;
-  const render = () => {
+  let cataloguePromise: Promise<any[]> | null = null;
+  const text = (value: unknown) => String(value ?? '');
+  const slugifyTopic = (value: string | undefined) => (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const setLangText = (element: HTMLElement, en: string, zh?: string | null) => {
+    element.textContent = locale === 'zh' ? (zh || en) : en;
+  };
+  const hasToken = (value: string | undefined, token: string) => (value ?? '').split(/\s+/).includes(token);
+  const formatDate = (value: string | undefined, lang: 'en' | 'zh') => {
+    if (!value) return lang === 'zh' ? '日期暂缺' : 'Date unavailable';
+    return new Intl.DateTimeFormat(lang === 'zh' ? 'zh-CN' : 'en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC',
+    }).format(new Date(value));
+  };
+  const formatArticleDate = (article: any, lang: 'en' | 'zh') => {
+    const label = lang === 'zh' ? article.publication_date_label_zh : article.publication_date_label_en;
+    return label || formatDate(article.published_at, lang);
+  };
+  const articleTokens = (article: any) => ({
+    diseaseText: (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''}`).join(' ').toLowerCase(),
+    diseaseIds: (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase()).filter(Boolean).join(' '),
+    countryText: (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en} ${item.name_zh ?? ''}`).join(' ').toLowerCase(),
+    countryCodes: (article.countries ?? []).map((item: any) => String(item.code ?? '').toLowerCase()).filter(Boolean).join(' '),
+    topicText: (article.topics ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
+    topicSlugs: (article.topics ?? []).map((item: any) => slugifyTopic(item.name)).filter(Boolean).join(' '),
+  });
+  const articleSearchText = (article: any, tokens = articleTokens(article)) => `${article.title} ${article.journal ?? ''} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText}`.toLowerCase();
+  const loadCatalogue = () => {
+    if (!cataloguePromise) {
+      cataloguePromise = fetch('/research/catalogue.json')
+        .then(response => {
+          if (!response.ok) throw new Error(`Research catalogue request failed: ${response.status}`);
+          return response.json();
+        })
+        .then(payload => Array.isArray(payload?.articles) ? payload.articles : []);
+    }
+    return cataloguePromise;
+  };
+  const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    return element;
+  };
+  const makeBadge = (en: string, zh: string | null | undefined, extraClass = '') => {
+    const badge = make('span', `research-badge ${extraClass}`.trim());
+    setLangText(badge, en, zh);
+    return badge;
+  };
+  const makeTopicBadge = (name: string) => {
+    const badge = make('a', 'research-badge research-badge-topic');
+    badge.href = `${routePrefix}/research/topics/${slugifyTopic(name)}/`;
+    badge.textContent = name;
+    return badge;
+  };
+  const renderArticleCard = (article: any) => {
+    const tokens = articleTokens(article);
+    const card = make('article', 'research-card');
+    card.dataset.researchCard = '';
+    card.dataset.search = articleSearchText(article, tokens);
+    card.dataset.disease = tokens.diseaseText;
+    card.dataset.diseaseIds = tokens.diseaseIds;
+    card.dataset.country = tokens.countryText;
+    card.dataset.countryCodes = tokens.countryCodes;
+    card.dataset.topic = tokens.topicText;
+    card.dataset.topicSlugs = tokens.topicSlugs;
+    card.dataset.study = String(article.study_type ?? '').toLowerCase();
+    card.dataset.journal = String(article.journal ?? '').toLowerCase();
+    card.dataset.publisher = String(article.publisher ?? '').toLowerCase();
+    card.dataset.publishedAt = String(article.published_at ?? '');
+    card.dataset.peerReviewStatus = String(article.peer_review_status ?? '');
+    card.dataset.openAccess = article.open_access_status === 'open' ? 'true' : 'false';
+
+    const topline = make('div', 'research-card-topline');
+    const badges = make('div', 'research-card-badges');
+    badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer'));
+    if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history'));
+    if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa'));
+    (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en)));
+    (article.topics ?? []).slice(0, 3).forEach((item: any) => badges.appendChild(makeTopicBadge(text(item.name))));
+    topline.appendChild(badges);
+    if (article.doi) {
+      const doi = make('a', 'research-card-doi');
+      doi.href = `https://doi.org/${article.doi}`;
+      doi.target = '_blank';
+      doi.rel = 'noopener noreferrer';
+      doi.textContent = `DOI ${article.doi} ↗`;
+      topline.appendChild(doi);
+    }
+    card.appendChild(topline);
+
+    const title = make('h3', 'research-card-title');
+    const titleLink = make('a');
+    titleLink.href = `${routePrefix}/research/articles/${article.slug}/`;
+    titleLink.textContent = text(article.title);
+    title.appendChild(titleLink);
+    card.appendChild(title);
+
+    const authorNames = (article.authors ?? []).filter(Boolean).map(text);
+    if (authorNames.length) {
+      const authors = make('p', 'research-card-authors');
+      const preview = authorNames.slice(0, 3);
+      const en = authorNames.length > 3 ? `${preview.join(', ')} +${authorNames.length - preview.length} more` : preview.join(', ');
+      const zh = authorNames.length > 3 ? `${preview.join('、')} 等 ${authorNames.length} 位作者` : preview.join('、');
+      setLangText(authors, en, zh);
+      card.appendChild(authors);
+    }
+
+    const source = make('p', 'research-card-source');
+    const journal = make('span');
+    setLangText(journal, text(article.journal || 'Journal unavailable'), text(article.journal || '期刊信息暂缺'));
+    source.appendChild(journal);
+    const separator = make('span');
+    separator.setAttribute('aria-hidden', 'true');
+    separator.textContent = '·';
+    source.appendChild(separator);
+    const time = make('time');
+    if (article.published_at) time.dateTime = article.published_at;
+    setLangText(time, formatArticleDate(article, 'en'), formatArticleDate(article, 'zh'));
+    source.appendChild(time);
+    card.appendChild(source);
+
+    const openAccessUrl = article.open_access_status === 'open'
+      ? article.open_access_url || article.source_urls?.publisher
+      : '';
+    const surveillance = (article.related_surveillance ?? [])[0];
+    const fallbackDisease = (article.diseases ?? [])[0];
+    const surveillancePath = surveillance?.url || (fallbackDisease?.slug ? `/diseases/${fallbackDisease.slug}/` : '');
+    const surveillanceUrl = surveillancePath && routePrefix && surveillancePath.startsWith('/') ? `${routePrefix}${surveillancePath}` : surveillancePath;
+    if (openAccessUrl || surveillanceUrl) {
+      const actions = make('div', 'research-card-actions');
+      if (openAccessUrl) {
+        const open = make('a', 'research-card-action research-card-action-oa');
+        open.href = openAccessUrl;
+        open.target = '_blank';
+        open.rel = 'noopener noreferrer';
+        setLangText(open, 'Open article ↗', '打开全文 ↗');
+        actions.appendChild(open);
+      }
+      if (surveillanceUrl) {
+        const related = make('a', 'research-card-action');
+        related.href = surveillanceUrl;
+        const labelEn = `${surveillance?.disease_name_en || fallbackDisease?.name_en || 'Related'} surveillance →`;
+        const labelZh = `${surveillance?.disease_name_zh || surveillance?.disease_name_en || fallbackDisease?.name_zh || fallbackDisease?.name_en || '相关'}监测 →`;
+        setLangText(related, labelEn, labelZh);
+        actions.appendChild(related);
+      }
+      card.appendChild(actions);
+    }
+
+    const facts = make('dl', 'research-card-facts');
+    const studyFact = make('div');
+    const studyDt = make('dt');
+    setLangText(studyDt, 'Type', '类型');
+    const studyDd = make('dd');
+    studyDd.textContent = text(article.study_type || 'Journal article');
+    studyFact.append(studyDt, studyDd);
+    const geographyFact = make('div');
+    const geographyDt = make('dt');
+    setLangText(geographyDt, 'Scope', '范围');
+    const geographyDd = make('dd');
+    geographyDd.textContent = (article.countries ?? []).length > 0
+      ? (article.countries ?? []).slice(0, 3).map((item: any) => locale === 'zh' ? item.name_zh ?? item.name_en : item.name_en).join(locale === 'zh' ? '、' : ', ')
+      : (locale === 'zh' ? '未分类' : 'Not classified');
+    geographyFact.append(geographyDt, geographyDd);
+    facts.append(studyFact, geographyFact);
+    card.appendChild(facts);
+
+    const context = make('p', 'research-context');
+    const contextLabel = make('strong');
+    setLangText(contextLabel, 'Why it matters now', '为何现在值得关注');
+    const contextCopy = make('span');
+    setLangText(contextCopy, text(article.why_it_matters_en), article.why_it_matters_zh);
+    context.append(contextLabel, contextCopy);
+    card.appendChild(context);
+
+    return card;
+  };
+  const matchesCollection = (article: any) => {
+    const tokens = articleTokens(article);
+    if (collectionScope === 'disease') return hasToken(tokens.diseaseIds, collectionValue);
+    if (collectionScope === 'country') return hasToken(tokens.countryCodes, collectionValue);
+    if (collectionScope === 'topic') return hasToken(tokens.topicSlugs, collectionValue);
+    return true;
+  };
+  const renderCount = (shown: number, total: number) => {
+    if (!count) return;
+    count.textContent = locale === 'zh'
+      ? (shown < total ? `显示 ${total} 篇文献中的 ${shown} 篇` : `${total} 篇文献`)
+      : (shown < total ? `${shown} of ${total} publications shown` : `${total} ${total === 1 ? 'publication' : 'publications'}`);
+  };
+  const renderServerCards = () => {
     cards.forEach((card, index) => {
       card.hidden = index >= visibleLimit;
     });
-    if (count) {
-      count.textContent = locale === 'zh'
-        ? (cards.length > visibleLimit ? `显示 ${cards.length} 篇文献中的 ${Math.min(visibleLimit, cards.length)} 篇` : `${cards.length} 篇文献`)
-        : (cards.length > visibleLimit ? `${Math.min(visibleLimit, cards.length)} of ${cards.length} publications shown` : `${cards.length} ${cards.length === 1 ? 'publication' : 'publications'}`);
-    }
+    renderCount(Math.min(visibleLimit, cards.length), cards.length);
     if (loadMore) loadMore.hidden = cards.length <= visibleLimit;
+  };
+  const renderClientCards = async () => {
+    if (!list) return;
+    try {
+      const articles = (await loadCatalogue()).filter(matchesCollection);
+      const visible = articles.slice(0, visibleLimit);
+      list.replaceChildren(...visible.map(renderArticleCard));
+      renderCount(visible.length, articles.length || totalArticles);
+      if (loadMore) loadMore.hidden = (articles.length || totalArticles) <= visibleLimit;
+    } catch (error) {
+      console.error(error);
+      if (loadMore) loadMore.hidden = true;
+      renderCount(Math.min(initialVisible, totalArticles), totalArticles);
+    }
   };
   loadMore?.addEventListener('click', () => {
     visibleLimit += initialVisible;
-    render();
+    if (useClientCatalogue) void renderClientCards();
+    else renderServerCards();
   });
-  render();
+  if (useClientCatalogue) renderCount(Math.min(initialVisible, totalArticles), totalArticles);
+  else renderServerCards();
 </script>
 
 <style>
