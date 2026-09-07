@@ -2,15 +2,16 @@ from datetime import timedelta
 from types import SimpleNamespace
 
 from src.ai.model_center import (
-    _combined_route_runtime_health_state,
     _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD,
+    RuntimeRouteAdmissionController,
+    _combined_route_runtime_health_state,
     _provider_check_result_from_model_results,
+    _runtime_admission_settings,
     _runtime_health_state,
     _utcnow,
     _write_provider_runtime_failure,
     _write_runtime_failure,
     _write_runtime_success,
-    RuntimeRouteAdmissionController,
 )
 
 
@@ -196,6 +197,89 @@ def test_runtime_admission_waits_for_capacity_without_raising_a_model_timeout() 
         await first.release(success=True)
         second = await asyncio.wait_for(second_task, timeout=0.1)
         await second.release(success=True)
+
+    import asyncio
+
+    asyncio.run(exercise())
+
+
+def test_runtime_admission_uses_provider_specific_auto_ceiling() -> None:
+    automatic = _runtime_admission_settings(
+        {
+            "runtime_provider_auto_max_concurrency": 5,
+            "extra_config": {},
+            "extra_params": {},
+        }
+    )
+    configured = _runtime_admission_settings(
+        {
+            "runtime_provider_auto_max_concurrency": 5,
+            "extra_config": {"runtime_max_concurrency": 3},
+            "extra_params": {},
+        }
+    )
+
+    assert automatic["provider_maximum"] == 5
+    assert automatic["provider_auto"] is True
+    assert configured["provider_maximum"] == 3
+    assert configured["provider_auto"] is False
+
+
+def test_runtime_admission_learns_and_backs_off_each_provider_independently() -> None:
+    async def exercise() -> None:
+        controller = RuntimeRouteAdmissionController()
+        fast = {
+            "provider_id": 1,
+            "model_id": 11,
+            "extra_config": {
+                "runtime_max_concurrency": 6,
+                "runtime_successes_to_scale_up": 1,
+                "runtime_concurrency_adjust_seconds": 20,
+            },
+            "extra_params": {"runtime_max_concurrency": 6},
+        }
+        cautious = {
+            "provider_id": 2,
+            "model_id": 21,
+            "extra_config": {
+                "runtime_max_concurrency": 3,
+                "runtime_successes_to_scale_up": 1,
+            },
+            "extra_params": {"runtime_max_concurrency": 3},
+        }
+
+        for _ in range(5):
+            permit = await controller.acquire(fast)
+            await permit.release(success=True)
+        for _ in range(2):
+            permit = await controller.acquire(cautious)
+            await permit.release(success=True)
+
+        assert controller.snapshot(fast)["runtime_provider_capacity"] == 6
+        assert controller.snapshot(cautious)["runtime_provider_capacity"] == 3
+        provider_snapshots = controller.provider_snapshots()
+        assert provider_snapshots["1"]["runtime_provider_capacity"] == 6
+        assert provider_snapshots["2"]["runtime_provider_capacity"] == 3
+
+        pressured = await controller.acquire(fast)
+        await pressured.release(success=False, error=RuntimeError("429 Too Many Requests"))
+
+        fast_snapshot = controller.snapshot(fast)
+        assert fast_snapshot["runtime_provider_capacity"] == 3
+        assert fast_snapshot["runtime_provider_backoff_remaining_seconds"] > 0
+        assert controller.snapshot(cautious)["runtime_provider_capacity"] == 3
+
+        # A malformed response belongs to this model, not to the shared
+        # provider quota, so it must not reduce sibling-model concurrency.
+        malformed = await controller.acquire(fast)
+        await malformed.release(success=False, error=ValueError("invalid structured output"))
+        assert controller.snapshot(fast)["runtime_provider_capacity"] == 3
+
+        # Successful calls during the hold-down window do not immediately
+        # reopen the capacity that just triggered provider pressure.
+        recovering = await controller.acquire(fast)
+        await recovering.release(success=True)
+        assert controller.snapshot(fast)["runtime_provider_capacity"] == 3
 
     import asyncio
 

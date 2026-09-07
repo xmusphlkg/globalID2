@@ -1057,9 +1057,15 @@ export default function AIModelsPage() {
             <p>{route.runtime_latency_ewma_ms == null ? "-" : `${Math.round(route.runtime_latency_ewma_ms)} ms EWMA`}</p>
             <p className="mt-1">{isZh ? "超时" : "timeouts"}: {route.runtime_timeout_count}</p>
             <p className="mt-1">
-              {isZh ? "准入" : "admission"}: {route.runtime_provider_inflight}/{route.runtime_provider_capacity}
+              {isZh ? "准入" : "admission"}: {route.runtime_provider_inflight}/{route.runtime_provider_capacity}/{route.runtime_provider_max_capacity}
               {" "}{isZh ? "提供商" : "provider"}, {route.runtime_model_inflight}/{route.runtime_model_capacity}
               {" "}{isZh ? "模型" : "model"}
+            </p>
+            <p className="mt-1">
+              {route.runtime_provider_auto_concurrency ? (isZh ? "自动调节" : "auto tuning") : (isZh ? "手动上限" : "manual cap")}
+              {route.runtime_provider_backoff_remaining_seconds > 0
+                ? ` · ${isZh ? "退避" : "backoff"} ${formatDuration(route.runtime_provider_backoff_remaining_seconds, lang)}`
+                : ""}
             </p>
             {route.runtime_last_error ? <p className="mt-1 max-w-[220px] truncate" title={route.runtime_last_error}>{route.runtime_last_error}</p> : null}
           </div>
@@ -1326,7 +1332,7 @@ export default function AIModelsPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 border-t border-tremor-border pt-3 text-xs text-tremor-content-subtle dark:border-dark-tremor-border dark:text-dark-tremor-content-subtle">
                         <span>{route.runtime_latency_ewma_ms == null ? "-" : `${Math.round(route.runtime_latency_ewma_ms)} ms`}</span>
-                        <span className="text-right">{route.runtime_provider_inflight}/{route.runtime_provider_capacity} provider</span>
+                        <span className="text-right">{route.runtime_provider_inflight}/{route.runtime_provider_capacity}/{route.runtime_provider_max_capacity} provider</span>
                       </div>
                     </article>
                   )) : <EmptyState icon={<GitBranch className="h-10 w-10" />} title={copy.noRoutes} />}

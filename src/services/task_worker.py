@@ -261,6 +261,12 @@ async def _load_runtime_routes() -> list[dict[str, Any]]:
     return await get_runtime_routes()
 
 
+def _runtime_provider_capacity_snapshots() -> dict[str, dict[str, Any]]:
+    from src.ai.model_center import runtime_provider_admission_snapshots
+
+    return runtime_provider_admission_snapshots()
+
+
 def _knowledge_task_disease_id(task: Task) -> str | None:
     """Return the single disease resource owned by a knowledge task, if any."""
     input_data = getattr(task, "input_data", None) or {}
@@ -575,6 +581,7 @@ async def run_worker() -> None:
             "ai_concurrency_max": MAX_CONCURRENT_AI_TASKS,
             "ai_concurrency_current": ai_concurrency.capacity,
             "ai_concurrency_adaptive": TASK_WORKER_CONFIG.ai_dynamic_concurrency_enabled,
+            "ai_provider_capacities": _runtime_provider_capacity_snapshots(),
         },
         on_lease_lost=_threaded_lease_lost,
     )

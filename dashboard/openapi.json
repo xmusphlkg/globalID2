@@ -10810,6 +10810,16 @@
             "title": "Runtime Model Inflight",
             "type": "integer"
           },
+          "runtime_provider_auto_concurrency": {
+            "default": true,
+            "title": "Runtime Provider Auto Concurrency",
+            "type": "boolean"
+          },
+          "runtime_provider_backoff_remaining_seconds": {
+            "default": 0,
+            "title": "Runtime Provider Backoff Remaining Seconds",
+            "type": "integer"
+          },
           "runtime_provider_capacity": {
             "default": 1,
             "title": "Runtime Provider Capacity",
@@ -10818,6 +10828,21 @@
           "runtime_provider_inflight": {
             "default": 0,
             "title": "Runtime Provider Inflight",
+            "type": "integer"
+          },
+          "runtime_provider_max_capacity": {
+            "default": 1,
+            "title": "Runtime Provider Max Capacity",
+            "type": "integer"
+          },
+          "runtime_provider_min_capacity": {
+            "default": 1,
+            "title": "Runtime Provider Min Capacity",
+            "type": "integer"
+          },
+          "runtime_provider_success_streak": {
+            "default": 0,
+            "title": "Runtime Provider Success Streak",
             "type": "integer"
           },
           "runtime_timeout_count": {

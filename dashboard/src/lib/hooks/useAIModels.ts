@@ -102,6 +102,11 @@ export interface AIRuntimeRoute {
   runtime_last_error: string | null;
   runtime_provider_capacity: number;
   runtime_provider_inflight: number;
+  runtime_provider_min_capacity: number;
+  runtime_provider_max_capacity: number;
+  runtime_provider_auto_concurrency: boolean;
+  runtime_provider_success_streak: number;
+  runtime_provider_backoff_remaining_seconds: number;
   runtime_model_capacity: number;
   runtime_model_inflight: number;
 }

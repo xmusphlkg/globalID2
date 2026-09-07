@@ -27,6 +27,7 @@ from src.ai.model_center import (
     get_runtime_routes,
     mask_api_key,
 )
+from src.control_plane.runtime import runtime_registry
 from src.core.db_schema import ensure_task_type_enum_schema
 from src.core.task_manager import task_manager
 from src.domain.ai_model_center import AIModelConfig, AIProviderConfig
@@ -708,6 +709,11 @@ class RuntimeRouteOut(BaseModel):
     runtime_last_error: Optional[str] = None
     runtime_provider_capacity: int = 1
     runtime_provider_inflight: int = 0
+    runtime_provider_min_capacity: int = 1
+    runtime_provider_max_capacity: int = 1
+    runtime_provider_auto_concurrency: bool = True
+    runtime_provider_success_streak: int = 0
+    runtime_provider_backoff_remaining_seconds: int = 0
     runtime_model_capacity: int = 1
     runtime_model_inflight: int = 0
 
@@ -1147,6 +1153,36 @@ async def test_all_models(structured: bool = True):
 @router.get("/ai/models/runtime", response_model=List[RuntimeRouteOut])
 async def list_runtime_routes():
     routes = await get_runtime_routes()
+    services, _ = await runtime_registry.list_services()
+    workers = [item for item in services if item.get("service") == "worker"]
+    workers.sort(key=lambda item: str(item.get("last_seen_at") or ""), reverse=True)
+    worker_metadata = (
+        workers[0].get("metadata")
+        if workers and isinstance(workers[0].get("metadata"), dict)
+        else {}
+    )
+    provider_capacities = worker_metadata.get("ai_provider_capacities")
+    provider_capacities = provider_capacities if isinstance(provider_capacities, dict) else {}
+    admission_fields = {
+        "runtime_provider_capacity",
+        "runtime_provider_inflight",
+        "runtime_provider_min_capacity",
+        "runtime_provider_max_capacity",
+        "runtime_provider_auto_concurrency",
+        "runtime_provider_success_streak",
+        "runtime_provider_backoff_remaining_seconds",
+    }
+    for route in routes:
+        worker_snapshot = provider_capacities.get(str(route.get("provider_id")))
+        if not isinstance(worker_snapshot, dict):
+            continue
+        route.update(
+            {
+                key: worker_snapshot[key]
+                for key in admission_fields
+                if key in worker_snapshot
+            }
+        )
     return [
         RuntimeRouteOut(
             model_id=int(route["model_id"]),
@@ -1179,6 +1215,11 @@ async def list_runtime_routes():
             runtime_last_error=route.get("runtime_last_error"),
             runtime_provider_capacity=int(route.get("runtime_provider_capacity") or 1),
             runtime_provider_inflight=int(route.get("runtime_provider_inflight") or 0),
+            runtime_provider_min_capacity=int(route.get("runtime_provider_min_capacity") or 1),
+            runtime_provider_max_capacity=int(route.get("runtime_provider_max_capacity") or 1),
+            runtime_provider_auto_concurrency=bool(route.get("runtime_provider_auto_concurrency", True)),
+            runtime_provider_success_streak=int(route.get("runtime_provider_success_streak") or 0),
+            runtime_provider_backoff_remaining_seconds=int(route.get("runtime_provider_backoff_remaining_seconds") or 0),
             runtime_model_capacity=int(route.get("runtime_model_capacity") or 1),
             runtime_model_inflight=int(route.get("runtime_model_inflight") or 0),
         )

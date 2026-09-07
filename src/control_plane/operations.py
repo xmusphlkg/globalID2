@@ -29,6 +29,20 @@ def _cancel_metadata(task: Task) -> tuple[bool, str | None]:
     return bool(metadata.get("cancel_requested")), requested_at if isinstance(requested_at, str) else None
 
 
+def _runtime_metadata_int(
+    metadata: dict[str, Any],
+    key: str,
+    *,
+    default: int,
+    minimum: int,
+) -> int:
+    raw = metadata.get(key)
+    try:
+        return max(minimum, int(raw) if raw is not None else default)
+    except (TypeError, ValueError):
+        return default
+
+
 def _task_projection(
     task: Task,
     *,
@@ -201,14 +215,26 @@ class TaskQueryRepository:
         # operator never sees a dead PID when a replacement is already live.
         workers.sort(key=lambda item: str(item.get("last_seen_at") or ""), reverse=True)
         worker_metadata = workers[0].get("metadata") if workers and isinstance(workers[0].get("metadata"), dict) else {}
+        ai_concurrency_current = _runtime_metadata_int(
+            worker_metadata,
+            "ai_concurrency_current",
+            default=1,
+            minimum=0,
+        )
+        ai_concurrency_max = _runtime_metadata_int(
+            worker_metadata,
+            "ai_concurrency_max",
+            default=1,
+            minimum=1,
+        )
         running = int(row.running_tasks or 0)
         retrying = int(row.retrying_tasks or 0)
         return {
             "worker_process_running": bool(workers),
             "worker_pid": workers[0].get("pid") if workers else None,
             "worker_concurrency": concurrency,
-            "ai_concurrency_current": int(worker_metadata.get("ai_concurrency_current") or 1),
-            "ai_concurrency_max": int(worker_metadata.get("ai_concurrency_max") or 1),
+            "ai_concurrency_current": ai_concurrency_current,
+            "ai_concurrency_max": ai_concurrency_max,
             "ai_concurrency_adaptive": bool(worker_metadata.get("ai_concurrency_adaptive")),
             "queued_tasks": int(row.queued_tasks or 0),
             "running_tasks": running,

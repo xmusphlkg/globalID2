@@ -36,6 +36,7 @@ _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD = 8
 _DEFAULT_PROVIDER_ADMISSION_MAX_CONCURRENCY = 2
 _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY = 1
 _DEFAULT_ADMISSION_SUCCESS_SCALE_UP = 2
+_DEFAULT_ADMISSION_ADJUST_SECONDS = 20
 _MODEL_TEST_MARKER = "globalid-model-test-ok"
 _PROVIDER_AUTHENTICATION_FAILURE_MESSAGE = (
     "Provider credentials were rejected. Update the credentials and run a provider "
@@ -503,7 +504,16 @@ def _positive_int(value: Any, default: int, *, maximum: int = 64) -> int:
         return default
 
 
-def _runtime_admission_settings(route: Dict[str, Any]) -> Dict[str, int]:
+def _runtime_admission_global_ceiling() -> int:
+    """Keep automatically learned provider limits inside the worker safety cap."""
+    try:
+        worker = get_config().task_worker
+        return max(1, min(64, int(worker.concurrency), int(worker.ai_concurrency)))
+    except (AttributeError, TypeError, ValueError):
+        return _DEFAULT_PROVIDER_ADMISSION_MAX_CONCURRENCY
+
+
+def _runtime_admission_settings(route: Dict[str, Any]) -> Dict[str, Any]:
     """Resolve request limits owned by the Model Center.
 
     Provider limits protect a shared credential or personal-plan quota. Model
@@ -516,9 +526,15 @@ def _runtime_admission_settings(route: Dict[str, Any]) -> Dict[str, int]:
     model_params = route.get("extra_params")
     model_params = model_params if isinstance(model_params, dict) else {}
 
-    provider_maximum = _positive_int(
-        provider_config.get("runtime_max_concurrency"),
+    configured_provider_maximum = provider_config.get("runtime_max_concurrency")
+    auto_provider_maximum = _positive_int(
+        route.get("runtime_provider_auto_max_concurrency"),
         _DEFAULT_PROVIDER_ADMISSION_MAX_CONCURRENCY,
+        maximum=_runtime_admission_global_ceiling(),
+    )
+    provider_maximum = _positive_int(
+        configured_provider_maximum,
+        auto_provider_maximum,
     )
     provider_minimum = min(
         provider_maximum,
@@ -535,12 +551,18 @@ def _runtime_admission_settings(route: Dict[str, Any]) -> Dict[str, int]:
     return {
         "provider_minimum": provider_minimum,
         "provider_maximum": provider_maximum,
+        "provider_auto": configured_provider_maximum in (None, ""),
         "model_minimum": model_minimum,
         "model_maximum": model_maximum,
         "successes_to_scale_up": _positive_int(
             provider_config.get("runtime_successes_to_scale_up"),
             _DEFAULT_ADMISSION_SUCCESS_SCALE_UP,
             maximum=100,
+        ),
+        "adjust_seconds": _positive_int(
+            provider_config.get("runtime_concurrency_adjust_seconds"),
+            _DEFAULT_ADMISSION_ADJUST_SECONDS,
+            maximum=3600,
         ),
     }
 
@@ -551,6 +573,42 @@ def _runtime_admission_keys(route: Dict[str, Any]) -> tuple[str, str]:
     return provider_key or "provider", model_key or "model"
 
 
+def _is_runtime_capacity_pressure(error: BaseException) -> bool:
+    """Return whether a failure is evidence that provider concurrency is too high."""
+    if isinstance(error, (asyncio.TimeoutError, TimeoutError)):
+        return True
+    try:
+        if is_rate_limit_error(error):
+            return True
+    except Exception:
+        pass
+
+    status_code = getattr(error, "status_code", None)
+    if status_code is None:
+        response = getattr(error, "response", None)
+        status_code = getattr(response, "status_code", None)
+    try:
+        if int(status_code) in {408, 429, 502, 503, 504}:
+            return True
+    except (TypeError, ValueError):
+        pass
+
+    message = str(error).lower()
+    return any(
+        token in message
+        for token in (
+            "rate limit",
+            "too many requests",
+            "quota exceeded",
+            "request timeout",
+            "timed out",
+            "overloaded",
+            "server busy",
+            "capacity exceeded",
+        )
+    )
+
+
 class RuntimeRouteAdmissionLease:
     """A single Model Center request permit, released exactly once."""
 
@@ -559,7 +617,7 @@ class RuntimeRouteAdmissionLease:
         controller: "RuntimeRouteAdmissionController",
         provider_key: str,
         model_key: str,
-        settings: Dict[str, int],
+        settings: Dict[str, Any],
     ) -> None:
         self._controller = controller
         self._provider_key = provider_key
@@ -567,7 +625,7 @@ class RuntimeRouteAdmissionLease:
         self._settings = settings
         self._released = False
 
-    async def release(self, *, success: bool) -> None:
+    async def release(self, *, success: bool, error: BaseException | None = None) -> None:
         if self._released:
             return
         self._released = True
@@ -576,6 +634,7 @@ class RuntimeRouteAdmissionLease:
             self._model_key,
             self._settings,
             success=success,
+            error=error,
         )
 
 
@@ -594,6 +653,8 @@ class RuntimeRouteAdmissionController:
         self._model_inflight: Dict[str, int] = {}
         self._provider_capacity: Dict[str, int] = {}
         self._provider_success_streak: Dict[str, int] = {}
+        self._provider_last_backoff: Dict[str, float] = {}
+        self._provider_settings: Dict[str, Dict[str, Any]] = {}
 
     def _ensure_loop(self) -> asyncio.Condition:
         loop = asyncio.get_running_loop()
@@ -604,12 +665,22 @@ class RuntimeRouteAdmissionController:
             self._model_inflight = {}
             self._provider_capacity = {}
             self._provider_success_streak = {}
+            self._provider_last_backoff = {}
+            self._provider_settings = {}
         return self._condition
+
+    def _remember_provider_settings(
+        self,
+        provider_key: str,
+        settings: Dict[str, Any],
+    ) -> None:
+        self._provider_settings[provider_key] = dict(settings)
 
     def score(self, route: Dict[str, Any]) -> tuple[float, float]:
         """Return live pressure for fair candidate ordering without a DB read."""
         provider_key, model_key = _runtime_admission_keys(route)
         settings = _runtime_admission_settings(route)
+        self._remember_provider_settings(provider_key, settings)
         provider_capacity = self._provider_capacity.get(provider_key, settings["provider_minimum"])
         provider_capacity = max(settings["provider_minimum"], min(provider_capacity, settings["provider_maximum"]))
         provider_load = self._provider_inflight.get(provider_key, 0) / provider_capacity
@@ -617,18 +688,63 @@ class RuntimeRouteAdmissionController:
         # Keep equal-load routes in the Model Center priority order.
         return max(provider_load, model_load), provider_load
 
-    def snapshot(self, route: Dict[str, Any]) -> Dict[str, int]:
+    def snapshot(self, route: Dict[str, Any]) -> Dict[str, Any]:
         """Expose the active request budget for the Model Center control plane."""
+        self._ensure_loop()
         provider_key, model_key = _runtime_admission_keys(route)
         settings = _runtime_admission_settings(route)
+        self._remember_provider_settings(provider_key, settings)
         provider_capacity = self._provider_capacity.get(provider_key, settings["provider_minimum"])
         provider_capacity = max(settings["provider_minimum"], min(provider_capacity, settings["provider_maximum"]))
+        last_backoff = self._provider_last_backoff.get(provider_key)
+        backoff_remaining = 0
+        if last_backoff is not None:
+            backoff_remaining = max(
+                0,
+                int(settings["adjust_seconds"] - (time.monotonic() - last_backoff)),
+            )
         return {
             "runtime_provider_capacity": provider_capacity,
             "runtime_provider_inflight": self._provider_inflight.get(provider_key, 0),
+            "runtime_provider_min_capacity": settings["provider_minimum"],
+            "runtime_provider_max_capacity": settings["provider_maximum"],
+            "runtime_provider_auto_concurrency": settings["provider_auto"],
+            "runtime_provider_success_streak": self._provider_success_streak.get(provider_key, 0),
+            "runtime_provider_backoff_remaining_seconds": backoff_remaining,
             "runtime_model_capacity": settings["model_maximum"],
             "runtime_model_inflight": self._model_inflight.get(model_key, 0),
         }
+
+    def provider_snapshots(self) -> Dict[str, Dict[str, Any]]:
+        """Expose worker-safe provider telemetry for runtime heartbeats."""
+        snapshots: Dict[str, Dict[str, Any]] = {}
+        now = time.monotonic()
+        for provider_key, settings in list(self._provider_settings.items()):
+            provider_capacity = self._provider_capacity.get(
+                provider_key,
+                settings["provider_minimum"],
+            )
+            provider_capacity = max(
+                settings["provider_minimum"],
+                min(provider_capacity, settings["provider_maximum"]),
+            )
+            last_backoff = self._provider_last_backoff.get(provider_key)
+            backoff_remaining = 0
+            if last_backoff is not None:
+                backoff_remaining = max(
+                    0,
+                    int(settings["adjust_seconds"] - (now - last_backoff)),
+                )
+            snapshots[provider_key] = {
+                "runtime_provider_capacity": provider_capacity,
+                "runtime_provider_inflight": self._provider_inflight.get(provider_key, 0),
+                "runtime_provider_min_capacity": settings["provider_minimum"],
+                "runtime_provider_max_capacity": settings["provider_maximum"],
+                "runtime_provider_auto_concurrency": settings["provider_auto"],
+                "runtime_provider_success_streak": self._provider_success_streak.get(provider_key, 0),
+                "runtime_provider_backoff_remaining_seconds": backoff_remaining,
+            }
+        return snapshots
 
     async def acquire(self, route: Dict[str, Any]) -> RuntimeRouteAdmissionLease:
         """Wait for a permit without treating local backpressure as model failure.
@@ -638,9 +754,10 @@ class RuntimeRouteAdmissionController:
         backpressure mechanism; imposing an unrelated queue deadline made a
         healthy but busy provider look like it had timed out upstream.
         """
+        condition = self._ensure_loop()
         provider_key, model_key = _runtime_admission_keys(route)
         settings = _runtime_admission_settings(route)
-        condition = self._ensure_loop()
+        self._remember_provider_settings(provider_key, settings)
 
         async with condition:
             while True:
@@ -666,19 +783,36 @@ class RuntimeRouteAdmissionController:
         self,
         provider_key: str,
         model_key: str,
-        settings: Dict[str, int],
+        settings: Dict[str, Any],
         *,
         success: bool,
+        error: BaseException | None = None,
     ) -> None:
         condition = self._ensure_loop()
         async with condition:
             self._provider_inflight[provider_key] = max(0, self._provider_inflight.get(provider_key, 1) - 1)
             self._model_inflight[model_key] = max(0, self._model_inflight.get(model_key, 1) - 1)
             current = self._provider_capacity.get(provider_key, settings["provider_minimum"])
+            current = max(
+                settings["provider_minimum"],
+                min(current, settings["provider_maximum"]),
+            )
+            self._provider_capacity[provider_key] = current
             if success:
-                streak = self._provider_success_streak.get(provider_key, 0) + 1
-                self._provider_success_streak[provider_key] = streak
-                if current < settings["provider_maximum"] and streak >= settings["successes_to_scale_up"]:
+                last_backoff = self._provider_last_backoff.get(provider_key)
+                can_probe_higher = (
+                    last_backoff is None
+                    or time.monotonic() - last_backoff >= settings["adjust_seconds"]
+                )
+                streak = self._provider_success_streak.get(provider_key, 0)
+                if can_probe_higher:
+                    streak += 1
+                    self._provider_success_streak[provider_key] = streak
+                if (
+                    can_probe_higher
+                    and current < settings["provider_maximum"]
+                    and streak >= settings["successes_to_scale_up"]
+                ):
                     self._provider_capacity[provider_key] = current + 1
                     self._provider_success_streak[provider_key] = 0
                     logger.info(
@@ -687,9 +821,23 @@ class RuntimeRouteAdmissionController:
                         current,
                         current + 1,
                     )
-            else:
+            elif error is None or _is_runtime_capacity_pressure(error):
                 self._provider_success_streak[provider_key] = 0
-                self._provider_capacity[provider_key] = settings["provider_minimum"]
+                reduced = max(settings["provider_minimum"], current // 2)
+                self._provider_capacity[provider_key] = reduced
+                self._provider_last_backoff[provider_key] = time.monotonic()
+                if reduced != current:
+                    logger.warning(
+                        "Model Center admission reduced provider={} from {} to {} after pressure: {}",
+                        provider_key,
+                        current,
+                        reduced,
+                        type(error).__name__ if error is not None else "unknown failure",
+                    )
+            else:
+                # Invalid output and other model-specific failures should not
+                # punish healthy sibling models sharing the same credential.
+                self._provider_success_streak[provider_key] = 0
             condition.notify_all()
 
 
@@ -701,9 +849,14 @@ def runtime_route_admission_score(route: Dict[str, Any]) -> tuple[float, float]:
     return runtime_route_admission.score(route)
 
 
-def runtime_route_admission_snapshot(route: Dict[str, Any]) -> Dict[str, int]:
+def runtime_route_admission_snapshot(route: Dict[str, Any]) -> Dict[str, Any]:
     """Expose request admission budget for runtime API and dashboard views."""
     return runtime_route_admission.snapshot(route)
+
+
+def runtime_provider_admission_snapshots() -> Dict[str, Dict[str, Any]]:
+    """Expose per-provider request budgets to the worker heartbeat."""
+    return runtime_route_admission.provider_snapshots()
 
 
 async def acquire_runtime_route_admission(route: Dict[str, Any]) -> RuntimeRouteAdmissionLease:
@@ -1344,8 +1497,35 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
                     **rate_limit_state,
                     **runtime_health_state,
             }
-            route.update(runtime_route_admission_snapshot(route))
             routes.append(route)
+
+        # In automatic mode, each provider learns independently up to the
+        # smaller of its enabled model capacity and the worker safety ceiling.
+        # Use enabled rather than momentarily routable models so an old lease
+        # cannot shrink the ceiling while sibling routes enter or leave a
+        # short cooldown. Per-model gates still prevent unavailable routes
+        # from contributing real in-flight requests.
+        # A provider-level runtime_max_concurrency override still takes
+        # precedence for known contractual limits.
+        provider_auto_maxima: Dict[int, int] = {}
+        for route in routes:
+            provider_id = int(route["provider_id"])
+            model_params = route.get("extra_params")
+            model_params = model_params if isinstance(model_params, dict) else {}
+            model_capacity = _positive_int(
+                model_params.get("runtime_max_concurrency"),
+                _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY,
+            )
+            provider_auto_maxima[provider_id] = (
+                provider_auto_maxima.get(provider_id, 0) + model_capacity
+            )
+
+        for route in routes:
+            route["runtime_provider_auto_max_concurrency"] = max(
+                1,
+                provider_auto_maxima.get(int(route["provider_id"]), 0),
+            )
+            route.update(runtime_route_admission_snapshot(route))
 
         return sorted(routes, key=_route_sort_key)
 

@@ -6529,6 +6529,16 @@ export interface components {
              */
             runtime_model_inflight: number;
             /**
+             * Runtime Provider Auto Concurrency
+             * @default true
+             */
+            runtime_provider_auto_concurrency: boolean;
+            /**
+             * Runtime Provider Backoff Remaining Seconds
+             * @default 0
+             */
+            runtime_provider_backoff_remaining_seconds: number;
+            /**
              * Runtime Provider Capacity
              * @default 1
              */
@@ -6538,6 +6548,21 @@ export interface components {
              * @default 0
              */
             runtime_provider_inflight: number;
+            /**
+             * Runtime Provider Max Capacity
+             * @default 1
+             */
+            runtime_provider_max_capacity: number;
+            /**
+             * Runtime Provider Min Capacity
+             * @default 1
+             */
+            runtime_provider_min_capacity: number;
+            /**
+             * Runtime Provider Success Streak
+             * @default 0
+             */
+            runtime_provider_success_streak: number;
             /**
              * Runtime Timeout Count
              * @default 0
