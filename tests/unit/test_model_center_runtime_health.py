@@ -203,7 +203,11 @@ def test_runtime_admission_waits_for_capacity_without_raising_a_model_timeout() 
     asyncio.run(exercise())
 
 
-def test_runtime_admission_uses_provider_specific_auto_ceiling() -> None:
+def test_runtime_admission_uses_provider_specific_auto_ceiling(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "src.ai.model_center._runtime_admission_global_ceiling",
+        lambda: 6,
+    )
     automatic = _runtime_admission_settings(
         {
             "runtime_provider_auto_max_concurrency": 5,
