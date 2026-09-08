@@ -1745,6 +1745,18 @@ def _validate_structured_test_response(text: str) -> None:
         raise RuntimeError("Structured workload probe returned an empty assistant response")
     if _looks_like_html(value):
         raise RuntimeError("Structured workload probe returned HTML instead of JSON")
+
+    # Literature enrichment accepts JSON wrapped in a Markdown fence (and a
+    # small amount of surrounding prose), which is common for otherwise valid
+    # model responses. Keep the health probe aligned with that production
+    # contract so formatting alone cannot strand a capable route as degraded.
+    fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", value, re.DOTALL | re.IGNORECASE)
+    if fenced:
+        value = fenced.group(1)
+    else:
+        start, end = value.find("{"), value.rfind("}")
+        if start >= 0 and end > start:
+            value = value[start : end + 1]
     try:
         payload = json.loads(value)
     except json.JSONDecodeError as exc:

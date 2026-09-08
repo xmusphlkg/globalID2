@@ -51,6 +51,20 @@ def test_structured_workload_probe_accepts_the_contract_payload() -> None:
     )
 
 
+def test_structured_workload_probe_accepts_production_style_json_fence() -> None:
+    model_center._validate_structured_test_response(
+        """Here is the requested result:
+```json
+{"status":"globalid-structured-probe-ok","items":[
+{"id":1,"title":"Wastewater","summary":"Wastewater surveillance provides an early population signal that can lead observed clinical case trends.","confidence":0.9},
+{"id":2,"title":"Vaccination","summary":"Vaccination lowers the probability of severe outcomes across the synthetic evidence supplied for this probe.","confidence":0.8},
+{"id":3,"title":"Reporting delay","summary":"Reporting delays systematically bias the newest observations downward until delayed records are incorporated.","confidence":0.85}
+]}
+```
+"""
+    )
+
+
 def test_model_catalogue_extraction_is_stable_and_deduplicated() -> None:
     payload = {"data": [{"id": "qwen3.8-flash"}, {"id": "qwen3.6-flash"}, {"id": "qwen3.8-flash"}, {"missing": "id"}]}
 
