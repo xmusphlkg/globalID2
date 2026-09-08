@@ -1,9 +1,6 @@
-name: Situation Room automated release
+name: Situation Room manual release
 
 on:
-  schedule:
-    # GitHub cron uses UTC. Offset from the top of the hour to avoid peak load.
-    - cron: "17 03 * * *"
   workflow_dispatch:
     inputs:
       deploy:
@@ -114,8 +111,8 @@ jobs:
     if: >-
       needs.build-and-gate.result == 'success' &&
       github.ref == 'refs/heads/master' &&
-      ((github.event_name == 'schedule' && vars.SITUATION_AUTO_DEPLOY == 'true') ||
-       (github.event_name == 'workflow_dispatch' && inputs.deploy == true))
+      github.event_name == 'workflow_dispatch' &&
+      inputs.deploy == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: situation-production
