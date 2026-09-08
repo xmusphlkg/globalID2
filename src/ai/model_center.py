@@ -33,6 +33,8 @@ _RUNTIME_FAILURE_COOLDOWN_CAP_SECONDS = 600
 _PROVIDER_TIMEOUT_CIRCUIT_THRESHOLD = 2
 _PROVIDER_FAILURE_RECENCY_WINDOW = timedelta(minutes=10)
 _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD = 8
+_MODEL_FAILURE_STREAK_DECAY_INTERVAL = timedelta(minutes=30)
+_MODEL_RECOVERY_PROBE_INTERVAL_SECONDS = 300
 _DEFAULT_PROVIDER_ADMISSION_MAX_CONCURRENCY = 2
 _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY = 1
 _DEFAULT_ADMISSION_SUCCESS_SCALE_UP = 2
@@ -47,10 +49,17 @@ _MODEL_TEST_PROMPT = (
     f"Reply with exactly this text and nothing else: {_MODEL_TEST_MARKER}"
 )
 _STRUCTURED_MODEL_TEST_PROMPT = (
-    "This is a production model-center workload probe. Return JSON only, with "
-    "exactly this shape: {\"status\":\"globalid-structured-probe-ok\","
-    "\"items\":[{\"id\":1,\"summary\":\"ok\"}]}. Do not wrap it in markdown."
+    "This is a production model-center literature workload probe. Return JSON only. "
+    "Use exactly this top-level shape: "
+    "{\"status\":\"globalid-structured-probe-ok\",\"items\":[...]}. "
+    "Create exactly three items with integer ids 1, 2, and 3. Each item must contain "
+    "a title, a factual summary of at least 60 characters, and a confidence value from "
+    "0 to 1. Summarize these synthetic findings: (1) wastewater surveillance can lead "
+    "clinical case trends; (2) vaccination reduces severe outcomes; (3) reporting delay "
+    "biases the newest observations. Do not use markdown or add unsupported facts."
 )
+
+_recovery_probe_attempted_at: Dict[int, float] = {}
 
 
 def _utcnow() -> datetime:
@@ -143,10 +152,9 @@ def _clear_payload_rate_limit(payload: Any, recovered_at: Optional[datetime] = N
 def _runtime_health_state(payload: Any, now: Optional[datetime] = None) -> Dict[str, Any]:
     """Read production-call health telemetry stored alongside routing settings.
 
-    Health-check probes are deliberately small and cannot establish that a
-    route is suitable for a long, structured workload.  Keep the latter's
-    signal separate from quota state so routing can temporarily avoid a route
-    without claiming that its credential is invalid.
+    Even realistic health probes are only point-in-time samples. Keep their
+    result separate from production workload health so routing can temporarily
+    avoid a route without claiming that its credential is invalid.
     """
     now = now or _utcnow()
     state = _extract_routing_state(payload)
@@ -166,6 +174,14 @@ def _runtime_health_state(payload: Any, now: Optional[datetime] = None) -> Dict[
             return None
         return value if value >= 0 else None
 
+    last_failure_at = _parse_datetime(state.get("last_runtime_failure_at"))
+    raw_failure_streak = _integer("runtime_failure_streak")
+    failure_streak = raw_failure_streak
+    if last_failure_at and now > last_failure_at:
+        decay_seconds = max(1, int(_MODEL_FAILURE_STREAK_DECAY_INTERVAL.total_seconds()))
+        elapsed_intervals = int((now - last_failure_at).total_seconds() // decay_seconds)
+        failure_streak = max(0, raw_failure_streak - elapsed_intervals)
+
     return {
         "runtime_failure_active": active,
         "runtime_failure_cooldown_until": cooldown_until.isoformat() if cooldown_until else None,
@@ -175,13 +191,18 @@ def _runtime_health_state(payload: Any, now: Optional[datetime] = None) -> Dict[
             else 0
         ),
         "runtime_failure_kind": str(state.get("last_runtime_failure_kind") or "").strip() or None,
-        "runtime_failure_streak": _integer("runtime_failure_streak"),
+        # The raw count remains durable for observability, while the effective
+        # streak loses one strike per quiet interval. A route that recovered
+        # upstream therefore cannot remain permanently excluded solely because
+        # no production request was allowed through to prove a success.
+        "runtime_failure_streak": failure_streak,
+        "runtime_failure_streak_raw": raw_failure_streak,
         "runtime_failure_count": _integer("runtime_failure_count"),
         "runtime_timeout_count": _integer("runtime_timeout_count"),
         "runtime_success_count": _integer("runtime_success_count"),
         "runtime_latency_ewma_ms": _number("runtime_latency_ewma_ms"),
         "runtime_last_latency_ms": _number("runtime_last_latency_ms"),
-        "runtime_last_failure_at": _parse_datetime(state.get("last_runtime_failure_at")),
+        "runtime_last_failure_at": last_failure_at,
         "runtime_last_success_at": _parse_datetime(state.get("last_runtime_success_at")),
         "runtime_last_error": str(state.get("last_runtime_error") or "").strip() or None,
     }
@@ -204,6 +225,7 @@ def _runtime_failure_kind(error: Any) -> Optional[str]:
         for marker in (
             "malformed structured response",
             "invalid structured json",
+            "empty completion response",
         )
     ):
         return "structured_output"
@@ -212,7 +234,6 @@ def _runtime_failure_kind(error: Any) -> Optional[str]:
     if any(
         marker in message
         for marker in (
-            "empty completion response",
             "connection error",
             "connect error",
             "connection reset",
@@ -249,10 +270,9 @@ def _write_runtime_failure(
     cooldown_seconds: int,
 ) -> Dict[str, Any]:
     state = _extract_routing_state(payload)
-    try:
-        previous_streak = max(0, int(state.get("runtime_failure_streak") or 0))
-    except (TypeError, ValueError):
-        previous_streak = 0
+    previous_streak = _runtime_health_state(payload, occurred_at)[
+        "runtime_failure_streak"
+    ]
     try:
         previous_count = max(0, int(state.get("runtime_failure_count") or 0))
     except (TypeError, ValueError):
@@ -431,6 +451,10 @@ def _combined_route_runtime_health_state(
         model_state["runtime_failure_streak"],
         provider_state["runtime_failure_streak"],
     )
+    failure_streak_raw = max(
+        model_state["runtime_failure_streak_raw"],
+        provider_state["runtime_failure_streak_raw"],
+    )
     degraded_scope: Optional[str] = None
     degraded_reason: Optional[str] = None
     if model_state["runtime_failure_streak"] >= _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD:
@@ -450,6 +474,7 @@ def _combined_route_runtime_health_state(
             active["runtime_failure_kind"] if active else model_state["runtime_failure_kind"]
         ),
         "runtime_failure_streak": failure_streak,
+        "runtime_failure_streak_raw": failure_streak_raw,
         "runtime_failure_count": model_state["runtime_failure_count"],
         "runtime_timeout_count": model_state["runtime_timeout_count"],
         "runtime_success_count": model_state["runtime_success_count"],
@@ -476,6 +501,27 @@ def _combined_route_runtime_health_state(
             active["runtime_last_error"] if active else model_state["runtime_last_error"]
         ),
     }
+
+
+def _route_routing_status(
+    route: Dict[str, Any],
+    *,
+    status_routable: bool,
+    rate_limit_state: Dict[str, Any],
+    runtime_health_state: Dict[str, Any],
+) -> tuple[str, str]:
+    """Describe actual route admission separately from the latest probe result."""
+    if not route.get("has_api_key"):
+        return "missing_credentials", "Provider API credentials are not configured."
+    if rate_limit_state["rate_limit_active"]:
+        return "rate_limited", "The route is waiting for its rate-limit cooldown to expire."
+    if runtime_health_state["runtime_failure_active"]:
+        return "cooling_down", "The route is temporarily cooling down after a production workload failure."
+    if runtime_health_state["runtime_degraded"]:
+        return "degraded", "The route is excluded after repeated production failures and is awaiting an automatic recovery probe."
+    if not status_routable:
+        return "probe_unavailable", "The latest model or provider workload probe did not succeed."
+    return "routable", "The route passed admission checks and can receive production workloads."
 
 
 def _route_sort_key(route: Dict[str, Any]) -> tuple[int, int, float, str]:
@@ -1467,6 +1513,13 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
             model_status = str(model.last_check_status or "").strip().lower()
             effective_status = _effective_route_check_status(model_status, provider_status)
             status_routable = effective_status != "unavailable"
+            has_api_key = bool(provider.api_key)
+            routing_status, routing_status_reason = _route_routing_status(
+                {"has_api_key": has_api_key},
+                status_routable=status_routable,
+                rate_limit_state=rate_limit_state,
+                runtime_health_state=runtime_health_state,
+            )
 
             route = {
                     "model_id": model.id,
@@ -1484,16 +1537,17 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
                     "extra_params": model.extra_params or {},
                     "temperature": model.temperature,
                     "max_tokens": model.max_tokens,
-                    "has_api_key": bool(provider.api_key),
+                    "has_api_key": has_api_key,
                     # Provider credential failures apply to every model under
                     # the provider. Preserve that durable state even when a
                     # sibling has an older model-level "available" result.
                     "last_check_status": effective_status,
-                    "available_for_routing": bool(provider.api_key)
-                    and status_routable
-                    and not rate_limit_state["rate_limit_active"]
-                    and not runtime_health_state["runtime_failure_active"]
-                    and not runtime_health_state["runtime_degraded"],
+                    "last_checked_at": (
+                        model.last_checked_at.isoformat() if model.last_checked_at else None
+                    ),
+                    "available_for_routing": routing_status == "routable",
+                    "routing_status": routing_status,
+                    "routing_status_reason": routing_status_reason,
                     **rate_limit_state,
                     **runtime_health_state,
             }
@@ -1698,8 +1752,35 @@ def _validate_structured_test_response(text: str) -> None:
     if not isinstance(payload, dict) or payload.get("status") != "globalid-structured-probe-ok":
         raise RuntimeError("Structured workload probe returned an unexpected JSON payload")
     items = payload.get("items")
-    if not isinstance(items, list) or not items or not isinstance(items[0], dict):
-        raise RuntimeError("Structured workload probe omitted its required items array")
+    if not isinstance(items, list) or len(items) != 3 or not all(isinstance(item, dict) for item in items):
+        raise RuntimeError("Structured workload probe must return exactly three evidence items")
+    if [item.get("id") for item in items] != [1, 2, 3]:
+        raise RuntimeError("Structured workload probe returned unexpected evidence item ids")
+    for item in items:
+        if not str(item.get("title") or "").strip():
+            raise RuntimeError("Structured workload probe omitted an evidence title")
+        if len(str(item.get("summary") or "").strip()) < 60:
+            raise RuntimeError("Structured workload probe returned an incomplete evidence summary")
+        try:
+            confidence = float(item.get("confidence"))
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError("Structured workload probe returned an invalid confidence value") from exc
+        if not 0 <= confidence <= 1:
+            raise RuntimeError("Structured workload probe returned confidence outside the 0..1 range")
+
+
+def _test_timeout_seconds(route: Dict[str, Any]) -> float:
+    provider_config = route.get("extra_config")
+    provider_config = provider_config if isinstance(provider_config, dict) else {}
+    model_params = route.get("extra_params")
+    model_params = model_params if isinstance(model_params, dict) else {}
+    raw = model_params.get("health_check_timeout_seconds")
+    if raw in (None, ""):
+        raw = provider_config.get("health_check_timeout_seconds", 45)
+    try:
+        return float(max(10, min(120, int(raw))))
+    except (TypeError, ValueError):
+        return 45.0
 
 
 async def _test_openai_compatible(
@@ -1717,6 +1798,8 @@ async def _test_openai_compatible(
                 api_key=route.get("api_key"),
                 base_url=candidate_base_url,
                 default_headers=(route.get("extra_headers") or None),
+                timeout=_test_timeout_seconds(route),
+                max_retries=0,
             )
             prompt = _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT
             response = await client.chat.completions.create(
@@ -1724,11 +1807,11 @@ async def _test_openai_compatible(
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are validating that this chat model can answer normal conversations.",
+                        "content": "You are validating an evidence-summarization model used by a public-health literature pipeline.",
                     },
                     {"role": "user", "content": prompt},
                 ],
-                max_tokens=max(128, min(_test_max_tokens(route), 512)) if structured else _test_max_tokens(route),
+                max_tokens=max(768, min(_test_max_tokens(route), 1200)) if structured else _test_max_tokens(route),
                 temperature=0,
             )
             text = _openai_response_text(response)
@@ -1755,12 +1838,16 @@ async def _test_anthropic(
     route: Dict[str, Any], model_name: str, *, structured: bool = False
 ) -> Dict[str, Any]:
     prompt = _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT
-    client = AsyncAnthropic(api_key=route.get("api_key"))
+    client = AsyncAnthropic(
+        api_key=route.get("api_key"),
+        timeout=_test_timeout_seconds(route),
+        max_retries=0,
+    )
     response = await client.messages.create(
         model=model_name,
-        system="You are validating that this chat model can answer normal conversations.",
+        system="You are validating an evidence-summarization model used by a public-health literature pipeline.",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=max(128, min(_test_max_tokens(route), 512)) if structured else _test_max_tokens(route),
+        max_tokens=max(768, min(_test_max_tokens(route), 1200)) if structured else _test_max_tokens(route),
         temperature=0,
     )
     text = "\n".join(
@@ -1791,7 +1878,7 @@ async def test_route_connection(
         else:
             details = await _test_openai_compatible(route, model_name, structured=structured)
 
-        probe_name = "Structured workload probe" if structured else "Chat completion test"
+        probe_name = "Literature workload probe" if structured else "Chat completion test"
         marker = "globalid-structured-probe-ok" if structured else _MODEL_TEST_MARKER
         message = f"{probe_name} successful. Response: {details.get('response_preview') or marker}"
 
@@ -1800,7 +1887,7 @@ async def test_route_connection(
             "status": "available",
             "message": message,
             "model_name": model_name,
-            "test_type": "structured_workload" if structured else "chat_completion",
+            "test_type": "literature_workload" if structured else "chat_completion",
             "test_prompt": _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT,
             **details,
         }
@@ -1810,7 +1897,7 @@ async def test_route_connection(
             "status": "rate_limited" if is_rate_limit_error(exc) else "unavailable",
             "message": str(exc),
             "model_name": model_name,
-            "test_type": "structured_workload" if structured else "chat_completion",
+            "test_type": "literature_workload" if structured else "chat_completion",
             "test_prompt": _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT,
             "retry_after_seconds": extract_retry_after_seconds(exc),
         }
@@ -2219,30 +2306,109 @@ async def check_provider_by_id(provider_id: int, *, structured: bool = True) -> 
     return result
 
 
+def _health_check_concurrency(route: Dict[str, Any]) -> int:
+    """Use a small provider-specific batch to catch concurrency-only failures."""
+    provider_config = route.get("extra_config")
+    provider_config = provider_config if isinstance(provider_config, dict) else {}
+    configured = provider_config.get("health_check_concurrency")
+    try:
+        provider_maximum = max(1, int(route.get("runtime_provider_max_capacity") or 1))
+    except (TypeError, ValueError):
+        provider_maximum = 1
+    return _positive_int(configured, min(2, provider_maximum), maximum=provider_maximum)
+
+
 async def check_all_models(*, structured: bool = True) -> List[Dict[str, Any]]:
-    """Test all enabled runtime routes and persist statuses."""
+    """Test all routes with realistic, provider-bounded parallel workload probes."""
     routes = await get_runtime_routes()
-    results: List[Dict[str, Any]] = []
-    provider_results: Dict[int, List[Dict[str, Any]]] = {}
+    semaphores: Dict[int, asyncio.Semaphore] = {}
     for route in routes:
-        result = await test_route_connection(route, structured=structured)
-        if result["status"] == "rate_limited":
-            await mark_route_rate_limited(
-                route,
-                result["message"],
-                retry_after_seconds=result.get("retry_after_seconds"),
-            )
-        await update_model_check_result(route["model_id"], result["status"], result["message"])
-        result.update(
-            {
-                "model_id": route["model_id"],
-                "provider_id": route["provider_id"],
-                "provider_key": route["provider_key"],
-            }
+        provider_id = int(route["provider_id"])
+        semaphores.setdefault(
+            provider_id,
+            asyncio.Semaphore(_health_check_concurrency(route)),
         )
-        results.append(result)
-        provider_results.setdefault(int(route["provider_id"]), []).append(result)
+
+    async def _check(route: Dict[str, Any]) -> Dict[str, Any]:
+        provider_id = int(route["provider_id"])
+        async with semaphores[provider_id]:
+            result = await test_route_connection(route, structured=structured)
+            if result["status"] == "rate_limited":
+                await mark_route_rate_limited(
+                    route,
+                    result["message"],
+                    retry_after_seconds=result.get("retry_after_seconds"),
+                )
+            await update_model_check_result(route["model_id"], result["status"], result["message"])
+            result.update(
+                {
+                    "model_id": route["model_id"],
+                    "provider_id": provider_id,
+                    "provider_key": route["provider_key"],
+                    "provider_probe_concurrency": _health_check_concurrency(route),
+                }
+            )
+            return result
+
+    results = list(await asyncio.gather(*(_check(route) for route in routes)))
+    provider_results: Dict[int, List[Dict[str, Any]]] = {}
+    for result in results:
+        provider_results.setdefault(int(result["provider_id"]), []).append(result)
     for provider_id, provider_model_results in provider_results.items():
         status, message = _provider_check_result_from_model_results(provider_model_results)
         await update_provider_check_result(provider_id, status, message)
+    return results
+
+
+async def probe_degraded_model_routes(
+    *,
+    limit: int = 2,
+    minimum_interval_seconds: int = _MODEL_RECOVERY_PROBE_INTERVAL_SECONDS,
+) -> List[Dict[str, Any]]:
+    """Run bounded realistic probes so chronically failed routes can recover.
+
+    Production admission excludes a chronic route, so it cannot generate the
+    success that clears its own circuit. The worker calls this function in a
+    separate low-rate sweep after ordinary cooldowns have expired.
+    """
+    routes = await get_runtime_routes()
+    now = time.monotonic()
+    due: List[Dict[str, Any]] = []
+    for route in routes:
+        if not route.get("runtime_degraded"):
+            continue
+        if route.get("runtime_failure_active") or route.get("rate_limit_active"):
+            continue
+        if not route.get("has_api_key"):
+            continue
+        try:
+            model_id = int(route["model_id"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        last_attempt = _recovery_probe_attempted_at.get(model_id, float("-inf"))
+        if now - last_attempt < max(30, int(minimum_interval_seconds)):
+            continue
+        due.append(route)
+
+    due.sort(
+        key=lambda route: (
+            str(route.get("runtime_last_failure_at") or ""),
+            int(route.get("priority") or 100),
+            int(route.get("model_id") or 0),
+        )
+    )
+    results: List[Dict[str, Any]] = []
+    for route in due[: max(0, int(limit))]:
+        model_id = int(route["model_id"])
+        _recovery_probe_attempted_at[model_id] = time.monotonic()
+        result = await check_model_by_id(model_id, structured=True)
+        results.append(
+            {
+                "model_id": model_id,
+                "model_key": route.get("model_key"),
+                "success": bool(result.get("success")),
+                "status": result.get("status"),
+                "message": result.get("message"),
+            }
+        )
     return results

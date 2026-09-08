@@ -1,12 +1,15 @@
 from datetime import timedelta
 from types import SimpleNamespace
 
+from src.ai import model_center
 from src.ai.model_center import (
     _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD,
     RuntimeRouteAdmissionController,
     _combined_route_runtime_health_state,
     _provider_check_result_from_model_results,
+    _route_routing_status,
     _runtime_admission_settings,
+    _runtime_failure_kind,
     _runtime_health_state,
     _utcnow,
     _write_provider_runtime_failure,
@@ -73,7 +76,7 @@ def test_chronic_model_failures_keep_route_out_of_active_candidates() -> None:
             payload,
             kind="timeout",
             error="request timed out",
-            occurred_at=now - timedelta(minutes=30, seconds=index),
+            occurred_at=now - timedelta(minutes=11) + timedelta(seconds=index),
             duration_seconds=35.0,
             cooldown_seconds=30,
         )
@@ -93,6 +96,103 @@ def test_chronic_model_failures_keep_route_out_of_active_candidates() -> None:
         provider,
     )
     assert recovered_combined["runtime_degraded"] is False
+
+
+def test_quiet_runtime_failures_decay_without_erasing_history() -> None:
+    now = _utcnow()
+    payload = {}
+    occurred_at = now - timedelta(hours=4, minutes=5)
+    for index in range(_MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD):
+        payload = _write_runtime_failure(
+            payload,
+            kind="timeout",
+            error="request timed out",
+            occurred_at=occurred_at + timedelta(seconds=index),
+            duration_seconds=30.0,
+            cooldown_seconds=30,
+        )
+
+    health = _runtime_health_state(payload, now)
+
+    assert health["runtime_failure_streak"] == 0
+    assert health["runtime_failure_streak_raw"] == _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD
+    assert health["runtime_failure_count"] == _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD
+
+
+def test_route_status_distinguishes_probe_success_from_runtime_cooldown() -> None:
+    status, reason = _route_routing_status(
+        {"has_api_key": True},
+        status_routable=True,
+        rate_limit_state={"rate_limit_active": False},
+        runtime_health_state={
+            "runtime_failure_active": True,
+            "runtime_degraded": False,
+        },
+    )
+
+    assert status == "cooling_down"
+    assert "production workload failure" in reason
+
+
+def test_empty_model_output_does_not_open_a_shared_provider_connection_circuit() -> None:
+    assert (
+        _runtime_failure_kind(RuntimeError("Model returned an empty completion response"))
+        == "structured_output"
+    )
+
+
+def test_degraded_routes_receive_bounded_automatic_recovery_probes(monkeypatch) -> None:
+    async def exercise() -> None:
+        model_center._recovery_probe_attempted_at.clear()
+
+        async def routes():
+            return [
+                {
+                    "model_id": 11,
+                    "model_key": "provider:recover-me",
+                    "priority": 100,
+                    "has_api_key": True,
+                    "runtime_degraded": True,
+                    "runtime_failure_active": False,
+                    "rate_limit_active": False,
+                    "runtime_last_failure_at": "2026-01-01T00:00:00+00:00",
+                },
+                {
+                    "model_id": 12,
+                    "model_key": "provider:still-cooling",
+                    "priority": 100,
+                    "has_api_key": True,
+                    "runtime_degraded": True,
+                    "runtime_failure_active": True,
+                    "rate_limit_active": False,
+                },
+            ]
+
+        checked = []
+
+        async def check(model_id, *, structured=True):
+            checked.append((model_id, structured))
+            return {"success": True, "status": "available", "message": "recovered"}
+
+        monkeypatch.setattr(model_center, "get_runtime_routes", routes)
+        monkeypatch.setattr(model_center, "check_model_by_id", check)
+
+        first = await model_center.probe_degraded_model_routes(
+            limit=2,
+            minimum_interval_seconds=30,
+        )
+        second = await model_center.probe_degraded_model_routes(
+            limit=2,
+            minimum_interval_seconds=30,
+        )
+
+        assert checked == [(11, True)]
+        assert first[0]["success"] is True
+        assert second == []
+
+    import asyncio
+
+    asyncio.run(exercise())
 
 
 def test_active_provider_circuit_does_not_extend_its_recovery_window() -> None:
