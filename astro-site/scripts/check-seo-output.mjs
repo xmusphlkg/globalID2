@@ -27,8 +27,9 @@ function attributes(tag) {
   return output;
 }
 
-function tags(html, name) {
-  return [...html.matchAll(new RegExp(`<${name}\\b[^>]*>`, 'gi'))].map(match => attributes(match[0]));
+export function tags(html, name) {
+  const tagPattern = new RegExp(`<${name}\\b(?:[^>"']|"[^"]*"|'[^']*')*>`, 'gi');
+  return [...html.matchAll(tagPattern)].map(match => attributes(match[0]));
 }
 
 function routeFor(file, dist) {
