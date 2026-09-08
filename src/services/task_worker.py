@@ -49,6 +49,10 @@ STALE_TASK_SECONDS = TASK_WORKER_CONFIG.stale_task_seconds
 RECOVERY_SCAN_SECONDS = TASK_WORKER_CONFIG.recovery_scan_seconds
 RUNTIME_LEASE_TTL_SECONDS = TASK_WORKER_CONFIG.runtime_lease_ttl_seconds
 RUNTIME_HEARTBEAT_TTL_SECONDS = TASK_WORKER_CONFIG.runtime_heartbeat_ttl_seconds
+MODEL_ROUTE_RECOVERY_SCAN_SECONDS = max(
+    60,
+    min(300, TASK_WORKER_CONFIG.ai_concurrency_adjust_seconds * 3),
+)
 
 _LIBC: ctypes.CDLL | None = None
 _LIBC_LOOKUP_DONE = False
@@ -259,6 +263,12 @@ async def _load_runtime_routes() -> list[dict[str, Any]]:
     from src.ai.model_center import get_runtime_routes
 
     return await get_runtime_routes()
+
+
+def _runtime_provider_capacity_snapshots() -> dict[str, dict[str, Any]]:
+    from src.ai.model_center import runtime_provider_admission_snapshots
+
+    return runtime_provider_admission_snapshots()
 
 
 def _knowledge_task_disease_id(task: Task) -> str | None:
@@ -488,6 +498,31 @@ async def _recover_stale_tasks(
             pass
 
 
+async def _probe_degraded_model_routes(stop_event: asyncio.Event) -> None:
+    """Give excluded model routes a bounded path back into production."""
+    from src.ai.model_center import probe_degraded_model_routes
+
+    while not stop_event.is_set():
+        try:
+            results = await probe_degraded_model_routes(limit=2)
+            if results:
+                recovered = sum(1 for result in results if result.get("success"))
+                logger.info(
+                    "Model Center recovery probes completed (attempted={}, recovered={})",
+                    len(results),
+                    recovered,
+                )
+        except Exception as exc:
+            logger.warning("Model Center recovery probe sweep failed: {}", exc)
+        try:
+            await asyncio.wait_for(
+                stop_event.wait(),
+                timeout=MODEL_ROUTE_RECOVERY_SCAN_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            pass
+
+
 async def _resume_knowledge_repairs_after_model_recovery() -> None:
     """Delegate one bounded terminal-repair wake-up to AI governance."""
     from src.services.ai_content_governance_service import ai_content_governance_service
@@ -575,12 +610,17 @@ async def run_worker() -> None:
             "ai_concurrency_max": MAX_CONCURRENT_AI_TASKS,
             "ai_concurrency_current": ai_concurrency.capacity,
             "ai_concurrency_adaptive": TASK_WORKER_CONFIG.ai_dynamic_concurrency_enabled,
+            "ai_provider_capacities": _runtime_provider_capacity_snapshots(),
         },
         on_lease_lost=_threaded_lease_lost,
     )
     recovery_sweep = asyncio.create_task(
         _recover_stale_tasks(stop_event, instance_id),
         name="control-plane-worker-task-recovery",
+    )
+    model_route_recovery_sweep = asyncio.create_task(
+        _probe_degraded_model_routes(stop_event),
+        name="model-center-route-recovery",
     )
     await control_plane_events.publish("runtime.started", resource_type="runtime", resource_id=instance_id)
 
@@ -743,6 +783,8 @@ async def run_worker() -> None:
 
     stop_event.set()
     await recovery_sweep
+    model_route_recovery_sweep.cancel()
+    await asyncio.gather(model_route_recovery_sweep, return_exceptions=True)
     await asyncio.to_thread(runtime_guard.stop)
     await control_plane_events.publish("runtime.stopped", resource_type="runtime", resource_id=instance_id)
     task_manager.set_broadcast_hook(None)

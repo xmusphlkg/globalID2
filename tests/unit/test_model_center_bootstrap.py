@@ -43,7 +43,25 @@ def _install_bootstrap_fakes(monkeypatch, *, engine=None):
 
 def test_structured_workload_probe_accepts_the_contract_payload() -> None:
     model_center._validate_structured_test_response(
-        '{"status":"globalid-structured-probe-ok","items":[{"id":1,"summary":"ok"}]}'
+        '{"status":"globalid-structured-probe-ok","items":['
+        '{"id":1,"title":"Wastewater","summary":"Wastewater surveillance provides an early population signal that can lead observed clinical case trends.","confidence":0.9},'
+        '{"id":2,"title":"Vaccination","summary":"Vaccination lowers the probability of severe outcomes across the synthetic evidence supplied for this probe.","confidence":0.8},'
+        '{"id":3,"title":"Reporting delay","summary":"Reporting delays systematically bias the newest observations downward until delayed records are incorporated.","confidence":0.85}'
+        ']}'
+    )
+
+
+def test_structured_workload_probe_accepts_production_style_json_fence() -> None:
+    model_center._validate_structured_test_response(
+        """Here is the requested result:
+```json
+{"status":"globalid-structured-probe-ok","items":[
+{"id":1,"title":"Wastewater","summary":"Wastewater surveillance provides an early population signal that can lead observed clinical case trends.","confidence":0.9},
+{"id":2,"title":"Vaccination","summary":"Vaccination lowers the probability of severe outcomes across the synthetic evidence supplied for this probe.","confidence":0.8},
+{"id":3,"title":"Reporting delay","summary":"Reporting delays systematically bias the newest observations downward until delayed records are incorporated.","confidence":0.85}
+]}
+```
+"""
     )
 
 
@@ -64,6 +82,79 @@ def test_model_catalogue_extraction_is_stable_and_deduplicated() -> None:
 def test_structured_workload_probe_rejects_invalid_payloads(response: str) -> None:
     with pytest.raises(RuntimeError):
         model_center._validate_structured_test_response(response)
+
+
+@pytest.mark.asyncio
+async def test_check_all_models_uses_provider_bounded_parallel_probes(monkeypatch) -> None:
+    routes = [
+        {
+            "model_id": 11,
+            "model_key": "fast:one",
+            "model_name": "one",
+            "provider_id": 1,
+            "provider_key": "fast",
+            "runtime_provider_max_capacity": 4,
+            "extra_config": {},
+        },
+        {
+            "model_id": 12,
+            "model_key": "fast:two",
+            "model_name": "two",
+            "provider_id": 1,
+            "provider_key": "fast",
+            "runtime_provider_max_capacity": 4,
+            "extra_config": {},
+        },
+        {
+            "model_id": 13,
+            "model_key": "fast:three",
+            "model_name": "three",
+            "provider_id": 1,
+            "provider_key": "fast",
+            "runtime_provider_max_capacity": 4,
+            "extra_config": {},
+        },
+        {
+            "model_id": 21,
+            "model_key": "cautious:one",
+            "model_name": "one",
+            "provider_id": 2,
+            "provider_key": "cautious",
+            "runtime_provider_max_capacity": 1,
+            "extra_config": {},
+        },
+    ]
+    active = {1: 0, 2: 0}
+    maximum = {1: 0, 2: 0}
+
+    async def get_routes():
+        return routes
+
+    async def test_route(route, *, structured=False):
+        provider_id = route["provider_id"]
+        active[provider_id] += 1
+        maximum[provider_id] = max(maximum[provider_id], active[provider_id])
+        await asyncio.sleep(0)
+        active[provider_id] -= 1
+        return {
+            "success": True,
+            "status": "available",
+            "message": "Literature workload probe successful",
+        }
+
+    async def no_op(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(model_center, "get_runtime_routes", get_routes)
+    monkeypatch.setattr(model_center, "test_route_connection", test_route)
+    monkeypatch.setattr(model_center, "update_model_check_result", no_op)
+    monkeypatch.setattr(model_center, "update_provider_check_result", no_op)
+
+    results = await model_center.check_all_models(structured=True)
+
+    assert maximum == {1: 2, 2: 1}
+    assert [result["model_id"] for result in results] == [11, 12, 13, 21]
+    assert [result["provider_probe_concurrency"] for result in results] == [2, 2, 2, 1]
 
 
 @pytest.mark.asyncio

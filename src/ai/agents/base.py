@@ -1173,9 +1173,9 @@ class BaseAgent(ABC):
                 )
             else:
                 response = await request
-        except BaseException:
+        except BaseException as exc:
             self._runtime_route_request_duration_seconds = time.perf_counter() - request_started_at
-            await admission.release(success=False)
+            await admission.release(success=False, error=exc)
             raise
         self._runtime_route_request_duration_seconds = time.perf_counter() - request_started_at
         await admission.release(success=True)

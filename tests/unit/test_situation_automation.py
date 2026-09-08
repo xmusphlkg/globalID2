@@ -153,19 +153,19 @@ def test_contract_drift_check_catches_modified_and_untracked_files(tmp_path: Pat
     assert any(CONTRACT_PATHS[1] in line for line in changed_contracts(tmp_path))
 
 
-def test_workflow_is_scheduled_serialized_and_artifact_gated() -> None:
+def test_workflow_is_manual_serialized_and_artifact_gated() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
     # BaseLoader avoids YAML 1.1 coercing the GitHub key `on` to a boolean.
     parsed = yaml.load(text, Loader=yaml.BaseLoader)
 
-    assert parsed["on"]["schedule"][0]["cron"] == "17 03 * * *"
+    assert "schedule" not in parsed["on"]
     assert "workflow_dispatch" in parsed["on"]
     assert parsed["concurrency"]["group"] == "situation-room-production"
     assert parsed["concurrency"]["cancel-in-progress"] == "false"
     assert parsed["jobs"]["build-and-gate"]["timeout-minutes"] == "90"
     assert parsed["jobs"]["deploy-production"]["needs"] == "build-and-gate"
     assert "needs.build-and-gate.result == 'success'" in parsed["jobs"]["deploy-production"]["if"]
-    assert "vars.SITUATION_AUTO_DEPLOY == 'true'" in parsed["jobs"]["deploy-production"]["if"]
+    assert "vars.SITUATION_AUTO_DEPLOY" not in parsed["jobs"]["deploy-production"]["if"]
     assert "github.event_name == 'workflow_dispatch'" in parsed["jobs"]["deploy-production"]["if"]
     assert "inputs.deploy == true" in parsed["jobs"]["deploy-production"]["if"]
     assert "actions/upload-artifact@v4" in text

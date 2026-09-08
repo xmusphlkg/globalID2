@@ -109,12 +109,12 @@ function providerMatchesFilter(provider: AIProviderItem, filter: HealthFilter): 
   return status === "checking";
 }
 
-function modelMatchesFilter(model: AIModelItem, filter: HealthFilter): boolean {
+function modelMatchesFilter(model: AIModelItem, filter: HealthFilter, route?: AIRuntimeRoute): boolean {
   const status = (model.last_check_status || "").toLowerCase();
   if (filter === "all") return true;
-  if (filter === "healthy") return model.is_enabled && status === "available" && !model.rate_limit_active && !model.runtime_failure_active;
+  if (filter === "healthy") return model.is_enabled && (route ? route.available_for_routing : status === "available" && !model.rate_limit_active && !model.runtime_failure_active);
   if (filter === "attention") {
-    return !model.is_enabled || model.rate_limit_active || model.runtime_failure_active || ["unavailable", "failed", "rate_limited"].includes(status);
+    return !model.is_enabled || (route ? !route.available_for_routing : model.rate_limit_active || model.runtime_failure_active || ["unavailable", "failed", "rate_limited"].includes(status));
   }
   return status === "checking";
 }
@@ -132,6 +132,39 @@ function statusTone(status: string): "neutral" | "info" | "success" | "warning" 
   if (normalized === "rate_limited" || normalized === "checking") return "warning";
   if (normalized === "unavailable" || normalized === "failed") return "danger";
   return "neutral";
+}
+
+function routingStatusTone(status: string): "neutral" | "info" | "success" | "warning" | "danger" | "primary" {
+  if (status === "routable") return "success";
+  if (["cooling_down", "degraded", "rate_limited"].includes(status)) return "warning";
+  if (["missing_credentials", "probe_unavailable"].includes(status)) return "danger";
+  return "neutral";
+}
+
+function routingStatusLabel(status: string, isZh: boolean): string {
+  const labels: Record<string, [string, string]> = {
+    routable: ["实际可用", "routable"],
+    cooling_down: ["运行冷却", "cooling down"],
+    degraded: ["等待自动恢复", "awaiting recovery"],
+    rate_limited: ["限流冷却", "rate limited"],
+    missing_credentials: ["缺少密钥", "missing key"],
+    probe_unavailable: ["探针失败", "probe unavailable"],
+  };
+  const label = labels[status] ?? [status || "未知", status || "unknown"];
+  return isZh ? label[0] : label[1];
+}
+
+function routingStatusReason(route: AIRuntimeRoute, isZh: boolean): string {
+  if (!isZh) return route.routing_status_reason || "-";
+  const reasons: Record<string, string> = {
+    routable: "已通过实际路由准入检查，可以接收生产任务。",
+    cooling_down: "真实任务刚刚失败，当前处于短暂冷却期。",
+    degraded: "真实任务连续失败，正在等待自动恢复探测。",
+    rate_limited: "供应商或模型限流，正在等待冷却结束。",
+    missing_credentials: "尚未配置供应商 API 密钥。",
+    probe_unavailable: "最近一次模型或供应商负载探测未通过。",
+  };
+  return reasons[route.routing_status] || route.routing_status_reason || "-";
 }
 
 function ActionButton({
@@ -318,7 +351,7 @@ export default function AIModelsPage() {
         subtitle: "统一管理提供商、模型路由、运行时优先级和健康状态。",
         openTasks: "AI 任务",
         openInteractions: "AI 交互",
-        checkAllModels: "对话检查全部模型",
+        checkAllModels: "文献负载检查全部模型",
         rebuildFromEnv: "重建 env 提供商",
         rebuildConfirm: "该操作会按 .env 配置重新初始化提供商及默认模型。已有自定义记录将被清空。",
         providers: "提供商",
@@ -390,7 +423,7 @@ export default function AIModelsPage() {
         subtitle: "Manage providers, model routes, runtime priority, and health in one workspace.",
         openTasks: "AI Tasks",
         openInteractions: "AI Interactions",
-        checkAllModels: "Chat Test All",
+        checkAllModels: "Literature Workload Test All",
         rebuildFromEnv: "Rebuild From .env",
         rebuildConfirm: "This will rebuild providers/models from .env and clear current custom records.",
         providers: "Providers",
@@ -494,6 +527,11 @@ export default function AIModelsPage() {
     };
   }, [models, providers, runtimeRoutes]);
 
+  const runtimeRouteByModelKey = useMemo(
+    () => new Map((runtimeRoutes ?? []).map((route) => [route.model_key, route])),
+    [runtimeRoutes],
+  );
+
   const searchQuery = search.trim().toLowerCase();
   const filteredProviders = useMemo(
     () =>
@@ -508,9 +546,9 @@ export default function AIModelsPage() {
     () =>
       (models ?? [])
         .filter((model) => matchesQuery([model.display_name, model.model_name, model.model_key, model.provider_key, model.provider_name, model.api_style], searchQuery))
-        .filter((model) => modelMatchesFilter(model, healthFilter))
+        .filter((model) => modelMatchesFilter(model, healthFilter, runtimeRouteByModelKey.get(model.model_key)))
         .sort((a, b) => Number(b.is_default) - Number(a.is_default) || Number(b.is_enabled) - Number(a.is_enabled) || a.priority - b.priority || a.display_name.localeCompare(b.display_name)),
-    [healthFilter, models, searchQuery],
+    [healthFilter, models, runtimeRouteByModelKey, searchQuery],
   );
 
   const filteredRuntimeRoutes = useMemo(
@@ -903,14 +941,23 @@ export default function AIModelsPage() {
         header: isZh ? "状态" : "Status",
         className: "w-[144px]",
         headerClassName: "w-[144px]",
-        render: (model) => (
-          <div className="flex w-[144px] flex-wrap gap-1">
-            <StatusBadge tone={model.is_enabled ? "success" : "neutral"}>{model.is_enabled ? "enabled" : "disabled"}</StatusBadge>
-            {model.is_default ? <StatusBadge tone="primary">default</StatusBadge> : null}
-            <StatusBadge tone={statusTone(model.last_check_status)}>{model.last_check_status || "unknown"}</StatusBadge>
-            {model.runtime_failure_active ? <StatusBadge tone="warning">{copy.cooldown}</StatusBadge> : null}
-          </div>
-        ),
+        render: (model) => {
+          const route = runtimeRouteByModelKey.get(model.model_key);
+          return (
+            <div className="flex w-[144px] flex-wrap gap-1">
+              <StatusBadge tone={model.is_enabled ? "success" : "neutral"}>{model.is_enabled ? "enabled" : "disabled"}</StatusBadge>
+              {model.is_default ? <StatusBadge tone="primary">default</StatusBadge> : null}
+              <StatusBadge tone={statusTone(model.last_check_status)}>
+                {isZh ? `探针 ${model.last_check_status || "unknown"}` : `probe ${model.last_check_status || "unknown"}`}
+              </StatusBadge>
+              {route ? (
+                <StatusBadge tone={routingStatusTone(route.routing_status)}>
+                  {routingStatusLabel(route.routing_status, isZh)}
+                </StatusBadge>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         key: "model",
@@ -999,7 +1046,7 @@ export default function AIModelsPage() {
         ),
       },
     ],
-    [copy, deleteModel.isPending, deletingModelId, isZh, testModel.isPending, updateModel],
+    [copy, deleteModel.isPending, deletingModelId, isZh, runtimeRouteByModelKey, testModel.isPending, updateModel],
   );
 
   const routeColumns = useMemo<DataTableColumn<AIRuntimeRoute>[]>(
@@ -1030,8 +1077,8 @@ export default function AIModelsPage() {
         render: (route) => (
           <div className="flex flex-wrap gap-1.5">
             <StatusBadge tone={route.has_api_key ? "success" : "danger"}>{route.has_api_key ? "key ready" : copy.noCredential}</StatusBadge>
-            <StatusBadge tone={route.available_for_routing ? "success" : route.rate_limit_active || route.runtime_failure_active ? "warning" : "neutral"}>
-              {route.available_for_routing ? "routable" : route.rate_limit_active || route.runtime_failure_active ? copy.cooldown : "disabled"}
+            <StatusBadge tone={routingStatusTone(route.routing_status)}>
+              {routingStatusLabel(route.routing_status, isZh)}
             </StatusBadge>
           </div>
         ),
@@ -1045,6 +1092,8 @@ export default function AIModelsPage() {
               ? formatDuration(route.rate_limit_remaining_seconds, lang)
               : route.runtime_failure_active
                 ? formatDuration(route.runtime_failure_remaining_seconds, lang)
+                : route.runtime_degraded
+                  ? (isZh ? "自动恢复探测" : "automatic recovery probe")
                 : "-"}
           </span>
         ),
@@ -1054,12 +1103,24 @@ export default function AIModelsPage() {
         header: copy.runtimeHealth,
         render: (route) => (
           <div className="min-w-[150px] text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            <p className="max-w-[260px] truncate" title={routingStatusReason(route, isZh)}>{routingStatusReason(route, isZh)}</p>
             <p>{route.runtime_latency_ewma_ms == null ? "-" : `${Math.round(route.runtime_latency_ewma_ms)} ms EWMA`}</p>
             <p className="mt-1">{isZh ? "超时" : "timeouts"}: {route.runtime_timeout_count}</p>
             <p className="mt-1">
-              {isZh ? "准入" : "admission"}: {route.runtime_provider_inflight}/{route.runtime_provider_capacity}
+              {isZh ? "连续失败" : "failure streak"}: {route.runtime_failure_streak}
+              {route.runtime_failure_streak_raw !== route.runtime_failure_streak ? `/${route.runtime_failure_streak_raw}` : ""}
+              {` · ${isZh ? "累计" : "total"} ${route.runtime_failure_count}`}
+            </p>
+            <p className="mt-1">
+              {isZh ? "准入" : "admission"}: {route.runtime_provider_inflight}/{route.runtime_provider_capacity}/{route.runtime_provider_max_capacity}
               {" "}{isZh ? "提供商" : "provider"}, {route.runtime_model_inflight}/{route.runtime_model_capacity}
               {" "}{isZh ? "模型" : "model"}
+            </p>
+            <p className="mt-1">
+              {route.runtime_provider_auto_concurrency ? (isZh ? "自动调节" : "auto tuning") : (isZh ? "手动上限" : "manual cap")}
+              {route.runtime_provider_backoff_remaining_seconds > 0
+                ? ` · ${isZh ? "退避" : "backoff"} ${formatDuration(route.runtime_provider_backoff_remaining_seconds, lang)}`
+                : ""}
             </p>
             {route.runtime_last_error ? <p className="mt-1 max-w-[220px] truncate" title={route.runtime_last_error}>{route.runtime_last_error}</p> : null}
           </div>
@@ -1253,7 +1314,9 @@ export default function AIModelsPage() {
             ) : (
               <>
                 <div className="space-y-2 md:hidden">
-                  {filteredModels.length ? filteredModels.map((model) => (
+                  {filteredModels.length ? filteredModels.map((model) => {
+                    const route = runtimeRouteByModelKey.get(model.model_key);
+                    return (
                     <article key={model.id} className="space-y-3 rounded-tremor-default border border-tremor-border bg-tremor-background p-3 shadow-[0_1px_2px_rgba(23,33,31,0.04)] dark:border-dark-tremor-border dark:bg-dark-tremor-background">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -1265,8 +1328,8 @@ export default function AIModelsPage() {
                       <div className="flex flex-wrap gap-1">
                         <StatusBadge tone={model.is_enabled ? "success" : "neutral"}>{model.is_enabled ? "enabled" : "disabled"}</StatusBadge>
                         {model.is_default ? <StatusBadge tone="primary">default</StatusBadge> : null}
-                        <StatusBadge tone={statusTone(model.last_check_status)}>{model.last_check_status || "unknown"}</StatusBadge>
-                        {model.runtime_failure_active ? <StatusBadge tone="warning">{copy.cooldown}</StatusBadge> : null}
+                        <StatusBadge tone={statusTone(model.last_check_status)}>{isZh ? `探针 ${model.last_check_status || "unknown"}` : `probe ${model.last_check_status || "unknown"}`}</StatusBadge>
+                        {route ? <StatusBadge tone={routingStatusTone(route.routing_status)}>{routingStatusLabel(route.routing_status, isZh)}</StatusBadge> : null}
                       </div>
                       <div className="flex items-center justify-between gap-3 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
                         <span className="truncate">{model.provider_key}</span>
@@ -1280,7 +1343,8 @@ export default function AIModelsPage() {
                         <IconActionButton tone="danger" disabled={deleteModel.isPending && deletingModelId === model.model_key} onClick={() => onDeleteModel(model)} icon={<Trash2 className="h-4 w-4" />} label={copy.delete} />
                       </div>
                     </article>
-                  )) : <EmptyState icon={<Cpu className="h-10 w-10" />} title={copy.noModels} />}
+                    );
+                  }) : <EmptyState icon={<Cpu className="h-10 w-10" />} title={copy.noModels} />}
                 </div>
                 <div className="hidden md:block">
                   <DataTable
@@ -1320,13 +1384,13 @@ export default function AIModelsPage() {
                         <span className="shrink-0 text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">P{route.priority ?? "-"}</span>
                       </div>
                       <div className="flex flex-wrap gap-1">
-                        <StatusBadge tone={route.available_for_routing ? "success" : route.rate_limit_active || route.runtime_failure_active ? "warning" : "neutral"}>{route.available_for_routing ? "routable" : route.rate_limit_active || route.runtime_failure_active ? copy.cooldown : "disabled"}</StatusBadge>
+                        <StatusBadge tone={routingStatusTone(route.routing_status)}>{routingStatusLabel(route.routing_status, isZh)}</StatusBadge>
                         {route.runtime_failure_active ? <StatusBadge tone="warning">{formatDuration(route.runtime_failure_remaining_seconds, lang)}</StatusBadge> : null}
                         {route.rate_limit_active ? <StatusBadge tone="warning">{formatDuration(route.rate_limit_remaining_seconds, lang)}</StatusBadge> : null}
                       </div>
                       <div className="grid grid-cols-2 gap-2 border-t border-tremor-border pt-3 text-xs text-tremor-content-subtle dark:border-dark-tremor-border dark:text-dark-tremor-content-subtle">
                         <span>{route.runtime_latency_ewma_ms == null ? "-" : `${Math.round(route.runtime_latency_ewma_ms)} ms`}</span>
-                        <span className="text-right">{route.runtime_provider_inflight}/{route.runtime_provider_capacity} provider</span>
+                        <span className="text-right">{route.runtime_provider_inflight}/{route.runtime_provider_capacity}/{route.runtime_provider_max_capacity} provider</span>
                       </div>
                     </article>
                   )) : <EmptyState icon={<GitBranch className="h-10 w-10" />} title={copy.noRoutes} />}

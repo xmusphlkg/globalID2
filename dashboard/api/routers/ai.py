@@ -27,6 +27,7 @@ from src.ai.model_center import (
     get_runtime_routes,
     mask_api_key,
 )
+from src.control_plane.runtime import runtime_registry
 from src.core.db_schema import ensure_task_type_enum_schema
 from src.core.task_manager import task_manager
 from src.domain.ai_model_center import AIModelConfig, AIProviderConfig
@@ -690,7 +691,10 @@ class RuntimeRouteOut(BaseModel):
     api_key_hint: Optional[str] = None
     priority: Optional[int] = None
     available_for_routing: bool = False
+    routing_status: str = "probe_unavailable"
+    routing_status_reason: Optional[str] = None
     last_check_status: Optional[str] = None
+    last_checked_at: Optional[str] = None
     rate_limit_active: bool = False
     rate_limit_scope: Optional[str] = None
     rate_limit_cooldown_until: Optional[str] = None
@@ -703,11 +707,24 @@ class RuntimeRouteOut(BaseModel):
     runtime_failure_remaining_seconds: int = 0
     runtime_failure_kind: Optional[str] = None
     runtime_failure_streak: int = 0
+    runtime_failure_streak_raw: int = 0
+    runtime_failure_count: int = 0
     runtime_timeout_count: int = 0
+    runtime_success_count: int = 0
+    runtime_degraded: bool = False
+    runtime_degraded_scope: Optional[str] = None
+    runtime_degraded_reason: Optional[str] = None
     runtime_latency_ewma_ms: Optional[float] = None
+    runtime_last_failure_at: Optional[str] = None
+    runtime_last_success_at: Optional[str] = None
     runtime_last_error: Optional[str] = None
     runtime_provider_capacity: int = 1
     runtime_provider_inflight: int = 0
+    runtime_provider_min_capacity: int = 1
+    runtime_provider_max_capacity: int = 1
+    runtime_provider_auto_concurrency: bool = True
+    runtime_provider_success_streak: int = 0
+    runtime_provider_backoff_remaining_seconds: int = 0
     runtime_model_capacity: int = 1
     runtime_model_inflight: int = 0
 
@@ -1147,6 +1164,36 @@ async def test_all_models(structured: bool = True):
 @router.get("/ai/models/runtime", response_model=List[RuntimeRouteOut])
 async def list_runtime_routes():
     routes = await get_runtime_routes()
+    services, _ = await runtime_registry.list_services()
+    workers = [item for item in services if item.get("service") == "worker"]
+    workers.sort(key=lambda item: str(item.get("last_seen_at") or ""), reverse=True)
+    worker_metadata = (
+        workers[0].get("metadata")
+        if workers and isinstance(workers[0].get("metadata"), dict)
+        else {}
+    )
+    provider_capacities = worker_metadata.get("ai_provider_capacities")
+    provider_capacities = provider_capacities if isinstance(provider_capacities, dict) else {}
+    admission_fields = {
+        "runtime_provider_capacity",
+        "runtime_provider_inflight",
+        "runtime_provider_min_capacity",
+        "runtime_provider_max_capacity",
+        "runtime_provider_auto_concurrency",
+        "runtime_provider_success_streak",
+        "runtime_provider_backoff_remaining_seconds",
+    }
+    for route in routes:
+        worker_snapshot = provider_capacities.get(str(route.get("provider_id")))
+        if not isinstance(worker_snapshot, dict):
+            continue
+        route.update(
+            {
+                key: worker_snapshot[key]
+                for key in admission_fields
+                if key in worker_snapshot
+            }
+        )
     return [
         RuntimeRouteOut(
             model_id=int(route["model_id"]),
@@ -1161,7 +1208,10 @@ async def list_runtime_routes():
             api_key_hint=mask_api_key(route.get("api_key")),
             priority=route.get("priority"),
             available_for_routing=bool(route.get("available_for_routing")),
+            routing_status=str(route.get("routing_status") or "probe_unavailable"),
+            routing_status_reason=route.get("routing_status_reason"),
             last_check_status=route.get("last_check_status"),
+            last_checked_at=route.get("last_checked_at"),
             rate_limit_active=bool(route.get("rate_limit_active")),
             rate_limit_scope=route.get("rate_limit_scope"),
             rate_limit_cooldown_until=route.get("rate_limit_cooldown_until"),
@@ -1174,11 +1224,24 @@ async def list_runtime_routes():
             runtime_failure_remaining_seconds=int(route.get("runtime_failure_remaining_seconds") or 0),
             runtime_failure_kind=route.get("runtime_failure_kind"),
             runtime_failure_streak=int(route.get("runtime_failure_streak") or 0),
+            runtime_failure_streak_raw=int(route.get("runtime_failure_streak_raw") or 0),
+            runtime_failure_count=int(route.get("runtime_failure_count") or 0),
             runtime_timeout_count=int(route.get("runtime_timeout_count") or 0),
+            runtime_success_count=int(route.get("runtime_success_count") or 0),
+            runtime_degraded=bool(route.get("runtime_degraded")),
+            runtime_degraded_scope=route.get("runtime_degraded_scope"),
+            runtime_degraded_reason=route.get("runtime_degraded_reason"),
             runtime_latency_ewma_ms=route.get("runtime_latency_ewma_ms"),
+            runtime_last_failure_at=route.get("runtime_last_failure_at"),
+            runtime_last_success_at=route.get("runtime_last_success_at"),
             runtime_last_error=route.get("runtime_last_error"),
             runtime_provider_capacity=int(route.get("runtime_provider_capacity") or 1),
             runtime_provider_inflight=int(route.get("runtime_provider_inflight") or 0),
+            runtime_provider_min_capacity=int(route.get("runtime_provider_min_capacity") or 1),
+            runtime_provider_max_capacity=int(route.get("runtime_provider_max_capacity") or 1),
+            runtime_provider_auto_concurrency=bool(route.get("runtime_provider_auto_concurrency", True)),
+            runtime_provider_success_streak=int(route.get("runtime_provider_success_streak") or 0),
+            runtime_provider_backoff_remaining_seconds=int(route.get("runtime_provider_backoff_remaining_seconds") or 0),
             runtime_model_capacity=int(route.get("runtime_model_capacity") or 1),
             runtime_model_inflight=int(route.get("runtime_model_inflight") or 0),
         )

@@ -16,7 +16,7 @@
     "test:knowledge": "node --experimental-strip-types --test src/utils/knowledge.test.ts",
     "test:research": "node --experimental-strip-types --test src/lib/research-ask.test.ts src/lib/research-ui.test.ts",
     "test:perf": "node --test scripts/check-performance-budgets.test.mjs scripts/optimize-world-map.test.mjs",
-    "test:seo": "node --experimental-strip-types --test scripts/build-redirects.test.mjs src/lib/report-routes.test.ts src/lib/research-catalogue.test.ts src/lib/research-feed.test.ts src/lib/research-integrity.test.ts src/lib/research-social-card.test.ts src/lib/site-social-card.test.ts src/lib/seo.test.ts src/lib/sitemap-entries.test.ts",
+    "test:seo": "node --experimental-strip-types --test scripts/build-redirects.test.mjs scripts/check-seo-output.test.mjs src/lib/report-routes.test.ts src/lib/research-catalogue.test.ts src/lib/research-feed.test.ts src/lib/research-integrity.test.ts src/lib/research-social-card.test.ts src/lib/site-social-card.test.ts src/lib/seo.test.ts src/lib/sitemap-entries.test.ts",
     "test:e2e": "playwright test",
     "check": "astro check && npm run check:styles",
     "check:styles": "node scripts/check-style-boundaries.mjs",

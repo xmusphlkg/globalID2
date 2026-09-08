@@ -31,11 +31,15 @@ _ROUTING_STATE_KEY = "routing_state"
 _RUNTIME_FAILURE_KINDS = {"timeout", "connection", "upstream", "structured_output"}
 _RUNTIME_FAILURE_COOLDOWN_CAP_SECONDS = 600
 _PROVIDER_TIMEOUT_CIRCUIT_THRESHOLD = 2
+_STRUCTURED_OUTPUT_COOLDOWN_STREAK_THRESHOLD = 3
 _PROVIDER_FAILURE_RECENCY_WINDOW = timedelta(minutes=10)
 _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD = 8
+_MODEL_FAILURE_STREAK_DECAY_INTERVAL = timedelta(minutes=30)
+_MODEL_RECOVERY_PROBE_INTERVAL_SECONDS = 300
 _DEFAULT_PROVIDER_ADMISSION_MAX_CONCURRENCY = 2
 _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY = 1
 _DEFAULT_ADMISSION_SUCCESS_SCALE_UP = 2
+_DEFAULT_ADMISSION_ADJUST_SECONDS = 20
 _MODEL_TEST_MARKER = "globalid-model-test-ok"
 _PROVIDER_AUTHENTICATION_FAILURE_MESSAGE = (
     "Provider credentials were rejected. Update the credentials and run a provider "
@@ -46,10 +50,17 @@ _MODEL_TEST_PROMPT = (
     f"Reply with exactly this text and nothing else: {_MODEL_TEST_MARKER}"
 )
 _STRUCTURED_MODEL_TEST_PROMPT = (
-    "This is a production model-center workload probe. Return JSON only, with "
-    "exactly this shape: {\"status\":\"globalid-structured-probe-ok\","
-    "\"items\":[{\"id\":1,\"summary\":\"ok\"}]}. Do not wrap it in markdown."
+    "This is a production model-center literature workload probe. Return JSON only. "
+    "Use exactly this top-level shape: "
+    "{\"status\":\"globalid-structured-probe-ok\",\"items\":[...]}. "
+    "Create exactly three items with integer ids 1, 2, and 3. Each item must contain "
+    "a title, a factual summary of at least 60 characters, and a confidence value from "
+    "0 to 1. Summarize these synthetic findings: (1) wastewater surveillance can lead "
+    "clinical case trends; (2) vaccination reduces severe outcomes; (3) reporting delay "
+    "biases the newest observations. Do not use markdown or add unsupported facts."
 )
+
+_recovery_probe_attempted_at: Dict[int, float] = {}
 
 
 def _utcnow() -> datetime:
@@ -142,10 +153,9 @@ def _clear_payload_rate_limit(payload: Any, recovered_at: Optional[datetime] = N
 def _runtime_health_state(payload: Any, now: Optional[datetime] = None) -> Dict[str, Any]:
     """Read production-call health telemetry stored alongside routing settings.
 
-    Health-check probes are deliberately small and cannot establish that a
-    route is suitable for a long, structured workload.  Keep the latter's
-    signal separate from quota state so routing can temporarily avoid a route
-    without claiming that its credential is invalid.
+    Even realistic health probes are only point-in-time samples. Keep their
+    result separate from production workload health so routing can temporarily
+    avoid a route without claiming that its credential is invalid.
     """
     now = now or _utcnow()
     state = _extract_routing_state(payload)
@@ -165,6 +175,14 @@ def _runtime_health_state(payload: Any, now: Optional[datetime] = None) -> Dict[
             return None
         return value if value >= 0 else None
 
+    last_failure_at = _parse_datetime(state.get("last_runtime_failure_at"))
+    raw_failure_streak = _integer("runtime_failure_streak")
+    failure_streak = raw_failure_streak
+    if last_failure_at and now > last_failure_at:
+        decay_seconds = max(1, int(_MODEL_FAILURE_STREAK_DECAY_INTERVAL.total_seconds()))
+        elapsed_intervals = int((now - last_failure_at).total_seconds() // decay_seconds)
+        failure_streak = max(0, raw_failure_streak - elapsed_intervals)
+
     return {
         "runtime_failure_active": active,
         "runtime_failure_cooldown_until": cooldown_until.isoformat() if cooldown_until else None,
@@ -174,13 +192,18 @@ def _runtime_health_state(payload: Any, now: Optional[datetime] = None) -> Dict[
             else 0
         ),
         "runtime_failure_kind": str(state.get("last_runtime_failure_kind") or "").strip() or None,
-        "runtime_failure_streak": _integer("runtime_failure_streak"),
+        # The raw count remains durable for observability, while the effective
+        # streak loses one strike per quiet interval. A route that recovered
+        # upstream therefore cannot remain permanently excluded solely because
+        # no production request was allowed through to prove a success.
+        "runtime_failure_streak": failure_streak,
+        "runtime_failure_streak_raw": raw_failure_streak,
         "runtime_failure_count": _integer("runtime_failure_count"),
         "runtime_timeout_count": _integer("runtime_timeout_count"),
         "runtime_success_count": _integer("runtime_success_count"),
         "runtime_latency_ewma_ms": _number("runtime_latency_ewma_ms"),
         "runtime_last_latency_ms": _number("runtime_last_latency_ms"),
-        "runtime_last_failure_at": _parse_datetime(state.get("last_runtime_failure_at")),
+        "runtime_last_failure_at": last_failure_at,
         "runtime_last_success_at": _parse_datetime(state.get("last_runtime_success_at")),
         "runtime_last_error": str(state.get("last_runtime_error") or "").strip() or None,
     }
@@ -203,6 +226,7 @@ def _runtime_failure_kind(error: Any) -> Optional[str]:
         for marker in (
             "malformed structured response",
             "invalid structured json",
+            "empty completion response",
         )
     ):
         return "structured_output"
@@ -211,7 +235,6 @@ def _runtime_failure_kind(error: Any) -> Optional[str]:
     if any(
         marker in message
         for marker in (
-            "empty completion response",
             "connection error",
             "connect error",
             "connection reset",
@@ -248,10 +271,9 @@ def _write_runtime_failure(
     cooldown_seconds: int,
 ) -> Dict[str, Any]:
     state = _extract_routing_state(payload)
-    try:
-        previous_streak = max(0, int(state.get("runtime_failure_streak") or 0))
-    except (TypeError, ValueError):
-        previous_streak = 0
+    previous_streak = _runtime_health_state(payload, occurred_at)[
+        "runtime_failure_streak"
+    ]
     try:
         previous_count = max(0, int(state.get("runtime_failure_count") or 0))
     except (TypeError, ValueError):
@@ -269,17 +291,25 @@ def _write_runtime_failure(
             "last_runtime_failure_kind": kind,
             "last_runtime_failure_at": occurred_at.isoformat(),
             "last_runtime_error": str(error or "")[:1000],
-            "runtime_cooldown_until": (
-                occurred_at
-                + timedelta(
-                    seconds=_runtime_failure_cooldown_seconds(
-                        base_seconds=cooldown_seconds,
-                        failure_streak=streak,
-                    )
-                )
-            ).isoformat(),
         }
     )
+    cooldown_threshold = (
+        _STRUCTURED_OUTPUT_COOLDOWN_STREAK_THRESHOLD
+        if kind == "structured_output"
+        else 1
+    )
+    if streak >= cooldown_threshold:
+        state["runtime_cooldown_until"] = (
+            occurred_at
+            + timedelta(
+                seconds=_runtime_failure_cooldown_seconds(
+                    base_seconds=cooldown_seconds,
+                    failure_streak=streak,
+                )
+            )
+        ).isoformat()
+    else:
+        state.pop("runtime_cooldown_until", None)
     if kind == "timeout":
         state["runtime_timeout_count"] = previous_timeouts + 1
     if duration_seconds is not None:
@@ -430,6 +460,10 @@ def _combined_route_runtime_health_state(
         model_state["runtime_failure_streak"],
         provider_state["runtime_failure_streak"],
     )
+    failure_streak_raw = max(
+        model_state["runtime_failure_streak_raw"],
+        provider_state["runtime_failure_streak_raw"],
+    )
     degraded_scope: Optional[str] = None
     degraded_reason: Optional[str] = None
     if model_state["runtime_failure_streak"] >= _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD:
@@ -449,6 +483,7 @@ def _combined_route_runtime_health_state(
             active["runtime_failure_kind"] if active else model_state["runtime_failure_kind"]
         ),
         "runtime_failure_streak": failure_streak,
+        "runtime_failure_streak_raw": failure_streak_raw,
         "runtime_failure_count": model_state["runtime_failure_count"],
         "runtime_timeout_count": model_state["runtime_timeout_count"],
         "runtime_success_count": model_state["runtime_success_count"],
@@ -477,6 +512,27 @@ def _combined_route_runtime_health_state(
     }
 
 
+def _route_routing_status(
+    route: Dict[str, Any],
+    *,
+    status_routable: bool,
+    rate_limit_state: Dict[str, Any],
+    runtime_health_state: Dict[str, Any],
+) -> tuple[str, str]:
+    """Describe actual route admission separately from the latest probe result."""
+    if not route.get("has_api_key"):
+        return "missing_credentials", "Provider API credentials are not configured."
+    if rate_limit_state["rate_limit_active"]:
+        return "rate_limited", "The route is waiting for its rate-limit cooldown to expire."
+    if runtime_health_state["runtime_failure_active"]:
+        return "cooling_down", "The route is temporarily cooling down after a production workload failure."
+    if runtime_health_state["runtime_degraded"]:
+        return "degraded", "The route is excluded after repeated production failures and is awaiting an automatic recovery probe."
+    if not status_routable:
+        return "probe_unavailable", "The latest model or provider workload probe did not succeed."
+    return "routable", "The route passed admission checks and can receive production workloads."
+
+
 def _route_sort_key(route: Dict[str, Any]) -> tuple[int, int, float, str]:
     """Keep user priority first, then prefer proven low-latency healthy routes."""
     try:
@@ -503,7 +559,16 @@ def _positive_int(value: Any, default: int, *, maximum: int = 64) -> int:
         return default
 
 
-def _runtime_admission_settings(route: Dict[str, Any]) -> Dict[str, int]:
+def _runtime_admission_global_ceiling() -> int:
+    """Keep automatically learned provider limits inside the worker safety cap."""
+    try:
+        worker = get_config().task_worker
+        return max(1, min(64, int(worker.concurrency), int(worker.ai_concurrency)))
+    except (AttributeError, TypeError, ValueError):
+        return _DEFAULT_PROVIDER_ADMISSION_MAX_CONCURRENCY
+
+
+def _runtime_admission_settings(route: Dict[str, Any]) -> Dict[str, Any]:
     """Resolve request limits owned by the Model Center.
 
     Provider limits protect a shared credential or personal-plan quota. Model
@@ -516,9 +581,15 @@ def _runtime_admission_settings(route: Dict[str, Any]) -> Dict[str, int]:
     model_params = route.get("extra_params")
     model_params = model_params if isinstance(model_params, dict) else {}
 
-    provider_maximum = _positive_int(
-        provider_config.get("runtime_max_concurrency"),
+    configured_provider_maximum = provider_config.get("runtime_max_concurrency")
+    auto_provider_maximum = _positive_int(
+        route.get("runtime_provider_auto_max_concurrency"),
         _DEFAULT_PROVIDER_ADMISSION_MAX_CONCURRENCY,
+        maximum=_runtime_admission_global_ceiling(),
+    )
+    provider_maximum = _positive_int(
+        configured_provider_maximum,
+        auto_provider_maximum,
     )
     provider_minimum = min(
         provider_maximum,
@@ -535,12 +606,18 @@ def _runtime_admission_settings(route: Dict[str, Any]) -> Dict[str, int]:
     return {
         "provider_minimum": provider_minimum,
         "provider_maximum": provider_maximum,
+        "provider_auto": configured_provider_maximum in (None, ""),
         "model_minimum": model_minimum,
         "model_maximum": model_maximum,
         "successes_to_scale_up": _positive_int(
             provider_config.get("runtime_successes_to_scale_up"),
             _DEFAULT_ADMISSION_SUCCESS_SCALE_UP,
             maximum=100,
+        ),
+        "adjust_seconds": _positive_int(
+            provider_config.get("runtime_concurrency_adjust_seconds"),
+            _DEFAULT_ADMISSION_ADJUST_SECONDS,
+            maximum=3600,
         ),
     }
 
@@ -551,6 +628,42 @@ def _runtime_admission_keys(route: Dict[str, Any]) -> tuple[str, str]:
     return provider_key or "provider", model_key or "model"
 
 
+def _is_runtime_capacity_pressure(error: BaseException) -> bool:
+    """Return whether a failure is evidence that provider concurrency is too high."""
+    if isinstance(error, (asyncio.TimeoutError, TimeoutError)):
+        return True
+    try:
+        if is_rate_limit_error(error):
+            return True
+    except Exception:
+        pass
+
+    status_code = getattr(error, "status_code", None)
+    if status_code is None:
+        response = getattr(error, "response", None)
+        status_code = getattr(response, "status_code", None)
+    try:
+        if int(status_code) in {408, 429, 502, 503, 504}:
+            return True
+    except (TypeError, ValueError):
+        pass
+
+    message = str(error).lower()
+    return any(
+        token in message
+        for token in (
+            "rate limit",
+            "too many requests",
+            "quota exceeded",
+            "request timeout",
+            "timed out",
+            "overloaded",
+            "server busy",
+            "capacity exceeded",
+        )
+    )
+
+
 class RuntimeRouteAdmissionLease:
     """A single Model Center request permit, released exactly once."""
 
@@ -559,7 +672,7 @@ class RuntimeRouteAdmissionLease:
         controller: "RuntimeRouteAdmissionController",
         provider_key: str,
         model_key: str,
-        settings: Dict[str, int],
+        settings: Dict[str, Any],
     ) -> None:
         self._controller = controller
         self._provider_key = provider_key
@@ -567,7 +680,7 @@ class RuntimeRouteAdmissionLease:
         self._settings = settings
         self._released = False
 
-    async def release(self, *, success: bool) -> None:
+    async def release(self, *, success: bool, error: BaseException | None = None) -> None:
         if self._released:
             return
         self._released = True
@@ -576,6 +689,7 @@ class RuntimeRouteAdmissionLease:
             self._model_key,
             self._settings,
             success=success,
+            error=error,
         )
 
 
@@ -594,6 +708,8 @@ class RuntimeRouteAdmissionController:
         self._model_inflight: Dict[str, int] = {}
         self._provider_capacity: Dict[str, int] = {}
         self._provider_success_streak: Dict[str, int] = {}
+        self._provider_last_backoff: Dict[str, float] = {}
+        self._provider_settings: Dict[str, Dict[str, Any]] = {}
 
     def _ensure_loop(self) -> asyncio.Condition:
         loop = asyncio.get_running_loop()
@@ -604,12 +720,22 @@ class RuntimeRouteAdmissionController:
             self._model_inflight = {}
             self._provider_capacity = {}
             self._provider_success_streak = {}
+            self._provider_last_backoff = {}
+            self._provider_settings = {}
         return self._condition
+
+    def _remember_provider_settings(
+        self,
+        provider_key: str,
+        settings: Dict[str, Any],
+    ) -> None:
+        self._provider_settings[provider_key] = dict(settings)
 
     def score(self, route: Dict[str, Any]) -> tuple[float, float]:
         """Return live pressure for fair candidate ordering without a DB read."""
         provider_key, model_key = _runtime_admission_keys(route)
         settings = _runtime_admission_settings(route)
+        self._remember_provider_settings(provider_key, settings)
         provider_capacity = self._provider_capacity.get(provider_key, settings["provider_minimum"])
         provider_capacity = max(settings["provider_minimum"], min(provider_capacity, settings["provider_maximum"]))
         provider_load = self._provider_inflight.get(provider_key, 0) / provider_capacity
@@ -617,18 +743,63 @@ class RuntimeRouteAdmissionController:
         # Keep equal-load routes in the Model Center priority order.
         return max(provider_load, model_load), provider_load
 
-    def snapshot(self, route: Dict[str, Any]) -> Dict[str, int]:
+    def snapshot(self, route: Dict[str, Any]) -> Dict[str, Any]:
         """Expose the active request budget for the Model Center control plane."""
+        self._ensure_loop()
         provider_key, model_key = _runtime_admission_keys(route)
         settings = _runtime_admission_settings(route)
+        self._remember_provider_settings(provider_key, settings)
         provider_capacity = self._provider_capacity.get(provider_key, settings["provider_minimum"])
         provider_capacity = max(settings["provider_minimum"], min(provider_capacity, settings["provider_maximum"]))
+        last_backoff = self._provider_last_backoff.get(provider_key)
+        backoff_remaining = 0
+        if last_backoff is not None:
+            backoff_remaining = max(
+                0,
+                int(settings["adjust_seconds"] - (time.monotonic() - last_backoff)),
+            )
         return {
             "runtime_provider_capacity": provider_capacity,
             "runtime_provider_inflight": self._provider_inflight.get(provider_key, 0),
+            "runtime_provider_min_capacity": settings["provider_minimum"],
+            "runtime_provider_max_capacity": settings["provider_maximum"],
+            "runtime_provider_auto_concurrency": settings["provider_auto"],
+            "runtime_provider_success_streak": self._provider_success_streak.get(provider_key, 0),
+            "runtime_provider_backoff_remaining_seconds": backoff_remaining,
             "runtime_model_capacity": settings["model_maximum"],
             "runtime_model_inflight": self._model_inflight.get(model_key, 0),
         }
+
+    def provider_snapshots(self) -> Dict[str, Dict[str, Any]]:
+        """Expose worker-safe provider telemetry for runtime heartbeats."""
+        snapshots: Dict[str, Dict[str, Any]] = {}
+        now = time.monotonic()
+        for provider_key, settings in list(self._provider_settings.items()):
+            provider_capacity = self._provider_capacity.get(
+                provider_key,
+                settings["provider_minimum"],
+            )
+            provider_capacity = max(
+                settings["provider_minimum"],
+                min(provider_capacity, settings["provider_maximum"]),
+            )
+            last_backoff = self._provider_last_backoff.get(provider_key)
+            backoff_remaining = 0
+            if last_backoff is not None:
+                backoff_remaining = max(
+                    0,
+                    int(settings["adjust_seconds"] - (now - last_backoff)),
+                )
+            snapshots[provider_key] = {
+                "runtime_provider_capacity": provider_capacity,
+                "runtime_provider_inflight": self._provider_inflight.get(provider_key, 0),
+                "runtime_provider_min_capacity": settings["provider_minimum"],
+                "runtime_provider_max_capacity": settings["provider_maximum"],
+                "runtime_provider_auto_concurrency": settings["provider_auto"],
+                "runtime_provider_success_streak": self._provider_success_streak.get(provider_key, 0),
+                "runtime_provider_backoff_remaining_seconds": backoff_remaining,
+            }
+        return snapshots
 
     async def acquire(self, route: Dict[str, Any]) -> RuntimeRouteAdmissionLease:
         """Wait for a permit without treating local backpressure as model failure.
@@ -638,9 +809,10 @@ class RuntimeRouteAdmissionController:
         backpressure mechanism; imposing an unrelated queue deadline made a
         healthy but busy provider look like it had timed out upstream.
         """
+        condition = self._ensure_loop()
         provider_key, model_key = _runtime_admission_keys(route)
         settings = _runtime_admission_settings(route)
-        condition = self._ensure_loop()
+        self._remember_provider_settings(provider_key, settings)
 
         async with condition:
             while True:
@@ -666,19 +838,36 @@ class RuntimeRouteAdmissionController:
         self,
         provider_key: str,
         model_key: str,
-        settings: Dict[str, int],
+        settings: Dict[str, Any],
         *,
         success: bool,
+        error: BaseException | None = None,
     ) -> None:
         condition = self._ensure_loop()
         async with condition:
             self._provider_inflight[provider_key] = max(0, self._provider_inflight.get(provider_key, 1) - 1)
             self._model_inflight[model_key] = max(0, self._model_inflight.get(model_key, 1) - 1)
             current = self._provider_capacity.get(provider_key, settings["provider_minimum"])
+            current = max(
+                settings["provider_minimum"],
+                min(current, settings["provider_maximum"]),
+            )
+            self._provider_capacity[provider_key] = current
             if success:
-                streak = self._provider_success_streak.get(provider_key, 0) + 1
-                self._provider_success_streak[provider_key] = streak
-                if current < settings["provider_maximum"] and streak >= settings["successes_to_scale_up"]:
+                last_backoff = self._provider_last_backoff.get(provider_key)
+                can_probe_higher = (
+                    last_backoff is None
+                    or time.monotonic() - last_backoff >= settings["adjust_seconds"]
+                )
+                streak = self._provider_success_streak.get(provider_key, 0)
+                if can_probe_higher:
+                    streak += 1
+                    self._provider_success_streak[provider_key] = streak
+                if (
+                    can_probe_higher
+                    and current < settings["provider_maximum"]
+                    and streak >= settings["successes_to_scale_up"]
+                ):
                     self._provider_capacity[provider_key] = current + 1
                     self._provider_success_streak[provider_key] = 0
                     logger.info(
@@ -687,9 +876,23 @@ class RuntimeRouteAdmissionController:
                         current,
                         current + 1,
                     )
-            else:
+            elif error is None or _is_runtime_capacity_pressure(error):
                 self._provider_success_streak[provider_key] = 0
-                self._provider_capacity[provider_key] = settings["provider_minimum"]
+                reduced = max(settings["provider_minimum"], current // 2)
+                self._provider_capacity[provider_key] = reduced
+                self._provider_last_backoff[provider_key] = time.monotonic()
+                if reduced != current:
+                    logger.warning(
+                        "Model Center admission reduced provider={} from {} to {} after pressure: {}",
+                        provider_key,
+                        current,
+                        reduced,
+                        type(error).__name__ if error is not None else "unknown failure",
+                    )
+            else:
+                # Invalid output and other model-specific failures should not
+                # punish healthy sibling models sharing the same credential.
+                self._provider_success_streak[provider_key] = 0
             condition.notify_all()
 
 
@@ -701,9 +904,14 @@ def runtime_route_admission_score(route: Dict[str, Any]) -> tuple[float, float]:
     return runtime_route_admission.score(route)
 
 
-def runtime_route_admission_snapshot(route: Dict[str, Any]) -> Dict[str, int]:
+def runtime_route_admission_snapshot(route: Dict[str, Any]) -> Dict[str, Any]:
     """Expose request admission budget for runtime API and dashboard views."""
     return runtime_route_admission.snapshot(route)
+
+
+def runtime_provider_admission_snapshots() -> Dict[str, Dict[str, Any]]:
+    """Expose per-provider request budgets to the worker heartbeat."""
+    return runtime_route_admission.provider_snapshots()
 
 
 async def acquire_runtime_route_admission(route: Dict[str, Any]) -> RuntimeRouteAdmissionLease:
@@ -1314,6 +1522,13 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
             model_status = str(model.last_check_status or "").strip().lower()
             effective_status = _effective_route_check_status(model_status, provider_status)
             status_routable = effective_status != "unavailable"
+            has_api_key = bool(provider.api_key)
+            routing_status, routing_status_reason = _route_routing_status(
+                {"has_api_key": has_api_key},
+                status_routable=status_routable,
+                rate_limit_state=rate_limit_state,
+                runtime_health_state=runtime_health_state,
+            )
 
             route = {
                     "model_id": model.id,
@@ -1331,21 +1546,49 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
                     "extra_params": model.extra_params or {},
                     "temperature": model.temperature,
                     "max_tokens": model.max_tokens,
-                    "has_api_key": bool(provider.api_key),
+                    "has_api_key": has_api_key,
                     # Provider credential failures apply to every model under
                     # the provider. Preserve that durable state even when a
                     # sibling has an older model-level "available" result.
                     "last_check_status": effective_status,
-                    "available_for_routing": bool(provider.api_key)
-                    and status_routable
-                    and not rate_limit_state["rate_limit_active"]
-                    and not runtime_health_state["runtime_failure_active"]
-                    and not runtime_health_state["runtime_degraded"],
+                    "last_checked_at": (
+                        model.last_checked_at.isoformat() if model.last_checked_at else None
+                    ),
+                    "available_for_routing": routing_status == "routable",
+                    "routing_status": routing_status,
+                    "routing_status_reason": routing_status_reason,
                     **rate_limit_state,
                     **runtime_health_state,
             }
-            route.update(runtime_route_admission_snapshot(route))
             routes.append(route)
+
+        # In automatic mode, each provider learns independently up to the
+        # smaller of its enabled model capacity and the worker safety ceiling.
+        # Use enabled rather than momentarily routable models so an old lease
+        # cannot shrink the ceiling while sibling routes enter or leave a
+        # short cooldown. Per-model gates still prevent unavailable routes
+        # from contributing real in-flight requests.
+        # A provider-level runtime_max_concurrency override still takes
+        # precedence for known contractual limits.
+        provider_auto_maxima: Dict[int, int] = {}
+        for route in routes:
+            provider_id = int(route["provider_id"])
+            model_params = route.get("extra_params")
+            model_params = model_params if isinstance(model_params, dict) else {}
+            model_capacity = _positive_int(
+                model_params.get("runtime_max_concurrency"),
+                _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY,
+            )
+            provider_auto_maxima[provider_id] = (
+                provider_auto_maxima.get(provider_id, 0) + model_capacity
+            )
+
+        for route in routes:
+            route["runtime_provider_auto_max_concurrency"] = max(
+                1,
+                provider_auto_maxima.get(int(route["provider_id"]), 0),
+            )
+            route.update(runtime_route_admission_snapshot(route))
 
         return sorted(routes, key=_route_sort_key)
 
@@ -1511,6 +1754,18 @@ def _validate_structured_test_response(text: str) -> None:
         raise RuntimeError("Structured workload probe returned an empty assistant response")
     if _looks_like_html(value):
         raise RuntimeError("Structured workload probe returned HTML instead of JSON")
+
+    # Literature enrichment accepts JSON wrapped in a Markdown fence (and a
+    # small amount of surrounding prose), which is common for otherwise valid
+    # model responses. Keep the health probe aligned with that production
+    # contract so formatting alone cannot strand a capable route as degraded.
+    fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", value, re.DOTALL | re.IGNORECASE)
+    if fenced:
+        value = fenced.group(1)
+    else:
+        start, end = value.find("{"), value.rfind("}")
+        if start >= 0 and end > start:
+            value = value[start : end + 1]
     try:
         payload = json.loads(value)
     except json.JSONDecodeError as exc:
@@ -1518,8 +1773,35 @@ def _validate_structured_test_response(text: str) -> None:
     if not isinstance(payload, dict) or payload.get("status") != "globalid-structured-probe-ok":
         raise RuntimeError("Structured workload probe returned an unexpected JSON payload")
     items = payload.get("items")
-    if not isinstance(items, list) or not items or not isinstance(items[0], dict):
-        raise RuntimeError("Structured workload probe omitted its required items array")
+    if not isinstance(items, list) or len(items) != 3 or not all(isinstance(item, dict) for item in items):
+        raise RuntimeError("Structured workload probe must return exactly three evidence items")
+    if [item.get("id") for item in items] != [1, 2, 3]:
+        raise RuntimeError("Structured workload probe returned unexpected evidence item ids")
+    for item in items:
+        if not str(item.get("title") or "").strip():
+            raise RuntimeError("Structured workload probe omitted an evidence title")
+        if len(str(item.get("summary") or "").strip()) < 60:
+            raise RuntimeError("Structured workload probe returned an incomplete evidence summary")
+        try:
+            confidence = float(item.get("confidence"))
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError("Structured workload probe returned an invalid confidence value") from exc
+        if not 0 <= confidence <= 1:
+            raise RuntimeError("Structured workload probe returned confidence outside the 0..1 range")
+
+
+def _test_timeout_seconds(route: Dict[str, Any]) -> float:
+    provider_config = route.get("extra_config")
+    provider_config = provider_config if isinstance(provider_config, dict) else {}
+    model_params = route.get("extra_params")
+    model_params = model_params if isinstance(model_params, dict) else {}
+    raw = model_params.get("health_check_timeout_seconds")
+    if raw in (None, ""):
+        raw = provider_config.get("health_check_timeout_seconds", 45)
+    try:
+        return float(max(10, min(120, int(raw))))
+    except (TypeError, ValueError):
+        return 45.0
 
 
 async def _test_openai_compatible(
@@ -1537,6 +1819,8 @@ async def _test_openai_compatible(
                 api_key=route.get("api_key"),
                 base_url=candidate_base_url,
                 default_headers=(route.get("extra_headers") or None),
+                timeout=_test_timeout_seconds(route),
+                max_retries=0,
             )
             prompt = _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT
             response = await client.chat.completions.create(
@@ -1544,11 +1828,11 @@ async def _test_openai_compatible(
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are validating that this chat model can answer normal conversations.",
+                        "content": "You are validating an evidence-summarization model used by a public-health literature pipeline.",
                     },
                     {"role": "user", "content": prompt},
                 ],
-                max_tokens=max(128, min(_test_max_tokens(route), 512)) if structured else _test_max_tokens(route),
+                max_tokens=max(768, min(_test_max_tokens(route), 1200)) if structured else _test_max_tokens(route),
                 temperature=0,
             )
             text = _openai_response_text(response)
@@ -1575,12 +1859,16 @@ async def _test_anthropic(
     route: Dict[str, Any], model_name: str, *, structured: bool = False
 ) -> Dict[str, Any]:
     prompt = _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT
-    client = AsyncAnthropic(api_key=route.get("api_key"))
+    client = AsyncAnthropic(
+        api_key=route.get("api_key"),
+        timeout=_test_timeout_seconds(route),
+        max_retries=0,
+    )
     response = await client.messages.create(
         model=model_name,
-        system="You are validating that this chat model can answer normal conversations.",
+        system="You are validating an evidence-summarization model used by a public-health literature pipeline.",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=max(128, min(_test_max_tokens(route), 512)) if structured else _test_max_tokens(route),
+        max_tokens=max(768, min(_test_max_tokens(route), 1200)) if structured else _test_max_tokens(route),
         temperature=0,
     )
     text = "\n".join(
@@ -1611,7 +1899,7 @@ async def test_route_connection(
         else:
             details = await _test_openai_compatible(route, model_name, structured=structured)
 
-        probe_name = "Structured workload probe" if structured else "Chat completion test"
+        probe_name = "Literature workload probe" if structured else "Chat completion test"
         marker = "globalid-structured-probe-ok" if structured else _MODEL_TEST_MARKER
         message = f"{probe_name} successful. Response: {details.get('response_preview') or marker}"
 
@@ -1620,7 +1908,7 @@ async def test_route_connection(
             "status": "available",
             "message": message,
             "model_name": model_name,
-            "test_type": "structured_workload" if structured else "chat_completion",
+            "test_type": "literature_workload" if structured else "chat_completion",
             "test_prompt": _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT,
             **details,
         }
@@ -1630,7 +1918,7 @@ async def test_route_connection(
             "status": "rate_limited" if is_rate_limit_error(exc) else "unavailable",
             "message": str(exc),
             "model_name": model_name,
-            "test_type": "structured_workload" if structured else "chat_completion",
+            "test_type": "literature_workload" if structured else "chat_completion",
             "test_prompt": _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT,
             "retry_after_seconds": extract_retry_after_seconds(exc),
         }
@@ -2039,30 +2327,109 @@ async def check_provider_by_id(provider_id: int, *, structured: bool = True) -> 
     return result
 
 
+def _health_check_concurrency(route: Dict[str, Any]) -> int:
+    """Use a small provider-specific batch to catch concurrency-only failures."""
+    provider_config = route.get("extra_config")
+    provider_config = provider_config if isinstance(provider_config, dict) else {}
+    configured = provider_config.get("health_check_concurrency")
+    try:
+        provider_maximum = max(1, int(route.get("runtime_provider_max_capacity") or 1))
+    except (TypeError, ValueError):
+        provider_maximum = 1
+    return _positive_int(configured, min(2, provider_maximum), maximum=provider_maximum)
+
+
 async def check_all_models(*, structured: bool = True) -> List[Dict[str, Any]]:
-    """Test all enabled runtime routes and persist statuses."""
+    """Test all routes with realistic, provider-bounded parallel workload probes."""
     routes = await get_runtime_routes()
-    results: List[Dict[str, Any]] = []
-    provider_results: Dict[int, List[Dict[str, Any]]] = {}
+    semaphores: Dict[int, asyncio.Semaphore] = {}
     for route in routes:
-        result = await test_route_connection(route, structured=structured)
-        if result["status"] == "rate_limited":
-            await mark_route_rate_limited(
-                route,
-                result["message"],
-                retry_after_seconds=result.get("retry_after_seconds"),
-            )
-        await update_model_check_result(route["model_id"], result["status"], result["message"])
-        result.update(
-            {
-                "model_id": route["model_id"],
-                "provider_id": route["provider_id"],
-                "provider_key": route["provider_key"],
-            }
+        provider_id = int(route["provider_id"])
+        semaphores.setdefault(
+            provider_id,
+            asyncio.Semaphore(_health_check_concurrency(route)),
         )
-        results.append(result)
-        provider_results.setdefault(int(route["provider_id"]), []).append(result)
+
+    async def _check(route: Dict[str, Any]) -> Dict[str, Any]:
+        provider_id = int(route["provider_id"])
+        async with semaphores[provider_id]:
+            result = await test_route_connection(route, structured=structured)
+            if result["status"] == "rate_limited":
+                await mark_route_rate_limited(
+                    route,
+                    result["message"],
+                    retry_after_seconds=result.get("retry_after_seconds"),
+                )
+            await update_model_check_result(route["model_id"], result["status"], result["message"])
+            result.update(
+                {
+                    "model_id": route["model_id"],
+                    "provider_id": provider_id,
+                    "provider_key": route["provider_key"],
+                    "provider_probe_concurrency": _health_check_concurrency(route),
+                }
+            )
+            return result
+
+    results = list(await asyncio.gather(*(_check(route) for route in routes)))
+    provider_results: Dict[int, List[Dict[str, Any]]] = {}
+    for result in results:
+        provider_results.setdefault(int(result["provider_id"]), []).append(result)
     for provider_id, provider_model_results in provider_results.items():
         status, message = _provider_check_result_from_model_results(provider_model_results)
         await update_provider_check_result(provider_id, status, message)
+    return results
+
+
+async def probe_degraded_model_routes(
+    *,
+    limit: int = 2,
+    minimum_interval_seconds: int = _MODEL_RECOVERY_PROBE_INTERVAL_SECONDS,
+) -> List[Dict[str, Any]]:
+    """Run bounded realistic probes so chronically failed routes can recover.
+
+    Production admission excludes a chronic route, so it cannot generate the
+    success that clears its own circuit. The worker calls this function in a
+    separate low-rate sweep after ordinary cooldowns have expired.
+    """
+    routes = await get_runtime_routes()
+    now = time.monotonic()
+    due: List[Dict[str, Any]] = []
+    for route in routes:
+        if not route.get("runtime_degraded"):
+            continue
+        if route.get("runtime_failure_active") or route.get("rate_limit_active"):
+            continue
+        if not route.get("has_api_key"):
+            continue
+        try:
+            model_id = int(route["model_id"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        last_attempt = _recovery_probe_attempted_at.get(model_id, float("-inf"))
+        if now - last_attempt < max(30, int(minimum_interval_seconds)):
+            continue
+        due.append(route)
+
+    due.sort(
+        key=lambda route: (
+            str(route.get("runtime_last_failure_at") or ""),
+            int(route.get("priority") or 100),
+            int(route.get("model_id") or 0),
+        )
+    )
+    results: List[Dict[str, Any]] = []
+    for route in due[: max(0, int(limit))]:
+        model_id = int(route["model_id"])
+        _recovery_probe_attempted_at[model_id] = time.monotonic()
+        result = await check_model_by_id(model_id, structured=True)
+        results.append(
+            {
+                "model_id": model_id,
+                "model_key": route.get("model_key"),
+                "success": bool(result.get("success")),
+                "status": result.get("status"),
+                "message": result.get("message"),
+            }
+        )
     return results

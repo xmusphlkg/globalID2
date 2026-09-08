@@ -84,7 +84,10 @@ export interface AIRuntimeRoute {
   api_key_hint: string | null;
   priority: number | null;
   available_for_routing: boolean;
+  routing_status: string;
+  routing_status_reason: string | null;
   last_check_status: string | null;
+  last_checked_at: string | null;
   rate_limit_active: boolean;
   rate_limit_scope: string | null;
   rate_limit_cooldown_until: string | null;
@@ -97,11 +100,24 @@ export interface AIRuntimeRoute {
   runtime_failure_remaining_seconds: number;
   runtime_failure_kind: string | null;
   runtime_failure_streak: number;
+  runtime_failure_streak_raw: number;
+  runtime_failure_count: number;
   runtime_timeout_count: number;
+  runtime_success_count: number;
+  runtime_degraded: boolean;
+  runtime_degraded_scope: string | null;
+  runtime_degraded_reason: string | null;
   runtime_latency_ewma_ms: number | null;
+  runtime_last_failure_at: string | null;
+  runtime_last_success_at: string | null;
   runtime_last_error: string | null;
   runtime_provider_capacity: number;
   runtime_provider_inflight: number;
+  runtime_provider_min_capacity: number;
+  runtime_provider_max_capacity: number;
+  runtime_provider_auto_concurrency: boolean;
+  runtime_provider_success_streak: number;
+  runtime_provider_backoff_remaining_seconds: number;
   runtime_model_capacity: number;
   runtime_model_inflight: number;
 }
@@ -237,7 +253,7 @@ export function useDeleteAIProvider() {
 export function useTestAIProvider() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (providerKey: string) => apiFetch(`/ai/models/providers/${encodeURIComponent(providerKey)}/test`, { method: "POST" }),
+    mutationFn: (providerKey: string) => apiFetch(`/ai/models/providers/${encodeURIComponent(providerKey)}/test`, { method: "POST", timeoutMs: 120_000 }),
     onSuccess: () => invalidateAIModelQueries(queryClient),
   });
 }
@@ -293,7 +309,7 @@ export function useUpdateAIModel() {
 export function useTestAIModel() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (modelKey: string) => apiFetch(`/ai/models/${encodeURIComponent(modelKey)}/test`, { method: "POST" }),
+    mutationFn: (modelKey: string) => apiFetch(`/ai/models/${encodeURIComponent(modelKey)}/test`, { method: "POST", timeoutMs: 120_000 }),
     onSuccess: () => invalidateAIModelQueries(queryClient),
   });
 }
@@ -309,7 +325,7 @@ export function useDeleteAIModel() {
 export function useCheckAllAIModels() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => apiFetch("/ai/models/check-all", { method: "POST" }),
+    mutationFn: () => apiFetch("/ai/models/check-all", { method: "POST", timeoutMs: 300_000 }),
     onSuccess: () => invalidateAIModelQueries(queryClient),
   });
 }

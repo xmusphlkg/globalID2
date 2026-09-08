@@ -10647,6 +10647,17 @@
             ],
             "title": "Last Check Status"
           },
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked At"
+          },
           "last_rate_limit_at": {
             "anyOf": [
               {
@@ -10730,6 +10741,49 @@
             ],
             "title": "Rate Limit Scope"
           },
+          "routing_status": {
+            "default": "probe_unavailable",
+            "title": "Routing Status",
+            "type": "string"
+          },
+          "routing_status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Status Reason"
+          },
+          "runtime_degraded": {
+            "default": false,
+            "title": "Runtime Degraded",
+            "type": "boolean"
+          },
+          "runtime_degraded_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Degraded Reason"
+          },
+          "runtime_degraded_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Degraded Scope"
+          },
           "runtime_failure_active": {
             "default": false,
             "title": "Runtime Failure Active",
@@ -10745,6 +10799,11 @@
               }
             ],
             "title": "Runtime Failure Cooldown Until"
+          },
+          "runtime_failure_count": {
+            "default": 0,
+            "title": "Runtime Failure Count",
+            "type": "integer"
           },
           "runtime_failure_kind": {
             "anyOf": [
@@ -10778,6 +10837,11 @@
             "title": "Runtime Failure Streak",
             "type": "integer"
           },
+          "runtime_failure_streak_raw": {
+            "default": 0,
+            "title": "Runtime Failure Streak Raw",
+            "type": "integer"
+          },
           "runtime_last_error": {
             "anyOf": [
               {
@@ -10788,6 +10852,28 @@
               }
             ],
             "title": "Runtime Last Error"
+          },
+          "runtime_last_failure_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Last Failure At"
+          },
+          "runtime_last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Last Success At"
           },
           "runtime_latency_ewma_ms": {
             "anyOf": [
@@ -10810,6 +10896,16 @@
             "title": "Runtime Model Inflight",
             "type": "integer"
           },
+          "runtime_provider_auto_concurrency": {
+            "default": true,
+            "title": "Runtime Provider Auto Concurrency",
+            "type": "boolean"
+          },
+          "runtime_provider_backoff_remaining_seconds": {
+            "default": 0,
+            "title": "Runtime Provider Backoff Remaining Seconds",
+            "type": "integer"
+          },
           "runtime_provider_capacity": {
             "default": 1,
             "title": "Runtime Provider Capacity",
@@ -10818,6 +10914,26 @@
           "runtime_provider_inflight": {
             "default": 0,
             "title": "Runtime Provider Inflight",
+            "type": "integer"
+          },
+          "runtime_provider_max_capacity": {
+            "default": 1,
+            "title": "Runtime Provider Max Capacity",
+            "type": "integer"
+          },
+          "runtime_provider_min_capacity": {
+            "default": 1,
+            "title": "Runtime Provider Min Capacity",
+            "type": "integer"
+          },
+          "runtime_provider_success_streak": {
+            "default": 0,
+            "title": "Runtime Provider Success Streak",
+            "type": "integer"
+          },
+          "runtime_success_count": {
+            "default": 0,
+            "title": "Runtime Success Count",
             "type": "integer"
           },
           "runtime_timeout_count": {

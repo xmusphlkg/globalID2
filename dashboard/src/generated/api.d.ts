@@ -6458,6 +6458,8 @@ export interface components {
             has_api_key: boolean;
             /** Last Check Status */
             last_check_status?: string | null;
+            /** Last Checked At */
+            last_checked_at?: string | null;
             /** Last Rate Limit At */
             last_rate_limit_at?: string | null;
             /** Model Id */
@@ -6494,12 +6496,33 @@ export interface components {
             /** Rate Limit Scope */
             rate_limit_scope?: string | null;
             /**
+             * Routing Status
+             * @default probe_unavailable
+             */
+            routing_status: string;
+            /** Routing Status Reason */
+            routing_status_reason?: string | null;
+            /**
+             * Runtime Degraded
+             * @default false
+             */
+            runtime_degraded: boolean;
+            /** Runtime Degraded Reason */
+            runtime_degraded_reason?: string | null;
+            /** Runtime Degraded Scope */
+            runtime_degraded_scope?: string | null;
+            /**
              * Runtime Failure Active
              * @default false
              */
             runtime_failure_active: boolean;
             /** Runtime Failure Cooldown Until */
             runtime_failure_cooldown_until?: string | null;
+            /**
+             * Runtime Failure Count
+             * @default 0
+             */
+            runtime_failure_count: number;
             /** Runtime Failure Kind */
             runtime_failure_kind?: string | null;
             /**
@@ -6514,8 +6537,17 @@ export interface components {
              * @default 0
              */
             runtime_failure_streak: number;
+            /**
+             * Runtime Failure Streak Raw
+             * @default 0
+             */
+            runtime_failure_streak_raw: number;
             /** Runtime Last Error */
             runtime_last_error?: string | null;
+            /** Runtime Last Failure At */
+            runtime_last_failure_at?: string | null;
+            /** Runtime Last Success At */
+            runtime_last_success_at?: string | null;
             /** Runtime Latency Ewma Ms */
             runtime_latency_ewma_ms?: number | null;
             /**
@@ -6529,6 +6561,16 @@ export interface components {
              */
             runtime_model_inflight: number;
             /**
+             * Runtime Provider Auto Concurrency
+             * @default true
+             */
+            runtime_provider_auto_concurrency: boolean;
+            /**
+             * Runtime Provider Backoff Remaining Seconds
+             * @default 0
+             */
+            runtime_provider_backoff_remaining_seconds: number;
+            /**
              * Runtime Provider Capacity
              * @default 1
              */
@@ -6538,6 +6580,26 @@ export interface components {
              * @default 0
              */
             runtime_provider_inflight: number;
+            /**
+             * Runtime Provider Max Capacity
+             * @default 1
+             */
+            runtime_provider_max_capacity: number;
+            /**
+             * Runtime Provider Min Capacity
+             * @default 1
+             */
+            runtime_provider_min_capacity: number;
+            /**
+             * Runtime Provider Success Streak
+             * @default 0
+             */
+            runtime_provider_success_streak: number;
+            /**
+             * Runtime Success Count
+             * @default 0
+             */
+            runtime_success_count: number;
             /**
              * Runtime Timeout Count
              * @default 0

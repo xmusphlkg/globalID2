@@ -9,6 +9,7 @@ import pytest
 
 from src.control_plane.events import ControlPlaneEventBus
 from src.control_plane import runtime as runtime_module
+from src.control_plane.operations import _runtime_metadata_int
 from src.control_plane.runtime import RuntimeRegistry, ThreadedRuntimeGuard
 
 
@@ -49,6 +50,23 @@ class FakeRedis:
         for key in self.values:
             if key.startswith(prefix):
                 yield key
+
+
+def test_worker_runtime_metadata_preserves_zero_ai_capacity() -> None:
+    metadata = {"ai_concurrency_current": 0, "ai_concurrency_max": 6}
+
+    assert _runtime_metadata_int(
+        metadata,
+        "ai_concurrency_current",
+        default=1,
+        minimum=0,
+    ) == 0
+    assert _runtime_metadata_int(
+        metadata,
+        "ai_concurrency_max",
+        default=1,
+        minimum=1,
+    ) == 6
 
 
 class FakeSyncRedis:
