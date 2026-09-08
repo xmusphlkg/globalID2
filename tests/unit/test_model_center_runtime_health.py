@@ -141,6 +141,37 @@ def test_empty_model_output_does_not_open_a_shared_provider_connection_circuit()
     )
 
 
+def test_intermittent_empty_output_requires_three_consecutive_failures_to_cool_route() -> None:
+    now = _utcnow()
+    payload = {}
+
+    for index in range(2):
+        payload = _write_runtime_failure(
+            payload,
+            kind="structured_output",
+            error="Model returned an empty completion response",
+            occurred_at=now + timedelta(seconds=index),
+            duration_seconds=1.0,
+            cooldown_seconds=60,
+        )
+        assert _runtime_health_state(payload, now + timedelta(seconds=index))[
+            "runtime_failure_active"
+        ] is False
+
+    payload = _write_runtime_failure(
+        payload,
+        kind="structured_output",
+        error="Model returned an empty completion response",
+        occurred_at=now + timedelta(seconds=2),
+        duration_seconds=1.0,
+        cooldown_seconds=60,
+    )
+
+    assert _runtime_health_state(payload, now + timedelta(seconds=2))[
+        "runtime_failure_active"
+    ] is True
+
+
 def test_degraded_routes_receive_bounded_automatic_recovery_probes(monkeypatch) -> None:
     async def exercise() -> None:
         model_center._recovery_probe_attempted_at.clear()

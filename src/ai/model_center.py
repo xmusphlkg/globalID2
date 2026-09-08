@@ -31,6 +31,7 @@ _ROUTING_STATE_KEY = "routing_state"
 _RUNTIME_FAILURE_KINDS = {"timeout", "connection", "upstream", "structured_output"}
 _RUNTIME_FAILURE_COOLDOWN_CAP_SECONDS = 600
 _PROVIDER_TIMEOUT_CIRCUIT_THRESHOLD = 2
+_STRUCTURED_OUTPUT_COOLDOWN_STREAK_THRESHOLD = 3
 _PROVIDER_FAILURE_RECENCY_WINDOW = timedelta(minutes=10)
 _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD = 8
 _MODEL_FAILURE_STREAK_DECAY_INTERVAL = timedelta(minutes=30)
@@ -290,17 +291,25 @@ def _write_runtime_failure(
             "last_runtime_failure_kind": kind,
             "last_runtime_failure_at": occurred_at.isoformat(),
             "last_runtime_error": str(error or "")[:1000],
-            "runtime_cooldown_until": (
-                occurred_at
-                + timedelta(
-                    seconds=_runtime_failure_cooldown_seconds(
-                        base_seconds=cooldown_seconds,
-                        failure_streak=streak,
-                    )
-                )
-            ).isoformat(),
         }
     )
+    cooldown_threshold = (
+        _STRUCTURED_OUTPUT_COOLDOWN_STREAK_THRESHOLD
+        if kind == "structured_output"
+        else 1
+    )
+    if streak >= cooldown_threshold:
+        state["runtime_cooldown_until"] = (
+            occurred_at
+            + timedelta(
+                seconds=_runtime_failure_cooldown_seconds(
+                    base_seconds=cooldown_seconds,
+                    failure_streak=streak,
+                )
+            )
+        ).isoformat()
+    else:
+        state.pop("runtime_cooldown_until", None)
     if kind == "timeout":
         state["runtime_timeout_count"] = previous_timeouts + 1
     if duration_seconds is not None:
