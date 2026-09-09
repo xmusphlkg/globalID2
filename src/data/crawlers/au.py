@@ -930,7 +930,21 @@ class AustraliaNINDSSCrawler(BaseCrawler):
             items = (
                 data["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
             )
-            return [str(item["G0"]) for item in items if "G0" in item]
+            values: List[str] = []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                value = item.get("G0", item.get("G"))
+                if value is None:
+                    # Recent Power BI DSR responses encode a one-column
+                    # projection in the generic C array instead of G0.
+                    cells = item.get("C")
+                    if isinstance(cells, (list, tuple)) and cells:
+                        value = cells[0]
+                normalized = _norm_text(value)
+                if normalized:
+                    values.append(normalized)
+            return values
         except Exception as exc:
             logger.debug(f"[AU-NINDSS] DAX list query failed | entity={entity} error={exc}")
             return []

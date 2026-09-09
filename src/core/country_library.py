@@ -343,6 +343,11 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "dataset_id": "3471d96b-c14c-403f-b3a6-016f1deac28e",
             "model_id": 3305775,
             "query_url": "",
+            "refresh_recent_months": 3,
+            "supports_current_month": True,
+            "default_include_current_month": False,
+            "dynamic_revision_enabled": True,
+            "current_month_status": "provisional",
             "query_payload": {
                 "version": "1.0.0",
                 "queries": [],

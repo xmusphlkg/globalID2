@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import uuid
-from typing import Any, Awaitable
+from typing import Any, Awaitable, Callable
 
 import pycountry
 from sqlalchemy import select
@@ -80,6 +81,58 @@ def _candidate_key(candidate: ArticleCandidate) -> str:
     if candidate.openalex_id:
         return f"openalex:{candidate.openalex_id.strip().upper()}"
     return f"article:{candidate.article_id}"
+
+
+def _is_postgres_deadlock(exc: BaseException) -> bool:
+    """Recognize PostgreSQL deadlocks through wrapped asyncpg/SQLAlchemy errors."""
+    pending: list[BaseException] = [exc]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        if any(
+            str(getattr(current, attribute, "") or "") == "40P01"
+            for attribute in ("sqlstate", "pgcode")
+        ):
+            return True
+        name = type(current).__name__.casefold()
+        message = str(current).casefold()
+        if "deadlock" in name or "deadlock detected" in message:
+            return True
+        for nested in (
+            getattr(current, "orig", None),
+            getattr(current, "__cause__", None),
+            getattr(current, "__context__", None),
+        ):
+            if isinstance(nested, BaseException):
+                pending.append(nested)
+    return False
+
+
+async def _retry_postgres_deadlock(
+    operation: Callable[[], Awaitable[Any]],
+    *,
+    max_retries: int,
+    base_delay_seconds: float,
+) -> Any:
+    """Retry only transactions PostgreSQL explicitly aborted as deadlock victims."""
+    for retry_index in range(max(0, max_retries) + 1):
+        try:
+            return await operation()
+        except Exception as exc:
+            if not _is_postgres_deadlock(exc) or retry_index >= max_retries:
+                raise
+            delay = base_delay_seconds * (2**retry_index)
+            logger.warning(
+                "Research Radar persistence deadlock; retrying transaction "
+                "attempt={}/{} delay_seconds={:.2f}",
+                retry_index + 2,
+                max_retries + 1,
+                delay,
+            )
+            await asyncio.sleep(delay)
 
 
 def _merge_candidate(primary: ArticleCandidate, incoming: ArticleCandidate) -> None:
@@ -528,45 +581,114 @@ class LiteraturePipeline:
             if task:
                 await task_manager.update_task_progress(task.task_uuid, 55)
 
-            inserted = updated = excluded = published = preprints_held_for_review = 0
-            async with get_db() as db:
-                repository = LiteratureRepository(db)
-                for index, candidate in enumerate(candidates):
-                    classification = classify_candidate(
-                        candidate,
-                        diseases=diseases,
-                        countries=countries,
-                        taxonomy=taxonomy,
-                        now=now,
-                        auto_publish_min_score=self.config.auto_publish_min_score,
+            persisted = {
+                "inserted": 0,
+                "updated": 0,
+                "excluded": 0,
+                "published": 0,
+                "preprints_held_for_review": 0,
+                "enrichment_degraded_review": 0,
+            }
+            classified_candidates: list[tuple[ArticleCandidate, Classification]] = []
+            # Classify before opening a transaction, then persist in a stable
+            # article order so concurrent syncs acquire row locks consistently.
+            for candidate in sorted(candidates, key=_candidate_key):
+                classification = classify_candidate(
+                    candidate,
+                    diseases=diseases,
+                    countries=countries,
+                    taxonomy=taxonomy,
+                    now=now,
+                    auto_publish_min_score=self.config.auto_publish_min_score,
+                )
+                if _hold_degraded_enrichment_for_review(
+                    classification,
+                    enrichment_degraded=enrichment_degraded,
+                ):
+                    persisted["enrichment_degraded_review"] += 1
+                persisted["preprints_held_for_review"] += int(
+                    _hold_preprint_for_review(candidate, classification)
+                )
+                # Autopilot owns publication so that every automatic decision
+                # passes the complete metadata/integrity gate and is audited.
+                if (
+                    self.config.autopilot_enabled
+                    and classification.publication_status == "published"
+                ):
+                    classification.publication_status = "review"
+                persisted["excluded"] += int(
+                    classification.publication_status == "excluded"
+                )
+                persisted["published"] += int(
+                    classification.publication_status == "published"
+                )
+                classified_candidates.append((candidate, classification))
+
+            batch_size = max(
+                1,
+                int(getattr(self.config, "persistence_batch_size", 25)),
+            )
+            max_deadlock_retries = int(
+                getattr(self.config, "persistence_deadlock_max_retries", 3)
+            )
+            deadlock_retry_base = float(
+                getattr(
+                    self.config,
+                    "persistence_deadlock_retry_base_seconds",
+                    0.25,
+                )
+            )
+            for offset in range(0, len(classified_candidates), batch_size):
+                batch = tuple(classified_candidates[offset : offset + batch_size])
+
+                async def persist_batch(
+                    batch_to_write: tuple[tuple[ArticleCandidate, Classification], ...] = batch,
+                ) -> dict[str, int]:
+                    batch_counts = {"inserted": 0, "updated": 0}
+                    async with get_db() as db:
+                        repository = LiteratureRepository(db)
+                        for candidate, classification in batch_to_write:
+                            was_inserted = await repository.upsert(
+                                candidate,
+                                classification,
+                                preserve_existing_publication_status=enrichment_degraded,
+                            )
+                            batch_counts["inserted"] += int(was_inserted)
+                            batch_counts["updated"] += int(not was_inserted)
+                    return batch_counts
+
+                batch_counts = await _retry_postgres_deadlock(
+                    persist_batch,
+                    max_retries=max_deadlock_retries,
+                    base_delay_seconds=deadlock_retry_base,
+                )
+                persisted["inserted"] += batch_counts["inserted"]
+                persisted["updated"] += batch_counts["updated"]
+                if task:
+                    committed = min(offset + len(batch), len(classified_candidates))
+                    await task_manager.update_task_progress(
+                        task.task_uuid,
+                        min(
+                            95,
+                            55
+                            + int(
+                                40
+                                * committed
+                                / max(1, len(classified_candidates))
+                            ),
+                        ),
                     )
-                    if _hold_degraded_enrichment_for_review(
-                        classification,
-                        enrichment_degraded=enrichment_degraded,
-                    ):
-                        enrichment_counts["enrichment_degraded_review"] += 1
-                    preprints_held_for_review += int(
-                        _hold_preprint_for_review(candidate, classification)
-                    )
-                    # Autopilot owns publication so that every automatic decision
-                    # passes the complete metadata/integrity gate and is audited.
-                    if self.config.autopilot_enabled and classification.publication_status == "published":
-                        classification.publication_status = "review"
-                    was_inserted = await repository.upsert(
-                        candidate,
-                        classification,
-                        preserve_existing_publication_status=enrichment_degraded,
-                    )
-                    inserted += int(was_inserted)
-                    updated += int(not was_inserted)
-                    excluded += int(classification.publication_status == "excluded")
-                    published += int(classification.publication_status == "published")
-                    if task and index % 20 == 0:
-                        await task_manager.update_task_progress(
-                            task.task_uuid,
-                            min(95, 55 + int(40 * (index + 1) / max(1, len(candidates)))),
-                        )
-                await db.commit()
+
+            inserted = persisted["inserted"]
+            updated = persisted["updated"]
+            excluded = persisted["excluded"]
+            published = persisted["published"]
+            preprints_held_for_review = persisted["preprints_held_for_review"]
+            enrichment_counts["enrichment_degraded_review"] += persisted[
+                "enrichment_degraded_review"
+            ]
+            if task and not classified_candidates:
+                await task_manager.update_task_progress(task.task_uuid, 95)
 
             automation = None
             # A provider-wide failure means every candidate in this batch may be

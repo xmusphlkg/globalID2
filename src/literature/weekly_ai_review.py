@@ -166,11 +166,15 @@ def deterministic_review_issues(packet: Mapping[str, Any]) -> list[str]:
 
 
 def parse_ai_review_response(value: str) -> dict[str, Any]:
-    """Accept one small exact JSON object; prose/fences/extra keys fail closed."""
+    """Accept one small exact JSON object, optionally in one JSON code fence."""
     if not isinstance(value, str) or len(value.encode("utf-8")) > 8_192:
         raise WeeklyAIReviewError("ai_review_response_invalid")
+    payload = value.strip()
+    fenced = re.fullmatch(r"```(?:json)?\s*(\{.*\})\s*```", payload, flags=re.IGNORECASE | re.DOTALL)
+    if fenced is not None:
+        payload = fenced.group(1).strip()
     try:
-        parsed = json.loads(value.strip())
+        parsed = json.loads(payload)
     except json.JSONDecodeError as exc:
         raise WeeklyAIReviewError("ai_review_response_invalid") from exc
     if not isinstance(parsed, dict) or set(parsed) != {"verdict", "issue_codes"}:
@@ -281,6 +285,16 @@ def _valid_stored_review(value: Any, *, now: datetime | None = None) -> str | No
     return "needs_editorial_review" if parsed.tzinfo is not None and parsed <= current + timedelta(minutes=5) else None
 
 
+def _stored_reviewed_at(value: Any) -> datetime | None:
+    if not isinstance(value, Mapping):
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value.get("reviewed_at")).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return parsed.astimezone(timezone.utc) if parsed.tzinfo is not None else None
+
+
 def write_weekly_ai_review(
     path: Path, record: dict[str, Any], *, current_brief_path: Path | None = None,
 ) -> None:
@@ -304,11 +318,24 @@ def write_weekly_ai_review(
                 continue
             if existing.get("week") != record["week"] or existing.get("brief_fingerprint") != record["brief_fingerprint"]:
                 continue
-            existing_status = _valid_stored_review(existing.get("review"))
-            incoming_status = _valid_stored_review(record.get("review"))
-            # Concurrent disagreement resolves toward human attention. A pass
-            # can never race-overwrite a valid needs-review verdict.
-            if existing_status == "needs_editorial_review" and incoming_status == "ai_reviewed":
+            existing_review = existing.get("review")
+            incoming_review = record.get("review")
+            existing_status = _valid_stored_review(existing_review)
+            incoming_status = _valid_stored_review(incoming_review)
+            existing_at = _stored_reviewed_at(existing_review)
+            incoming_at = _stored_reviewed_at(incoming_review)
+            # Only a strictly newer valid review may replace an existing
+            # decision. This permits scheduled AI rechecks to clear an older
+            # hold without allowing a delayed concurrent response to win.
+            if (
+                existing_status is not None
+                and (
+                    incoming_status is None
+                    or existing_at is None
+                    or incoming_at is None
+                    or incoming_at <= existing_at
+                )
+            ):
                 return
         payload["reviews"] = [
             row for row in payload["reviews"]
@@ -351,7 +378,8 @@ class WeeklyAIReviewRunner:
             "Do not use outside knowledge, browsing, retrieval, memory, hidden context, or unstated facts. "
             "Check whether claims stay within cited findings, monitoring links are disclosed as non-causal, "
             "gaps describe catalogue coverage only, and English/Chinese meanings align. Return JSON only with "
-            "exact keys verdict and issue_codes. Never return reasoning."
+            "exact keys verdict and issue_codes. An empty evidence_gaps array is valid; missing_bilingual_gap "
+            "applies only when a present gap row lacks English or Chinese text. Never return reasoning."
         )
         prompt = json.dumps({
             "task": "Bounded public weekly-brief quality review",
@@ -399,6 +427,7 @@ async def review_weekly_brief_files(
     preferred_models: list[str] | None = None,
     timeout_seconds: int = 60,
     max_attempts: int = 2,
+    recheck_after_hours: int = 6,
     apply: bool = True,
     runner: WeeklyAIReviewRunner | None = None,
 ) -> dict[str, Any]:
@@ -440,12 +469,24 @@ async def review_weekly_brief_files(
                 continue
             existing_row = existing.get(week)
             if isinstance(existing_row, dict) and existing_row.get("brief_fingerprint") == fingerprint:
-                previous_status = _valid_stored_review(existing_row.get("review"))
-                if previous_status:
+                existing_review = existing_row.get("review")
+                previous_status = _valid_stored_review(existing_review)
+                reviewed_at = _stored_reviewed_at(existing_review)
+                recheck_due = bool(
+                    previous_status == "needs_editorial_review"
+                    and reviewed_at is not None
+                    and reviewed_at + timedelta(hours=max(1, int(recheck_after_hours)))
+                    <= datetime.now(timezone.utc)
+                )
+                if previous_status and not recheck_due:
                     counts["skipped"] += 1
                     outcomes.append({
                         "week": week, "status": "skipped",
-                        "reason": f"unchanged_fingerprint_{previous_status}",
+                        "reason": (
+                            f"unchanged_fingerprint_{previous_status}_recheck_pending"
+                            if previous_status == "needs_editorial_review"
+                            else f"unchanged_fingerprint_{previous_status}"
+                        ),
                     })
                     continue
             verdict = await reviewer.review(

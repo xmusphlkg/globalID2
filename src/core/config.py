@@ -652,6 +652,24 @@ class LiteratureSettings(_BaseEnvSettings):
     source_concurrency: int = Field(default=4, ge=1, le=12)
     request_timeout_seconds: int = Field(default=30, ge=5, le=120)
     max_retries: int = Field(default=3, ge=1, le=5)
+    persistence_deadlock_max_retries: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description="Retry a rolled-back Research Radar persistence transaction after PostgreSQL deadlocks",
+    )
+    persistence_deadlock_retry_base_seconds: float = Field(
+        default=0.25,
+        ge=0.01,
+        le=10.0,
+        description="Initial exponential backoff for Research Radar deadlock retries",
+    )
+    persistence_batch_size: int = Field(
+        default=25,
+        ge=1,
+        le=500,
+        description="Maximum Research Radar articles committed in one database transaction",
+    )
     auto_publish_min_score: float = Field(default=0.72, ge=0.0, le=1.0)
     public_article_limit: int = Field(default=500, ge=20, le=5000)
     ai_enrichment_enabled: bool = Field(
@@ -671,7 +689,7 @@ class LiteratureSettings(_BaseEnvSettings):
     )
     ai_enrichment_batch_size: int = Field(default=50, ge=1, le=50)
     ai_enrichment_concurrency: int = Field(
-        default=12,
+        default=8,
         ge=1,
         le=24,
         description="Maximum article-level concurrency within one Research Radar AI enrichment task",
@@ -712,6 +730,15 @@ class LiteratureSettings(_BaseEnvSettings):
     weekly_ai_review_batch_size: int = Field(default=2, ge=1, le=8)
     weekly_ai_review_timeout_seconds: int = Field(default=60, ge=10, le=180)
     weekly_ai_review_max_attempts: int = Field(default=2, ge=1, le=2)
+    weekly_ai_review_recheck_hours: int = Field(
+        default=6,
+        ge=1,
+        le=168,
+        description=(
+            "Minimum delay before automatically re-reviewing an unchanged weekly brief "
+            "that AI previously held for editorial attention"
+        ),
+    )
     gap_discovery_enabled: bool = Field(
         default=True,
         description="Enable review-only targeted literature discovery for Situation Room evidence gaps",

@@ -39,6 +39,7 @@ DEFAULT_SUBDIVISION_OUTPUT_DIR = ROOT / "data/current/au/subdivisions"
 DEFAULT_SOURCE_NAME = "Australia NINDSS (location aggregated)"
 MAPPING_SOURCE_ID = "SRC_AU_NINDSS"
 _ARCHIVE_SKIP_STATES = {"AUS", "UNKNOWN", "TOTAL", "ALL"}
+_LIVE_COMPLETENESS_RATIO = 0.95
 
 
 @dataclass
@@ -104,6 +105,8 @@ class AUMonthlyUpdater:
         country_code: str = "AU",
         source_name: str = DEFAULT_SOURCE_NAME,
         output_csv: Path | None = None,
+        include_current_month: bool = False,
+        refresh_recent_months: int = 3,
     ) -> None:
         self.country_code = country_code.upper()
         if self.country_code != "AU" and self.country_code not in AU_STATE_SUBDIVISIONS:
@@ -115,6 +118,8 @@ class AUMonthlyUpdater:
         self.series_country_code = "AU"
         self.series_geography_key = f"country:{self.country_code}:national"
         self.source_name = source_name
+        self.include_current_month = bool(include_current_month)
+        self.refresh_recent_months = max(1, int(refresh_recent_months))
         self.output_csv = (
             Path(output_csv)
             if output_csv is not None
@@ -139,14 +144,14 @@ class AUMonthlyUpdater:
     def is_subdivision(self) -> bool:
         return self.country_code != "AU"
 
-    @staticmethod
-    def _default_recent_months() -> List[Tuple[int, int]]:
+    def _default_recent_months(self) -> List[Tuple[int, int]]:
         now = datetime.now()
         months_to_fetch: List[Tuple[int, int]] = []
-        for delta in range(3):
+        first_delta = 0 if self.include_current_month else 1
+        for delta in range(first_delta, first_delta + self.refresh_recent_months):
             month = now.month - delta
             year = now.year
-            if month <= 0:
+            while month <= 0:
                 month += 12
                 year -= 1
             months_to_fetch.append((year, month))
@@ -155,7 +160,11 @@ class AUMonthlyUpdater:
     def _resolve_requested_months(
         self, months: Optional[List[Tuple[int, int]]]
     ) -> List[Tuple[int, int]]:
-        return sorted(set(months)) if months is not None else self._default_recent_months()
+        requested = set(months) if months is not None else set(self._default_recent_months())
+        if not self.include_current_month:
+            now = datetime.now()
+            requested.discard((now.year, now.month))
+        return sorted(requested)
 
     def _rows_cover_months(
         self,
@@ -182,6 +191,45 @@ class AUMonthlyUpdater:
             if (parsed := _parse_date(row)) is not None
             and (parsed.year, parsed.month) in requested
         ]
+
+    @staticmethod
+    def _select_candidate_rows(
+        live_rows: List[Dict[str, str]],
+        archive_rows: List[Dict[str, str]],
+        prior_rows: List[Dict[str, str]],
+    ) -> Tuple[str, List[Dict[str, str]]]:
+        recovery_candidates = [
+            ("raw archive", archive_rows, 1),
+            ("previous CSV snapshot", prior_rows, 0),
+        ]
+        largest_recovery = max(
+            (len(rows) for _label, rows, _priority in recovery_candidates),
+            default=0,
+        )
+        if live_rows and (
+            largest_recovery == 0
+            or len(live_rows) >= largest_recovery * _LIVE_COMPLETENESS_RATIO
+        ):
+            # Small differences usually mean the source removed or renamed a
+            # disease. Prefer the fresh snapshot instead of resurrecting stale
+            # archive files; reserve recovery for materially partial fetches.
+            return "live fetch", live_rows
+
+        candidates = [
+            *([("live fetch", live_rows, 2)] if live_rows else []),
+            *[
+                (label, rows, priority)
+                for label, rows, priority in recovery_candidates
+                if rows
+            ],
+        ]
+        if not candidates:
+            return "", []
+        label, rows, _priority = max(
+            candidates,
+            key=lambda item: (len(item[1]), item[2]),
+        )
+        return label, rows
 
     def _write_rows_to_output_csv(self, rows: List[Dict[str, str]]) -> AUFetchSummary:
         ordered_rows = sorted(rows, key=lambda r: (r["Date"], r["RawDiseaseLabel"]))
@@ -377,6 +425,11 @@ class AUMonthlyUpdater:
         """
         logs: List[str] = []
         requested_months = self._resolve_requested_months(months)
+        if not requested_months:
+            raise ValueError(
+                "AU crawl has no eligible closed months; enable include_current_month "
+                "to fetch the open provisional month"
+            )
         archive_root = (
             Path(raw_dir)
             if raw_dir is not None
@@ -401,16 +454,16 @@ class AUMonthlyUpdater:
                 fetch_summary = crawler.crawl_monthly_subdivision_csv(
                     self.output_csv,
                     jurisdiction_code=self.country_code,
-                    months=months,
+                    months=requested_months,
                 )
             else:
                 fetch_summary = crawler.crawl_monthly_national_csv(
                     self.output_csv,
-                    months=months,
+                    months=requested_months,
                 )
             logs.append(
                 f"[crawler] fetched {fetch_summary.row_count} rows; "
-                f"months={'all 3 recent' if months is None else len(months)}; "
+                f"months={len(requested_months)}; "
                 f"latest={fetch_summary.latest_date}"
             )
             if save_raw and raw_dir is not None:
@@ -432,20 +485,15 @@ class AUMonthlyUpdater:
             else []
         )
 
-        candidates: List[Tuple[str, List[Dict[str, str]], int]] = []
-        if live_rows:
-            candidates.append(("live fetch", live_rows, 2))
-        if archive_candidate:
-            candidates.append(("raw archive", archive_candidate, 1))
-        if prior_candidate:
-            candidates.append(("previous CSV snapshot", prior_candidate, 0))
-
-        if not candidates:
+        selected_label, rows = self._select_candidate_rows(
+            live_rows,
+            archive_candidate,
+            prior_candidate,
+        )
+        if not rows:
             if live_error is not None:
                 raise live_error
             raise RuntimeError("AU crawler produced no usable rows")
-
-        selected_label, rows, _ = max(candidates, key=lambda item: (len(item[1]), item[2]))
 
         if selected_label != "live fetch":
             summary = self._write_rows_to_output_csv(rows)
@@ -503,6 +551,18 @@ class AUMonthlyUpdater:
                             if (report_date.year, report_date.month)
                             == (today.year, today.month)
                             else "false"
+                        ),
+                        "RevisionSemantics": (
+                            "open_provisional"
+                            if (report_date.year, report_date.month)
+                            == (today.year, today.month)
+                            else "authoritative_revision"
+                        ),
+                        "AuthoritativeRevision": (
+                            "false"
+                            if (report_date.year, report_date.month)
+                            == (today.year, today.month)
+                            else "true"
                         ),
                         "JurisdictionCode": _norm_text(row.get("JurisdictionCode"))
                         or self.country_code,

@@ -511,6 +511,7 @@ class LiteratureService:
                     preferred_models=list((task.input_data or {}).get("preferred_models") or []),
                     timeout_seconds=cfg.weekly_ai_review_timeout_seconds,
                     max_attempts=cfg.weekly_ai_review_max_attempts,
+                    recheck_after_hours=getattr(cfg, "weekly_ai_review_recheck_hours", 6),
                     apply=True,
                 )
                 if output["weekly_ai_review"]["counts"]["failed"]:

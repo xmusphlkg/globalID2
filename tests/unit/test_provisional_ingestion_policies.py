@@ -29,6 +29,56 @@ def test_au_marks_only_the_open_month_provisional(tmp_path) -> None:
         "closed_revisable",
         "provisional",
     ]
+    assert [row["AuthoritativeRevision"] for row in rows] == ["true", "false"]
+    assert [row["RevisionSemantics"] for row in rows] == [
+        "authoritative_revision",
+        "open_provisional",
+    ]
+
+
+def test_au_default_window_excludes_open_month_unless_enabled() -> None:
+    today = date.today()
+    current_month = (today.year, today.month)
+
+    closed_only = AUMonthlyUpdater(refresh_recent_months=3)
+    closed_months = closed_only._resolve_requested_months(None)
+    assert len(closed_months) == 3
+    assert current_month not in closed_months
+
+    with_open_month = AUMonthlyUpdater(
+        include_current_month=True,
+        refresh_recent_months=3,
+    )
+    open_months = with_open_month._resolve_requested_months(None)
+    assert len(open_months) == 3
+    assert current_month in open_months
+
+
+def test_au_explicit_open_month_is_filtered_when_policy_is_closed_only() -> None:
+    today = date.today()
+    updater = AUMonthlyUpdater(include_current_month=False)
+
+    assert updater._resolve_requested_months([(today.year, today.month)]) == []
+
+
+def test_au_prefers_nearly_complete_live_snapshot_over_stale_archive_rows() -> None:
+    live = [{"row": str(index)} for index in range(96)]
+    archive = [{"row": str(index)} for index in range(100)]
+
+    label, rows = AUMonthlyUpdater._select_candidate_rows(live, archive, [])
+
+    assert label == "live fetch"
+    assert rows is live
+
+
+def test_au_uses_archive_for_materially_partial_live_snapshot() -> None:
+    live = [{"row": "1"}]
+    archive = [{"row": "1"}, {"row": "2"}]
+
+    label, rows = AUMonthlyUpdater._select_candidate_rows(live, archive, [])
+
+    assert label == "raw archive"
+    assert rows is archive
 
 
 def test_ch_uses_api_completeness_instead_of_country_level_guess(tmp_path) -> None:

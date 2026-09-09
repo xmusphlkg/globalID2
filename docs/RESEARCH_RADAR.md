@@ -281,7 +281,7 @@ It receives only public `cited_findings`, `monitoring_context`,
 `evidence_gaps`, and `methodology`; browsing, retrieval, outside knowledge,
 abstracts, private notes, and database rows are excluded. Deterministic checks
 run first. The model must return one bounded JSON object using an issue-code
-allowlist. Prose, unknown codes, malformed output, unavailable routes, and
+allowlist; one otherwise empty JSON code fence is tolerated. Prose, unknown codes, malformed output, unavailable routes, and
 missing credentials all fail closed; raw output and reasoning are not stored.
 
 The feature is off by default. A configured Model Center route can run it on
@@ -302,7 +302,10 @@ PYTHONPATH=. venv/bin/python scripts/ai_review_research_weekly_briefs.py --week 
 
 A pass is shown as `ai_reviewed` with an explicit “not editorial review”
 disclosure. Content changes invalidate it, and a matching human review always
-wins. Failures keep the public unreviewed label and fail a scheduled worker
+wins. An unchanged brief held for editorial attention is automatically
+re-reviewed after `LITERATURE__WEEKLY_AI_REVIEW_RECHECK_HOURS` (six hours by
+default); a strictly newer valid AI pass clears the older AI hold and publishes
+the `ai_reviewed` status. Failures keep the public unreviewed label and fail a scheduled worker
 task with `weekly_brief_ai_review_failed_closed`, so health cannot appear green
 while the route is failing; site generation remains available.
 
