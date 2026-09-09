@@ -47,6 +47,31 @@ test('ranking prioritizes disease, geography, and title matches over recency alo
   assert.ok(ranked[0].findingEn?.includes('waning immunity'));
 });
 
+test('question prepositions do not activate a colliding two-letter country code', () => {
+  const ranked = rankResearchArticles('dengue surveillance in Brazil', [
+    ...articles,
+    {
+      article_id: 'brazil-surveillance',
+      title: 'Dengue surveillance in Brazil',
+      countries: [{ code: 'BR', name_en: 'Brazil', confidence: 0.95 }],
+      diseases: [{ disease_id: 'D021', name_en: 'Dengue', confidence: 0.95 }],
+      topics: [{ name: 'Surveillance', confidence: 0.95 }],
+    },
+    {
+      article_id: 'india-background',
+      title: 'Dengue surveillance methods',
+      countries: [{ code: 'IN', name_en: 'India', confidence: 0.95 }],
+      diseases: [{ disease_id: 'D021', name_en: 'Dengue', confidence: 0.95 }],
+      topics: [{ name: 'Surveillance', confidence: 0.95 }],
+    },
+  ], { now: new Date('2026-08-17T00:00:00Z') });
+
+  const brazil = ranked.find((item) => item.article.article_id === 'brazil-surveillance');
+  assert.ok(brazil);
+  assert.equal(brazil.evidenceLevel, 'exact');
+  assert.ok(!brazil.matchReasons.some((reason) => reason.queryTerm === 'India'));
+});
+
 test('English aliases expand into structured disease, country, and topic matches', () => {
   const ranked = rankResearchArticles('whooping cough vaccine evidence in JP', articles, {
     now: new Date('2026-08-17T00:00:00Z'),

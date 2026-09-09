@@ -7,6 +7,7 @@ interface Props {
   dataUrl?: string;
   topN?: number;
   height?: number;
+  entityIds?: string[];
   sourceMeta?: ChartSourceMeta | null;
   initialLanguage?: 'en' | 'zh';
 }
@@ -19,12 +20,14 @@ export function nationalJurisdictionSeries(
   );
 }
 
-export default function DiseaseCountryCurve({ dataUrl, topN = 10, height = 380, sourceMeta = null, initialLanguage = 'en' }: Props) {
+export default function DiseaseCountryCurve({ dataUrl, topN = 10, height = 380, entityIds, sourceMeta = null, initialLanguage = 'en' }: Props) {
   const [series, setSeries] = useState<Record<string, DiseaseDatasetSeriesEntry>>({});
   const [loadError, setLoadError] = useState(false);
   const lang = initialLanguage;
 
   useEffect(() => {
+    setSeries({});
+    setLoadError(false);
     if (!dataUrl) return;
 
     let cancelled = false;
@@ -70,6 +73,7 @@ export default function DiseaseCountryCurve({ dataUrl, topN = 10, height = 380, 
     <EpidemicCurve
       series={series}
       topN={topN}
+      entityIds={entityIds}
       height={height}
       entityType="country"
       sourceMeta={sourceMeta}

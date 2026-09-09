@@ -1,5 +1,6 @@
 ---
 import ReportLayout from '../../layouts/ReportLayout.astro';
+import ResearchAskSurveillance from '../../components/research/ResearchAskSurveillance';
 import { buildAlternatePaths } from '../../lib/seo';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
@@ -27,43 +28,73 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 >
   <div class="ask-page">
     <header class="academic-hero ask-hero">
-      <p class="academic-kicker">{pick('Evidence-grounded retrieval', '基于证据的检索')}</p>
-      <h1>{pick('Ask GIDS Research', '问研究雷达')}</h1>
-      <p class="ask-lede">{pick('Ask about a disease, country, study design, or public-health topic. Results come only from published Research Radar records and their verified public surveillance links.', '可询问疾病、国家、研究设计或公共卫生主题。结果仅来自研究雷达已发布记录及其已核验的公开监测关联。')}</p>
-      <form id="research-question-form" class="ask-form" role="search" data-research-locale={locale}>
-        <label for="research-question">{pick('Research question', '研究问题')}</label>
-        <div class="ask-input-row">
-          <input id="research-question" class="site-control-input" type="search" autocomplete="off" required minlength="2" maxlength="240" placeholder={pick('What does recent evidence say about pertussis resurgence?', '近期证据如何解释百日咳回升？')} />
-          <button type="submit">{pick('Find evidence', '查找证据')}</button>
+      <div class="ask-hero-layout">
+        <div class="ask-hero-copy">
+          <p class="academic-kicker">{pick('Evidence-grounded retrieval', '基于证据的检索')}</p>
+          <div class="ask-title-row">
+            <h1>{pick('Ask GIDS Research', '问研究雷达')}</h1>
+            <span class="ask-title-index">01 / 03</span>
+          </div>
+          <p class="ask-lede">{pick('Ask about a disease, country, study design, or public-health topic. Results come only from published Research Radar records and their verified public surveillance links.', '可询问疾病、国家、研究设计或公共卫生主题。结果仅来自研究雷达已发布记录及其已核验的公开监测关联。')}</p>
         </div>
-      </form>
-      <div class="ask-examples" aria-label={pick('Example questions', '问题示例')}>
-        <span>{pick('Try:', '例如：')}</span>
-        <button type="button" data-question={pick('pertussis resurgence and vaccination', '百日咳回升与疫苗接种')}>{pick('Pertussis resurgence', '百日咳回升')}</button>
-        <button type="button" data-question={pick('dengue surveillance in Brazil', '巴西登革热监测')}>{pick('Dengue in Brazil', '巴西登革热')}</button>
-        <button type="button" data-question={pick('antimicrobial resistance systematic reviews', '抗菌药物耐药系统综述')}>{pick('AMR reviews', '耐药性综述')}</button>
+        <aside class="ask-method-card" aria-label={pick('How Ask GIDS works', 'Ask GIDS 如何工作')}>
+          <p class="ask-method-kicker">{pick('How it works', '工作方式')}</p>
+          <ol>
+            <li><span>01</span><strong>{pick('Parse the question', '拆解问题')}</strong><small>{pick('Disease, place, topic, and study design', '疾病、地区、主题与研究设计')}</small></li>
+            <li><span>02</span><strong>{pick('Rank published evidence', '排序已发布证据')}</strong><small>{pick('Explainable catalogue matching', '可解释的目录匹配')}</small></li>
+            <li><span>03</span><strong>{pick('Add surveillance context', '补充监测背景')}</strong><small>{pick('When a public time series is available', '有公开时间序列时显示')}</small></li>
+          </ol>
+        </aside>
       </div>
-      <p class="ask-privacy">{pick('Your question is processed in this browser and is not sent to a model or stored by this page.', '你的问题只在当前浏览器中处理，本页面不会将其发送给模型或保存。')}</p>
+      <div class="ask-query-panel">
+        <form id="research-question-form" class="ask-form" role="search" data-research-locale={locale}>
+          <label for="research-question">{pick('Research question', '研究问题')}</label>
+          <div class="ask-input-row">
+            <input id="research-question" class="site-control-input" type="search" autocomplete="off" required minlength="2" maxlength="240" placeholder={pick('What does recent evidence say about pertussis resurgence?', '近期证据如何解释百日咳回升？')} />
+            <button type="submit"><span>{pick('Find evidence', '查找证据')}</span><span aria-hidden="true">→</span></button>
+          </div>
+        </form>
+        <div class="ask-examples" aria-label={pick('Example questions', '问题示例')}>
+          <span>{pick('Try a focused query', '试试这些问题')}</span>
+          <button type="button" data-question={pick('pertussis resurgence and vaccination', '百日咳回升与疫苗接种')}>{pick('Pertussis resurgence', '百日咳回升')}</button>
+          <button type="button" data-question={pick('dengue surveillance in Brazil', '巴西登革热监测')}>{pick('Dengue in Brazil', '巴西登革热')}</button>
+          <button type="button" data-question={pick('antimicrobial resistance systematic reviews', '抗菌药物耐药系统综述')}>{pick('AMR reviews', '耐药性综述')}</button>
+        </div>
+        <p class="ask-privacy"><span class="ask-privacy-dot" aria-hidden="true"></span>{pick('Processed in this browser · not sent to a model · not stored by this page', '仅在当前浏览器处理 · 不发送给模型 · 本页面不保存')}</p>
+      </div>
     </header>
 
     <section id="ask-status" class="card ask-status" role="status" aria-live="polite" hidden></section>
     <section id="ask-answer" class="ask-answer" aria-live="polite" hidden>
       <article class="card answer-summary">
-        <div class="answer-heading"><div><p class="academic-kicker">{pick('Catalogue answer', '目录回答')}</p><h2>{pick('What the indexed evidence shows', '索引证据显示什么')}</h2></div><a href={`${prefix}/research/`}>{pick('Browse Research Radar →', '浏览研究雷达 →')}</a></div>
+        <div class="answer-heading"><div><p class="academic-kicker">{pick('Catalogue answer', '目录回答')}</p><h2>{pick('What the indexed evidence shows', '索引证据显示什么')}</h2></div><a href={`${prefix}/research/`}>{pick('Browse Research Radar', '浏览研究雷达')} <span aria-hidden="true">→</span></a></div>
+        <p id="answer-query-caption" class="answer-query-caption"></p>
         <p id="answer-summary-text"></p>
+        <div class="answer-metrics" aria-label={pick('Answer counts', '回答统计')}>
+          <div><strong id="answer-exact-count">—</strong><span>{pick('Exact matches', '精确匹配')}</span></div>
+          <div><strong id="answer-background-count">—</strong><span>{pick('Background matches', '背景匹配')}</span></div>
+          <div><strong id="answer-surveillance-count">—</strong><span>{pick('Public signals', '公开信号')}</span></div>
+        </div>
         <div id="answer-themes" class="answer-themes"></div>
         <p id="answer-limitations" class="answer-limitations"></p>
       </article>
 
+      <article id="answer-surveillance-card" class="card answer-section ask-surveillance-section" hidden>
+        <div class="answer-section-heading">
+          <div><p class="academic-kicker">{pick('Surveillance context', '监测背景')}</p><h2>{pick('Epidemiological curve', '流行病学曲线')}</h2></div>
+          <span class="answer-section-badge">{pick('GIDS data', 'GIDS 数据')}</span>
+        </div>
+        <p id="answer-surveillance-intro" class="answer-section-intro"></p>
+        <ResearchAskSurveillance client:load initialLanguage={locale} />
+      </article>
+
       <article id="answer-signals-card" class="card answer-section" hidden>
-        <p class="academic-kicker">{pick('Current GIDS context', '当前 GIDS 背景')}</p>
-        <h2>{pick('Linked public surveillance signals', '已关联的公开监测信号')}</h2>
+        <div class="answer-section-heading"><div><p class="academic-kicker">{pick('Current GIDS context', '当前 GIDS 背景')}</p><h2>{pick('Linked public surveillance signals', '已关联的公开监测信号')}</h2></div><span class="answer-section-badge">{pick('Linked evidence', '关联证据')}</span></div>
         <div id="answer-signals" class="signal-list"></div>
       </article>
 
       <article class="card answer-section">
-        <p class="academic-kicker">{pick('Cited evidence', '引用证据')}</p>
-        <h2>{pick('Relevant Research Radar records', '相关研究雷达记录')}</h2>
+        <div class="answer-section-heading"><div><p class="academic-kicker">{pick('Cited evidence', '引用证据')}</p><h2>{pick('Relevant Research Radar records', '相关研究雷达记录')}</h2></div><span class="answer-section-badge">{pick('Source-level links', '来源级链接')}</span></div>
         <div id="answer-evidence" class="evidence-list"></div>
       </article>
     </section>
@@ -77,15 +108,32 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
   const input = document.querySelector<HTMLInputElement>('#research-question');
   const status = document.querySelector<HTMLElement>('#ask-status');
   const answer = document.querySelector<HTMLElement>('#ask-answer');
+  const queryCaption = document.querySelector<HTMLElement>('#answer-query-caption');
   const summary = document.querySelector<HTMLElement>('#answer-summary-text');
+  const exactCount = document.querySelector<HTMLElement>('#answer-exact-count');
+  const backgroundCount = document.querySelector<HTMLElement>('#answer-background-count');
+  const surveillanceCount = document.querySelector<HTMLElement>('#answer-surveillance-count');
   const themes = document.querySelector<HTMLElement>('#answer-themes');
   const limitations = document.querySelector<HTMLElement>('#answer-limitations');
+  const surveillanceCard = document.querySelector<HTMLElement>('#answer-surveillance-card');
+  const surveillanceIntro = document.querySelector<HTMLElement>('#answer-surveillance-intro');
   const signalsCard = document.querySelector<HTMLElement>('#answer-signals-card');
   const signals = document.querySelector<HTMLElement>('#answer-signals');
   const evidence = document.querySelector<HTMLElement>('#answer-evidence');
   let cataloguePromise: Promise<any[]> | null = null;
   const isZh = () => form?.dataset.researchLocale === 'zh';
   const routePrefix = isZh() ? '/zh' : '';
+  const SURVEILLANCE_EVENT = 'gids:research-ask-surveillance';
+  type SurveillanceDetail = {
+    diseaseId: string;
+    diseaseSlug?: string | null;
+    diseaseNameEn?: string | null;
+    diseaseNameZh?: string | null;
+    countryCodes: string[];
+    countryNameEn?: string | null;
+    countryNameZh?: string | null;
+  };
+  const askWindow = window as Window & { __gidsResearchAskSurveillance?: SurveillanceDetail | null };
   const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
     const element = document.createElement(tag);
     if (className) element.className = className;
@@ -111,11 +159,65 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
     return cataloguePromise;
   };
 
+  const normalizedFacet = (value: unknown) => String(value ?? '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+  const requestedFacetTerms = (result: ReturnType<typeof answerResearchQuestion>, kind: string) => [...new Set(
+    result.evidence.flatMap((item) => item.matchReasons
+      .filter((reason) => reason.kind === kind)
+      .flatMap((reason) => [reason.queryTerm, reason.matchedAlias])
+      .map(normalizedFacet)
+      .filter(Boolean))
+  )];
+  const matchesFacet = (item: any, terms: string[]) => {
+    if (!terms.length) return false;
+    const candidates = [item.disease_id, item.slug, item.code, item.name_en, item.name_zh]
+      .map(normalizedFacet)
+      .filter(Boolean);
+    return terms.some((term) => candidates.some((candidate) => (
+      candidate === term
+      || (candidate.length > 3 && (candidate.includes(term) || term.includes(candidate)))
+    )));
+  };
+  const buildSurveillanceDetail = (result: ReturnType<typeof answerResearchQuestion>): SurveillanceDetail | null => {
+    const diseaseTerms = requestedFacetTerms(result, 'disease');
+    if (!diseaseTerms.length) return null;
+    const diseaseCandidates = result.evidence.flatMap((item) => item.article.diseases ?? [])
+      .filter((item: any) => Number(item.confidence ?? 1) >= 0.66 && item.disease_id)
+      .filter((item: any) => matchesFacet(item, diseaseTerms));
+    const disease = new Map(diseaseCandidates.map((item: any) => [String(item.disease_id), item])).values().next().value as any;
+    if (!disease) return null;
+
+    const countryTerms = requestedFacetTerms(result, 'country');
+    const countryCandidates = countryTerms.length
+      ? result.evidence.flatMap((item) => item.article.countries ?? [])
+        .filter((item: any) => Number(item.confidence ?? 1) >= 0.66 && item.code)
+        .filter((item: any) => matchesFacet(item, countryTerms))
+      : [];
+    const countries = [...new Map(countryCandidates.map((item: any) => [String(item.code).toUpperCase(), item])).values()] as any[];
+    return {
+      diseaseId: String(disease.disease_id),
+      diseaseSlug: disease.slug ?? null,
+      diseaseNameEn: disease.name_en ?? null,
+      diseaseNameZh: disease.name_zh ?? null,
+      countryCodes: countries.map((item) => String(item.code).toUpperCase()),
+      countryNameEn: countries.length === 1 ? countries[0].name_en ?? null : null,
+      countryNameZh: countries.length === 1 ? countries[0].name_zh ?? null : null,
+    };
+  };
+
   const render = (result: ReturnType<typeof answerResearchQuestion>) => {
-    if (!answer || !summary || !themes || !limitations || !signals || !signalsCard || !evidence || !status) return;
+    if (!answer || !queryCaption || !summary || !exactCount || !backgroundCount || !surveillanceCount || !themes || !limitations || !surveillanceCard || !surveillanceIntro || !signals || !signalsCard || !evidence || !status) return;
     status.hidden = true;
     answer.hidden = false;
+    queryCaption.textContent = `${isZh() ? '当前问题' : 'Current question'} · ${result.query}`;
     summary.textContent = isZh() ? result.summaryZh : result.summaryEn;
+    exactCount.textContent = String(result.exactEvidence.length);
+    backgroundCount.textContent = String(result.backgroundEvidence.length);
+    surveillanceCount.textContent = String(result.signals.length);
     limitations.textContent = isZh() ? result.limitationsZh : result.limitationsEn;
     themes.replaceChildren(...result.themes.map((item) => {
       const chip = make('span');
@@ -137,6 +239,26 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
       return link;
     }));
 
+    const surveillanceDetail = buildSurveillanceDetail(result);
+    surveillanceCard.hidden = !surveillanceDetail;
+    if (surveillanceDetail) {
+      const diseaseLabel = isZh()
+        ? surveillanceDetail.diseaseNameZh || surveillanceDetail.diseaseNameEn || surveillanceDetail.diseaseId
+        : surveillanceDetail.diseaseNameEn || surveillanceDetail.diseaseId;
+      const countryLabel = surveillanceDetail.countryCodes.length === 1
+        ? (isZh()
+            ? surveillanceDetail.countryNameZh || surveillanceDetail.countryNameEn || surveillanceDetail.countryCodes[0]
+            : surveillanceDetail.countryNameEn || surveillanceDetail.countryCodes[0])
+        : surveillanceDetail.countryCodes.length > 1
+          ? (isZh() ? `${surveillanceDetail.countryCodes.length} 个相关国家/地区` : `${surveillanceDetail.countryCodes.length} related locations`)
+          : (isZh() ? '报告国家/地区' : 'reporting locations');
+      surveillanceIntro.textContent = isZh()
+        ? `已根据问题匹配 ${diseaseLabel} × ${countryLabel} 的公开报告病例序列。`
+        : `A public reported-case series was matched for ${diseaseLabel} × ${countryLabel}.`;
+    }
+    askWindow.__gidsResearchAskSurveillance = surveillanceDetail;
+    window.dispatchEvent(new CustomEvent(SURVEILLANCE_EVENT, { detail: surveillanceDetail }));
+
     if (!result.evidence.length) {
       const empty = make('p', 'evidence-empty');
       empty.textContent = isZh() ? '请换一个更具体的疾病、地区或主题后重试。' : 'Try a more specific disease, geography, or topic.';
@@ -149,13 +271,21 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
       const number = make('span', 'evidence-number');
       number.textContent = String(index + 1).padStart(2, '0');
       const body = make('div');
+      const rowHeader = make('div', 'evidence-row-header');
       const heading = make('h3');
       const internal = make('a');
       internal.href = `${routePrefix}/research/articles/${article.slug}/`;
       internal.textContent = article.title || (isZh() ? '未命名研究' : 'Untitled research');
       heading.append(internal);
+      const level = make('span', `evidence-level evidence-level-${item.evidenceLevel}`);
+      level.textContent = item.evidenceLevel === 'exact'
+        ? (isZh() ? '精确匹配' : 'Exact match')
+        : (isZh() ? '背景匹配' : 'Background');
+      rowHeader.append(level);
       const meta = make('p', 'evidence-meta');
       meta.textContent = [article.journal, article.study_type, (article.countries ?? []).map((country: any) => country.name_en || country.code).join(', '), formatDate(article.published_at)].filter(Boolean).join(' · ');
+      const matched = make('p', 'evidence-match');
+      matched.textContent = `${isZh() ? '匹配' : 'Matched'}: ${item.matchedTerms.join(isZh() ? '、' : ', ')}`;
       const finding = make('p', 'evidence-finding');
       finding.textContent = (isZh() ? item.findingZh : item.findingEn) || (isZh() ? '该记录尚无已发布的结构化结果摘要；请查看原文。' : 'No published structured finding is available for this record; consult the source.');
       const citations = make('div', 'evidence-citations');
@@ -187,8 +317,9 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
         oa.textContent = isZh() ? '开放获取 ↗' : 'Open access ↗';
         citations.append(oa);
       }
-      body.append(heading, meta, finding, citations);
+      body.append(rowHeader, heading, meta, matched, finding, citations);
       row.append(number, body);
+      row.dataset.evidenceLevel = item.evidenceLevel;
       return row;
     }));
   };
@@ -227,47 +358,113 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
   }
 </script>
 
-<style>
-  .ask-page { width: min(74rem, calc(100% - 2rem)); margin: 0 auto; padding: 2.5rem 0 3rem; }
-  .ask-hero { padding: clamp(1.5rem, 4vw, 3rem); }
-  .ask-hero h1 { max-width: 62rem; margin-top: .7rem; color: rgb(var(--text-strong)); font: 600 clamp(2.4rem, 7vw, 5rem)/.98 'IBM Plex Sans', sans-serif; letter-spacing: -.045em; }
+<style is:global>
+  .ask-page { width: min(78rem, calc(100% - 2rem)); margin: 0 auto; padding: clamp(1.25rem, 4vw, 2.75rem) 0 4rem; }
+  .ask-hero { padding: clamp(1.25rem, 4vw, 2.75rem); background: linear-gradient(135deg, rgb(var(--surface)), rgb(var(--surface-raised) / .46)); }
+  .ask-hero-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 21rem); gap: clamp(1.5rem, 5vw, 4.5rem); align-items: stretch; }
+  .ask-hero-copy { min-width: 0; }
+  .ask-title-row { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-top: .7rem; }
+  .ask-hero h1 { max-width: 62rem; color: rgb(var(--text-strong)); font: 600 clamp(2.35rem, 6vw, 4.7rem)/.98 'IBM Plex Sans', sans-serif; letter-spacing: -.05em; }
+  .ask-title-index { flex: 0 0 auto; padding-bottom: .25rem; color: rgb(var(--text-faint)); font: 600 .62rem/1 ui-monospace, monospace; letter-spacing: .12em; }
   .ask-lede { max-width: 52rem; margin-top: 1rem; color: rgb(var(--text-muted)); font-size: clamp(.92rem, 1.8vw, 1.08rem); line-height: 1.72; }
-  .ask-form { margin-top: 2rem; }
-  .ask-form > label { display: block; margin-bottom: .55rem; color: rgb(var(--text-strong)); font-size: .72rem; font-weight: 700; }
+  .ask-method-card { border-left: 1px solid rgb(var(--border-soft) / .72); padding: .1rem 0 .1rem 1.35rem; }
+  .ask-method-kicker { color: rgb(var(--text-faint)); font-size: .64rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+  .ask-method-card ol { display: grid; gap: 1rem; margin-top: 1.1rem; list-style: none; }
+  .ask-method-card li { display: grid; grid-template-columns: 1.8rem minmax(0, 1fr); column-gap: .55rem; }
+  .ask-method-card li > span { grid-row: span 2; color: rgb(var(--color-teal)); font: 600 .65rem/1.35 ui-monospace, monospace; }
+  .ask-method-card strong { color: rgb(var(--text-strong)); font-size: .76rem; line-height: 1.35; }
+  .ask-method-card small { margin-top: .18rem; color: rgb(var(--text-faint)); font-size: .65rem; line-height: 1.45; }
+  .ask-query-panel { margin-top: clamp(1.75rem, 4vw, 2.75rem); border-top: 1px solid rgb(var(--border) / .75); padding-top: 1.25rem; }
+  .ask-form { margin-top: 0; }
+  .ask-form > label { display: block; margin-bottom: .55rem; color: rgb(var(--text-strong)); font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
   .ask-input-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
-  .ask-input-row input { min-height: 3.2rem; border-right: 0; padding: 0 1rem; font-size: .92rem; }
-  .ask-input-row button { min-width: 9rem; border: 1px solid rgb(var(--color-brand)); background: rgb(var(--color-brand)); padding: 0 1rem; color: white; font-size: .78rem; font-weight: 700; }
+  .ask-input-row input { min-height: 3.35rem; border-right: 0; padding: 0 1rem; font-size: .94rem; }
+  .ask-input-row button { display: inline-flex; min-width: 10.5rem; min-height: 3.35rem; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid rgb(var(--color-brand)); background: rgb(var(--color-brand)); padding: 0 1rem 0 1.1rem; color: white; font-size: .75rem; font-weight: 700; letter-spacing: .02em; transition: background-color .18s ease, border-color .18s ease; }
+  .ask-input-row button:hover { border-color: rgb(var(--color-teal)); background: rgb(var(--color-teal)); }
+  .ask-input-row button span:last-child { font-size: 1.05rem; font-weight: 400; }
   .ask-examples { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin-top: .8rem; }
-  .ask-examples span { color: rgb(var(--text-faint)); font-size: .68rem; }
-  .ask-examples button { border: 1px solid rgb(var(--border)); padding: .25rem .5rem; color: rgb(var(--text-muted)); font-size: .66rem; }
-  .ask-examples button:hover { border-color: rgb(var(--color-brand) / .65); color: rgb(var(--color-brand)); }
-  .ask-privacy { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.5; }
+  .ask-examples span { margin-right: .2rem; color: rgb(var(--text-faint)); font-size: .66rem; font-weight: 650; }
+  .ask-examples button { border: 1px solid rgb(var(--border)); background: rgb(var(--surface) / .42); padding: .3rem .58rem; color: rgb(var(--text-muted)); font-size: .66rem; transition: border-color .18s ease, color .18s ease, background-color .18s ease; }
+  .ask-examples button:hover { border-color: rgb(var(--color-brand) / .65); background: rgb(var(--surface)); color: rgb(var(--color-brand)); }
+  .ask-privacy { display: flex; align-items: center; gap: .45rem; margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .66rem; line-height: 1.5; }
+  .ask-privacy-dot { width: .42rem; height: .42rem; flex: 0 0 auto; border-radius: 999px; background: rgb(var(--color-teal)); box-shadow: 0 0 0 3px rgb(var(--color-teal) / .12); }
   .ask-status { margin-top: 1.5rem; padding: 1rem 1.2rem; color: rgb(var(--text-muted)); font-size: .8rem; }
   .ask-status[data-kind='error'] { border-color: rgb(185 28 28 / .5); color: rgb(185 28 28); }
-  .ask-answer { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
-  .answer-summary, .answer-section { padding: clamp(1.25rem, 3vw, 2rem); }
-  .answer-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .7); }
-  .answer-heading h2, .answer-section h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 clamp(1.35rem, 3vw, 1.85rem)/1.12 'IBM Plex Sans', sans-serif; }
+  .ask-answer { display: grid; gap: 1rem; margin-top: 1.5rem; }
+  .answer-summary, .answer-section { padding: clamp(1.15rem, 3vw, 2rem); }
+  .answer-summary { border-top: 3px solid rgb(var(--color-teal)); }
+  .answer-heading, .answer-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .7); }
+  .answer-heading h2, .answer-section h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 clamp(1.35rem, 3vw, 1.85rem)/1.12 'IBM Plex Sans', sans-serif; letter-spacing: -.025em; }
   .answer-heading a { flex: none; color: rgb(var(--color-brand)); font-size: .7rem; font-weight: 650; }
-  #answer-summary-text { margin-top: 1.1rem; color: rgb(var(--text)); font-size: .9rem; line-height: 1.65; }
+  .answer-heading a:hover, .ask-surveillance-links a:hover { color: rgb(var(--color-teal)); }
+  .answer-query-caption { margin-top: 1rem; color: rgb(var(--text-faint)); font: 500 .68rem/1.45 ui-monospace, monospace; }
+  #answer-summary-text { max-width: 62rem; margin-top: .55rem; color: rgb(var(--text)); font-size: .9rem; line-height: 1.68; }
+  .answer-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 1.25rem; border-top: 1px solid rgb(var(--border) / .65); border-bottom: 1px solid rgb(var(--border) / .65); }
+  .answer-metrics > div { min-width: 0; padding: .85rem .9rem; border-left: 1px solid rgb(var(--border) / .65); }
+  .answer-metrics > div:first-child { border-left: 0; padding-left: 0; }
+  .answer-metrics strong, .answer-metrics span { display: block; }
+  .answer-metrics strong { color: rgb(var(--text-strong)); font: 600 1.35rem/1.1 'IBM Plex Sans', sans-serif; font-variant-numeric: tabular-nums; }
+  .answer-metrics span { margin-top: .25rem; color: rgb(var(--text-faint)); font-size: .64rem; line-height: 1.35; }
   .answer-themes { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
-  .answer-themes span { border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised) / .45); padding: .25rem .5rem; color: rgb(var(--text-muted)); font-size: .66rem; }
+  .answer-themes span { border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised) / .45); padding: .28rem .55rem; color: rgb(var(--text-muted)); font-size: .66rem; }
   .answer-limitations { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgb(var(--border) / .6); color: rgb(var(--text-faint)); font-size: .7rem; line-height: 1.55; }
-  .signal-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: .65rem; margin-top: 1rem; }
-  .signal-list a { padding: .8rem; border: 1px solid rgb(var(--border) / .7); }
+  .answer-section-badge { flex: 0 0 auto; border: 1px solid rgb(var(--border) / .8); background: rgb(var(--surface-raised) / .42); padding: .28rem .5rem; color: rgb(var(--text-faint)); font-size: .62rem; font-weight: 650; letter-spacing: .04em; }
+  .answer-section-intro { margin-top: .85rem; color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.6; }
+  .signal-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin-top: 1rem; }
+  .signal-list a { padding: .85rem; border: 1px solid rgb(var(--border) / .7); background: rgb(var(--surface-raised) / .22); transition: border-color .18s ease, background-color .18s ease; }
+  .signal-list a:hover { border-color: rgb(var(--border-soft)); background: rgb(var(--surface-raised) / .52); }
   .signal-list strong, .signal-list span { display: block; }
   .signal-list strong { color: rgb(var(--text-strong)); font: 600 .9rem/1.25 'IBM Plex Sans', sans-serif; }
   .signal-list span { margin-top: .3rem; color: rgb(var(--text-faint)); font-size: .64rem; line-height: 1.4; }
-  .evidence-list { margin-top: 1rem; }
-  .evidence-row { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: .8rem; padding: 1.1rem 0; border-top: 1px solid rgb(var(--border) / .6); }
+  .evidence-list { margin-top: .7rem; }
+  .evidence-row { display: grid; grid-template-columns: 2.7rem minmax(0, 1fr); gap: .9rem; padding: 1.25rem 0; border-top: 1px solid rgb(var(--border) / .6); }
   .evidence-row:first-child { border-top: 0; }
-  .evidence-number { color: rgb(var(--border-soft)); font: 600 .66rem/1 ui-monospace, monospace; }
+  .evidence-number { display: inline-flex; width: 1.9rem; height: 1.9rem; align-items: center; justify-content: center; border: 1px solid rgb(var(--border) / .75); background: rgb(var(--surface-raised) / .45); color: rgb(var(--text-faint)); font: 600 .66rem/1 ui-monospace, monospace; }
+  .evidence-row-header { display: flex; justify-content: flex-end; min-height: 1.1rem; }
+  .evidence-level { border: 1px solid rgb(var(--border) / .75); padding: .2rem .45rem; color: rgb(var(--text-faint)); font-size: .6rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .evidence-level-exact { border-color: rgb(var(--color-teal) / .55); color: rgb(var(--color-teal)); }
   .evidence-row h3 a { color: rgb(var(--text-strong)); font: 600 1.05rem/1.3 'IBM Plex Sans', sans-serif; }
   .evidence-row h3 a:hover { color: rgb(var(--color-brand)); }
   .evidence-meta { margin-top: .35rem; color: rgb(var(--text-faint)); font-size: .66rem; line-height: 1.45; }
-  .evidence-finding { margin-top: .7rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.62; }
+  .evidence-match { margin-top: .55rem; color: rgb(var(--color-teal)); font: 600 .62rem/1.4 ui-monospace, monospace; }
+  .evidence-finding { margin-top: .55rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.62; }
   .evidence-citations { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .7rem; }
-  .evidence-citations a { border: 1px solid rgb(var(--border)); padding: .22rem .45rem; color: rgb(var(--color-brand)); font-size: .62rem; }
+  .evidence-citations a { border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised) / .22); padding: .26rem .5rem; color: rgb(var(--color-brand)); font-size: .62rem; transition: border-color .18s ease, background-color .18s ease; }
+  .evidence-citations a:hover { border-color: rgb(var(--color-brand) / .58); background: rgb(var(--surface-raised) / .56); }
   .evidence-empty { padding: 2rem 0; color: rgb(var(--text-muted)); font-size: .82rem; }
-  @media (max-width: 640px) { .ask-page { width: min(100% - 1rem, 74rem); padding-top: 1rem; } .ask-input-row { grid-template-columns: 1fr; } .ask-input-row input { border-right: 1px solid rgb(var(--border)); } .ask-input-row button { min-height: 2.8rem; } .answer-heading { align-items: start; flex-direction: column; } .signal-list { grid-template-columns: 1fr; } }
+
+  .ask-surveillance-widget { margin-top: 1rem; }
+  .ask-surveillance-widget-header { display: grid; gap: .5rem; border: 1px solid rgb(var(--border) / .75); border-left: 3px solid rgb(var(--color-teal)); background: linear-gradient(135deg, rgb(var(--surface-raised) / .55), rgb(var(--surface) / .72)); padding: 1rem 1.1rem; }
+  .ask-surveillance-scope { display: inline-flex; align-items: center; gap: .45rem; color: rgb(var(--color-teal)); font-size: .62rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+  .ask-surveillance-scope-dot { width: .45rem; height: .45rem; border-radius: 999px; background: currentColor; box-shadow: 0 0 0 3px rgb(var(--color-teal) / .13); }
+  .ask-surveillance-entity { display: flex; flex-wrap: wrap; align-items: baseline; gap: .45rem; color: rgb(var(--text-strong)); font: 600 1rem/1.3 'IBM Plex Sans', sans-serif; }
+  .ask-surveillance-entity span { color: rgb(var(--text-faint)); font-weight: 400; }
+  .ask-surveillance-widget-header p { max-width: 58rem; color: rgb(var(--text-muted)); font-size: .75rem; line-height: 1.55; }
+  .ask-surveillance-links { display: flex; flex-wrap: wrap; gap: .75rem 1rem; }
+  .ask-surveillance-links a { color: rgb(var(--color-brand)); font-size: .66rem; font-weight: 700; }
+  .ask-surveillance-note { margin-top: .75rem; color: rgb(var(--text-faint)); font-size: .67rem; line-height: 1.55; }
+  .ask-surveillance-widget > .chart-shell { margin-top: .9rem; }
+
+  @media (max-width: 760px) {
+    .ask-hero-layout { grid-template-columns: 1fr; gap: 1.5rem; }
+    .ask-method-card { border-top: 1px solid rgb(var(--border-soft) / .72); border-left: 0; padding: 1.25rem 0 0; }
+    .ask-method-card ol { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+    .ask-method-card li { display: block; }
+    .ask-method-card li > span { display: block; margin-bottom: .35rem; }
+    .ask-method-card small { display: block; }
+  }
+  @media (max-width: 640px) {
+    .ask-page { width: min(100% - 1rem, 78rem); padding-top: 1rem; }
+    .ask-title-row { align-items: start; }
+    .ask-title-index { padding-top: .4rem; }
+    .ask-input-row { grid-template-columns: 1fr; }
+    .ask-input-row input { border-right: 1px solid rgb(var(--border)); }
+    .ask-input-row button { width: 100%; min-height: 2.95rem; }
+    .answer-heading, .answer-section-heading { align-items: start; flex-direction: column; }
+    .answer-section-badge { align-self: flex-start; }
+    .signal-list { grid-template-columns: 1fr; }
+    .evidence-row { grid-template-columns: 2.1rem minmax(0, 1fr); gap: .65rem; }
+    .evidence-number { width: 1.65rem; height: 1.65rem; }
+    .ask-surveillance-widget > .chart-shell { margin-right: -.35rem; margin-left: -.35rem; }
+  }
 </style>

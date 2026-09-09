@@ -96,6 +96,18 @@ test('command search supports keyboard access and locale-aware results', async (
   await expect(page.getByRole('dialog', { name: 'Find data and evidence' })).not.toBeVisible();
 });
 
+test('Ask GIDS links a focused research query to its surveillance curve', async ({ page }, testInfo) => {
+  test.skip(!['chromium-390', 'chromium-1280'].includes(testInfo.project.name));
+  await page.goto('/research/ask/?q=dengue+surveillance+in+Brazil', { waitUntil: 'networkidle' });
+  await expect(page.locator('#answer-surveillance-card')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Epidemiological curve' })).toBeVisible();
+  await expect(page.locator('#answer-exact-count')).toHaveText('4');
+  await expect(page.locator('.ask-surveillance-entity')).toContainText('Dengue');
+  await expect(page.locator('.ask-surveillance-entity')).toContainText('Brazil');
+  await expect(page.locator('[data-research-surveillance="true"] .chart-sidebar-name').first()).toContainText('Brazil');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+});
+
 test('shared public pages render complete Chinese structures', async ({ page }, testInfo) => {
   test.skip(!['chromium-390', 'chromium-1280'].includes(testInfo.project.name));
   await page.goto('/zh/about/');

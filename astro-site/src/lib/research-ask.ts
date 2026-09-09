@@ -13,8 +13,8 @@ export interface ResearchAskArticle {
   open_access_status?: string | null;
   open_access_url?: string | null;
   tags?: Array<string | { name?: string; label?: string }>;
-  diseases?: Array<{ disease_id?: string; name_en?: string; name_zh?: string; confidence?: number }>;
-  countries?: Array<{ code?: string; name_en?: string; name_zh?: string; confidence?: number }>;
+  diseases?: Array<{ disease_id?: string; slug?: string; name_en?: string; name_zh?: string; confidence?: number }>;
+  countries?: Array<{ code?: string; slug?: string; name_en?: string; name_zh?: string; confidence?: number }>;
   topics?: Array<{ name?: string; confidence?: number }>;
   summary?: Record<string, Record<string, unknown>>;
   why_it_matters_en?: string | null;
@@ -198,7 +198,12 @@ function containsTerm(haystack: string, term: string): boolean {
 }
 
 function normalizedAliases(values: unknown[]): string[] {
-  return [...new Set(values.map(normalizeText).filter(Boolean))];
+  // A two-letter country code can be an ordinary question word (for example,
+  // India's `IN` is also the preposition "in"). Keep the full country name
+  // searchable, but do not let a stop-word code become an implicit facet.
+  return [...new Set(values.map(normalizeText).filter((alias) => (
+    Boolean(alias) && !STOP_WORDS.has(alias)
+  )))];
 }
 
 function mergeAliasGroups(groups: AliasGroup[]): AliasGroup[] {
