@@ -62,6 +62,15 @@ when the crawler or `scripts/generate_site_data.py` runs.
    artifact.
 6. The code repository HEAD is unchanged throughout the release.
 
+When a release is triggered by a country crawl, the trigger carries that country
+scope into site-data generation. The exporter refreshes that country's country
+JSON, merges the changed slice into affected disease JSON, and regenerates only
+the corresponding download partitions. A manual control-panel refresh also
+collects completed country crawls since the last release and uses those scopes.
+Existing country/disease files and historical download windows are reused in
+place. A scheduled release without a known scope remains a full refresh so
+corrections cannot be missed.
+
 Every public export contains a manifest with explicit partition and format paths. The
 download repository is a distribution channel, not the permanent raw archive;
 it has no `releases/` directory or GitHub Release dependency.

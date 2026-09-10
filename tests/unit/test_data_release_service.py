@@ -505,6 +505,22 @@ def test_generate_site_data_command_builds_direct_downloads_without_publishing(t
     }.isdisjoint(command)
 
 
+def test_generate_site_data_command_carries_incremental_country_scope(tmp_path):
+    service = DataReleaseService()
+    command = service._generate_site_data_command(
+        python_path=tmp_path / "python",
+        download_url_base="https://raw.example/data/main",
+        incremental_country_codes=["cn", " CA-ON "],
+    )
+
+    assert command[-4:] == [
+        "--incremental-country",
+        "CN",
+        "--incremental-country",
+        "CA-ON",
+    ]
+
+
 @pytest.mark.asyncio
 async def test_release_preflight_checks_direct_download_repo_when_enabled(
     monkeypatch, tmp_path

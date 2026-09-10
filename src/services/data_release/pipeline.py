@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 import json
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any
 from zoneinfo import ZoneInfo
 
 
@@ -164,6 +165,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     generate_cmd = service._generate_site_data_command(
         python_path=python_path,
         download_url_base=download_url_base,
+        incremental_country_codes=input_data.get("incremental_country_codes") or [],
     )
     await service._run_logged_command(
         task.task_uuid,
@@ -428,6 +430,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     output = {
         "release_job_id": job.job_id,
         "release_job_name": job.name,
+        "incremental_country_codes": input_data.get("incremental_country_codes") or [],
         "github_repo_url": download_repo_url,
         "download_repo_branch": branch,
         "download_url_base": download_url_base,

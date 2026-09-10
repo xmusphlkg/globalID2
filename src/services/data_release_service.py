@@ -804,8 +804,64 @@ class DataReleaseService:
         download_repo_url = self._download_repo_url()
         download_url_base = self._download_repo_raw_base(job)
         raw_archive = self._raw_archive_runtime()
+        incremental_country_codes: list[str] = []
+        async with get_database() as db:
+            if trigger_task_uuid:
+                trigger_task = await db.execute(
+                    select(Task).where(Task.task_uuid == trigger_task_uuid)
+                )
+                trigger_task = trigger_task.scalar_one_or_none()
+                trigger_input = dict(
+                    (trigger_task.input_data if trigger_task else None) or {}
+                )
+                trigger_country = str(
+                    trigger_input.get("country")
+                    or trigger_input.get("country_code")
+                    or ""
+                ).strip().upper()
+                if trigger_country:
+                    incremental_country_codes = [trigger_country]
+            elif manual:
+                # A manual control-panel refresh should still be incremental
+                # when it follows one or more completed country crawls. If no
+                # crawl happened since the last release, keep the safe full
+                # refresh behavior for code/configuration changes.
+                latest_release = (
+                    await db.execute(
+                        select(Task.completed_at)
+                        .where(
+                            Task.task_type == TaskType.EXPORT_DATA,
+                            Task.status == TaskStatus.COMPLETED,
+                            Task.completed_at.is_not(None),
+                        )
+                        .order_by(Task.completed_at.desc())
+                        .limit(1)
+                    )
+                ).scalar_one_or_none()
+                crawl_query = select(Task).where(
+                    Task.task_type == TaskType.CRAWL_DATA,
+                    Task.status == TaskStatus.COMPLETED,
+                )
+                if latest_release is not None:
+                    crawl_query = crawl_query.where(
+                        Task.completed_at > latest_release
+                    )
+                crawl_tasks = (
+                    await db.execute(
+                        crawl_query.order_by(Task.completed_at.asc()).limit(100)
+                    )
+                ).scalars().all()
+                for crawl_task in crawl_tasks:
+                    crawl_input = dict(crawl_task.input_data or {})
+                    country = str(
+                        crawl_input.get("country")
+                        or crawl_input.get("country_code")
+                        or ""
+                    ).strip().upper()
+                    if country and country not in incremental_country_codes:
+                        incremental_country_codes.append(country)
         description_parts = [
-            f"Generate site data and build Astro site for release job {job.job_id}.",
+            f"Refresh and generate site data, then build Astro site for release job {job.job_id}.",
             (
                 f"Incrementally archive raw crawler data to {raw_archive.branch}."
                 if raw_archive.enabled
@@ -836,6 +892,7 @@ class DataReleaseService:
             "timezone": job.timezone or self._config().timezone,
             "trigger": trigger,
             "manual_trigger": manual,
+            "incremental_country_codes": incremental_country_codes,
             "trigger_task_uuid": trigger_task_uuid,
             "generated_paths": list(GENERATED_DATA_PATHS),
             "raw_archive_enabled": raw_archive.enabled,
@@ -1328,10 +1385,12 @@ class DataReleaseService:
         *,
         python_path: Path,
         download_url_base: str,
+        incremental_country_codes: list[str] | tuple[str, ...] | None = None,
     ) -> list[str]:
         return build_generate_site_data_command(
             python_path=python_path,
             download_url_base=download_url_base,
+            incremental_country_codes=incremental_country_codes,
         )
 
     def _update_situation_room_command(self, *, python_path: Path) -> list[str]:
