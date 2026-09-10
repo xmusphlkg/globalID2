@@ -2,6 +2,36 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing bilingual notes are also available in the website Changelog.
 
+## [0.9.6] - 2026-09-10
+
+### Added
+
+- Added surveillance context to Research Ask: matched published disease/location evidence with GIDS reported-case curves, bilingual data links, and interpretation notes.
+- Added runtime routing telemetry for the Model Center and exposed actual routability, recovery state, capacity, latency, and failure history in the control panel.
+- Added bounded literature-workload probes and independent provider/model admission controls so production summary traffic is tested under a representative structured workload.
+- Added explicit Australia ingestion semantics for closed-month revisions, open provisional months, completeness-based recovery, and authoritative revision flags.
+
+### Changed
+
+- Research Radar persistence now classifies candidates before opening transactions, writes them in stable order and bounded batches, and retries only PostgreSQL deadlock victims.
+- Model Center route health now decays stale failure streaks, probes chronically failing routes for recovery, and tunes provider concurrency independently from model concurrency.
+- Literature enrichment now tolerates mixed-prefix/suffix JSON responses, retries transient model-channel failures, and supports configurable per-model attempts.
+- Control-plane event streams now use bounded connections with automatic client reconnects, allowing clean service maintenance without losing the event contract.
+- Situation Room production release workflows are now manual-only; scheduled runs stop at a verified artifact until an operator requests deployment.
+
+### Fixed
+
+- Prevented missing-model-channel errors from consuming every summary retry and added a cooldown before probing the same unavailable route again.
+- Prevented malformed or fenced model responses from failing otherwise recoverable literature enrichment.
+- Prevented repeated SMTP authentication failures from hammering the server by applying a bounded authentication cooldown.
+- Made quoted SEO metadata parse safely during static output checks.
+- Kept AU crawls from silently publishing an open provisional month unless explicitly requested, while recovering materially incomplete live snapshots from approved archives.
+
+### Operations
+
+- Hardened automated research releases with bounded retries, deterministic persistence, source completeness checks, and clearer control-plane failure handling.
+- Added focused tests for model-channel recovery, literature response parsing and retries, SMTP authentication cooldowns, AU provisional ingestion, and release automation.
+
 ## [0.9.5] - 2026-09-05
 
 ### Fixed

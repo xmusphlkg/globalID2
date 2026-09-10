@@ -1107,6 +1107,22 @@ async def test_model_enrichment_coerces_scalar_field_payloads():
     assert "Coerced scalar fields" in result.review_notes
 
 
+def test_parse_json_supports_mixed_prefix_and_suffix() -> None:
+    parsed = enrichment_module._parse_json(
+        "prefix text\n```json\n{\"research_question\": {\"text\": \"ok\"}, \"study_design\": null, \"population_setting\": null, \"main_findings\": null, \"public_health_relevance\": null, \"limitations\": null, \"gids_interpretation\": null}\n```tail"
+    )
+
+    assert parsed["research_question"]["text"] == "ok"
+
+
+def test_parse_json_extracts_first_json_object_from_messy_text() -> None:
+    parsed = enrichment_module._parse_json(
+        'noise {"research_question": {"text": "ok"}, "study_design": null, "population_setting": null, "main_findings": null, "public_health_relevance": null, "limitations": null, "gids_interpretation": null} trailing'
+    )
+
+    assert parsed["research_question"]["text"] == "ok"
+
+
 @pytest.mark.asyncio
 async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeypatch):
     captured = {}
@@ -1135,7 +1151,7 @@ async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeyp
 
     assert captured["wait_for_model_recovery"] is True
     assert captured["max_quota_recovery_rounds"] == 1
-    assert captured["max_attempts_per_model"] == 1
+    assert captured["max_attempts_per_model"] == 2
 
 
 @pytest.mark.asyncio

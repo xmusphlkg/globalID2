@@ -100,6 +100,7 @@ def test_smtp_authentication_failure_is_not_retried(monkeypatch) -> None:
 
 def test_quit_failure_after_delivery_does_not_report_send_failure(monkeypatch) -> None:
     service = _service()
+    monkeypatch.setattr(smtp_module, "_smtp_auth_failure_retry_after", 0.0)
     connection = _Connection(
         quit_error=smtplib.SMTPServerDisconnected("connection already closed")
     )
@@ -112,3 +113,32 @@ def test_quit_failure_after_delivery_does_not_report_send_failure(monkeypatch) -
     ) is True
     assert len(connection.messages) == 1
     assert connection.quit_calls == 1
+
+
+def test_auth_failure_blocks_follow_up_sends_within_cooldown(monkeypatch) -> None:
+    service = _service()
+    monkeypatch.setattr(smtp_module, "_smtp_auth_failure_retry_after", 0.0)
+    connection = _Connection(
+        send_error=smtplib.SMTPAuthenticationError(535, b"bad credentials")
+    )
+    monkeypatch.setattr(service, "_create_connection", lambda: connection)
+    now = [1000.0]
+    monkeypatch.setattr(smtp_module.time, "time", lambda: now[0])
+    assert smtp_module._smtp_auth_failure_retry_after == 0.0
+    assert (
+        service.send_email(
+            recipients=["ops@example.test"],
+            subject="Alert",
+            body_html="<p>failed task</p>",
+        )
+        is False
+    )
+    assert smtp_module._smtp_auth_failure_retry_after > now[0]
+    assert (
+        service.send_email(
+            recipients=["ops@example.test"],
+            subject="Alert",
+            body_html="<p>failed task</p>",
+        )
+        is False
+    )

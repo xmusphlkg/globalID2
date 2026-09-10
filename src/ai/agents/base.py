@@ -19,6 +19,7 @@ from src.ai.model_center import (
     acquire_runtime_route_admission,
     clear_route_rate_limit,
     extract_retry_after_seconds,
+    is_model_channel_failure,
     get_active_model_routes,
     get_runtime_routes,
     is_model_unavailable_error,
@@ -986,6 +987,7 @@ class BaseAgent(ABC):
 
                     quota_related = is_rate_limit_error(e)
                     unavailable_related = is_model_unavailable_error(e)
+                    channel_failed_related = is_model_channel_failure(e)
                     retry_after_seconds = extract_retry_after_seconds(e)
                     cooldown_seconds = retry_after_seconds or int(
                         getattr(self.config.ai, "rate_limit_cooldown_seconds", 300)
@@ -1055,6 +1057,30 @@ class BaseAgent(ABC):
                             except Exception as persist_exc:
                                 logger.warning(
                                     f"Failed to persist route cooldown for '{route_key}': {persist_exc}"
+                                )
+                        BaseAgent.AVAILABLE_MODEL_ROUTES = None
+                        BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
+                        break
+
+                    if channel_failed_related:
+                        channel_cooldown_seconds = max(60, int(cooldown_seconds))
+                        logger.warning(
+                            "Detected model channel failure for '{}'; "
+                            f"cooling down model/route for {channel_cooldown_seconds}s before probing alternatives.",
+                            self.model,
+                        )
+                        BaseAgent._mark_model_cooling_down(self.model, channel_cooldown_seconds)
+                        BaseAgent._mark_route_cooling_down(route_key, channel_cooldown_seconds)
+                        if route:
+                            try:
+                                await mark_route_rate_limited(
+                                    route,
+                                    str(e),
+                                    retry_after_seconds=cooldown_seconds,
+                                )
+                            except Exception as persist_exc:
+                                logger.warning(
+                                    f"Failed to persist channel-failure cooldown for '{route_key}': {persist_exc}"
                                 )
                         BaseAgent.AVAILABLE_MODEL_ROUTES = None
                         BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None

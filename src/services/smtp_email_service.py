@@ -20,6 +20,8 @@ logger = get_logger(__name__)
 
 _SMTP_MAX_ATTEMPTS = 3
 _SMTP_RETRY_BASE_DELAY_SECONDS = 1.0
+_SMTP_AUTH_FAILURE_COOLDOWN_SECONDS = 300.0
+_smtp_auth_failure_retry_after: float = 0.0
 
 
 def _is_retryable_smtp_error(exc: BaseException) -> bool:
@@ -44,6 +46,23 @@ def _is_retryable_smtp_error(exc: BaseException) -> bool:
             OSError,
         ),
     )
+
+
+def _is_auth_failure_error(exc: BaseException) -> bool:
+    if isinstance(exc, smtplib.SMTPAuthenticationError):
+        return True
+    if isinstance(exc, smtplib.SMTPResponseException):
+        try:
+            return int(exc.smtp_code) == 535
+        except (TypeError, ValueError):
+            return False
+    return False
+
+
+def _record_auth_failure_cooldown(now: float, *, message: str) -> None:
+    global _smtp_auth_failure_retry_after
+    _smtp_auth_failure_retry_after = now + _SMTP_AUTH_FAILURE_COOLDOWN_SECONDS
+    logger.warning("SMTP auth-related failure; suppressing retries for {}s: {}", int(_SMTP_AUTH_FAILURE_COOLDOWN_SECONDS), message)
 
 
 def _close_smtp_connection(server: smtplib.SMTP, *, delivered: bool) -> None:
@@ -103,6 +122,14 @@ class SMTPEmailService:
         recipient_list = [addr.strip() for addr in recipients if addr and addr.strip()]
         if not recipient_list:
             logger.warning("SMTP email skipped: no recipients configured")
+            return False
+
+        now = time.time()
+        if _smtp_auth_failure_retry_after and now < _smtp_auth_failure_retry_after:
+            logger.warning(
+                "SMTP auth configuration issue active; skipping send for {} more second(s).",
+                int(_smtp_auth_failure_retry_after - now),
+            )
             return False
 
         from_email = config["smtp_from_email"]
@@ -191,6 +218,8 @@ class SMTPEmailService:
                 time.sleep(delay)
 
             if last_error is not None:
+                if _is_auth_failure_error(last_error):
+                    _record_auth_failure_cooldown(time.time(), message=str(last_error))
                 raise last_error
             raise RuntimeError("SMTP delivery failed without an error")
         except Exception as exc:

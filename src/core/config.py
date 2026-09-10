@@ -717,6 +717,12 @@ class LiteratureSettings(_BaseEnvSettings):
         default=True,
         description="Wait once for Model Center route recovery before failing literature AI enrichment",
     )
+    ai_literature_max_attempts_per_model: int = Field(
+        default=2,
+        ge=1,
+        le=3,
+        description="Maximum retries per model for literature enrichment requests",
+    )
     ai_quota_recovery_rounds: int = Field(
         default=1,
         ge=0,

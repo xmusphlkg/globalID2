@@ -67,7 +67,11 @@ class LiteratureEvidenceAgent(BaseAgent):
                     literature_config.ai_wait_for_model_recovery,
                 )
             ),
-            max_attempts_per_model=1,
+            max_attempts_per_model=getattr(
+                literature_config,
+                "ai_literature_max_attempts_per_model",
+                2,
+            ),
             max_quota_recovery_rounds=int(
                 kwargs.get(
                     "max_quota_recovery_rounds",
@@ -116,14 +120,36 @@ def source_fingerprint(article: LiteratureArticle) -> str:
 
 def _parse_json(value: str) -> dict[str, Any]:
     text = value.strip()
-    fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, re.DOTALL | re.IGNORECASE)
+
+    def _parse_first_object(payload: str) -> Any:
+        decoder = json.JSONDecoder()
+        start = 0
+        while start < len(payload):
+            open_idx = payload.find("{", start)
+            if open_idx < 0:
+                break
+            try:
+                parsed = decoder.raw_decode(payload, open_idx)[0]
+            except json.JSONDecodeError:
+                start = open_idx + 1
+                continue
+            return parsed
+        return None
+
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL | re.IGNORECASE)
     if fenced:
+        candidate = _parse_first_object(fenced.group(1))
+        if isinstance(candidate, dict):
+            return candidate
         text = fenced.group(1)
     else:
+        candidate = _parse_first_object(text)
+        if isinstance(candidate, dict):
+            return candidate
         start, end = text.find("{"), text.rfind("}")
         if start >= 0 and end > start:
             text = text[start : end + 1]
-    parsed = json.loads(text)
+    parsed = json.loads(text) if text else {}
     if not isinstance(parsed, dict):
         raise ValueError("Literature enrichment response must be a JSON object")
     return parsed
@@ -159,6 +185,9 @@ def _is_transient_generation_error(error: Exception) -> bool:
             "rate limit",
             "service unavailable",
             "temporarily unavailable",
+            "get_channel_failed",
+            "channel unavailable",
+            "可用渠道不存在",
             "timed out",
             "timeout",
         )

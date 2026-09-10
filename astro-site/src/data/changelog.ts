@@ -22,6 +22,75 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.9.6',
+    date: '2026-09-10',
+    titleEn: 'Surveillance context and resilient research operations',
+    titleZh: '监测背景与更稳健的研究运营',
+    summaryEn:
+      'GIDS now connects Research Ask evidence to published surveillance curves, exposes real Model Center route health, and keeps literature and release automation moving through safer retries and recovery controls.',
+    summaryZh:
+      'GIDS 现在将研究问答证据连接到已发布的监测曲线，展示模型中心真实路由健康，并通过更安全的重试与恢复控制让文献和发布自动化持续运行。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Research Ask can now show a matched GIDS reported-case curve for the disease and locations found in a published evidence query.',
+            zh: '研究问答现在可以针对已发布证据查询中匹配到的疾病和地区，展示对应的 GIDS 报告病例曲线。',
+          },
+          {
+            en: 'The control panel now exposes actual model-route status, recovery state, provider capacity, latency, and failure history.',
+            zh: '控制面板现在展示模型路由实际状态、恢复状态、提供商容量、延迟和失败历史。',
+          },
+          {
+            en: 'Australia monthly ingestion now labels open provisional months and authoritative revisions explicitly, with completeness-based archive recovery.',
+            zh: '澳大利亚月度抓取现在明确标记开放暂定月份和权威修订，并在实时结果不完整时按完整度从归档恢复。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Research Radar persistence now uses stable ordering, bounded batches, and deadlock-only retries to keep concurrent collection reliable.',
+            zh: '研究雷达持久化现在使用稳定排序、受限批次和仅针对死锁的重试，提升并发采集可靠性。',
+          },
+          {
+            en: 'Model Center routes recover from stale failures through decaying streaks and structured workload probes, while provider and model admission stay independently tuned.',
+            zh: '模型中心路由会通过失败计数衰减和结构化负载探测从陈旧故障中恢复，同时独立调节提供商与模型准入。',
+          },
+          {
+            en: 'Research Ask adds bilingual surveillance links, curve context, and clearer result metrics without sending the query to a model.',
+            zh: '研究问答新增双语监测链接、曲线上下文和更清晰的结果指标，查询仍不会发送给模型。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Unavailable model channels now cool down before retrying, instead of consuming every literature-summary attempt.',
+            zh: '不可用模型通道现在会先进入冷却，再继续重试，不再消耗文献摘要的全部尝试次数。',
+          },
+          {
+            en: 'Messy fenced or prefixed JSON responses are recovered when they contain a valid literature object.',
+            zh: '当带有围栏或前后杂文的模型响应包含有效文献对象时，现在可以恢复解析。',
+          },
+          {
+            en: 'SMTP authentication failures now use a short cooldown, and SEO checks safely handle quoted metadata.',
+            zh: 'SMTP 认证失败现在使用短暂冷却，SEO 检查也能安全处理带引号的元数据。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.9.5',
     date: '2026-09-05',
     titleEn: 'Research Radar publication-boundary repair',
