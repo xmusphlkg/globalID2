@@ -1172,6 +1172,20 @@ def write_incremental_site_export_artifacts(
         generated_at=context["generated_at"],
     )
     write_pretty_json(output_dir / "about.json", about_snapshot)
+
+    # An incremental release still runs the Situation Room refresh first.
+    # Refresh both build-time and public latest snapshots so the generated
+    # artifact stays aligned with the database publication pointer; weekly
+    # and monthly archives remain unchanged on this bounded path.
+    situation_latest = context.get("situation_latest")
+    if situation_latest and situation_latest.get("public_enabled"):
+        write_pretty_json(output_dir / "situation" / "v3" / "latest.json", situation_latest)
+        write_compact_json(public_site_data_dir / "situation" / "v3" / "latest.json", situation_latest)
+        write_pretty_json(output_dir / "situation" / "latest.json", situation_latest)
+        write_compact_json(public_site_data_dir / "situation" / "latest.json", situation_latest)
+    elif situation_latest:
+        write_pretty_json(output_dir / "situation" / "v3" / "shadow-latest.json", situation_latest)
+
     print(
         "  ✓ incremental site artifacts "
         f"({len(changed_countries)} countries, {len(changed_diseases)} diseases)"
