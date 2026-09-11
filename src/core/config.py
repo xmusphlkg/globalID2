@@ -649,7 +649,12 @@ class LiteratureSettings(_BaseEnvSettings):
         le=1.0,
         description="Coverage target used by bounded resumable Unpaywall backfill runs",
     )
-    source_concurrency: int = Field(default=4, ge=1, le=12)
+    source_concurrency: int = Field(
+        default=2,
+        ge=1,
+        le=12,
+        description="Concurrent requests per literature provider; kept conservative for Crossref TLS stability",
+    )
     request_timeout_seconds: int = Field(default=30, ge=5, le=120)
     max_retries: int = Field(default=3, ge=1, le=5)
     persistence_deadlock_max_retries: int = Field(

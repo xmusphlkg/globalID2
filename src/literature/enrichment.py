@@ -31,6 +31,7 @@ from src.domain import (
     StandardDisease,
     Task,
 )
+from .content_policy import detail_restrictions
 
 
 logger = get_logger(__name__)
@@ -709,6 +710,8 @@ class LiteratureEnrichmentPipeline:
             summaries_by_key: dict[tuple[str, str], LiteratureSummary] = {}
 
             def needs_work(article: LiteratureArticle) -> bool:
+                if detail_restrictions(article):
+                    return False
                 if len(article.abstract_text or "") < self.config.ai_min_abstract_characters:
                     return False
                 fingerprint = source_fingerprint(article)
@@ -813,6 +816,8 @@ class LiteratureEnrichmentPipeline:
         return list(articles), context
 
     async def _should_skip(self, article: LiteratureArticle, *, language: str, force: bool) -> bool:
+        if detail_restrictions(article):
+            return True
         if len(article.abstract_text or "") < self.config.ai_min_abstract_characters:
             return True
         async with get_db() as db:

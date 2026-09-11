@@ -30,6 +30,7 @@ from src.domain import (
 from src.generation.site_data_queries import has_table
 from src.generation.site_data_writer import remove_stale_json_files, write_compact_json, write_pretty_json
 from src.literature.knowledge_graph import build_knowledge_graph
+from src.literature.content_policy import content_policy
 from src.literature.recommendations import attach_related_research
 from src.literature.weekly_briefs import enrich_weekly_briefs, load_weekly_review_registry
 from src.literature.weekly_ai_review import load_weekly_ai_review_registry
@@ -894,6 +895,9 @@ def _article_reference(
         "relation_level": relation_level,
         "recency_status": recency_status,
         "evidence_age_days": evidence_age_days,
+        "detail_available": not bool(article.get("related_only")),
+        "related_only": bool(article.get("related_only")),
+        "content_tier": article.get("content_tier"),
     }
 
 
@@ -1119,6 +1123,7 @@ def build_surveillance_evidence(
                 if decision and decision.get("status") == "rejected":
                     continue
                 article_published = _optional_public_datetime(article.get("published_at"))
+                related_only = bool(article.get("related_only"))
                 evidence_age_days = (
                     max(0, (evidence_anchor.date() - article_published.date()).days)
                     if evidence_anchor and article_published
@@ -1132,10 +1137,17 @@ def build_surveillance_evidence(
                 if decision and decision.get("status") == "confirmed":
                     relation_level = str(decision.get("relation_level") or "disease_context")
                     requested_exact = relation_level == "exact_disease_geography"
-                    is_exact = requested_exact and not outside_exact_window and not date_unverifiable
+                    is_exact = (
+                        requested_exact
+                        and not related_only
+                        and not outside_exact_window
+                        and not date_unverifiable
+                    )
                     if requested_exact and outside_exact_window:
                         relation_level = "historical_disease_geography_context"
                     elif requested_exact and date_unverifiable:
+                        relation_level = "disease_context"
+                    elif requested_exact and related_only:
                         relation_level = "disease_context"
                 else:
                     if disease_id not in article_disease_ids.get(article_id, set()):
@@ -1146,7 +1158,12 @@ def build_surveillance_evidence(
                     )
                     # A classifier-only record without a publication date cannot
                     # demonstrate that it is current enough to close a signal gap.
-                    is_exact = geographic_match and not outside_exact_window and not date_unverifiable
+                    is_exact = (
+                        geographic_match
+                        and not related_only
+                        and not outside_exact_window
+                        and not date_unverifiable
+                    )
                     relation_level = (
                         "exact_disease_geography"
                         if is_exact
@@ -1297,8 +1314,12 @@ def attach_surveillance_evidence(
     diseases_by_id: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Attach signal evidence and article backlinks without mutating input."""
+    evidence_articles = [
+        *(payload.get("articles") or []),
+        *(payload.get("related_only_articles") or []),
+    ]
     projection = build_surveillance_evidence(
-        payload.get("articles") or [],
+        evidence_articles,
         situation_snapshot,
         diseases_by_id=diseases_by_id,
         relation_decisions=payload.get("_signal_article_links") or [],
@@ -1327,6 +1348,13 @@ def attach_surveillance_evidence(
     return {
         **public_payload,
         "articles": projected_articles,
+        "related_only_articles": [
+            {
+                **article,
+                "related_signals": related_by_article.get(str(article.get("article_id") or ""), []),
+            }
+            for article in payload.get("related_only_articles") or []
+        ],
         "featured": [by_id.get(article.get("article_id"), article) for article in payload.get("featured") or []],
         "reviews_and_guidelines": [
             by_id.get(article.get("article_id"), article)
@@ -1374,6 +1402,7 @@ def empty_literature_export() -> dict[str, Any]:
         "featured": [],
         "articles": [],
         "preprints": [],
+        "related_only_articles": [],
         "integrity_alerts": [],
         "historical_baseline": [],
         "reviews_and_guidelines": [],
@@ -1721,6 +1750,7 @@ async def collect_literature_export(
         country_phrase_en = ", ".join(country["name_en"] for country in countries[article.article_id][:2])
         study_type = article.study_type or "journal article"
         summary = summaries_by_article.get(article.article_id, {})
+        policy = content_policy(article)
         summary_relevance_en = (summary.get("en") or {}).get("public_health_relevance")
         summary_relevance_zh = (summary.get("zh") or {}).get("public_health_relevance")
         context_en = (
@@ -1819,12 +1849,16 @@ async def collect_literature_export(
             "populations": controlled_entities("populations"),
             "related_surveillance": related_surveillance,
             "summary": summary,
+            "content_policy": policy,
             "content_tier": (
-                "quality_gated_bilingual_evidence"
+                "related_only"
+                if policy["related_only"]
+                else "quality_gated_bilingual_evidence"
                 if summary.get("en") and summary.get("zh")
                 else "metadata_only"
             ),
-            "indexable": bool(summary.get("en") and summary.get("zh")),
+            "related_only": policy["related_only"],
+            "indexable": bool(summary.get("en") and summary.get("zh")) and not policy["related_only"],
             "why_it_matters_en": context_en,
             "why_it_matters_zh": context_zh,
             "why_it_matters_source": "published_summary" if summary_relevance_en or summary_relevance_zh else "classifier_metadata",
@@ -1837,6 +1871,11 @@ async def collect_literature_export(
         })
 
     projected, preprints = partition_public_literature_articles(projected)
+    related_only_articles = [
+        article
+        for article in [*projected, *preprints]
+        if article.get("related_only") is True
+    ]
     # A published editorial state is necessary but not sufficient for a
     # public evidence page. Legacy metadata-only records remain in the control
     # plane until both published language summaries pass their quality gates.
@@ -2023,6 +2062,7 @@ async def collect_literature_export(
         )[:6],
         "articles": projected,
         "preprints": preprints,
+        "related_only_articles": related_only_articles,
         "integrity_alerts": integrity_alerts,
         "historical_baseline": sorted(
             [item for item in projected if item.get("source_kind") == "historical_seed"],

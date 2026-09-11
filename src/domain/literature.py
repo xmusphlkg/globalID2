@@ -174,7 +174,11 @@ class LiteratureIngestRun(BaseModel):
     # later pruned. Recovery always matches this exact value; it never guesses
     # ownership from timestamps.
     task_uuid: Mapped[Optional[str]] = mapped_column(String(36))
-    source: Mapped[str] = mapped_column(String(80), nullable=False)
+    # Source labels are composed from all enabled providers and fallback
+    # markers (for example ``crossref-unavailable``). Keep enough room for
+    # future providers without allowing a persistence failure to mask a
+    # partially successful ingest.
+    source: Mapped[str] = mapped_column(String(256), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="running")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

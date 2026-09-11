@@ -17,6 +17,7 @@ from src.domain import (
 )
 
 from .classification import CLASSIFICATION_VERSION
+from .content_policy import content_policy
 from .types import ArticleCandidate, Classification
 
 
@@ -156,6 +157,7 @@ class LiteratureRepository:
             ]
             origins.append(discovery_context)
             metadata["discovery_origins"] = origins[-20:]
+        metadata["content_policy"] = content_policy(article)
         article.metadata_ = _classification_metadata(metadata, classification)
         if (
             not editorial_locked

@@ -51,6 +51,7 @@ from .types import ArticleCandidate, Classification
 
 logger = get_logger(__name__)
 ROOT = Path(__file__).resolve().parents[2]
+_INGEST_SOURCE_MAX_LENGTH = 256
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -329,6 +330,16 @@ class LiteraturePipeline:
                     resume_after=resume_after,
                 )
                 raw_records = source_result.records
+                # If every journal stream failed, treat Crossref as
+                # unavailable so the existing PubMed fallback can take over.
+                # Partial Crossref results remain usable and are persisted.
+                if (
+                    int((source_result.checkpoint or {}).get("source_errors") or 0) > 0
+                    and not raw_records
+                ):
+                    crossref_error = "JournalStreamError"
+                    source_result = None
+                    raise RuntimeError("Crossref journal streams unavailable")
             except Exception as exc:
                 crossref_error = type(exc).__name__ or "Exception"
                 if not getattr(self.config, "pubmed_enabled", False):
@@ -360,6 +371,7 @@ class LiteraturePipeline:
             diseases, countries = await self._classification_catalogues()
 
             controlled_result = None
+            controlled_error: str | None = None
             controlled_crossref_records: list[dict[str, Any]] = []
             controlled_europe_pmc_records: list[dict[str, Any]] = []
             controlled_pubmed_records: list[dict[str, Any]] = []
@@ -374,48 +386,52 @@ class LiteraturePipeline:
                         8,
                     ),
                 )
-                controlled_result = await fetch_controlled_discovery(
-                    crossref=crossref,
-                    europe_pmc=(
-                        EuropePmcClient(
-                            timeout_seconds=self.config.request_timeout_seconds,
-                            retries=self.config.max_retries,
-                        )
-                        if self.config.europe_pmc_enabled
-                        else None
+                controlled_result, controlled_error = await _isolate_optional_source(
+                    "controlled-query",
+                    fetch_controlled_discovery(
+                        crossref=crossref,
+                        europe_pmc=(
+                            EuropePmcClient(
+                                timeout_seconds=self.config.request_timeout_seconds,
+                                retries=self.config.max_retries,
+                            )
+                            if self.config.europe_pmc_enabled
+                            else None
+                        ),
+                        pubmed=(
+                            PubMedClient(
+                                contact_email=self.config.contact_email,
+                                api_key=getattr(self.config, "pubmed_api_key", ""),
+                                tool=getattr(self.config, "pubmed_tool", "GIDSResearchRadar"),
+                                timeout_seconds=self.config.request_timeout_seconds,
+                                retries=self.config.max_retries,
+                                min_interval_seconds=getattr(self.config, "pubmed_min_interval_seconds", 0.34),
+                            )
+                            if getattr(self.config, "pubmed_enabled", False)
+                            else None
+                        ),
+                        batches=query_batches,
+                        checkpoint=controlled_checkpoint,
+                        since=since,
+                        until=now,
+                        max_queries=getattr(self.config, "controlled_discovery_queries_per_run", 8),
+                        records_per_query=getattr(
+                            self.config,
+                            "controlled_discovery_records_per_query",
+                            15,
+                        ),
+                        max_records=getattr(
+                            self.config,
+                            "controlled_discovery_max_records_per_run",
+                            120,
+                        ),
+                        concurrency=self.config.source_concurrency,
                     ),
-                    pubmed=(
-                        PubMedClient(
-                            contact_email=self.config.contact_email,
-                            api_key=getattr(self.config, "pubmed_api_key", ""),
-                            tool=getattr(self.config, "pubmed_tool", "GIDSResearchRadar"),
-                            timeout_seconds=self.config.request_timeout_seconds,
-                            retries=self.config.max_retries,
-                            min_interval_seconds=getattr(self.config, "pubmed_min_interval_seconds", 0.34),
-                        )
-                        if getattr(self.config, "pubmed_enabled", False)
-                        else None
-                    ),
-                    batches=query_batches,
-                    checkpoint=controlled_checkpoint,
-                    since=since,
-                    until=now,
-                    max_queries=getattr(self.config, "controlled_discovery_queries_per_run", 8),
-                    records_per_query=getattr(
-                        self.config,
-                        "controlled_discovery_records_per_query",
-                        15,
-                    ),
-                    max_records=getattr(
-                        self.config,
-                        "controlled_discovery_max_records_per_run",
-                        120,
-                    ),
-                    concurrency=self.config.source_concurrency,
                 )
-                controlled_crossref_records = controlled_result.crossref_records
-                controlled_europe_pmc_records = controlled_result.europe_pmc_records
-                controlled_pubmed_records = controlled_result.pubmed_records
+                if controlled_result is not None:
+                    controlled_crossref_records = controlled_result.crossref_records
+                    controlled_europe_pmc_records = controlled_result.europe_pmc_records
+                    controlled_pubmed_records = controlled_result.pubmed_records
 
             official_guidance_result = None
             official_guidance_records: list[dict[str, Any]] = []
@@ -751,6 +767,7 @@ class LiteraturePipeline:
                 "controlled_discovery_query_errors": len(
                     (controlled_result.checkpoint if controlled_result else {}).get("query_errors") or []
                 ),
+                "controlled_discovery_source_errors": int(controlled_error is not None),
                 "normalized": len(candidates),
                 "same_batch_duplicates": same_batch_duplicates,
                 "inserted": inserted,
@@ -1118,7 +1135,11 @@ class LiteraturePipeline:
             run.status = status
             run.completed_at = datetime.now(timezone.utc)
             if source is not None:
-                run.source = source
+                # Keep persistence resilient if a future provider adds a
+                # longer label than the schema allows. The database column is
+                # intentionally generous, while this guard prevents a new
+                # label from turning a successful fallback into a failed run.
+                run.source = str(source)[:_INGEST_SOURCE_MAX_LENGTH]
             if through_indexed_at is not None:
                 run.through_indexed_at = through_indexed_at
             if checkpoint is not None:
