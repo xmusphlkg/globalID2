@@ -1,17 +1,15 @@
-// src/components/charts/CountriesMapView.tsx
-// Flat world map with SVG leader lines (折线) connecting each country dot to an info box.
-// Countries and coverage status come from the shared country coverage registry.
-
-import React, {
-  useRef, useState, useEffect, useCallback, useMemo,
-} from 'react';
+// Interactive coverage map. Country dots stay quiet and compact; province dots
+// pulse only when a sub-national feed is available. Coordinates for countries
+// are derived from the bundled world GeoJSON and the MIT-licensed flag-icons
+// country catalogue, so the map does not depend on a third-party tile service.
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactEChartsCore from '../../lib/echartsReact';
 import echarts from '../../lib/echartsMap';
+import countryCatalogue from 'flag-icons/country.json' with { type: 'json' };
 import { getFlagAssetPath } from '../../lib/country-flag';
 import {
   COUNTRY_COVERAGE,
   getCoverageDisplayName,
-  getCoverageLabelOffset,
   hasCountryDataSnapshot,
   resolveCoverageStatus,
   type CoverageStatus,
@@ -19,83 +17,40 @@ import {
 
 const MAP_NAME = 'world-countries-lnglat';
 const LOCAL_WORLD_MAP_URL = '/data/world.json';
-const BOX_W = 138;
-const BOX_H = 42;
 
-function getGeoJsonBounds(geoJson: any) {
-  const bounds = {
-    minX: Infinity,
-    maxX: -Infinity,
-    minY: Infinity,
-    maxY: -Infinity,
-  };
-
-  const visit = (value: any) => {
-    if (Array.isArray(value) && typeof value[0] === 'number' && typeof value[1] === 'number') {
-      bounds.minX = Math.min(bounds.minX, value[0]);
-      bounds.maxX = Math.max(bounds.maxX, value[0]);
-      bounds.minY = Math.min(bounds.minY, value[1]);
-      bounds.maxY = Math.max(bounds.maxY, value[1]);
-      return;
-    }
-
-    if (Array.isArray(value)) value.forEach(visit);
-  };
-
-  geoJson?.features?.forEach((feature: any) => visit(feature.geometry?.coordinates));
-  return bounds;
-}
-
-function isLngLatWorldGeoJson(geoJson: any) {
-  const { minX, maxX, minY, maxY } = getGeoJsonBounds(geoJson);
-  return (
-    Number.isFinite(minX)
-    && minX >= -180.5
-    && maxX <= 180.5
-    && minY >= -90.5
-    && maxY <= 90.5
-  );
-}
-
-async function fetchLngLatWorldGeoJson() {
-  let lastError: unknown;
-
-  for (const url of [LOCAL_WORLD_MAP_URL]) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const geoJson = await response.json();
-      if (isLngLatWorldGeoJson(geoJson)) return geoJson;
-      throw new Error(`World map is not lng/lat GeoJSON: ${url}`);
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError;
-}
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+type MarkerStatus = CoverageStatus | 'Unsupported';
+type MarkerKind = 'country' | 'subdivision';
 
 interface MetaCountry {
   code: string;
   name: string;
-  total_cases: number;
-  total_deaths: number;
-  disease_count: number;
+  name_en?: string;
+  name_zh?: string;
+  parent_code?: string | null;
+  location_type?: string;
+  total_cases?: number;
+  total_deaths?: number;
+  disease_count?: number;
   data_available?: boolean;
   record_count?: number;
   date_range?: { start?: string | null; end?: string | null } | null;
 }
 
-interface DotPos {
+interface Marker {
   iso2: string;
-  status: CoverageStatus;
-  statusLabel: string;
   name: string;
-  px: number; py: number;   // dot pixel position (chart-relative)
-  bx: number; by: number;   // box centre pixel position
+  lat: number;
+  lng: number;
+  status: MarkerStatus;
+  kind: MarkerKind;
+  statusLabel: string;
+  href?: string;
   meta?: MetaCountry;
+}
+
+interface DotPos extends Marker {
+  px: number;
+  py: number;
 }
 
 interface Props {
@@ -104,427 +59,253 @@ interface Props {
   initialLanguage?: 'en' | 'zh';
 }
 
-type CountryFilterWindow = Window & {
-  __globalIdCountryFilterCodes?: string[];
+type CountryFilterWindow = Window & { __globalIdCountryFilterCodes?: string[] };
+type CatalogueCountry = { code?: string; name?: string; iso?: boolean };
+
+function getGeoJsonBounds(geoJson: any) {
+  const bounds = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+  const visit = (value: any) => {
+    if (Array.isArray(value) && typeof value[0] === 'number' && typeof value[1] === 'number') {
+      bounds.minX = Math.min(bounds.minX, value[0]); bounds.maxX = Math.max(bounds.maxX, value[0]);
+      bounds.minY = Math.min(bounds.minY, value[1]); bounds.maxY = Math.max(bounds.maxY, value[1]);
+      return;
+    }
+    if (Array.isArray(value)) value.forEach(visit);
+  };
+  geoJson?.features?.forEach((feature: any) => visit(feature.geometry?.coordinates));
+  return bounds;
+}
+
+function isLngLatWorldGeoJson(geoJson: any) {
+  const { minX, maxX, minY, maxY } = getGeoJsonBounds(geoJson);
+  return Number.isFinite(minX) && minX >= -180.5 && maxX <= 180.5 && minY >= -90.5 && maxY <= 90.5;
+}
+
+async function fetchLngLatWorldGeoJson() {
+  const response = await fetch(LOCAL_WORLD_MAP_URL);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const geoJson = await response.json();
+  if (!isLngLatWorldGeoJson(geoJson)) throw new Error('World map is not lng/lat GeoJSON');
+  return geoJson;
+}
+
+function centroid(feature: any): [number, number] | null {
+  const points: Array<[number, number]> = [];
+  const visit = (value: any) => {
+    if (Array.isArray(value) && typeof value[0] === 'number' && typeof value[1] === 'number') {
+      points.push([value[0], value[1]]); return;
+    }
+    if (Array.isArray(value)) value.forEach(visit);
+  };
+  visit(feature?.geometry?.coordinates);
+  if (!points.length) return null;
+  return [points.reduce((sum, point) => sum + point[0], 0) / points.length, points.reduce((sum, point) => sum + point[1], 0) / points.length];
+}
+
+function normaliseName(value: string) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim().replace(/^(the|republic of|state of)\s+/, '');
+}
+
+const NAME_ALIASES: Record<string, string[]> = {
+  'czechia': ['czech republic'], 'eswatini': ['swaziland'], 'north macedonia': ['macedonia'],
+  'myanmar': ['burma'], 'timor leste': ['east timor'], 'brunei': ['brunei darussalam'],
+  'laos': ['lao pdr', 'lao people s democratic republic'], 'russia': ['russian federation'],
+  'south korea': ['korea'], 'moldova': ['republic of moldova'], 'vietnam': ['viet nam'],
+  'tanzania': ['united republic of tanzania'], 'bolivia': ['bolivia plurinational state of'],
+  'venezuela': ['venezuela bolivarian republic of'], 'iran': ['iran islamic republic of'],
+  'syria': ['syrian arab republic'], 'democratic republic of the congo': ['dem rep congo', 'democratic republic of congo'],
+  'congo': ['republic of the congo'], 'palestine': ['palestine west bank and gaza'],
+  'united states': ['united states of america'], 'united kingdom': ['uk'],
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// Open-source map data sometimes omits tiny islands or uses a disputed label.
+// These fallbacks keep the marker layer useful while remaining auditable.
+const FALLBACK_POINTS: Record<string, [number, number]> = {
+  AD: [1.58, 42.55], MC: [7.42, 43.73], SM: [12.46, 43.94], VA: [12.45, 41.9],
+  LI: [9.55, 47.14], SG: [103.82, 1.35], HK: [114.17, 22.32], MO: [113.55, 22.2],
+  TW: [121, 23.7], MV: [73.22, 4.2], MT: [14.4, 35.9],
+};
+
+const SUBDIVISION_POINTS: Record<string, [number, number]> = {
+  'AU-ACT': [149.13, -35.28], 'AU-NSW': [147, -32], 'AU-NT': [133, -19.5], 'AU-QLD': [145, -22],
+  'AU-SA': [136, -30], 'AU-TAS': [147, -42], 'AU-VIC': [144, -36.8], 'AU-WA': [121, -25],
+  'CA-ON': [-85, 50], 'CN-AH': [117.2, 31.8], 'CN-BJ': [116.4, 39.9], 'CN-CQ': [107.9, 29.6],
+  'CN-FJ': [118.3, 26.1], 'CN-GD': [113.3, 23.1], 'CN-GS': [100.2, 38.4], 'CN-GX': [108.8, 23.8],
+  'CN-GZ': [106.7, 26.8], 'CN-HA': [113.6, 34.8], 'CN-HB': [112.3, 30.9], 'CN-HE': [114.5, 38],
+  'CN-HI': [109.7, 19.2], 'CN-HL': [127.8, 47], 'CN-HN': [111.7, 27.6], 'CN-JL': [126.2, 43.7],
+  'CN-JS': [119.4, 32.9], 'CN-JX': [115.7, 27.6], 'CN-LN': [122.6, 41.3], 'CN-NM': [111.7, 44],
+  'CN-NX': [105.2, 37.2], 'CN-QH': [96, 35.2], 'CN-SC': [102.7, 30.7], 'CN-SD': [118.1, 36.3],
+  'CN-SH': [121.5, 31.2], 'CN-SN': [108.9, 35.2], 'CN-SX': [112.3, 37.8], 'CN-TJ': [117.4, 39.3],
+  'CN-XJ': [85.5, 41.1], 'CN-XZ': [88.4, 31.7], 'CN-YN': [101.5, 25.5], 'CN-ZJ': [120.2, 29.2],
+};
+
+function makeCountryPoints(worldGeoJson: any, metaByCode: Record<string, MetaCountry>, lang: 'en' | 'zh'): Marker[] {
+  const featureByName = new Map<string, any>();
+  for (const feature of worldGeoJson?.features ?? []) {
+    const name = normaliseName(feature?.properties?.name);
+    if (name) featureByName.set(name, feature);
+  }
+  const coverageByCode = new Map(COUNTRY_COVERAGE.filter(c => !c.code.includes('-')).map(c => [c.code, c]));
+  const catalogue = (countryCatalogue as CatalogueCountry[]).filter(country => country.iso && /^[a-z]{2}$/i.test(country.code || ''));
+  const markers: Marker[] = [];
+  for (const country of catalogue) {
+    const code = String(country.code).toUpperCase();
+    const coverage = coverageByCode.get(code);
+    const meta = metaByCode[code];
+    const names = [country.name || '', ...(NAME_ALIASES[normaliseName(country.name || '')] || [])];
+    const feature = names.map(normaliseName).map(name => featureByName.get(name)).find(Boolean);
+    const point = coverage ? [coverage.lng, coverage.lat] as [number, number] : centroid(feature) || FALLBACK_POINTS[code];
+    if (!point) continue;
+    const hasData = hasCountryDataSnapshot(meta);
+    const status: MarkerStatus = coverage
+      ? resolveCoverageStatus(coverage, hasData)
+      : hasData ? 'Supported' : 'Unsupported';
+    const name = coverage
+      ? getCoverageDisplayName(coverage, lang, lang === 'zh' ? (meta?.name_zh || meta?.name) : (meta?.name_en || meta?.name))
+      : (lang === 'zh' ? (meta?.name_zh || meta?.name || country.name || code) : (meta?.name_en || meta?.name || country.name || code));
+    markers.push({ iso2: code, name, lat: point[1], lng: point[0], status, kind: 'country', statusLabel: status === 'Supported' ? 'Supported' : status === 'Scheduled' ? 'Planned' : 'Not supported', href: hasData ? `/countries/${code.toLowerCase()}/` : undefined, meta });
+  }
+  // A few boundary features (small islands and disputed territories) have no
+  // ISO entry in the catalogue. Keep them visible as unsupported hollow dots
+  // instead of silently dropping countries from the baseline layer.
+  const representedNames = new Set(markers.map(marker => normaliseName(marker.name)));
+  let fallbackIndex = 0;
+  for (const feature of worldGeoJson?.features ?? []) {
+    const featureName = String(feature?.properties?.name || '').trim();
+    const key = normaliseName(featureName);
+    const point = centroid(feature);
+    if (!key || !point || representedNames.has(key)) continue;
+    representedNames.add(key);
+    markers.push({ iso2: `ZZ-${fallbackIndex++}`, name: featureName, lat: point[1], lng: point[0], status: 'Unsupported', kind: 'country', statusLabel: 'Not supported' });
+  }
+  return markers;
+}
 
 export default function CountriesMapView({ metaCountries = [], height = 450, initialLanguage = 'en' }: Props) {
   const chartRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const [lang] = useState<'en' | 'zh'>(initialLanguage);
   const [mapReady, setMapReady] = useState(false);
+  const [worldGeoJson, setWorldGeoJson] = useState<any>(null);
   const [dotPositions, setDotPositions] = useState<DotPos[]>([]);
+  const [hovered, setHovered] = useState<DotPos | null>(null);
   const [visibleCountryCodes, setVisibleCountryCodes] = useState<string[] | null>(() => {
     if (typeof window === 'undefined') return null;
     return (window as CountryFilterWindow).__globalIdCountryFilterCodes ?? null;
   });
-
-  // Build meta lookup
-  const metaByCode = useMemo(
-    () => Object.fromEntries(metaCountries.map(m => [m.code.toUpperCase(), m])),
-    [metaCountries],
-  );
-
-  const countriesWithStatus = useMemo(
-    () => COUNTRY_COVERAGE.map((c) => {
-      const meta = metaByCode[c.code];
-      const status = resolveCoverageStatus(c, hasCountryDataSnapshot(meta));
-      return {
-        iso2: c.code,
-        lat: c.lat,
-        lng: c.lng,
-        name: getCoverageDisplayName(c, lang, meta?.name),
-        status,
-        statusLabel: lang === 'zh'
-          ? status === 'Supported' ? '已支持' : '规划中'
-          : status,
-      };
-    }),
-    [lang, metaByCode],
-  );
-
-  const displayedCountries = useMemo(() => {
-    if (visibleCountryCodes === null) return countriesWithStatus;
+  const metaByCode = useMemo(() => Object.fromEntries(metaCountries.map(meta => [meta.code.toUpperCase(), meta])), [metaCountries]);
+  const allMarkers = useMemo(() => {
+    if (!worldGeoJson) return [];
+    const countries = makeCountryPoints(worldGeoJson, metaByCode, initialLanguage);
+    const subdivisions: Marker[] = metaCountries
+      .filter(meta => meta.parent_code || meta.location_type === 'subdivision')
+      .map(meta => {
+        const code = meta.code.toUpperCase();
+        const point = SUBDIVISION_POINTS[code];
+        if (!point) return null;
+        const hasData = hasCountryDataSnapshot(meta);
+        const status: MarkerStatus = hasData ? 'Supported' : (COUNTRY_COVERAGE.find(item => item.code === code)?.status || 'Scheduled');
+        return { iso2: code, name: initialLanguage === 'zh' ? (meta.name_zh || meta.name_en || meta.name) : (meta.name_en || meta.name), lat: point[1], lng: point[0], status, kind: 'subdivision', statusLabel: status === 'Supported' ? 'Province supported' : status === 'Scheduled' ? 'Province planned' : 'Not supported', href: hasData ? `/countries/${code.toLowerCase()}/` : undefined, meta } as Marker;
+      }).filter((marker): marker is Marker => Boolean(marker));
+    return [...countries, ...subdivisions];
+  }, [worldGeoJson, metaByCode, metaCountries, initialLanguage]);
+  const displayedMarkers = useMemo(() => {
+    if (visibleCountryCodes === null) return allMarkers;
     const visible = new Set(visibleCountryCodes.map(code => code.toUpperCase()));
-    return countriesWithStatus.filter(country => visible.has(country.iso2));
-  }, [countriesWithStatus, visibleCountryCodes]);
+    return allMarkers.filter(marker => visible.has(marker.iso2) || visible.has(marker.iso2.split('-')[0]));
+  }, [allMarkers, visibleCountryCodes]);
 
   useEffect(() => {
-    const handleCountryFilter = (event: Event) => {
-      const codes = (event as CustomEvent<{ codes?: string[] }>).detail?.codes;
-      setVisibleCountryCodes(Array.isArray(codes) ? codes : null);
-    };
-    window.addEventListener('globalid:country-filter', handleCountryFilter);
-    return () => window.removeEventListener('globalid:country-filter', handleCountryFilter);
+    const handle = (event: Event) => setVisibleCountryCodes((event as CustomEvent<{ codes?: string[] }>).detail?.codes ?? null);
+    window.addEventListener('globalid:country-filter', handle);
+    return () => window.removeEventListener('globalid:country-filter', handle);
   }, []);
-
-  // Theme detection ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    const update = () => {
-      setTheme(root.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
-    };
+    const update = () => setTheme(root.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
     update();
-    const obs = new MutationObserver(update);
-    obs.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => obs.disconnect();
+    const observer = new MutationObserver(update); observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
   }, []);
-
-  // Load world GeoJSON ───────────────────────────────────────────────────────
   useEffect(() => {
     if (echarts.getMap(MAP_NAME)) { setMapReady(true); return; }
-
     let cancelled = false;
-    fetchLngLatWorldGeoJson()
-      .then((gj) => {
-        if (cancelled) return;
-        echarts.registerMap(MAP_NAME, gj);
-        setMapReady(true);
-      })
-      .catch((error) => {
-        console.error('Unable to load lng/lat world map for countries view', error);
-      });
-
+    fetchLngLatWorldGeoJson().then(geoJson => {
+      if (cancelled) return;
+      echarts.registerMap(MAP_NAME, geoJson); setWorldGeoJson(geoJson); setMapReady(true);
+    }).catch(error => console.error('Unable to load world map', error));
     return () => { cancelled = true; };
   }, []);
+  useEffect(() => {
+    if (mapReady && !worldGeoJson) setWorldGeoJson(echarts.getMap(MAP_NAME)?.geoJson);
+  }, [mapReady, worldGeoJson]);
 
-  // Convert geo → pixel and place boxes ─────────────────────────────────────
   const computePositions = useCallback(() => {
-    const inst = chartRef.current?.getEchartsInstance?.();
-    if (!inst) return;
-
+    const instance = chartRef.current?.getEchartsInstance?.();
+    if (!instance) return;
     const rect = containerRef.current?.getBoundingClientRect();
-    const cw = rect?.width ?? 900;
-    const ch = rect?.height ?? 450;
-    const scale = Math.max(0.72, Math.min(1.14, cw / 1100));
-
-    const hw = BOX_W / 2; const hh = BOX_H / 2;
-    const pos: DotPos[] = [];
-    
-    for (const c of displayedCountries) {
-      const pt = inst.convertToPixel({ geoIndex: 0 }, [c.lng, c.lat]) as [number, number] | null;
-      if (!pt) continue;
-      const [bdx, bdy] = getCoverageLabelOffset(c.iso2);
-      // Raw box centre
-      let bx = pt[0] + bdx * scale;
-      let by = pt[1] + bdy * scale;
-      
-      // Initial Clamp so box stays inside container
-      bx = Math.max(hw + 4, Math.min(cw - hw - 4, bx));
-      by = Math.max(hh + 4, Math.min(ch - hh - 4, by));
-      
-      pos.push({
-        iso2: c.iso2, status: c.status, statusLabel: c.statusLabel, name: c.name,
-        px: pt[0], py: pt[1], bx, by,
-        meta: metaByCode[c.iso2],
-      });
+    const next: DotPos[] = [];
+    for (const marker of displayedMarkers) {
+      const point = instance.convertToPixel({ geoIndex: 0 }, [marker.lng, marker.lat]) as [number, number] | null;
+      if (point) next.push({ ...marker, px: point[0], py: point[1] });
     }
-
-    setDotPositions(pos);
-  }, [displayedCountries, metaByCode]);
-
-  // Recalculate positions after the map is fully laid out ───────────────────
+    setDotPositions(next);
+    if (hovered && !next.some(marker => marker.iso2 === hovered.iso2)) setHovered(null);
+    void rect;
+  }, [displayedMarkers, hovered]);
   useEffect(() => {
     if (!mapReady) return;
-    // ECharts geo layout is computed asynchronously after GeoJSON is registered;
-    // fire multiple recalculations to catch when it settles.
-    const t1 = setTimeout(computePositions, 500);
-    const t2 = setTimeout(computePositions, 1200);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const timers = [setTimeout(computePositions, 250), setTimeout(computePositions, 800)];
+    return () => timers.forEach(clearTimeout);
   }, [mapReady, computePositions]);
-
-  // Resize observer ──────────────────────────────────────────────────────────
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setTimeout(computePositions, 80));
-    ro.observe(el);
-    return () => ro.disconnect();
+    const element = containerRef.current; if (!element) return;
+    const observer = new ResizeObserver(() => setTimeout(computePositions, 60)); observer.observe(element);
+    return () => observer.disconnect();
   }, [computePositions]);
 
-  // ECharts option ───────────────────────────────────────────────────────────
-  const isLight = theme === 'light';
-  const palette = isLight
-    ? {
-        mapBg: 'linear-gradient(180deg, #eef4fa 0%, #dde8f2 100%)',
-        areaColor: '#fbfdff',
-        areaBorder: '#b6c8d8',
-        areaHover: '#e4edf5',
-        tooltipBg: '#ffffff',
-        tooltipBorder: '#c7d7e6',
-        tooltipText: '#17304d',
-        supported: '#0d6d8c',
-        supportedBorder: '#1c86aa',
-        scheduled: '#7d8d9f',
-        scheduledBorder: '#9aacbd',
-        boxBg: '#ffffff',
-        boxText: '#17304d',
-        boxTextMuted: '#657b92',
-        boxSupportedBorder: '#a7c2d5',
-        boxScheduledBorder: '#c8d6e2',
-      }
-    : {
-        mapBg: 'linear-gradient(180deg, #152233 0%, #111b28 100%)',
-        areaColor: '#1b2a3c',
-        areaBorder: '#102033',
-        areaHover: '#25374d',
-        tooltipBg: '#162334',
-        tooltipBorder: '#304156',
-        tooltipText: '#e2e8f0',
-        supported: '#0d9488',
-        supportedBorder: '#14b8a6',
-        scheduled: '#475569',
-        scheduledBorder: '#64748b',
-        boxBg: '#1e293b',
-        boxText: '#f1f5f9',
-        boxTextMuted: '#94a3b8',
-        boxSupportedBorder: '#0d9488',
-        boxScheduledBorder: '#334155',
-      };
+  const palette = theme === 'light' ? {
+    mapBg: 'linear-gradient(180deg, #eef4fa 0%, #dde8f2 100%)', areaColor: '#fbfdff', areaBorder: '#b6c8d8', areaHover: '#e4edf5',
+    supported: '#138a70', supportedBorder: '#0d6d8c', planned: '#3aa66f', unsupported: '#8497aa', tooltipBg: '#fff', tooltipBorder: '#c7d7e6', text: '#17304d', muted: '#657b92',
+  } : {
+    mapBg: 'linear-gradient(180deg, #152233 0%, #111b28 100%)', areaColor: '#1b2a3c', areaBorder: '#102033', areaHover: '#25374d',
+    supported: '#14b8a6', supportedBorder: '#0d9488', planned: '#4ade80', unsupported: '#8091a5', tooltipBg: '#162334', tooltipBorder: '#304156', text: '#e2e8f0', muted: '#94a3b8',
+  };
+  const option = useMemo(() => mapReady ? ({
+    backgroundColor: 'transparent',
+    geo: { map: MAP_NAME, roam: true, scaleLimit: { min: 0.7, max: 8 }, silent: true, itemStyle: { areaColor: palette.areaColor, borderColor: palette.areaBorder, borderWidth: 0.5 }, emphasis: { itemStyle: { areaColor: palette.areaHover }, label: { show: false } } },
+    // The interactive HTML dots below are the single source of marker pixels.
+    // Keeping an invisible scatter series gives ECharts a geo coordinate layer
+    // to roam without doubling each marker visually.
+    series: [{ type: 'scatter', coordinateSystem: 'geo', silent: true, data: displayedMarkers.map(marker => ({ value: [marker.lng, marker.lat], name: marker.name })), symbolSize: 0 }],
+  }) : {}, [mapReady, displayedMarkers, palette]);
+  const handleEvents = useMemo(() => ({ finished: () => setTimeout(computePositions, 80), georoam: () => setTimeout(computePositions, 30) }), [computePositions]);
+  const zoom = (factor: number) => chartRef.current?.getEchartsInstance?.()?.dispatchAction({ type: 'geoRoam', geoIndex: 0, zoom: factor });
+  const resetZoom = () => chartRef.current?.getEchartsInstance?.()?.setOption({ geo: { zoom: 1, center: [0, 0] } });
 
-  const option = useMemo(() => {
-    if (!mapReady) return {};
-    return {
-      backgroundColor: 'transparent',
-      geo: {
-        map: MAP_NAME,
-        roam: true,
-        scaleLimit: { min: 0.6, max: 8 },
-        silent: false,
-        itemStyle: {
-          areaColor: palette.areaColor,
-          borderColor: palette.areaBorder,
-          borderWidth: 0.5,
-        },
-        emphasis: {
-          itemStyle: { areaColor: palette.areaHover },
-          label: { show: false },
-        },
-        select: { disabled: true },
-      },
-      series: [
-        {
-          type: 'scatter',
-          coordinateSystem: 'geo',
-          data: displayedCountries.map(c => ({
-            value: [c.lng, c.lat],
-            name: c.name,
-            status: c.status,
-            statusLabel: c.statusLabel,
-            iso2: c.iso2,
-          })),
-          symbolSize: (_v: any, p: any) => p.data?.status === 'Supported' ? 13 : 9,
-          itemStyle: {
-            color: (p: any) => p.data?.status === 'Supported' ? palette.supported : palette.scheduled,
-            borderColor: (p: any) => p.data?.status === 'Supported' ? palette.supportedBorder : palette.scheduledBorder,
-            borderWidth: 2,
-            shadowBlur: (p: any) => p.data?.status === 'Supported' ? 10 : 0,
-            shadowColor: palette.supported,
-          },
-          emphasis: {
-            itemStyle: {
-              color: (p: any) => p.data?.status === 'Supported' ? palette.supportedBorder : palette.scheduledBorder,
-            },
-          },
-          label: { show: false },
-          z: 6,
-        },
-      ],
-      tooltip: {
-        trigger: 'item',
-        backgroundColor: palette.tooltipBg,
-        borderColor: palette.tooltipBorder,
-        textStyle: { color: palette.tooltipText, fontSize: 12 },
-        formatter: (p: any) => `
-          <div style="display:flex;align-items:center;gap:7px">
-            <img src="${getFlagAssetPath(p.data?.iso2)}" alt="" width="24" height="18" style="width:24px;height:18px;object-fit:cover;border:1px solid ${palette.tooltipBorder}" />
-            <span><b>${p.data.name}</b><br/>${p.data.statusLabel ?? p.data.status}</span>
-          </div>`,
-      },
-    };
-  }, [mapReady, displayedCountries, palette]);
-
-  const handleEvents = useMemo(() => ({
-    finished: () => setTimeout(computePositions, 600),
-    georoam: () => setTimeout(computePositions, 50),
-  }), [computePositions]);
-
-  // ─── Render ────────────────────────────────────────────────────────────────
-
-  if (!mapReady) {
-    return (
-      <div
-        style={{ height }}
-        className="flex items-center justify-center text-sm text-[rgb(var(--text-muted))]"
-      >
-        <span className="inline-flex items-center gap-2">
-          <svg className="h-4 w-4 animate-spin text-teal-500" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
-          <span>{lang === 'zh' ? '正在加载地图…' : 'Loading map…'}</span>
-        </span>
-      </div>
-    );
-  }
-
-  const scaledBoxW = BOX_W;
-  const scaledBoxH = BOX_H;
-  // Keep persistent labels for active pipelines only. Scheduled coverage stays
-  // visible as map dots with hover tooltips; its source details live in the
-  // country cards below the map. This avoids label collisions as the roadmap
-  // expands beyond a small handful of countries.
-  const labeledPositions = dotPositions.filter(d => d.status === 'Supported');
-
+  if (!mapReady) return <div style={{ height }} className="flex items-center justify-center text-sm text-[rgb(var(--text-muted))]">{initialLanguage === 'zh' ? '正在加载地图…' : 'Loading map…'}</div>;
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'relative',
-        height,
-        overflow: 'hidden',
-        background: palette.mapBg,
-      }}
-    >
-      {/* ECharts world map */}
-      <ReactEChartsCore
-        ref={chartRef}
-        echarts={echarts}
-        option={option}
-        style={{ height: '100%', width: '100%' }}
-        onEvents={handleEvents}
-        notMerge
-      />
-
-      {/* ── SVG overlay: L-shaped leader lines ── */}
-      {labeledPositions.length > 0 && (
-        <svg
-          style={{
-            position: 'absolute', inset: 0,
-            width: '100%', height: '100%',
-            pointerEvents: 'none', overflow: 'visible',
-          }}
-        >
-          {labeledPositions.map(d => {
-            const [bdx] = getCoverageLabelOffset(d.iso2);
-            const isRight = bdx > 0;
-
-            // Connect to the nearest edge of the box
-            const edgeX = isRight ? d.bx - scaledBoxW / 2 : d.bx + scaledBoxW / 2;
-            const edgeY = d.by;          // box vertical centre
-
-            // L-shape: dot → horizontal run → vertical drop to box centre
-            const color = d.status === 'Supported' ? palette.supported : palette.scheduled;
-            const dash = d.status === 'Scheduled' ? '5 3' : undefined;
-
-            return (
-              <g key={d.iso2}>
-                {/* dot halo */}
-                <circle
-                  cx={d.px} cy={d.py} r={d.status === 'Supported' ? 7 : 5}
-                  fill="none" stroke={color} strokeWidth={1} opacity={0.35}
-                />
-                {/* polyline: dot → elbow → box edge */}
-                <polyline
-                  points={`${d.px},${d.py} ${edgeX},${d.py} ${edgeX},${edgeY}`}
-                  fill="none"
-                  stroke={color}
-                  strokeWidth={1.2}
-                  strokeDasharray={dash}
-                  opacity={0.75}
-                />
-                {/* small filled dot at country location */}
-                <circle
-                  cx={d.px} cy={d.py} r={d.status === 'Supported' ? 4 : 3}
-                  fill={color}
-                />
-              </g>
-            );
-          })}
-        </svg>
-      )}
-
-      {/* ── Country info boxes ── */}
-      {labeledPositions.map(d => {
-        const isSupported = d.status === 'Supported';
-        const accentColor = isSupported ? palette.supported : palette.scheduled;
-        const borderColor = isSupported ? palette.boxSupportedBorder : palette.boxScheduledBorder;
-        const href = isSupported ? `${lang === 'zh' ? '/zh' : ''}/countries/${d.iso2.toLowerCase()}/` : undefined;
-        const flagPath = getFlagAssetPath(d.iso2);
-
-        const boxStyles: React.CSSProperties = {
-          position: 'absolute',
-          left: d.bx - scaledBoxW / 2,
-          top:  d.by - scaledBoxH / 2,
-          width: scaledBoxW,
-          minHeight: scaledBoxH,
-          background: palette.boxBg,
-          border: `1px solid ${borderColor}`,
-          borderRadius: 0,
-          padding: '5px 9px',
-          zIndex: 10,
-          lineHeight: 1.32,
-          textDecoration: 'none',
-          color: palette.boxText,
-          cursor: isSupported ? 'pointer' : 'default',
-          boxShadow: isSupported
-            ? `0 10px 18px ${accentColor}22`
-            : isLight
-              ? '0 6px 14px rgba(42, 74, 103, 0.08)'
-              : '0 1px 4px rgba(0,0,0,0.25)',
-          transition: 'box-shadow 0.15s ease',
-          display: 'block',
-          userSelect: 'none',
-        };
-
-        const inner = (
-          <>
-            <div style={{
-              fontWeight: 650, fontSize: 11.5,
-              display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4,
-              color: palette.boxText,
-            }}>
-              <img
-                src={flagPath}
-                alt=""
-                aria-hidden="true"
-                width={20}
-                height={15}
-                style={{ width: 20, height: 15, objectFit: 'cover', border: `1px solid ${borderColor}`, flexShrink: 0 }}
-              />
-              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {d.name}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{
-                display: 'inline-block',
-                background: isSupported ? accentColor : 'transparent',
-                border: `1px solid ${borderColor}`,
-                borderRadius: 0,
-                padding: '1px 5px',
-                fontSize: 9.5,
-                color: isSupported ? '#fff' : palette.boxTextMuted,
-                fontWeight: 500,
-              }}>
-                {d.statusLabel}
-              </span>
-            </div>
-          </>
-        );
-
-        return href ? (
-          <a key={d.iso2} href={href} style={boxStyles}>{inner}</a>
-        ) : (
-          <div key={d.iso2} style={boxStyles}>{inner}</div>
-        );
+    <div ref={containerRef} className="coverage-map-canvas" style={{ position: 'relative', height, overflow: 'hidden', background: palette.mapBg }}>
+      <ReactEChartsCore ref={chartRef} echarts={echarts} option={option} style={{ height: '100%', width: '100%' }} onEvents={handleEvents} notMerge />
+      <div className="coverage-map-controls" role="group" aria-label={initialLanguage === 'zh' ? '地图缩放' : 'Map zoom'}>
+        <button type="button" onClick={() => zoom(1.25)} aria-label={initialLanguage === 'zh' ? '放大地图' : 'Zoom in'}>+</button>
+        <button type="button" onClick={() => zoom(0.8)} aria-label={initialLanguage === 'zh' ? '缩小地图' : 'Zoom out'}>−</button>
+        <button type="button" onClick={resetZoom} aria-label={initialLanguage === 'zh' ? '重置地图缩放' : 'Reset map zoom'}>↺</button>
+      </div>
+      <span className="coverage-map-hint">{initialLanguage === 'zh' ? '滚轮缩放 · 拖拽平移' : 'Scroll to zoom · drag to pan'}</span>
+      {dotPositions.map(marker => {
+        const isSubdivision = marker.kind === 'subdivision';
+        const isUnsupported = marker.status === 'Unsupported';
+        const isPlanned = marker.status === 'Scheduled';
+        const color = isUnsupported ? palette.unsupported : isPlanned ? palette.planned : palette.supported;
+        return <button key={marker.iso2} type="button" className={`coverage-map-dot ${isSubdivision ? 'is-subdivision' : 'is-country'} ${isUnsupported ? 'is-unsupported' : ''} ${isPlanned ? 'is-planned' : ''}`} style={{ left: marker.px, top: marker.py, '--dot-color': color } as React.CSSProperties} aria-label={`${marker.name} — ${marker.statusLabel}`} onMouseEnter={() => setHovered(marker)} onMouseLeave={() => setHovered(null)} onFocus={() => setHovered(marker)} onBlur={() => setHovered(null)} onClick={() => marker.href && (window.location.href = `${initialLanguage === 'zh' ? '/zh' : ''}${marker.href}`)} />;
       })}
+      {hovered && <div className="coverage-map-tooltip" style={{ left: Math.min(Math.max(8, hovered.px + 12), Math.max(8, (containerRef.current?.clientWidth || 800) - 190)), top: Math.min(Math.max(8, hovered.py - 46), Math.max(8, (containerRef.current?.clientHeight || height) - 82)), background: palette.tooltipBg, borderColor: palette.tooltipBorder, color: palette.text }} role="status">
+        <div className="coverage-map-tooltip-title"><img src={getFlagAssetPath(hovered.iso2)} alt="" aria-hidden="true" /> <strong>{hovered.name}</strong></div>
+        <div className="coverage-map-tooltip-meta">{hovered.kind === 'subdivision' ? (initialLanguage === 'zh' ? '省级/地区' : 'Province / region') : (initialLanguage === 'zh' ? '国家' : 'Country')} · {hovered.statusLabel}</div>
+        {hovered.href && <div className="coverage-map-tooltip-action">{initialLanguage === 'zh' ? '单击打开详情页 ↗' : 'Click to open details ↗'}</div>}
+      </div>}
     </div>
   );
 }

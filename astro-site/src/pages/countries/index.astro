@@ -164,30 +164,56 @@ const TRACK_ZH: Record<string, string> = {
     </section>
 
     <section class="card coverage-surface p-6 sm:p-8">
-      <div class="coverage-section-header flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
+      <div class="coverage-map-header">
+        <div class="coverage-map-title-block">
+          <p class="coverage-map-eyebrow">{pick('Live geography layer', '实时地理覆盖层')}</p>
           <h2 class="coverage-section-title">{pick('Data coverage map', '数据覆盖地图')}</h2>
+          <p class="coverage-map-description">{pick('See where GIDS has a country-level feed, a province-level feed, or a planned source.', '查看 GIDS 已接入国家级、省级数据，及计划接入的数据来源。')}</p>
         </div>
+        <div class="coverage-map-readout" aria-label={pick('Map status summary', '地图状态摘要')}>
+          <strong>{activeCount}</strong>
+          <span>{pick('countries live', '个国家已上线')}</span>
+          <small>{pick(`${chinaSubdivisionCount + subdivisionCountries.filter(c => c.parent_code !== 'CN').length} regional feeds`, `${chinaSubdivisionCount + subdivisionCountries.filter(c => c.parent_code !== 'CN').length} 个省级/地区数据源`)}</small>
+        </div>
+      </div>
 
-        <div class="coverage-legend">
-          <span class="coverage-legend-item">
-            <span class="inline-block h-2.5 w-2.5 rounded-full bg-teal-500"></span>
-            <span>{pick('Supported', '已支持')}</span>
+      <div class="coverage-map-toolbar">
+        <div class="coverage-legend" role="list" aria-label={pick('Map legend', '地图图例')}>
+          <span class="coverage-legend-item" role="listitem">
+            <span class="coverage-legend-dot coverage-legend-supported"></span>
+            <span>{pick('Country supported', '国家已支持')}</span>
           </span>
-          <span class="coverage-legend-item">
-            <span class="inline-block h-2.5 w-2.5 rounded-full bg-[rgb(var(--surface))]"></span>
-            <span>{pick('Scheduled', '规划中')}</span>
+          <span class="coverage-legend-item" role="listitem">
+            <span class="coverage-legend-dot coverage-legend-subdivision"></span>
+            <span>{pick('Province / region supported', '省级/地区已支持')}</span>
+          </span>
+          <span class="coverage-legend-item" role="listitem">
+            <span class="coverage-legend-dot coverage-legend-planned"></span>
+            <span>{pick('Planned', '规划中')}</span>
+          </span>
+          <span class="coverage-legend-item" role="listitem">
+            <span class="coverage-legend-dot coverage-legend-unsupported"></span>
+            <span>{pick('Not supported', '不支持')}</span>
           </span>
         </div>
+        <span class="coverage-map-toolbar-note">{pick('Hover a point for details · click a live point to open its page', '悬浮查看详情 · 单击已上线点打开详情页')}</span>
       </div>
 
       <div class="coverage-map-frame">
         <CountriesMapView
           client:only="react"
-          metaCountries={supportedCountries}
+          metaCountries={metaCountries}
           height={520}
           initialLanguage={locale}
         />
+        <p class="coverage-map-provenance">
+          {pick(
+            'Marker positions use the bundled open GeoJSON boundary set and ISO country catalogue; province points are maintained as approximate administrative centroids.',
+            '标记位置使用站点内置的开放 GeoJSON 边界数据与 ISO 国家目录；省级点位以近似行政中心维护。',
+          )}
+          {' '}
+          <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noreferrer">flag-icons ↗</a>
+        </p>
       </div>
     </section>
 
@@ -482,8 +508,10 @@ const TRACK_ZH: Record<string, string> = {
     if (emptyState) emptyState.hidden = visibleCodes.length !== 0;
     if (resetButton) resetButton.disabled = !query && !who && !wb && !income && selectedStatus === 'all';
 
-    window.__globalIdCountryFilterCodes = visibleCodes;
-    window.dispatchEvent(new CustomEvent('globalid:country-filter', { detail: { codes: visibleCodes } }));
+    const mapFilterActive = Boolean(query || who || wb || income || selectedStatus !== 'all');
+    const mapCodes = mapFilterActive ? visibleCodes : null;
+    window.__globalIdCountryFilterCodes = mapCodes;
+    window.dispatchEvent(new CustomEvent('globalid:country-filter', { detail: { codes: mapCodes } }));
     if (updateUrl) syncUrl();
   }
 
@@ -597,26 +625,71 @@ const TRACK_ZH: Record<string, string> = {
   line-height: 1.15;
 }
 
-.coverage-section-header {
-  position: relative;
-  margin-bottom: 1.4rem;
-  padding-left: 1rem;
-}
-
-.coverage-section-header::before {
-  content: "";
-  position: absolute;
-  inset: 0.15rem auto 0.15rem 0;
-  width: 3px;
-  background: linear-gradient(180deg, rgb(var(--color-brand) / 0.82), rgb(var(--color-accent) / 0.56));
-}
-
 .coverage-section-title {
   color: rgb(var(--text-strong));
   font-family: 'IBM Plex Sans', sans-serif;
   font-size: clamp(1.55rem, 2vw, 2.15rem);
   font-weight: 600;
   letter-spacing: -0.02em;
+}
+
+.coverage-section-header {
+  position: relative;
+  margin-bottom: 1.4rem;
+  padding-left: 1rem;
+}
+.coverage-section-header::before {
+  content: "";
+  position: absolute;
+  inset: .15rem auto .15rem 0;
+  width: 3px;
+  background: linear-gradient(180deg, rgb(var(--color-brand) / .82), rgb(var(--color-accent) / .56));
+}
+
+.coverage-map-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding-bottom: 1.35rem;
+  border-bottom: 1px solid rgb(var(--border));
+}
+
+.coverage-map-title-block { min-width: 0; }
+.coverage-map-eyebrow {
+  margin: 0 0 .45rem;
+  color: rgb(var(--color-teal));
+  font-size: .67rem;
+  font-weight: 750;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.coverage-map-description {
+  max-width: 42rem;
+  margin: .55rem 0 0;
+  color: rgb(var(--text-muted));
+  font-size: .82rem;
+  line-height: 1.55;
+}
+.coverage-map-readout {
+  display: grid;
+  min-width: 9.4rem;
+  padding: .75rem .9rem;
+  border-left: 3px solid rgb(var(--color-teal));
+  background: rgb(var(--bg-soft) / .7);
+  color: rgb(var(--text-muted));
+}
+.coverage-map-readout strong { color: rgb(var(--text-strong)); font-size: 1.8rem; font-weight: 680; line-height: 1; }
+.coverage-map-readout span { margin-top: .25rem; color: rgb(var(--text)); font-size: .72rem; font-weight: 680; }
+.coverage-map-readout small { margin-top: .38rem; color: rgb(var(--text-faint)); font-size: .63rem; }
+
+.coverage-map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+  padding: .85rem 0 1rem;
 }
 
 .coverage-section-lead {
@@ -630,26 +703,89 @@ const TRACK_ZH: Record<string, string> = {
 .coverage-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: .35rem 1rem;
 }
 
 .coverage-legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  border: 1px solid rgb(var(--border) / 0.72);
-  background: rgb(var(--surface) / 0.88);
-  padding: 0.55rem 0.85rem;
+  gap: .42rem;
+  padding: .2rem 0;
   color: rgb(var(--text));
-  font-size: 0.8rem;
+  font-size: .72rem;
   font-weight: 600;
 }
 
+.coverage-map-toolbar-note { flex: 0 0 auto; color: rgb(var(--text-faint)); font-size: .67rem; text-align: right; }
+
 .coverage-map-frame {
-  border: 1px solid rgb(var(--border) / 0.78);
-  background: linear-gradient(180deg, rgb(var(--bg-soft) / 0.72), rgb(var(--surface) / 0.86));
-  padding: 1rem;
+  overflow: hidden;
+  border: 1px solid rgb(var(--border) / .82);
+  background: rgb(var(--bg-soft) / .55);
+  padding: .65rem;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .4), 0 12px 28px rgb(19 48 77 / .06);
 }
+
+.coverage-map-canvas { isolation: isolate; }
+:global(.coverage-map-canvas) { isolation: isolate; }
+:global(.coverage-map-dot) { position: absolute; width: 1rem; height: 1rem; margin: -.5rem 0 0 -.5rem; border: 0; border-radius: 999px; background: var(--dot-color); box-shadow: 0 0 0 2px rgb(var(--surface) / .58); cursor: pointer; padding: 0; transform: translateZ(0); transition: transform .15s ease, box-shadow .15s ease; z-index: 4; }
+:global(.coverage-map-dot.is-country) { width: 1rem; height: 1rem; margin: -.5rem 0 0 -.5rem; }
+:global(.coverage-map-dot.is-subdivision) { width: .56rem; height: .56rem; margin: -.28rem 0 0 -.28rem; }
+:global(.coverage-map-dot.is-unsupported) { width: .3rem; height: .3rem; margin: -.15rem 0 0 -.15rem; background: var(--dot-color); border: 0; box-shadow: none; cursor: pointer; opacity: .42; animation: none; }
+:global(.coverage-map-dot.is-planned) { background: color-mix(in srgb, var(--dot-color) 28%, rgb(var(--surface))); border: 1px solid var(--dot-color); box-shadow: 0 0 0 2px rgb(var(--surface) / .58); }
+:global(.coverage-map-dot:not(.is-unsupported)) { animation: coverage-dot-pulse 2.4s ease-out infinite; }
+:global(.coverage-map-dot.is-unsupported) { animation: coverage-dot-breathe-muted 3.2s ease-in-out infinite; }
+:global(.coverage-map-dot:hover), :global(.coverage-map-dot:focus-visible) { outline: none; transform: scale(1.65); box-shadow: 0 0 0 3px rgb(var(--surface) / .7), 0 0 0 5px color-mix(in srgb, var(--dot-color) 40%, transparent); }
+:global(.coverage-map-dot.is-unsupported:hover), :global(.coverage-map-dot.is-unsupported:focus-visible) { transform: scale(1.9); opacity: .9; box-shadow: 0 0 0 3px rgb(var(--surface) / .7); }
+:global(.coverage-map-controls) { position: absolute; top: .8rem; right: .8rem; display: grid; gap: .25rem; z-index: 8; }
+:global(.coverage-map-controls button) { width: 2rem; height: 2rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface) / .9); color: rgb(var(--text-strong)); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+:global(.coverage-map-controls button:hover), :global(.coverage-map-controls button:focus-visible) { border-color: rgb(var(--color-teal)); color: rgb(var(--color-teal)); outline: none; }
+:global(.coverage-map-hint) { position: absolute; left: .8rem; bottom: .65rem; padding: .3rem .5rem; background: rgb(var(--surface) / .82); color: rgb(var(--text-faint)); font-size: .66rem; letter-spacing: .04em; pointer-events: none; z-index: 8; }
+:global(.coverage-map-tooltip) { position: absolute; width: 11.5rem; padding: .55rem .65rem; border: 1px solid; box-shadow: 0 8px 18px rgb(0 0 0 / .14); pointer-events: none; z-index: 12; }
+:global(.coverage-map-tooltip-title) { display: flex; align-items: center; gap: .4rem; font-size: .74rem; line-height: 1.25; }
+:global(.coverage-map-tooltip-title img) { width: 1.15rem; height: .8rem; object-fit: cover; border: 1px solid rgb(var(--border)); }
+:global(.coverage-map-tooltip-meta) { margin-top: .3rem; font-size: .65rem; opacity: .76; }
+:global(.coverage-map-tooltip-action) { margin-top: .35rem; color: rgb(var(--color-teal)); font-size: .64rem; font-weight: 650; }
+.coverage-map-dot {
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  margin: -0.5rem 0 0 -0.5rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--dot-color);
+  box-shadow: 0 0 0 2px rgb(var(--surface) / .58);
+  cursor: pointer;
+  padding: 0;
+  transform: translateZ(0);
+  transition: transform .15s ease, box-shadow .15s ease;
+  z-index: 4;
+}
+.coverage-map-dot.is-country { width: .72rem; height: .72rem; margin: -.36rem 0 0 -.36rem; }
+.coverage-map-dot.is-subdivision { width: .56rem; height: .56rem; margin: -.28rem 0 0 -.28rem; }
+.coverage-map-dot.is-unsupported { width: .3rem; height: .3rem; margin: -.15rem 0 0 -.15rem; background: var(--dot-color); border: 0; box-shadow: none; cursor: pointer; opacity: .42; animation: none; }
+.coverage-map-dot.is-planned { background: color-mix(in srgb, var(--dot-color) 28%, rgb(var(--surface))); border: 1px solid var(--dot-color); box-shadow: 0 0 0 2px rgb(var(--surface) / .58); }
+.coverage-map-dot.is-subdivision:not(.is-unsupported) { animation: coverage-dot-pulse 2.4s ease-out infinite; }
+.coverage-map-dot:hover, .coverage-map-dot:focus-visible { outline: none; transform: scale(1.65); box-shadow: 0 0 0 3px rgb(var(--surface) / .7), 0 0 0 5px color-mix(in srgb, var(--dot-color) 40%, transparent); }
+.coverage-map-dot.is-unsupported:hover, .coverage-map-dot.is-unsupported:focus-visible { transform: scale(1.9); opacity: .9; box-shadow: 0 0 0 3px rgb(var(--surface) / .7); }
+@keyframes coverage-dot-pulse { 0%, 100% { box-shadow: 0 0 0 2px rgb(var(--surface) / .58), 0 0 0 0 color-mix(in srgb, var(--dot-color) 42%, transparent); } 50% { box-shadow: 0 0 0 2px rgb(var(--surface) / .58), 0 0 0 5px color-mix(in srgb, var(--dot-color) 0%, transparent); } }
+@keyframes coverage-dot-breathe-muted { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+.coverage-map-controls { position: absolute; top: .8rem; right: .8rem; display: grid; gap: .25rem; z-index: 8; }
+.coverage-map-controls button { width: 2rem; height: 2rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface) / .9); color: rgb(var(--text-strong)); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.coverage-map-controls button:hover, .coverage-map-controls button:focus-visible { border-color: rgb(var(--color-teal)); color: rgb(var(--color-teal)); outline: none; }
+.coverage-map-hint { position: absolute; left: .8rem; bottom: .65rem; padding: .3rem .5rem; background: rgb(var(--surface) / .82); color: rgb(var(--text-faint)); font-size: .66rem; letter-spacing: .04em; pointer-events: none; z-index: 8; }
+.coverage-map-provenance { margin: .65rem 0 0; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.5; }
+.coverage-map-provenance a { color: rgb(var(--color-teal)); text-decoration: underline; text-underline-offset: 2px; }
+.coverage-map-tooltip { position: absolute; width: 11.5rem; padding: .55rem .65rem; border: 1px solid; box-shadow: 0 8px 18px rgb(0 0 0 / .14); pointer-events: none; z-index: 12; }
+.coverage-map-tooltip-title { display: flex; align-items: center; gap: .4rem; font-size: .74rem; line-height: 1.25; }
+.coverage-map-tooltip-title img { width: 1.15rem; height: .8rem; object-fit: cover; border: 1px solid rgb(var(--border)); }
+.coverage-map-tooltip-meta { margin-top: .3rem; font-size: .65rem; opacity: .76; }
+.coverage-map-tooltip-action { margin-top: .35rem; color: rgb(var(--color-teal)); font-size: .64rem; font-weight: 650; }
+.coverage-legend-dot { display: inline-block; width: .65rem; height: .65rem; border-radius: 999px; }
+.coverage-legend-supported { background: #138a70; }
+.coverage-legend-subdivision { background: #14b8a6; animation: coverage-dot-pulse 2.4s ease-out infinite; }
+.coverage-legend-planned { background: #a6d9b8; border: 1px solid #3aa66f; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .35); }
+.coverage-legend-unsupported { width: .42rem; height: .42rem; background: rgb(var(--text-faint) / .65); }
 
 .coverage-summary-pill {
   display: inline-flex;
@@ -881,6 +1017,38 @@ const TRACK_ZH: Record<string, string> = {
   .coverage-map-frame {
     padding: 0.7rem;
   }
+
+  .coverage-map-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .coverage-map-readout {
+    grid-template-columns: auto 1fr;
+    column-gap: .55rem;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .coverage-map-readout strong { grid-row: span 2; }
+  .coverage-map-readout small { margin-top: 0; }
+  .coverage-map-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .45rem;
+    overflow: visible;
+  }
+  .coverage-legend {
+    width: 100%;
+    flex-wrap: nowrap;
+    gap: .85rem;
+    overflow-x: auto;
+    padding-bottom: .25rem;
+    scrollbar-width: thin;
+  }
+  .coverage-legend-item { flex: 0 0 auto; white-space: nowrap; }
+  .coverage-map-toolbar-note { text-align: left; }
 
   .coverage-filters {
     grid-template-columns: 1fr;

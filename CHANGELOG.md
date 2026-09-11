@@ -2,6 +2,27 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing bilingual notes are also available in the website Changelog.
 
+## [0.9.7] - 2026-09-11
+
+### Added
+
+- Added a redesigned countries coverage map with dual-layer markers for countries and provinces/regions, hover tooltips, and interactive controls for pan/zoom.
+- Added open GeoJSON- and ISO-based coverage marker positioning so the map no longer depends on remote tile services and can mark unsupported geographies through explicit fallback points.
+
+### Changed
+
+- Reworked the countries page coverage section with a bilingual summary header, status readout, richer legend, and filter-linked map overlay behavior.
+- Integrated weekly literature AI-review record updates into the release cycle, including refreshed fingerprints and review timestamps for active weekly slots.
+
+### Fixed
+
+- Fixed map filtering synchronization so global resets and detailed filter changes consistently drive the marker layer state.
+- Hardened map placement on diverse GeoJSON geometry by validating coordinate type and falling back to computed centroids for edge geographies when explicit coordinate coverage is missing.
+
+### Operations
+
+- Updated `configs/literature/weekly_ai_reviews.json` for W36 and W37 to carry the latest review fingerprints and pass timestamps.
+
 ## [0.9.6] - 2026-09-10
 
 ### Added

@@ -22,6 +22,63 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.9.7',
+    date: '2026-09-11',
+    titleEn: 'Interactive coverage map and refined release sync',
+    titleZh: '互动覆盖地图与发布同步优化',
+    summaryEn:
+      'GIDS now renders a bolder coverage map for countries and provinces, adds richer map interactions, and keeps weekly literature review records aligned with the latest release state.',
+    summaryZh:
+      'GIDS 现在使用更直观的覆盖地图同时展示国家和省级覆盖，并增强地图交互体验；周报文献人工审核记录与最新发布状态同步。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Implemented a redesigned coverage map with country and subdivision markers, status legends, and interactive hover interactions.',
+            zh: '重新实现覆盖地图，支持国家和地区点位、状态图例，以及悬停交互。',
+          },
+          {
+            en: 'Map rendering now uses local GeoJSON and the bundled ISO country catalogue, avoiding dependency on third-party tile services.',
+            zh: '地图渲染改用本地 GeoJSON 与内置 ISO 国家目录，不再依赖第三方地图服务。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'The countries page now shows a bilingual coverage summary, clearer map controls, and synchronized map filtering with list filtering states.',
+            zh: '国家页现在包含中英双语覆盖摘要、可视化地图控制项，并将列表筛选与地图联动同步。',
+          },
+          {
+            en: 'Geolocation for markers now combines catalogue names, coverage status, and fallback geometry points for more stable map behavior on small or disputed geographies.',
+            zh: '地图点位定位结合国家目录名、覆盖状态与回退几何点，提升小区域与争议区域下的展示稳定性。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Resolved inconsistent map overlay updates when clearing filters or switching between supported and planned views.',
+            zh: '修复清空筛选或切换到支持/规划视图时，地图标注层更新不一致的问题。',
+          },
+          {
+            en: 'Updated weekly literature review entries for 2026-W36 and 2026-W37 with refreshed fingerprints and review timestamps.',
+            zh: '更新 2026-W36 与 2026-W37 的周更文献审核记录，补齐新的指纹与审核时间。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.9.6',
     date: '2026-09-10',
     titleEn: 'Surveillance context and resilient research operations',
