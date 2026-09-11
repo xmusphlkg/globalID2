@@ -6,13 +6,15 @@ interface Props {
   stream?: boolean;
   index?: number;
   initialVisible?: number;
-  locale?: 'en' | 'zh';
+  locale?: 'en' | 'zh' | 'fr';
 }
+import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
 
 const { article, compact = false, featured = false, stream = false, index, initialVisible, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
-const localeHref = (href: string | null) => href && zh && href.startsWith('/') ? `${prefix}${href}` : href;
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
+const localeHref = (href: string | null) => href && (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
 const initiallyHidden = typeof index === 'number' && typeof initialVisible === 'number' && index >= initialVisible;
 const publicationDate = article.publication_date_label_en ?? (article.published_at
   ? new Date(article.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -49,6 +51,9 @@ const surveillanceLabelEn = surveillanceLink
 const surveillanceLabelZh = surveillanceLink
   ? `${surveillanceLink.disease_name_zh ?? surveillanceLink.disease_name_en}监测`
   : fallbackDisease ? `${fallbackDisease.name_zh ?? fallbackDisease.name_en}监测` : '相关监测';
+const surveillanceLabelFr = surveillanceLink
+  ? `${surveillanceLink.disease_name_fr ?? DISEASE_NAMES_FR[String(fallbackDisease?.slug ?? '').toLowerCase()] ?? DISEASE_NAMES_FR_BY_ID[String(fallbackDisease?.disease_id ?? '').toUpperCase()] ?? surveillanceLink.disease_name_en} surveillance`
+  : fallbackDisease ? `${fallbackDisease.name_fr ?? DISEASE_NAMES_FR[String(fallbackDisease.slug ?? '').toLowerCase()] ?? DISEASE_NAMES_FR_BY_ID[String(fallbackDisease.disease_id ?? '').toUpperCase()] ?? fallbackDisease.name_en} surveillance` : 'Surveillance associée';
 ---
 
 <article
@@ -83,7 +88,7 @@ const surveillanceLabelZh = surveillanceLink
       {isHistoricalBaseline && <span class="research-badge research-badge-history">{zh ? '历史基线' : 'Historical baseline'}</span>}
       {article.open_access_status === 'open' && <span class="research-badge research-badge-oa">{zh ? '开放获取' : 'Open access'}</span>}
       {(article.diseases ?? []).slice(0, compact ? 1 : 2).map((disease: any) => (
-        <span class="research-badge">{zh ? disease.name_zh ?? disease.name_en : disease.name_en}</span>
+        <span class="research-badge">{zh ? disease.name_zh ?? disease.name_en : fr ? disease.name_fr ?? DISEASE_NAMES_FR[String(disease.slug ?? '').toLowerCase()] ?? DISEASE_NAMES_FR_BY_ID[String(disease.disease_id ?? '').toUpperCase()] ?? disease.name_en : disease.name_en}</span>
       ))}
       {visibleTopics.map((topic: any) => (
         <a class="research-badge research-badge-topic" href={`${prefix}/research/topics/${String(topic.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}/`}>{topic.name}</a>
@@ -102,7 +107,7 @@ const surveillanceLabelZh = surveillanceLink
   {(openAccessUrl || surveillanceUrl) && (
     <div class="research-card-actions">
       {openAccessUrl && <a class="research-card-action research-card-action-oa" href={openAccessUrl} target="_blank" rel="noopener noreferrer">{zh ? '打开全文 ↗' : 'Open article ↗'}</a>}
-      {surveillanceUrl && <a class="research-card-action" href={localeHref(surveillanceUrl)}>{zh ? surveillanceLabelZh : surveillanceLabelEn} →</a>}
+      {surveillanceUrl && <a class="research-card-action" href={localeHref(surveillanceUrl)}>{zh ? surveillanceLabelZh : fr ? surveillanceLabelFr : surveillanceLabelEn} →</a>}
     </div>
   )}
 

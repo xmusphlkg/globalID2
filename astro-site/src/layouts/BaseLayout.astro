@@ -11,7 +11,7 @@ interface Props {
   description?: string;
   image?: string;
   noindex?: boolean;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
   additionalStructuredData?: JsonLdNode | JsonLdNode[];
   seo?: SeoDocument;
   hideLanguageToggle?: boolean;
@@ -35,6 +35,8 @@ const siteBase = Astro.site?.toString() ?? Astro.url.origin;
 const canonicalURL = new URL(seo?.canonicalPath ?? Astro.url.pathname, siteBase);
 const siteOrigin = new URL(siteBase).origin;
 const documentLocale = seo?.locale ?? initialLanguage;
+const isChinese = documentLocale === 'zh';
+const isFrench = documentLocale === 'fr';
 const pageTitle = seo?.title ?? (title === 'GIDS' ? title : `${title} | GIDS`);
 const pageDescription = seo?.description ?? description;
 const metaDescription = clampSeoDescription(pageDescription);
@@ -72,7 +74,7 @@ const structuredData = {
       name: 'Global Infectious Disease Surveillance',
       alternateName: 'GIDS',
       description: 'Official-source infectious disease surveillance data, trends, downloadable datasets, and methodology.',
-      inLanguage: ['en', 'zh'],
+      inLanguage: ['en', 'zh-CN', 'fr-FR'],
       publisher: {
         '@id': `${siteOrigin}#organization`,
       },
@@ -105,7 +107,7 @@ const structuredData = {
       isPartOf: {
         '@id': `${siteOrigin}#website`,
       },
-      inLanguage: documentLocale === 'zh' ? 'zh-CN' : 'en',
+      inLanguage: isChinese ? 'zh-CN' : isFrench ? 'fr-FR' : 'en',
       ...(seo?.datePublished ? { datePublished: seo.datePublished } : {}),
       ...(seo?.dateModified ? { dateModified: seo.dateModified } : {}),
     },
@@ -116,7 +118,7 @@ const structuredData = {
 
 <!doctype html>
 <html
-  lang={documentLocale === 'zh' ? 'zh-CN' : 'en'}
+  lang={isChinese ? 'zh-CN' : isFrench ? 'fr-FR' : 'en'}
   data-lang={documentLocale}
   data-release-id={siteReleaseId}
 >
@@ -133,7 +135,7 @@ const structuredData = {
     <meta name="description" content={metaDescription} />
     <link rel="canonical" href={canonicalURL} />
     {alternateUrls.map(({ locale, url }) => (
-      <link rel="alternate" hreflang={locale === 'zh' ? 'zh-CN' : 'en'} href={url} />
+      <link rel="alternate" hreflang={locale === 'zh' ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en'} href={url} />
     ))}
     {alternatePaths.en && <link rel="alternate" hreflang="x-default" href={new URL(alternatePaths.en, siteBase)} />}
     <meta name="robots" content={robotsContent} />
@@ -142,8 +144,8 @@ const structuredData = {
     <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content="GIDS" />
-    <meta property="og:locale" content={documentLocale === 'zh' ? 'zh_CN' : 'en_US'} />
-    <meta property="og:locale:alternate" content={documentLocale === 'zh' ? 'en_US' : 'zh_CN'} />
+    <meta property="og:locale" content={isChinese ? 'zh_CN' : isFrench ? 'fr_FR' : 'en_US'} />
+    <meta property="og:locale:alternate" content={isChinese ? 'en_US' : isFrench ? 'en_US' : 'zh_CN'} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={metaDescription} />
     <meta property="og:image" content={new URL(pageImage, siteBase)} />
@@ -178,13 +180,14 @@ const structuredData = {
     </script>
   </head>
   <body class="min-h-screen flex flex-col">
-    <a class="skip-link" href="#main-content">{documentLocale === 'zh' ? '跳到主要内容' : 'Skip to main content'}</a>
+    <a class="skip-link" href="#main-content">{isChinese ? '跳到主要内容' : isFrench ? 'Aller au contenu principal' : 'Skip to main content'}</a>
     <Header initialLanguage={initialLanguage} hideLanguageToggle={hideLanguageToggle} />
     {maintenanceMessage && <div class="site-update-banner border-b" role="status" aria-live="polite">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 text-sm font-medium text-center">
         <span>
-          {initialLanguage === 'zh'
+          {isChinese
             ? '网站正在维护，部分功能可能暂时不可用。'
+            : isFrench ? 'Le site est en maintenance; certaines fonctionnalités peuvent être temporairement indisponibles.'
             : maintenanceMessage}
         </span>
       </div>

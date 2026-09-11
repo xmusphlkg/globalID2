@@ -1,9 +1,9 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PublicAbout from '../components/public/PublicAbout.astro';
-const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
 ---
-<BaseLayout title={zh ? '方法与关于' : 'Methods & About'} description={zh ? '了解 GIDS 如何采集、标准化、发布和解释官方来源的传染病监测数据。' : 'How GIDS collects, standardizes, publishes, and explains official-source infectious disease surveillance data.'} initialLanguage={locale} seo={{ title: zh ? '方法与关于 | GIDS' : 'Methods & About | GIDS', description: zh ? '了解 GIDS 如何采集、标准化、发布和解释官方来源的传染病监测数据。' : 'How GIDS collects, standardizes, publishes, and explains official-source infectious disease surveillance data.', locale, canonicalPath: zh ? '/zh/about/' : '/about/', alternatePaths: { en: '/about/', zh: '/zh/about/' } }}>
+<BaseLayout title={zh ? '方法与关于' : locale === 'fr' ? 'Méthodes et à propos' : 'Methods & About'} description={zh ? '了解 GIDS 如何采集、标准化、发布和解释官方来源的传染病监测数据。' : locale === 'fr' ? 'Comment GIDS collecte, normalise, publie et explique les données officielles de surveillance.' : 'How GIDS collects, standardizes, publishes, and explains official-source infectious disease surveillance data.'} initialLanguage={locale} seo={{ title: zh ? '方法与关于 | GIDS' : locale === 'fr' ? 'Méthodes et à propos | GIDS' : 'Methods & About | GIDS', description: zh ? '了解 GIDS 如何采集、标准化、发布和解释官方来源的传染病监测数据。' : locale === 'fr' ? 'Comment GIDS collecte, normalise, publie et explique les données officielles de surveillance.' : 'How GIDS collects, standardizes, publishes, and explains official-source infectious disease surveillance data.', locale, canonicalPath: zh ? '/zh/about/' : locale === 'fr' ? '/fr/about/' : '/about/', alternatePaths: { en: '/about/', zh: '/zh/about/', fr: '/fr/about/' } }}>
   <PublicAbout locale={locale} />
 </BaseLayout>

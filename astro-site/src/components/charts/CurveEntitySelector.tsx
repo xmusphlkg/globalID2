@@ -19,7 +19,7 @@ interface Props {
   colorById: Map<string, string>;
   metric: EpidemicMetric;
   entityType: CurveEntityType;
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
   query: string;
   selectionMode: CurveSelectionMode;
   onQueryChange: (query: string) => void;
@@ -83,9 +83,9 @@ export default function CurveEntitySelector({
       if (sortMode === 'latest') return latestValue(right) - latestValue(left);
       if (sortMode === 'total') return (series[right]?.total_cases ?? 0) - (series[left]?.total_cases ?? 0);
       if (sortMode === 'name') {
-        const leftName = lang === 'zh' ? series[left]?.name_zh : series[left]?.name_en;
-        const rightName = lang === 'zh' ? series[right]?.name_zh : series[right]?.name_en;
-        return (leftName ?? '').localeCompare(rightName ?? '', lang === 'zh' ? 'zh' : 'en');
+        const leftName = lang === 'zh' ? series[left]?.name_zh : lang === 'fr' ? (series[left]?.name_fr ?? series[left]?.name_en) : series[left]?.name_en;
+        const rightName = lang === 'zh' ? series[right]?.name_zh : lang === 'fr' ? (series[right]?.name_fr ?? series[right]?.name_en) : series[right]?.name_en;
+        return (leftName ?? '').localeCompare(rightName ?? '', lang === 'zh' ? 'zh' : lang === 'fr' ? 'fr' : 'en');
       }
       return (rankById.get(left) ?? 0) - (rankById.get(right) ?? 0);
     });
@@ -96,7 +96,7 @@ export default function CurveEntitySelector({
       <div className="chart-sidebar-header">
         <div>
           <div className="chart-sidebar-title">
-            {lang === 'zh' ? `${entityName.zh}筛选` : `${entityName.en[0].toUpperCase()}${entityName.en.slice(1)} filter`}
+            {lang === 'zh' ? `${entityName.zh}筛选` : lang === 'fr' ? `Filtrer ${entityName.enPlural === 'diseases' ? 'les maladies' : 'les pays'}` : `${entityName.en[0].toUpperCase()}${entityName.en.slice(1)} filter`}
           </div>
           {!isCompact && (
             <div className="chart-sidebar-copy">
@@ -214,7 +214,7 @@ export default function CurveEntitySelector({
                   />
                   <div className="min-w-0 flex-1">
                     <div className="chart-sidebar-name">
-                      {lang === 'zh' ? item.name_zh : item.name_en}
+                      {lang === 'zh' ? item.name_zh : lang === 'fr' ? (item.name_fr ?? item.name_en) : item.name_en}
                       {isCompact && entityType === 'country' && (
                         <span className="chart-sidebar-compact-total">
                           {' '}({totalCases.toLocaleString()})

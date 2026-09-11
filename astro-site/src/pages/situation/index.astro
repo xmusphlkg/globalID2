@@ -15,9 +15,9 @@ import {
   type SituationReportV3,
 } from '../../utils/situation';
 
-const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 
 const latestPath = resolve('./src/data/situation/v3/latest.json');

@@ -41,7 +41,7 @@ interface Props {
   height?: number;
   sourceMeta?: ChartSourceMeta | null;
   sourceSeriesUrl?: string;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
 const SERIES_COLORS = [
@@ -119,7 +119,7 @@ function eventDateFromValue(value: unknown): string | null {
 
 function buildCurveEvents(
   item: CurveSeries,
-  lang: 'en' | 'zh',
+  lang: 'en' | 'zh' | 'fr',
 ) {
   const firstDate = item.dates?.[0];
   const lastDate = item.dates?.[item.dates.length - 1];
@@ -149,7 +149,7 @@ function buildCurveEvents(
     .map((event) => [`${event.date}:${event.label}`, event])).values()];
 }
 
-function comparisonReasonLabel(reason: string, lang: 'en' | 'zh') {
+function comparisonReasonLabel(reason: string, lang: 'en' | 'zh' | 'fr') {
   const labels: Record<string, { en: string; zh: string }> = {
     select_at_least_two: { en: 'select at least two series', zh: '请至少选择两条序列' },
     source_not_comparable: { en: 'a source explicitly forbids direct comparison', zh: '至少一个来源明确标记为不可直接比较' },
@@ -167,7 +167,8 @@ function comparisonReasonLabel(reason: string, lang: 'en' | 'zh') {
     definition_unknown: { en: 'a case-definition version is missing', zh: '至少一个病例定义版本缺失' },
     no_common_window: { en: 'there is no common observed time window', zh: '没有共同观测时间窗' },
   };
-  return (labels[reason] ?? { en: reason.replaceAll('_', ' '), zh: reason.replaceAll('_', ' ') })[lang];
+  const entry = (labels[reason] ?? { en: reason.replaceAll('_', ' '), zh: reason.replaceAll('_', ' '), fr: reason.replaceAll('_', ' ') }) as Partial<Record<'en' | 'zh' | 'fr', string>>;
+  return entry[lang] ?? entry.en;
 }
 
 export default function EpidemicCurve({
@@ -393,7 +394,7 @@ export default function EpidemicCurve({
       const provisionalFrom = getEffectiveProvisionalFrom(item);
       return {
         id,
-        name: lang === 'zh' ? item.name_zh : item.name_en,
+        name: lang === 'zh' ? item.name_zh : lang === 'fr' ? (item.name_fr ?? item.name_en) : item.name_en,
         color: colorById.get(id) ?? SERIES_COLORS[0],
         dates: clipped.dates,
         values: clipped.values,
@@ -495,7 +496,7 @@ export default function EpidemicCurve({
       if (fragments.length === 0) return [];
       return [{
         id,
-        name: lang === 'zh' ? item.name_zh : item.name_en,
+        name: lang === 'zh' ? item.name_zh : lang === 'fr' ? (item.name_fr ?? item.name_en) : item.name_en,
         fragments,
       }];
     })
@@ -722,7 +723,7 @@ export default function EpidemicCurve({
           return (
             <label key={control.id} className="block min-w-0 text-xs text-[rgb(var(--text-muted))]">
               <span className="mb-1 block truncate font-medium text-[rgb(var(--text-strong))]">
-                {lang === 'zh' ? control.item.name_zh : control.item.name_en}
+                {lang === 'zh' ? control.item.name_zh : lang === 'fr' ? (control.item.name_fr ?? control.item.name_en) : control.item.name_en}
               </span>
               <select
                 id={`epidemic-curve-source-${control.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
@@ -743,7 +744,9 @@ export default function EpidemicCurve({
                 }}
                 aria-label={lang === 'zh'
                   ? `${control.item.name_zh}曲线来源序列`
-                  : `${control.item.name_en} curve source series`}
+                  : lang === 'fr'
+                    ? `${control.item.name_fr ?? control.item.name_en} — séries sources`
+                    : `${control.item.name_en} curve source series`}
               >
                 {control.publicProjectionAvailable ? (
                   <option value="">{lang === 'zh' ? '公开投影（默认）' : 'Public projection (default)'}</option>

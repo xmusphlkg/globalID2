@@ -4,10 +4,16 @@ import PageAnchorNav from '../components/PageAnchorNav.astro';
 import { changelogReleases, type ChangeKind } from '../data/changelog';
 import { buildAlternatePaths } from '../lib/seo';
 
-const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
+const frenchUi: Record<string, string> = {
+  Changelog: 'Journal des modifications', 'Changelog | GIDS': 'Journal des modifications | GIDS', 'Product updates': 'Mises à jour du produit', 'What’s new in GIDS': 'Nouveautés de GIDS',
+  'Public release history across capabilities, refinements, and fixes.': 'Historique public des fonctionnalités, améliorations et corrections.', 'Changelog summary': 'Résumé des modifications', releases: 'versions', 'documented changes': 'changements documentés', 'first published': 'première publication', 'Release navigation': 'Navigation des versions', 'Current release': 'Version actuelle', 'Get future updates': 'Recevoir les prochaines mises à jour', 'Choose the topics you care about.': 'Choisissez les sujets qui vous intéressent.', 'Release history': 'Historique des versions', Latest: 'Dernière version', 'Jump to a version': 'Accéder à une version', 'Link to this release': 'Lien vers cette version',
+  'Follow every GIDS release, including new capabilities, improvements, fixes, and release dates.': 'Suivez chaque version de GIDS : nouveautés, améliorations, corrections et dates de publication.', 'Link to version': 'Lien vers la version',
+};
+const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : fr && typeof en === 'string' ? (frenchUi[en] ?? en) as T : en;
 
 const latestRelease = changelogReleases[0];
 const changeCount = changelogReleases.reduce(
@@ -21,7 +27,7 @@ const kindMeta: Record<ChangeKind, { marker: string; className: string }> = {
   fixed: { marker: '✓', className: 'changelog-kind-fixed' },
 };
 
-function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
+function formatDate(date: string, locale: 'en-US' | 'zh-CN' | 'fr-FR') {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString(locale, {
     year: 'numeric',
     month: locale === 'zh-CN' ? 'long' : 'short',
@@ -71,7 +77,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
           <span class="changelog-card-kicker">{pick('Current release', '当前版本')}</span>
           <strong>v{latestRelease.version}</strong>
           <time datetime={latestRelease.date}>
-            <span>{formatDate(latestRelease.date, zh ? 'zh-CN' : 'en-US')}</span>
+            <span>{formatDate(latestRelease.date, zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US')}</span>
           </time>
         </div>
 
@@ -106,8 +112,8 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
 
             <details class="changelog-release-body" open={index === 0}>
               <summary class="changelog-release-summary-row">
-                <span><strong>v{release.version}</strong><span>{pick(release.titleEn, release.titleZh)}</span></span>
-                <time datetime={release.date}><span>{formatDate(release.date, zh ? 'zh-CN' : 'en-US')}</span></time>
+              <span><strong>v{release.version}</strong><span>{fr ? (release.titleFr ?? release.titleEn) : pick(release.titleEn, release.titleZh)}</span></span>
+                <time datetime={release.date}><span>{formatDate(release.date, zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US')}</span></time>
               </summary>
               <header class="changelog-release-header">
                 <div class="changelog-release-version-row">
@@ -115,12 +121,12 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
                   {index === 0 && <span class="changelog-latest-pill">{pick('Latest', '最新版本')}</span>}
                 </div>
                 <time datetime={release.date}>
-                  <span>{formatDate(release.date, zh ? 'zh-CN' : 'en-US')}</span>
+                  <span>{formatDate(release.date, zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US')}</span>
                 </time>
               </header>
 
-              <h2>{pick(release.titleEn, release.titleZh)}</h2>
-              <p class="changelog-release-summary">{pick(release.summaryEn, release.summaryZh)}</p>
+              <h2>{fr ? (release.titleFr ?? release.titleEn) : pick(release.titleEn, release.titleZh)}</h2>
+              <p class="changelog-release-summary">{fr ? (release.summaryFr ?? release.summaryEn) : pick(release.summaryEn, release.summaryZh)}</p>
 
               <div class="changelog-change-groups">
                 {release.sections.map((section) => {
@@ -129,11 +135,11 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
                     <section class="changelog-change-group">
                       <div class:list={['changelog-kind', meta.className]}>
                         <span class="changelog-kind-marker" aria-hidden="true">{meta.marker}</span>
-                        <h3>{pick(section.labelEn, section.labelZh)}</h3>
+                        <h3>{fr ? (section.labelFr ?? section.labelEn) : pick(section.labelEn, section.labelZh)}</h3>
                       </div>
                       <ul>
                         {section.items.map((item) => (
-                          <li>{pick(item.en, item.zh)}</li>
+                          <li>{fr ? (item.fr ?? item.en) : pick(item.en, item.zh)}</li>
                         ))}
                       </ul>
                     </section>

@@ -6,16 +6,18 @@ import researchData from '../../data/research/index.json';
 import researchHotspotsData from '../../data/research/hotspots.json';
 import { buildResearchFeedDefinitions, filterResearchFeedArticles, type ResearchFeedScope } from '../../lib/research-feed';
 import { buildAlternatePaths } from '../../lib/seo';
+import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
 
 interface Props {
-  locale?: 'en' | 'zh';
+  locale?: 'en' | 'zh' | 'fr';
 }
 
 const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
-const localeHref = (href: string | null | undefined) => href && zh && href.startsWith('/') ? `${prefix}${href}` : href;
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ? zhValue : en;
+const localeHref = (href: string | null | undefined) => href && (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
 
 const data: any = researchData;
 const articles = (data.articles ?? []).filter((article: any) => (
@@ -159,7 +161,7 @@ const itemList = {
         <div class="directory-rows">
           <section>
             <h3>{pick('Diseases', '疾病')}</h3>
-            <ul>{topDiseaseHubs.map((facet: any) => <li><a href={localeHref(facet.url)}><span>{pick(facet.name_en, facet.name_zh ?? facet.name_en)}</span><strong>{facet.count}</strong></a></li>)}</ul>
+            <ul>{topDiseaseHubs.map((facet: any) => <li><a href={localeHref(facet.url)}><span>{pick(facet.name_en, facet.name_zh ?? facet.name_en, facet.name_fr ?? DISEASE_NAMES_FR[String(facet.slug ?? '').toLowerCase()] ?? DISEASE_NAMES_FR_BY_ID[String(facet.disease_id ?? '').toUpperCase()] ?? facet.name_en)}</span><strong>{facet.count}</strong></a></li>)}</ul>
           </section>
           <section>
             <h3>{pick('Topics', '主题')}</h3>
@@ -237,7 +239,7 @@ const itemList = {
                 <time datetime={signal.data_through}>{signal.data_through ?? '—'}</time>
               </div>
               <h3><a href={localeHref(signal.situation_url ?? '/situation/')}>{pick(signal.title, signal.title_zh ?? signal.title)}</a></h3>
-              <p class="surveillance-research-meta"><span>{pick(signal.disease_name_en, signal.disease_name_zh ?? signal.disease_name_en)}</span> · {geography}</p>
+              <p class="surveillance-research-meta"><span>{pick(signal.disease_name_en, signal.disease_name_zh ?? signal.disease_name_en, signal.disease_name_fr ?? DISEASE_NAMES_FR_BY_ID[String(signal.disease_id ?? '').toUpperCase()] ?? signal.disease_name_en)}</span> · {geography}</p>
               {linkedArticles.length > 0
                 ? <ol>{linkedArticles.map((article: any) => <li><a href={`${prefix}/research/articles/${article.slug}/`}><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></a></li>)}</ol>
                 : <p class="surveillance-research-empty">{pick('No public Research Radar article currently meets this relationship threshold.', '目前没有公开的 Research Radar 文献达到此关联阈值。')}</p>}
@@ -311,7 +313,7 @@ const itemList = {
       <div class="research-heading"><div><p class="academic-kicker">{pick('Evidence library', '证据库')}</p><h2 class="section-heading">{pick('Latest publications', '最新发表')}</h2></div></div>
       <form class="research-filters" role="search" aria-label={pick('Filter research articles', '筛选研究文献')} data-research-filters data-research-locale={locale}>
         <label class="search-field"><span class="sr-only">{pick('Search', '搜索')}</span><input class="site-control-input" id="research-search" type="search" placeholder={pick('Search title, disease, journal, or topic', '搜索标题、疾病、期刊或主题')} /></label>
-        <label><span>{pick('Disease', '疾病')}</span><select class="site-control-input" id="research-disease"><option value="">{pick('All diseases', '全部疾病')}</option>{diseases.map((item: any) => <option value={item.disease_id.toLowerCase()}>{pick(item.name_en, item.name_zh ?? item.name_en)}</option>)}</select></label>
+        <label><span>{pick('Disease', '疾病', 'Maladie')}</span><select class="site-control-input" id="research-disease"><option value="">{pick('All diseases', '全部疾病', 'Toutes les maladies')}</option>{diseases.map((item: any) => <option value={item.disease_id.toLowerCase()}>{pick(item.name_en, item.name_zh ?? item.name_en, item.name_fr ?? DISEASE_NAMES_FR_BY_ID[String(item.disease_id ?? '').toUpperCase()] ?? DISEASE_NAMES_FR[String(item.slug ?? '').toLowerCase()] ?? item.name_en)}</option>)}</select></label>
         <label><span>{pick('Country', '国家')}</span><select class="site-control-input" id="research-country"><option value="">{pick('All countries', '全部国家')}</option>{countries.map((item: any) => <option value={item.code.toLowerCase()}>{pick(item.name_en, item.name_zh ?? item.name_en)}</option>)}</select></label>
         <label><span>{pick('Study type', '研究类型')}</span><select class="site-control-input" id="research-study"><option value="">{pick('All study types', '全部研究类型')}</option>{studyTypes.map((item) => <option value={item.toLowerCase()}>{item}</option>)}</select></label>
         <label><span>{pick('Topic', '主题')}</span><select class="site-control-input" id="research-topic"><option value="">{pick('All topics', '全部主题')}</option>{topics.map((item) => <option value={String(item).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}>{item}</option>)}</select></label>
@@ -363,27 +365,27 @@ const itemList = {
     if (preset && disease && [...disease.options].some(option => option.value === preset)) disease.value = preset;
     const hasToken = (value: string | undefined, token: string) => (value ?? '').split(/\s+/).includes(token);
     const slugifyTopic = (value: string | undefined) => (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const currentLang = () => form?.dataset.researchLocale === 'zh' ? 'zh' : 'en';
-    const routePrefix = currentLang() === 'zh' ? '/zh' : '';
-    const setLangText = (element: HTMLElement, en: string, zh?: string | null) => {
-      element.textContent = currentLang() === 'zh' ? (zh || en) : en;
+    const currentLang = () => form?.dataset.researchLocale === 'zh' ? 'zh' : form?.dataset.researchLocale === 'fr' ? 'fr' : 'en';
+    const routePrefix = currentLang() === 'zh' ? '/zh' : currentLang() === 'fr' ? '/fr' : '';
+    const setLangText = (element: HTMLElement, en: string, zh?: string | null, fr?: string | null) => {
+      element.textContent = currentLang() === 'zh' ? (zh || en) : currentLang() === 'fr' ? (fr || en) : en;
     };
     const text = (value: unknown) => String(value ?? '');
-    const formatDate = (value: string | undefined, lang: 'en' | 'zh') => {
+    const formatDate = (value: string | undefined, lang: 'en' | 'zh' | 'fr') => {
       if (!value) return lang === 'zh' ? '日期暂缺' : 'Date unavailable';
-      return new Intl.DateTimeFormat(lang === 'zh' ? 'zh-CN' : 'en-US', {
+      return new Intl.DateTimeFormat(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
         timeZone: 'UTC',
       }).format(new Date(value));
     };
-    const formatArticleDate = (article: any, lang: 'en' | 'zh') => {
+    const formatArticleDate = (article: any, lang: 'en' | 'zh' | 'fr') => {
       const label = lang === 'zh' ? article.publication_date_label_zh : article.publication_date_label_en;
       return label || formatDate(article.published_at, lang);
     };
     const articleTokens = (article: any) => ({
-      diseaseText: (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''}`).join(' ').toLowerCase(),
+      diseaseText: (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase(),
       diseaseIds: (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase()).filter(Boolean).join(' '),
       countryText: (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en}`).join(' ').toLowerCase(),
       countryCodes: (article.countries ?? []).map((item: any) => String(item.code ?? '').toLowerCase()).filter(Boolean).join(' '),
@@ -447,7 +449,7 @@ const itemList = {
       badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer'));
       if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history'));
       if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa'));
-      (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en)));
+      (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), currentLang() === 'zh' ? item.name_zh ?? item.name_en : currentLang() === 'fr' ? item.name_fr ?? item.name_en : item.name_en)));
       (article.topics ?? []).slice(0, 3).forEach((item: any) => badges.appendChild(makeTopicBadge(text(item.name))));
       topline.appendChild(badges);
       if (article.doi) {

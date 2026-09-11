@@ -11,6 +11,7 @@ interface DiseaseRow {
   disease_id: string;
   name_en: string;
   name_zh: string;
+  name_fr?: string;
   category: string;
   slug: string;
   total_cases: number;
@@ -26,7 +27,7 @@ interface Props {
   countryCode?: string;
   series?: Record<string, CountryDatasetSeriesEntry>;
   dataUrl?: string;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
 type SortKey = 'name_en' | 'total_cases' | 'total_deaths' | 'latest_cases' | 'category';
@@ -50,11 +51,14 @@ const CATEGORY_LABEL_ZH: Record<string, string> = {
   Fungal: '真菌性',
   Other: '其他',
 };
+const CATEGORY_LABEL_FR: Record<string, string> = {
+  All: 'Toutes', Viral: 'Virales', Bacterial: 'Bactériennes', Parasitic: 'Parasitaires', Fungal: 'Fongiques', Other: 'Autres',
+};
 
-function Badge({ category, lang }: { category: string; lang: 'en' | 'zh' }) {
+function Badge({ category, lang }: { category: string; lang: 'en' | 'zh' | 'fr' }) {
   return (
     <span className={`inline-flex items-center rounded-none px-2 py-0.5 text-xs font-medium ${CATEGORY_STYLES[category] ?? 'bg-[rgb(var(--surface))] text-[rgb(var(--text))] ring-1 ring-[rgb(var(--border))]'}`}>
-      {lang === 'zh' ? CATEGORY_LABEL_ZH[category] ?? category : category}
+      {lang === 'zh' ? CATEGORY_LABEL_ZH[category] ?? category : lang === 'fr' ? CATEGORY_LABEL_FR[category] ?? category : category}
     </span>
   );
 }
@@ -71,7 +75,7 @@ function Sparkline({
 }: {
   diseaseId: string;
   diseaseName: string;
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
   series?: Props['series'];
 }) {
   const record = series?.[diseaseId];
@@ -199,7 +203,7 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
     if (search.trim()) {
       const q = search.toLowerCase();
       filtered = filtered.filter(r =>
-        r.name_en.toLowerCase().includes(q) || r.name_zh.includes(q)
+        r.name_en.toLowerCase().includes(q) || r.name_zh.includes(q) || (r.name_fr ?? '').toLowerCase().includes(q)
       );
     }
     return [...filtered].sort((a, b) => {
@@ -367,23 +371,23 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
           <tbody className="divide-y divide-[rgb(var(--border))]">
             {visibleRows.map(row => {
               const cfr = row.total_cases > 0 ? (row.total_deaths / row.total_cases) * 100 : null;
-              const diseasePath = `${lang === 'zh' ? '/zh' : ''}/diseases/${toSeoSlug(row.slug)}/`;
+              const diseasePath = `${lang === 'zh' ? '/zh' : lang === 'fr' ? '/fr' : ''}/diseases/${toSeoSlug(row.slug)}/`;
               return (
                 <tr key={row.disease_id} className="site-table-row-hover transition-colors group">
                   <td className="comparison-cell-sticky px-4 py-3">
                     <a href={diseasePath} className="block">
                       <span className="comparison-cell-primary font-medium group-hover:text-brand-400 transition-colors">
-                        {lang === 'zh' ? row.name_zh : row.name_en}
+                        {lang === 'zh' ? row.name_zh : lang === 'fr' ? (row.name_fr ?? row.name_en) : row.name_en}
                       </span>
                       <span className="comparison-cell-secondary mt-0.5 block text-xs">
-                        {lang === 'zh' ? row.name_en : row.name_zh}
+                        {lang === 'zh' ? row.name_en : lang === 'fr' ? row.name_en : row.name_zh}
                       </span>
                     </a>
                   </td>
                   <td className="px-4 py-3">
                     <Sparkline
                       diseaseId={row.disease_id}
-                      diseaseName={lang === 'zh' ? row.name_zh : row.name_en}
+                      diseaseName={lang === 'zh' ? row.name_zh : lang === 'fr' ? (row.name_fr ?? row.name_en) : row.name_en}
                       lang={lang}
                       series={series}
                     />

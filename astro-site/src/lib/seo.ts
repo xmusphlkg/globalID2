@@ -1,6 +1,6 @@
 export type JsonLdNode = Record<string, unknown>;
 
-export type SeoLocale = 'en' | 'zh';
+export type SeoLocale = 'en' | 'zh' | 'fr';
 
 export interface SeoDocument {
   title: string;
@@ -68,20 +68,25 @@ export function isIndexableResearchCollection(itemCount: unknown): boolean {
 }
 
 export function buildSeoTitle(subject: string, intent: string, coverage?: string, locale: SeoLocale = 'en'): string {
-  const cleanSubject = normalizeSeoText(subject) || (locale === 'zh' ? '传染病监测' : 'Infectious disease surveillance');
+  const cleanSubject = normalizeSeoText(subject) || (locale === 'zh' ? '传染病监测' : locale === 'fr' ? 'Surveillance des maladies infectieuses' : 'Infectious disease surveillance');
   const cleanCoverage = normalizeSeoText(coverage);
   if (locale === 'zh') {
     return clampSeoTitle(`${cleanSubject}${cleanCoverage ? `监测数据 ${cleanCoverage}` : '监测数据'} | ${SITE_NAME}`);
+  }
+  if (locale === 'fr') {
+    return clampSeoTitle(`${cleanSubject}${cleanCoverage ? ` — données de surveillance ${cleanCoverage}` : ' — données de surveillance'} | ${SITE_NAME}`);
   }
   return clampSeoTitle(`${cleanSubject} ${intent}${cleanCoverage ? ` ${cleanCoverage}` : ''} | ${SITE_NAME}`);
 }
 
 export function buildAlternatePaths(canonicalPath: string, locale: SeoLocale): Record<SeoLocale, string> {
-  const englishPath = canonicalPath.replace(/^\/zh(?=\/|$)/, '') || '/';
+  // Keep the locale parameter for API compatibility; all three alternates are
+  // emitted on every page so crawlers and users can discover each interface.
+  void locale;
+  const englishPath = canonicalPath.replace(/^\/(?:zh|fr)(?=\/|$)/, '') || '/';
   const chinesePath = englishPath === '/' ? '/zh/' : `/zh${englishPath}`;
-  return locale === 'zh'
-    ? { en: englishPath, zh: canonicalPath }
-    : { en: canonicalPath, zh: chinesePath };
+  const frenchPath = englishPath === '/' ? '/fr/' : `/fr${englishPath}`;
+  return { en: englishPath, zh: chinesePath, fr: frenchPath };
 }
 
 export function isIndexableDisease(input: {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export type ChartLanguage = 'en' | 'zh';
+export type ChartLanguage = 'en' | 'zh' | 'fr';
 export type ChartTheme = 'light' | 'dark';
 
 function readTheme(): ChartTheme {

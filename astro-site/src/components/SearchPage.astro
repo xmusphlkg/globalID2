@@ -1,11 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-interface Props { locale?: 'en' | 'zh'; }
+interface Props { locale?: 'en' | 'zh' | 'fr'; }
 const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const canonicalPath = zh ? '/zh/search/' : '/search/';
+const canonicalPath = zh ? '/zh/search/' : locale === 'fr' ? '/fr/search/' : '/search/';
 ---
-<BaseLayout title={zh ? '全站检索' : 'Search'} description={zh ? '检索 GIDS 的国家、疾病、态势、报告与研究证据。' : 'Search GIDS countries, diseases, situation reports, and research evidence.'} initialLanguage={locale} noindex seo={{ title: zh ? '全站检索 | GIDS' : 'Search | GIDS', description: zh ? '检索 GIDS 的公开数据与证据。' : 'Search public GIDS data and evidence.', locale, canonicalPath, alternatePaths: { en: '/search/', zh: '/zh/search/' }, noindex: true }}>
+<BaseLayout title={zh ? '全站检索' : locale === 'fr' ? 'Recherche' : 'Search'} description={zh ? '检索 GIDS 的国家、疾病、态势、报告与研究证据。' : locale === 'fr' ? 'Recherchez dans les pays, maladies, rapports et études GIDS.' : 'Search GIDS countries, diseases, situation reports, and research evidence.'} initialLanguage={locale} noindex seo={{ title: zh ? '全站检索 | GIDS' : locale === 'fr' ? 'Recherche | GIDS' : 'Search | GIDS', description: zh ? '检索 GIDS 的公开数据与证据。' : locale === 'fr' ? 'Recherchez dans les données et preuves publiques GIDS.' : 'Search public GIDS data and evidence.', locale, canonicalPath, alternatePaths: { en: '/search/', zh: '/zh/search/', fr: '/fr/search/' }, noindex: true }}>
   <section class="search-page max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
     <p class="academic-kicker">{zh ? '证据发现' : 'Evidence discovery'}</p>
     <h1 class="academic-title">{zh ? '检索 GIDS' : 'Search GIDS'}</h1>

@@ -125,7 +125,8 @@ export function useEpidemicCurveState({
     return eligibleIds.filter((id) => {
       const item = series[id];
       return (item.name_en ?? '').toLowerCase().includes(normalizedQuery)
-        || (item.name_zh ?? '').toLowerCase().includes(normalizedQuery);
+        || (item.name_zh ?? '').toLowerCase().includes(normalizedQuery)
+        || (item.name_fr ?? '').toLowerCase().includes(normalizedQuery);
     });
   }, [eligibleIds, query, series]);
 

@@ -12,7 +12,7 @@ interface Props {
   archivePath: string;
   previousPath?: string;
   nextPath?: string;
-  locale?: 'en' | 'zh';
+  locale?: 'en' | 'zh' | 'fr';
 }
 const { report, jsonPath, canonicalPath, archivePath, previousPath, nextPath, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';

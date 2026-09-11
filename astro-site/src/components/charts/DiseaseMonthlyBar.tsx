@@ -7,7 +7,7 @@ interface Props {
   dataUrl?: string;
   height?: number;
   sourceMeta?: ChartSourceMeta | null;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
 export default function DiseaseMonthlyBar({ dataUrl, height = 360, sourceMeta = null, initialLanguage = 'en' }: Props) {

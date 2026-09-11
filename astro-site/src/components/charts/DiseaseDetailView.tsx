@@ -15,15 +15,16 @@ interface DiseaseSection {
   title: string;
   content: string;
   content_html?: string;
-  title_i18n?: Record<'zh' | 'en', string>;
-  content_i18n?: Record<'zh' | 'en', string>;
-  content_html_i18n?: Record<'zh' | 'en', string>;
+  title_i18n?: Partial<Record<'zh' | 'en' | 'fr', string>>;
+  content_i18n?: Partial<Record<'zh' | 'en' | 'fr', string>>;
+  content_html_i18n?: Partial<Record<'zh' | 'en' | 'fr', string>>;
 }
 
 interface DiseaseMeta {
   disease_id: string;
   name_en: string;
   name_zh: string;
+  name_fr?: string;
   category: string;
   slug: string;
 }
@@ -52,7 +53,7 @@ interface Props {
   series: DiseaseSeries | null;
   reportMeta: ReportMeta;
   globalDiseasePath?: string | null;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
@@ -74,7 +75,7 @@ function useTheme() {
   return theme;
 }
 
-function useLang(initialLanguage: 'en' | 'zh') {
+function useLang(initialLanguage: 'en' | 'zh' | 'fr') {
   return initialLanguage;
 }
 
@@ -128,8 +129,8 @@ function fmtNum(n: number): string {
   return n.toLocaleString();
 }
 
-function fmtDate(d: string, lang: 'en' | 'zh') {
-  return new Date(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short' });
+function fmtDate(d: string, lang: 'en' | 'zh' | 'fr') {
+  return new Date(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short' });
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -150,7 +151,7 @@ const YEAR_PALETTE_LIGHT = [
 function EpidemicCurveChart({ series, theme, lang, showDeaths }: {
   series: DiseaseSeries;
   theme: 'light' | 'dark';
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
   showDeaths: boolean;
 }) {
   const t = chartTokens(theme);
@@ -170,7 +171,7 @@ function EpidemicCurveChart({ series, theme, lang, showDeaths }: {
         textStyle: { color: t.tooltipFont, fontSize: 12 },
         formatter: (params: any[]) => {
           const d = params[0]?.axisValue;
-          const dateStr = d ? new Date(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short' }) : '';
+          const dateStr = d ? new Date(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short' }) : '';
           let html = `<div style="font-size:11px;color:${t.font};margin-bottom:4px">${dateStr}</div>`;
           params.forEach((p: any) => {
             const v = p.value?.[1] ?? p.value ?? 0;
@@ -286,7 +287,7 @@ function MonthlyDistributionChart({ series, metric, theme, lang }: {
   series: DiseaseSeries;
   metric: 'cases' | 'deaths';
   theme: 'light' | 'dark';
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
 }) {
   const t = chartTokens(theme);
   const palette = theme === 'light' ? YEAR_PALETTE_LIGHT : YEAR_PALETTE_DARK;
@@ -365,8 +366,8 @@ function MonthlyDistributionChart({ series, metric, theme, lang }: {
 
 // ─── Section renderer ─────────────────────────────────────────────────────────
 
-function localizedText(value: Record<'zh' | 'en', string> | undefined, lang: 'en' | 'zh', fallback: string) {
-  return value?.[lang] || value?.zh || fallback;
+function localizedText(value: Partial<Record<'zh' | 'en' | 'fr', string>> | undefined, lang: 'en' | 'zh' | 'fr', fallback: string) {
+  return value?.[lang] || value?.en || value?.zh || fallback;
 }
 
 function markdownHtml(value: string) {
@@ -376,7 +377,7 @@ function markdownHtml(value: string) {
 function SectionBlock({ section, theme, lang }: {
   section: DiseaseSection;
   theme: 'light' | 'dark';
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
 }) {
   const isLight = theme === 'light';
   const borderColor = isLight ? '#e2e8f0' : '#1e293b';
@@ -445,7 +446,7 @@ function Figure({ number, caption, children, theme, lang }: {
   caption: string;
   children: React.ReactNode;
   theme: 'light' | 'dark';
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
 }) {
   const isLight = theme === 'light';
   const figureRef = useRef<HTMLElement>(null);
@@ -512,7 +513,7 @@ const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string
   Fungal:    { bg: 'rgba(167,139,250,0.1)', text: '#a78bfa', border: 'rgba(167,139,250,0.25)' },
 };
 
-function categoryLabel(value: string, lang: 'en' | 'zh') {
+function categoryLabel(value: string, lang: 'en' | 'zh' | 'fr') {
   if (lang === 'en') return value || 'Unclassified';
   return ({
     Viral: '病毒性',
@@ -527,7 +528,7 @@ function categoryLabel(value: string, lang: 'en' | 'zh') {
 export default function DiseaseDetailView({ diseaseMeta, sections, series, reportMeta, globalDiseasePath = null, initialLanguage = 'en' }: Props) {
   const theme = useTheme();
   const lang = useLang(initialLanguage);
-  const localePrefix = lang === 'zh' ? '/zh' : '';
+  const localePrefix = lang === 'zh' ? '/zh' : lang === 'fr' ? '/fr' : '';
   const isLight = theme === 'light';
 
   const bgPage   = isLight ? '#f8fafc' : '#060d1b';
@@ -628,11 +629,11 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
           {/* Disease title */}
           <div className="mb-6">
             <h1 style={{ color: textHead }} className="text-3xl md:text-4xl font-bold tracking-tight leading-tight mb-1">
-              {lang === 'zh' && diseaseMeta.name_zh ? diseaseMeta.name_zh : diseaseMeta.name_en}
+              {lang === 'zh' && diseaseMeta.name_zh ? diseaseMeta.name_zh : lang === 'fr' ? (diseaseMeta.name_fr ?? diseaseMeta.name_en) : diseaseMeta.name_en}
             </h1>
-            {diseaseMeta.name_zh && (
+            {(diseaseMeta.name_zh || diseaseMeta.name_fr) && (
               <p style={{ color: textMute }} className="text-base mt-1">
-                {lang === 'zh' ? `英文名：${diseaseMeta.name_en}` : diseaseMeta.name_zh}
+                {lang === 'zh' ? `英文名：${diseaseMeta.name_en}` : lang === 'fr' ? diseaseMeta.name_en : diseaseMeta.name_zh}
               </p>
             )}
           </div>
@@ -740,10 +741,14 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
                 showDeathMetrics
                   ? (lang === 'zh'
                     ? `${diseaseMeta.name_zh || diseaseMeta.name_en} 流行曲线——月度病例数（柱）与死亡数（线），双纵轴`
-                    : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases (bars, left axis) and deaths (line, right axis) over the full surveillance period.`)
+                    : lang === 'fr'
+                      ? `Courbe épidémique de ${diseaseMeta.name_fr ?? diseaseMeta.name_en} — cas mensuels (barres) et décès (ligne), double axe`
+                      : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases (bars, left axis) and deaths (line, right axis) over the full surveillance period.`)
                   : (lang === 'zh'
                     ? `${diseaseMeta.name_zh || diseaseMeta.name_en} 流行曲线——完整监测期的月度病例数`
-                    : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases over the full surveillance period.`)
+                    : lang === 'fr'
+                      ? `Courbe épidémique de ${diseaseMeta.name_fr ?? diseaseMeta.name_en} — cas mensuels sur toute la période de surveillance`
+                      : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases over the full surveillance period.`)
               }
               theme={theme}
               lang={lang}

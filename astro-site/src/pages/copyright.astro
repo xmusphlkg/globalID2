@@ -1,20 +1,21 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PublicCopyright from '../components/public/PublicCopyright.astro';
-const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 ---
 
 <BaseLayout
-  title={zh ? '版权、许可与复用说明' : 'Copyright, Licensing & Reuse'}
-  description={zh ? '了解如何引用、使用和再发布 GIDS 内容与官方来源监测数据。' : 'Clear guidance for citing, using, and redistributing GIDS content and official-source surveillance data.'}
+  title={zh ? '版权、许可与复用说明' : fr ? 'Droits d’auteur, licences et réutilisation' : 'Copyright, Licensing & Reuse'}
+  description={zh ? '了解如何引用、使用和再发布 GIDS 内容与官方来源监测数据。' : fr ? 'Conseils clairs pour citer, utiliser et redistribuer le contenu GIDS et les données officielles de surveillance.' : 'Clear guidance for citing, using, and redistributing GIDS content and official-source surveillance data.'}
   initialLanguage={locale}
   seo={{
-    title: zh ? '版权、许可与复用 | GIDS' : 'Copyright, Licensing & Reuse | GIDS',
-    description: zh ? '了解如何引用、使用和再发布 GIDS 内容与官方来源监测数据。' : 'Clear guidance for citing, using, and redistributing GIDS content and official-source surveillance data.',
+    title: zh ? '版权、许可与复用 | GIDS' : fr ? 'Droits d’auteur, licences et réutilisation | GIDS' : 'Copyright, Licensing & Reuse | GIDS',
+    description: zh ? '了解如何引用、使用和再发布 GIDS 内容与官方来源监测数据。' : fr ? 'Conseils clairs pour citer, utiliser et redistribuer le contenu GIDS et les données officielles de surveillance.' : 'Clear guidance for citing, using, and redistributing GIDS content and official-source surveillance data.',
     locale,
-    canonicalPath: zh ? '/zh/copyright/' : '/copyright/',
-    alternatePaths: { en: '/copyright/', zh: '/zh/copyright/' },
+    canonicalPath: zh ? '/zh/copyright/' : fr ? '/fr/copyright/' : '/copyright/',
+    alternatePaths: { en: '/copyright/', zh: '/zh/copyright/', fr: '/fr/copyright/' },
   }}
 >
   <PublicCopyright locale={locale} />

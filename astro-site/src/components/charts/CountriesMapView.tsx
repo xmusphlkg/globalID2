@@ -56,7 +56,7 @@ interface DotPos extends Marker {
 interface Props {
   metaCountries?: MetaCountry[];
   height?: number;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
 type CountryFilterWindow = Window & { __globalIdCountryFilterCodes?: string[] };
@@ -140,7 +140,7 @@ const SUBDIVISION_POINTS: Record<string, [number, number]> = {
   'CN-XJ': [85.5, 41.1], 'CN-XZ': [88.4, 31.7], 'CN-YN': [101.5, 25.5], 'CN-ZJ': [120.2, 29.2],
 };
 
-function makeCountryPoints(worldGeoJson: any, metaByCode: Record<string, MetaCountry>, lang: 'en' | 'zh'): Marker[] {
+function makeCountryPoints(worldGeoJson: any, metaByCode: Record<string, MetaCountry>, lang: 'en' | 'zh' | 'fr'): Marker[] {
   const featureByName = new Map<string, any>();
   for (const feature of worldGeoJson?.features ?? []) {
     const name = normaliseName(feature?.properties?.name);
@@ -299,7 +299,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
         const isUnsupported = marker.status === 'Unsupported';
         const isPlanned = marker.status === 'Scheduled';
         const color = isUnsupported ? palette.unsupported : isPlanned ? palette.planned : palette.supported;
-        return <button key={marker.iso2} type="button" className={`coverage-map-dot ${isSubdivision ? 'is-subdivision' : 'is-country'} ${isUnsupported ? 'is-unsupported' : ''} ${isPlanned ? 'is-planned' : ''}`} style={{ left: marker.px, top: marker.py, '--dot-color': color } as React.CSSProperties} aria-label={`${marker.name} — ${marker.statusLabel}`} onMouseEnter={() => setHovered(marker)} onMouseLeave={() => setHovered(null)} onFocus={() => setHovered(marker)} onBlur={() => setHovered(null)} onClick={() => marker.href && (window.location.href = `${initialLanguage === 'zh' ? '/zh' : ''}${marker.href}`)} />;
+        return <button key={marker.iso2} type="button" className={`coverage-map-dot ${isSubdivision ? 'is-subdivision' : 'is-country'} ${isUnsupported ? 'is-unsupported' : ''} ${isPlanned ? 'is-planned' : ''}`} style={{ left: marker.px, top: marker.py, '--dot-color': color } as React.CSSProperties} aria-label={`${marker.name} — ${marker.statusLabel}`} onMouseEnter={() => setHovered(marker)} onMouseLeave={() => setHovered(null)} onFocus={() => setHovered(marker)} onBlur={() => setHovered(null)} onClick={() => marker.href && (window.location.href = `${initialLanguage === 'zh' ? '/zh' : initialLanguage === 'fr' ? '/fr' : ''}${marker.href}`)} />;
       })}
       {hovered && <div className="coverage-map-tooltip" style={{ left: Math.min(Math.max(8, hovered.px + 12), Math.max(8, (containerRef.current?.clientWidth || 800) - 190)), top: Math.min(Math.max(8, hovered.py - 46), Math.max(8, (containerRef.current?.clientHeight || height) - 82)), background: palette.tooltipBg, borderColor: palette.tooltipBorder, color: palette.text }} role="status">
         <div className="coverage-map-tooltip-title"><img src={getFlagAssetPath(hovered.iso2)} alt="" aria-hidden="true" /> <strong>{hovered.name}</strong></div>

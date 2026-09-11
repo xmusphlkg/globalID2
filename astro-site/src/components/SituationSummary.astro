@@ -2,11 +2,11 @@
 import type { SituationReportV3 } from '../utils/situation';
 import { diseaseHref, formatNumber, geographyLabel, label, labelZh } from '../utils/situation';
 
-interface Props { snapshot: SituationReportV3; compact?: boolean; locale?: 'en' | 'zh'; }
+interface Props { snapshot: SituationReportV3; compact?: boolean; locale?: 'en' | 'zh' | 'fr'; }
 
 const { snapshot, compact = false, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 const signals = snapshot.signals.slice(0, compact ? 3 : 5);
 const currency = snapshot.data_currency.by_source ?? [];

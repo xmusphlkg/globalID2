@@ -4,11 +4,13 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
 import DiseaseCard from '../../components/DiseaseCard.astro';
 import diseasesRaw from '../../data/diseases/index.json';
 import { buildAlternatePaths } from '../../lib/seo';
+import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
 
-const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ? zhValue : en;
 
 const diseases = diseasesRaw as any[];
 
@@ -52,27 +54,27 @@ const catCounts = Object.fromEntries(
 ---
 
 <ReportLayout
-  title={pick('Disease Directory', '疾病目录')}
-  description={pick(`Browse ${diseases.length} infectious diseases tracked by GIDS`, `浏览 GIDS 追踪的 ${diseases.length} 种传染病`)}
+  title={pick('Disease Directory', '疾病目录', 'Répertoire des maladies')}
+  description={pick(`Browse ${diseases.length} infectious diseases tracked by GIDS`, `浏览 GIDS 追踪的 ${diseases.length} 种传染病`, `Parcourez les ${diseases.length} maladies infectieuses suivies par GIDS`)}
   initialLanguage={locale}
-  seo={{ title: pick('Disease Directory | GIDS', '疾病目录 | GIDS'), description: pick(`Browse ${diseases.length} infectious diseases tracked by GIDS`, `浏览 GIDS 追踪的 ${diseases.length} 种传染病`), locale, canonicalPath: `${prefix}/diseases/`, alternatePaths: buildAlternatePaths(`${prefix}/diseases/`, locale), pageType: 'WebPage' }}
-  breadcrumbs={[{ label: pick('Diseases', '疾病') }]}
+  seo={{ title: pick('Disease Directory | GIDS', '疾病目录 | GIDS', 'Répertoire des maladies | GIDS'), description: pick(`Browse ${diseases.length} infectious diseases tracked by GIDS`, `浏览 GIDS 追踪的 ${diseases.length} 种传染病`, `Parcourez les ${diseases.length} maladies infectieuses suivies par GIDS`), locale, canonicalPath: `${prefix}/diseases/`, alternatePaths: buildAlternatePaths(`${prefix}/diseases/`, locale), pageType: 'WebPage' }}
+  breadcrumbs={[{ label: pick('Diseases', '疾病', 'Maladies') }]}
 >
   <div class="diseases-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
     <section class="card diseases-intro p-6 sm:p-8">
       <div class="diseases-intro-grid">
         <div>
-          <h1 class="section-heading">{pick('Disease Directory', '疾病目录')}</h1>
-          <p class="diseases-intro-copy mt-3">{pick(`${diseases.length} infectious diseases tracked across categories`, `追踪 ${diseases.length} 种传染病，按分类组织`)}</p>
+          <h1 class="section-heading">{pick('Disease Directory', '疾病目录', 'Répertoire des maladies')}</h1>
+          <p class="diseases-intro-copy mt-3">{pick(`${diseases.length} infectious diseases tracked across categories`, `追踪 ${diseases.length} 种传染病，按分类组织`, `${diseases.length} maladies infectieuses suivies par catégorie`)}</p>
         </div>
 
         <div class="diseases-meta-grid">
           <article class="diseases-meta-card">
-            <div class="diseases-meta-label">{pick('Diseases', '疾病总数')}</div>
+            <div class="diseases-meta-label">{pick('Diseases', '疾病总数', 'Maladies')}</div>
             <div class="diseases-meta-value">{diseases.length}</div>
           </article>
           <article class="diseases-meta-card">
-            <div class="diseases-meta-label">{pick('Categories', '分类数量')}</div>
+            <div class="diseases-meta-label">{pick('Categories', '分类数量', 'Catégories')}</div>
             <div class="diseases-meta-value">{categories.length}</div>
           </article>
         </div>
@@ -83,17 +85,17 @@ const catCounts = Object.fromEntries(
           <input
             id="disease-search"
             type="search"
-            placeholder={pick('Search diseases or ICD code...', '搜索疾病或 ICD 编码…')}
+            placeholder={pick('Search diseases or ICD code...', '搜索疾病或 ICD 编码…', 'Rechercher une maladie ou un code CIM…')}
             class="site-control-input diseases-search w-full px-3 py-2 text-sm rounded-none border focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
           <button
             id="clear-disease-search"
             type="button"
             class="site-action-secondary px-3 py-2 text-xs rounded-none border font-semibold transition-colors"
-            aria-label={pick('Clear search', '清除搜索')}
+            aria-label={pick('Clear search', '清除搜索', 'Effacer la recherche')}
             disabled
           >
-            {pick('Clear', '清除')}
+            {pick('Clear', '清除', 'Effacer')}
           </button>
         </div>
 
@@ -102,14 +104,14 @@ const catCounts = Object.fromEntries(
             class="cat-filter-btn site-control-pill is-active px-3 py-1.5 text-xs rounded-none border transition-colors"
             data-cat="All"
           >
-            <span>{pick(`All (${diseases.length})`, `全部（${diseases.length}）`)}</span>
+            <span>{pick(`All (${diseases.length})`, `全部（${diseases.length}）`, `Toutes (${diseases.length})`)}</span>
           </button>
           {categories.map((cat) => (
             <button
               class="cat-filter-btn site-control-pill px-3 py-1.5 text-xs rounded-none border transition-colors"
               data-cat={cat}
             >
-              <span>{pick(`${cat} (${catCounts[cat] ?? 0})`, `${catZh[cat] ?? cat}（${catCounts[cat] ?? 0}）`)}</span>
+              <span>{pick(`${cat} (${catCounts[cat] ?? 0})`, `${catZh[cat] ?? cat}（${catCounts[cat] ?? 0}）`, `${cat === 'Viral' ? 'Virales' : cat === 'Bacterial' ? 'Bactériennes' : cat === 'Parasitic' ? 'Parasitaires' : cat === 'Fungal' ? 'Fongiques' : 'Autres'} (${catCounts[cat] ?? 0})`)}</span>
             </button>
           ))}
         </div>
@@ -121,7 +123,7 @@ const catCounts = Object.fromEntries(
       return (
         <section class="cat-section card diseases-category p-5 sm:p-6" data-cat={cat}>
           <div class="diseases-category-header">
-            <h2 class="diseases-category-title">{pick(cat, catZh[cat] ?? cat)}</h2>
+            <h2 class="diseases-category-title">{pick(cat, catZh[cat] ?? cat, cat === 'Viral' ? 'Virales' : cat === 'Bacterial' ? 'Bactériennes' : cat === 'Parasitic' ? 'Parasitaires' : cat === 'Fungal' ? 'Fongiques' : 'Autres')}</h2>
             <span class="diseases-category-count">{catDiseases.length}</span>
           </div>
 
@@ -131,12 +133,14 @@ const catCounts = Object.fromEntries(
                 class="disease-card-wrap"
                 data-name-en={(d.name_en ?? '').toLowerCase()}
                 data-name-zh={(d.name_zh ?? '').toLowerCase()}
+                data-name-fr={(d.name_fr ?? DISEASE_NAMES_FR[d.slug] ?? d.name_en ?? '').toLowerCase()}
                 data-icd={(d.icd_10 ?? '').toLowerCase()}
               >
                 <DiseaseCard
                   diseaseId={d.disease_id}
                   nameEn={d.name_en}
                   nameZh={d.name_zh}
+                  nameFr={d.name_fr ?? DISEASE_NAMES_FR[d.slug] ?? d.name_en}
                   category={d.normalized_category}
                   icd10={d.icd_10}
                   description={d.description}
@@ -151,8 +155,8 @@ const catCounts = Object.fromEntries(
     })}
 
     <div id="no-results" class="card diseases-empty hidden p-10 sm:p-12 text-center">
-      <p class="diseases-empty-title">{pick('No diseases found', '未找到匹配疾病')}</p>
-      <p class="diseases-empty-copy mt-2">{pick('Try a different keyword, category, or ICD code.', '请尝试其他关键词、分类或 ICD 编码。')}</p>
+      <p class="diseases-empty-title">{pick('No diseases found', '未找到匹配疾病', 'Aucune maladie trouvée')}</p>
+      <p class="diseases-empty-copy mt-2">{pick('Try a different keyword, category, or ICD code.', '请尝试其他关键词、分类或 ICD 编码。', 'Essayez un autre mot-clé, une autre catégorie ou un code CIM.')}</p>
     </div>
   </div>
 </ReportLayout>
@@ -190,9 +194,10 @@ const catCounts = Object.fromEntries(
       section.querySelectorAll<HTMLElement>('.disease-card-wrap').forEach((card) => {
         const nameEn = (card.dataset.nameEn ?? '').toLowerCase();
         const nameZh = (card.dataset.nameZh ?? '').toLowerCase();
+        const nameFr = (card.dataset.nameFr ?? '').toLowerCase();
         const icd = (card.dataset.icd ?? '').toLowerCase();
 
-        const matches = !q || nameEn.includes(q) || nameZh.includes(q) || icd.includes(q);
+        const matches = !q || nameEn.includes(q) || nameZh.includes(q) || nameFr.includes(q) || icd.includes(q);
         card.classList.toggle('hidden', !matches);
 
         if (matches) sectionHasVisible = true;

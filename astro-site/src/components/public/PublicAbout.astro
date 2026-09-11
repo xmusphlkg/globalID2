@@ -5,12 +5,12 @@ import PageAnchorNav from '../PageAnchorNav.astro';
 import StatBar from '../StatBar.astro';
 
 interface Props {
-  locale?: 'en' | 'zh';
+  locale?: 'en' | 'zh' | 'fr';
 }
 
 const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const about = aboutRaw as any;
 const summary = about.summary ?? {};
 const dateLocale = zh ? 'zh-CN' : 'en-US';

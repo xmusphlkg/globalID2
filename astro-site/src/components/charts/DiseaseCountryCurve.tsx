@@ -9,7 +9,7 @@ interface Props {
   height?: number;
   entityIds?: string[];
   sourceMeta?: ChartSourceMeta | null;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
 export function nationalJurisdictionSeries(

@@ -7,7 +7,7 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxJavaScriptChunkBytes: 350_000,
   maxRouteCompressedAssetsBytes: 370_000,
   maxOrdinaryRouteCompressedAssetsBytes: 300_000,
-  // Raised from 100KB (2026-08-23): the bilingual Research Radar graph page
+  // Raised from 100KB (2026-08-23): the multilingual Research Radar graph page
   // now carries enough static graph metadata to sit just over the old cap.
   maxPageHtmlGzipBytes: 115_000,
   maxAverageHtmlBytes: 105_000,
@@ -144,7 +144,7 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
         assetCount: selected.size,
       };
     }
-    const isDataRoute = /^\/(?:zh\/)?(?:countries|diseases|situation|research)\//.test(routePath);
+    const isDataRoute = /^\/(?:(?:zh|fr)\/)?(?:countries|diseases|situation|research)\//.test(routePath);
     if (!isDataRoute && gzipBytes > largestOrdinaryRoute.gzipBytes) {
       largestOrdinaryRoute = { path: routePath, gzipBytes, assetCount: selected.size };
     }

@@ -62,7 +62,7 @@ interface Props {
   onDateWindowChange: (dateWindow: DateWindow) => void;
   metric: EpidemicMetric;
   metricLabel?: string;
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
   colors: ChartColors;
   title?: string;
   height: number | string;
@@ -79,7 +79,7 @@ function formatTooltipValue(value: unknown, metric: EpidemicMetric) {
     : numericValue.toLocaleString();
 }
 
-function formatTooltipDelta(value: number, metric: EpidemicMetric, lang: 'en' | 'zh') {
+function formatTooltipDelta(value: number, metric: EpidemicMetric, lang: 'en' | 'zh' | 'fr') {
   const prefix = value > 0 ? '+' : '';
   const formatted = formatTooltipValue(value, metric);
   return lang === 'zh' ? `较上一期 ${prefix}${formatted}` : `vs previous ${prefix}${formatted}`;

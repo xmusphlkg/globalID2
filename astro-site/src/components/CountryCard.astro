@@ -11,7 +11,7 @@ interface Props {
   diseaseCount?: number;
   dateRange?: { start: string | null; end: string | null };
   locationType?: 'country' | 'subdivision' | string;
-  locale?: 'en' | 'zh';
+  locale?: 'en' | 'zh' | 'fr';
 }
 
 const { code, name, nameZh = name, totalCases = 0, totalDeaths = 0, diseaseCount = 0, dateRange, locationType = 'country', locale = 'en' } = Astro.props;
@@ -22,7 +22,7 @@ function fmtNum(n: number) {
   return n.toLocaleString();
 }
 
-const href = `${locale === 'zh' ? '/zh' : ''}/countries/${code.toLowerCase()}/`;
+const href = `${locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : ''}/countries/${code.toLowerCase()}/`;
 const deathsDisplay = totalDeaths > 0 ? fmtNum(totalDeaths) : '-';
 const displayName = locale === 'zh' ? nameZh : name;
 const labels = locale === 'zh'

@@ -3,10 +3,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchArticleCard from './ResearchArticleCard.astro';
 
-interface Props { diseaseId: string; locale?: 'en' | 'zh' }
+interface Props { diseaseId: string; locale?: 'en' | 'zh' | 'fr' }
 const { diseaseId, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const file = resolve(`./src/data/research/diseases/${diseaseId.toLowerCase()}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : null;
 const articles = payload?.articles ?? [];

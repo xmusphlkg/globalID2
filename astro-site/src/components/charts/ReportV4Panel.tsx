@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
 import { loadCountryDataset, type CountryDatasetSeriesEntry } from './countryDataset';
+import { DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
 
-type Lang = 'zh' | 'en';
+type Lang = 'zh' | 'en' | 'fr';
 type AnyRecord = Record<string, any>;
 type SparklineSeriesEntry = Pick<CountryDatasetSeriesEntry, 'cases' | 'weekly_equiv_cases'> & {
   dates?: string[];
@@ -113,7 +114,7 @@ function sectionLabel(value: unknown, lang: Lang): string {
     data_interpretation_notes: { zh: '数据口径', en: 'Data notes' },
     method_appendix: { zh: '方法附录', en: 'Method appendix' },
   };
-  return labels[key]?.[lang] || (lang === 'zh' ? '报告章节' : key || 'Report section');
+  return labels[key]?.[lang as 'zh' | 'en'] || (lang === 'zh' ? '报告章节' : lang === 'fr' ? 'Section du rapport' : key || 'Report section');
 }
 
 function trendLabel(row: AnyRecord, lang: Lang): string {
@@ -358,7 +359,7 @@ function CasesMoMCell({
 
 export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries, initialLanguage = 'en' }: Props) {
   const lang = useLang(initialLanguage);
-  const localePrefix = lang === 'zh' ? '/zh' : '';
+  const localePrefix = lang === 'zh' ? '/zh' : lang === 'fr' ? '/fr' : '';
   const document = asRecord(report.report_document_v4 || asRecord(report.metadata).report_document_v4 || report);
   const metrics = asRecord(document.metrics);
   const deathReporting = asRecord(document.death_reporting);
@@ -587,7 +588,7 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
                   const monthlyCurve = aggregateCurveByPeriod(rowSeries, 'month');
                   const annualCurve = aggregateCurveByPeriod(rowSeries, 'year');
                   const ytdCases = currentYearCumulativeCases(rowSeries);
-                  const diseaseName = lang === 'zh' ? (row.name_zh || row.name_en) : (row.name_en || row.name_zh);
+                  const diseaseName = lang === 'zh' ? (row.name_zh || row.name_en) : lang === 'fr' ? (row.name_fr || DISEASE_NAMES_FR_BY_ID[diseaseId] || row.name_en || row.name_zh) : (row.name_en || row.name_zh);
                   const href = countryCode && reportId && row.slug
                     ? `${localePrefix}/countries/${countryCode}/reports/${reportId}/${row.slug}/`
                     : undefined;

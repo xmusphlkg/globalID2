@@ -91,12 +91,12 @@ export function normalizeIntegrityAlerts(value: unknown): ResearchIntegrityAlert
 
 export function integrityAlertLabel(
   eventType: IntegrityAlertType,
-  locale: 'en' | 'zh' = 'en',
+  locale: 'en' | 'zh' | 'fr' = 'en',
 ): string {
   const labels = {
-    retraction: { en: 'Retraction', zh: '撤稿' },
-    expression_of_concern: { en: 'Expression of concern', zh: '关注声明' },
-    correction: { en: 'Correction', zh: '更正' },
+    retraction: { en: 'Retraction', zh: '撤稿', fr: 'Rétractation' },
+    expression_of_concern: { en: 'Expression of concern', zh: '关注声明', fr: 'Expression de préoccupation' },
+    correction: { en: 'Correction', zh: '更正', fr: 'Correction' },
   } as const;
   return labels[eventType][locale];
 }

@@ -16,7 +16,7 @@ interface Props {
   title?: string;
   height?: number;
   sourceMeta?: ChartSourceMeta | null;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
 function formatValue(value: number | null | undefined) {

@@ -3,10 +3,10 @@ import ReportLayout from '../layouts/ReportLayout.astro';
 import { buildAlternatePaths, type SeoDocument } from '../lib/seo';
 import { formatDate, type SituationReportV3 } from '../utils/situation';
 
-interface Props { kind: 'weekly' | 'monthly'; reports: SituationReportV3[]; locale?: 'en' | 'zh'; }
+interface Props { kind: 'weekly' | 'monthly'; reports: SituationReportV3[]; locale?: 'en' | 'zh' | 'fr'; }
 const { kind, reports, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 const titleWord = kind === 'weekly' ? 'Weekly' : 'Monthly';
 const titleZh = kind === 'weekly' ? '周报' : '月报';

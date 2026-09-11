@@ -13,7 +13,7 @@ interface Props {
   countryName?: string;
   qualityScore?: number | null;
   summary?: string | null;
-  locale?: 'en' | 'zh';
+  locale?: 'en' | 'zh' | 'fr';
 }
 
 const {
@@ -29,11 +29,11 @@ const {
   locale = 'en',
 } = Astro.props;
 
-const prefix = locale === 'zh' ? '/zh' : '';
+const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
 const href = `${prefix}/countries/${(countryCode ?? 'cn').toLowerCase()}/reports/${id}/`;
 
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString(locale === 'zh' ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 const typeLabels: Record<string, string> = {

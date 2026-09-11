@@ -287,7 +287,7 @@ function summaryField(article: ResearchAskArticle, language: string, field: stri
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function evidenceFinding(article: ResearchAskArticle, language: 'en' | 'zh'): string | null {
+function evidenceFinding(article: ResearchAskArticle, language: 'en' | 'zh' | 'fr'): string | null {
   return summaryField(article, language, 'main_findings')
     ?? summaryField(article, language, 'public_health_relevance')
     ?? (language === 'en' ? article.why_it_matters_en?.trim() : article.why_it_matters_zh?.trim())

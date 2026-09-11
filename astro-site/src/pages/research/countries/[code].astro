@@ -8,7 +8,7 @@ export function getStaticPaths() {
   return ((researchData as any).facets?.countries ?? []).map((facet: any) => ({ params: { code: facet.slug }, props: { facet, code: facet.slug, locale: 'en' } }));
 }
 
-interface Props { facet?: any; code?: string; locale?: 'en' | 'zh' }
+interface Props { facet?: any; code?: string; locale?: 'en' | 'zh' | 'fr' }
 const { locale = 'en' } = Astro.props as Props;
 const code = (Astro.props as Props).code ?? '';
 const facet = (Astro.props as Props).facet ?? ((researchData as any).facets?.countries ?? []).find((item: any) => item.slug === code || String(item.code).toLowerCase() === code);

@@ -2,7 +2,7 @@
 import type { SituationReportV3 } from '../utils/situation';
 import { formatDate, formatNumber, label, labelZh } from '../utils/situation';
 
-interface Props { snapshot: SituationReportV3; locale?: 'en' | 'zh'; }
+interface Props { snapshot: SituationReportV3; locale?: 'en' | 'zh' | 'fr'; }
 const { snapshot, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
 const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;

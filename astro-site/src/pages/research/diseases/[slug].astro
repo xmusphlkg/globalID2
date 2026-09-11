@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
 import researchData from '../../../data/research/index.json';
+import { DISEASE_NAMES_FR } from '../../../utils/diseaseNames';
 
 export function getStaticPaths() {
   return ((researchData as any).facets?.diseases ?? []).map((facet: any) => ({
@@ -11,12 +12,12 @@ export function getStaticPaths() {
   }));
 }
 
-interface Props { facet?: any; diseaseSlug?: string; locale?: 'en' | 'zh' }
+interface Props { facet?: any; diseaseSlug?: string; locale?: 'en' | 'zh' | 'fr' }
 const { locale = 'en' } = Astro.props as Props;
 const diseaseSlug = (Astro.props as Props).diseaseSlug ?? '';
 const facet = (Astro.props as Props).facet ?? ((researchData as any).facets?.diseases ?? []).find((item: any) => item.slug === diseaseSlug);
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const researchFile = resolve(`./src/data/research/diseases/${String(facet.disease_id).toLowerCase()}.json`);
 const research = existsSync(researchFile) ? JSON.parse(readFileSync(researchFile, 'utf-8')) : { articles: [], publication_timeline: [] };
 const surveillanceFile = resolve(`./src/data/diseases/${String(facet.disease_id).toLowerCase()}.json`);
@@ -33,6 +34,8 @@ const maxCases = Math.max(1, ...timeline.map((item) => item.cases));
 const maxPublications = Math.max(1, ...timeline.map((item) => item.publications));
 const description = `A curated view of published ${facet.name_en} research, auditable classifier relationships, and the available GIDS surveillance timeline.`;
 const descriptionZh = `${facet.name_zh ?? facet.name_en}已发布研究、可审计分类关系与可用 GIDS 监测时间线的专题视图。`;
+const diseaseNameFr = facet.name_fr ?? DISEASE_NAMES_FR[String(facet.slug).toLowerCase()] ?? facet.name_en;
+const descriptionFr = `Une vue ciblée des recherches publiées sur ${diseaseNameFr}, des relations de classification auditables et de la chronologie de surveillance GIDS disponible.`;
 ---
 
 <ResearchCollectionPage
@@ -40,8 +43,10 @@ const descriptionZh = `${facet.name_zh ?? facet.name_en}已发布研究、可审
   eyebrowZh="疾病证据专题"
   title={facet.name_en}
   titleZh={facet.name_zh ?? facet.name_en}
+  titleFr={diseaseNameFr}
   description={description}
   descriptionZh={descriptionZh}
+  descriptionFr={descriptionFr}
   canonicalPath={`/research/diseases/${facet.slug}/`}
   articles={research.articles ?? []}
   clientCollectionScope="disease"

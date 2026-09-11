@@ -1,9 +1,11 @@
 import type { SourceSeriesMetadata } from './countryDataset';
+import { DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
 
 export interface DiseaseDatasetSeriesEntry {
   disease_id: string;
   name_en: string;
   name_zh: string;
+  name_fr?: string;
   dates: string[];
   cases: (number | null)[];
   weekly_equiv_cases: (number | null)[];
@@ -47,6 +49,7 @@ interface CompactDiseaseDatasetSeriesEntry {
   cc: string;
   n?: string;
   n_zh?: string;
+  n_fr?: string;
   tc?: number;
   td?: number;
   x: number[];
@@ -94,7 +97,14 @@ function isCompactDiseaseDataset(value: unknown): value is CompactDiseaseDataset
 
 function normalizeDiseaseDataset(raw: DiseaseDataset | CompactDiseaseDataset): DiseaseDataset {
   if (!isCompactDiseaseDataset(raw)) {
-    return raw;
+    if (!raw.country_series) return raw;
+    return {
+      ...raw,
+      country_series: Object.fromEntries(Object.entries(raw.country_series).map(([id, entry]) => [
+        id,
+        { ...entry, name_fr: entry.name_fr ?? DISEASE_NAMES_FR_BY_ID[entry.disease_id ?? id] ?? entry.name_en },
+      ])),
+    };
   }
 
   const sourceLabels = raw.sources ?? [];
@@ -117,6 +127,7 @@ function normalizeDiseaseDataset(raw: DiseaseDataset | CompactDiseaseDataset): D
           disease_id: entry.cc,
           name_en: entry.n ?? entry.cc,
           name_zh: entry.n_zh ?? entry.n ?? entry.cc,
+          name_fr: entry.n_fr ?? DISEASE_NAMES_FR_BY_ID[entry.cc] ?? entry.n ?? entry.cc,
           dates,
           cases: entry.c ?? [],
           weekly_equiv_cases: entry.w ?? [],

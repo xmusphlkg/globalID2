@@ -12,10 +12,10 @@ import {
   unitSuffix,
 } from '../utils/situation';
 
-interface Props { snapshot: SituationReportV3; locale?: 'en' | 'zh'; }
+interface Props { snapshot: SituationReportV3; locale?: 'en' | 'zh' | 'fr'; }
 const { snapshot, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 const sourceOptions = [...new Set(snapshot.signals.map(signal => signal.identity.source_system))].sort();
 const stateOptions = [...new Set(snapshot.signals.map(signal => signal.anomaly.state))].sort();

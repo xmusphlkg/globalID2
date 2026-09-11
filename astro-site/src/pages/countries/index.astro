@@ -23,9 +23,9 @@ import {
   type WorldBankRegionCode,
 } from '../../lib/country-classifications';
 
-const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 
 const meta = metaRaw as any;
@@ -103,8 +103,8 @@ const INCOME_OPTIONS = [...new Set(
   ORDERED_COUNTRIES.map(c => getCountryClassification(c.code)?.income_group).filter(Boolean),
 )] as IncomeGroupCode[];
 
-const byLocalizedLabel = <T extends string>(labels: Record<T, { en: string; zh: string }>) =>
-  (a: T, b: T) => labels[a][locale].localeCompare(labels[b][locale], zh ? 'zh-CN' : 'en');
+const byLocalizedLabel = <T extends string>(labels: Record<T, { en: string; zh: string; fr: string }>) =>
+  (a: T, b: T) => (labels[a][locale] ?? labels[a].en).localeCompare(labels[b][locale] ?? labels[b].en, zh ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en');
 
 WHO_OPTIONS.sort(byLocalizedLabel(WHO_REGION_LABELS));
 WB_REGION_OPTIONS.sort(byLocalizedLabel(WORLD_BANK_REGION_LABELS));

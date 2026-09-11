@@ -5,7 +5,7 @@ import { filterResearchFeedArticles, type ResearchFeedData } from '../../../lib/
 
 const data = researchData as ResearchFeedData;
 const preprints = filterResearchFeedArticles(data, 'peer-review', 'preprint');
-const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
 ---
 

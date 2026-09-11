@@ -5,7 +5,7 @@ import metaData from '../data/meta.json';
 import sitePackage from '../../package.json';
 
 interface Props {
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
 const { initialLanguage = 'en' } = Astro.props;
@@ -13,7 +13,7 @@ const year = new Date().getFullYear();
 const siteVersion = sitePackage.version;
 const siteUpdatedAt = import.meta.env.PUBLIC_GIDS_BUILT_AT?.trim() || new Date().toISOString();
 const databaseLatestAt = metaData?.generated_at;
-const formatDate = (value: string | undefined, locale: 'en-US' | 'zh-CN', fallback: string) => {
+const formatDate = (value: string | undefined, locale: 'en-US' | 'zh-CN' | 'fr-FR', fallback: string) => {
   const date = value ? new Date(value) : null;
   return date && !Number.isNaN(date.getTime())
     ? date.toLocaleDateString(locale, {
@@ -26,8 +26,10 @@ const formatDate = (value: string | undefined, locale: 'en-US' | 'zh-CN', fallba
 };
 const siteUpdatedEn = formatDate(siteUpdatedAt, 'en-US', 'Unknown');
 const siteUpdatedZh = formatDate(siteUpdatedAt, 'zh-CN', '未知');
+const siteUpdatedFr = formatDate(siteUpdatedAt, 'fr-FR', 'Inconnu');
 const databaseLatestEn = formatDate(databaseLatestAt, 'en-US', 'Unknown');
 const databaseLatestZh = formatDate(databaseLatestAt, 'zh-CN', '未知');
+const databaseLatestFr = formatDate(databaseLatestAt, 'fr-FR', 'Inconnu');
 
 const links = [
   { href: '/situation/', label: 'Situation', labelZh: '全球态势' },
@@ -40,7 +42,8 @@ const links = [
   { href: '/copyright/', label: 'Copyright Notice', labelZh: '版权声明' },
   { href: '/terms/', label: 'Terms & Privacy', labelZh: '条款与隐私' },
 ];
-const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/' ? '/zh/' : `/zh${href}`) : href;
+const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/' ? '/zh/' : `/zh${href}`) : initialLanguage === 'fr' ? (href === '/' ? '/fr/' : `/fr${href}`) : href;
+const fr = initialLanguage === 'fr';
 const maintainer = initialLanguage === 'zh' ? {
   title: '维护者',
   name: '李康国',
@@ -74,6 +77,7 @@ const maintainer = initialLanguage === 'zh' ? {
         <p class="site-footer-copy text-sm leading-relaxed">
           {initialLanguage === 'zh'
             ? '全球传染病监测数据，附官方来源链接与数据使用提示。'
+            : fr ? 'Données mondiales sur les maladies infectieuses, avec liens vers les sources officielles et conseils d’interprétation.'
             : 'Global infectious disease data with official source links and guidance for interpretation.'}
         </p>
       </div>
@@ -81,13 +85,13 @@ const maintainer = initialLanguage === 'zh' ? {
       <!-- Quick links -->
       <div>
         <h2 class="site-footer-section-title font-semibold text-sm mb-3">
-          {initialLanguage === 'zh' ? '导航' : 'Navigate'}
+          {initialLanguage === 'zh' ? '导航' : fr ? 'Navigation' : 'Navigate'}
         </h2>
         <ul class="space-y-2">
           {links.map(({ href, label, labelZh }) => (
             <li>
               <a href={localizedHref(href)} class="site-footer-link text-sm transition-colors">
-                {initialLanguage === 'zh' ? labelZh : label}
+                {initialLanguage === 'zh' ? labelZh : fr ? ({ Situation: 'Situation', Countries: 'Pays', 'Disease Directory': 'Répertoire des maladies', Downloads: 'Téléchargements', 'Research Radar': 'Radar de recherche', About: 'À propos', Subscribe: 'S’abonner', 'Copyright Notice': 'Droit d’auteur', 'Terms & Privacy': 'Conditions et confidentialité' }[label] ?? label) : label}
               </a>
             </li>
           ))}
@@ -97,25 +101,25 @@ const maintainer = initialLanguage === 'zh' ? {
       <!-- Data info -->
       <div>
         <h2 class="site-footer-section-title font-semibold text-sm mb-3">
-          {initialLanguage === 'zh' ? '数据' : 'Data'}
+          {initialLanguage === 'zh' ? '数据' : fr ? 'Données' : 'Data'}
         </h2>
         <ul class="site-footer-meta space-y-1.5 text-sm">
           <li>
             <span>
-              {initialLanguage === 'zh' ? '网站更新' : 'Website updated'}
+              {initialLanguage === 'zh' ? '网站更新' : fr ? 'Site mis à jour' : 'Website updated'}
             </span>:
             {' '}
             <span class="site-footer-meta-value">
-              {initialLanguage === 'zh' ? siteUpdatedZh : siteUpdatedEn}
+              {initialLanguage === 'zh' ? siteUpdatedZh : fr ? siteUpdatedFr : siteUpdatedEn}
             </span>
           </li>
           <li>
             <span>
-              {initialLanguage === 'zh' ? '数据库最新日期' : 'Latest database date'}
+              {initialLanguage === 'zh' ? '数据库最新日期' : fr ? 'Date de la base de données' : 'Latest database date'}
             </span>:
             {' '}
             <span class="site-footer-meta-value">
-              {initialLanguage === 'zh' ? databaseLatestZh : databaseLatestEn}
+              {initialLanguage === 'zh' ? databaseLatestZh : fr ? databaseLatestFr : databaseLatestEn}
             </span>
           </li>
           <li><a class="site-footer-link" href={localizedHref('/about/')}>{initialLanguage === 'zh' ? '数据来源与方法' : 'Sources and methods'}</a></li>
@@ -150,6 +154,7 @@ const maintainer = initialLanguage === 'zh' ? {
       <p class="site-footer-legal-note text-xs">
         {initialLanguage === 'zh'
           ? '数据仅供信息参考，请以官方卫生机构发布为准。'
+          : fr ? 'Ces données sont fournies à titre informatif. Consultez toujours les autorités sanitaires officielles.'
           : 'Data provided for informational purposes only. Always refer to official health authorities.'}
       </p>
     </div>

@@ -23,7 +23,7 @@ interface Props {
   slug?: string;
   countryCode?: string;
   diseaseSlug?: string;
-  locale?: 'en' | 'zh';
+  locale?: 'en' | 'zh' | 'fr';
 }
 
 const props = Astro.props as Props;
@@ -36,7 +36,7 @@ const country = candidate?.country ?? {};
 const series = candidate?.series ?? {};
 const locale = props.locale ?? 'en';
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => `${prefix}${href}`;
 const countryNameEn = country.country_name_en ?? country.country_name ?? String(code).toUpperCase();
 const countryNameZh = country.country_name_zh ?? countryNameEn;

@@ -1,15 +1,18 @@
 ---
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import ResearchArticleCard from './ResearchArticleCard.astro';
-import { buildAlternatePaths, isIndexableResearchCollection } from '../../lib/seo';
+import { buildAlternatePaths, clampSeoTitle, isIndexableResearchCollection } from '../../lib/seo';
+import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
 
 interface Props {
   eyebrow: string;
   eyebrowZh: string;
   title: string;
   titleZh: string;
+  titleFr?: string;
   description: string;
   descriptionZh: string;
+  descriptionFr?: string;
   canonicalPath: string;
   articles: any[];
   contextLabel?: string;
@@ -19,7 +22,7 @@ interface Props {
   feedLabelZh?: string;
   clientCollectionScope?: 'disease' | 'country' | 'topic';
   clientCollectionValue?: string;
-  locale?: 'en' | 'zh';
+  locale?: 'en' | 'zh' | 'fr';
 }
 
 const {
@@ -27,8 +30,10 @@ const {
   eyebrowZh,
   title,
   titleZh,
+  titleFr = title,
   description,
   descriptionZh,
+  descriptionFr = description,
   canonicalPath,
   articles,
   contextLabel = 'Published evidence',
@@ -41,7 +46,8 @@ const {
   locale = 'en',
 } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => `${prefix}${href}`;
 const localizedCanonicalPath = localeHref(canonicalPath);
 const collectionIndexable = isIndexableResearchCollection(articles.length);
@@ -54,10 +60,13 @@ const initialResultCount = articles.length > initialVisibleArticles
 const diseaseCount = new Set(articles.flatMap((article: any) => (article.diseases ?? []).map((item: any) => item.disease_id))).size;
 const countryCount = new Set(articles.flatMap((article: any) => (article.countries ?? []).map((item: any) => item.code))).size;
 const topicCount = new Set(articles.flatMap((article: any) => (article.topics ?? []).map((item: any) => item.name))).size;
+const localizedTitle = zh ? titleZh : fr ? titleFr : title;
+const localizedResearchLabel = zh ? '研究雷达' : fr ? 'Radar de recherche' : 'Research Radar';
+const pageSeoTitle = clampSeoTitle(`${localizedTitle} | ${localizedResearchLabel} | GIDS`);
 const structuredData = {
   '@type': 'CollectionPage',
-  name: zh ? titleZh : title,
-  description: zh ? descriptionZh : description,
+  name: zh ? titleZh : fr ? titleFr : title,
+  description: zh ? descriptionZh : fr ? descriptionFr : description,
   mainEntity: {
     '@type': 'ItemList',
     numberOfItems: articles.length,
@@ -72,12 +81,12 @@ const structuredData = {
 ---
 
 <ReportLayout
-  title={`${zh ? titleZh : title} | ${zh ? '研究雷达' : 'Research Radar'}`}
-  description={zh ? descriptionZh : description}
+  title={pageSeoTitle}
+  description={zh ? descriptionZh : fr ? descriptionFr : description}
   initialLanguage={locale}
   seo={{
-    title: `${zh ? titleZh : title} | ${zh ? '研究雷达' : 'Research Radar'} | GIDS`,
-    description: zh ? descriptionZh : description,
+    title: pageSeoTitle,
+    description: zh ? descriptionZh : fr ? descriptionFr : description,
     locale,
     canonicalPath: localizedCanonicalPath,
     alternatePaths: buildAlternatePaths(localizedCanonicalPath, locale),
@@ -86,21 +95,21 @@ const structuredData = {
   }}
   structuredData={structuredData}
   breadcrumbs={[
-    { label: 'Research Radar', labelZh: '研究雷达', href: localeHref('/research/') },
-    { label: title, labelZh: titleZh },
+    { label: 'Research Radar', labelZh: '研究雷达', labelFr: 'Radar de recherche', href: localeHref('/research/') },
+    { label: title, labelZh: titleZh, labelFr: titleFr },
   ]}
 >
   <div class="research-collection">
     <header class="academic-hero collection-hero">
       <div class="collection-topline">
-        <p class="academic-kicker">{zh ? eyebrowZh : eyebrow}</p>
+        <p class="academic-kicker">{zh ? eyebrowZh : fr ? 'Pôle de preuves sur la maladie' : eyebrow}</p>
         <div class="collection-actions">
           <a href={localeHref('/research/')}>{zh ? '研究首页' : 'Research home'}</a>
           <a href={feedPath} type="application/rss+xml">{zh ? feedLabelZh : feedLabel}</a>
         </div>
       </div>
-      <h1>{zh ? titleZh : title}</h1>
-      <p class="collection-lede">{zh ? descriptionZh : description}</p>
+      <h1>{zh ? titleZh : fr ? titleFr : title}</h1>
+      <p class="collection-lede">{zh ? descriptionZh : fr ? descriptionFr : description}</p>
       <dl class="collection-metrics">
         <div><dt>{zh ? contextLabelZh : contextLabel}</dt><dd>{articles.length}</dd></div>
         <div><dt>{zh ? '疾病' : 'Diseases'}</dt><dd>{diseaseCount}</dd></div>
@@ -129,6 +138,7 @@ const structuredData = {
               data-collection-client-catalogue={useClientCollectionCatalogue ? 'true' : 'false'}
               data-collection-scope={clientCollectionScope}
               data-collection-value={clientCollectionValue}
+              data-disease-name-map={JSON.stringify(DISEASE_NAMES_FR)}
             >
               {serverRenderedArticles.map((article: any, index: number) => (
                 <ResearchArticleCard article={article} index={index} initialVisible={initialVisibleArticles} locale={locale} />
@@ -162,26 +172,29 @@ const structuredData = {
   const useClientCatalogue = list?.dataset.collectionClientCatalogue === 'true';
   const collectionScope = list?.dataset.collectionScope ?? '';
   const collectionValue = (list?.dataset.collectionValue ?? '').toLowerCase();
-  const locale = list?.dataset.collectionLocale === 'zh' ? 'zh' : 'en';
-  const routePrefix = locale === 'zh' ? '/zh' : '';
+  const diseaseNameMap = (() => {
+    try { return JSON.parse(list?.dataset.diseaseNameMap ?? '{}') as Record<string, string>; } catch { return {}; }
+  })();
+  const locale = list?.dataset.collectionLocale === 'zh' ? 'zh' : list?.dataset.collectionLocale === 'fr' ? 'fr' : 'en';
+  const routePrefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
   let visibleLimit = initialVisible;
   let cataloguePromise: Promise<any[]> | null = null;
   const text = (value: unknown) => String(value ?? '');
   const slugifyTopic = (value: string | undefined) => (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const setLangText = (element: HTMLElement, en: string, zh?: string | null) => {
-    element.textContent = locale === 'zh' ? (zh || en) : en;
+  const setLangText = (element: HTMLElement, en: string, zh?: string | null, fr?: string | null) => {
+    element.textContent = locale === 'zh' ? (zh || en) : locale === 'fr' ? (fr || en) : en;
   };
   const hasToken = (value: string | undefined, token: string) => (value ?? '').split(/\s+/).includes(token);
-  const formatDate = (value: string | undefined, lang: 'en' | 'zh') => {
+  const formatDate = (value: string | undefined, lang: 'en' | 'zh' | 'fr') => {
     if (!value) return lang === 'zh' ? '日期暂缺' : 'Date unavailable';
-    return new Intl.DateTimeFormat(lang === 'zh' ? 'zh-CN' : 'en-US', {
+    return new Intl.DateTimeFormat(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       timeZone: 'UTC',
     }).format(new Date(value));
   };
-  const formatArticleDate = (article: any, lang: 'en' | 'zh') => {
+  const formatArticleDate = (article: any, lang: 'en' | 'zh' | 'fr') => {
     const label = lang === 'zh' ? article.publication_date_label_zh : article.publication_date_label_en;
     return label || formatDate(article.published_at, lang);
   };
@@ -210,9 +223,9 @@ const structuredData = {
     if (className) element.className = className;
     return element;
   };
-  const makeBadge = (en: string, zh: string | null | undefined, extraClass = '') => {
+  const makeBadge = (en: string, zh: string | null | undefined, extraClass = '', fr: string | null | undefined = null) => {
     const badge = make('span', `research-badge ${extraClass}`.trim());
-    setLangText(badge, en, zh);
+    setLangText(badge, en, zh, fr);
     return badge;
   };
   const makeTopicBadge = (name: string) => {
@@ -244,7 +257,7 @@ const structuredData = {
     badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer'));
     if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history'));
     if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa'));
-    (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en)));
+    (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en, '', item.name_fr ?? diseaseNameMap[String(item.slug ?? '').toLowerCase()] ?? diseaseNameMap[String(item.disease_id ?? '').toLowerCase()] ?? item.name_en)));
     (article.topics ?? []).slice(0, 3).forEach((item: any) => badges.appendChild(makeTopicBadge(text(item.name))));
     topline.appendChild(badges);
     if (article.doi) {
@@ -310,7 +323,8 @@ const structuredData = {
         related.href = surveillanceUrl;
         const labelEn = `${surveillance?.disease_name_en || fallbackDisease?.name_en || 'Related'} surveillance →`;
         const labelZh = `${surveillance?.disease_name_zh || surveillance?.disease_name_en || fallbackDisease?.name_zh || fallbackDisease?.name_en || '相关'}监测 →`;
-        setLangText(related, labelEn, labelZh);
+        const labelFr = `${surveillance?.disease_name_fr || diseaseNameMap[String(fallbackDisease?.slug ?? '').toLowerCase()] || diseaseNameMap[String(fallbackDisease?.disease_id ?? '').toLowerCase()] || fallbackDisease?.name_en || 'Maladie associée'} surveillance →`;
+        setLangText(related, labelEn, labelZh, labelFr);
         actions.appendChild(related);
       }
       card.appendChild(actions);

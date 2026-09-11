@@ -1,9 +1,9 @@
 ---
-interface Props { locale?: 'en' | 'zh'; }
+interface Props { locale?: 'en' | 'zh' | 'fr'; }
 
 const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const updatedIso = '2026-08-18';
 const updatedLabel = zh ? '2026 年 8 月 18 日' : '18 August 2026';
 const currentYear = new Date().getUTCFullYear();

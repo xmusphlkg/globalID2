@@ -4,6 +4,7 @@ import echarts from '../../lib/echartsResearch';
 import ChartFrame from '../charts/ChartFrame';
 import { useChartLanguage, useChartTheme } from '../charts/chartPreferences';
 import type { EChartsOption } from 'echarts';
+import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
 
 type HotspotPeriod = {
   period: string;
@@ -36,6 +37,7 @@ type HeatmapRow = {
   key: string;
   disease_name_en: string;
   disease_name_zh?: string | null;
+  disease_name_fr?: string | null;
   topic: string;
   count_total: number;
   cells: HeatmapCell[];
@@ -121,7 +123,7 @@ type ChartKey = 'stream' | 'heatmap' | 'burst' | 'migration';
 
 interface Props {
   hotspots: Hotspots;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
 function escapeHtml(value: unknown) {
@@ -268,7 +270,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
 
   const heatmapOption = useMemo<EChartsOption>(() => {
     const xLabels = heatmapPeriods.map((period) => period.label ?? period.period);
-    const yLabels = heatmapRows.map((row) => `${lang === 'zh' ? (row.disease_name_zh || row.disease_name_en) : row.disease_name_en} · ${row.topic}`);
+    const yLabels = heatmapRows.map((row) => `${lang === 'zh' ? (row.disease_name_zh || row.disease_name_en) : lang === 'fr' ? (row.disease_name_fr || DISEASE_NAMES_FR_BY_ID[row.key] || DISEASE_NAMES_FR[row.key] || row.disease_name_en) : row.disease_name_en} · ${row.topic}`);
     const maxValue = Math.max(1, ...heatmapRows.flatMap((row) => row.cells.map((cell) => cell.count)));
     const periodIndex = new Map(heatmapPeriods.map((period, index) => [period.period, index]));
     const data: [number, number, number][] = heatmapRows.flatMap((row, rowIndex) => (
@@ -290,7 +292,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
         formatter: (param: any) => {
           const value = param?.data ?? [];
           const row = heatmapRows[value[1]] as HeatmapRow | undefined;
-          return `<strong>${escapeHtml(row ? `${lang === 'zh' ? (row.disease_name_zh || row.disease_name_en) : row.disease_name_en} · ${row.topic}` : '')}</strong><br/>${escapeHtml(xLabels[value[0]] ?? '')}: ${value[2] ?? 0} ${t('papers', '篇论文')}`;
+          return `<strong>${escapeHtml(row ? `${lang === 'zh' ? (row.disease_name_zh || row.disease_name_en) : lang === 'fr' ? (row.disease_name_fr || DISEASE_NAMES_FR_BY_ID[row.key] || DISEASE_NAMES_FR[row.key] || row.disease_name_en) : row.disease_name_en} · ${row.topic}` : '')}</strong><br/>${escapeHtml(xLabels[value[0]] ?? '')}: ${value[2] ?? 0} ${t('papers', '篇论文')}`;
         },
       },
       grid: { top: 24, right: 42, bottom: 112, left: 240 },
@@ -595,7 +597,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
           <tbody>
             {heatmapRows.map((row) => (
               <tr key={row.key}>
-                <td className="is-sticky">{lang === 'zh' ? (row.disease_name_zh || row.disease_name_en) : row.disease_name_en} · {row.topic}</td>
+                <td className="is-sticky">{lang === 'zh' ? (row.disease_name_zh || row.disease_name_en) : lang === 'fr' ? (row.disease_name_fr || DISEASE_NAMES_FR_BY_ID[row.key] || DISEASE_NAMES_FR[row.key] || row.disease_name_en) : row.disease_name_en} · {row.topic}</td>
                 {heatmapPeriods.map((period) => (
                   <td key={period.period}>{row.cells.find((cell) => cell.period === period.period)?.count ?? 0}</td>
                 ))}

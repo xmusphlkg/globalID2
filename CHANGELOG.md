@@ -1,6 +1,28 @@
 # Changelog
 
-This file records release-level changes to the GIDS application and its data operations. Public-facing bilingual notes are also available in the website Changelog.
+This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
+
+## [0.10.1] - 2026-09-11
+
+### Added
+
+- Added a French interface under `/fr/` across the public home, country, disease, report, research, situation, download, and policy pages.
+- Added French translations for shared navigation, search, statistics, chart metrics, categories, accessibility labels, and release notes.
+- Added a synchronized French disease-name catalogue for directories, cards, search, research views, and epidemiological charts.
+
+### Changed
+
+- Language switching now cycles through English, French, and Chinese while preserving the current page and query string.
+- French pages use `fr-FR` number and date formatting and expose French document, Open Graph, and structured-data metadata.
+
+### Fixed
+
+- Fixed localized links from charts, country cards, reports, research widgets, breadcrumbs, and the footer so French users remain in the French experience.
+- Added safe English fallback behavior for legacy records that do not yet contain French content.
+
+### Validation
+
+- Passed Astro type checking, style-boundary checks, and the full SEO test suite (26 tests).
 
 ## [0.9.7] - 2026-09-11
 

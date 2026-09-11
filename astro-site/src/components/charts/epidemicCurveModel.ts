@@ -51,13 +51,13 @@ export type EpidemicCurveViewAction =
 export const DEFAULT_METRIC: EpidemicMetric = 'cases';
 export const ANIMATION_POINT_LIMIT = 5_000;
 
-export const METRIC_LABELS: Record<EpidemicMetric, { en: string; zh: string }> = {
-  weekly_equiv_cases: { en: 'Weekly reported cases', zh: '周度报告病例数' },
-  cases: { en: 'Source-period cases', zh: '来源期间病例数' },
-  historical_index: { en: 'Observed / historical expected (%)', zh: '观察值／历史预期值（%）' },
-  trend_index: { en: 'Trend index (series peak = 100)', zh: '趋势指数（各序列峰值 = 100）' },
-  deaths: { en: 'Deaths', zh: '死亡数' },
-  incidence_rates: { en: 'Cases per 100k per source period', zh: '每个来源期间每10万人病例数' },
+export const METRIC_LABELS: Record<EpidemicMetric, { en: string; zh: string; fr: string }> = {
+  weekly_equiv_cases: { en: 'Weekly reported cases', zh: '周度报告病例数', fr: 'Cas déclarés hebdomadaires' },
+  cases: { en: 'Source-period cases', zh: '来源期间病例数', fr: 'Cas de la période source' },
+  historical_index: { en: 'Observed / historical expected (%)', zh: '观察值／历史预期值（%）', fr: 'Observé / attendu historique (%)' },
+  trend_index: { en: 'Trend index (series peak = 100)', zh: '趋势指数（各序列峰值 = 100）', fr: 'Indice de tendance (pic de la série = 100)' },
+  deaths: { en: 'Deaths', zh: '死亡数', fr: 'Décès' },
+  incidence_rates: { en: 'Cases per 100k per source period', zh: '每个来源期间每10万人病例数', fr: 'Cas pour 100 000 par période source' },
 };
 
 export const INITIAL_CURVE_VIEW_STATE: EpidemicCurveViewState = {
@@ -294,7 +294,7 @@ export function getSeriesGranularity(item: CurveSeries): string {
 
 export function formatTemporalGranularity(
   value: string | null | undefined,
-  lang: 'en' | 'zh',
+  lang: 'en' | 'zh' | 'fr',
 ) {
   const granularity = normalizeTemporalGranularity(value);
   const labels: Record<string, { en: string; zh: string }> = {
@@ -306,10 +306,12 @@ export function formatTemporalGranularity(
     mixed: { en: 'Mixed grain', zh: '混合粒度' },
     unknown: { en: 'Source cadence', zh: '按来源频率' },
   };
-  return (labels[granularity] ?? {
+  const entry = (labels[granularity] ?? {
     en: granularity.replaceAll('_', ' '),
     zh: granularity.replaceAll('_', ' '),
-  })[lang];
+    fr: granularity.replaceAll('_', ' '),
+  }) as Partial<Record<'en' | 'zh' | 'fr', string>>;
+  return entry[lang] ?? entry.en;
 }
 
 export function supportsWeeklyEquivalent(item: CurveSeries): boolean {
@@ -320,7 +322,7 @@ export function supportsWeeklyEquivalent(item: CurveSeries): boolean {
 
 export function formatIncidenceMetricLabel(
   granularities: string[],
-  lang: 'en' | 'zh',
+  lang: 'en' | 'zh' | 'fr',
 ) {
   const normalized = Array.from(new Set(
     granularities.map(normalizeTemporalGranularity)

@@ -5,6 +5,7 @@ import ReportLayout from '../../../layouts/ReportLayout.astro';
 import researchData from '../../../data/research/index.json';
 import { integrityAlertLabel, normalizeIntegrityAlerts } from '../../../lib/research-integrity';
 import { buildAlternatePaths, clampSeoDescription, clampSeoTitle } from '../../../lib/seo';
+import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../../utils/diseaseNames';
 
 export function getStaticPaths() {
   const data: any = researchData;
@@ -12,13 +13,14 @@ export function getStaticPaths() {
     .map((article: any) => ({ params: { slug: article.slug }, props: { articleSlug: article.slug, locale: 'en' } }));
 }
 
-interface Props { articleSlug?: string; locale?: 'en' | 'zh' }
+interface Props { articleSlug?: string; locale?: 'en' | 'zh' | 'fr' }
 const { articleSlug = '', locale = 'en' } = Astro.props as Props;
 const slug = articleSlug;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
-const localeHref = (href: string) => zh && href.startsWith('/') ? `${prefix}${href}` : href;
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
+const localeHref = (href: string) => (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ? zhValue : en;
 const file = resolve(`./src/data/research/articles/${slug}.json`);
 const article: any = existsSync(file)
   ? JSON.parse(readFileSync(file, 'utf-8'))
@@ -70,7 +72,7 @@ const structuredArticle = {
   identifier: article.doi ? `https://doi.org/${article.doi}` : article.pmid ? `PMID:${article.pmid}` : article.article_id,
   sameAs: originalUrl,
   about: (article.diseases ?? []).map((disease: any) => ({ '@type': 'MedicalCondition', name: disease.name_en })),
-  inLanguage: zh ? 'zh-CN' : 'en',
+  inLanguage: zh ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en',
 };
 const graph = article.knowledge_graph ?? { stats: {}, edges: [] };
 const summaryProvenance = summaryEn.provenance ?? summaryZh.provenance ?? null;
@@ -90,9 +92,11 @@ const canonicalPath = localeHref(`/research/articles/${article.slug}/`);
 const whyItMatters = pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en);
 const descriptionContext = zh
   ? '本页提供研究设计、主要发现、重要局限、来源标识及相关监测背景。'
-  : 'Review the study design, main findings, important limitations, source identifiers, and related surveillance context.';
+  : fr
+    ? 'Consultez le plan de l’étude, les résultats principaux, les limites, les identifiants de source et le contexte de surveillance associé.'
+    : 'Review the study design, main findings, important limitations, source identifiers, and related surveillance context.';
 const pageDescription = clampSeoDescription(`${whyItMatters} ${descriptionContext}`);
-const titleSuffix = zh ? ' | GIDS 中文证据摘要' : ' | GIDS';
+const titleSuffix = zh ? ' | GIDS 中文证据摘要' : fr ? ' | GIDS — résumé français' : ' | GIDS';
 const doiSuffix = article.doi ? String(article.doi).split('/').filter(Boolean).at(-1) : '';
 const shortIdentifier = doiSuffix && [...doiSuffix].length <= 18
   ? doiSuffix
@@ -119,9 +123,9 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
   }}
   structuredData={structuredArticle}
   breadcrumbs={[
-    { label: 'Research Radar', labelZh: '研究雷达', href: localeHref('/research/') },
-    ...(isPreprint ? [{ label: 'Preprints', labelZh: '预印本', href: localeHref('/research/preprints/') }] : []),
-    { label: 'Evidence summary', labelZh: '证据摘要' },
+    { label: 'Research Radar', labelZh: '研究雷达', labelFr: 'Radar de recherche', href: localeHref('/research/') },
+    ...(isPreprint ? [{ label: 'Preprints', labelZh: '预印本', labelFr: 'Prépublications', href: localeHref('/research/preprints/') }] : []),
+    { label: 'Evidence summary', labelZh: '证据摘要', labelFr: 'Résumé des preuves' },
   ]}
 >
   <article class="evidence-page">
@@ -132,7 +136,7 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
         {showCorrectionHistory && <span class="integrity-corrected">{pick('Correction recorded', '已记录更正')}</span>}
         {isHistoricalBaseline && <span class="history">{pick('Historical baseline', '历史基线')}</span>}
         {article.open_access_status === 'open' && <span class="oa">{pick('Open access', '开放获取')}</span>}
-        {(article.diseases ?? []).map((disease: any) => <span>{pick(disease.name_en, disease.name_zh ?? disease.name_en)}</span>)}
+        {(article.diseases ?? []).map((disease: any) => <span>{pick(disease.name_en, disease.name_zh ?? disease.name_en, disease.name_fr ?? DISEASE_NAMES_FR[String(disease.slug ?? '').toLowerCase()] ?? DISEASE_NAMES_FR_BY_ID[String(disease.disease_id ?? '').toUpperCase()] ?? disease.name_en)}</span>)}
       </div>
       <h1>{article.title}</h1>
       <p class="evidence-citation"><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')}</span><span>·</span><time datetime={article.published_at}>{pick(publicationDateEn, publicationDateZh)}</time></p>

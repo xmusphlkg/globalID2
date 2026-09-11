@@ -1,6 +1,7 @@
 ---
 import CountryCard from '../CountryCard.astro';
 import CountryFlag from '../CountryFlag.astro';
+import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
 import { hasCountryDataSnapshot } from '../../lib/country-coverage';
 import { isSituationReportV3, type SituationReportV3 } from '../../utils/situation';
 import { existsSync, readFileSync } from 'node:fs';
@@ -11,11 +12,12 @@ import reportsRaw from '../../data/reports/index.json';
 import japanDataRaw from '../../data/countries/jp.json';
 import chinaDataRaw from '../../data/countries/cn.json';
 
-interface Props { locale?: 'en' | 'zh'; }
+interface Props { locale?: 'en' | 'zh' | 'fr'; }
 
 const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const href = (path: string) => `${prefix}${path}`;
 const t = zh ? {
   eyebrow: 'GIDS · 官方来源监测',
@@ -124,6 +126,20 @@ const t = zh ? {
 };
 
 const meta = metaRaw as any;
+// French is the shared interface language for France and Canada. Keep source
+// names and disease names intact, while translating the surrounding controls.
+if (fr) Object.assign(t, {
+  eyebrow: 'GIDS · surveillance à source officielle', titleLines: ['Repérer les signaux', 'Retracer les sources'],
+  sloganPrefix: 'Puis', sloganWords: ['comparer les tendances', 'réutiliser les données', 'vérifier les preuves', 'agir plus vite'],
+  summary: 'Recherchez les données officielles, les synthèses de situation, le contexte scientifique et les jeux de données téléchargeables depuis un même espace public.',
+  searchLabel: 'Rechercher dans GIDS', searchPlaceholder: 'Rechercher un pays, une maladie, un rapport ou une étude', search: 'Rechercher',
+  situation: 'Voir la situation actuelle', countries: 'Parcourir les pays', downloads: 'Télécharger les données', release: 'Publication publique actuelle', updated: 'Mis à jour',
+  observations: 'Séries de surveillance', reportedCases: 'Cas déclarés', jurisdictions: 'Pays et régions', diseases: 'Maladies suivies', sources: 'Sources officielles', through: 'Données jusqu’au',
+  recentBoard: 'Mises à jour récentes', cadence: 'Fréquence', sourceNote: 'La couverture, les définitions et les calendriers varient selon la source; une valeur manquante ne doit pas être interprétée comme zéro.',
+  methods: 'Sources et méthodes', review: 'Synthèse de situation', attention: 'Points d’attention', events: 'Événements officiels', signals: 'Signaux publiés', reviewed: 'Juridictions examinées', fullReview: 'Ouvrir la synthèse complète',
+  explore: 'Commencer l’exploration', exploreTitle: 'Accéder aux preuves de santé publique comme à un catalogue de données', exploreText: 'La page d’accueil privilégie la recherche, la navigation thématique, les téléchargements et la méthodologie.',
+  countryPath: 'Explorer par lieu', countryPathText: 'Consultez la couverture, les sources, les maladies et la période de chaque pays ou région.', diseasePath: 'Explorer par maladie', diseasePathText: 'Comparez la couverture d’une même maladie entre les différentes sources.', downloadPath: 'Réutiliser directement', downloadPathText: 'Téléchargez les jeux de données publics et vérifiez les champs et limites avant citation.', researchPath: 'Relier la recherche', researchPathText: 'Interprétez les signaux de surveillance à la lumière des données publiées.', countryList: 'Pays les mieux couverts', common: 'Maladies courantes', viewAll: 'Tout voir', analysis: 'Analyses publiées', latest: 'Derniers rapports de surveillance', research: 'Parcourir les preuves', openReport: 'Ouvrir le rapport', unavailable: 'Indisponible', empty: 'Aucun rapport public disponible.', curveLabel: 'Grippe au Japon · grippe en Chine',
+});
 const jurisdictions = (meta.countries ?? []).filter(hasCountryDataSnapshot);
 // Headline totals and rankings use one comparable national layer. Subnational
 // datasets remain available from their parent country pages.
@@ -159,9 +175,9 @@ const formatDate = (value?: string) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? t.unavailable
-    : date.toLocaleDateString(zh ? 'zh-CN' : 'en-US', { year: 'numeric', month: zh ? 'numeric' : 'short', day: 'numeric', timeZone: 'UTC' });
+    : date.toLocaleDateString(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', { year: 'numeric', month: zh ? 'numeric' : 'short', day: 'numeric', timeZone: 'UTC' });
 };
-const formatNumber = (value: number) => new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', {
+const formatNumber = (value: number) => new Intl.NumberFormat(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', {
   notation: value >= 1_000_000 ? 'compact' : 'standard',
   maximumFractionDigits: value >= 1_000_000 ? 1 : 0,
 }).format(value);
@@ -363,7 +379,7 @@ const explorePaths = [
         <div class="disease-list">
           {featuredDiseases.map((disease: any) => (
             <a href={href(`/diseases/${disease.slug}/`)}>
-              <span><strong>{zh ? disease.name_zh ?? disease.name_en : disease.name_en}</strong><small>{zh ? disease.name_en : `${disease.name_zh ?? ''} · ${disease.category}`}</small></span>
+              <span><strong>{zh ? disease.name_zh ?? disease.name_en : fr ? (disease.name_fr ?? DISEASE_NAMES_FR[disease.slug] ?? disease.name_en) : disease.name_en}</strong><small>{zh ? disease.name_en : fr ? disease.name_en : `${disease.name_zh ?? ''} · ${disease.category}`}</small></span>
               <span aria-hidden="true">-&gt;</span>
             </a>
           ))}

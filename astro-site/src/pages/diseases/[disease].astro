@@ -19,12 +19,14 @@ import {
   renderCitations,
 } from '../../utils/citations';
 import { resolveKnowledgeText } from '../../utils/knowledge';
+import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
 import {
   buildDatasetDistributions,
   buildDatasetStructuredData,
   buildDiseaseMetaDescription,
   buildAlternatePaths,
   buildSeoTitle,
+  clampSeoTitle,
   formatYearRange,
   isIndexableDisease,
   toSeoSlug,
@@ -41,15 +43,16 @@ export async function getStaticPaths() {
     const disease = toSeoSlug(d.slug) || d.slug;
     return {
       params: { disease },
-      props: { diseaseId: d.disease_id, diseaseSlug: disease, locale: 'en' as 'en' | 'zh' },
+      props: { diseaseId: d.disease_id, diseaseSlug: disease, locale: 'en' as 'en' | 'zh' | 'fr' },
     };
   });
 }
 
-interface Props { diseaseId: string; diseaseSlug: string; locale?: 'en' | 'zh'; }
+interface Props { diseaseId: string; diseaseSlug: string; locale?: 'en' | 'zh' | 'fr'; }
 const { diseaseId, diseaseSlug: disease, locale = 'en' } = Astro.props as Props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (path: string) => `${prefix}${path}`;
 
 const dataPath = resolve(`./src/data/diseases/${diseaseId.toLowerCase()}.json`);
@@ -76,6 +79,9 @@ if (existsSync(downloadsPath)) {
 
 const categoryZh: Record<string, string> = {
   Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫', Fungal: '真菌性',
+};
+const categoryFr: Record<string, string> = {
+  Viral: 'Virale', Bacterial: 'Bactérienne', Parasitic: 'Parasitaire', Fungal: 'Fongique',
 };
 
 const categoryStyles: Record<string, string> = {
@@ -119,7 +125,7 @@ const preventionZh = resolveKnowledgeText(knowledgePayloads, 'prevention', 'zh')
 const surveillanceNoteEn = resolveKnowledgeText(knowledgePayloads, 'surveillance_note', 'en');
 const surveillanceNoteZh = resolveKnowledgeText(knowledgePayloads, 'surveillance_note', 'zh');
 const knowledgeSectionLabels = knowledgeData?.knowledge_section_labels ?? diseaseData?.knowledge_section_labels ?? {};
-const sectionLabel = (field: string, language: 'en' | 'zh', fallback: string) => (
+const sectionLabel = (field: string, language: 'en' | 'zh' | 'fr', fallback: string) => (
   knowledgeSectionLabels?.[field]?.[language] ?? fallback
 );
 const knowledgeSources = Array.isArray(knowledgeData?.knowledge_sources)
@@ -253,7 +259,8 @@ const chartSourceMeta = buildChartSourceMeta(
 const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/${diseaseId.toLowerCase()}.json`;
 const diseaseNameEn = diseaseData?.name_en ?? disease ?? 'Disease';
 const diseaseNameZh = diseaseData?.name_zh ?? diseaseNameEn;
-const diseaseName = zh ? diseaseNameZh : diseaseNameEn;
+const diseaseNameFr = diseaseData?.name_fr ?? DISEASE_NAMES_FR[disease] ?? diseaseNameEn;
+const diseaseName = zh ? diseaseNameZh : fr ? diseaseNameFr : diseaseNameEn;
 const diseaseMetaDescriptionEn = buildDiseaseMetaDescription({
   name: diseaseNameEn,
   category: diseaseData?.category,
@@ -263,7 +270,9 @@ const diseaseMetaDescriptionEn = buildDiseaseMetaDescription({
 });
 const diseaseMetaDescription = zh
   ? `${diseaseNameZh}全球监测数据，覆盖${countryCount}个报告国家和地区，包含趋势、国家比较、来源与下载。`
-  : diseaseMetaDescriptionEn;
+  : fr
+    ? `Données mondiales de surveillance de ${diseaseNameFr}, couvrant ${countryCount} pays et territoires déclarants, avec tendances, comparaisons, sources et téléchargements.`
+    : diseaseMetaDescriptionEn;
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
 const diseasePageUrl = new URL(Astro.url.pathname, siteOrigin).toString();
 const diseaseSourceUrls = [
@@ -274,13 +283,13 @@ const diseaseSourceUrls = [
 const diseaseDatasetStructuredData = buildDatasetStructuredData({
   id: `${diseasePageUrl}#dataset`,
   url: diseasePageUrl,
-  name: zh ? `${diseaseNameZh}全球监测数据集` : `${diseaseNameEn} infectious disease surveillance dataset`,
+  name: zh ? `${diseaseNameZh}全球监测数据集` : fr ? `Jeu de données de surveillance de ${diseaseNameFr}` : `${diseaseNameEn} infectious disease surveillance dataset`,
   description: diseaseMetaDescription,
   siteOrigin,
   dateModified: diseaseDownload?.generated_at ?? knowledgeUpdatedAt,
   start: coverageStart,
   end: coverageEnd,
-  keywords: (zh ? [diseaseNameZh, diseaseData?.category, '传染病监测', '公共卫生数据'] : [diseaseNameEn, diseaseData?.category, 'infectious disease surveillance', 'public health data'])
+  keywords: (zh ? [diseaseNameZh, diseaseData?.category, '传染病监测', '公共卫生数据'] : fr ? [diseaseNameFr, diseaseData?.category, 'surveillance des maladies infectieuses', 'santé publique'] : [diseaseNameEn, diseaseData?.category, 'infectious disease surveillance', 'public health data'])
     .filter((keyword): keyword is string => typeof keyword === 'string' && keyword.length > 0),
   distributions: buildDatasetDistributions({
     entry: diseaseDownload,
@@ -325,7 +334,7 @@ const diseaseIndexable = isIndexableDisease({
   knowledgeSources,
 });
 const diseaseSeo = {
-  title: zh ? `${diseaseNameZh}监测数据 ${diseaseCoverage} | GIDS` : buildSeoTitle(diseaseNameEn, 'surveillance data', diseaseCoverage),
+  title: zh ? `${diseaseNameZh}监测数据 ${diseaseCoverage} | GIDS` : fr ? clampSeoTitle(`${diseaseNameFr} — données de surveillance ${diseaseCoverage} | GIDS`) : buildSeoTitle(diseaseNameEn, 'surveillance data', diseaseCoverage),
   description: diseaseMetaDescription,
   canonicalPath: Astro.url.pathname,
   alternatePaths: diseaseIndexable
@@ -346,8 +355,8 @@ const diseaseSeo = {
   initialLanguage={locale}
   hideLanguageToggle={!diseaseIndexable}
   breadcrumbs={[
-    { label: 'Diseases', labelZh: '疾病', href: localeHref('/diseases/') },
-    { label: diseaseData?.name_en ?? disease, labelZh: diseaseData?.name_zh ?? diseaseData?.name_en ?? disease },
+    { label: 'Diseases', labelZh: '疾病', labelFr: 'Maladies', href: localeHref('/diseases/') },
+    { label: diseaseData?.name_en ?? disease, labelZh: diseaseData?.name_zh ?? diseaseData?.name_en ?? disease, labelFr: diseaseNameFr },
   ]}
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -364,7 +373,7 @@ const diseaseSeo = {
             </p>
             <span class={`inline-flex items-center rounded-none px-2.5 py-0.5 text-xs font-semibold ${badgeClass}`}>
               <span>
-                {zh ? categoryZh[diseaseData.category] ?? diseaseData.category : diseaseData.category}
+                {zh ? categoryZh[diseaseData.category] ?? diseaseData.category : fr ? categoryFr[diseaseData.category] ?? diseaseData.category : diseaseData.category}
               </span>
             </span>
           </div>
@@ -374,12 +383,12 @@ const diseaseSeo = {
               <div>
                 <h1 class="academic-title leading-tight">
                   <span>
-                    {zh ? diseaseData.name_zh : diseaseData.name_en}
+                    {zh ? diseaseData.name_zh : fr ? diseaseNameFr : diseaseData.name_en}
                   </span>
                 </h1>
                 <p class="academic-subtitle mt-2">
                   <span>
-                    {zh ? diseaseData.name_en : diseaseData.name_zh}
+                    {zh ? diseaseData.name_en : fr ? diseaseData.name_en : diseaseData.name_zh}
                   </span>
                 </p>
               </div>
@@ -553,10 +562,10 @@ const diseaseSeo = {
         </section>
 
         <PageAnchorNav locale={locale} items={[
-          { href: '#coverage', label: 'Coverage', labelZh: '覆盖范围' },
-          { href: '#trends', label: 'Trends & comparison', labelZh: '趋势与比较' },
-          { href: '#research', label: 'Research', labelZh: '研究证据' },
-          { href: '#downloads', label: 'Download & methods', labelZh: '下载与方法' },
+          { href: '#coverage', label: 'Coverage', labelZh: '覆盖范围', labelFr: 'Couverture' },
+          { href: '#trends', label: 'Trends & comparison', labelZh: '趋势与比较', labelFr: 'Tendances et comparaison' },
+          { href: '#research', label: 'Research', labelZh: '研究证据', labelFr: 'Recherche' },
+          { href: '#downloads', label: 'Download & methods', labelZh: '下载与方法', labelFr: 'Téléchargement et méthodes' },
         ]} />
 
         {countryCount > 0 && (

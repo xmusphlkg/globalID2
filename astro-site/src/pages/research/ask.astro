@@ -3,9 +3,9 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
 import ResearchAskSurveillance from '../../components/research/ResearchAskSurveillance';
 import { buildAlternatePaths } from '../../lib/seo';
 
-const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 ---
 

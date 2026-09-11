@@ -8,12 +8,12 @@ export function getStaticPaths() {
   return ((researchData as any).facets?.weeks ?? []).map((facet: any) => ({ params: { week: facet.week }, props: { facet, week: facet.week, locale: 'en' } }));
 }
 
-interface Props { facet?: any; week?: string; locale?: 'en' | 'zh' }
+interface Props { facet?: any; week?: string; locale?: 'en' | 'zh' | 'fr' }
 const { locale = 'en' } = Astro.props as Props;
 const week = (Astro.props as Props).week ?? '';
 const facet = (Astro.props as Props).facet ?? ((researchData as any).facets?.weeks ?? []).find((item: any) => item.week === week);
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => zh && href.startsWith('/') ? `${prefix}${href}` : href;
 const file = resolve(`./src/data/research/weekly/${facet.week}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [], top_topics: [] };

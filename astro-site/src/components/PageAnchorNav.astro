@@ -3,17 +3,19 @@ interface AnchorItem {
   href: string;
   label: string;
   labelZh: string;
+  labelFr?: string;
 }
 
 interface Props {
   items: AnchorItem[];
-  locale?: 'en' | 'zh';
+  locale?: 'en' | 'zh' | 'fr';
   variant?: 'bar' | 'list';
   numbered?: boolean;
   sticky?: boolean;
   showTitle?: boolean;
   label?: string;
   labelZh?: string;
+  labelFr?: string;
 }
 
 const {
@@ -24,6 +26,7 @@ const {
   sticky = true,
   label = 'On this page',
   labelZh = '本页导航',
+  labelFr = 'Sur cette page',
 } = Astro.props;
 const zh = locale === 'zh';
 const showTitle = Astro.props.showTitle ?? variant === 'list';
@@ -31,19 +34,19 @@ const showTitle = Astro.props.showTitle ?? variant === 'list';
 
 <nav
   class:list={['page-anchor-nav', `page-anchor-nav-${variant}`, sticky && 'page-anchor-nav-sticky']}
-  aria-label={zh ? labelZh : label}
+  aria-label={zh ? labelZh : locale === 'fr' ? labelFr : label}
   data-page-anchor-nav
   style={`--anchor-count: ${items.length}`}
 >
   {showTitle && <p class="page-anchor-title">
     <span aria-hidden="true"></span>
-    {zh ? labelZh : label}
+    {zh ? labelZh : locale === 'fr' ? labelFr : label}
   </p>}
   <div class="page-anchor-links">
     {items.map((item, index) => (
       <a href={item.href} data-page-anchor-link>
         {numbered && <small>{String(index + 1).padStart(2, '0')}</small>}
-        <span>{zh ? item.labelZh : item.label}</span>
+        <span>{zh ? item.labelZh : locale === 'fr' ? (item.labelFr ?? item.label) : item.label}</span>
       </a>
     ))}
   </div>

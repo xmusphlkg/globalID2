@@ -30,14 +30,14 @@ export function getStaticPaths() {
   const meta = JSON.parse(readFileSync(metaPath, 'utf-8')) as any;
   return (meta.countries ?? []).filter(hasCountryDataSnapshot).map((c: any) => ({
     params: { country: c.code.toLowerCase() },
-    props: { countryCode: c.code.toLowerCase(), locale: 'en' as 'en' | 'zh' },
+    props: { countryCode: c.code.toLowerCase(), locale: 'en' as 'en' | 'zh' | 'fr' },
   }));
 }
 
-interface Props { countryCode: string; locale?: 'en' | 'zh'; }
+interface Props { countryCode: string; locale?: 'en' | 'zh' | 'fr'; }
 const { countryCode: country, locale = 'en' } = Astro.props as Props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (path: string) => `${prefix}${path}`;
 const fallbackCountryCode = String(country ?? '').toUpperCase();
 const childJurisdictions = ((metaRaw as any).countries ?? [])

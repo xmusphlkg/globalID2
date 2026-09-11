@@ -1,20 +1,21 @@
 import type { APIRoute } from 'astro';
 import researchRaw from '../../data/research/index.json';
 import { diseaseIndex, indexableDiseases, publishableReports, siteMeta } from '../../lib/seo-page-data';
+import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
 
 export const prerender = true;
 
 type SearchEntry = {
   id: string;
   kind: 'country' | 'disease' | 'situation' | 'report' | 'research' | 'page';
-  href: { en: string; zh?: string };
-  title: { en: string; zh?: string };
-  summary?: { en?: string; zh?: string };
+  href: { en: string; zh?: string; fr?: string };
+  title: { en: string; zh?: string; fr?: string };
+  summary?: { en?: string; zh?: string; fr?: string };
   aliases: string[];
   updated_at?: string;
 };
 
-const localized = (path: string) => ({ en: path, zh: path === '/' ? '/zh/' : `/zh${path}` });
+const localized = (path: string) => ({ en: path, zh: path === '/' ? '/zh/' : `/zh${path}`, fr: path === '/' ? '/fr/' : `/fr${path}` });
 const clean = (values: unknown[]) => [...new Set(values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map(value => value.trim()))];
 
 export const GET: APIRoute = () => {
@@ -42,9 +43,9 @@ export const GET: APIRoute = () => {
       id: `disease:${disease.disease_id}`,
       kind: 'disease',
       href: localized(`/diseases/${slug}/`),
-      title: { en: disease.name_en ?? slug, zh: disease.name_zh },
-      summary: { en: disease.description ?? `${disease.category ?? ''} disease surveillance profile`, zh: `${disease.name_zh ?? disease.name_en}监测数据、趋势与证据说明` },
-      aliases: clean([disease.disease_id, disease.slug, disease.name_en, disease.name_zh, disease.icd_10, disease.icd_11, disease.category]),
+      title: { en: disease.name_en ?? slug, zh: disease.name_zh, fr: disease.name_fr ?? DISEASE_NAMES_FR[slug] ?? disease.name_en },
+      summary: { en: disease.description ?? `${disease.category ?? ''} disease surveillance profile`, zh: `${disease.name_zh ?? disease.name_en}监测数据、趋势与证据说明`, fr: `Profil de surveillance de ${disease.name_fr ?? DISEASE_NAMES_FR[slug] ?? disease.name_en}` },
+      aliases: clean([disease.disease_id, disease.slug, disease.name_en, disease.name_zh, disease.name_fr, DISEASE_NAMES_FR[slug], disease.icd_10, disease.icd_11, disease.category]),
     });
   }
 
@@ -84,7 +85,7 @@ export const GET: APIRoute = () => {
   entries.push(
     { id: 'situation:latest', kind: 'situation', href: localized('/situation/'), title: { en: 'Current global situation', zh: '当前全球态势' }, summary: { en: 'Review priorities, official events, coverage, and methods.', zh: '复核优先级、官方事件、覆盖范围和方法。' }, aliases: ['situation', 'signals', 'events', '态势', '信号', '事件'] },
     { id: 'page:countries', kind: 'page', href: localized('/countries/'), title: { en: 'Country data directory', zh: '国家与地区数据目录' }, aliases: ['countries', 'regions', '国家', '地区'] },
-    { id: 'page:diseases', kind: 'page', href: localized('/diseases/'), title: { en: 'Disease directory', zh: '疾病目录' }, aliases: ['diseases', 'conditions', '疾病'] },
+    { id: 'page:diseases', kind: 'page', href: localized('/diseases/'), title: { en: 'Disease directory', zh: '疾病目录', fr: 'Répertoire des maladies' }, aliases: ['diseases', 'conditions', 'maladies', '疾病'] },
     { id: 'page:downloads', kind: 'page', href: localized('/downloads/'), title: { en: 'Data downloads', zh: '数据下载' }, aliases: ['csv', 'json', 'xlsx', 'download', '下载'] },
     { id: 'page:methods', kind: 'page', href: localized('/about/'), title: { en: 'Methods, sources, and about GIDS', zh: '方法、来源与关于 GIDS' }, aliases: ['methods', 'sources', 'limitations', '方法', '来源', '局限'] },
     { id: 'page:copyright', kind: 'page', href: localized('/copyright/'), title: { en: 'Copyright, data licensing, and reuse', zh: '版权、数据许可与复用' }, aliases: ['copyright', 'licence', 'license', 'reuse', 'attribution', '版权', '许可', '复用', '署名'] },

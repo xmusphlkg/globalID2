@@ -5,9 +5,9 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const situationPublic = existsSync(resolve('./src/data/situation/v3/latest.json'));
-const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
 
 const sections = [

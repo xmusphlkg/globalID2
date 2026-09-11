@@ -14,9 +14,9 @@ export function getStaticPaths() {
     },
   }));
 }
-const { reportPeriod, previous: previousProp, next: nextProp, locale = 'en' } = Astro.props as { reportPeriod?: string; previous?: string; next?: string; locale?: 'en' | 'zh' };
+const { reportPeriod, previous: previousProp, next: nextProp, locale = 'en' } = Astro.props as { reportPeriod?: string; previous?: string; next?: string; locale?: 'en' | 'zh' | 'fr' };
 const period = reportPeriod ?? Astro.params.period;
-const prefix = locale === 'zh' ? '/zh' : '';
+const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
 const reports = listSituationReports('weekly');
 const reportIndex = reports.findIndex(item => item.report.period_key === period);
 const previous = previousProp ?? (reportIndex > 0 ? reports[reportIndex - 1]?.report.period_key : undefined);

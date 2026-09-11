@@ -1,5 +1,6 @@
 ---
 import CountryCard from '../CountryCard.astro';
+import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
 import CountryFlag from '../CountryFlag.astro';
 import { hasCountryDataSnapshot } from '../../lib/country-coverage';
 import { isSituationReportV3, type SituationReportV3 } from '../../utils/situation';
@@ -9,10 +10,10 @@ import metaRaw from '../../data/meta.json';
 import diseasesRaw from '../../data/diseases/index.json';
 import reportsRaw from '../../data/reports/index.json';
 
-interface Props { locale?: 'en' | 'zh'; }
+interface Props { locale?: 'en' | 'zh' | 'fr'; }
 const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const href = (path: string) => `${prefix}${path}`;
 const copy = zh ? {
   eyebrow: '官方来源的公共卫生数据', title: '全球传染病监测',
@@ -80,7 +81,7 @@ const dataThrough = situation?.data_currency.latest_data_through ?? meta.generat
   <section class="home-section"><div class="page-wrap">
     <header class="section-heading"><div><p class="eyebrow">{copy.explore}</p><h2>{copy.start}</h2></div><a href={href('/downloads/')}>{copy.downloads} →</a></header>
     <div class="explore-grid"><div><div class="subheading"><h3>{copy.countryList}</h3><a href={href('/countries/')}>{copy.viewAll} {countries.length}</a></div><div class="country-grid">{featuredCountries.map((country: any) => <CountryCard code={country.code} name={country.name} nameZh={country.name_zh} totalCases={country.total_cases} totalDeaths={country.total_deaths} diseaseCount={country.disease_count} dateRange={country.date_range} locale={locale} />)}</div></div>
-      <div><div class="subheading"><h3>{copy.common}</h3><a href={href('/diseases/')}>{copy.viewAll}</a></div><div class="disease-list">{featuredDiseases.map((disease: any) => <a href={href(`/diseases/${disease.slug}/`)}><span><strong>{zh ? disease.name_zh ?? disease.name_en : disease.name_en}</strong><small>{zh ? disease.name_en : `${disease.name_zh ?? ''} · ${disease.category}`}</small></span><span>→</span></a>)}</div></div>
+      <div><div class="subheading"><h3>{copy.common}</h3><a href={href('/diseases/')}>{copy.viewAll}</a></div><div class="disease-list">{featuredDiseases.map((disease: any) => { const frenchName = disease.name_fr ?? DISEASE_NAMES_FR[disease.slug] ?? disease.name_en; return <a href={href(`/diseases/${disease.slug}/`)}><span><strong>{zh ? disease.name_zh ?? disease.name_en : locale === 'fr' ? frenchName : disease.name_en}</strong><small>{zh ? disease.name_en : locale === 'fr' ? disease.name_en : `${disease.name_zh ?? ''} · ${disease.category}`}</small></span><span>→</span></a>; })}</div></div>
     </div>
   </div></section>
 

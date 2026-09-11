@@ -3,14 +3,16 @@ import CountryFlag from '../CountryFlag.astro';
 import downloadsRaw from '../../data/downloads.json';
 import metaRaw from '../../data/meta.json';
 import { toSeoSlug } from '../../lib/seo';
+import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
 
 interface Props {
-  locale?: 'en' | 'zh';
+  locale?: 'en' | 'zh' | 'fr';
 }
 
 const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const downloads = downloadsRaw as any;
 const countryMetaByCode = new Map(
   ((metaRaw as any).countries ?? []).map((entry: any) => [String(entry.code).toUpperCase(), entry]),
@@ -63,8 +65,10 @@ const diseases = (downloads.diseases ?? []).map((entry: any) => {
     id: entry.disease_id ?? entry.id,
     name: zh
       ? entry.name_zh ?? entry.name_en ?? entry.slug
-      : entry.name_en ?? entry.slug ?? entry.id,
-    aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''} ${entry.slug ?? ''}`,
+      : fr
+        ? entry.name_fr ?? DISEASE_NAMES_FR[String(entry.slug ?? '').toLowerCase()] ?? entry.name_en ?? entry.slug ?? entry.id
+        : entry.name_en ?? entry.slug ?? entry.id,
+    aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''} ${entry.name_fr ?? ''} ${DISEASE_NAMES_FR[String(entry.slug ?? '').toLowerCase()] ?? ''} ${entry.slug ?? ''}`,
     detail: zh
       ? `${recordCount.toLocaleString('zh-CN')} 条记录 · ${countryCount} 个国家/地区`
       : `${recordCount.toLocaleString('en-US')} records · ${countryCount} countries/regions`,

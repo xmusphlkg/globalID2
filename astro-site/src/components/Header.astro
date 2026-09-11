@@ -1,29 +1,39 @@
 ---
 import BrandLogo from './BrandLogo.astro';
+import type { Lang } from '../utils/i18n';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-interface Props { initialLanguage?: 'en' | 'zh'; hideLanguageToggle?: boolean; }
+interface Props { initialLanguage?: Lang; hideLanguageToggle?: boolean; }
 
 const { initialLanguage = 'en', hideLanguageToggle = false } = Astro.props;
 const currentPath = Astro.url.pathname;
 const isChinese = initialLanguage === 'zh' || currentPath === '/zh' || currentPath.startsWith('/zh/');
-const englishPath = isChinese ? (currentPath.replace(/^\/zh(?=\/|$)/, '') || '/') : currentPath;
-const chinesePath = englishPath === '/' ? '/zh/' : `/zh${englishPath}`;
-const localePath = `${isChinese ? englishPath : chinesePath}${Astro.url.search}`;
-const localize = (path: string) => isChinese ? (path === '/' ? '/zh/' : `/zh${path}`) : path;
+const isFrench = initialLanguage === 'fr' || currentPath === '/fr' || currentPath.startsWith('/fr/');
+const englishPath = currentPath.replace(/^\/(?:zh|fr)(?=\/|$)/, '') || '/';
+const pathFor = (lang: Lang, path = englishPath) => lang === 'zh'
+  ? (path === '/' ? '/zh/' : `/zh${path}`)
+  : lang === 'fr'
+    ? (path === '/' ? '/fr/' : `/fr${path}`)
+    : path;
+// The compact toggle advances through all supported interfaces. This keeps the
+// header usable on narrow screens while still making every locale discoverable.
+const nextLanguage: Lang = isFrench ? 'zh' : isChinese ? 'en' : 'fr';
+const localePath = `${pathFor(nextLanguage)}${Astro.url.search}`;
+const localize = (path: string) => pathFor(isChinese ? 'zh' : isFrench ? 'fr' : 'en', path);
+const copy = (en: string, zh: string, fr: string) => isChinese ? zh : isFrench ? fr : en;
 const situationVisible = existsSync(resolve('./src/data/situation/v3/latest.json'))
   || ((import.meta.env.DEV || process.env.SITUATION_SHADOW_PREVIEW === 'true') && existsSync(resolve('./src/data/situation/shadow-latest.json')));
 
 const primaryLinks = [
-  ...(situationVisible ? [{ href: '/situation/', en: 'Situation', zh: '全球态势' }] : []),
-  { href: '/research/', en: 'Research', zh: '研究' },
-  { href: '/about/', en: 'Methods & About', zh: '方法与关于' },
+  ...(situationVisible ? [{ href: '/situation/', en: 'Situation', zh: '全球态势', fr: 'Situation' }] : []),
+  { href: '/research/', en: 'Research', zh: '研究', fr: 'Recherche' },
+  { href: '/about/', en: 'Methods & About', zh: '方法与关于', fr: 'Méthodes et à propos' },
 ];
 const dataLinks = [
-  { href: '/countries/', en: 'Countries', zh: '国家与地区' },
-  { href: '/diseases/', en: 'Diseases', zh: '疾病目录' },
-  { href: '/downloads/', en: 'Downloads', zh: '数据下载' },
+  { href: '/countries/', en: 'Countries', zh: '国家与地区', fr: 'Pays et régions' },
+  { href: '/diseases/', en: 'Diseases', zh: '疾病目录', fr: 'Répertoire des maladies' },
+  { href: '/downloads/', en: 'Downloads', zh: '数据下载', fr: 'Téléchargements' },
 ];
 const active = (path: string) => englishPath === path || (path !== '/' && englishPath.startsWith(path));
 ---
@@ -31,49 +41,49 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
 <header class="site-header sticky top-0 z-50 border-b">
   <div class="site-header-inner">
     <div class="site-header-bar">
-      <BrandLogo href={localize('/')} variant="lockup" alt={isChinese ? 'GIDS — 全球传染病监测' : 'GIDS — Global Infectious Disease Surveillance'} subtitleText={isChinese ? '全球传染病监测' : 'Global Infectious Disease Surveillance'} class="site-header-brand-block" imgClass="site-header-mark" titleClass="site-header-brandtitle" subtitleClass="site-header-brandline" />
+      <BrandLogo href={localize('/')} variant="lockup" alt={copy('GIDS — Global Infectious Disease Surveillance', 'GIDS — 全球传染病监测', 'GIDS — Surveillance mondiale des maladies infectieuses')} subtitleText={copy('Global Infectious Disease Surveillance', '全球传染病监测', 'Surveillance mondiale des maladies infectieuses')} class="site-header-brand-block" imgClass="site-header-mark" titleClass="site-header-brandtitle" subtitleClass="site-header-brandline" />
 
-      <nav class="site-nav-desktop hidden lg:flex items-center gap-1" aria-label={isChinese ? '主导航' : 'Primary navigation'}>
-        {primaryLinks.slice(0, 1).map(link => <a href={localize(link.href)} class:list={['nav-link focus-ring', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{isChinese ? link.zh : link.en}</a>)}
+      <nav class="site-nav-desktop hidden lg:flex items-center gap-1" aria-label={copy('Primary navigation', '主导航', 'Navigation principale')}>
+        {primaryLinks.slice(0, 1).map(link => <a href={localize(link.href)} class:list={['nav-link focus-ring', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
         <details class="site-nav-menu">
           <summary class:list={['nav-link focus-ring', dataLinks.some(link => active(link.href)) && 'nav-link-active']}>
-            {isChinese ? '数据' : 'Data'} <span aria-hidden="true">⌄</span>
+            {copy('Data', '数据', 'Données')} <span aria-hidden="true">⌄</span>
           </summary>
           <div class="site-nav-popover">
-            {dataLinks.map(link => <a href={localize(link.href)} class="site-nav-popover-link" aria-current={active(link.href) ? 'page' : undefined}>{isChinese ? link.zh : link.en}</a>)}
+            {dataLinks.map(link => <a href={localize(link.href)} class="site-nav-popover-link" aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
           </div>
         </details>
-        {primaryLinks.slice(1).map(link => <a href={localize(link.href)} class:list={['nav-link focus-ring', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{isChinese ? link.zh : link.en}</a>)}
+        {primaryLinks.slice(1).map(link => <a href={localize(link.href)} class:list={['nav-link focus-ring', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
       </nav>
 
       <div class="site-header-actions flex items-center gap-2">
-        <button id="site-search-open" class="site-search-trigger focus-ring" type="button" aria-label={isChinese ? '打开全站搜索' : 'Open global search'} aria-haspopup="dialog" aria-controls="site-search-dialog">
+        <button id="site-search-open" class="site-search-trigger focus-ring" type="button" aria-label={copy('Open global search', '打开全站搜索', 'Ouvrir la recherche globale')} aria-haspopup="dialog" aria-controls="site-search-dialog">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.4-4.4m2.4-5.1a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" /></svg>
-          <span class="hidden sm:inline">{isChinese ? '搜索' : 'Search'}</span>
+          <span class="hidden sm:inline">{copy('Search', '搜索', 'Rechercher')}</span>
         </button>
-        <button id="theme-toggle" data-theme-toggle class="site-icon-btn focus-ring" type="button" aria-label={isChinese ? '切换到深色主题' : 'Switch to dark theme'}>
+        <button id="theme-toggle" data-theme-toggle class="site-icon-btn focus-ring" type="button" aria-label={copy('Switch to dark theme', '切换到深色主题', 'Passer au thème sombre')}>
           <svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.4 15.2A8.5 8.5 0 0 1 8.8 3.6 8.5 8.5 0 1 0 20.4 15.2Z" /></svg>
           <svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
           <span id="theme-toggle-label" class="sr-only">Dark</span>
         </button>
-        {!hideLanguageToggle && <a id="lang-toggle" class="site-toggle-btn focus-ring" href={localePath} hreflang={isChinese ? 'en' : 'zh-CN'} lang={isChinese ? 'en' : 'zh-CN'} aria-label={isChinese ? 'Switch to English' : '切换到中文'}>{isChinese ? 'EN' : '中文'}</a>}
-        <button id="mobile-menu-toggle" class="site-icon-btn lg:hidden focus-ring" type="button" aria-label={isChinese ? '打开导航菜单' : 'Open navigation menu'} aria-controls="mobile-menu" aria-expanded="false">
+        {!hideLanguageToggle && <a id="lang-toggle" class="site-toggle-btn focus-ring" href={localePath} hreflang={nextLanguage === 'zh' ? 'zh-CN' : nextLanguage} lang={nextLanguage === 'zh' ? 'zh-CN' : nextLanguage} aria-label={copy('Passer au français', '切换到英文', 'Passer au chinois')}>{nextLanguage === 'zh' ? '中文' : nextLanguage === 'fr' ? 'FR' : 'EN'}</a>}
+        <button id="mobile-menu-toggle" class="site-icon-btn lg:hidden focus-ring" type="button" aria-label={copy('Open navigation menu', '打开导航菜单', 'Ouvrir le menu de navigation')} aria-controls="mobile-menu" aria-expanded="false">
           <svg class="menu-open-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           <svg class="menu-close-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
       </div>
     </div>
 
-    <nav id="mobile-menu" class="site-header-mobile-menu hidden lg:hidden" aria-label={isChinese ? '移动导航' : 'Mobile navigation'}>
+    <nav id="mobile-menu" class="site-header-mobile-menu hidden lg:hidden" aria-label={copy('Mobile navigation', '移动导航', 'Navigation mobile')}>
       <div class="site-header-mobile-inner">
-        {primaryLinks.slice(0, 1).map(link => <a href={localize(link.href)} class:list={['nav-link', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{isChinese ? link.zh : link.en}</a>)}
-        <p class="site-mobile-group-label">{isChinese ? '数据' : 'Data'}</p>
-        {dataLinks.map(link => <a href={localize(link.href)} class:list={['nav-link site-mobile-sub-link', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{isChinese ? link.zh : link.en}</a>)}
-        {primaryLinks.slice(1).map(link => <a href={localize(link.href)} class:list={['nav-link', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{isChinese ? link.zh : link.en}</a>)}
+        {primaryLinks.slice(0, 1).map(link => <a href={localize(link.href)} class:list={['nav-link', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
+        <p class="site-mobile-group-label">{copy('Data', '数据', 'Données')}</p>
+        {dataLinks.map(link => <a href={localize(link.href)} class:list={['nav-link site-mobile-sub-link', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
+        {primaryLinks.slice(1).map(link => <a href={localize(link.href)} class:list={['nav-link', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
         <div class="site-mobile-tools">
-          {!hideLanguageToggle && <a class="site-mobile-tool focus-ring" href={localePath} hreflang={isChinese ? 'en' : 'zh-CN'} lang={isChinese ? 'en' : 'zh-CN'} aria-label={isChinese ? 'Switch to English' : '切换到中文'}>
-            <span aria-hidden="true">{isChinese ? 'EN' : '中文'}</span>
-            <span>{isChinese ? 'English' : '中文界面'}</span>
+          {!hideLanguageToggle && <a class="site-mobile-tool focus-ring" href={localePath} hreflang={nextLanguage === 'zh' ? 'zh-CN' : nextLanguage} lang={nextLanguage === 'zh' ? 'zh-CN' : nextLanguage} aria-label={copy('Passer au français', '切换到英文', 'Passer au chinois')}>
+            <span aria-hidden="true">{nextLanguage === 'zh' ? '中文' : nextLanguage === 'fr' ? 'FR' : 'EN'}</span>
+            <span>{nextLanguage === 'zh' ? '中文界面' : nextLanguage === 'fr' ? 'Interface française' : 'English'}</span>
           </a>}
         </div>
       </div>
@@ -84,17 +94,17 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
 <dialog id="site-search-dialog" class="site-search-dialog" aria-labelledby="site-search-title">
   <form method="dialog" class="site-search-dialog-shell">
     <header class="site-search-dialog-header">
-      <div><p class="academic-kicker">{isChinese ? '全站检索' : 'Global search'}</p><h2 id="site-search-title">{isChinese ? '查找数据与证据' : 'Find data and evidence'}</h2></div>
-      <button class="site-search-close focus-ring" value="cancel" aria-label={isChinese ? '关闭搜索' : 'Close search'}>Esc</button>
+      <div><p class="academic-kicker">{copy('Global search', '全站检索', 'Recherche globale')}</p><h2 id="site-search-title">{copy('Find data and evidence', '查找数据与证据', 'Trouver des données et des preuves')}</h2></div>
+      <button class="site-search-close focus-ring" value="cancel" aria-label={copy('Close search', '关闭搜索', 'Fermer la recherche')}>Esc</button>
     </header>
-    <label for="site-search-input" class="sr-only">{isChinese ? '搜索国家、疾病、报告和研究' : 'Search countries, diseases, reports, and research'}</label>
+    <label for="site-search-input" class="sr-only">{copy('Search countries, diseases, reports, and research', '搜索国家、疾病、报告和研究', 'Rechercher des pays, maladies, rapports et études')}</label>
     <div class="site-search-input-wrap">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.4-4.4m2.4-5.1a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" /></svg>
-      <input id="site-search-input" name="q" type="search" autocomplete="off" placeholder={isChinese ? '搜索国家、疾病、报告、研究…' : 'Search countries, diseases, reports, research…'} aria-describedby="site-search-help" />
+      <input id="site-search-input" name="q" type="search" autocomplete="off" placeholder={copy('Search countries, diseases, reports, research…', '搜索国家、疾病、报告、研究…', 'Rechercher des pays, maladies, rapports, études…')} aria-describedby="site-search-help" />
     </div>
-    <p id="site-search-help" class="site-search-help">{isChinese ? '输入至少 2 个字符。使用方向键浏览，Enter 打开。' : 'Type at least 2 characters. Use arrow keys to review and Enter to open.'}</p>
-    <div id="site-search-results" class="site-search-results" role="listbox" aria-label={isChinese ? '搜索结果' : 'Search results'}></div>
-    <footer class="site-search-footer"><a id="site-search-all" href={localize('/search/')}>{isChinese ? '查看全部结果' : 'View all results'} <span aria-hidden="true">→</span></a></footer>
+    <p id="site-search-help" class="site-search-help">{copy('Type at least 2 characters. Use arrow keys to review and Enter to open.', '输入至少 2 个字符。使用方向键浏览，Enter 打开。', 'Saisissez au moins 2 caractères. Utilisez les flèches puis Entrée pour ouvrir.')}</p>
+    <div id="site-search-results" class="site-search-results" role="listbox" aria-label={copy('Search results', '搜索结果', 'Résultats de recherche')}></div>
+    <footer class="site-search-footer"><a id="site-search-all" href={localize('/search/')}>{copy('View all results', '查看全部结果', 'Voir tous les résultats')} <span aria-hidden="true">→</span></a></footer>
   </form>
 </dialog>
 
@@ -178,7 +188,8 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   }
 </style>
 
-<script is:inline define:vars={{ isChinese }}>
+<script is:inline define:vars={{ isChinese, isFrench, languagePrefix: isChinese ? '/zh' : isFrench ? '/fr' : '' }}>
+  const localized = (en, zh, fr) => isChinese ? zh : isFrench ? fr : en;
   const themeButtons = [...document.querySelectorAll('[data-theme-toggle]')];
   const themeLabel = document.querySelector('#theme-toggle-label');
   const mobileButton = document.querySelector('#mobile-menu-toggle');
@@ -198,7 +209,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
     document.documentElement.classList.toggle('dark', theme === 'dark');
     const next = theme === 'dark' ? 'Light' : 'Dark';
     if (themeLabel) themeLabel.textContent = next;
-    themeButtons.forEach(button => button.setAttribute('aria-label', isChinese ? (theme === 'dark' ? '切换到浅色主题' : '切换到深色主题') : `Switch to ${next.toLowerCase()} theme`));
+    themeButtons.forEach(button => button.setAttribute('aria-label', localized(theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme', theme === 'dark' ? '切换到浅色主题' : '切换到深色主题', theme === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre')));
   }
   applyTheme(localStorage.getItem('theme') === 'dark' ? 'dark' : 'light');
   themeButtons.forEach(button => button.addEventListener('click', () => {
@@ -209,14 +220,14 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   function closeMobileMenu(restoreFocus = false) {
     mobileMenu?.classList.add('hidden');
     mobileButton?.setAttribute('aria-expanded', 'false');
-    mobileButton?.setAttribute('aria-label', isChinese ? '打开导航菜单' : 'Open navigation menu');
+    mobileButton?.setAttribute('aria-label', localized('Open navigation menu', '打开导航菜单', 'Ouvrir le menu de navigation'));
     if (restoreFocus) mobileButton?.focus();
   }
 
   mobileButton?.addEventListener('click', () => {
     const open = mobileMenu?.classList.toggle('hidden') === false;
     mobileButton.setAttribute('aria-expanded', String(open));
-    mobileButton.setAttribute('aria-label', open ? (isChinese ? '关闭导航菜单' : 'Close navigation menu') : (isChinese ? '打开导航菜单' : 'Open navigation menu'));
+    mobileButton.setAttribute('aria-label', open ? localized('Close navigation menu', '关闭导航菜单', 'Fermer le menu de navigation') : localized('Open navigation menu', '打开导航菜单', 'Ouvrir le menu de navigation'));
   });
 
   async function loadSearch() {
@@ -258,9 +269,9 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
 
   const normalized = value => String(value || '').normalize('NFKD').toLowerCase().trim();
   function score(entry, query) {
-    const title = normalized(isChinese ? (entry.title.zh || entry.title.en) : entry.title.en);
+    const title = normalized(isChinese ? (entry.title.zh || entry.title.en) : isFrench ? (entry.title.fr || entry.title.en) : entry.title.en);
     const aliases = (entry.aliases || []).map(normalized);
-    const summary = normalized(isChinese ? (entry.summary?.zh || entry.summary?.en) : entry.summary?.en);
+    const summary = normalized(isChinese ? (entry.summary?.zh || entry.summary?.en) : isFrench ? (entry.summary?.fr || entry.summary?.en) : entry.summary?.en);
     if (title === query) return 100;
     if (title.startsWith(query)) return 80;
     if (aliases.some(alias => alias === query)) return 70;
@@ -272,17 +283,17 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   function renderSearch() {
     if (!(searchInput instanceof HTMLInputElement) || !searchResults) return;
     const query = normalized(searchInput.value);
-    if (searchAll instanceof HTMLAnchorElement) searchAll.href = `${isChinese ? '/zh' : ''}/search/?q=${encodeURIComponent(searchInput.value.trim())}`;
+    if (searchAll instanceof HTMLAnchorElement) searchAll.href = `${languagePrefix}/search/?q=${encodeURIComponent(searchInput.value.trim())}`;
     searchResults.replaceChildren();
     if (query.length < 2) return;
     const matches = searchEntries.map(entry => ({ entry, rank: score(entry, query) })).filter(item => item.rank > 0).sort((a,b) => b.rank-a.rank).slice(0, 8);
-    if (!matches.length) { const empty = document.createElement('p'); empty.className='site-search-empty'; empty.textContent=isChinese?'未找到匹配内容。':'No matching evidence found.'; searchResults.append(empty); return; }
+    if (!matches.length) { const empty = document.createElement('p'); empty.className='site-search-empty'; empty.textContent=localized('No matching evidence found.', '未找到匹配内容。', 'Aucun résultat trouvé.'); searchResults.append(empty); return; }
     for (const { entry } of matches) {
       const link = document.createElement('a'); link.className='site-search-result'; link.setAttribute('role','option');
-      link.href = isChinese && entry.href.zh ? entry.href.zh : entry.href.en;
+      link.href = isChinese && entry.href.zh ? entry.href.zh : isFrench && entry.href.fr ? entry.href.fr : entry.href.en;
       const kind = document.createElement('span'); kind.className='site-search-result-kind'; kind.textContent=entry.kind;
-      const title = document.createElement('strong'); title.textContent=isChinese?(entry.title.zh||entry.title.en):entry.title.en;
-      const summary = document.createElement('small'); summary.textContent=isChinese?(entry.summary?.zh||entry.summary?.en||''):(entry.summary?.en||'');
+      const title = document.createElement('strong'); title.textContent=isChinese?(entry.title.zh||entry.title.en):isFrench?(entry.title.fr||entry.title.en):entry.title.en;
+      const summary = document.createElement('small'); summary.textContent=isChinese?(entry.summary?.zh||entry.summary?.en||''):isFrench?(entry.summary?.fr||entry.summary?.en||''):(entry.summary?.en||'');
       link.append(kind,title,summary); searchResults.append(link);
     }
   }
