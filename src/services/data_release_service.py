@@ -100,7 +100,10 @@ SUBSCRIPTION_SYNC_STRICT_VALUES = {"1", "true", "yes", "on", "required", "strict
 LOGGED_COMMAND_CANCEL_POLL_SECONDS = 1.0
 DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS = 15 * 60
 GENERATE_SITE_DATA_TIMEOUT_SECONDS = 30 * 60
-ASTRO_BUILD_TIMEOUT_SECONDS = 15 * 60
+# The multilingual static site now renders thousands of country/disease pages.
+# Keep the build guard finite, but allow a full production render to finish on
+# memory-constrained release workers instead of aborting at the legacy 15 min.
+ASTRO_BUILD_TIMEOUT_SECONDS = 60 * 60
 CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS = 15 * 60
 SUBSCRIPTION_SYNC_TIMEOUT_SECONDS = 10 * 60
 DOWNLOAD_PUBLISH_TIMEOUT_SECONDS = 15 * 60
