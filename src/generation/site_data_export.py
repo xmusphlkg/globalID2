@@ -785,9 +785,13 @@ async def collect_site_export_context(
             )
 
     if incremental:
-        situation_latest = _read_json_file(
-            output_dir / "situation" / "v3" / "latest.json", None
-        )
+        # The Situation Room refresh runs immediately before an incremental
+        # release and advances the database publication pointer. Reading the
+        # previous local snapshot here can therefore publish a stale
+        # `latest.json` and fail the release gate. Fetch the pointer-backed
+        # report even for incremental country exports; weekly/monthly archives
+        # remain unchanged to keep the incremental path bounded.
+        situation_latest = await latest_report_v3()
         situation_weekly = []
         situation_monthly = []
     else:
