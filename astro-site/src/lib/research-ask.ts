@@ -13,12 +13,13 @@ export interface ResearchAskArticle {
   open_access_status?: string | null;
   open_access_url?: string | null;
   tags?: Array<string | { name?: string; label?: string }>;
-  diseases?: Array<{ disease_id?: string; slug?: string; name_en?: string; name_zh?: string; confidence?: number }>;
-  countries?: Array<{ code?: string; slug?: string; name_en?: string; name_zh?: string; confidence?: number }>;
+  diseases?: Array<{ disease_id?: string; slug?: string; name_en?: string; name_zh?: string; name_fr?: string; confidence?: number }>;
+  countries?: Array<{ code?: string; slug?: string; name_en?: string; name_zh?: string; name_fr?: string; confidence?: number }>;
   topics?: Array<{ name?: string; confidence?: number }>;
   summary?: Record<string, Record<string, unknown>>;
   why_it_matters_en?: string | null;
   why_it_matters_zh?: string | null;
+  why_it_matters_fr?: string | null;
   related_signals?: ResearchAskSignal[];
 }
 
@@ -27,7 +28,8 @@ export interface ResearchAskSignal {
   title?: string | null;
   disease_name_en?: string | null;
   disease_name_zh?: string | null;
-  geographies?: Array<{ code?: string; name?: string; name_en?: string }>;
+  disease_name_fr?: string | null;
+  geographies?: Array<{ code?: string; name?: string; name_en?: string; name_fr?: string }>;
   relation_level?: string;
   data_through?: string | null;
   situation_url?: string | null;
@@ -43,6 +45,7 @@ export interface ResearchAskEvidence {
   citation: ResearchAskCitation;
   findingEn: string | null;
   findingZh: string | null;
+  findingFr: string | null;
 }
 
 export interface ResearchAskMatchReason {
@@ -66,6 +69,7 @@ export interface ResearchAskGap {
   kind: 'no_relevant_records' | 'no_exact_evidence' | 'missing_structured_summary' | 'no_linked_surveillance';
   messageEn: string;
   messageZh: string;
+  messageFr?: string;
   count?: number;
 }
 
@@ -81,8 +85,10 @@ export interface ResearchAskAnswer {
   themes: Array<{ name: string; count: number }>;
   summaryEn: string;
   summaryZh: string;
+  summaryFr: string;
   limitationsEn: string;
   limitationsZh: string;
+  limitationsFr: string;
 }
 
 const STOP_WORDS = new Set([
@@ -90,6 +96,7 @@ const STOP_WORDS = new Set([
   'evidence', 'from', 'global', 'have', 'how', 'in', 'into', 'latest', 'most', 'new', 'of', 'on', 'recent', 'research',
   'study', 'that', 'the', 'their', 'these', 'this', 'what', 'when', 'where', 'which', 'why',
   'with', 'would',
+  'dans', 'des', 'les', 'une', 'pour', 'sur', 'avec', 'entre', 'quel', 'quelle', 'quels', 'quelles', 'est', 'sont', 'au', 'aux', 'du', 'de', 'la', 'le',
   '什么', '为何', '为什么', '如何', '哪些', '最新', '近期', '研究', '证据', '全球', '相关',
 ]);
 
@@ -108,20 +115,20 @@ interface SearchUnit {
 }
 
 const STATIC_ALIAS_GROUPS: Array<{ kind: AliasGroup['kind']; label: string; aliases: string[] }> = [
-  { kind: 'disease', label: 'Pertussis', aliases: ['pertussis', 'whooping cough', '百日咳'] },
-  { kind: 'disease', label: 'Dengue', aliases: ['dengue', 'dengue fever', '登革热'] },
-  { kind: 'disease', label: 'Influenza', aliases: ['influenza', 'flu', '流感'] },
-  { kind: 'disease', label: 'Measles', aliases: ['measles', '麻疹'] },
-  { kind: 'disease', label: 'Mpox', aliases: ['mpox', 'monkeypox', '猴痘'] },
-  { kind: 'disease', label: 'COVID-19', aliases: ['covid 19', 'covid', 'sars cov 2', '新冠', '新型冠状病毒'] },
-  { kind: 'country', label: 'Japan', aliases: ['japan', 'jp', '日本'] },
-  { kind: 'country', label: 'Brazil', aliases: ['brazil', 'br', '巴西'] },
-  { kind: 'country', label: 'China', aliases: ['china', 'cn', '中国'] },
-  { kind: 'country', label: 'United States', aliases: ['united states', 'usa', 'u s', 'us', '美国'] },
-  { kind: 'country', label: 'United Kingdom', aliases: ['united kingdom', 'uk', 'great britain', '英国'] },
-  { kind: 'topic', label: 'Vaccination', aliases: ['vaccination', 'vaccine', 'vaccines', 'immunization', 'immunisation', '疫苗', '接种'] },
-  { kind: 'topic', label: 'Surveillance', aliases: ['surveillance', 'monitoring', '监测'] },
-  { kind: 'topic', label: 'Diagnostics', aliases: ['diagnostics', 'diagnostic', 'diagnosis', 'testing', '诊断', '检测'] },
+  { kind: 'disease', label: 'Pertussis', aliases: ['pertussis', 'whooping cough', 'coqueluche', '百日咳'] },
+  { kind: 'disease', label: 'Dengue', aliases: ['dengue', 'dengue fever', 'fièvre dengue', '登革热'] },
+  { kind: 'disease', label: 'Influenza', aliases: ['influenza', 'flu', 'grippe', '流感'] },
+  { kind: 'disease', label: 'Measles', aliases: ['measles', 'rougeole', '麻疹'] },
+  { kind: 'disease', label: 'Mpox', aliases: ['mpox', 'monkeypox', 'variole du singe', '猴痘'] },
+  { kind: 'disease', label: 'COVID-19', aliases: ['covid 19', 'covid', 'sars cov 2', 'covid 19', '新冠', '新型冠状病毒'] },
+  { kind: 'country', label: 'Japan', aliases: ['japan', 'jp', 'japon', '日本'] },
+  { kind: 'country', label: 'Brazil', aliases: ['brazil', 'brésil', 'br', '巴西'] },
+  { kind: 'country', label: 'China', aliases: ['china', 'cn', 'chine', '中国'] },
+  { kind: 'country', label: 'United States', aliases: ['united states', 'usa', 'u s', 'us', 'états unis', '美国'] },
+  { kind: 'country', label: 'United Kingdom', aliases: ['united kingdom', 'uk', 'great britain', 'royaume uni', '英国'] },
+  { kind: 'topic', label: 'Vaccination', aliases: ['vaccination', 'vaccine', 'vaccines', 'immunization', 'immunisation', 'vaccination', '疫苗', '接种'] },
+  { kind: 'topic', label: 'Surveillance', aliases: ['surveillance', 'monitoring', 'surveillance épidémiologique', '监测'] },
+  { kind: 'topic', label: 'Diagnostics', aliases: ['diagnostics', 'diagnostic', 'diagnosis', 'testing', 'diagnostic', '检测'] },
   { kind: 'topic', label: 'Antimicrobial resistance', aliases: ['antimicrobial resistance', 'antibiotic resistance', 'amr', '耐药', '抗微生物药物耐药性'] },
   { kind: 'topic', label: 'Outbreak investigation', aliases: ['outbreak', 'outbreak investigation', '暴发', '疫情调查'] },
   { kind: 'topic', label: 'Modelling', aliases: ['modelling', 'modeling', 'transmission model', '模型', '建模'] },
@@ -141,6 +148,7 @@ const FIELD_WEIGHTS = {
   tags: 7,
   summaryEn: 5,
   summaryZh: 5,
+  summaryFr: 5,
 } as const;
 
 function normalizeText(value: unknown): string {
@@ -171,8 +179,8 @@ function confident(value: { confidence?: number }): boolean {
 
 function articleFieldText(article: ResearchAskArticle) {
   const title = normalizeText(article.title);
-  const diseases = normalizeText((article.diseases ?? []).filter(confident).flatMap((item) => [item.disease_id, item.name_en, item.name_zh]).join(' '));
-  const countries = normalizeText((article.countries ?? []).filter(confident).flatMap((item) => [item.code, item.name_en, item.name_zh]).join(' '));
+  const diseases = normalizeText((article.diseases ?? []).filter(confident).flatMap((item) => [item.disease_id, item.name_en, item.name_zh, item.name_fr]).join(' '));
+  const countries = normalizeText((article.countries ?? []).filter(confident).flatMap((item) => [item.code, item.name_en, item.name_zh, item.name_fr]).join(' '));
   const topics = normalizeText((article.topics ?? []).filter(confident).map((item) => item.name).join(' '));
   const study = normalizeText(article.study_type);
   const tags = normalizeText([
@@ -188,7 +196,11 @@ function articleFieldText(article: ResearchAskArticle) {
     article.why_it_matters_zh,
     ...Object.values(article.summary?.zh ?? {}),
   ].join(' '));
-  return { title, diseases, countries, topics, study, tags, summaryEn, summaryZh };
+  const summaryFr = normalizeText([
+    article.why_it_matters_fr,
+    ...Object.values(article.summary?.fr ?? {}),
+  ].join(' '));
+  return { title, diseases, countries, topics, study, tags, summaryEn, summaryZh, summaryFr };
 }
 
 function containsTerm(haystack: string, term: string): boolean {
@@ -231,11 +243,11 @@ function catalogueAliasGroups(articles: ResearchAskArticle[]): AliasGroup[] {
   }));
   for (const article of articles) {
     for (const disease of (article.diseases ?? []).filter(confident)) {
-      const aliases = normalizedAliases([disease.disease_id, disease.name_en, disease.name_zh]);
+      const aliases = normalizedAliases([disease.disease_id, disease.name_en, disease.name_zh, disease.name_fr]);
       if (aliases.length) groups.push({ kind: 'disease', label: disease.name_en || disease.name_zh || disease.disease_id || aliases[0], aliases });
     }
     for (const country of (article.countries ?? []).filter(confident)) {
-      const aliases = normalizedAliases([country.code, country.name_en, country.name_zh]);
+      const aliases = normalizedAliases([country.code, country.name_en, country.name_zh, country.name_fr]);
       if (aliases.length) groups.push({ kind: 'country', label: country.name_en || country.name_zh || country.code || aliases[0], aliases });
     }
     for (const topic of (article.topics ?? []).filter(confident)) {
@@ -290,7 +302,7 @@ function summaryField(article: ResearchAskArticle, language: string, field: stri
 function evidenceFinding(article: ResearchAskArticle, language: 'en' | 'zh' | 'fr'): string | null {
   return summaryField(article, language, 'main_findings')
     ?? summaryField(article, language, 'public_health_relevance')
-    ?? (language === 'en' ? article.why_it_matters_en?.trim() : article.why_it_matters_zh?.trim())
+    ?? (language === 'en' ? article.why_it_matters_en?.trim() : language === 'zh' ? article.why_it_matters_zh?.trim() : article.why_it_matters_fr?.trim())
     ?? null;
 }
 
@@ -417,6 +429,7 @@ export function rankResearchArticles(
         citation: citationFor(article, 0),
         findingEn: evidenceFinding(article, 'en'),
         findingZh: evidenceFinding(article, 'zh'),
+        findingFr: evidenceFinding(article, 'fr'),
       } satisfies ResearchAskEvidence;
     })
     .filter((item): item is ResearchAskEvidence => item !== null)
@@ -476,6 +489,7 @@ function collectGaps(
       kind: 'no_relevant_records',
       messageEn: 'No indexed record matched the requested disease, geography, topic, or study design closely enough.',
       messageZh: '当前索引中没有与所问疾病、地区、主题或研究设计足够匹配的记录。',
+      messageFr: 'Aucun enregistrement indexé ne correspond suffisamment à la maladie, à la zone géographique, au thème ou au type d’étude demandé.',
     }];
   }
   const gaps: ResearchAskGap[] = [];
@@ -484,15 +498,17 @@ function collectGaps(
       kind: 'no_exact_evidence',
       messageEn: 'Only background matches were found; no record matched every requested domain facet.',
       messageZh: '目前仅检索到背景匹配；没有记录同时满足问题中的全部领域条件。',
+      messageFr: 'Seuls des résultats contextuels ont été trouvés ; aucun enregistrement ne correspond à tous les critères demandés.',
     });
   }
-  const missingSummary = evidence.filter((item) => !item.findingEn && !item.findingZh).length;
+  const missingSummary = evidence.filter((item) => !item.findingEn && !item.findingZh && !item.findingFr).length;
   if (missingSummary) {
     gaps.push({
       kind: 'missing_structured_summary',
       count: missingSummary,
       messageEn: `${missingSummary} cited record${missingSummary === 1 ? '' : 's'} lack a published structured finding; consult the source directly.`,
       messageZh: `${missingSummary} 条已引用记录尚无已发布的结构化研究结果，请直接阅读原始来源。`,
+      messageFr: `${missingSummary} référence${missingSummary === 1 ? '' : 's'} citée${missingSummary === 1 ? '' : 's'} ne possède pas de résultat structuré publié ; consultez directement la source.`,
     });
   }
   if (!signals.length) {
@@ -500,6 +516,7 @@ function collectGaps(
       kind: 'no_linked_surveillance',
       messageEn: 'No public GIDS surveillance signal is currently linked to these records.',
       messageZh: '这些记录当前没有关联的公开 GIDS 监测信号。',
+      messageFr: 'Aucun signal public de surveillance GIDS n’est actuellement lié à ces références.',
     });
   }
   return gaps;
@@ -522,6 +539,7 @@ export function answerResearchQuestion(
   const gaps = collectGaps(evidence, exactEvidence, signals);
   const themeEn = themes.length ? ` Leading indexed themes: ${themes.slice(0, 3).map((item) => item.name).join(', ')}.` : '';
   const themeZh = themes.length ? ` 主要索引主题为：${themes.slice(0, 3).map((item) => item.name).join('、')}。` : '';
+  const themeFr = themes.length ? ` Thèmes principaux indexés : ${themes.slice(0, 3).map((item) => item.name).join(', ')}.` : '';
   const exactMarkers = citationMarkers(exactEvidence);
   const backgroundMarkers = citationMarkers(backgroundEvidence);
   const summaryEn = evidence.length
@@ -530,6 +548,9 @@ export function answerResearchQuestion(
   const summaryZh = evidence.length
     ? `检索到 ${exactEvidence.length} 条精确引用记录${exactMarkers ? ` ${exactMarkers}` : ''}，以及 ${backgroundEvidence.length} 条背景记录${backgroundMarkers ? ` ${backgroundMarkers}` : ''}。另有 ${signals.length} 条公开监测信号，仅作为背景信息。${themeZh}`
     : '未找到相关度足够高的已发布研究记录。请尝试输入疾病、国家、研究设计或公共卫生主题。';
+  const summaryFr = evidence.length
+    ? `${exactEvidence.length} référence${exactEvidence.length === 1 ? '' : 's'} exacte${exactEvidence.length === 1 ? '' : 's'}${exactMarkers ? ` ${exactMarkers}` : ''} et ${backgroundEvidence.length} référence${backgroundEvidence.length === 1 ? '' : 's'} contextuelle${backgroundEvidence.length === 1 ? '' : 's'}${backgroundMarkers ? ` ${backgroundMarkers}` : ''} ont été trouvées. ${signals.length} signal${signals.length === 1 ? '' : 's'} public${signals.length === 1 ? '' : 's'} lié${signals.length === 1 ? '' : 's'} fournit${signals.length === 1 ? '' : 'ssent'} uniquement un contexte.${themeFr}`
+    : 'Aucune publication Research Radar suffisamment pertinente n’a été trouvée. Essayez une maladie, un pays, un type d’étude ou un thème de santé publique.';
   return {
     query: query.trim(),
     normalizedQuery: normalizeText(query),
@@ -542,7 +563,9 @@ export function answerResearchQuestion(
     themes,
     summaryEn,
     summaryZh,
+    summaryFr,
     limitationsEn: 'This is deterministic, explainable catalogue retrieval—not a causal synthesis, clinical recommendation, or disease-risk assessment. Surveillance links provide context and do not show that a study explains or predicts a signal. Verify every finding in its cited source.',
     limitationsZh: '这是确定、可解释的目录检索，不是因果综合、临床建议或疾病风险评估。监测关联仅提供背景，不能证明研究解释或预测了某个信号。请逐条核对所引用的原始来源。',
+    limitationsFr: 'Il s’agit d’une recherche déterministe et explicable dans le catalogue, pas d’une synthèse causale, d’une recommandation clinique ni d’une évaluation du risque. Les liens de surveillance fournissent un contexte et ne montrent pas qu’une étude explique ou prédit un signal. Vérifiez chaque résultat dans sa source.',
   };
 }

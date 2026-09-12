@@ -605,6 +605,7 @@ class LiteraturePipeline:
                 "preprints_held_for_review": 0,
                 "enrichment_degraded_review": 0,
             }
+            inserted_article_ids: list[str] = []
             classified_candidates: list[tuple[ArticleCandidate, Classification]] = []
             # Classify before opening a transaction, then persist in a stable
             # article order so concurrent syncs acquire row locks consistently.
@@ -671,6 +672,8 @@ class LiteraturePipeline:
                             )
                             batch_counts["inserted"] += int(was_inserted)
                             batch_counts["updated"] += int(not was_inserted)
+                            if was_inserted:
+                                inserted_article_ids.append(candidate.article_id)
                     return batch_counts
 
                 batch_counts = await _retry_postgres_deadlock(
@@ -872,6 +875,10 @@ class LiteraturePipeline:
                 "from_indexed_at": since.isoformat(),
                 "through_indexed_at": through_indexed_at.isoformat(),
                 **counts,
+                # Keep this lightweight operational hint out of the durable
+                # ingest-run counts JSON; the service uses it to enqueue a
+                # targeted summary task immediately after this transaction.
+                "inserted_article_ids": inserted_article_ids,
                 "automation": automation,
             }
         except Exception as exc:

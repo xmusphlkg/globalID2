@@ -22,11 +22,14 @@ const publicationDate = article.publication_date_label_en ?? (article.published_
 const publicationDateZh = article.publication_date_label_zh ?? (article.published_at
   ? new Date(article.published_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
   : '日期暂缺');
+const publicationDateFr = article.publication_date_label_fr ?? (article.published_at
+  ? new Date(article.published_at).toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
+  : 'Date indisponible');
 const isHistoricalBaseline = article.source_kind === 'historical_seed' || article.historical_baseline;
-const diseaseText = (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''}`).join(' ').toLowerCase();
-const countryText = (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en}`).join(' ').toLowerCase();
+const diseaseText = (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase();
+const countryText = (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase();
 const topicText = (article.topics ?? []).map((item: any) => item.name).join(' ').toLowerCase();
-const filterText = `${article.title} ${article.journal ?? ''} ${diseaseText} ${countryText} ${topicText}`.toLowerCase();
+const filterText = `${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${diseaseText} ${countryText} ${topicText}`.toLowerCase();
 const diseaseIds = (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase()).filter(Boolean);
 const countryCodes = (article.countries ?? []).map((item: any) => String(item.code ?? '').toLowerCase()).filter(Boolean);
 const topicSlugs = (article.topics ?? []).map((item: any) => String(item.name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')).filter(Boolean);
@@ -83,10 +86,10 @@ const surveillanceLabelFr = surveillanceLink
   <div class="research-card-topline">
     <div class="research-card-badges">
       <span class="research-badge research-badge-peer">
-        {article.peer_review_status === 'peer_reviewed' ? (zh ? '同行评议' : 'Peer reviewed') : (zh ? '预印本' : 'Preprint')}
+        {article.peer_review_status === 'peer_reviewed' ? (zh ? '同行评议' : fr ? 'Évalué par les pairs' : 'Peer reviewed') : (zh ? '预印本' : fr ? 'Prépublication' : 'Preprint')}
       </span>
-      {isHistoricalBaseline && <span class="research-badge research-badge-history">{zh ? '历史基线' : 'Historical baseline'}</span>}
-      {article.open_access_status === 'open' && <span class="research-badge research-badge-oa">{zh ? '开放获取' : 'Open access'}</span>}
+      {isHistoricalBaseline && <span class="research-badge research-badge-history">{zh ? '历史基线' : fr ? 'Référence historique' : 'Historical baseline'}</span>}
+      {article.open_access_status === 'open' && <span class="research-badge research-badge-oa">{zh ? '开放获取' : fr ? 'Accès ouvert' : 'Open access'}</span>}
       {(article.diseases ?? []).slice(0, compact ? 1 : 2).map((disease: any) => (
         <span class="research-badge">{zh ? disease.name_zh ?? disease.name_en : fr ? disease.name_fr ?? DISEASE_NAMES_FR[String(disease.slug ?? '').toLowerCase()] ?? DISEASE_NAMES_FR_BY_ID[String(disease.disease_id ?? '').toUpperCase()] ?? disease.name_en : disease.name_en}</span>
       ))}
@@ -100,13 +103,13 @@ const surveillanceLabelFr = surveillanceLink
   <h3 class="research-card-title"><a href={`${prefix}/research/articles/${article.slug}/`}>{article.title}</a></h3>
   {authorLineEn && <p class="research-card-authors">{zh ? authorLineZh : authorLineEn}</p>}
   <p class="research-card-source">
-    <span>{article.journal ?? (zh ? '期刊信息暂缺' : 'Journal unavailable')}</span>
+    <span>{article.journal ?? (zh ? '期刊信息暂缺' : fr ? 'Revue indisponible' : 'Journal unavailable')}</span>
     <span aria-hidden="true">·</span>
-    <time datetime={article.published_at}>{zh ? publicationDateZh : publicationDate}</time>
+    <time datetime={article.published_at}>{zh ? publicationDateZh : fr ? publicationDateFr : publicationDate}</time>
   </p>
   {(openAccessUrl || surveillanceUrl) && (
     <div class="research-card-actions">
-      {openAccessUrl && <a class="research-card-action research-card-action-oa" href={openAccessUrl} target="_blank" rel="noopener noreferrer">{zh ? '打开全文 ↗' : 'Open article ↗'}</a>}
+      {openAccessUrl && <a class="research-card-action research-card-action-oa" href={openAccessUrl} target="_blank" rel="noopener noreferrer">{zh ? '打开全文 ↗' : fr ? 'Ouvrir l’article ↗' : 'Open article ↗'}</a>}
       {surveillanceUrl && <a class="research-card-action" href={localeHref(surveillanceUrl)}>{zh ? surveillanceLabelZh : fr ? surveillanceLabelFr : surveillanceLabelEn} →</a>}
     </div>
   )}
@@ -114,12 +117,12 @@ const surveillanceLabelFr = surveillanceLink
   {!compact && (
     <>
       <dl class="research-card-facts">
-        <div><dt>{zh ? '类型' : 'Type'}</dt><dd>{article.study_type ?? (zh ? '期刊论文' : 'Journal article')}</dd></div>
-        <div><dt>{zh ? '范围' : 'Scope'}</dt><dd>{(article.countries ?? []).length > 0 ? article.countries.slice(0, 3).map((item: any) => zh ? item.name_zh ?? item.name_en : item.name_en).join(zh ? '、' : ', ') : (zh ? '未分类' : 'Not classified')}</dd></div>
+        <div><dt>{zh ? '类型' : fr ? 'Type' : 'Type'}</dt><dd>{article.study_type ?? (zh ? '期刊论文' : fr ? 'Article de revue' : 'Journal article')}</dd></div>
+        <div><dt>{zh ? '范围' : fr ? 'Portée' : 'Scope'}</dt><dd>{(article.countries ?? []).length > 0 ? article.countries.slice(0, 3).map((item: any) => zh ? item.name_zh ?? item.name_en : fr ? item.name_fr ?? item.name_en : item.name_en).join(zh ? '、' : ', ') : (zh ? '未分类' : fr ? 'Non classé' : 'Not classified')}</dd></div>
       </dl>
       <p class="research-context">
-        <strong>{zh ? '为何现在值得关注' : 'Why it matters now'}</strong>
-        <span>{zh ? article.why_it_matters_zh ?? article.why_it_matters_en : article.why_it_matters_en}</span>
+        <strong>{zh ? '为何现在值得关注' : fr ? 'Pourquoi cette étude compte maintenant' : 'Why it matters now'}</strong>
+        <span>{zh ? article.why_it_matters_zh ?? article.why_it_matters_en : fr ? article.why_it_matters_fr ?? article.summary?.fr?.public_health_relevance ?? article.why_it_matters_en : article.why_it_matters_en}</span>
       </p>
     </>
   )}

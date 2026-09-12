@@ -685,6 +685,10 @@ class LiteratureSettings(_BaseEnvSettings):
         default=False,
         description="Continuously process the next eligible summary batch on the scheduler",
     )
+    ai_enrichment_auto_on_ingest: bool = Field(
+        default=True,
+        description="Queue a targeted evidence-summary task for newly inserted literature after each sync",
+    )
     ai_enrichment_interval_minutes: int = Field(default=15, ge=15, le=10080)
     ai_enrichment_catch_up_interval_minutes: int = Field(
         default=1,
@@ -711,7 +715,7 @@ class LiteratureSettings(_BaseEnvSettings):
         le=5,
         description="Maximum automatic generations per unchanged article/language before exception review",
     )
-    ai_enrichment_languages_raw: str = Field(default="en,zh")
+    ai_enrichment_languages_raw: str = Field(default="en,zh,fr")
     ai_min_abstract_characters: int = Field(default=180, ge=80, le=2000)
     ai_require_open_access: bool = Field(
         default=False,
@@ -787,7 +791,7 @@ class LiteratureSettings(_BaseEnvSettings):
     @property
     def ai_enrichment_languages(self) -> list[str]:
         languages = [value.strip().lower() for value in self.ai_enrichment_languages_raw.split(",")]
-        return [value for value in dict.fromkeys(languages) if value in {"en", "zh"}] or ["en"]
+        return [value for value in dict.fromkeys(languages) if value in {"en", "zh", "fr"}] or ["en"]
 
 class AppSettingsConfig(BaseSettings):
     """应用基础配置"""

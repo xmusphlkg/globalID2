@@ -1790,3 +1790,25 @@ def test_autopilot_holds_protocol_v2_chinese_summary_without_alignment_evidence(
         _autopilot_config(),
         expected_canonical_summary_fingerprint="abc123",
     ).action == "publish"
+
+
+@pytest.mark.asyncio
+async def test_french_enrichment_uses_canonical_english_contract():
+    candidate = normalize_crossref(_crossref_payload())
+    assert candidate is not None
+    canonical = {field: f"Canonical {field}." for field in SUMMARY_FIELDS}
+    agent = _FakeLiteratureAgent()
+    result = await LiteratureSummaryGenerator(agent=agent).generate(
+        article=candidate,
+        language="fr",
+        diseases=["Dengue"],
+        countries=["Japan"],
+        topics=["Surveillance"],
+        timeout_seconds=10,
+        preferred_models=[],
+        canonical_fields=canonical,
+    )
+    assert result.canonical_summary_fingerprint
+    request = json.loads(agent.calls[0]["prompt"])
+    assert "French" in agent.calls[0]["system"]
+    assert request["canonical_summary_en"]["main_findings"] == canonical["main_findings"]

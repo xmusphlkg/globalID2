@@ -5,25 +5,26 @@ import { buildAlternatePaths } from '../../lib/seo';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ? zhValue : en;
 ---
 
 <ReportLayout
-  title={pick('Ask GIDS Research', '问研究雷达')}
-  description={pick('Search published Research Radar evidence and its public surveillance links with source-level citations.', '检索研究雷达已发表证据及其公开监测关联，并核对来源级引用。')}
+  title={pick('Ask GIDS Research', '问研究雷达', 'Interroger la recherche GIDS')}
+  description={pick('Search published Research Radar evidence and its public surveillance links with source-level citations.', '检索研究雷达已发表证据及其公开监测关联，并核对来源级引用。', 'Recherchez les preuves publiées du Radar de recherche et leurs liens publics de surveillance avec des citations au niveau des sources.')}
   initialLanguage={locale}
   seo={{
-    title: pick('Ask GIDS Research | GIDS', '问研究雷达 | GIDS'),
-    description: pick('Search published Research Radar evidence and its public surveillance links with source-level citations.', '检索研究雷达已发表证据及其公开监测关联，并核对来源级引用。'),
+    title: pick('Ask GIDS Research | GIDS', '问研究雷达 | GIDS', 'Interroger la recherche GIDS | GIDS'),
+    description: pick('Search published Research Radar evidence and its public surveillance links with source-level citations.', '检索研究雷达已发表证据及其公开监测关联，并核对来源级引用。', 'Recherchez les preuves publiées du Radar de recherche et leurs liens publics de surveillance avec des citations au niveau des sources.'),
     locale,
     canonicalPath: `${prefix}/research/ask/`,
     alternatePaths: buildAlternatePaths(`${prefix}/research/ask/`, locale),
     pageType: 'WebPage',
   }}
   breadcrumbs={[
-    { label: pick('Research Radar', '研究雷达'), href: `${prefix}/research/` },
-    { label: pick('Ask GIDS Research', '问研究雷达') },
+    { label: pick('Research Radar', '研究雷达', 'Radar de recherche'), href: `${prefix}/research/` },
+    { label: pick('Ask GIDS Research', '问研究雷达', 'Interroger la recherche GIDS') },
   ]}
 >
   <div class="ask-page">
@@ -122,16 +123,19 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
   const evidence = document.querySelector<HTMLElement>('#answer-evidence');
   let cataloguePromise: Promise<any[]> | null = null;
   const isZh = () => form?.dataset.researchLocale === 'zh';
-  const routePrefix = isZh() ? '/zh' : '';
+  const isFr = () => form?.dataset.researchLocale === 'fr';
+  const routePrefix = isZh() ? '/zh' : isFr() ? '/fr' : '';
   const SURVEILLANCE_EVENT = 'gids:research-ask-surveillance';
   type SurveillanceDetail = {
     diseaseId: string;
     diseaseSlug?: string | null;
     diseaseNameEn?: string | null;
     diseaseNameZh?: string | null;
+    diseaseNameFr?: string | null;
     countryCodes: string[];
     countryNameEn?: string | null;
     countryNameZh?: string | null;
+    countryNameFr?: string | null;
   };
   const askWindow = window as Window & { __gidsResearchAskSurveillance?: SurveillanceDetail | null };
   const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
@@ -140,8 +144,8 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
     return element;
   };
   const formatDate = (value: string | null | undefined) => {
-    if (!value) return isZh() ? '日期暂缺' : 'Date unavailable';
-    return new Intl.DateTimeFormat(isZh() ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(value));
+    if (!value) return isZh() ? '日期暂缺' : isFr() ? 'Date indisponible' : 'Date unavailable';
+    return new Intl.DateTimeFormat(isZh() ? 'zh-CN' : isFr() ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(value));
   };
   const setStatus = (message: string, kind = 'pending') => {
     if (!status) return;
@@ -174,7 +178,7 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
   )];
   const matchesFacet = (item: any, terms: string[]) => {
     if (!terms.length) return false;
-    const candidates = [item.disease_id, item.slug, item.code, item.name_en, item.name_zh]
+    const candidates = [item.disease_id, item.slug, item.code, item.name_en, item.name_zh, item.name_fr]
       .map(normalizedFacet)
       .filter(Boolean);
     return terms.some((term) => candidates.some((candidate) => (
@@ -203,9 +207,11 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
       diseaseSlug: disease.slug ?? null,
       diseaseNameEn: disease.name_en ?? null,
       diseaseNameZh: disease.name_zh ?? null,
+      diseaseNameFr: disease.name_fr ?? null,
       countryCodes: countries.map((item) => String(item.code).toUpperCase()),
       countryNameEn: countries.length === 1 ? countries[0].name_en ?? null : null,
       countryNameZh: countries.length === 1 ? countries[0].name_zh ?? null : null,
+      countryNameFr: countries.length === 1 ? countries[0].name_fr ?? null : null,
     };
   };
 
@@ -213,12 +219,12 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
     if (!answer || !queryCaption || !summary || !exactCount || !backgroundCount || !surveillanceCount || !themes || !limitations || !surveillanceCard || !surveillanceIntro || !signals || !signalsCard || !evidence || !status) return;
     status.hidden = true;
     answer.hidden = false;
-    queryCaption.textContent = `${isZh() ? '当前问题' : 'Current question'} · ${result.query}`;
-    summary.textContent = isZh() ? result.summaryZh : result.summaryEn;
+    queryCaption.textContent = `${isZh() ? '当前问题' : isFr() ? 'Question actuelle' : 'Current question'} · ${result.query}`;
+    summary.textContent = isZh() ? result.summaryZh : isFr() ? result.summaryFr : result.summaryEn;
     exactCount.textContent = String(result.exactEvidence.length);
     backgroundCount.textContent = String(result.backgroundEvidence.length);
     surveillanceCount.textContent = String(result.signals.length);
-    limitations.textContent = isZh() ? result.limitationsZh : result.limitationsEn;
+    limitations.textContent = isZh() ? result.limitationsZh : isFr() ? result.limitationsFr : result.limitationsEn;
     themes.replaceChildren(...result.themes.map((item) => {
       const chip = make('span');
       chip.textContent = `${item.name} · ${item.count}`;
@@ -231,7 +237,7 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
       const signalPath = signal.situation_url || '/situation/';
       link.href = routePrefix && signalPath.startsWith('/') ? `${routePrefix}${signalPath}` : signalPath;
       const title = make('strong');
-      title.textContent = isZh() ? (signal.disease_name_zh || signal.disease_name_en || signal.title || '监测信号') : (signal.disease_name_en || signal.title || 'Surveillance signal');
+      title.textContent = isZh() ? (signal.disease_name_zh || signal.disease_name_en || signal.title || '监测信号') : isFr() ? (signal.disease_name_fr || signal.disease_name_en || signal.title || 'Signal de surveillance') : (signal.disease_name_en || signal.title || 'Surveillance signal');
       const detail = make('span');
       const geographies = (signal.geographies ?? []).map((item: any) => item.name_en || item.name || item.code).filter(Boolean).join(', ');
       detail.textContent = [geographies, signal.relation_level === 'exact_disease_geography' ? (isZh() ? '疾病与地区精确关联' : 'Exact disease–geography link') : (isZh() ? '疾病背景关联' : 'Disease-context link'), signal.data_through ? formatDate(signal.data_through) : ''].filter(Boolean).join(' · ');
@@ -244,24 +250,28 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
     if (surveillanceDetail) {
       const diseaseLabel = isZh()
         ? surveillanceDetail.diseaseNameZh || surveillanceDetail.diseaseNameEn || surveillanceDetail.diseaseId
-        : surveillanceDetail.diseaseNameEn || surveillanceDetail.diseaseId;
+        : isFr()
+          ? surveillanceDetail.diseaseNameFr || surveillanceDetail.diseaseNameEn || surveillanceDetail.diseaseId
+          : surveillanceDetail.diseaseNameEn || surveillanceDetail.diseaseId;
       const countryLabel = surveillanceDetail.countryCodes.length === 1
         ? (isZh()
             ? surveillanceDetail.countryNameZh || surveillanceDetail.countryNameEn || surveillanceDetail.countryCodes[0]
             : surveillanceDetail.countryNameEn || surveillanceDetail.countryCodes[0])
         : surveillanceDetail.countryCodes.length > 1
-          ? (isZh() ? `${surveillanceDetail.countryCodes.length} 个相关国家/地区` : `${surveillanceDetail.countryCodes.length} related locations`)
-          : (isZh() ? '报告国家/地区' : 'reporting locations');
+          ? (isZh() ? `${surveillanceDetail.countryCodes.length} 个相关国家/地区` : isFr() ? `${surveillanceDetail.countryCodes.length} lieux associés` : `${surveillanceDetail.countryCodes.length} related locations`)
+          : (isZh() ? '报告国家/地区' : isFr() ? 'lieux déclarants' : 'reporting locations');
       surveillanceIntro.textContent = isZh()
         ? `已根据问题匹配 ${diseaseLabel} × ${countryLabel} 的公开报告病例序列。`
-        : `A public reported-case series was matched for ${diseaseLabel} × ${countryLabel}.`;
+        : isFr()
+          ? `Une série publique de cas déclarés a été trouvée pour ${diseaseLabel} × ${countryLabel}.`
+          : `A public reported-case series was matched for ${diseaseLabel} × ${countryLabel}.`;
     }
     askWindow.__gidsResearchAskSurveillance = surveillanceDetail;
     window.dispatchEvent(new CustomEvent(SURVEILLANCE_EVENT, { detail: surveillanceDetail }));
 
     if (!result.evidence.length) {
       const empty = make('p', 'evidence-empty');
-      empty.textContent = isZh() ? '请换一个更具体的疾病、地区或主题后重试。' : 'Try a more specific disease, geography, or topic.';
+      empty.textContent = isZh() ? '请换一个更具体的疾病、地区或主题后重试。' : isFr() ? 'Essayez une maladie, une zone géographique ou un thème plus précis.' : 'Try a more specific disease, geography, or topic.';
       evidence.replaceChildren(empty);
       return;
     }
@@ -275,7 +285,7 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
       const heading = make('h3');
       const internal = make('a');
       internal.href = `${routePrefix}/research/articles/${article.slug}/`;
-      internal.textContent = article.title || (isZh() ? '未命名研究' : 'Untitled research');
+      internal.textContent = article.title || (isZh() ? '未命名研究' : isFr() ? 'Recherche sans titre' : 'Untitled research');
       heading.append(internal);
       const level = make('span', `evidence-level evidence-level-${item.evidenceLevel}`);
       level.textContent = item.evidenceLevel === 'exact'
@@ -287,11 +297,11 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
       const matched = make('p', 'evidence-match');
       matched.textContent = `${isZh() ? '匹配' : 'Matched'}: ${item.matchedTerms.join(isZh() ? '、' : ', ')}`;
       const finding = make('p', 'evidence-finding');
-      finding.textContent = (isZh() ? item.findingZh : item.findingEn) || (isZh() ? '该记录尚无已发布的结构化结果摘要；请查看原文。' : 'No published structured finding is available for this record; consult the source.');
+      finding.textContent = (isZh() ? item.findingZh : isFr() ? item.findingFr : item.findingEn) || (isZh() ? '该记录尚无已发布的结构化结果摘要；请查看原文。' : isFr() ? 'Aucun résultat structuré publié n’est disponible pour cette référence ; consultez la source.' : 'No published structured finding is available for this record; consult the source.');
       const citations = make('div', 'evidence-citations');
       const radar = make('a');
       radar.href = `${routePrefix}/research/articles/${article.slug}/`;
-      radar.textContent = isZh() ? '证据摘要' : 'Evidence summary';
+      radar.textContent = isZh() ? '证据摘要' : isFr() ? 'Résumé des preuves' : 'Evidence summary';
       citations.append(radar);
       if (article.doi) {
         const doi = make('a');
@@ -314,7 +324,7 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
         oa.href = article.open_access_url;
         oa.target = '_blank';
         oa.rel = 'noopener noreferrer';
-        oa.textContent = isZh() ? '开放获取 ↗' : 'Open access ↗';
+        oa.textContent = isZh() ? '开放获取 ↗' : isFr() ? 'Accès ouvert ↗' : 'Open access ↗';
         citations.append(oa);
       }
       body.append(rowHeader, heading, meta, matched, finding, citations);
@@ -327,7 +337,7 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
   const ask = async (question: string) => {
     const query = question.trim();
     if (query.length < 2) return;
-    setStatus(isZh() ? '正在检索已发布目录…' : 'Searching the published catalogue…');
+    setStatus(isZh() ? '正在检索已发布目录…' : isFr() ? 'Recherche dans le catalogue publié…' : 'Searching the published catalogue…');
     answer?.setAttribute('hidden', '');
     try {
       const articles = await loadCatalogue();
@@ -336,7 +346,7 @@ const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
       url.searchParams.set('q', query);
       history.replaceState(null, '', url);
     } catch {
-      setStatus(isZh() ? '暂时无法读取研究目录，请稍后重试。' : 'The research catalogue could not be loaded. Please try again shortly.', 'error');
+      setStatus(isZh() ? '暂时无法读取研究目录，请稍后重试。' : isFr() ? 'Le catalogue de recherche est indisponible. Réessayez dans un instant.' : 'The research catalogue could not be loaded. Please try again shortly.', 'error');
     }
   };
 

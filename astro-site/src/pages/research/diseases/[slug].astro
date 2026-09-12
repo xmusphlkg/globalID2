@@ -22,6 +22,7 @@ const researchFile = resolve(`./src/data/research/diseases/${String(facet.diseas
 const research = existsSync(researchFile) ? JSON.parse(readFileSync(researchFile, 'utf-8')) : { articles: [], publication_timeline: [] };
 const surveillanceFile = resolve(`./src/data/diseases/${String(facet.disease_id).toLowerCase()}.json`);
 const surveillance = existsSync(surveillanceFile) ? JSON.parse(readFileSync(surveillanceFile, 'utf-8')) : null;
+const fr = locale === 'fr';
 const publications = new Map((research.publication_timeline ?? []).map((item: any) => [item.month, Number(item.publication_count ?? 0)]));
 const evidenceEvents: any[] = research.evidence_events ?? [];
 const months: string[] = surveillance?.global_monthly?.months ?? [];
@@ -55,8 +56,8 @@ const descriptionFr = `Une vue ciblée des recherches publiées sur ${diseaseNam
 >
   <section slot="context" class="card evidence-timeline">
     <div class="timeline-heading">
-      <div><p class="academic-kicker">{zh ? '证据时间线' : 'Evidence timeline'}</p><h2>{zh ? '监测活动与发表数量' : 'Surveillance activity and publication volume'}</h2></div>
-      <a href={`${prefix}/diseases/${facet.slug}/`}>{zh ? '查看疾病监测 →' : 'Open disease surveillance →'}</a>
+      <div><p class="academic-kicker">{zh ? '证据时间线' : fr ? 'Chronologie des preuves' : 'Evidence timeline'}</p><h2>{zh ? '监测活动与发表数量' : fr ? 'Activité de surveillance et volume de publications' : 'Surveillance activity and publication volume'}</h2></div>
+      <a href={`${prefix}/diseases/${facet.slug}/`}>{zh ? '查看疾病监测 →' : fr ? 'Ouvrir la surveillance →' : 'Open disease surveillance →'}</a>
     </div>
     {timeline.length > 0 ? <div class="timeline-table" role="table" aria-label="Monthly surveillance cases and publication volume">
       {timeline.map((item) => <div class="timeline-row" role="row">
@@ -64,18 +65,18 @@ const descriptionFr = `Une vue ciblée des recherches publiées sur ${diseaseNam
         <div class="bar-cell" role="cell"><span class="cases-bar" style={`width:${Math.max(item.cases ? 3 : 0, item.cases / maxCases * 100)}%`}></span><strong>{item.cases.toLocaleString()}</strong></div>
         <div class="bar-cell" role="cell"><span class="papers-bar" style={`width:${Math.max(item.publications ? 8 : 0, item.publications / maxPublications * 100)}%`}></span><strong>{item.publications}</strong></div>
       </div>)}
-      <div class="timeline-legend"><span><i class="cases-dot"></i><b>{zh ? 'GIDS 报告记录' : 'GIDS reported records'}</b></span><span><i class="papers-dot"></i><b>{zh ? '研究雷达发表数量' : 'Research Radar publications'}</b></span></div>
-    </div> : <p class="timeline-empty">{zh ? '该疾病暂无 GIDS 月度序列；文献集合仍可独立使用。' : 'No monthly GIDS series is available for this disease; the literature collection remains usable independently.'}</p>}
-    {evidenceEvents.length > 0 && <div class="evidence-events" aria-label="Guidance and vaccine-policy evidence publications">
-      <h3>{zh ? '指南与疫苗政策证据' : 'Guidance and vaccine-policy evidence'}</h3>
+      <div class="timeline-legend"><span><i class="cases-dot"></i><b>{zh ? 'GIDS 报告记录' : fr ? 'Cas déclarés à GIDS' : 'GIDS reported records'}</b></span><span><i class="papers-dot"></i><b>{zh ? '研究雷达发表数量' : fr ? 'Publications du Radar de recherche' : 'Research Radar publications'}</b></span></div>
+    </div> : <p class="timeline-empty">{zh ? '该疾病暂无 GIDS 月度序列；文献集合仍可独立使用。' : fr ? 'Aucune série mensuelle GIDS n’est disponible pour cette maladie ; la collection de publications reste utilisable séparément.' : 'No monthly GIDS series is available for this disease; the literature collection remains usable independently.'}</p>}
+    {evidenceEvents.length > 0 && <div class="evidence-events" aria-label={fr ? 'Publications de recommandations et de politiques vaccinales' : 'Guidance and vaccine-policy evidence publications'}>
+      <h3>{zh ? '指南与疫苗政策证据' : fr ? 'Recommandations et politiques vaccinales' : 'Guidance and vaccine-policy evidence'}</h3>
       {evidenceEvents.slice(0, 8).map((event) => <a href={`${prefix}/research/articles/${event.slug}/`}>
         <time datetime={event.date}>{event.date}</time>
-        <span>{event.event_type === 'guideline_publication' ? (zh ? '指南发布' : 'Guideline publication') : (zh ? '疫苗政策证据' : 'Vaccine-policy evidence')}</span>
+        <span>{event.event_type === 'guideline_publication' ? (zh ? '指南发布' : fr ? 'Publication de recommandation' : 'Guideline publication') : (zh ? '疫苗政策证据' : fr ? 'Preuve de politique vaccinale' : 'Vaccine-policy evidence')}</span>
         <strong>{event.title}</strong>
       </a>)}
     </div>}
-    <p class="timeline-note">{zh ? '两组条形使用独立刻度。并列展示仅用于导航和比较，并不表示发表活动能够解释监测活动。' : 'The two bars use independent scales. Their alignment supports navigation and comparison only; it does not claim that publication activity explains surveillance activity.'}</p>
-    <p class="timeline-note">{zh ? '指南与政策标记表示已收录文献的发布日期；该标记本身不代表官方政策一定在当日发生变化。' : 'Guidance and policy markers identify dated publications in the curated catalogue; they do not by themselves establish that an official policy changed on that date.'}</p>
+    <p class="timeline-note">{zh ? '两组条形使用独立刻度。并列展示仅用于导航和比较，并不表示发表活动能够解释监测活动。' : fr ? 'Les deux barres utilisent des échelles indépendantes. Leur alignement facilite uniquement la navigation et la comparaison ; il ne signifie pas que les publications expliquent l’activité de surveillance.' : 'The two bars use independent scales. Their alignment supports navigation and comparison only; it does not claim that publication activity explains surveillance activity.'}</p>
+    <p class="timeline-note">{zh ? '指南与政策标记表示已收录文献的发布日期；该标记本身不代表官方政策一定在当日发生变化。' : fr ? 'Les marqueurs de recommandations et de politiques indiquent la date des publications du catalogue ; ils n’établissent pas à eux seuls qu’une politique officielle a changé ce jour-là.' : 'Guidance and policy markers identify dated publications in the curated catalogue; they do not by themselves establish that an official policy changed on that date.'}</p>
   </section>
 </ResearchCollectionPage>
 

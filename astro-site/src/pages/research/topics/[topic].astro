@@ -16,6 +16,7 @@ const file = resolve(`./src/data/research/topics/${facet.slug}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [] };
 const description = `Published Research Radar records connected to the ${facet.name} topic through the auditable classification pipeline.`;
 const descriptionZh = `通过可审计分类流程与“${facet.name}”主题关联的研究雷达已发布记录。`;
+const descriptionFr = `Références publiées du Radar de recherche reliées au thème « ${facet.name} » par la classification auditable.`;
 ---
 
 <ResearchCollectionPage
@@ -23,8 +24,10 @@ const descriptionZh = `通过可审计分类流程与“${facet.name}”主题�
   eyebrowZh="公共卫生主题"
   title={facet.name}
   titleZh={facet.name}
+  titleFr={facet.name}
   description={description}
   descriptionZh={descriptionZh}
+  descriptionFr={descriptionFr}
   canonicalPath={`/research/topics/${facet.slug}/`}
   articles={payload.articles ?? []}
   clientCollectionScope="topic"

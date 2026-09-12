@@ -372,7 +372,7 @@ const itemList = {
     };
     const text = (value: unknown) => String(value ?? '');
     const formatDate = (value: string | undefined, lang: 'en' | 'zh' | 'fr') => {
-      if (!value) return lang === 'zh' ? '日期暂缺' : 'Date unavailable';
+      if (!value) return lang === 'zh' ? '日期暂缺' : lang === 'fr' ? 'Date indisponible' : 'Date unavailable';
       return new Intl.DateTimeFormat(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', {
         year: 'numeric',
         month: 'short',
@@ -381,13 +381,13 @@ const itemList = {
       }).format(new Date(value));
     };
     const formatArticleDate = (article: any, lang: 'en' | 'zh' | 'fr') => {
-      const label = lang === 'zh' ? article.publication_date_label_zh : article.publication_date_label_en;
+      const label = lang === 'zh' ? article.publication_date_label_zh : lang === 'fr' ? article.publication_date_label_fr : article.publication_date_label_en;
       return label || formatDate(article.published_at, lang);
     };
     const articleTokens = (article: any) => ({
       diseaseText: (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase(),
       diseaseIds: (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase()).filter(Boolean).join(' '),
-      countryText: (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en}`).join(' ').toLowerCase(),
+      countryText: (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase(),
       countryCodes: (article.countries ?? []).map((item: any) => String(item.code ?? '').toLowerCase()).filter(Boolean).join(' '),
       topicText: (article.topics ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
       topicSlugs: (article.topics ?? []).map((item: any) => slugifyTopic(item.name)).filter(Boolean).join(' '),
@@ -396,7 +396,7 @@ const itemList = {
       populationIds: (article.populations ?? []).map((item: any) => String(item.id ?? '').toLowerCase()).filter(Boolean).join(' '),
       populationText: (article.populations ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
     });
-    const articleSearchText = (article: any, tokens = articleTokens(article)) => `${article.title} ${article.journal ?? ''} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText} ${tokens.pathogenText} ${tokens.populationText}`.toLowerCase();
+    const articleSearchText = (article: any, tokens = articleTokens(article)) => `${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText} ${tokens.pathogenText} ${tokens.populationText}`.toLowerCase();
     const loadCatalogue = () => {
       if (!cataloguePromise) {
         cataloguePromise = fetch('/research/catalogue.json')
@@ -413,9 +413,9 @@ const itemList = {
       if (className) element.className = className;
       return element;
     };
-    const makeBadge = (en: string, zh: string | null | undefined, extraClass = '') => {
+    const makeBadge = (en: string, zh: string | null | undefined, extraClass = '', fr?: string | null) => {
       const badge = make('span', `research-badge ${extraClass}`.trim());
-      setLangText(badge, en, zh);
+      setLangText(badge, en, zh, fr);
       return badge;
     };
     const makeTopicBadge = (name: string) => {
@@ -446,10 +446,10 @@ const itemList = {
 
       const topline = make('div', 'research-card-topline');
       const badges = make('div', 'research-card-badges');
-      badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer'));
-      if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history'));
-      if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa'));
-      (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), currentLang() === 'zh' ? item.name_zh ?? item.name_en : currentLang() === 'fr' ? item.name_fr ?? item.name_en : item.name_en)));
+      badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer', article.peer_review_status === 'peer_reviewed' ? 'Évalué par les pairs' : 'Prépublication'));
+      if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history', 'Référence historique'));
+      if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa', 'Accès ouvert'));
+      (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en, '', item.name_fr ?? item.name_en)));
       (article.topics ?? []).slice(0, 3).forEach((item: any) => badges.appendChild(makeTopicBadge(text(item.name))));
       topline.appendChild(badges);
       if (article.doi) {
@@ -490,7 +490,7 @@ const itemList = {
       source.appendChild(separator);
       const time = document.createElement('time');
       if (article.published_at) time.dateTime = article.published_at;
-      setLangText(time, formatArticleDate(article, 'en'), formatArticleDate(article, 'zh'));
+      setLangText(time, formatArticleDate(article, 'en'), formatArticleDate(article, 'zh'), formatArticleDate(article, 'fr'));
       source.appendChild(time);
       card.appendChild(source);
 
@@ -508,7 +508,7 @@ const itemList = {
           open.href = openAccessUrl;
           open.target = '_blank';
           open.rel = 'noopener noreferrer';
-          setLangText(open, 'Open article ↗', '打开全文 ↗');
+          setLangText(open, 'Open article ↗', '打开全文 ↗', 'Ouvrir l’article ↗');
           actions.appendChild(open);
         }
         if (surveillanceUrl) {
@@ -516,7 +516,8 @@ const itemList = {
           related.href = surveillanceUrl;
           const labelEn = `${surveillance?.disease_name_en || fallbackDisease?.name_en || 'Related'} surveillance →`;
           const labelZh = `${surveillance?.disease_name_zh || surveillance?.disease_name_en || fallbackDisease?.name_zh || fallbackDisease?.name_en || '相关'}监测 →`;
-          setLangText(related, labelEn, labelZh);
+          const labelFr = `${surveillance?.disease_name_fr || fallbackDisease?.name_fr || fallbackDisease?.name_en || 'Maladie associée'} surveillance →`;
+          setLangText(related, labelEn, labelZh, labelFr);
           actions.appendChild(related);
         }
         card.appendChild(actions);
@@ -525,26 +526,26 @@ const itemList = {
       const facts = make('dl', 'research-card-facts');
       const studyFact = document.createElement('div');
       const studyDt = document.createElement('dt');
-      setLangText(studyDt, 'Type', '类型');
+      setLangText(studyDt, 'Type', '类型', 'Type');
       const studyDd = document.createElement('dd');
       studyDd.textContent = text(article.study_type || 'Journal article');
       studyFact.append(studyDt, studyDd);
       const geographyFact = document.createElement('div');
       const geographyDt = document.createElement('dt');
-      setLangText(geographyDt, 'Scope', '范围');
+      setLangText(geographyDt, 'Scope', '范围', 'Portée');
       const geographyDd = document.createElement('dd');
       geographyDd.textContent = (article.countries ?? []).length > 0
-        ? (article.countries ?? []).slice(0, 3).map((item: any) => item.name_en).join(', ')
-        : 'Not classified';
+        ? (article.countries ?? []).slice(0, 3).map((item: any) => currentLang() === 'zh' ? item.name_zh ?? item.name_en : currentLang() === 'fr' ? item.name_fr ?? item.name_en : item.name_en).join(currentLang() === 'zh' ? '、' : ', ')
+        : currentLang() === 'zh' ? '未分类' : currentLang() === 'fr' ? 'Non classé' : 'Not classified';
       geographyFact.append(geographyDt, geographyDd);
       facts.append(studyFact, geographyFact);
       card.appendChild(facts);
 
       const context = make('p', 'research-context');
       const contextLabel = document.createElement('strong');
-      setLangText(contextLabel, 'Why it matters now', '为何现在值得关注');
+      setLangText(contextLabel, 'Why it matters now', '为何现在值得关注', 'Pourquoi cette étude compte maintenant');
       const contextCopy = document.createElement('span');
-      setLangText(contextCopy, text(article.why_it_matters_en), article.why_it_matters_zh);
+      setLangText(contextCopy, text(article.why_it_matters_en), article.why_it_matters_zh, article.why_it_matters_fr || article.summary?.fr?.public_health_relevance);
       context.append(contextLabel, contextCopy);
       card.appendChild(context);
 

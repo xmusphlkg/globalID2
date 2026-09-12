@@ -7,6 +7,7 @@ const data = researchData as ResearchFeedData;
 const preprints = filterResearchFeedArticles(data, 'peer-review', 'preprint');
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 ---
 
 <ResearchCollectionPage
@@ -14,8 +15,10 @@ const zh = locale === 'zh';
   eyebrowZh="独立证据流"
   title="Published preprints"
   titleZh="已公开预印本"
+  titleFr="Prépublications publiées"
   description="Editorially published infectious-disease preprints, kept separate from the peer-reviewed Research Radar catalogue."
   descriptionZh="经编辑发布的传染病预印本，与研究雷达同行评议文献目录严格分开。"
+  descriptionFr="Prépublications sur les maladies infectieuses publiées par la rédaction, séparées du catalogue Research Radar évalué par les pairs."
   canonicalPath="/research/preprints/"
   articles={preprints}
   contextLabel="Published preprints"
@@ -27,10 +30,10 @@ const zh = locale === 'zh';
 >
   <section slot="context" class="preprint-notice" aria-labelledby="preprint-notice-title">
     <div>
-      <p class="academic-kicker">{zh ? '发表状态' : 'Publication status'}</p>
-      <h2 id="preprint-notice-title">{zh ? '预印本尚未完成同行评议' : 'Preprints have not completed peer review'}</h2>
+      <p class="academic-kicker">{zh ? '发表状态' : fr ? 'Statut de publication' : 'Publication status'}</p>
+      <h2 id="preprint-notice-title">{zh ? '预印本尚未完成同行评议' : fr ? 'Les prépublications n’ont pas encore été évaluées par les pairs' : 'Preprints have not completed peer review'}</h2>
     </div>
-    <p>{zh ? '此处仅展示编辑状态为“已发布”的记录。编辑发布仅表示该记录可供公众发现，并不验证研究结论，也不代表稿件已经完成同行评议。' : 'Only records with an editorial status of published appear here. Editorial publication makes the record publicly discoverable; it does not validate the findings or make the manuscript peer reviewed.'}</p>
+    <p>{zh ? '此处仅展示编辑状态为“已发布”的记录。编辑发布仅表示该记录可供公众发现，并不验证研究结论，也不代表稿件已经完成同行评议。' : fr ? 'Seules les références dont le statut éditorial est « publié » apparaissent ici. La publication éditoriale rend la référence découvrable ; elle ne valide pas les résultats et ne signifie pas que le manuscrit a été évalué par les pairs.' : 'Only records with an editorial status of published appear here. Editorial publication makes the record publicly discoverable; it does not validate the findings or make the manuscript peer reviewed.'}</p>
   </section>
 </ResearchCollectionPage>
 

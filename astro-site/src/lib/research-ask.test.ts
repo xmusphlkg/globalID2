@@ -104,6 +104,23 @@ test('Chinese aliases use bilingual summaries and expose numbered source citatio
   assert.match(answer.summaryZh, /\[1\]/);
 });
 
+test('French aliases rank French structured findings and return a French answer', () => {
+  const frenchArticles = articles.map((article) => article.article_id === 'a1'
+    ? {
+        ...article,
+        diseases: [{ ...article.diseases[0], name_fr: 'Coqueluche' }],
+        countries: [{ ...article.countries[0], name_fr: 'Japon' }],
+        summary: { ...article.summary, fr: { main_findings: 'Les auteurs rapportent des résultats compatibles avec une baisse de l’immunité.' } },
+      }
+    : article);
+  const answer = answerResearchQuestion('coqueluche au Japon', frenchArticles, {
+    now: new Date('2026-08-17T00:00:00Z'),
+  });
+  assert.equal(answer.exactEvidence[0].article.article_id, 'a1');
+  assert.match(answer.exactEvidence[0].findingFr ?? '', /baisse de l’immunité/);
+  assert.match(answer.summaryFr, /référence/);
+});
+
 test('title, tags, and bilingual summaries are searchable with deterministic field weights', () => {
   const weightedArticles = [
     { article_id: 'summary-en', title: 'English summary match', summary: { en: { main_findings: 'Waning is discussed.' } } },

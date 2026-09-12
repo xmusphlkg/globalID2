@@ -24,6 +24,7 @@ _FINGERPRINT = re.compile(r"^[0-9a-f]{64}$")
 _METHODOLOGY = {
     "en": "Source-level findings come only from published bilingual structured summaries. Monitoring links are deterministic Research Radar relationships; they do not establish cause, validate a signal, or constitute a risk assessment.",
     "zh": "文献发现仅来自已发布的双语结构化摘要。监测关联由 Research Radar 确定性关系生成，不建立因果关系、不验证信号，也不构成风险评估。",
+    "fr": "Les résultats proviennent uniquement de résumés structurés bilingues publiés, avec une traduction française facultative. Les liens de surveillance sont déterministes ; ils n’établissent pas de causalité, ne valident pas un signal et ne constituent pas une évaluation du risque.",
 }
 
 
@@ -87,13 +88,16 @@ def project_weekly_editorial_review(
         projected["institution"] = institution
     note_en = _public_text(value.get("note_en"), minimum=2, maximum=1000)
     note_zh = _public_text(value.get("note_zh"), minimum=1, maximum=1000)
+    note_fr = _public_text(value.get("note_fr"), minimum=1, maximum=1000)
     # A public note is optional, but an explicitly supplied note must be a
     # complete safe bilingual pair. Partial/unsafe optional metadata makes the
     # review record ambiguous, so the entire review fails closed.
-    if "note_en" in value or "note_zh" in value:
+    if "note_en" in value or "note_zh" in value or "note_fr" in value:
         if not note_en or not note_zh:
             return None
         projected.update({"note_en": note_en, "note_zh": note_zh})
+        if note_fr:
+            projected["note_fr"] = note_fr
     return projected
 
 
@@ -183,6 +187,25 @@ def weekly_brief_review_fingerprint(value: dict[str, Any]) -> str:
             if isinstance(value.get("methodology") or _METHODOLOGY, dict) else None,
         },
     }
+    # Keep the v2 fingerprint byte-for-byte compatible for existing English /
+    # Chinese briefs. French fields participate as soon as a French rendering
+    # is present, so a translation change invalidates the editorial review.
+    has_french = any(
+        isinstance(row, dict) and any(row.get(key) for key in ("finding_fr", "note_fr"))
+        for name in ("cited_findings", "evidence_gaps")
+        for row in (value.get(name) or [])
+    ) or isinstance(value.get("methodology"), dict) and bool((value.get("methodology") or {}).get("fr"))
+    if has_french:
+        canonical["cited_findings"] = items(
+            "cited_findings",
+            ("article_id", "title", "finding_en", "finding_zh", "finding_fr", "source_url", "doi", "provenance"),
+        )
+        canonical["evidence_gaps"] = items(
+            "evidence_gaps",
+            ("gap_id", "signal_id", "disease_id", "geographies", "gap_type", "note_en", "note_zh", "note_fr"),
+        )
+        methodology = value.get("methodology") or _METHODOLOGY
+        canonical["methodology"]["fr"] = methodology.get("fr") if isinstance(methodology, dict) else None
     serialized = json.dumps(canonical, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
@@ -211,7 +234,7 @@ def _finding(article: dict[str, Any]) -> dict[str, Any] | None:
     finding_zh = str(summary_zh.get("main_findings") or "").strip()
     if not finding_en or not finding_zh:
         return None
-    return {
+    result = {
         "article_id": article.get("article_id"),
         "slug": article.get("slug"),
         "title": article.get("title"),
@@ -221,6 +244,10 @@ def _finding(article: dict[str, Any]) -> dict[str, Any] | None:
         "doi": article.get("doi"),
         "provenance": "published_bilingual_structured_summary",
     }
+    finding_fr = str(((article.get("summary") or {}).get("fr") or {}).get("main_findings") or "").strip()
+    if finding_fr:
+        result["finding_fr"] = finding_fr
+    return result
 
 
 def enrich_weekly_briefs(
@@ -264,7 +291,7 @@ def enrich_weekly_briefs(
                         key: signal.get(key)
                         for key in (
                             "signal_id", "section", "kind", "title", "disease_id",
-                            "disease_name_en", "disease_name_zh", "geographies",
+                            "disease_name_en", "disease_name_zh", "disease_name_fr", "geographies",
                             "data_through", "window", "risk", "relation_level", "situation_url",
                         )
                     }
@@ -272,9 +299,9 @@ def enrich_weekly_briefs(
             {
                 key: gap.get(key)
                 for key in (
-                    "gap_id", "signal_id", "disease_id", "disease_name_en", "disease_name_zh",
+                    "gap_id", "signal_id", "disease_id", "disease_name_en", "disease_name_zh", "disease_name_fr",
                     "geographies", "gap_type", "section", "kind", "data_through", "risk",
-                    "context_article_count", "note_en", "note_zh",
+                    "context_article_count", "note_en", "note_zh", "note_fr",
                 )
             }
             for gap in gaps
@@ -282,13 +309,16 @@ def enrich_weekly_briefs(
         ]
         findings = [finding for article in articles if (finding := _finding(article))]
         findings.sort(key=lambda item: (str(item.get("title") or ""), str(item.get("article_id") or "")))
+        methodology = {"en": _METHODOLOGY["en"], "zh": _METHODOLOGY["zh"]}
+        if any("finding_fr" in finding for finding in findings) or any(gap.get("note_fr") for gap in related_gaps):
+            methodology["fr"] = _METHODOLOGY["fr"]
         projected_brief = {
             **brief,
             "articles": articles,
             "cited_findings": findings[:5],
             "monitoring_context": sorted(signals.values(), key=lambda item: str(item.get("signal_id") or "")),
             "evidence_gaps": related_gaps,
-            "methodology": dict(_METHODOLOGY),
+            "methodology": methodology,
         }
         review = _bound_editorial_review(raw.get("_editorial_review"), projected_brief, now=now)
         fingerprint = weekly_brief_review_fingerprint(projected_brief)

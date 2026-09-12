@@ -5,8 +5,9 @@ import { buildAlternatePaths } from '../../lib/seo';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => zh ? zhValue : fr ? (frValue ?? en) : en;
 
 const graph: any = (researchData as any).knowledge_graph ?? { nodes: [], edges: [], stats: {}, quality: {} };
 const nodes: any[] = (graph.nodes ?? []).map((node: any) => ({
@@ -17,58 +18,58 @@ const nodes: any[] = (graph.nodes ?? []).map((node: any) => ({
 }));
 const edgeCount = Array.isArray(graph.edges) ? graph.edges.length : 0;
 const nodeTypes = [...new Set(nodes.map((node: any) => String(node.type || 'unknown')))].sort();
-const relationLabels: Record<string, { en: string; zh: string }> = {
-  ABOUT_DISEASE: { en: 'About disease', zh: '涉及疾病' },
-  STUDIED_IN: { en: 'Studied in', zh: '研究地区' },
-  ADDRESSES_TOPIC: { en: 'Addresses topic', zh: '涉及主题' },
-  USES_STUDY_DESIGN: { en: 'Uses study design', zh: '采用研究设计' },
-  STUDIES_PATHOGEN: { en: 'Studies pathogen', zh: '研究病原体' },
-  STUDIED_POPULATION_SETTING: { en: 'Population and setting', zh: '研究人群与场景' },
-  EVALUATES_INTERVENTION: { en: 'Evaluates intervention', zh: '评估干预' },
-  INFORMS_POLICY_DOMAIN: { en: 'Informs policy domain', zh: '关联政策领域' },
+const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
+  ABOUT_DISEASE: { en: 'About disease', zh: '涉及疾病', fr: 'Concerne la maladie' },
+  STUDIED_IN: { en: 'Studied in', zh: '研究地区', fr: 'Étudié dans' },
+  ADDRESSES_TOPIC: { en: 'Addresses topic', zh: '涉及主题', fr: 'Traite le thème' },
+  USES_STUDY_DESIGN: { en: 'Uses study design', zh: '采用研究设计', fr: 'Utilise le plan d’étude' },
+  STUDIES_PATHOGEN: { en: 'Studies pathogen', zh: '研究病原体', fr: 'Étudie l’agent pathogène' },
+  STUDIED_POPULATION_SETTING: { en: 'Population and setting', zh: '研究人群与场景', fr: 'Population et contexte' },
+  EVALUATES_INTERVENTION: { en: 'Evaluates intervention', zh: '评估干预', fr: 'Évalue l’intervention' },
+  INFORMS_POLICY_DOMAIN: { en: 'Informs policy domain', zh: '关联政策领域', fr: 'Éclaire le domaine politique' },
 };
 ---
 
 <ReportLayout
-  title={pick('Research evidence graph', '研究证据图谱')}
-  description={pick('Browse auditable relationships among GIDS Research Radar articles, diseases, places, topics, study designs, pathogens, populations, interventions, and policy domains.', '浏览 GIDS 研究雷达中文献、疾病、地区、主题、研究设计、病原体、人群、干预和政策领域之间的可审计关系。')}
+  title={pick('Research evidence graph', '研究证据图谱', 'Graphe des preuves de recherche')}
+  description={pick('Browse auditable relationships among GIDS Research Radar articles, diseases, places, topics, study designs, pathogens, populations, interventions, and policy domains.', '浏览 GIDS 研究雷达中文献、疾病、地区、主题、研究设计、病原体、人群、干预和政策领域之间的可审计关系。', 'Explorez les relations auditables entre les publications, maladies, lieux, thèmes, plans d’étude, agents pathogènes, populations, interventions et domaines politiques du Radar de recherche GIDS.')}
   initialLanguage={locale}
   seo={{
-    title: pick('Research evidence graph | GIDS', '研究证据图谱 | GIDS'),
-    description: pick('Explore provenance-preserving Research Radar evidence relationships.', '探索保留来源信息的研究雷达证据关系。'),
+    title: pick('Research evidence graph | GIDS', '研究证据图谱 | GIDS', 'Graphe des preuves de recherche | GIDS'),
+    description: pick('Explore provenance-preserving Research Radar evidence relationships.', '探索保留来源信息的研究雷达证据关系。', 'Explorez les relations de preuves du Radar de recherche en conservant leur provenance.'),
     locale,
     canonicalPath: `${prefix}/research/graph/`,
     alternatePaths: buildAlternatePaths(`${prefix}/research/graph/`, locale),
     pageType: 'WebPage',
   }}
   breadcrumbs={[
-    { label: pick('Research Radar', '研究雷达'), href: `${prefix}/research/` },
-    { label: pick('Evidence graph', '证据图谱') },
+    { label: pick('Research Radar', '研究雷达', 'Radar de recherche'), href: `${prefix}/research/` },
+    { label: pick('Evidence graph', '证据图谱', 'Graphe des preuves') },
   ]}
 >
   <div class="graph-page">
     <header class="academic-hero graph-hero">
-      <p class="academic-kicker">{pick('Auditable relationships', '可审计关系')}</p>
-      <h1>{pick('Research evidence graph', '研究证据图谱')}</h1>
-      <p>{pick('Browse deterministic classifier links and quality-gated summary relationships. The graph does not infer causality or scientific credibility.', '浏览确定性分类关系与通过质量门控的摘要关系。本图谱不推断因果关系或科学可信度。')}</p>
+      <p class="academic-kicker">{pick('Auditable relationships', '可审计关系', 'Relations auditables')}</p>
+      <h1>{pick('Research evidence graph', '研究证据图谱', 'Graphe des preuves de recherche')}</h1>
+      <p>{pick('Browse deterministic classifier links and quality-gated summary relationships. The graph does not infer causality or scientific credibility.', '浏览确定性分类关系与通过质量门控的摘要关系。本图谱不推断因果关系或科学可信度。', 'Parcourez les liens déterministes du classificateur et les relations de résumés contrôlées par la qualité. Le graphe n’infère ni causalité ni crédibilité scientifique.')}</p>
       <dl>
-        <div><dt>{pick('Nodes', '节点')}</dt><dd>{graph.stats?.nodes ?? nodes.length}</dd></div>
-        <div><dt>{pick('Relationships', '关系')}</dt><dd>{graph.stats?.edges ?? edgeCount}</dd></div>
-        <div><dt>{pick('Articles', '论文')}</dt><dd>{graph.stats?.articles ?? 0}</dd></div>
-        <div><dt>{pick('Filtered low-confidence links', '已过滤低置信度关系')}</dt><dd>{graph.quality?.skipped_low_confidence_edges ?? 0}</dd></div>
+        <div><dt>{pick('Nodes', '节点', 'Nœuds')}</dt><dd>{graph.stats?.nodes ?? nodes.length}</dd></div>
+        <div><dt>{pick('Relationships', '关系', 'Relations')}</dt><dd>{graph.stats?.edges ?? edgeCount}</dd></div>
+        <div><dt>{pick('Articles', '论文', 'Publications')}</dt><dd>{graph.stats?.articles ?? 0}</dd></div>
+        <div><dt>{pick('Filtered low-confidence links', '已过滤低置信度关系', 'Liens à faible confiance filtrés')}</dt><dd>{graph.quality?.skipped_low_confidence_edges ?? 0}</dd></div>
       </dl>
     </header>
 
     <section class="card graph-workspace" data-evidence-graph data-graph-locale={locale} data-graph-prefix={prefix} data-graph-src="/site-data/research-graph.json">
       <div class="graph-controls">
         <label>
-          <span>{pick('Search nodes', '搜索节点')}</span>
-          <input class="site-control-input" type="search" data-graph-search placeholder={pick('Search articles, diseases, places, or topics', '搜索论文、疾病、地区或主题')} />
+          <span>{pick('Search nodes', '搜索节点', 'Rechercher des nœuds')}</span>
+          <input class="site-control-input" type="search" data-graph-search placeholder={pick('Search articles, diseases, places, or topics', '搜索论文、疾病、地区或主题', 'Rechercher des publications, maladies, lieux ou thèmes')} />
         </label>
         <label>
-          <span>{pick('Node type', '节点类型')}</span>
+          <span>{pick('Node type', '节点类型', 'Type de nœud')}</span>
           <select class="site-control-input" data-graph-type>
-            <option value="">{pick('All node types', '全部节点类型')}</option>
+            <option value="">{pick('All node types', '全部节点类型', 'Tous les types de nœuds')}</option>
             {nodeTypes.map(type => <option value={type}>{type.replaceAll('_', ' ')}</option>)}
           </select>
         </label>
@@ -76,23 +77,23 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
 
       <div class="graph-columns">
         <section aria-labelledby="graph-node-heading">
-          <div class="graph-section-heading"><h2 id="graph-node-heading">{pick('Entities', '实体')}</h2><span data-graph-count>{nodes.length}</span></div>
+          <div class="graph-section-heading"><h2 id="graph-node-heading">{pick('Entities', '实体', 'Entités')}</h2><span data-graph-count>{nodes.length}</span></div>
           <div class="graph-node-list" data-graph-node-list></div>
-          <noscript><p class="graph-script-note">{pick('Enable JavaScript to browse graph entities and relationships.', '请启用 JavaScript 以浏览图谱实体和关系。')}</p></noscript>
-          <button class="graph-more" type="button" data-graph-more>{pick('Show more entities', '显示更多实体')}</button>
+          <noscript><p class="graph-script-note">{pick('Enable JavaScript to browse graph entities and relationships.', '请启用 JavaScript 以浏览图谱实体和关系。', 'Activez JavaScript pour parcourir les entités et relations du graphe.')}</p></noscript>
+          <button class="graph-more" type="button" data-graph-more>{pick('Show more entities', '显示更多实体', 'Afficher davantage d’entités')}</button>
         </section>
         <section aria-labelledby="graph-relation-heading" class="graph-detail">
-          <div class="graph-section-heading"><h2 id="graph-relation-heading">{pick('Selected relationships', '所选关系')}</h2></div>
+          <div class="graph-section-heading"><h2 id="graph-relation-heading">{pick('Selected relationships', '所选关系', 'Relations sélectionnées')}</h2></div>
           <div data-graph-detail>
-            <p>{pick('Loading evidence graph relationships.', '正在加载证据图谱关系。')}</p>
+            <p>{pick('Loading evidence graph relationships.', '正在加载证据图谱关系。', 'Chargement des relations du graphe des preuves.')}</p>
           </div>
         </section>
       </div>
     </section>
 
     <section class="graph-method card">
-      <h2>{pick('Provenance and limits', '来源与限制')}</h2>
-      <p>{pick('Disease, country, topic, pathogen, and study-design edges retain classifier confidence. Population-setting edges copy only a bilingual, quality-gated structured-summary field. Intervention and policy edges use a small published topic mapping. No raw abstracts, PDFs, or private source payloads are exported.', '疾病、国家、主题、病原体和研究设计关系保留分类置信度；人群与场景关系仅来自通过质量门控的双语结构化摘要；干预和政策关系使用小型公开主题映射。系统不会导出原始摘要、PDF 或私有来源负载。')}</p>
+      <h2>{pick('Provenance and limits', '来源与限制', 'Provenance et limites')}</h2>
+      <p>{pick('Disease, country, topic, pathogen, and study-design edges retain classifier confidence. Population-setting edges copy only a bilingual, quality-gated structured-summary field. Intervention and policy edges use a small published topic mapping. No raw abstracts, PDFs, or private source payloads are exported.', '疾病、国家、主题、病原体和研究设计关系保留分类置信度；人群与场景关系仅来自通过质量门控的双语结构化摘要；干预和政策关系使用小型公开主题映射。系统不会导出原始摘要、PDF 或私有来源负载。', 'Les liens de maladie, pays, thème, agent pathogène et plan d’étude conservent la confiance du classificateur. Les liens de population et de contexte ne reprennent qu’un champ de résumé structuré contrôlé par la qualité. Aucun résumé brut, PDF ou contenu privé n’est exporté.')}</p>
     </section>
   </div>
 
@@ -111,12 +112,12 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
       let visibleLimit = 80;
       let selectedNodeId = '';
 
-      const lang = () => root.dataset.graphLocale === 'zh' ? 'zh' : 'en';
+      const lang = () => root.dataset.graphLocale === 'zh' ? 'zh' : root.dataset.graphLocale === 'fr' ? 'fr' : 'en';
       const routePrefix = root.dataset.graphPrefix || '';
-      const setStatus = (en, zh) => {
+      const setStatus = (en, zh, fr) => {
         if (!detail) return;
         const message = document.createElement('p');
-        message.textContent = lang() === 'zh' ? zh : en;
+        message.textContent = lang() === 'zh' ? zh : lang() === 'fr' ? (fr || en) : en;
         detail.replaceChildren(message);
       };
       const refresh = () => {
@@ -154,13 +155,13 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
         const title = document.createElement('h3');
         title.textContent = node.label;
         const meta = document.createElement('p');
-        meta.textContent = `${String(node.type || '').replaceAll('_', ' ')} · ${linked.length} ${lang() === 'zh' ? '条关系' : 'relationships'}`;
+        meta.textContent = `${String(node.type || '').replaceAll('_', ' ')} · ${linked.length} ${lang() === 'zh' ? '条关系' : lang() === 'fr' ? 'relations' : 'relationships'}`;
         const list = document.createElement('ul');
         linked.forEach((edge) => {
           const outbound = edge.source === nodeId;
           const other = nodes.get(outbound ? edge.target : edge.source);
           const item = document.createElement('li');
-          const relation = relationLabels[edge.relation] || { en: String(edge.relation).replaceAll('_', ' '), zh: String(edge.relation).replaceAll('_', ' ') };
+          const relation = relationLabels[edge.relation] || { en: String(edge.relation).replaceAll('_', ' '), zh: String(edge.relation).replaceAll('_', ' '), fr: String(edge.relation).replaceAll('_', ' ') };
           const label = document.createElement('span');
           label.textContent = `${outbound ? '→' : '←'} ${relation[lang()]}`;
           const target = other?.url ? document.createElement('a') : document.createElement('strong');
@@ -184,9 +185,9 @@ const relationLabels: Record<string, { en: string; zh: string }> = {
           graph = await response.json();
           nodes = new Map((graph.nodes || []).map((node) => [node.id, node]));
           refresh();
-          setStatus('Choose an entity to inspect every public relationship attached to it.', '选择一个实体，查看与其关联的全部公开关系。');
+          setStatus('Choose an entity to inspect every public relationship attached to it.', '选择一个实体，查看与其关联的全部公开关系。', 'Choisissez une entité pour afficher toutes ses relations publiques.');
         } catch (error) {
-          setStatus('The evidence graph could not be loaded. Please try again later.', '证据图谱暂时无法加载，请稍后重试。');
+          setStatus('The evidence graph could not be loaded. Please try again later.', '证据图谱暂时无法加载，请稍后重试。', 'Le graphe des preuves est indisponible. Réessayez plus tard.');
         }
       };
       loadGraph();

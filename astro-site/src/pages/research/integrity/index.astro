@@ -9,8 +9,9 @@ import { buildAlternatePaths } from '../../../lib/seo';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => zh ? zhValue : fr ? (frValue ?? en) : en;
 
 const alerts = normalizeIntegrityAlerts((researchData as any).integrity_alerts);
 const counts = {
@@ -19,18 +20,19 @@ const counts = {
   correction: alerts.filter(alert => alert.event_type === 'correction').length,
 };
 const dateLabels = (value?: string) => {
-  if (!value) return { en: 'Date unavailable', zh: '日期暂缺' };
+  if (!value) return { en: 'Date unavailable', zh: '日期暂缺', fr: 'Date indisponible' };
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return { en: value, zh: value };
+  if (Number.isNaN(parsed.getTime())) return { en: value, zh: value, fr: value };
   return {
     en: parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }),
     zh: parsed.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }),
+    fr: parsed.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }),
   };
 };
 const structuredData = {
   '@type': 'CollectionPage',
-  name: pick('Research integrity alerts', '研究完整性通知'),
-  description: pick('Public retraction, expression-of-concern, and correction history for Research Radar records.', '研究雷达文献的公开撤稿、关注声明和更正历史。'),
+  name: pick('Research integrity alerts', '研究完整性通知', 'Alertes d’intégrité de la recherche'),
+  description: pick('Public retraction, expression-of-concern, and correction history for Research Radar records.', '研究雷达文献的公开撤稿、关注声明和更正历史。', 'Historique public des rétractations, expressions de préoccupation et corrections des références du Radar de recherche.'),
   mainEntity: {
     '@type': 'ItemList',
     numberOfItems: alerts.length,
@@ -45,12 +47,12 @@ const structuredData = {
 ---
 
 <ReportLayout
-  title={pick('Research integrity alerts', '研究完整性通知')}
-  description={pick('Public retraction, expression-of-concern, and correction history for Research Radar records.', '研究雷达文献的公开撤稿、关注声明和更正历史。')}
+  title={pick('Research integrity alerts', '研究完整性通知', 'Alertes d’intégrité de la recherche')}
+  description={pick('Public retraction, expression-of-concern, and correction history for Research Radar records.', '研究雷达文献的公开撤稿、关注声明和更正历史。', 'Historique public des rétractations, expressions de préoccupation et corrections des références du Radar de recherche.')}
   initialLanguage={locale}
   seo={{
-    title: pick('Research integrity alerts | Research Radar | GIDS', '研究完整性通知 | 研究雷达 | GIDS'),
-    description: pick('Public retraction, expression-of-concern, and correction history for Research Radar records.', '研究雷达文献的公开撤稿、关注声明和更正历史。'),
+    title: pick('Research integrity alerts | Research Radar | GIDS', '研究完整性通知 | 研究雷达 | GIDS', 'Alertes d’intégrité | Radar de recherche | GIDS'),
+    description: pick('Public retraction, expression-of-concern, and correction history for Research Radar records.', '研究雷达文献的公开撤稿、关注声明和更正历史。', 'Historique public des rétractations, expressions de préoccupation et corrections des références du Radar de recherche.'),
     locale,
     canonicalPath: `${prefix}/research/integrity/`,
     alternatePaths: buildAlternatePaths(`${prefix}/research/integrity/`, locale),
@@ -58,70 +60,71 @@ const structuredData = {
   }}
   structuredData={structuredData}
   breadcrumbs={[
-    { label: pick('Research Radar', '研究雷达'), href: `${prefix}/research/` },
-    { label: pick('Integrity alerts', '完整性通知') },
+    { label: pick('Research Radar', '研究雷达', 'Radar de recherche'), href: `${prefix}/research/` },
+    { label: pick('Integrity alerts', '完整性通知', 'Alertes d’intégrité') },
   ]}
 >
   <div class="integrity-page">
     <header class="academic-hero integrity-hero">
       <div class="integrity-topline">
-        <p class="academic-kicker">{pick('Publication record', '发表记录')}</p>
-        <a href={`${prefix}/research/`}>{pick('Research home', '研究首页')}</a>
+        <p class="academic-kicker">{pick('Publication record', '发表记录', 'Dossier de publication')}</p>
+        <a href={`${prefix}/research/`}>{pick('Research home', '研究首页', 'Accueil recherche')}</a>
       </div>
-      <h1>{pick('Research integrity alerts', '研究完整性通知')}</h1>
-      <p class="integrity-lede">{pick('A public history of retractions, expressions of concern, and corrections affecting records that have appeared in Research Radar.', '公开记录曾出现在研究雷达中的文献所涉及的撤稿、关注声明和更正历史。')}</p>
+      <h1>{pick('Research integrity alerts', '研究完整性通知', 'Alertes d’intégrité de la recherche')}</h1>
+      <p class="integrity-lede">{pick('A public history of retractions, expressions of concern, and corrections affecting records that have appeared in Research Radar.', '公开记录曾出现在研究雷达中的文献所涉及的撤稿、关注声明和更正历史。', 'Historique public des rétractations, expressions de préoccupation et corrections concernant les références apparues dans le Radar de recherche.')}</p>
       <dl class="integrity-metrics">
-        <div><dt>{pick('All alerts', '全部通知')}</dt><dd>{alerts.length}</dd></div>
-        <div><dt>{pick('Retractions', '撤稿')}</dt><dd>{counts.retraction}</dd></div>
-        <div><dt>{pick('Expressions of concern', '关注声明')}</dt><dd>{counts.expression_of_concern}</dd></div>
-        <div><dt>{pick('Corrections', '更正')}</dt><dd>{counts.correction}</dd></div>
+        <div><dt>{pick('All alerts', '全部通知', 'Toutes les alertes')}</dt><dd>{alerts.length}</dd></div>
+        <div><dt>{pick('Retractions', '撤稿', 'Rétractations')}</dt><dd>{counts.retraction}</dd></div>
+        <div><dt>{pick('Expressions of concern', '关注声明', 'Expressions de préoccupation')}</dt><dd>{counts.expression_of_concern}</dd></div>
+        <div><dt>{pick('Corrections', '更正', 'Corrections')}</dt><dd>{counts.correction}</dd></div>
       </dl>
     </header>
 
     <section class="integrity-explainer" aria-labelledby="integrity-explainer-title">
       <div>
-        <p class="academic-kicker">{pick('How to read this page', '如何阅读本页')}</p>
-        <h2 id="integrity-explainer-title">{pick('Status notices remain visible after catalogue removal', '文献移出目录后，状态通知仍会保留')}</h2>
+        <p class="academic-kicker">{pick('How to read this page', '如何阅读本页', 'Comment lire cette page')}</p>
+        <h2 id="integrity-explainer-title">{pick('Status notices remain visible after catalogue removal', '文献移出目录后，状态通知仍会保留', 'Les avis de statut restent visibles après le retrait du catalogue')}</h2>
       </div>
-      <p>{pick('Retracted records and records under an expression of concern are removed from the public research catalogue, while this metadata-only history remains. Corrected records may remain public and link to their event history. Always verify the linked source record.', '撤稿文献和收到关注声明的文献会从公开研究目录中移除，但本页会保留仅含元数据的历史记录。已更正文献可能继续公开，并链接其事件历史。请始终核对所链接的来源记录。')}</p>
+      <p>{pick('Retracted records and records under an expression of concern are removed from the public research catalogue, while this metadata-only history remains. Corrected records may remain public and link to their event history. Always verify the linked source record.', '撤稿文献和收到关注声明的文献会从公开研究目录中移除，但本页会保留仅含元数据的历史记录。已更正文献可能继续公开，并链接其事件历史。请始终核对所链接的来源记录。', 'Les références rétractées ou faisant l’objet d’une expression de préoccupation sont retirées du catalogue public, tandis que cet historique limité aux métadonnées est conservé. Les références corrigées peuvent rester publiques et renvoyer à leur historique. Vérifiez toujours la source liée.')}</p>
     </section>
 
     <section class="integrity-register" aria-labelledby="integrity-register-title">
       <div class="integrity-heading">
         <div>
-          <p class="academic-kicker">{pick('Status history', '状态历史')}</p>
-          <h2 id="integrity-register-title">{pick('Recorded integrity events', '已记录的完整性事件')}</h2>
+          <p class="academic-kicker">{pick('Status history', '状态历史', 'Historique des statuts')}</p>
+          <h2 id="integrity-register-title">{pick('Recorded integrity events', '已记录的完整性事件', 'Événements d’intégrité enregistrés')}</h2>
         </div>
         <span>{String(alerts.length).padStart(2, '0')}</span>
       </div>
 
       {alerts.length === 0 ? (
         <div class="integrity-empty">
-          <h3>{pick('No public integrity alerts', '暂无公开完整性通知')}</h3>
-          <p>{pick('The alert register is active. Retractions, expressions of concern, and corrections will appear here after the publication-history gate is satisfied.', '通知登记页已经启用。通过发表历史门控后，撤稿、关注声明和更正将在此显示。')}</p>
+          <h3>{pick('No public integrity alerts', '暂无公开完整性通知', 'Aucune alerte d’intégrité publique')}</h3>
+          <p>{pick('The alert register is active. Retractions, expressions of concern, and corrections will appear here after the publication-history gate is satisfied.', '通知登记页已经启用。通过发表历史门控后，撤稿、关注声明和更正将在此显示。', 'Le registre des alertes est actif. Les rétractations, expressions de préoccupation et corrections apparaîtront après validation de l’historique de publication.')}</p>
         </div>
       ) : (
         <ol class="integrity-list">
           {alerts.map(alert => {
             const labelEn = integrityAlertLabel(alert.event_type);
             const labelZh = integrityAlertLabel(alert.event_type, 'zh');
+            const labelFr = integrityAlertLabel(alert.event_type, 'fr');
             const eventDate = dateLabels(alert.effective_at ?? alert.recorded_at);
             return (
               <li>
                 <article class:list={['integrity-alert', `integrity-${alert.event_type}`]}>
                   <div class="alert-topline">
-                    <span class="alert-status">{pick(labelEn, labelZh)}</span>
-                    <time datetime={alert.effective_at ?? alert.recorded_at}>{pick(eventDate.en, eventDate.zh)}</time>
+                    <span class="alert-status">{pick(labelEn, labelZh, labelFr)}</span>
+                    <time datetime={alert.effective_at ?? alert.recorded_at}>{pick(eventDate.en, eventDate.zh, eventDate.fr)}</time>
                   </div>
                   <h3>{alert.article_title}</h3>
                   <p class="alert-citation">{[alert.journal, alert.doi ? `DOI ${alert.doi}` : null].filter(Boolean).join(' · ') || alert.article_id}</p>
                   <dl>
-                    <div><dt>{pick('Current status', '当前状态')}</dt><dd>{pick(labelEn, labelZh)}</dd></div>
-                    <div><dt>{pick('Recorded source', '记录来源')}</dt><dd>{alert.source}</dd></div>
+                    <div><dt>{pick('Current status', '当前状态', 'Statut actuel')}</dt><dd>{pick(labelEn, labelZh, labelFr)}</dd></div>
+                    <div><dt>{pick('Recorded source', '记录来源', 'Source enregistrée')}</dt><dd>{alert.source}</dd></div>
                   </dl>
                   <div class="alert-actions">
-                    {alert.source_url && <a class="source-link" href={alert.source_url} target="_blank" rel="noopener noreferrer">{pick('Verify source record ↗', '核对来源记录 ↗')}</a>}
-                    {alert.article_url && <a href={zh && alert.article_url.startsWith('/') ? `${prefix}${alert.article_url}` : alert.article_url}>{pick('View corrected public record →', '查看已更正公开记录 →')}</a>}
+                    {alert.source_url && <a class="source-link" href={alert.source_url} target="_blank" rel="noopener noreferrer">{pick('Verify source record ↗', '核对来源记录 ↗', 'Vérifier la source ↗')}</a>}
+                    {alert.article_url && <a href={(zh || fr) && alert.article_url.startsWith('/') ? `${prefix}${alert.article_url}` : alert.article_url}>{pick('View corrected public record →', '查看已更正公开记录 →', 'Voir la référence publique corrigée →')}</a>}
                   </div>
                 </article>
               </li>

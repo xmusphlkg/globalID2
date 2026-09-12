@@ -13,12 +13,14 @@ const { locale = 'en' } = Astro.props as Props;
 const week = (Astro.props as Props).week ?? '';
 const facet = (Astro.props as Props).facet ?? ((researchData as any).facets?.weeks ?? []).find((item: any) => item.week === week);
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const localeHref = (href: string) => zh && href.startsWith('/') ? `${prefix}${href}` : href;
+const localeHref = (href: string) => (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
 const file = resolve(`./src/data/research/weekly/${facet.week}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [], top_topics: [] };
 const description = `A source-grounded weekly Research Radar brief for publications dated ${payload.start_date ?? facet.start_date} through ${payload.end_date ?? facet.end_date}.`;
 const descriptionZh = `基于来源的 Research Radar 周报，覆盖 ${payload.start_date ?? facet.start_date} 至 ${payload.end_date ?? facet.end_date} 期间发表的文献。`;
+const descriptionFr = `Brief hebdomadaire du Radar de recherche fondé sur les sources, couvrant les publications du ${payload.start_date ?? facet.start_date} au ${payload.end_date ?? facet.end_date}.`;
 const citedFindings = payload.cited_findings ?? [];
 const monitoringContext = payload.monitoring_context ?? [];
 const evidenceGaps = payload.evidence_gaps ?? [];
@@ -31,8 +33,10 @@ const aiReview = payload.brief_status === 'ai_reviewed' && payload.byline?.ai_re
 const reviewedDate = reviewer?.reviewed_at ? String(reviewer.reviewed_at).slice(0, 10) : '';
 const reviewedByEn = reviewer ? `Editorially reviewed by ${reviewer.name} · ${reviewer.role}` : '';
 const reviewedByZh = reviewer ? `编辑审核：${reviewer.name} · ${reviewer.role}` : '';
+const reviewedByFr = reviewer ? `Relecture éditoriale : ${reviewer.name} · ${reviewer.role}` : '';
 const reviewedAtEn = reviewer ? `Reviewed ${reviewedDate}` : '';
 const reviewedAtZh = reviewer ? `审核于 ${reviewedDate}` : '';
+const reviewedAtFr = reviewer ? `Relu le ${reviewedDate}` : '';
 ---
 
 <ResearchCollectionPage
@@ -40,54 +44,60 @@ const reviewedAtZh = reviewer ? `审核于 ${reviewedDate}` : '';
   eyebrowZh="每周证据简报"
   title={`Research week ${facet.week}`}
   titleZh={`研究周报 ${facet.week}`}
+  titleFr={`Semaine de recherche ${facet.week}`}
   description={description}
   descriptionZh={descriptionZh}
+  descriptionFr={descriptionFr}
   canonicalPath={`/research/weekly/${facet.week}/`}
   articles={payload.articles ?? []}
   contextLabel="Papers this week"
   contextLabelZh="本周论文"
+  feedLabel="RSS feed"
+  feedLabelZh="RSS 订阅"
+  clientCollectionScope="week"
+  clientCollectionValue={facet.week}
   locale={locale}
 >
   <section slot="context" class="card weekly-context">
-    <p class="academic-kicker">{zh ? '本周概览' : 'Week at a glance'}</p>
-    <div class="weekly-grid"><div><strong>{payload.disease_count ?? 0}</strong><span>{zh ? '种疾病' : 'diseases'}</span></div><div><strong>{payload.country_count ?? 0}</strong><span>{zh ? '个国家和地区' : 'countries & regions'}</span></div><div class="weekly-topics"><span>{zh ? '主要主题' : 'Leading topics'}</span><p>{(payload.top_topics ?? []).join(' · ') || '—'}</p></div></div>
-    <p class="weekly-note">{zh ? '本简报汇总发表元数据和分类关系，不是风险评估，也不代表疾病发病情况发生变化。' : 'This brief summarizes publication metadata and classifier links. It is not a risk assessment or a claim about changes in disease incidence.'}</p>
+    <p class="academic-kicker">{zh ? '本周概览' : fr ? 'Aperçu de la semaine' : 'Week at a glance'}</p>
+    <div class="weekly-grid"><div><strong>{payload.disease_count ?? 0}</strong><span>{zh ? '种疾病' : fr ? 'maladies' : 'diseases'}</span></div><div><strong>{payload.country_count ?? 0}</strong><span>{zh ? '个国家和地区' : fr ? 'pays et régions' : 'countries & regions'}</span></div><div class="weekly-topics"><span>{zh ? '主要主题' : fr ? 'Thèmes principaux' : 'Leading topics'}</span><p>{(payload.top_topics ?? []).join(' · ') || '—'}</p></div></div>
+    <p class="weekly-note">{zh ? '本简报汇总发表元数据和分类关系，不是风险评估，也不代表疾病发病情况发生变化。' : fr ? 'Ce brief résume les métadonnées de publication et les liens de classification. Il ne constitue pas une évaluation du risque ni une affirmation sur l’incidence des maladies.' : 'This brief summarizes publication metadata and classifier links. It is not a risk assessment or a claim about changes in disease incidence.'}</p>
     <div class="weekly-byline">
-      <span>{zh ? payload.byline?.name_zh ?? 'GIDS Research Radar 自动编译器' : payload.byline?.name_en ?? 'GIDS Research Radar automated compiler'}</span>
+      <span>{zh ? payload.byline?.name_zh ?? 'GIDS Research Radar 自动编译器' : fr ? 'Compilateur automatisé du Radar de recherche GIDS' : payload.byline?.name_en ?? 'GIDS Research Radar automated compiler'}</span>
       {reviewer ? (
         <div class="weekly-review" data-review-status="editorially-reviewed">
-          <strong>{zh ? reviewedByZh : reviewedByEn}</strong>
+          <strong>{zh ? reviewedByZh : fr ? reviewedByFr : reviewedByEn}</strong>
           {reviewer.institution && <span>{reviewer.institution}</span>}
-          <time datetime={reviewer.reviewed_at}>{zh ? reviewedAtZh : reviewedAtEn}</time>
-          {reviewer.note_en && reviewer.note_zh && <p>{zh ? reviewer.note_zh : reviewer.note_en}</p>}
+          <time datetime={reviewer.reviewed_at}>{zh ? reviewedAtZh : fr ? reviewedAtFr : reviewedAtEn}</time>
+          {reviewer.note_en && reviewer.note_zh && <p>{zh ? reviewer.note_zh : fr ? reviewer.note_fr ?? reviewer.note_en : reviewer.note_en}</p>}
         </div>
       ) : aiReview ? (
         <div class="weekly-review" data-review-status="ai-reviewed">
-          <strong>{zh ? 'AI 证据边界审核通过 · 非编辑签审' : 'AI evidence-bound review passed · not editorial review'}</strong>
+          <strong>{zh ? 'AI 证据边界审核通过 · 非编辑签审' : fr ? 'Contrôle IA des limites de preuve réussi · sans validation éditoriale' : 'AI evidence-bound review passed · not editorial review'}</strong>
           <span>{aiReview.provider} · {aiReview.model}</span>
           <time datetime={aiReview.reviewed_at}>{String(aiReview.reviewed_at).slice(0, 10)}</time>
         </div>
       ) : (
-        <strong data-review-status="not-editorially-reviewed">{zh ? '自动编译 · 未经编辑审核' : 'Automatically compiled · not editorially reviewed'}</strong>
+        <strong data-review-status="not-editorially-reviewed">{zh ? '自动编译 · 未经编辑审核' : fr ? 'Compilation automatique · sans relecture éditoriale' : 'Automatically compiled · not editorially reviewed'}</strong>
       )}
     </div>
   </section>
 
   {citedFindings.length > 0 && (
     <section slot="context" class="card weekly-evidence-section">
-      <p class="academic-kicker">{zh ? '有引用的证据' : 'Cited evidence'}</p>
-      <h2>{zh ? '本周来源层面发现' : 'Source-level findings this week'}</h2>
-      <ol>{citedFindings.map((finding: any) => <li><a href={finding.source_url}><strong>{finding.title}</strong><p>{zh ? finding.finding_zh ?? finding.finding_en : finding.finding_en}</p><span>{finding.doi ? `DOI ${finding.doi}` : (zh ? 'GIDS 证据记录' : 'GIDS evidence record')} →</span></a></li>)}</ol>
+      <p class="academic-kicker">{zh ? '有引用的证据' : fr ? 'Preuves citées' : 'Cited evidence'}</p>
+      <h2>{zh ? '本周来源层面发现' : fr ? 'Résultats au niveau des sources cette semaine' : 'Source-level findings this week'}</h2>
+      <ol>{citedFindings.map((finding: any) => <li><a href={finding.source_url}><strong>{finding.title}</strong><p>{zh ? finding.finding_zh ?? finding.finding_en : fr ? finding.finding_fr ?? finding.finding_en : finding.finding_en}</p><span>{finding.doi ? `DOI ${finding.doi}` : (zh ? 'GIDS 证据记录' : fr ? 'Référence GIDS' : 'GIDS evidence record')} →</span></a></li>)}</ol>
     </section>
   )}
 
   {(monitoringContext.length > 0 || evidenceGaps.length > 0) && (
     <section slot="context" class="card weekly-evidence-section">
-      <p class="academic-kicker">{zh ? '监测背景' : 'Monitoring context'}</p>
-      <h2>{zh ? '信号与目录覆盖' : 'Signals and catalogue coverage'}</h2>
-      {monitoringContext.length > 0 && <div class="weekly-monitoring-list">{monitoringContext.map((signal: any) => <a href={localeHref(signal.situation_url ?? '/situation/')}><strong>{zh ? signal.disease_name_zh ?? signal.title ?? signal.disease_name_en : signal.title ?? signal.disease_name_en}</strong><span>{(signal.geographies ?? []).map((item: any) => zh ? item.name_zh ?? item.name_en : item.name_en).join(' · ') || (zh ? '地理范围暂缺' : 'Geography unavailable')} · {signal.data_through ?? '—'}</span><em>{String(signal.relation_level ?? 'context').replaceAll('_', ' ')}</em></a>)}</div>}
-      {evidenceGaps.length > 0 && <div class="weekly-gap-list"><h3>{zh ? '公开目录证据缺口' : 'Open catalogue evidence gaps'}</h3>{evidenceGaps.map((gap: any) => <article><strong>{zh ? gap.disease_name_zh ?? gap.disease_name_en : gap.disease_name_en}</strong><p>{zh ? gap.note_zh ?? gap.note_en : gap.note_en}</p></article>)}</div>}
-      <p class="weekly-note">{zh ? payload.methodology?.zh ?? payload.methodology?.en : payload.methodology?.en}</p>
+      <p class="academic-kicker">{zh ? '监测背景' : fr ? 'Contexte de surveillance' : 'Monitoring context'}</p>
+      <h2>{zh ? '信号与目录覆盖' : fr ? 'Signaux et couverture du catalogue' : 'Signals and catalogue coverage'}</h2>
+      {monitoringContext.length > 0 && <div class="weekly-monitoring-list">{monitoringContext.map((signal: any) => <a href={localeHref(signal.situation_url ?? '/situation/')}><strong>{zh ? signal.disease_name_zh ?? signal.title ?? signal.disease_name_en : fr ? signal.disease_name_fr ?? signal.title ?? signal.disease_name_en : signal.title ?? signal.disease_name_en}</strong><span>{(signal.geographies ?? []).map((item: any) => zh ? item.name_zh ?? item.name_en : fr ? item.name_fr ?? item.name_en : item.name_en).join(' · ') || (zh ? '地理范围暂缺' : fr ? 'Géographie indisponible' : 'Geography unavailable')} · {signal.data_through ?? '—'}</span><em>{String(signal.relation_level ?? 'context').replaceAll('_', ' ')}</em></a>)}</div>}
+      {evidenceGaps.length > 0 && <div class="weekly-gap-list"><h3>{zh ? '公开目录证据缺口' : fr ? 'Lacunes du catalogue public' : 'Open catalogue evidence gaps'}</h3>{evidenceGaps.map((gap: any) => <article><strong>{zh ? gap.disease_name_zh ?? gap.disease_name_en : fr ? gap.disease_name_fr ?? gap.disease_name_en : gap.disease_name_en}</strong><p>{zh ? gap.note_zh ?? gap.note_en : fr ? gap.note_fr ?? gap.note_en : gap.note_en}</p></article>)}</div>}
+      <p class="weekly-note">{zh ? payload.methodology?.zh ?? payload.methodology?.en : fr ? payload.methodology?.fr ?? payload.methodology?.en : payload.methodology?.en}</p>
     </section>
   )}
 </ResearchCollectionPage>

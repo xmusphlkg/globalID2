@@ -20,7 +20,7 @@ interface Props {
   feedPath?: string;
   feedLabel?: string;
   feedLabelZh?: string;
-  clientCollectionScope?: 'disease' | 'country' | 'topic';
+  clientCollectionScope?: 'disease' | 'country' | 'topic' | 'week';
   clientCollectionValue?: string;
   locale?: 'en' | 'zh' | 'fr';
 }
@@ -49,14 +49,15 @@ const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => `${prefix}${href}`;
+const localizedFeedPath = fr && feedPath.startsWith('/') ? `/fr${feedPath}` : feedPath;
 const localizedCanonicalPath = localeHref(canonicalPath);
 const collectionIndexable = isIndexableResearchCollection(articles.length);
 const initialVisibleArticles = 30;
 const useClientCollectionCatalogue = Boolean(clientCollectionScope && clientCollectionValue && articles.length > initialVisibleArticles);
 const serverRenderedArticles = useClientCollectionCatalogue ? articles.slice(0, initialVisibleArticles) : articles;
 const initialResultCount = articles.length > initialVisibleArticles
-  ? (zh ? `显示 ${articles.length} 篇文献中的 ${initialVisibleArticles} 篇` : `${initialVisibleArticles} of ${articles.length} publications shown`)
-  : (zh ? `${articles.length} 篇文献` : `${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}`);
+  ? (zh ? `显示 ${articles.length} 篇文献中的 ${initialVisibleArticles} 篇` : fr ? `${initialVisibleArticles} publications sur ${articles.length} affichées` : `${initialVisibleArticles} of ${articles.length} publications shown`)
+  : (zh ? `${articles.length} 篇文献` : fr ? `${articles.length} publication${articles.length === 1 ? '' : 's'}` : `${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}`);
 const diseaseCount = new Set(articles.flatMap((article: any) => (article.diseases ?? []).map((item: any) => item.disease_id))).size;
 const countryCount = new Set(articles.flatMap((article: any) => (article.countries ?? []).map((item: any) => item.code))).size;
 const topicCount = new Set(articles.flatMap((article: any) => (article.topics ?? []).map((item: any) => item.name))).size;
@@ -104,17 +105,17 @@ const structuredData = {
       <div class="collection-topline">
         <p class="academic-kicker">{zh ? eyebrowZh : fr ? 'Pôle de preuves sur la maladie' : eyebrow}</p>
         <div class="collection-actions">
-          <a href={localeHref('/research/')}>{zh ? '研究首页' : 'Research home'}</a>
-          <a href={feedPath} type="application/rss+xml">{zh ? feedLabelZh : feedLabel}</a>
+          <a href={localeHref('/research/')}>{zh ? '研究首页' : fr ? 'Accueil recherche' : 'Research home'}</a>
+          <a href={localizedFeedPath} type="application/rss+xml">{zh ? feedLabelZh : fr ? 'Flux RSS' : feedLabel}</a>
         </div>
       </div>
       <h1>{zh ? titleZh : fr ? titleFr : title}</h1>
       <p class="collection-lede">{zh ? descriptionZh : fr ? descriptionFr : description}</p>
       <dl class="collection-metrics">
-        <div><dt>{zh ? contextLabelZh : contextLabel}</dt><dd>{articles.length}</dd></div>
-        <div><dt>{zh ? '疾病' : 'Diseases'}</dt><dd>{diseaseCount}</dd></div>
-        <div><dt>{zh ? '国家和地区' : 'Countries'}</dt><dd>{countryCount}</dd></div>
-        <div><dt>{zh ? '主题' : 'Topics'}</dt><dd>{topicCount}</dd></div>
+        <div><dt>{zh ? contextLabelZh : fr ? 'Publications' : contextLabel}</dt><dd>{articles.length}</dd></div>
+        <div><dt>{zh ? '疾病' : fr ? 'Maladies' : 'Diseases'}</dt><dd>{diseaseCount}</dd></div>
+        <div><dt>{zh ? '国家和地区' : fr ? 'Pays et régions' : 'Countries'}</dt><dd>{countryCount}</dd></div>
+        <div><dt>{zh ? '主题' : fr ? 'Thèmes' : 'Topics'}</dt><dd>{topicCount}</dd></div>
       </dl>
     </header>
 
@@ -122,7 +123,7 @@ const structuredData = {
 
     <section class="card collection-results">
       <div class="collection-heading">
-        <div><p class="academic-kicker">{zh ? '证据流' : 'Evidence stream'}</p><h2>{zh ? '已发布文献' : 'Published literature'}</h2></div>
+        <div><p class="academic-kicker">{zh ? '证据流' : fr ? 'Flux de preuves' : 'Evidence stream'}</p><h2>{zh ? '已发布文献' : fr ? 'Publications disponibles' : 'Published literature'}</h2></div>
         <span>{String(articles.length).padStart(2, '0')}</span>
       </div>
       {articles.length > 0
@@ -152,12 +153,12 @@ const structuredData = {
                 aria-controls="collection-list"
                 data-load-more-collection
               >
-                {zh ? '加载更多论文' : 'Load more publications'}
+                {zh ? '加载更多论文' : fr ? 'Charger davantage' : 'Load more publications'}
               </button>
             )}
           </>
         )
-        : <div class="collection-empty"><h3>{zh ? '暂无已发布记录' : 'No published records'}</h3><p>{zh ? '该集合已就绪，将通过自动质量门控发布流程填充。' : 'This collection is ready and will populate through the automatic quality-gated release workflow.'}</p></div>}
+        : <div class="collection-empty"><h3>{zh ? '暂无已发布记录' : fr ? 'Aucune publication disponible' : 'No published records'}</h3><p>{zh ? '该集合已就绪，将通过自动质量门控发布流程填充。' : fr ? 'Cette collection sera alimentée par le processus de publication avec contrôle qualité.' : 'This collection is ready and will populate through the automatic quality-gated release workflow.'}</p></div>}
     </section>
   </div>
 </ReportLayout>
@@ -186,7 +187,7 @@ const structuredData = {
   };
   const hasToken = (value: string | undefined, token: string) => (value ?? '').split(/\s+/).includes(token);
   const formatDate = (value: string | undefined, lang: 'en' | 'zh' | 'fr') => {
-    if (!value) return lang === 'zh' ? '日期暂缺' : 'Date unavailable';
+    if (!value) return lang === 'zh' ? '日期暂缺' : lang === 'fr' ? 'Date indisponible' : 'Date unavailable';
     return new Intl.DateTimeFormat(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', {
       year: 'numeric',
       month: 'short',
@@ -195,18 +196,18 @@ const structuredData = {
     }).format(new Date(value));
   };
   const formatArticleDate = (article: any, lang: 'en' | 'zh' | 'fr') => {
-    const label = lang === 'zh' ? article.publication_date_label_zh : article.publication_date_label_en;
+    const label = lang === 'zh' ? article.publication_date_label_zh : lang === 'fr' ? article.publication_date_label_fr : article.publication_date_label_en;
     return label || formatDate(article.published_at, lang);
   };
   const articleTokens = (article: any) => ({
-    diseaseText: (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''}`).join(' ').toLowerCase(),
+    diseaseText: (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase(),
     diseaseIds: (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase()).filter(Boolean).join(' '),
-    countryText: (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en} ${item.name_zh ?? ''}`).join(' ').toLowerCase(),
+    countryText: (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase(),
     countryCodes: (article.countries ?? []).map((item: any) => String(item.code ?? '').toLowerCase()).filter(Boolean).join(' '),
     topicText: (article.topics ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
     topicSlugs: (article.topics ?? []).map((item: any) => slugifyTopic(item.name)).filter(Boolean).join(' '),
   });
-  const articleSearchText = (article: any, tokens = articleTokens(article)) => `${article.title} ${article.journal ?? ''} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText}`.toLowerCase();
+  const articleSearchText = (article: any, tokens = articleTokens(article)) => `${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText}`.toLowerCase();
   const loadCatalogue = () => {
     if (!cataloguePromise) {
       cataloguePromise = fetch('/research/catalogue.json')
@@ -254,9 +255,9 @@ const structuredData = {
 
     const topline = make('div', 'research-card-topline');
     const badges = make('div', 'research-card-badges');
-    badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer'));
-    if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history'));
-    if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa'));
+    badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer', article.peer_review_status === 'peer_reviewed' ? 'Évalué par les pairs' : 'Prépublication'));
+    if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history', 'Référence historique'));
+    if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa', 'Accès ouvert'));
     (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en, '', item.name_fr ?? diseaseNameMap[String(item.slug ?? '').toLowerCase()] ?? diseaseNameMap[String(item.disease_id ?? '').toLowerCase()] ?? item.name_en)));
     (article.topics ?? []).slice(0, 3).forEach((item: any) => badges.appendChild(makeTopicBadge(text(item.name))));
     topline.appendChild(badges);
@@ -289,7 +290,7 @@ const structuredData = {
 
     const source = make('p', 'research-card-source');
     const journal = make('span');
-    setLangText(journal, text(article.journal || 'Journal unavailable'), text(article.journal || '期刊信息暂缺'));
+    setLangText(journal, text(article.journal || 'Journal unavailable'), text(article.journal || '期刊信息暂缺'), text(article.journal || 'Revue indisponible'));
     source.appendChild(journal);
     const separator = make('span');
     separator.setAttribute('aria-hidden', 'true');
@@ -297,7 +298,7 @@ const structuredData = {
     source.appendChild(separator);
     const time = make('time');
     if (article.published_at) time.dateTime = article.published_at;
-    setLangText(time, formatArticleDate(article, 'en'), formatArticleDate(article, 'zh'));
+    setLangText(time, formatArticleDate(article, 'en'), formatArticleDate(article, 'zh'), formatArticleDate(article, 'fr'));
     source.appendChild(time);
     card.appendChild(source);
 
@@ -315,7 +316,7 @@ const structuredData = {
         open.href = openAccessUrl;
         open.target = '_blank';
         open.rel = 'noopener noreferrer';
-        setLangText(open, 'Open article ↗', '打开全文 ↗');
+        setLangText(open, 'Open article ↗', '打开全文 ↗', 'Ouvrir l’article ↗');
         actions.appendChild(open);
       }
       if (surveillanceUrl) {
@@ -333,26 +334,26 @@ const structuredData = {
     const facts = make('dl', 'research-card-facts');
     const studyFact = make('div');
     const studyDt = make('dt');
-    setLangText(studyDt, 'Type', '类型');
+    setLangText(studyDt, 'Type', '类型', 'Type');
     const studyDd = make('dd');
     studyDd.textContent = text(article.study_type || 'Journal article');
     studyFact.append(studyDt, studyDd);
     const geographyFact = make('div');
     const geographyDt = make('dt');
-    setLangText(geographyDt, 'Scope', '范围');
+    setLangText(geographyDt, 'Scope', '范围', 'Portée');
     const geographyDd = make('dd');
     geographyDd.textContent = (article.countries ?? []).length > 0
-      ? (article.countries ?? []).slice(0, 3).map((item: any) => locale === 'zh' ? item.name_zh ?? item.name_en : item.name_en).join(locale === 'zh' ? '、' : ', ')
-      : (locale === 'zh' ? '未分类' : 'Not classified');
+      ? (article.countries ?? []).slice(0, 3).map((item: any) => locale === 'zh' ? item.name_zh ?? item.name_en : locale === 'fr' ? item.name_fr ?? item.name_en : item.name_en).join(locale === 'zh' ? '、' : ', ')
+      : (locale === 'zh' ? '未分类' : locale === 'fr' ? 'Non classé' : 'Not classified');
     geographyFact.append(geographyDt, geographyDd);
     facts.append(studyFact, geographyFact);
     card.appendChild(facts);
 
     const context = make('p', 'research-context');
     const contextLabel = make('strong');
-    setLangText(contextLabel, 'Why it matters now', '为何现在值得关注');
+    setLangText(contextLabel, 'Why it matters now', '为何现在值得关注', 'Pourquoi cette étude compte maintenant');
     const contextCopy = make('span');
-    setLangText(contextCopy, text(article.why_it_matters_en), article.why_it_matters_zh);
+    setLangText(contextCopy, text(article.why_it_matters_en), article.why_it_matters_zh, article.why_it_matters_fr || article.summary?.fr?.public_health_relevance);
     context.append(contextLabel, contextCopy);
     card.appendChild(context);
 
@@ -363,13 +364,16 @@ const structuredData = {
     if (collectionScope === 'disease') return hasToken(tokens.diseaseIds, collectionValue);
     if (collectionScope === 'country') return hasToken(tokens.countryCodes, collectionValue);
     if (collectionScope === 'topic') return hasToken(tokens.topicSlugs, collectionValue);
+    if (collectionScope === 'week') return text(article.publication_week).toLowerCase() === collectionValue;
     return true;
   };
   const renderCount = (shown: number, total: number) => {
     if (!count) return;
     count.textContent = locale === 'zh'
       ? (shown < total ? `显示 ${total} 篇文献中的 ${shown} 篇` : `${total} 篇文献`)
-      : (shown < total ? `${shown} of ${total} publications shown` : `${total} ${total === 1 ? 'publication' : 'publications'}`);
+      : locale === 'fr'
+        ? (shown < total ? `${shown} publications sur ${total} affichées` : `${total} publication${total === 1 ? '' : 's'}`)
+        : (shown < total ? `${shown} of ${total} publications shown` : `${total} ${total === 1 ? 'publication' : 'publications'}`);
   };
   const renderServerCards = () => {
     cards.forEach((card, index) => {

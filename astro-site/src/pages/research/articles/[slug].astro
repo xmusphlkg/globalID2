@@ -44,14 +44,15 @@ const showCorrectionHistory = article.integrity_status === 'corrected'
   && integrityEvents.length > 0;
 const summaryEn = article.summary?.en ?? {};
 const summaryZh = article.summary?.zh ?? {};
+const summaryFr = article.summary?.fr ?? {};
 const evidenceSections = [
-  ['Research question', '研究问题', 'research_question'],
-  ['Study design', '研究设计', 'study_design'],
-  ['Population and setting', '人群与场景', 'population_setting'],
-  ['Main findings', '主要发现', 'main_findings'],
-  ['Public-health relevance', '公共卫生意义', 'public_health_relevance'],
-  ['Important limitations', '重要局限', 'limitations'],
-  ['GIDS interpretation', 'GIDS 解读', 'gids_interpretation'],
+  ['Research question', '研究问题', 'Question de recherche', 'research_question'],
+  ['Study design', '研究设计', 'Plan d’étude', 'study_design'],
+  ['Population and setting', '人群与场景', 'Population et contexte', 'population_setting'],
+  ['Main findings', '主要发现', 'Résultats principaux', 'main_findings'],
+  ['Public-health relevance', '公共卫生意义', 'Pertinence pour la santé publique', 'public_health_relevance'],
+  ['Important limitations', '重要局限', 'Limites importantes', 'limitations'],
+  ['GIDS interpretation', 'GIDS 解读', 'Interprétation GIDS', 'gids_interpretation'],
 ] as const;
 const publicationDateEn = article.publication_date_label_en ?? (article.published_at
   ? new Date(article.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
@@ -59,6 +60,9 @@ const publicationDateEn = article.publication_date_label_en ?? (article.publishe
 const publicationDateZh = article.publication_date_label_zh ?? (article.published_at
   ? new Date(article.published_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
   : '日期暂缺');
+const publicationDateFr = article.publication_date_label_fr ?? (article.published_at
+  ? new Date(article.published_at).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+  : 'Date indisponible');
 const authorLine = (article.authors ?? []).join(', ');
 const originalUrl = article.source_urls?.doi ?? article.source_urls?.publisher;
 const isHistoricalBaseline = article.source_kind === 'historical_seed' || article.historical_baseline;
@@ -75,13 +79,16 @@ const structuredArticle = {
   inLanguage: zh ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en',
 };
 const graph = article.knowledge_graph ?? { stats: {}, edges: [] };
-const summaryProvenance = summaryEn.provenance ?? summaryZh.provenance ?? null;
+const summaryProvenance = summaryEn.provenance ?? summaryZh.provenance ?? summaryFr.provenance ?? null;
 const provenanceDisclosureEn = summaryProvenance?.editorially_approved
   ? 'This bilingual evidence summary was AI-assisted and subsequently editorially approved.'
   : 'This bilingual evidence summary was generated with AI and passed an automated quality gate; it has not been editorially approved.';
 const provenanceDisclosureZh = summaryProvenance?.editorially_approved
   ? '本双语证据摘要由 AI 辅助生成，随后已通过编辑审核。'
   : '本双语证据摘要由 AI 生成并通过自动质量门控；尚未经过编辑审核。';
+const provenanceDisclosureFr = summaryProvenance?.editorially_approved
+  ? 'Ce résumé de preuves multilingue a été assisté par IA puis approuvé par la rédaction.'
+  : 'Ce résumé de preuves multilingue a été généré par IA et a passé un contrôle qualité automatisé ; il n’a pas encore été approuvé par la rédaction.';
 const relatedSurveillance = article.related_surveillance ?? [];
 const relatedSignals = (article.related_signals ?? []).filter((signal: any) => signal.visibility === 'public' || import.meta.env.DEV);
 const relatedArticles = article.related_articles ?? [];
@@ -89,7 +96,7 @@ const isIndexableEvidencePage = article.indexable !== false
   && Boolean(article.summary?.en)
   && Boolean(article.summary?.zh);
 const canonicalPath = localeHref(`/research/articles/${article.slug}/`);
-const whyItMatters = pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en);
+const whyItMatters = pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en, article.why_it_matters_fr ?? summaryFr.public_health_relevance);
 const descriptionContext = zh
   ? '本页提供研究设计、主要发现、重要局限、来源标识及相关监测背景。'
   : fr
@@ -131,23 +138,23 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
   <article class="evidence-page">
     <header class="academic-hero evidence-header">
       <div class="evidence-badges">
-        <span>{article.peer_review_status === 'peer_reviewed' ? pick('Peer reviewed', '同行评议') : pick('Preprint', '预印本')}</span>
-        {isPreprint && versionRelation && <span class="version-available">{pick('Peer-reviewed version available', '已有同行评议版本')}</span>}
-        {showCorrectionHistory && <span class="integrity-corrected">{pick('Correction recorded', '已记录更正')}</span>}
-        {isHistoricalBaseline && <span class="history">{pick('Historical baseline', '历史基线')}</span>}
-        {article.open_access_status === 'open' && <span class="oa">{pick('Open access', '开放获取')}</span>}
+        <span>{article.peer_review_status === 'peer_reviewed' ? pick('Peer reviewed', '同行评议', 'Évalué par les pairs') : pick('Preprint', '预印本', 'Prépublication')}</span>
+        {isPreprint && versionRelation && <span class="version-available">{pick('Peer-reviewed version available', '已有同行评议版本', 'Version évaluée par les pairs disponible')}</span>}
+        {showCorrectionHistory && <span class="integrity-corrected">{pick('Correction recorded', '已记录更正', 'Correction enregistrée')}</span>}
+        {isHistoricalBaseline && <span class="history">{pick('Historical baseline', '历史基线', 'Référence historique')}</span>}
+        {article.open_access_status === 'open' && <span class="oa">{pick('Open access', '开放获取', 'Accès ouvert')}</span>}
         {(article.diseases ?? []).map((disease: any) => <span>{pick(disease.name_en, disease.name_zh ?? disease.name_en, disease.name_fr ?? DISEASE_NAMES_FR[String(disease.slug ?? '').toLowerCase()] ?? DISEASE_NAMES_FR_BY_ID[String(disease.disease_id ?? '').toUpperCase()] ?? disease.name_en)}</span>)}
       </div>
       <h1>{article.title}</h1>
-      <p class="evidence-citation"><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')}</span><span>·</span><time datetime={article.published_at}>{pick(publicationDateEn, publicationDateZh)}</time></p>
+      <p class="evidence-citation"><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺', 'Revue indisponible')}</span><span>·</span><time datetime={article.published_at}>{pick(publicationDateEn, publicationDateZh, publicationDateFr)}</time></p>
       {authorLine && <p class="evidence-authors">{authorLine}</p>}
       <dl class="evidence-register">
         <div><dt>DOI</dt><dd>{article.doi ?? '—'}</dd></div>
         <div><dt>PMID</dt><dd>{article.pmid ?? '—'}</dd></div>
         <div><dt>PMCID</dt><dd>{article.pmcid ?? '—'}</dd></div>
         <div><dt>OpenAlex</dt><dd>{article.openalex_id ?? '—'}</dd></div>
-        <div><dt>{pick('Study type', '研究类型')}</dt><dd>{article.study_type ?? pick('Journal article', '期刊论文')}</dd></div>
-        <div><dt>{pick('Publisher', '出版商')}</dt><dd>{article.publisher ?? pick('Publisher unavailable', '出版商暂缺')}</dd></div>
+        <div><dt>{pick('Study type', '研究类型', 'Type d’étude')}</dt><dd>{article.study_type ?? pick('Journal article', '期刊论文', 'Article de revue')}</dd></div>
+        <div><dt>{fr ? 'Éditeur' : pick('Publisher', '出版商')}</dt><dd>{article.publisher ?? (fr ? 'Éditeur indisponible' : pick('Publisher unavailable', '出版商暂缺'))}</dd></div>
         <div><dt>{pick('Article type', '文章类型')}</dt><dd>{article.article_type ?? 'journal-article'}</dd></div>
         <div><dt>{pick('Integrity', '完整性状态')}</dt><dd>{article.integrity_status === 'corrected' ? pick('Corrected', '已更正') : article.integrity_status}</dd></div>
       </dl>
@@ -178,8 +185,8 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
     <div class="evidence-layout">
       <div>
         <section class="evidence-context">
-          <p class="evidence-kicker">{pick('Why this research matters now', '为何这项研究现在值得关注')}</p>
-          <p>{pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en)}</p>
+          <p class="evidence-kicker">{pick('Why this research matters now', '为何这项研究现在值得关注', 'Pourquoi cette étude compte maintenant')}</p>
+          <p>{pick(article.why_it_matters_en, article.why_it_matters_zh ?? article.why_it_matters_en, article.why_it_matters_fr ?? summaryFr.public_health_relevance)}</p>
         </section>
         {showCorrectionHistory && (
           <section class="evidence-surveillance article-integrity-history" aria-labelledby="article-integrity-title">
@@ -207,16 +214,20 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
         )}
         <section class="evidence-sections">
           <div class="section-title"><span>01</span><h2>{pick('Structured evidence summary', '结构化证据摘要')}</h2></div>
-          {evidenceSections.map(([labelEn, labelZh, key]) => {
+          {evidenceSections.map(([labelEn, labelZh, labelFr, key]) => {
             const valueEn = summaryEn[key];
             const valueZh = summaryZh[key];
+            const valueFr = summaryFr[key];
             const fallbackEn = key === 'limitations'
               ? 'Limitations could not be fully assessed from the available metadata.'
               : 'This field has not yet received a quality-gated evidence summary. Consult the original article.';
             const fallbackZh = key === 'limitations'
               ? '根据现有元数据，尚无法充分评估研究局限。'
               : '该字段尚无通过质量门控的证据摘要，请查阅原始文献。';
-            return <div class:list={['evidence-section', !valueEn && !valueZh && 'evidence-section-pending']}><h3>{pick(labelEn, labelZh)}</h3><p>{pick(valueEn ?? fallbackEn, valueZh ?? fallbackZh)}</p></div>;
+            const fallbackFr = key === 'limitations'
+              ? 'Les limites ne peuvent pas être évaluées complètement à partir des métadonnées disponibles.'
+              : 'Ce champ ne dispose pas encore d’un résumé de preuves contrôlé ; consultez l’article original.';
+            return <div class:list={['evidence-section', !valueEn && !valueZh && !valueFr && 'evidence-section-pending']}><h3>{pick(labelEn, labelZh, labelFr)}</h3><p>{pick(valueEn ?? fallbackEn, valueZh ?? fallbackZh, valueFr ?? fallbackFr)}</p></div>;
           })}
         </section>
 
@@ -273,7 +284,7 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
         {(article.countries ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Geographic scope', '地理范围')}</p><ul>{article.countries.map((country: any) => <li><a href={localeHref(`/research/countries/${country.code.toLowerCase()}/`)}>{pick(country.name_en, country.name_zh ?? country.name_en)} <span>→</span></a></li>)}</ul></div>}
         <div class="evidence-aside-block"><p class="evidence-kicker">{pick('Original sources', '原始来源')}</p><div class="source-links">{article.doi && <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer">{pick('DOI record ↗', 'DOI 记录 ↗')}</a>}{article.source_urls?.pubmed && <a href={article.source_urls.pubmed} target="_blank" rel="noopener noreferrer">PubMed ↗</a>}{article.open_access_url && <a href={article.open_access_url} target="_blank" rel="noopener noreferrer">{pick('Open access ↗', '开放获取 ↗')}</a>}</div></div>
         <div class="evidence-aside-block evidence-score"><p class="evidence-kicker">{pick('GIDS Discovery Score', 'GIDS 发现分数')}</p><strong>{Math.round((article.discovery_score ?? 0) * 100)}</strong><p>{pick('A transparent discovery ranking, not a scientific quality or credibility score.', '这是透明的发现排序，并非科学质量或可信度评分。')}</p></div>
-        {summaryProvenance && <div class="evidence-aside-block evidence-provenance"><p class="evidence-kicker">{pick('Summary transparency', '摘要透明度')}</p><p>{pick(provenanceDisclosureEn, provenanceDisclosureZh)}</p>{summaryProvenance.quality_score != null && <p>{pick('Automated quality checks passed before publication.', '发布前已通过自动质量检查。')}</p>}</div>}
+        {summaryProvenance && <div class="evidence-aside-block evidence-provenance"><p class="evidence-kicker">{pick('Summary transparency', '摘要透明度', 'Transparence du résumé')}</p><p>{pick(provenanceDisclosureEn, provenanceDisclosureZh, provenanceDisclosureFr)}</p>{summaryProvenance.quality_score != null && <p>{pick('Automated quality checks passed before publication.', '发布前已通过自动质量检查。', 'Les contrôles qualité automatisés ont été réussis avant publication.')}</p>}</div>}
       </aside>
     </div>
   </article>

@@ -44,6 +44,9 @@ AI_REVIEW_ISSUE_CODES = frozenset({
     "risk_assessment_language",
     "unsupported_claim",
     "bilingual_mismatch",
+    "missing_french_finding",
+    "missing_french_gap",
+    "french_mismatch",
     "content_too_large",
 })
 _ALLOWED_RELATIONS = {
@@ -103,12 +106,15 @@ def public_review_packet(brief: Mapping[str, Any]) -> dict[str, Any]:
     findings = []
     for row in list(brief.get("cited_findings") or [])[:5]:
         if isinstance(row, Mapping):
-            findings.append({
+            projected = {
                 key: _text(row.get(key), 4_000 if key.startswith("finding_") else 500)
                 for key in (
                     "article_id", "title", "finding_en", "finding_zh", "source_url", "doi", "provenance",
                 )
-            })
+            }
+            if row.get("finding_fr"):
+                projected["finding_fr"] = _text(row.get("finding_fr"), 4_000)
+            findings.append(projected)
     context = []
     for row in list(brief.get("monitoring_context") or [])[:50]:
         if isinstance(row, Mapping):
@@ -122,20 +128,26 @@ def public_review_packet(brief: Mapping[str, Any]) -> dict[str, Any]:
     gaps = []
     for row in list(brief.get("evidence_gaps") or [])[:50]:
         if isinstance(row, Mapping):
-            gaps.append({
+            projected = {
                 **{
                     key: _text(row.get(key), 4_000 if key.startswith("note_") else 500)
                     for key in ("gap_id", "signal_id", "disease_id", "gap_type", "note_en", "note_zh")
                 },
                 "geographies": _public_geographies(row.get("geographies")),
-            })
+            }
+            if row.get("note_fr"):
+                projected["note_fr"] = _text(row.get("note_fr"), 4_000)
+            gaps.append(projected)
     methodology = brief.get("methodology") if isinstance(brief.get("methodology"), Mapping) else {}
-    return {
+    result = {
         "cited_findings": findings,
         "monitoring_context": context,
         "evidence_gaps": gaps,
         "methodology": {"en": _text(methodology.get("en"), 4_000), "zh": _text(methodology.get("zh"), 4_000)},
     }
+    if methodology.get("fr"):
+        result["methodology"]["fr"] = _text(methodology.get("fr"), 4_000)
+    return result
 
 
 def deterministic_review_issues(packet: Mapping[str, Any]) -> list[str]:
@@ -148,6 +160,8 @@ def deterministic_review_issues(packet: Mapping[str, Any]) -> list[str]:
             issues.add("invalid_finding_provenance")
         if not _text(finding.get("finding_en"), 4000) or not _text(finding.get("finding_zh"), 4000):
             issues.add("missing_bilingual_finding")
+        if "finding_fr" in finding and not _text(finding.get("finding_fr"), 4000):
+            issues.add("missing_french_finding")
         if not _INTERNAL_SOURCE.fullmatch(str(finding.get("source_url") or "")):
             issues.add("invalid_internal_source_reference")
     for relation in packet.get("monitoring_context") or []:
@@ -156,8 +170,12 @@ def deterministic_review_issues(packet: Mapping[str, Any]) -> list[str]:
     for gap in packet.get("evidence_gaps") or []:
         if not _text(gap.get("note_en"), 4000) or not _text(gap.get("note_zh"), 4000):
             issues.add("missing_bilingual_gap")
+        if "note_fr" in gap and not _text(gap.get("note_fr"), 4000):
+            issues.add("missing_french_gap")
     methodology = packet.get("methodology") or {}
     if not _text(methodology.get("en"), 4000) or not _text(methodology.get("zh"), 4000):
+        issues.add("incomplete_methodology")
+    if "fr" in methodology and not _text(methodology.get("fr"), 4000):
         issues.add("incomplete_methodology")
     encoded = json.dumps(packet, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
     if len(encoded) > _MAX_PACKET_BYTES:
@@ -377,7 +395,7 @@ class WeeklyAIReviewRunner:
             f"Protocol {AI_REVIEW_PROTOCOL_VERSION}. Review only the supplied public JSON packet. "
             "Do not use outside knowledge, browsing, retrieval, memory, hidden context, or unstated facts. "
             "Check whether claims stay within cited findings, monitoring links are disclosed as non-causal, "
-            "gaps describe catalogue coverage only, and English/Chinese meanings align. Return JSON only with "
+            "gaps describe catalogue coverage only, and all supplied language meanings align. Return JSON only with "
             "exact keys verdict and issue_codes. An empty evidence_gaps array is valid; missing_bilingual_gap "
             "applies only when a present gap row lacks English or Chinese text. Never return reasoning."
         )

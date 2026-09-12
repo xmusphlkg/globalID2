@@ -277,6 +277,7 @@ class LiteratureService:
     async def execute_task(self, task: Task) -> dict[str, Any]:
         cfg = self._config()
         result = await LiteraturePipeline(cfg).execute(task)
+        result["new_article_enrichment"] = await self._enqueue_new_article_enrichment(result)
         catch_up_required = bool(result.get("source_truncated"))
         result["catch_up_required"] = int(catch_up_required)
         result["catch_up_scheduled"] = 0
@@ -385,6 +386,76 @@ class LiteratureService:
                 "Research Radar catch-up could not confirm a durable earlier schedule"
             )
         return result
+
+    async def _enqueue_new_article_enrichment(self, result: dict[str, Any]) -> dict[str, Any]:
+        """Queue summaries for articles inserted by the just-finished sync.
+
+        The regular enrichment scheduler remains responsible for backlog and
+        retry work.  This targeted hand-off makes a newly discovered article
+        eligible for English canonical generation and French translation as
+        soon as its ingest transaction commits, without making the source sync
+        wait for model calls.
+        """
+        cfg = self._config()
+        raw_ids = result.get("inserted_article_ids") or []
+        article_ids = list(dict.fromkeys(str(value) for value in raw_ids if value))
+        base: dict[str, Any] = {
+            "status": "not_required",
+            "selected_articles": len(article_ids),
+            "languages": [],
+            "task_uuid": None,
+        }
+        if not article_ids:
+            base["reason"] = "no_new_articles"
+            return base
+        if not getattr(cfg, "ai_enrichment_enabled", False):
+            base["status"] = "disabled"
+            base["reason"] = "ai_enrichment_disabled"
+            return base
+        if not getattr(cfg, "ai_enrichment_auto_on_ingest", True):
+            base["status"] = "disabled"
+            base["reason"] = "auto_on_ingest_disabled"
+            return base
+
+        configured = getattr(cfg, "ai_enrichment_languages", None) or ["en", "zh", "fr"]
+        languages = list(dict.fromkeys(
+            str(value).strip().lower()
+            for value in configured
+            if str(value).strip().lower() in {"en", "zh", "fr"}
+        ))
+        # Translations use English as their semantic contract.  Add both
+        # languages even when a legacy environment still lists only en/zh.
+        languages = ["en", *[value for value in languages if value != "en"]]
+        if "fr" not in languages:
+            languages.append("fr")
+        base["languages"] = languages
+        try:
+            queued = await self.trigger_enrichment(
+                article_ids=article_ids,
+                languages=languages,
+                limit=min(
+                    len(article_ids),
+                    max(1, int(getattr(cfg, "ai_enrichment_batch_size", 50))),
+                ),
+                manual=False,
+            )
+        except Exception as exc:
+            base["status"] = "failed"
+            base["reason"] = type(exc).__name__ or "Exception"
+            logger.warning(
+                "Research Radar new-article French enrichment could not be queued error_type={}",
+                type(exc).__name__ or "Exception",
+            )
+            return base
+        base["task_uuid"] = queued.get("task_uuid")
+        base["status"] = (
+            "queued"
+            if queued.get("status") == "queued"
+            else str(queued.get("status") or "skipped")
+        )
+        if queued.get("reason"):
+            base["reason"] = queued["reason"]
+        return base
 
     async def trigger_enrichment(
         self,

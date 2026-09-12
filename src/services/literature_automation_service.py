@@ -351,6 +351,15 @@ def decide_summary(
             or alignment.get("canonical_summary_fingerprint") != expected_canonical_summary_fingerprint
         ):
             return AutomationDecision("hold", ("bilingual canonical alignment evidence is missing or stale",))
+    if getattr(summary, "language", None) == "fr" and int(metadata.get("protocol_version") or 0) >= 2:
+        alignment = metadata.get("translation_alignment")
+        if not isinstance(alignment, dict) or (
+            alignment.get("protocol_version") != "canonical-en-translation.v2"
+            or alignment.get("canonical_language") != "en"
+            or alignment.get("target_language") != "fr"
+            or alignment.get("canonical_summary_fingerprint") != expected_canonical_summary_fingerprint
+        ):
+            return AutomationDecision("hold", ("French canonical alignment evidence is missing or stale",))
     if "verbatim-overlap" in str(summary.review_notes or "").lower():
         return AutomationDecision("hold", ("verbatim overlap was detected during generation",))
     required_fields = {

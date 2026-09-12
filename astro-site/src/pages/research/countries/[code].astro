@@ -16,6 +16,8 @@ const file = resolve(`./src/data/research/countries/${facet.slug}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [] };
 const description = `Published infectious-disease research classified with a high-confidence geographic relationship to ${facet.name_en}.`;
 const descriptionZh = `与${facet.name_zh ?? facet.name_en}形成高置信度地理分类关系的已发布传染病研究。`;
+const countryNameFr = facet.name_fr ?? facet.name_en;
+const descriptionFr = `通过高置信度地理分类关系与 ${countryNameFr} 相关的已发布传染病研究。`;
 ---
 
 <ResearchCollectionPage
@@ -23,8 +25,10 @@ const descriptionZh = `与${facet.name_zh ?? facet.name_en}形成高置信度地
   eyebrowZh="地区证据专题"
   title={`${facet.name_en} research`}
   titleZh={`${facet.name_zh ?? facet.name_en}研究`}
+  titleFr={`Recherche sur ${countryNameFr}`}
   description={description}
   descriptionZh={descriptionZh}
+  descriptionFr={descriptionFr}
   canonicalPath={`/research/countries/${facet.slug}/`}
   articles={payload.articles ?? []}
   clientCollectionScope="country"

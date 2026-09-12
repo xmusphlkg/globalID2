@@ -5,6 +5,7 @@ import { compactResearchArticle } from './research-catalogue.ts';
 test('compact catalogue retains every field used by client-side research filters', () => {
   const compact = compactResearchArticle({
     article_id: 'a1', slug: 'a1', title: 'Study', publisher: 'Publisher',
+    publication_week: '2026-W37',
     authors: ['First Author', 'Second Author'],
     pathogens: [{ id: 'p1', name: 'Pathogen' }],
     pathogen_types: [{ id: 'virus', name: 'Virus' }],
@@ -14,6 +15,7 @@ test('compact catalogue retains every field used by client-side research filters
   });
 
   assert.equal(compact.publisher, 'Publisher');
+  assert.equal(compact.publication_week, '2026-W37');
   assert.deepEqual(compact.authors, ['First Author', 'Second Author']);
   assert.deepEqual(compact.pathogens, [{ id: 'p1', name: 'Pathogen' }]);
   assert.deepEqual(compact.pathogen_types, [{ id: 'virus', name: 'Virus' }]);
