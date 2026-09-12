@@ -5143,7 +5143,7 @@ export interface components {
                 [key: string]: string | null;
             } | null;
             /** Summary Language */
-            summary_language?: ("en" | "zh") | null;
+            summary_language?: ("en" | "zh" | "fr") | null;
             /** Summary Status */
             summary_status?: ("draft" | "review" | "published" | "rejected") | null;
         };
@@ -5203,7 +5203,7 @@ export interface components {
              */
             force: boolean;
             /** Languages */
-            languages?: ("en" | "zh")[];
+            languages?: ("en" | "zh" | "fr")[];
             /** Limit */
             limit?: number | null;
         };

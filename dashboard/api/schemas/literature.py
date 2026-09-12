@@ -64,7 +64,7 @@ class LiteratureArticleUpdate(BaseModel):
     publication_status: PublicationStatus | None = None
     is_featured: bool | None = None
     editorial_note: str | None = Field(default=None, max_length=2000)
-    summary_language: Literal["en", "zh"] | None = None
+    summary_language: Literal["en", "zh", "fr"] | None = None
     summary: dict[str, str | None] | None = None
     summary_status: SummaryStatus | None = None
 
@@ -103,7 +103,7 @@ class LiteratureAutomationRequest(BaseModel):
 
 class LiteratureEnrichmentRequest(BaseModel):
     article_ids: list[str] = Field(default_factory=list, max_length=50)
-    languages: list[Literal["en", "zh"]] = Field(default_factory=lambda: ["en", "zh"])
+    languages: list[Literal["en", "zh", "fr"]] = Field(default_factory=lambda: ["en", "zh", "fr"])
     limit: int | None = Field(default=None, ge=1, le=50)
     force: bool = False
 
