@@ -394,7 +394,7 @@ export default function EpidemicCurve({
       const provisionalFrom = getEffectiveProvisionalFrom(item);
       return {
         id,
-        name: lang === 'zh' ? item.name_zh : lang === 'fr' ? (item.name_fr ?? item.name_en) : item.name_en,
+        name: lang === 'zh' ? item.name_zh : lang === 'fr' ? (item.name_fr ?? 'Nom français indisponible') : item.name_en,
         color: colorById.get(id) ?? SERIES_COLORS[0],
         dates: clipped.dates,
         values: clipped.values,
@@ -496,7 +496,7 @@ export default function EpidemicCurve({
       if (fragments.length === 0) return [];
       return [{
         id,
-        name: lang === 'zh' ? item.name_zh : lang === 'fr' ? (item.name_fr ?? item.name_en) : item.name_en,
+        name: lang === 'zh' ? item.name_zh : lang === 'fr' ? (item.name_fr ?? 'Nom français indisponible') : item.name_en,
         fragments,
       }];
     })
@@ -723,7 +723,7 @@ export default function EpidemicCurve({
           return (
             <label key={control.id} className="block min-w-0 text-xs text-[rgb(var(--text-muted))]">
               <span className="mb-1 block truncate font-medium text-[rgb(var(--text-strong))]">
-                {lang === 'zh' ? control.item.name_zh : lang === 'fr' ? (control.item.name_fr ?? control.item.name_en) : control.item.name_en}
+                {lang === 'zh' ? control.item.name_zh : lang === 'fr' ? (control.item.name_fr ?? 'Nom français indisponible') : control.item.name_en}
               </span>
               <select
                 id={`epidemic-curve-source-${control.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
@@ -745,7 +745,7 @@ export default function EpidemicCurve({
                 aria-label={lang === 'zh'
                   ? `${control.item.name_zh}曲线来源序列`
                   : lang === 'fr'
-                    ? `${control.item.name_fr ?? control.item.name_en} — séries sources`
+                    ? `${control.item.name_fr ?? 'Nom français indisponible'} — séries sources`
                     : `${control.item.name_en} curve source series`}
               >
                 {control.publicProjectionAvailable ? (

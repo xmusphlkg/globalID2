@@ -2,28 +2,31 @@
 import ReportLayout from '../layouts/ReportLayout.astro';
 import { buildAlternatePaths, type SeoDocument } from '../lib/seo';
 import { formatDate, type SituationReportV3 } from '../utils/situation';
+import { translateUi } from '../utils/i18n';
 
 interface Props { kind: 'weekly' | 'monthly'; reports: SituationReportV3[]; locale?: 'en' | 'zh' | 'fr'; }
 const { kind, reports, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 const titleWord = kind === 'weekly' ? 'Weekly' : 'Monthly';
 const titleZh = kind === 'weekly' ? '周报' : '月报';
+const titleFr = kind === 'weekly' ? 'hebdomadaires' : 'mensuels';
 const canonicalPath = `${prefix}/situation/${kind}/`;
 const seo: SeoDocument = {
-  title: pick(`${titleWord} Situation Reports | GIDS`, `传染病态势${titleZh} | GIDS`),
-  description: pick(`${titleWord} period reports of new, persistent, resolved, and end-active infectious-disease review signals.`, `汇总新增、持续、消退及期末活跃传染病复核信号的${titleZh}。`),
+  title: pick(`${titleWord} Situation Reports | GIDS`, `传染病态势${titleZh} | GIDS`, `Rapports de situation ${titleFr} | GIDS`),
+  description: pick(`${titleWord} period reports of new, persistent, resolved, and end-active infectious-disease review signals.`, `汇总新增、持续、消退及期末活跃传染病复核信号的${titleZh}。`, `Rapports de situation ${titleFr} regroupant les signaux nouveaux, persistants, résolus et actifs en fin de période.`),
   canonicalPath,
   alternatePaths: buildAlternatePaths(canonicalPath, locale),
   noindex: reports.length === 0,
 };
 ---
 
-<ReportLayout title={pick(`${titleWord} Situation Reports`, `传染病态势${titleZh}`)} description={seo.description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室'), href: `${prefix}/situation/` }, { label: pick(`${titleWord} reports`, titleZh) }]}>
+<ReportLayout title={pick(`${titleWord} Situation Reports`, `传染病态势${titleZh}`, `Rapports de situation ${titleFr}`)} description={seo.description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室'), href: `${prefix}/situation/` }, { label: pick(`${titleWord} reports`, titleZh, `Rapports ${titleFr}`) }]}>
   <div class="archive max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-    <header><p>{pick('Period archive', '期间报告归档')}</p><h1>{pick(`${titleWord} Situation Reports`, `传染病态势${titleZh}`)}</h1><span>{pick('Each report aggregates all gate-passed daily runs in the period; later upstream revisions create a new immutable revision.', '每份报告聚合期间内全部通过质量门的日运行；上游修订将生成新的不可变修订版。')}</span></header>
-    {reports.length ? <ol>{[...reports].reverse().map(report => <li><a href={`${prefix}/situation/${kind}/${report.report.period_key}/`}><b>{report.report.period_key}</b><span>{formatDate(report.report.period_start)} – {formatDate(report.report.period_end)}</span><dl><div><dt>{pick('New', '新增')}</dt><dd>{report.summary.new_count}</dd></div><div><dt>{pick('Persistent', '持续')}</dt><dd>{report.summary.persistent_count}</dd></div><div><dt>{pick('Resolved', '消退')}</dt><dd>{report.summary.resolved_count}</dd></div><div><dt>{pick('Active', '活跃')}</dt><dd>{report.summary.active_at_period_end_count}</dd></div></dl><small><i>{pick('revision', '修订版')}</i> {report.report.revision} · {formatDate(report.report.as_of)}</small></a></li>)}</ol> : <p class="empty">{pick(`No gate-passed ${kind} report has been published yet.`, `尚无通过质量门的${titleZh}。`)}</p>}
+    <header><p>{pick('Period archive', '期间报告归档')}</p><h1>{pick(`${titleWord} Situation Reports`, `传染病态势${titleZh}`, `Rapports de situation ${titleFr}`)}</h1><span>{pick('Each report aggregates all gate-passed daily runs in the period; later upstream revisions create a new immutable revision.', '每份报告聚合期间内全部通过质量门的日运行；上游修订将生成新的不可变修订版。', 'Chaque rapport agrège les exécutions quotidiennes validées de la période ; toute révision amont crée une nouvelle révision immuable.')}</span></header>
+    {reports.length ? <ol>{[...reports].reverse().map(report => <li><a href={`${prefix}/situation/${kind}/${report.report.period_key}/`}><b>{report.report.period_key}</b><span>{formatDate(report.report.period_start, locale)} – {formatDate(report.report.period_end, locale)}</span><dl><div><dt>{pick('New', '新增', 'Nouveaux')}</dt><dd>{report.summary.new_count}</dd></div><div><dt>{pick('Persistent', '持续', 'Persistants')}</dt><dd>{report.summary.persistent_count}</dd></div><div><dt>{pick('Resolved', '消退', 'Résolus')}</dt><dd>{report.summary.resolved_count}</dd></div><div><dt>{pick('Active', '活跃', 'Actifs')}</dt><dd>{report.summary.active_at_period_end_count}</dd></div></dl><small><i>{pick('revision', '修订版', 'révision')}</i> {report.report.revision} · {formatDate(report.report.as_of, locale)}</small></a></li>)}</ol> : <p class="empty">{pick(`No gate-passed ${kind} report has been published yet.`, `尚无通过质量门的${titleZh}。`, `Aucun rapport ${titleFr} validé n’a encore été publié.`)}</p>}
   </div>
 </ReportLayout>
 

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
 import researchData from '../../../data/research/index.json';
-import { DISEASE_NAMES_FR } from '../../../utils/diseaseNames';
+import { localizedDiseaseName } from '../../../utils/diseaseNames';
 
 export function getStaticPaths() {
   return ((researchData as any).facets?.diseases ?? []).map((facet: any) => ({
@@ -35,13 +35,14 @@ const maxCases = Math.max(1, ...timeline.map((item) => item.cases));
 const maxPublications = Math.max(1, ...timeline.map((item) => item.publications));
 const description = `A curated view of published ${facet.name_en} research, auditable classifier relationships, and the available GIDS surveillance timeline.`;
 const descriptionZh = `${facet.name_zh ?? facet.name_en}已发布研究、可审计分类关系与可用 GIDS 监测时间线的专题视图。`;
-const diseaseNameFr = facet.name_fr ?? DISEASE_NAMES_FR[String(facet.slug).toLowerCase()] ?? facet.name_en;
+const diseaseNameFr = localizedDiseaseName(facet, 'fr');
 const descriptionFr = `Une vue ciblée des recherches publiées sur ${diseaseNameFr}, des relations de classification auditables et de la chronologie de surveillance GIDS disponible.`;
 ---
 
 <ResearchCollectionPage
   eyebrow="Disease evidence hub"
   eyebrowZh="疾病证据专题"
+  eyebrowFr="Pôle de preuves sur la maladie"
   title={facet.name_en}
   titleZh={facet.name_zh ?? facet.name_en}
   titleFr={diseaseNameFr}

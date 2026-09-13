@@ -1,11 +1,13 @@
 ---
 import type { SituationReportV3 } from '../utils/situation';
-import { formatDate, formatNumber, label, labelZh } from '../utils/situation';
+import { formatDate, formatNumber, label, labelFr, labelZh } from '../utils/situation';
+import { translateUi } from '../utils/i18n';
 
 interface Props { snapshot: SituationReportV3; locale?: 'en' | 'zh' | 'fr'; }
 const { snapshot, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const fr = locale === 'fr';
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 const slices = [...(snapshot.data_currency.by_source ?? [])].sort((left, right) => {
   const rank = (status: string) => ({ stale: 0, failed: 0, partial: 1, not_checked: 2, fresh: 3 })[status] ?? 2;
   return rank(left.status) - rank(right.status) || left.source_system.localeCompare(right.source_system);
@@ -25,7 +27,7 @@ const readiness = snapshot.coverage.evaluated_series_count > 0
     <div>
       <p>{pick('Data readiness', '数据就绪度')}</p>
       <h2 id="readiness-title">{pick('Compare only mature source periods', '仅比较已成熟的来源周期')}</h2>
-      <span>{pick('Each feed advances on its own schedule. New periods are held back until the source cohort is sufficiently complete; delayed feeds do not enter the current FDR family.', '各来源按自身节奏更新。新周期只有在来源序列群达到足够完整度后才进入分析；延迟来源不进入当期 FDR 检验族。')}</span>
+      <span>{pick('Each feed advances on its own schedule. New periods are held back until the source cohort is sufficiently complete; delayed feeds do not enter the current FDR family.', '各来源按自身节奏更新。新周期只有在来源序列群达到足够完整度后才进入分析；延迟来源不进入当期 FDR 检验族。', 'Chaque flux avance selon son propre calendrier. Les nouvelles périodes sont retenues jusqu’à ce que la cohorte source soit suffisamment complète ; les flux retardés ne rejoignent pas la famille FDR actuelle.')}</span>
     </div>
     <div class="readiness-score">
       <b>{readiness === null ? '—' : `${Math.round(readiness * 100)}%`}</b>
@@ -43,7 +45,7 @@ const readiness = snapshot.coverage.evaluated_series_count > 0
 
   <details class="source-ledger">
     <summary>
-      <span>{pick(`Inspect ${slices.length} source / cadence groups`, `查看 ${slices.length} 个来源 / 频率组`)}</span>
+      <span>{pick(`Inspect ${slices.length} source / cadence groups`, `查看 ${slices.length} 个来源 / 频率组`, `Examiner ${slices.length} groupes source / fréquence`)}</span>
       <small>{pick('Analysis through · latest received · cohort readiness', '分析截至 · 最新收到 · 来源群就绪度')}</small>
     </summary>
     <div class="source-table" role="table" aria-label={pick('Source data readiness', '来源数据就绪度')}>
@@ -57,11 +59,11 @@ const readiness = snapshot.coverage.evaluated_series_count > 0
       {slices.map(slice => {
         const ratio = slice.readiness_ratio ?? (slice.status === 'fresh' ? 1 : 0);
         return <div class={`source-row status-${slice.status}`} role="row">
-          <span role="cell"><b>{slice.source_system}</b><small>{pick(label(slice.cadence || 'mixed'), labelZh(slice.cadence || 'mixed'))}</small></span>
-          <span role="cell"><b>{formatDate(slice.comparable_through || slice.latest_data_through)}</b><small>{slice.analyzed_series_count} <i>{pick('series analyzed', '条序列已分析')}</i></small></span>
-          <span role="cell"><b>{formatDate(slice.latest_available_through || slice.latest_data_through)}</b><small>{slice.held_back_series_count ?? 0} <i>{pick('held back', '条暂缓')}</i></small></span>
-          <span role="cell" class="meter-cell"><span class="meter"><i style={`width:${Math.round(ratio * 100)}%`}></i></span><small>{formatNumber(ratio * 100, 0)}%</small></span>
-          <span role="cell"><em>{pick(label(slice.status), labelZh(slice.status))}</em>{(slice.delayed_series_count ?? 0) > 0 && <small>{slice.delayed_series_count} <i>{pick('delayed', '条延迟')}</i></small>}</span>
+          <span role="cell"><b>{slice.source_system}</b><small>{pick(label(slice.cadence || 'mixed'), labelZh(slice.cadence || 'mixed'), labelFr(slice.cadence || 'mixed'))}</small></span>
+          <span role="cell"><b>{formatDate(slice.comparable_through || slice.latest_data_through, locale)}</b><small>{slice.analyzed_series_count} <i>{pick('series analyzed', '条序列已分析')}</i></small></span>
+          <span role="cell"><b>{formatDate(slice.latest_available_through || slice.latest_data_through, locale)}</b><small>{slice.held_back_series_count ?? 0} <i>{pick('held back', '条暂缓')}</i></small></span>
+          <span role="cell" class="meter-cell"><span class="meter"><i style={`width:${Math.round(ratio * 100)}%`}></i></span><small>{formatNumber(ratio * 100, 0, locale)}%</small></span>
+          <span role="cell"><em>{pick(label(slice.status), labelZh(slice.status), labelFr(slice.status))}</em>{(slice.delayed_series_count ?? 0) > 0 && <small>{slice.delayed_series_count} <i>{pick('delayed', '条延迟')}</i></small>}</span>
         </div>;
       })}
     </div>

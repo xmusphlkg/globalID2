@@ -1295,6 +1295,8 @@ async def test_enrichment_generation_failures_record_attempts_and_stop_requeue(m
     assert db.summary.generation_metadata["publication_gate"] == "generation-failed"
     assert db.summary.generation_metadata["quality_attempts"] == 1
     assert db.summary.generation_metadata["last_generation_error"] == "ValueError"
+    assert db.summary.generation_metadata["translation_provenance"]["target_language"] == "zh"
+    assert db.summary.generation_metadata["translation_provenance"]["status"] == "retry_pending"
     assert await pipeline._should_skip(article, language="zh", force=False) is False
 
     await pipeline._store_failure(
@@ -1335,6 +1337,7 @@ async def test_transient_enrichment_failures_do_not_consume_quality_attempts(mon
     assert db.summary.generation_metadata["publication_gate"] == "generation-transient-failure"
     assert db.summary.generation_metadata["quality_attempts"] == 0
     assert db.summary.generation_metadata["last_generation_error_transient"] is True
+    assert "translation_provenance" not in db.summary.generation_metadata
     assert await pipeline._should_skip(article, language="en", force=False) is False
 
 

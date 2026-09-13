@@ -6,6 +6,7 @@ import ResearchArticleCard from './ResearchArticleCard.astro';
 interface Props { diseaseId: string; locale?: 'en' | 'zh' | 'fr' }
 const { diseaseId, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const file = resolve(`./src/data/research/diseases/${diseaseId.toLowerCase()}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : null;
@@ -17,18 +18,18 @@ const previewArticles = articles.slice(0, 5);
   <section class="figure-panel disease-research-panel">
     <div class="research-panel-heading">
       <div>
-        <p class="academic-kicker">{zh ? '研究雷达' : 'Research Radar'}</p>
-        <h2 class="figure-title mt-1">{zh ? '近期相关研究' : 'Recent related research'}</h2>
+        <p class="academic-kicker">{zh ? '研究雷达' : fr ? 'Radar de recherche' : 'Research Radar'}</p>
+        <h2 class="figure-title mt-1">{zh ? '近期相关研究' : fr ? 'Recherches récentes associées' : 'Recent related research'}</h2>
       </div>
-      <a href={`${prefix}/research/?disease=${diseaseId}`}>{zh ? '查看全部研究 →' : 'View all research →'}</a>
+      <a href={`${prefix}/research/?disease=${diseaseId}`}>{zh ? '查看全部研究 →' : fr ? 'Voir toutes les recherches →' : 'View all research →'}</a>
     </div>
     <div class="mt-5">{previewArticles.map((article: any) => <ResearchArticleCard article={article} compact locale={locale} />)}</div>
     {articles.length > previewArticles.length && (
       <p class="research-panel-count">
-        {zh ? `显示 ${articles.length} 篇相关论文中的 ${previewArticles.length} 篇。` : `Showing ${previewArticles.length} of ${articles.length} related publications.`}
+        {zh ? `显示 ${articles.length} 篇相关论文中的 ${previewArticles.length} 篇。` : fr ? `${previewArticles.length} publications associées sur ${articles.length} affichées.` : `Showing ${previewArticles.length} of ${articles.length} related publications.`}
       </p>
     )}
-    <p class="research-panel-note">{zh ? '文献链接仅用于发现研究，不会改变或验证上方的监测序列。' : 'Literature links are provided for discovery and do not alter or validate the surveillance series above.'}</p>
+    <p class="research-panel-note">{zh ? '文献链接仅用于发现研究，不会改变或验证上方的监测序列。' : fr ? 'Les liens bibliographiques servent à découvrir des travaux et ne modifient ni ne valident la série de surveillance ci-dessus.' : 'Literature links are provided for discovery and do not alter or validate the surveillance series above.'}</p>
   </section>
 )}
 

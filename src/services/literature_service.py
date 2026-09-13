@@ -915,6 +915,16 @@ class LiteratureService:
                 "source": "Model Center evidence agent",
                 "batch_size": cfg.ai_enrichment_batch_size,
                 "languages": cfg.ai_enrichment_languages,
+                "translation_queue": (
+                    ((latest_enrichment.output_data or {}).get("summaries") or {}).get("translation_queue")
+                    if latest_enrichment is not None and isinstance(latest_enrichment.output_data, dict)
+                    else None
+                ),
+                "language_counts": (
+                    ((latest_enrichment.output_data or {}).get("summaries") or {}).get("language_counts")
+                    if latest_enrichment is not None and isinstance(latest_enrichment.output_data, dict)
+                    else None
+                ),
                 "catch_up_interval_minutes": getattr(
                     cfg,
                     "ai_enrichment_catch_up_interval_minutes",

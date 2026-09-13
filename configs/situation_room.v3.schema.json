@@ -623,6 +623,10 @@
         "zh": {
           "title": "Zh",
           "type": "string"
+        },
+        "fr": {
+          "title": "Fr",
+          "type": "string"
         }
       },
       "required": [

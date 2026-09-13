@@ -4,13 +4,14 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
 import DiseaseCard from '../../components/DiseaseCard.astro';
 import diseasesRaw from '../../data/diseases/index.json';
 import { buildAlternatePaths } from '../../lib/seo';
-import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { translateUi } from '../../utils/i18n';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 
 const diseases = diseasesRaw as any[];
 
@@ -133,14 +134,14 @@ const catCounts = Object.fromEntries(
                 class="disease-card-wrap"
                 data-name-en={(d.name_en ?? '').toLowerCase()}
                 data-name-zh={(d.name_zh ?? '').toLowerCase()}
-                data-name-fr={(d.name_fr ?? DISEASE_NAMES_FR[d.slug] ?? d.name_en ?? '').toLowerCase()}
+                data-name-fr={localizedDiseaseName(d, 'fr').toLowerCase()}
                 data-icd={(d.icd_10 ?? '').toLowerCase()}
               >
                 <DiseaseCard
                   diseaseId={d.disease_id}
                   nameEn={d.name_en}
                   nameZh={d.name_zh}
-                  nameFr={d.name_fr ?? DISEASE_NAMES_FR[d.slug] ?? d.name_en}
+                  nameFr={localizedDiseaseName(d, 'fr')}
                   category={d.normalized_category}
                   icd10={d.icd_10}
                   description={d.description}

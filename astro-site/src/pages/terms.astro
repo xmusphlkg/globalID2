@@ -4,8 +4,24 @@ import { buildAlternatePaths } from '../lib/seo';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => {
+  if (fr) {
+    if (frValue === undefined) throw new Error(`Missing French terms translation: ${String(en)}`);
+    return frValue;
+  }
+  return zh ? zhValue : en;
+};
+const termsFr: Record<string, string> = {
+  Purpose: 'Objet', 'Source basis': 'Base des sources', 'Use boundary': 'Limites d’utilisation', 'Commercial use': 'Usage commercial',
+  '1. Acceptance and Scope': '1. Acceptation et champ d’application', '2. Service Purpose': '2. Objet du service', '3. Not-for-Profit Nature and Commercial Use Restrictions': '3. Nature non lucrative et restrictions commerciales',
+  '4. Informational Use Only': '4. Usage informatif uniquement', '5. Data Sources and Methodology': '5. Sources et méthodologie des données', '6. AI-Assisted Reports and Automated Processing': '6. Rapports assistés par IA et traitement automatisé',
+  '7. Subscriptions and Email Communications': '7. Abonnements et communications électroniques', '8. User Responsibilities': '8. Responsabilités de l’utilisateur', '9. Intellectual Property, Attribution, and Reuse': '9. Propriété intellectuelle, attribution et réutilisation',
+  '10. Privacy Notice': '10. Avis de confidentialité', '11. Local Storage, Cookies, and Security Controls': '11. Stockage local, cookies et contrôles de sécurité', '12. Children and Minors': '12. Enfants et mineurs',
+  '13. Third-Party Services and Links': '13. Services et liens tiers', '14. Availability, Maintenance, and Changes': '14. Disponibilité, maintenance et modifications', '15. Disclaimers': '15. Avertissements',
+  '16. Limitation of Liability': '16. Limitation de responsabilité', '17. Suspension and Enforcement': '17. Suspension et application', '18. Changes to These Terms': '18. Modifications des présentes conditions', '19. Contact and Requests': '19. Contact et demandes',
+};
 
 const updatedAt = 'August 18, 2026';
 
@@ -15,26 +31,98 @@ const summaryItems = [
     labelZh: '服务目的',
     valueEn: 'Public-interest infectious disease surveillance, charts, reports, and email updates.',
     valueZh: '面向公共利益的传染病监测、图表、报告与邮件更新。',
+    valueFr: 'Surveillance des maladies infectieuses d’intérêt public, graphiques, rapports et mises à jour par e-mail.',
   },
   {
     labelEn: 'Source basis',
     labelZh: '来源基础',
     valueEn: 'Official public health feeds, open data, public reports, and automated normalization.',
     valueZh: '官方公共卫生数据源、开放数据、公开报告与自动标准化处理。',
+    valueFr: 'Flux officiels de santé publique, données ouvertes, rapports publics et normalisation automatisée.',
   },
   {
     labelEn: 'Use boundary',
     labelZh: '使用边界',
     valueEn: 'Informational only; not medical advice, legal advice, or an official emergency alert system.',
     valueZh: '仅供信息参考；不构成医疗建议、法律建议或官方应急预警系统。',
+    valueFr: 'À titre informatif uniquement ; ne constitue ni un avis médical ou juridique, ni un système officiel d’alerte d’urgence.',
   },
   {
     labelEn: 'Commercial use',
     labelZh: '商业使用',
     valueEn: 'Not-for-profit public-interest service; unauthorized commercial use is prohibited.',
     valueZh: '非营利公共利益服务；禁止未经授权的商业使用。',
+    valueFr: 'Service d’intérêt public sans but lucratif ; tout usage commercial non autorisé est interdit.',
   },
 ];
+
+// The body is kept as an ordered locale resource so adding a new language does
+// not require duplicating the legal document structure. Coverage is asserted
+// below before the page is rendered.
+const termsFrParagraphs = [
+  'Les présentes Conditions du service et le présent Avis de confidentialité régissent l’accès à GIDS et son utilisation, notamment le site public, les pages consacrées aux maladies et aux pays, les rapports générés, les graphiques, les données téléchargeables ou lisibles par machine et les services liés aux abonnements.',
+  'En consultant le site, en utilisant les données publiées, en envoyant un formulaire d’abonnement ou en interagissant autrement avec GIDS, vous acceptez les présentes conditions. Si vous ne les acceptez pas, n’utilisez pas le service et ne transmettez pas d’informations d’abonnement.',
+  'GIDS est un projet mondial de surveillance des maladies infectieuses conçu pour faciliter la recherche, la comparaison, la visualisation et le suivi des données officielles de surveillance dans différentes juridictions.',
+  'Le service peut comprendre la collecte et l’analyse automatisées de données, la normalisation des noms de maladies, l’attribution des sources de santé publique, des résumés multilingues assistés par IA, la génération de rapports, des abonnements à des alertes ou synthèses et des ressources de projet dont les sources sont visibles.',
+  'GIDS est fourni à des fins de recherche, d’enseignement, de journalisme, d’exploration de données ouvertes et de surveillance d’intérêt public. Il ne remplace ni les systèmes officiels de santé publique, ni le jugement clinique, ni l’examen épidémiologique professionnel, ni les communications d’urgence.',
+  'Le site public GIDS et le service d’abonnement sont exploités sans but lucratif, dans l’intérêt public et avec une orientation de recherche. Sauf indication expresse contraire de GIDS, l’accès au site public et aux fonctions publiques d’abonnement est gratuit.',
+  'Cette déclaration décrit la finalité opérationnelle du service public. Elle ne signifie pas que GIDS est un organisme de bienfaisance enregistré, une organisation exonérée d’impôt, une fondation ou une autre entité juridique à but non lucratif réglementée, sauf avis officiel distinct l’indiquant expressément.',
+  'Sans autorisation écrite préalable de GIDS, vous ne pouvez pas utiliser le site GIDS, les vues de données publiques, les rapports générés, les graphiques, les résumés, le système d’abonnement, le nom, les logos ou la marque pour des produits ou services commerciaux, la revente, la surveillance payante, des jeux de données propriétaires, la publicité, la prospection, l’entraînement de modèles, l’extraction commerciale automatisée ou toute autre activité génératrice de revenus.',
+  'Les usages non commerciaux autorisés comprennent l’apprentissage personnel, la citation universitaire, l’enseignement, le journalisme d’intérêt public, la recherche non commerciale et l’évaluation interne, à condition de conserver l’attribution, de ne pas dénaturer les données et de respecter les conditions propres à chaque source.',
+  'Toute autorisation commerciale doit être explicite et écrite. Le silence, l’absence de blocage technique, la disponibilité publique, la visibilité du dépôt ou la réception d’e-mails d’abonnement n’accordent aucune autorisation commerciale.',
+  'Cette restriction d’usage commercial s’applique au service public et aux contenus créés par GIDS. Si une licence logicielle distincte est publiée pour des fichiers identifiés du dépôt, elle régit ces fichiers. Le dépôt ne publie actuellement aucune LICENSE générale couvrant l’ensemble du code et sa seule visibilité n’accorde aucun droit supplémentaire de réutilisation. Les données de sources tierces restent régies par les conditions de leurs fournisseurs d’origine.',
+  'Le contenu de GIDS ne constitue ni un avis médical, un diagnostic, un conseil thérapeutique ou juridique, une instruction de politique publique, un conseil aux voyageurs, ni une directive officielle de santé publique.',
+  'Pour toute question médicale personnelle, consultez un professionnel de santé qualifié. Pour les nombres officiels de cas, les définitions de déclaration, les épidémies, les restrictions de voyage, les mesures de santé publique ou les urgences, consultez directement l’autorité gouvernementale ou sanitaire compétente.',
+  'N’utilisez pas GIDS comme seul fondement de décisions cliniques, d’interventions d’urgence, d’achats, de conformité juridique, d’investissement, d’assurance, d’emploi, de fermeture d’écoles, de contrôle aux frontières ou d’autres décisions à fort impact.',
+  'GIDS agrège et republie des vues dérivées d’informations publiques sur les maladies infectieuses provenant d’autorités sanitaires officielles, de portails de données ouvertes, de tableaux de bord publics, de rapports, d’API et d’autres sources indiquées sur le site.',
+  'Le projet normalise les noms, pays, périodes, cas, décès et champs associés dans un modèle de données commun. Cette opération améliore la comparabilité, mais peut aussi introduire des hypothèses de correspondance, des choix d’agrégation ou des incohérences temporaires.',
+  'Les données sources peuvent être retardées, corrigées, retirées, préliminaires, incomplètes, révisées ou fondées sur des définitions de cas différentes. GIDS peut mettre à jour les enregistrements lorsque les sources changent, sans pouvoir garantir une synchronisation en temps réel ni une correction historique complète.',
+  'Certains résumés, analyses, traductions, libellés ou rapports peuvent être générés ou assistés par des systèmes automatisés, notamment des modèles de langage, à partir d’enregistrements de surveillance issus de la base de données et de métadonnées de source.',
+  'Les contenus assistés par IA peuvent comporter des omissions, des interprétations obsolètes, des problèmes de traduction, des déductions non étayées ou des erreurs de raisonnement. Les utilisateurs doivent vérifier toute déclaration importante auprès des sources citées et des publications officielles.',
+  'GIDS peut appliquer des circuits de validation et des contrôles de qualité, mais la publication ne signifie pas que chaque déclaration automatisée a été examinée indépendamment par un médecin, un avocat, une autorité de santé publique ou un organisme de réglementation dûment habilité.',
+  'Lorsque vous demandez un abonnement, GIDS enregistre votre adresse e-mail, les listes sélectionnées, vos préférences de pays et de maladies, la langue, la fréquence d’envoi, le fuseau horaire, la page d’origine, l’état de confirmation et les métadonnées d’envoi nécessaires pour fournir les mises à jour demandées.',
+  'Une confirmation par e-mail peut être requise avant l’activation de l’abonnement. Les confirmations, synthèses, rapports, alertes, avis de nouvelle soumission ou messages de service peuvent être envoyés par GIDS Alerts ou par un autre expéditeur publié par GIDS.',
+  'Chaque envoi d’abonnement est destiné à inclure un mécanisme de désabonnement ou de gestion des préférences lorsqu’il est techniquement disponible et légalement requis. Vous pouvez interrompre les futurs e-mails d’abonnement au moyen du lien de désabonnement signé ou du canal de contact publié par GIDS.',
+  'Les e-mails d’abonnement doivent identifier correctement l’expéditeur et ne pas employer d’objet ou d’informations d’acheminement substantiellement trompeurs. Lorsqu’un message est promotionnel ou nécessite d’autres mentions, GIDS doit inclure les informations légalement requises sur l’expéditeur, le contact et le refus de réception.',
+  'La remise des e-mails n’est pas garantie. Les messages peuvent être retardés, filtrés, bloqués, dupliqués ou échouer en raison des limites du fournisseur, des réglages du destinataire, des contrôles de sécurité ou d’une infrastructure tierce.',
+  'Il vous incombe d’évaluer si le contenu de GIDS convient à votre usage, de confirmer les informations auprès des sources primaires et de respecter les lois, obligations professionnelles, exigences d’examen institutionnel et conditions propres aux sources applicables à votre utilisation.',
+  'Vous ne devez pas transmettre l’adresse e-mail d’une autre personne sans autorisation, perturber le service, contourner les contrôles de sécurité, présenter les productions de GIDS comme une publication gouvernementale officielle, supprimer l’attribution des sources ni utiliser le service pour envoyer du spam, des logiciels malveillants, des contenus trompeurs ou illicites.',
+  'Tout accès automatisé, extraction, mise en miroir ou téléchargement en masse doit respecter les directives robots, les consignes d’API publiées, les limites de débit, les en-têtes de cache, les conditions des sources et les contraintes raisonnables de charge.',
+  'Les droits sont réservés, lorsqu’ils peuvent être protégés, sur le logiciel GIDS, la conception du site, la présentation générée, la documentation et les textes originaux, sauf autorisation expresse, licence propre à un fichier ou exception légale applicable. L’avis distinct sur les droits d’auteur et la réutilisation décrit les différentes couches de droits et les pratiques d’attribution actuelles.',
+  'Les données sources de santé publique restent soumises aux droits, licences, avertissements et exigences d’attribution des autorités sources ou fournisseurs de données d’origine. GIDS ne revendique pas la propriété des contenus de tiers.',
+  'Lorsque vous réutilisez des jeux de données, graphiques ou rapports dérivés de GIDS, conservez l’attribution des sources, citez GIDS et les sources primaires concernées, indiquez la date de consultation ou de génération et évitez de suggérer une approbation de GIDS ou d’une autorité sanitaire.',
+  'Vous ne pouvez pas utiliser les noms, logos, habillages, captures d’écran, rapports, graphiques ou vues de données de GIDS d’une manière suggérant un parrainage, une certification, un partenariat, une approbation officielle ou un statut d’autorité de santé publique sans autorisation écrite expresse.',
+  'GIDS ne collecte que les informations personnelles raisonnablement nécessaires pour fournir les abonnements, maintenir la sécurité, diagnostiquer les erreurs, prévenir les abus, enregistrer le consentement et les événements d’audit et exploiter le site.',
+  'Les dossiers d’abonnement peuvent inclure l’adresse e-mail, des valeurs de recherche hachées de l’adresse, les préférences, la langue, le fuseau horaire, les jetons de confirmation et de désabonnement, l’état d’envoi, le domaine du destinataire, des journaux techniques, l’agent utilisateur et des métadonnées IP hachées ou autrement minimisées.',
+  'GIDS ne vend pas les adresses e-mail des abonnés et ne les utilise pas pour de la publicité ciblée. Les prestataires d’hébergement, de base de données, de sécurité, d’e-mail, d’analyse ou de dépôt peuvent traiter les informations uniquement dans la mesure nécessaire au fonctionnement du service.',
+  'Les données peuvent être traitées dans des pays autres que votre pays de résidence. GIDS applique des garanties techniques et organisationnelles raisonnables, mais aucun service Internet ne peut garantir une sécurité absolue.',
+  'Les données d’abonnement sont généralement conservées pendant la durée de l’abonnement, puis durant une période raisonnable à des fins d’audit, de sécurité, de liste d’opposition, de sauvegarde, juridiques ou opérationnelles. Les journaux agrégés, dépersonnalisés ou de sécurité peuvent être conservés plus longtemps lorsque cela est approprié.',
+  'Selon votre lieu de résidence, vous pouvez disposer de droits d’accès, de rectification, d’effacement, de limitation, d’exportation, d’opposition au traitement, de retrait du consentement ou de plainte auprès d’une autorité de contrôle. Utilisez le canal de contact publié pour formuler une demande relative à la vie privée.',
+  'Lorsque le consentement fonde l’envoi des e-mails d’abonnement, son retrait met fin aux futurs envois après traitement de la demande, sans affecter les traitements déjà réalisés ni les informations conservées à des fins légitimes de sécurité, d’audit, de liste d’opposition ou juridiques.',
+  'Le site peut utiliser le stockage local ou des fonctions similaires du navigateur pour mémoriser les préférences de langue et de thème. Ces préférences sont enregistrées dans votre navigateur et peuvent être effacées dans ses paramètres.',
+  'GIDS peut utiliser des cookies, des jetons anti-abus, des signaux de limitation de débit, des en-têtes de sécurité, des liens de vérification par e-mail ou des services de sécurité tiers pour protéger le système d’abonnement et le site public.',
+  'Le site public actuel n’est pas conçu autour de la publicité ciblée ou du suivi publicitaire comportemental. Si cela change, GIDS devra mettre à jour le présent avis avant d’utiliser les informations d’abonnement à des fins substantiellement différentes.',
+  'GIDS s’adresse aux chercheurs, étudiants, journalistes, professionnels de santé publique, développeurs et lecteurs intéressés par les données de surveillance. Il n’est pas destiné aux enfants de moins de 13 ans ni aux enfants n’ayant pas atteint l’âge minimal de consentement numérique dans leur juridiction.',
+  'Les mineurs ne doivent utiliser GIDS qu’avec l’autorisation et sous la supervision d’un parent, d’un tuteur, d’un enseignant ou d’un autre adulte responsable. Ne transmettez pas de données personnelles concernant un enfant sans y être autorisé.',
+  'Si GIDS apprend avoir recueilli des informations personnelles d’abonnement concernant un enfant alors qu’un consentement parental ou une autre base légale est requis mais indisponible, GIDS peut supprimer ou désactiver les informations d’abonnement concernées.',
+  'GIDS peut proposer des liens vers des autorités sanitaires officielles, des portails sources, GitHub, des fournisseurs d’infrastructure ou d’e-mail, des outils d’analyse ou d’autres services tiers. Ces services sont régis par leurs propres conditions et pratiques de confidentialité.',
+  'GIDS n’est pas responsable de la disponibilité, de l’exactitude, de la sécurité ou des politiques des sites ou services tiers. Les liens sont fournis pour la transparence des sources et la commodité, et non à titre d’approbation.',
+  'GIDS peut à tout moment ajouter, modifier, suspendre, restreindre ou supprimer des fonctionnalités, pays, maladies, rapports, listes d’abonnement, jeux de données ou méthodes d’accès, notamment pour la maintenance, l’examen de la qualité des données, la prévention des abus, la conformité juridique, la maîtrise des coûts ou les priorités du projet.',
+  'Le service peut être indisponible pendant les reconstructions, déploiements, interruptions des sources, contrôles de sécurité, incidents d’infrastructure ou perturbations de fournisseurs en amont.',
+  'GIDS est fourni « en l’état » et « selon disponibilité ». Dans toute la mesure permise par la loi, GIDS exclut toute garantie d’exactitude, d’exhaustivité, d’actualité, de fiabilité, d’adéquation à un usage particulier, d’absence de contrefaçon, de disponibilité ininterrompue ou de fonctionnement sans erreur.',
+  'GIDS ne garantit pas que les données publiées reflètent la situation officielle la plus récente, que les correspondances automatisées sont exactes, que les rapports générés sont complets ni que les alertes d’abonnement arriveront avant qu’un événement de santé publique concerné n’évolue.',
+  'Dans toute la mesure permise par la loi, GIDS, ses responsables, contributeurs, fournisseurs d’infrastructure et autres participants au projet ne pourront être tenus responsables de dommages indirects, accessoires, particuliers, consécutifs, exemplaires, punitifs ou fondés sur la confiance, résultant de l’utilisation ou de l’impossibilité d’utiliser le service.',
+  'Cela comprend notamment les pertes liées à des décisions médicales, de santé publique, opérationnelles, commerciales, universitaires, réglementaires, de voyage, d’achat, financières ou de réputation prises à partir du contenu de GIDS.',
+  'Rien dans les présentes conditions ne limite une responsabilité qui ne peut être limitée en vertu du droit applicable.',
+  'GIDS peut bloquer, limiter le débit, suspendre, supprimer ou refuser les accès, abonnements ou requêtes automatisées qui paraissent abusifs, illicites, sensibles pour la sécurité, attentatoires à la vie privée, trompeurs ou incompatibles avec les présentes conditions.',
+  'Si vous estimez qu’un accès a été restreint par erreur, utilisez le canal de contact publié et fournissez suffisamment de contexte pour permettre son examen.',
+  'Tout usage commercial non autorisé peut entraîner la résiliation de l’accès, le retrait de l’autorisation, des demandes de suppression ou de correction d’attribution, la suspension des abonnements et tout autre recours prévu par le droit applicable.',
+  'GIDS peut mettre à jour les présentes conditions à mesure que le projet, les sources de données, le système d’abonnement, les pratiques de confidentialité ou les exigences applicables évoluent. La date de « dernière mise à jour » indique la version publiée la plus récente.',
+  'Les modifications importantes peuvent, lorsque cela est possible, être annoncées sur le site, dans le dépôt ou dans les communications d’abonnement. L’utilisation continue après une mise à jour vaut acceptation des conditions mises à jour.',
+  'Si une disposition est jugée invalide ou inapplicable, les autres dispositions continuent de s’appliquer dans toute la mesure permise par la loi. Le fait de ne pas faire appliquer une disposition ne vaut pas renonciation au droit de l’appliquer ultérieurement.',
+  'Pour signaler des problèmes de qualité des données, des corrections de source, des problèmes d’abonnement, des demandes relatives à la vie privée, des préoccupations de sécurité ou des avis juridiques, utilisez le suivi des problèmes du projet ou un autre canal de contact publié par GIDS.',
+  'Lorsque vous signalez un problème de qualité des données ou de sécurité, indiquez l’URL de la page, l’URL de la source si elle est disponible, la maladie ou le pays, la période, une description concise et tout élément permettant de reproduire le problème.',
+] as const;
 
 const sections = [
   {
@@ -400,61 +488,74 @@ const sections = [
     ],
   },
 ];
+
+const sourceParagraphs = sections.flatMap((section) => section.paragraphs);
+if (sourceParagraphs.length !== termsFrParagraphs.length) {
+  throw new Error(`French terms coverage mismatch: ${termsFrParagraphs.length}/${sourceParagraphs.length} paragraphs`);
+}
+let frenchParagraphIndex = 0;
+const localizedSections = sections.map((section) => ({
+  ...section,
+  paragraphs: section.paragraphs.map((paragraph) => ({
+    ...paragraph,
+    fr: termsFrParagraphs[frenchParagraphIndex++],
+  })),
+}));
 ---
 
 <BaseLayout
-  title={pick('Service Terms', '服务协议')}
-  description={pick('GIDS service terms and privacy notice for public infectious disease surveillance data, AI-assisted reports, and email subscriptions.', '适用于公开传染病监测数据、AI 辅助报告和邮件订阅的 GIDS 服务协议与隐私说明。')}
+  title={pick('Service Terms', '服务协议', 'Conditions du service')}
+  description={pick('GIDS service terms and privacy notice for public infectious disease surveillance data, AI-assisted reports, and email subscriptions.', '适用于公开传染病监测数据、AI 辅助报告和邮件订阅的 GIDS 服务协议与隐私说明。', 'Conditions du service et avis de confidentialité GIDS pour les données publiques de surveillance, les rapports assistés par IA et les abonnements e-mail.')}
   initialLanguage={locale}
-  seo={{ title: pick('Service Terms | GIDS', '服务协议 | GIDS'), description: pick('GIDS service terms and privacy notice for public infectious disease surveillance data, AI-assisted reports, and email subscriptions.', '适用于公开传染病监测数据、AI 辅助报告和邮件订阅的 GIDS 服务协议与隐私说明。'), locale, canonicalPath: `${prefix}/terms/`, alternatePaths: buildAlternatePaths(`${prefix}/terms/`, locale), pageType: 'WebPage' }}
+  seo={{ title: pick('Service Terms | GIDS', '服务协议 | GIDS', 'Conditions du service | GIDS'), description: pick('GIDS service terms and privacy notice for public infectious disease surveillance data, AI-assisted reports, and email subscriptions.', '适用于公开传染病监测数据、AI 辅助报告和邮件订阅的 GIDS 服务协议与隐私说明。', 'Conditions du service et avis de confidentialité GIDS pour les données publiques de surveillance, les rapports assistés par IA et les abonnements e-mail.'), locale, canonicalPath: `${prefix}/terms/`, alternatePaths: buildAlternatePaths(`${prefix}/terms/`, locale), pageType: 'WebPage' }}
 >
   <section class="terms-page">
     <div class="mx-auto max-w-5xl px-4 py-14 sm:px-6 lg:px-8">
       <div class="terms-hero">
-        <p class="terms-kicker">{pick('Official notice', '官方说明')}</p>
-        <h1>{pick('GIDS Service Terms and Privacy Notice', 'GIDS 服务协议与隐私说明')}</h1>
-        <p class="terms-updated">{pick(`Last updated: ${updatedAt}`, '最后更新：2026 年 8 月 18 日')}</p>
-        <p class="terms-lead">{pick('This page explains the rules for using GIDS, the limits of public infectious disease surveillance information, and how subscription data is handled.', '本页说明 GIDS 的使用规则、公开传染病监测信息的使用边界，以及订阅数据的处理方式。')}</p>
+        <p class="terms-kicker">{pick('Official notice', '官方说明', 'Avis officiel')}</p>
+        <h1>{pick('GIDS Service Terms and Privacy Notice', 'GIDS 服务协议与隐私说明', 'Conditions du service et avis de confidentialité GIDS')}</h1>
+        <p class="terms-updated">{pick(`Last updated: ${updatedAt}`, '最后更新：2026 年 8 月 18 日', `Dernière mise à jour : 18 août 2026`)}</p>
+        <p class="terms-lead">{pick('This page explains the rules for using GIDS, the limits of public infectious disease surveillance information, and how subscription data is handled.', '本页说明 GIDS 的使用规则、公开传染病监测信息的使用边界，以及订阅数据的处理方式。', 'Cette page explique les règles d’utilisation de GIDS, les limites des informations publiques de surveillance et le traitement des données d’abonnement.')}</p>
       </div>
 
-      <div class="terms-summary" aria-label={pick('Terms summary', '协议摘要')}>
+      <div class="terms-summary" aria-label={pick('Terms summary', '协议摘要', 'Résumé des conditions')}>
         {summaryItems.map((item) => (
           <article>
-            <p class="terms-summary-label">{pick(item.labelEn, item.labelZh)}</p>
-            <p class="terms-summary-value">{pick(item.valueEn, item.valueZh)}</p>
+            <p class="terms-summary-label">{pick(item.labelEn, item.labelZh, termsFr[item.labelEn])}</p>
+            <p class="terms-summary-value">{pick(item.valueEn, item.valueZh, item.valueFr)}</p>
           </article>
         ))}
       </div>
 
       <div class="terms-surface">
-        {sections.map((section, index) => (
+        {localizedSections.map((section, index) => (
           <details class="terms-section" open={index < 3}>
             <summary>
-              <h2>{pick(section.titleEn, section.titleZh)}</h2>
+              <h2>{pick(section.titleEn, section.titleZh, termsFr[section.titleEn])}</h2>
               <span aria-hidden="true">+</span>
             </summary>
             <div>
               {section.paragraphs.map((paragraph) => (
-                <p>{pick(paragraph.en, paragraph.zh)}</p>
+                <p>{pick(paragraph.en, paragraph.zh, paragraph.fr)}</p>
               ))}
             </div>
           </details>
         ))}
 
         <section class="terms-links-section">
-          <h2>{pick('Project Links', '项目链接')}</h2>
+          <h2>{pick('Project Links', '项目链接', 'Liens du projet')}</h2>
           <div class="terms-link-list">
             <a href={`${prefix}/copyright/`}>
-              <span>{pick('Copyright & reuse notice', '版权与复用说明')}</span>
+              <span>{pick('Copyright & reuse notice', '版权与复用说明', 'Avis sur les droits d’auteur et la réutilisation')}</span>
             </a>
             <a href="https://github.com/xmusphlkg/globalID2" target="_blank" rel="noopener noreferrer">
-              <span>{pick('Source repository', '源码仓库')}</span>
+              <span>{pick('Source repository', '源码仓库', 'Dépôt source')}</span>
             </a>
             <a href="https://github.com/xmusphlkg/globalID2/issues" target="_blank" rel="noopener noreferrer">
-              <span>{pick('Issue tracker', '问题反馈')}</span>
+              <span>{pick('Issue tracker', '问题反馈', 'Suivi des problèmes')}</span>
             </a>
             <a href={`${prefix}/subscribe/`}>
-              <span>{pick('Subscription center', '订阅中心')}</span>
+              <span>{pick('Subscription center', '订阅中心', 'Centre d’abonnement')}</span>
             </a>
           </div>
         </section>

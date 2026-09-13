@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
 import researchData from '../../../data/research/index.json';
+import { localizedResearchTopic } from '../../../utils/i18n';
 
 export function getStaticPaths() {
   return ((researchData as any).facets?.topics ?? []).map((facet: any) => ({ params: { topic: facet.slug }, props: { facet, topic: facet.slug, locale: 'en' } }));
@@ -14,17 +15,19 @@ const topic = (Astro.props as Props).topic ?? '';
 const facet = (Astro.props as Props).facet ?? ((researchData as any).facets?.topics ?? []).find((item: any) => item.slug === topic);
 const file = resolve(`./src/data/research/topics/${facet.slug}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [] };
+const topicNameFr = localizedResearchTopic('fr', facet.name);
 const description = `Published Research Radar records connected to the ${facet.name} topic through the auditable classification pipeline.`;
 const descriptionZh = `通过可审计分类流程与“${facet.name}”主题关联的研究雷达已发布记录。`;
-const descriptionFr = `Références publiées du Radar de recherche reliées au thème « ${facet.name} » par la classification auditable.`;
+const descriptionFr = `Références publiées du Radar de recherche reliées au thème « ${topicNameFr} » par la classification auditable.`;
 ---
 
 <ResearchCollectionPage
   eyebrow="Public-health topic"
   eyebrowZh="公共卫生主题"
+  eyebrowFr="Thème de santé publique"
   title={facet.name}
   titleZh={facet.name}
-  titleFr={facet.name}
+  titleFr={topicNameFr}
   description={description}
   descriptionZh={descriptionZh}
   descriptionFr={descriptionFr}

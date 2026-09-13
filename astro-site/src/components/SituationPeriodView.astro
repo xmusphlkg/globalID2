@@ -4,6 +4,7 @@ import SituationSummary from './SituationSummary.astro';
 import SituationDetails from './SituationDetails.astro';
 import { buildAlternatePaths, type SeoDocument } from '../lib/seo';
 import { formatDate, sourceEvidenceUrls, type SituationReportV3 } from '../utils/situation';
+import { localizedDynamicText, translateUi } from '../utils/i18n';
 
 interface Props {
   report: SituationReportV3;
@@ -16,14 +17,25 @@ interface Props {
 }
 const { report, jsonPath, canonicalPath, archivePath, previousPath, nextPath, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const fr = locale === 'fr';
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 const periodKind = report.report.kind === 'weekly' ? 'Weekly' : 'Monthly';
 const title = `${periodKind} Infectious Disease Situation — ${report.report.period_key}`;
 const titleZh = `${report.report.kind === 'weekly' ? '周度' : '月度'}传染病态势 — ${report.report.period_key}`;
-const description = pick(report.narrative.en, report.narrative.zh);
+const titleFr = `${report.report.kind === 'weekly' ? 'hebdomadaire' : 'mensuelle'} de situation des maladies infectieuses — ${report.report.period_key}`;
+const description = localizedDynamicText(locale, {
+  en: report.narrative.en,
+  zh: report.narrative.zh,
+  fr: (report.narrative as { fr?: string | null }).fr ?? undefined,
+}, { context: `le rapport ${report.report.period_key}`, required: fr });
+const limitations = localizedDynamicText(locale, {
+  en: report.limitations.en,
+  zh: report.limitations.zh,
+  fr: (report.limitations as { fr?: string | null }).fr ?? undefined,
+}, { context: `les limites du rapport ${report.report.period_key}`, required: fr });
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
 const structuredData = [{
-  '@type': 'Report', '@id': `${new URL(canonicalPath, siteOrigin)}#report`, name: pick(title, titleZh),
+  '@type': 'Report', '@id': `${new URL(canonicalPath, siteOrigin)}#report`, name: pick(title, titleZh, titleFr),
   datePublished: report.report.as_of, dateModified: report.report.as_of,
   temporalCoverage: `${report.report.period_start}/${report.report.period_end}`,
   isBasedOn: sourceEvidenceUrls(report),
@@ -33,26 +45,26 @@ const structuredData = [{
   },
 }];
 const seo: SeoDocument = {
-  title: `${pick(title, titleZh)} | GIDS`, description, canonicalPath,
+  title: `${pick(title, titleZh, titleFr)} | GIDS`, description, canonicalPath,
   alternatePaths: buildAlternatePaths(canonicalPath, locale), noindex: !report.public_enabled,
   pageType: 'Report', datePublished: report.report.as_of, dateModified: report.report.as_of,
 };
 ---
 
-<ReportLayout title={pick(title, titleZh)} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室'), href: zh ? '/zh/situation/' : '/situation/' }, { label: pick(`${periodKind} reports`, report.report.kind === 'weekly' ? '周报' : '月报'), href: archivePath }, { label: report.report.period_key }]}>
+<ReportLayout title={pick(title, titleZh, titleFr)} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室'), href: locale === 'zh' ? '/zh/situation/' : locale === 'fr' ? '/fr/situation/' : '/situation/' }, { label: pick(`${periodKind} reports`, report.report.kind === 'weekly' ? '周报' : '月报', report.report.kind === 'weekly' ? 'Rapports hebdomadaires' : 'Rapports mensuels'), href: archivePath }, { label: report.report.period_key }]}>
   <div class="period-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <header class="period-header">
-      <div><p>{pick(`${periodKind} period report`, report.report.kind === 'weekly' ? '周度期间报告' : '月度期间报告')}</p><h1>{pick(title, titleZh)}</h1><span>{formatDate(report.report.period_start)} – {formatDate(report.report.period_end)} · <i>{pick('revision', '修订版')}</i> {report.report.revision}</span></div>
-      <a href={jsonPath} download>{pick('Download JSON', '下载 JSON')}</a>
+      <div><p>{pick(`${periodKind} period report`, report.report.kind === 'weekly' ? '周度期间报告' : '月度期间报告', report.report.kind === 'weekly' ? 'Rapport de période hebdomadaire' : 'Rapport de période mensuelle')}</p><h1>{pick(title, titleZh, titleFr)}</h1><span>{formatDate(report.report.period_start, locale)} – {formatDate(report.report.period_end, locale)} · <i>{pick('revision', '修订版', 'révision')}</i> {report.report.revision}</span></div>
+      <a href={jsonPath} download>{pick('Download JSON', '下载 JSON', 'Télécharger le JSON')}</a>
     </header>
-    <nav class="adjacent" aria-label={pick('Adjacent reports', '相邻期间报告')}>
-      {previousPath ? <a href={previousPath}>← <span>{pick('Previous period', '上一期间')}</span></a> : <span />}
-      <a href={archivePath}>{pick('All period reports', '全部期间报告')}</a>
-      {nextPath ? <a href={nextPath}><span>{pick('Next period', '下一期间')}</span> →</a> : <span />}
+    <nav class="adjacent" aria-label={pick('Adjacent reports', '相邻期间报告', 'Rapports adjacents')}>
+      {previousPath ? <a href={previousPath}>← <span>{pick('Previous period', '上一期间', 'Période précédente')}</span></a> : <span />}
+      <a href={archivePath}>{pick('All period reports', '全部期间报告', 'Tous les rapports de période')}</a>
+      {nextPath ? <a href={nextPath}><span>{pick('Next period', '下一期间', 'Période suivante')}</span> →</a> : <span />}
     </nav>
     <SituationSummary snapshot={report} locale={locale} />
     <SituationDetails snapshot={report} locale={locale} />
-    <footer><p>{pick(report.limitations.en, report.limitations.zh)}</p></footer>
+    <footer><p>{limitations}</p></footer>
   </div>
 </ReportLayout>
 

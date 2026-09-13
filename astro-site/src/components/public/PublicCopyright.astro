@@ -3,15 +3,66 @@ interface Props { locale?: 'en' | 'zh' | 'fr'; }
 
 const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const updatedIso = '2026-08-18';
-const updatedLabel = zh ? '2026 年 8 月 18 日' : '18 August 2026';
+const updatedLabel = zh ? '2026 年 8 月 18 日' : fr ? '18 août 2026' : '18 August 2026';
 const currentYear = new Date().getUTCFullYear();
+
+/**
+ * Copyright page copy is deliberately strict: French must never silently
+ * reuse English legal text. Missing entries fail the build so a new sentence
+ * cannot ship untranslated by accident.
+ */
+const FR_COPY: Record<string, string> = {
+  Breadcrumb: 'Fil d’Ariane', Home: 'Accueil', 'Copyright & reuse': 'Droits d’auteur et réutilisation',
+  'Legal & reuse': 'Droits et réutilisation', 'Copyright, licensing & reuse': 'Droits d’auteur, licences et réutilisation',
+  'Citation and reuse guidance for GIDS content, surveillance data, code, and brand materials.': 'Guide de citation et de réutilisation des contenus GIDS, des données de surveillance, du code et des éléments de marque.',
+  'On this page': 'Sur cette page', 'Quick guide': 'Guide rapide', 'Material types': 'Types de contenus', Attribution: 'Attribution',
+  'Source licences': 'Licences des sources', 'Automated use': 'Usage automatisé', 'Automated & commercial use': 'Usage automatisé et commercial', 'Rights concerns': 'Questions relatives aux droits',
+  'Service Terms & Privacy Notice': 'Conditions du service et avis de confidentialité',
+  'GIDS content can be used how?': 'Comment utiliser les contenus GIDS ?', 'Using GIDS at a glance': 'Utiliser GIDS en un coup d’œil',
+  'Start with your intended use, then check the material and its original source for specific terms.': 'Commencez par définir votre usage, puis vérifiez le contenu et sa source originale pour connaître les conditions particulières.',
+  'Reuse guidance table; scroll horizontally': 'Tableau des règles de réutilisation ; faites défiler horizontalement',
+  'You want to…': 'Vous souhaitez…', Position: 'Règle applicable', 'What to do': 'À faire',
+  'More specific terms shown on an individual page, dataset, download, repository, or source website take priority over this general guide.': 'Les conditions plus précises indiquées sur une page, un jeu de données, un téléchargement, un dépôt ou un site source prévalent sur ce guide général.',
+  'What rules apply?': 'Quelles règles s’appliquent ?', 'Different parts of GIDS may be governed by different rights or licences. These distinctions are the starting point.': 'Les différentes composantes de GIDS peuvent relever de droits ou de licences différents. Ces distinctions constituent le point de départ.',
+  'How to cite GIDS': 'Comment citer GIDS',
+  'Good attribution preserves the provenance chain: what you used, how GIDS presented or processed it, and where it originated.': 'Une bonne attribution conserve la chaîne de provenance : ce que vous avez utilisé, la manière dont GIDS l’a présenté ou traité et son origine.',
+  'Citation tool': 'Outil de citation', 'Choose a format and copy': 'Choisissez un format et copiez-le', 'Copy citation': 'Copier la citation', Copied: 'Copié', 'Citation formats': 'Formats de citation',
+  'If you modified the material:': 'Si vous avez modifié le contenu :',
+  'Add “Data filtered, transformed, or redrawn by the user. The resulting presentation does not imply endorsement by GIDS or the original source authority.”': 'Ajoutez « Données filtrées, transformées ou redessinées par l’utilisateur. La présentation qui en résulte n’implique aucune approbation de GIDS ni de l’autorité à l’origine de la source. »',
+  'Data licences follow the source': 'Les licences des données suivent la source',
+  'GIDS integrates materials published by multiple public health authorities. There is no single licence that automatically applies to every surveillance record. Some sources carry an explicit open licence; others permit access without a general reuse licence or impose their own conditions.': 'GIDS intègre des contenus publiés par plusieurs autorités de santé publique. Aucune licence unique ne s’applique automatiquement à tous les enregistrements de surveillance. Certaines sources disposent d’une licence ouverte explicite ; d’autres autorisent l’accès sans licence générale de réutilisation ou imposent leurs propres conditions.',
+  'An open licence attached to one source does not extend to another source, to the GIDS brand, or to material that has not been expressly licensed.': 'Une licence ouverte attachée à une source ne s’étend pas à une autre source, à la marque GIDS ni à un contenu qui n’a pas fait l’objet d’une licence expresse.',
+  'Read the official licence deed': 'Lire le texte officiel de la licence', 'Before redistributing a dataset, check': 'Avant de redistribuer un jeu de données, vérifiez',
+  'When no explicit licence can be identified, do not interpret public availability alone as an unrestricted licence to redistribute the material.': 'Lorsqu’aucune licence explicite ne peut être identifiée, ne considérez pas la seule disponibilité publique comme une autorisation illimitée de redistribuer le contenu.',
+  'Automated access, model training & commercial reuse': 'Accès automatisé, entraînement de modèles et réutilisation commerciale',
+  'Copyright, data licensing, and technical access are separate issues. Automated access may be subject to rate limits, robots directives, API rules, security controls, and the Service Terms. Following those technical rules does not grant reuse rights.': 'Le droit d’auteur, les licences de données et l’accès technique sont des questions distinctes. L’accès automatisé peut être soumis à des limites de débit, aux directives robots, aux règles d’API, aux contrôles de sécurité et aux Conditions du service. Le respect de ces règles techniques n’accorde pas de droits de réutilisation.',
+  'For source data, the original publisher’s licence remains controlling. Commercial reuse of GIDS-created content, branded outputs, or services may require written permission. Contact the project about large-scale research access or uses not clearly covered here.': 'Pour les données sources, la licence de l’éditeur d’origine reste déterminante. La réutilisation commerciale des contenus créés par GIDS, des productions de marque ou des services peut nécessiter une autorisation écrite. Contactez le projet pour les accès de recherche à grande échelle ou les usages non clairement couverts ici.',
+  'Review the Service Terms and technical access rules': 'Consulter les Conditions du service et les règles d’accès technique',
+  'Report a copyright or licensing issue': 'Signaler un problème de droit d’auteur ou de licence',
+  'If material appears incorrectly attributed, licensed, or made available, please report it.': 'Si un contenu semble incorrectement attribué, licencié ou mis à disposition, veuillez le signaler.',
+  'Use the public issue tracker for source, attribution, or licensing reports that contain no confidential information. Do not post identity documents, private contact information, unpublished authorisation records, or other sensitive material.': 'Utilisez le suivi public des problèmes pour les signalements de source, d’attribution ou de licence ne contenant aucune information confidentielle. Ne publiez pas de pièces d’identité, de coordonnées privées, d’autorisations non publiées ni d’autres informations sensibles.',
+  'Report a rights issue': 'Signaler un problème de droits',
+  'Rights in GIDS-created material are reserved unless expressly stated otherwise.': 'Les droits sur les contenus créés par GIDS sont réservés, sauf indication expresse contraire.',
+  'Rights in third-party source material remain with the relevant publishers or rights holders and are subject to their respective licences and terms.': 'Les droits sur les contenus sources de tiers restent ceux des éditeurs ou titulaires concernés et sont soumis à leurs licences et conditions respectives.',
+  'This page provides general reuse guidance and is not legal advice for a specific use. Version date: ': 'Cette page fournit des indications générales de réutilisation et ne constitue pas un avis juridique pour un usage particulier. Date de version : ',
+};
+const tr = (en: string, zhValue: string) => fr ? (() => {
+  const value = FR_COPY[en];
+  if (!value) throw new Error(`Missing French copyright translation: ${en}`);
+  return value;
+})() : zh ? zhValue : en;
 
 const heroFacts = zh ? [
   ['允许', '学术、教学、新闻与公共利益使用'],
   ['数据许可', '以原始来源为准'],
   ['最后更新', updatedLabel],
+] : fr ? [
+  ['Autorisé', 'Recherche, enseignement, journalisme et intérêt public'],
+  ['Licence des données', 'Les conditions propres à chaque source s’appliquent'],
+  ['Dernière mise à jour', updatedLabel],
 ] : [
   ['Allowed', 'Research, teaching, journalism, public-interest use'],
   ['Data licence', 'Source-specific terms apply'],
@@ -27,6 +78,15 @@ const uses = zh ? [
   ['用于商业产品或服务', '部分情形需授权', '除非相关来源或具体材料已有明确许可，否则使用 GIDS 原创内容或服务前请联系项目方。', 'permission'],
   ['使用 GIDS 名称、Logo 或视觉标识', '品牌使用需授权', '正常学术署名无需品牌授权，但不得暗示合作、认证、赞助或官方认可。', 'permission'],
   ['批量获取、自动化商业提取或模型训练', '适用额外规则', '同时查看服务协议、技术访问规则及相关来源材料的许可。', 'check'],
+] : fr ? [
+  ['Citer ou créer un lien vers une page GIDS', 'Autorisé', 'Citez le titre de la page, GIDS, l’URL et la date d’accès, ainsi que la source originale lorsque cela est pertinent.', 'allow'],
+  ['Utiliser GIDS pour la recherche, l’enseignement ou l’étude personnelle', 'Généralement autorisé', 'Attribuez GIDS, conservez les informations de source originale et respectez les conditions propres à chaque source.', 'allow'],
+  ['Télécharger ou analyser des données de surveillance', 'Vérifier la licence de la source', 'Examinez l’autorité source, les informations de licence et la documentation fournie avec le jeu de données.', 'check'],
+  ['Republier ou redessiner un graphique GIDS', 'Vérifier avant réutilisation', 'Mentionnez GIDS et la source sous-jacente, et indiquez tout filtrage, toute agrégation, traduction ou modification graphique.', 'check'],
+  ['Utiliser un contenu dans un article ou une communication d’intérêt public', 'Généralement autorisé', 'Distinguez le traitement effectué par GIDS de la publication officielle originale et ne suggérez aucune approbation.', 'allow'],
+  ['Utiliser un contenu créé par GIDS dans un produit ou service commercial', 'Autorisation éventuellement requise', 'Contactez GIDS, sauf si une licence de source ou de composant autorise indépendamment l’usage envisagé.', 'permission'],
+  ['Utiliser le nom, le logo ou l’identité visuelle de GIDS', 'Autorisation requise pour la marque', 'L’attribution factuelle ordinaire est bienvenue. Ne suggérez ni partenariat, ni certification, ni parrainage, ni approbation.', 'permission'],
+  ['Accès en masse, extraction commerciale automatisée ou entraînement de modèles', 'Conditions distinctes applicables', 'Consultez les Conditions du service, les règles d’accès technique et les licences des contenus sous-jacents.', 'check'],
 ] : [
   ['Link to or cite a GIDS page', 'Permitted', 'Cite the page title, GIDS, URL, and access date, plus the original source where relevant.', 'allow'],
   ['Use GIDS for research, teaching, or personal study', 'Generally permitted', 'Attribute GIDS, preserve the original source information, and follow any source-specific terms.', 'allow'],
@@ -67,6 +127,27 @@ const materials = zh ? [
     summary: 'GIDS 名称、Logo、视觉识别及其他项目标识。',
     body: '正常引用和事实性说明中可以使用 GIDS 名称。未经书面许可，不得暗示合作、认证、赞助、官方身份或认可关系。署名不等于品牌授权。',
   },
+] : fr ? [
+  {
+    number: '01', title: 'Contenus créés par GIDS', status: 'Les règles GIDS s’appliquent',
+    summary: 'Textes originaux, documentation, résumés, expression visuelle, conception des pages et autres contenus créés par le projet.',
+    body: 'Les liens et citations sont autorisés. La reproduction de contenus substantiels, leur redistribution dans un autre produit ou leur usage commercial peut nécessiter une autorisation préalable. Les droits sont réservés sauf indication contraire sur une page ou un composant.',
+  },
+  {
+    number: '02', title: 'Données de surveillance des sources officielles', status: 'Les règles de la source s’appliquent',
+    summary: 'Enregistrements et métadonnées de surveillance provenant d’autorités sanitaires, de systèmes officiels de données ouvertes, de rapports, de tableaux de bord ou d’API.',
+    body: 'GIDS ne revendique pas la propriété des faits de surveillance sous-jacents du seul fait qu’ils sont collectés, normalisés, analysés ou affichés ici. La licence, l’attribution et les conditions de réutilisation de l’éditeur d’origine continuent de s’appliquer.',
+  },
+  {
+    number: '03', title: 'Code et logiciels', status: 'Vérifier la licence du dépôt',
+    summary: 'Code du site, outils de traitement des données, paquets et dépendances tierces.',
+    body: 'Utilisez la licence jointe au dépôt, paquet, répertoire ou fichier concerné. La visibilité publique n’autorise pas automatiquement la copie, la modification, la redistribution ou la réutilisation commerciale. Les dépendances conservent leurs propres licences.',
+  },
+  {
+    number: '04', title: 'Nom et marque GIDS', status: 'Les règles de marque s’appliquent',
+    summary: 'Nom GIDS, logo, identité visuelle et autres identifiants du projet.',
+    body: 'Le nom GIDS peut être utilisé pour une attribution factuelle ordinaire. Une autorisation écrite est requise pour les usages suggérant un partenariat, une certification, un parrainage, un statut officiel ou une approbation. L’attribution n’est pas une autorisation de marque.',
+  },
 ] : [
   {
     number: '01',
@@ -103,6 +184,11 @@ const attributionItems = zh ? [
   ['保留原始来源', '如页面标注了公共卫生机构或原始发布方，应同时注明。'],
   ['记录版本信息', '注明页面链接及访问或下载日期，并保留发布日期、版本号或快照日期。'],
   ['说明数据改动', '如进行了筛选、聚合、翻译、转换、重新计算或重新制图，应明确说明。'],
+] : fr ? [
+  ['Identifier le contenu', 'Indiquez le titre complet de la page, de la figure, du rapport ou du jeu de données.'],
+  ['Conserver la source originale', 'Mentionnez l’autorité sanitaire ou l’éditeur d’origine lorsqu’il est identifié.'],
+  ['Enregistrer la version', 'Incluez l’URL de la page et la date d’accès, ainsi que toute date de publication, de version ou d’instantané.'],
+  ['Déclarer les modifications', 'Indiquez clairement si vous avez filtré, agrégé, traduit, transformé, recalculé ou redessiné le contenu.'],
 ] : [
   ['Identify the material', 'Give the full title of the page, figure, report, or dataset.'],
   ['Preserve the original source', 'Credit the relevant public health authority or original publisher where identified.'],
@@ -125,6 +211,19 @@ const citations = zh ? [
     id: 'ris',
     label: 'RIS',
     content: `TY  - DATA\nTI  - [页面或数据集标题]\nAU  - Global Infectious Disease Surveillance (GIDS)\nUR  - [GIDS 页面 URL]\nY2  - [YYYY/MM/DD]\nN1  - 原始来源：[机构及来源链接]\nER  -`,
+  },
+] : fr ? [
+  {
+    id: 'plain', label: 'Citation de page',
+    content: 'Global Infectious Disease Surveillance (GIDS), « [titre de la page ou du jeu de données] ». Source principale : [autorité et source]. Consulté le [AAAA-MM-JJ]. [URL de la page GIDS].',
+  },
+  {
+    id: 'bibtex', label: 'BibTeX',
+    content: `@misc{gids_[short_title]_[year],\n  author = {{Global Infectious Disease Surveillance}},\n  title = {[Page or dataset title]},\n  howpublished = {GIDS},\n  url = {[GIDS page URL]},\n  note = {Source principale : [autorité et source]. Consulté le [AAAA-MM-JJ]}\n}`,
+  },
+  {
+    id: 'ris', label: 'RIS',
+    content: `TY  - DATA\nTI  - [Titre de la page ou du jeu de données]\nAU  - Global Infectious Disease Surveillance (GIDS)\nUR  - [URL de la page GIDS]\nY2  - [AAAA/MM/JJ]\nN1  - Source principale : [autorité et source]\nER  -`,
   },
 ] : [
   {
@@ -151,6 +250,13 @@ const sourceChecks = zh ? [
   '下载文件中的 README、字段说明、来源字段和许可信息',
   '是否包含第三方图片、Logo、报告版式或其他单独受保护的内容',
   '是否修改了疾病定义、报告周期、地理单位或其他关键特征',
+] : fr ? [
+  'l’autorité sanitaire publique ou l’éditeur d’origine',
+  'la page source liée par GIDS',
+  'la licence ou les conditions de réutilisation associées à cette source',
+  'le README, le guide des champs, les champs de provenance et les métadonnées de licence du téléchargement',
+  'la présence éventuelle d’images, de logos, de mises en page de rapports ou d’autres contenus protégés de tiers',
+  'toute modification des définitions, périodes de déclaration, unités géographiques ou autres caractéristiques substantielles',
 ] : [
   'the original public health authority or publisher',
   'the source page linked by GIDS',
@@ -165,6 +271,11 @@ const concerns = zh ? [
   ['原始材料位置', '如可以，请提供原始来源机构或发布页面。'],
   ['具体问题', '说明涉及版权、许可、署名或其他复用条件中的哪一项。'],
   ['希望采取的处理方式', '例如更正来源、更新许可信息、替换链接、限制下载或移除材料。'],
+] : fr ? [
+  ['Contenu GIDS concerné', 'Fournissez la page, la figure, le jeu de données ou le téléchargement concerné.'],
+  ['Contenu original', 'Ajoutez, si possible, le lien vers la source ou l’éditeur d’origine.'],
+  ['Problème de droits', 'Expliquez le problème de propriété, de licence, d’attribution ou de réutilisation.'],
+  ['Correction demandée', 'Par exemple : corriger l’attribution, mettre à jour la licence, remplacer un lien, restreindre le téléchargement ou retirer le contenu.'],
 ] : [
   ['Affected GIDS material', 'Provide the relevant page, figure, dataset, or download.'],
   ['Original material', 'Include the original source or publisher link where possible.'],
@@ -176,15 +287,13 @@ const concerns = zh ? [
 <section class="copyright-page">
   <header class="copyright-header">
     <div class="copyright-wrap">
-      <nav class="copyright-breadcrumb" aria-label={zh ? '面包屑' : 'Breadcrumb'}>
-        <a href={`${prefix}/`}>{zh ? '首页' : 'Home'}</a><span aria-hidden="true">/</span><span>{zh ? '版权与复用' : 'Copyright & reuse'}</span>
+      <nav class="copyright-breadcrumb" aria-label={tr('Breadcrumb', '面包屑')}>
+        <a href={`${prefix}/`}>{tr('Home', '首页')}</a><span aria-hidden="true">/</span><span>{tr('Copyright & reuse', '版权与复用')}</span>
       </nav>
-      <p class="copyright-label">{zh ? '法律与复用' : 'Legal & reuse'}</p>
-      <h1>{zh ? '版权、许可与复用说明' : 'Copyright, licensing & reuse'}</h1>
+      <p class="copyright-label">{tr('Legal & reuse', '法律与复用')}</p>
+      <h1>{tr('Copyright, licensing & reuse', '版权、许可与复用说明')}</h1>
       <p class="copyright-intro">
-        {zh
-          ? '了解 GIDS 内容、监测数据、代码与品牌材料的引用和复用边界。'
-          : 'Citation and reuse guidance for GIDS content, surveillance data, code, and brand materials.'}
+        {tr('Citation and reuse guidance for GIDS content, surveillance data, code, and brand materials.', '了解 GIDS 内容、监测数据、代码与品牌材料的引用和复用边界。')}
       </p>
       <dl class="copyright-summary">
         {heroFacts.map(([label, value]) => (
@@ -196,28 +305,28 @@ const concerns = zh ? [
 
   <div class="copyright-shell">
     <aside class="copyright-toc">
-      <p>{zh ? '本页目录' : 'On this page'}</p>
-      <nav aria-label={zh ? '本页目录' : 'On this page'}>
-        <a href="#reuse-checker"><span>01</span>{zh ? '快速判断' : 'Quick guide'}</a>
-        <a href="#material-types"><span>02</span>{zh ? '材料类型' : 'Material types'}</a>
-        <a href="#attribution"><span>03</span>{zh ? '署名与引用' : 'Attribution'}</a>
-        <a href="#source-licences"><span>04</span>{zh ? '来源许可' : 'Source licences'}</a>
-        <a href="#automated-use"><span>05</span>{zh ? '自动化与商业使用' : 'Automated use'}</a>
-        <a href="#rights-concerns"><span>06</span>{zh ? '权利问题反馈' : 'Rights concerns'}</a>
+      <p>{tr('On this page', '本页目录')}</p>
+      <nav aria-label={tr('On this page', '本页目录')}>
+        <a href="#reuse-checker"><span>01</span>{tr('Quick guide', '快速判断')}</a>
+        <a href="#material-types"><span>02</span>{tr('Material types', '材料类型')}</a>
+        <a href="#attribution"><span>03</span>{tr('Attribution', '署名与引用')}</a>
+        <a href="#source-licences"><span>04</span>{tr('Source licences', '来源许可')}</a>
+        <a href="#automated-use"><span>05</span>{tr('Automated use', '自动化与商业使用')}</a>
+        <a href="#rights-concerns"><span>06</span>{tr('Rights concerns', '权利问题反馈')}</a>
       </nav>
-      <a class="copyright-terms-link" href={`${prefix}/terms/`}>{zh ? '服务协议与隐私说明' : 'Service Terms & Privacy Notice'}</a>
+      <a class="copyright-terms-link" href={`${prefix}/terms/`}>{tr('Service Terms & Privacy Notice', '服务协议与隐私说明')}</a>
     </aside>
 
     <div class="copyright-content">
       <section id="reuse-checker" class="copyright-section copyright-section-first">
         <div class="copyright-section-heading">
-          <p>01 · {zh ? '快速判断' : 'Quick guide'}</p>
-          <h2>{zh ? 'GIDS 内容可以怎样使用？' : 'Using GIDS at a glance'}</h2>
-          <p>{zh ? '先按使用场景确认基本规则，再查看具体材料和原始来源的许可。' : 'Start with your intended use, then check the material and its original source for specific terms.'}</p>
+          <p>01 · {tr('Quick guide', '快速判断')}</p>
+          <h2>{tr('Using GIDS at a glance', 'GIDS 内容可以怎样使用？')}</h2>
+          <p>{tr('Start with your intended use, then check the material and its original source for specific terms.', '先按使用场景确认基本规则，再查看具体材料和原始来源的许可。')}</p>
         </div>
-        <div class="copyright-table-wrap" role="region" tabindex="0" aria-label={zh ? '使用场景与许可判断表，可横向滚动' : 'Reuse guidance table; scroll horizontally'}>
+        <div class="copyright-table-wrap" role="region" tabindex="0" aria-label={tr('Reuse guidance table; scroll horizontally', '使用场景与许可判断表，可横向滚动')}>
           <table>
-            <thead><tr><th>{zh ? '使用场景' : 'You want to…'}</th><th>{zh ? '当前规则' : 'Position'}</th><th>{zh ? '建议操作' : 'What to do'}</th></tr></thead>
+            <thead><tr><th>{tr('You want to…', '使用场景')}</th><th>{tr('Position', '当前规则')}</th><th>{tr('What to do', '建议操作')}</th></tr></thead>
             <tbody>
               {uses.map(([use, label, guidance, tone]) => (
                 <tr>
@@ -229,14 +338,14 @@ const concerns = zh ? [
             </tbody>
           </table>
         </div>
-        <p class="copyright-note">{zh ? '具体页面、数据集、下载文件、代码仓库或原始来源给出的许可条件，优先于本页的一般说明。' : 'More specific terms shown on an individual page, dataset, download, repository, or source website take priority over this general guide.'}</p>
+        <p class="copyright-note">{tr('More specific terms shown on an individual page, dataset, download, repository, or source website take priority over this general guide.', '具体页面、数据集、下载文件、代码仓库或原始来源给出的许可条件，优先于本页的一般说明。')}</p>
       </section>
 
       <section id="material-types" class="copyright-section">
         <div class="copyright-section-heading">
-          <p>02 · {zh ? '材料类型' : 'Material types'}</p>
-          <h2>{zh ? '不同材料适用什么规则？' : 'What rules apply?'}</h2>
-          <p>{zh ? '判断复用条件时，应先区分项目原创内容、来源数据、软件与品牌元素。' : 'Different parts of GIDS may be governed by different rights or licences. These distinctions are the starting point.'}</p>
+          <p>02 · {tr('Material types', '材料类型')}</p>
+          <h2>{tr('What rules apply?', '不同材料适用什么规则？')}</h2>
+          <p>{tr('Different parts of GIDS may be governed by different rights or licences. These distinctions are the starting point.', '判断复用条件时，应先区分项目原创内容、来源数据、软件与品牌元素。')}</p>
         </div>
         <div class="copyright-material-grid">
           {materials.map(material => (
@@ -252,9 +361,9 @@ const concerns = zh ? [
 
       <section id="attribution" class="copyright-section">
         <div class="copyright-section-heading">
-          <p>03 · {zh ? '署名与引用' : 'Attribution'}</p>
-          <h2>{zh ? '如何引用 GIDS？' : 'How to cite GIDS'}</h2>
-          <p>{zh ? '良好的引用应保留完整来源链：使用对象、GIDS 的处理或呈现方式，以及信息最初由哪个机构发布。' : 'Good attribution preserves the provenance chain: what you used, how GIDS presented or processed it, and where it originated.'}</p>
+          <p>03 · {tr('Attribution', '署名与引用')}</p>
+          <h2>{tr('How to cite GIDS', '如何引用 GIDS？')}</h2>
+          <p>{tr('Good attribution preserves the provenance chain: what you used, how GIDS presented or processed it, and where it originated.', '良好的引用应保留完整来源链：使用对象、GIDS 的处理或呈现方式，以及信息最初由哪个机构发布。')}</p>
         </div>
         <ol class="copyright-attribution-list">
           {attributionItems.map(([title, body], index) => (
@@ -265,12 +374,12 @@ const concerns = zh ? [
         <div class="copyright-citation-tool">
           <div class="copyright-citation-header">
             <div>
-              <span>{zh ? '引用工具' : 'Citation tool'}</span>
-              <strong>{zh ? '选择格式并复制' : 'Choose a format and copy'}</strong>
-            </div>
-            <button class="copyright-copy-button" type="button" data-copy-citation data-label={zh ? '复制引用' : 'Copy citation'} data-copied={zh ? '已复制' : 'Copied'}>{zh ? '复制引用' : 'Copy citation'}</button>
+                <span>{tr('Citation tool', '引用工具')}</span>
+                <strong>{tr('Choose a format and copy', '选择格式并复制')}</strong>
+              </div>
+            <button class="copyright-copy-button" type="button" data-copy-citation data-label={tr('Copy citation', '复制引用')} data-copied={tr('Copied', '已复制')}>{tr('Copy citation', '复制引用')}</button>
           </div>
-          <div class="copyright-citation-tabs" role="tablist" aria-label={zh ? '引用格式' : 'Citation formats'}>
+          <div class="copyright-citation-tabs" role="tablist" aria-label={tr('Citation formats', '引用格式')}>
             {citations.map((citation, index) => (
               <button type="button" role="tab" id={`citation-tab-${citation.id}`} aria-controls={`citation-panel-${citation.id}`} aria-selected={index === 0 ? 'true' : 'false'} tabindex={index === 0 ? 0 : -1} data-citation-tab={citation.id}>{citation.label}</button>
             ))}
@@ -280,44 +389,44 @@ const concerns = zh ? [
               <pre>{citation.content}</pre>
             </div>
           ))}
-          <p class="copyright-modified-note"><strong>{zh ? '如修改了材料：' : 'If you modified the material:'}</strong> {zh ? '请注明“本材料由使用者进一步筛选、转换或重新制图；相关呈现不代表 GIDS 或原始来源机构认可或背书。”' : 'Add “Data filtered, transformed, or redrawn by the user. The resulting presentation does not imply endorsement by GIDS or the original source authority.”'}</p>
+          <p class="copyright-modified-note"><strong>{tr('If you modified the material:', '如修改了材料：')}</strong> {tr('Add “Data filtered, transformed, or redrawn by the user. The resulting presentation does not imply endorsement by GIDS or the original source authority.”', '请注明“本材料由使用者进一步筛选、转换或重新制图；相关呈现不代表 GIDS 或原始来源机构认可或背书。”')}</p>
         </div>
       </section>
 
       <section id="source-licences" class="copyright-section">
         <div class="copyright-section-heading">
-          <p>04 · {zh ? '数据来源与许可' : 'Source licences'}</p>
-          <h2>{zh ? '数据许可由原始来源决定' : 'Data licences follow the source'}</h2>
+          <p>04 · {tr('Source licences', '数据来源与许可')}</p>
+          <h2>{tr('Data licences follow the source', '数据许可由原始来源决定')}</h2>
         </div>
         <div class="copyright-prose">
-          <p>{zh ? 'GIDS 整合了多个公共卫生机构发布的资料，因此不存在一项自动覆盖网站全部监测数据的统一许可证。部分来源采用明确的开放许可；另一些来源可能允许公众访问，但没有提供一般再利用许可，或对署名、再发布及商业使用另有规定。' : 'GIDS integrates materials published by multiple public health authorities. There is no single licence that automatically applies to every surveillance record. Some sources carry an explicit open licence; others permit access without a general reuse licence or impose their own conditions.'}</p>
-          <p>{zh ? '某一来源采用开放许可，并不意味着该许可自动适用于其他来源、GIDS 品牌或未明确标注许可的材料。' : 'An open licence attached to one source does not extend to another source, to the GIDS brand, or to material that has not been expressly licensed.'}</p>
-          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">{zh ? '查看 CC BY 4.0 官方许可摘要' : 'Read the official licence deed'} <span aria-hidden="true">↗</span></a>
+          <p>{tr('GIDS integrates materials published by multiple public health authorities. There is no single licence that automatically applies to every surveillance record. Some sources carry an explicit open licence; others permit access without a general reuse licence or impose their own conditions.', 'GIDS 整合了多个公共卫生机构发布的资料，因此不存在一项自动覆盖网站全部监测数据的统一许可证。部分来源采用明确的开放许可；另一些来源可能允许公众访问，但没有提供一般再利用许可，或对署名、再发布及商业使用另有规定。')}</p>
+          <p>{tr('An open licence attached to one source does not extend to another source, to the GIDS brand, or to material that has not been expressly licensed.', '某一来源采用开放许可，并不意味着该许可自动适用于其他来源、GIDS 品牌或未明确标注许可的材料。')}</p>
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">{tr('Read the official licence deed', '查看 CC BY 4.0 官方许可摘要')} <span aria-hidden="true">↗</span></a>
         </div>
         <div class="copyright-checklist">
-          <h3>{zh ? '再发布数据前建议核对' : 'Before redistributing a dataset, check'}</h3>
+          <h3>{tr('Before redistributing a dataset, check', '再发布数据前建议核对')}</h3>
           <ul>{sourceChecks.map(item => <li>{item}</li>)}</ul>
         </div>
-        <p class="copyright-note">{zh ? '如果无法找到明确许可，不应仅根据“数据可以公开访问”推定其可以不受限制地重新分发。' : 'When no explicit licence can be identified, do not interpret public availability alone as an unrestricted licence to redistribute the material.'}</p>
+        <p class="copyright-note">{tr('When no explicit licence can be identified, do not interpret public availability alone as an unrestricted licence to redistribute the material.', '如果无法找到明确许可，不应仅根据“数据可以公开访问”推定其可以不受限制地重新分发。')}</p>
       </section>
 
       <section id="automated-use" class="copyright-section">
         <div class="copyright-section-heading">
-          <p>05 · {zh ? '自动化与商业使用' : 'Automated & commercial use'}</p>
-          <h2>{zh ? '自动化访问、模型训练与商业复用' : 'Automated access, model training & commercial reuse'}</h2>
+          <p>05 · {tr('Automated & commercial use', '自动化与商业使用')}</p>
+          <h2>{tr('Automated access, model training & commercial reuse', '自动化访问、模型训练与商业复用')}</h2>
         </div>
         <div class="copyright-prose copyright-prose-columns">
-          <p>{zh ? '版权、数据许可和网站技术访问规则属于不同层面。自动化访问可能受到请求频率限制、robots 规则、API 规范、安全措施及《服务协议》的约束；遵守这些技术规则并不意味着自动获得底层材料的复用许可。' : 'Copyright, data licensing, and technical access are separate issues. Automated access may be subject to rate limits, robots directives, API rules, security controls, and the Service Terms. Following those technical rules does not grant reuse rights.'}</p>
-          <p>{zh ? '对于来源数据，应继续以原始发布机构的许可为准。将 GIDS 原创内容、品牌化输出或相关服务用于商业用途时，部分情形可能需要书面许可。大规模研究访问或本页未明确覆盖的使用场景，请先联系项目方。' : 'For source data, the original publisher’s licence remains controlling. Commercial reuse of GIDS-created content, branded outputs, or services may require written permission. Contact the project about large-scale research access or uses not clearly covered here.'}</p>
+          <p>{tr('Copyright, data licensing, and technical access are separate issues. Automated access may be subject to rate limits, robots directives, API rules, security controls, and the Service Terms. Following those technical rules does not grant reuse rights.', '版权、数据许可和网站技术访问规则属于不同层面。自动化访问可能受到请求频率限制、robots 规则、API 规范、安全措施及《服务协议》的约束；遵守这些技术规则并不意味着自动获得底层材料的复用许可。')}</p>
+          <p>{tr('For source data, the original publisher’s licence remains controlling. Commercial reuse of GIDS-created content, branded outputs, or services may require written permission. Contact the project about large-scale research access or uses not clearly covered here.', '对于来源数据，应继续以原始发布机构的许可为准。将 GIDS 原创内容、品牌化输出或相关服务用于商业用途时，部分情形可能需要书面许可。大规模研究访问或本页未明确覆盖的使用场景，请先联系项目方。')}</p>
         </div>
-        <a class="copyright-inline-link" href={`${prefix}/terms/`}>{zh ? '查看服务协议与技术访问规则' : 'Review the Service Terms and technical access rules'} <span aria-hidden="true">→</span></a>
+        <a class="copyright-inline-link" href={`${prefix}/terms/`}>{tr('Review the Service Terms and technical access rules', '查看服务协议与技术访问规则')} <span aria-hidden="true">→</span></a>
       </section>
 
       <section id="rights-concerns" class="copyright-section">
         <div class="copyright-section-heading">
-          <p>06 · {zh ? '权利问题反馈' : 'Rights concerns'}</p>
-          <h2>{zh ? '报告版权、许可或署名问题' : 'Report a copyright or licensing issue'}</h2>
-          <p>{zh ? '如材料的来源标注、许可状态或公开方式可能有误，请向项目方反馈。' : 'If material appears incorrectly attributed, licensed, or made available, please report it.'}</p>
+          <p>06 · {tr('Rights concerns', '权利问题反馈')}</p>
+          <h2>{tr('Report a copyright or licensing issue', '报告版权、许可或署名问题')}</h2>
+          <p>{tr('If material appears incorrectly attributed, licensed, or made available, please report it.', '如材料的来源标注、许可状态或公开方式可能有误，请向项目方反馈。')}</p>
         </div>
         <div class="copyright-concern-grid">
           {concerns.map(([title, body], index) => (
@@ -325,15 +434,15 @@ const concerns = zh ? [
           ))}
         </div>
         <div class="copyright-contact">
-          <p>{zh ? '不涉及保密信息的来源、署名或许可问题，可以通过公开 issue tracker 提交。请勿上传身份证件、私人联系方式、未公开授权文件或其他敏感资料。' : 'Use the public issue tracker for source, attribution, or licensing reports that contain no confidential information. Do not post identity documents, private contact information, unpublished authorisation records, or other sensitive material.'}</p>
-          <a href="https://github.com/xmusphlkg/globalID2/issues/new" target="_blank" rel="noopener noreferrer">{zh ? '报告版权或许可问题' : 'Report a rights issue'} <span aria-hidden="true">↗</span></a>
+          <p>{tr('Use the public issue tracker for source, attribution, or licensing reports that contain no confidential information. Do not post identity documents, private contact information, unpublished authorisation records, or other sensitive material.', '不涉及保密信息的来源、署名或许可问题，可以通过公开 issue tracker 提交。请勿上传身份证件、私人联系方式、未公开授权文件或其他敏感资料。')}</p>
+          <a href="https://github.com/xmusphlkg/globalID2/issues/new" target="_blank" rel="noopener noreferrer">{tr('Report a rights issue', '报告版权或许可问题')} <span aria-hidden="true">↗</span></a>
         </div>
       </section>
 
       <footer class="copyright-document-footer">
-        <p>© {currentYear} GIDS. {zh ? '除非另有明确说明，GIDS 原创材料的相关权利予以保留。' : 'Rights in GIDS-created material are reserved unless expressly stated otherwise.'}</p>
-        <p>{zh ? '第三方来源材料的相关权利仍属于其原始发布方或相应权利人，并适用各自的许可和使用条件。' : 'Rights in third-party source material remain with the relevant publishers or rights holders and are subject to their respective licences and terms.'}</p>
-        <p>{zh ? '本页提供一般复用指引，不构成针对具体使用场景的法律意见。版本日期：' : 'This page provides general reuse guidance and is not legal advice for a specific use. Version date: '}<time datetime={updatedIso}>{updatedLabel}</time></p>
+        <p>© {currentYear} GIDS. {tr('Rights in GIDS-created material are reserved unless expressly stated otherwise.', '除非另有明确说明，GIDS 原创材料的相关权利予以保留。')}</p>
+        <p>{tr('Rights in third-party source material remain with the relevant publishers or rights holders and are subject to their respective licences and terms.', '第三方来源材料的相关权利仍属于其原始发布方或相应权利人，并适用各自的许可和使用条件。')}</p>
+        <p>{tr('This page provides general reuse guidance and is not legal advice for a specific use. Version date: ', '本页提供一般复用指引，不构成针对具体使用场景的法律意见。版本日期：')}<time datetime={updatedIso}>{updatedLabel}</time></p>
       </footer>
     </div>
   </div>

@@ -12,6 +12,7 @@ import {
 } from './countryDataset';
 import { useChartLanguage, useChartTheme } from './chartPreferences';
 import { useCountryDataset } from './useCountryDataset';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
 
 type HeatmapData = CountryDatasetHeatmap;
 type DiseaseSeriesEntry = CountryDatasetSeriesEntry;
@@ -103,7 +104,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
           return lang === 'zh'
             ? (entry?.name_zh || entry?.name_en || loadedData.disease_labels[index])
             : lang === 'fr'
-              ? (entry?.name_fr || entry?.name_en || loadedData.disease_labels[index])
+              ? localizedDiseaseName({ disease_id: id, name_en: entry?.name_en ?? loadedData.disease_labels[index], name_fr: entry?.name_fr }, 'fr')
               : (entry?.name_en || entry?.name_zh || loadedData.disease_labels[index]);
         }),
         months: loadedData.months,
@@ -130,7 +131,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
           lang === 'zh'
             ? (entry.name_zh || entry.name_en || entry.disease_id)
             : lang === 'fr'
-              ? (entry.name_fr || entry.name_en || entry.disease_id)
+              ? localizedDiseaseName(entry, 'fr')
               : (entry.name_en || entry.name_zh || entry.disease_id)
         )),
         months,

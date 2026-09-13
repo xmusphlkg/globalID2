@@ -25,6 +25,7 @@ export async function getStaticPaths() {
 const { countryCode, locale = 'en' } = Astro.props as Props;
 const country = countryCode ?? Astro.params.country;
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => `${prefix}${href}`;
 const fallbackCountryCode = String(country ?? '').toUpperCase();
@@ -34,11 +35,12 @@ const reports = reportsForCountry(readPublishableReports(), country) as any[];
 const countryData = loadCountry(String(country));
 const countryNameEn = reports[0]?.country_name_en ?? reports[0]?.country_name ?? countryData?.country_name_en ?? fallbackCountryCode;
 const countryNameZh = reports[0]?.country_name_local ?? countryData?.country_name_zh ?? countryNameEn;
-const countryName = zh ? countryNameZh : countryNameEn;
+const countryNameFr = reports[0]?.country_name_fr ?? countryData?.country_name_fr ?? countryNameEn;
+const countryName = zh ? countryNameZh : fr ? countryNameFr : countryNameEn;
 const canonicalPath = localeHref(`/countries/${country}/reports/`);
 const seo = {
-  title: zh ? `${countryNameZh}监测报告 | GIDS` : `${countryNameEn} Surveillance Reports | GIDS`,
-  description: zh ? `浏览${countryNameZh}的全部传染病监测报告。` : `Browse all infectious-disease surveillance reports for ${countryNameEn}.`,
+  title: zh ? `${countryNameZh}监测报告 | GIDS` : fr ? `Rapports de surveillance — ${countryNameFr} | GIDS` : `${countryNameEn} Surveillance Reports | GIDS`,
+  description: zh ? `浏览${countryNameZh}的全部传染病监测报告。` : fr ? `Parcourez tous les rapports de surveillance des maladies infectieuses pour ${countryNameFr}.` : `Browse all infectious-disease surveillance reports for ${countryNameEn}.`,
   locale,
   canonicalPath,
   alternatePaths: buildAlternatePaths(canonicalPath, locale),
@@ -47,6 +49,7 @@ const seo = {
 
 const reportTypeLabel = (type: string) => {
   const key = type.toUpperCase();
+  if (fr) return ({ DAILY: 'Rapports quotidiens', WEEKLY: 'Rapports hebdomadaires', MONTHLY: 'Rapports mensuels', QUARTERLY: 'Rapports trimestriels', ANNUAL: 'Rapports annuels' } as Record<string, string>)[key] ?? 'Autres rapports';
   if (!zh) return `${key.charAt(0)}${key.slice(1).toLowerCase()} Reports`;
   return ({ DAILY: '日报', WEEKLY: '周报', MONTHLY: '月报', QUARTERLY: '季报', ANNUAL: '年报' } as Record<string, string>)[key] ?? '其他报告';
 };
@@ -66,18 +69,18 @@ for (const r of reports) {
   initialLanguage={locale}
   seo={seo}
   breadcrumbs={[
-    { label: 'Countries', labelZh: '国家/地区', href: localeHref('/countries/') },
-    { label: countryNameEn, labelZh: countryNameZh, href: localeHref(`/countries/${country}/`) },
-    { label: 'Reports', labelZh: '报告' },
+    { label: 'Countries', labelZh: '国家/地区', labelFr: 'Pays', href: localeHref('/countries/') },
+    { label: countryNameEn, labelZh: countryNameZh, labelFr: countryNameFr, href: localeHref(`/countries/${country}/`) },
+    { label: 'Reports', labelZh: '报告', labelFr: 'Rapports' },
   ]}
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <div class="mb-10">
       <h1 class="text-3xl font-bold text-[rgb(var(--text-strong))] mb-2">
-        {countryName}&nbsp;<span class="text-[rgb(var(--text-muted))] font-normal">{zh ? '报告' : 'Reports'}</span>
+        {countryName}&nbsp;<span class="text-[rgb(var(--text-muted))] font-normal">{zh ? '报告' : fr ? 'Rapports' : 'Reports'}</span>
       </h1>
       <p class="text-[rgb(var(--text-muted))] text-sm">
-        {reports.length}&nbsp;<span>{zh ? '份已生成报告' : 'reports generated'}</span>
+        {reports.length}&nbsp;<span>{zh ? '份已生成报告' : fr ? 'rapports générés' : 'reports generated'}</span>
       </p>
     </div>
 
@@ -98,9 +101,11 @@ for (const r of reports) {
               periodEnd={r.period_end}
               createdAt={r.created_at}
               countryCode={r.country_code}
-              countryName={zh ? countryNameZh : r.country_name}
+              countryName={zh ? countryNameZh : fr ? countryNameFr : r.country_name}
               qualityScore={r.quality_score}
               summary={r.summary}
+              titleFr={r.title_fr}
+              summaryFr={r.summary_fr}
               locale={locale}
             />
           ))}
@@ -110,7 +115,7 @@ for (const r of reports) {
 
     {reports.length === 0 && (
       <div class="text-center py-24 text-[rgb(var(--text-muted))]">
-        <p>{zh ? '该国家暂无报告。' : 'No reports available for this country.'}</p>
+        <p>{zh ? '该国家暂无报告。' : fr ? 'Aucun rapport n’est disponible pour ce pays.' : 'No reports available for this country.'}</p>
       </div>
     )}
   </div>

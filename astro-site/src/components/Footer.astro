@@ -3,9 +3,10 @@
 import BrandLogo from './BrandLogo.astro';
 import metaData from '../data/meta.json';
 import sitePackage from '../../package.json';
+import { createTranslator, localizedPath, type Lang } from '../utils/i18n';
 
 interface Props {
-  initialLanguage?: 'en' | 'zh' | 'fr';
+  initialLanguage?: Lang;
 }
 
 const { initialLanguage = 'en' } = Astro.props;
@@ -31,34 +32,41 @@ const databaseLatestEn = formatDate(databaseLatestAt, 'en-US', 'Unknown');
 const databaseLatestZh = formatDate(databaseLatestAt, 'zh-CN', '未知');
 const databaseLatestFr = formatDate(databaseLatestAt, 'fr-FR', 'Inconnu');
 
+const copy = createTranslator(initialLanguage);
 const links = [
-  { href: '/situation/', label: 'Situation', labelZh: '全球态势' },
-  { href: '/countries/', label: 'Countries', labelZh: '国家/地区' },
-  { href: '/diseases/', label: 'Disease Directory', labelZh: '疾病目录' },
-  { href: '/downloads/', label: 'Downloads', labelZh: '数据下载' },
-  { href: '/research/', label: 'Research Radar', labelZh: '研究雷达' },
-  { href: '/about/', label: 'About', labelZh: '关于' },
-  { href: '/subscribe/', label: 'Subscribe', labelZh: '订阅' },
-  { href: '/copyright/', label: 'Copyright Notice', labelZh: '版权声明' },
-  { href: '/terms/', label: 'Terms & Privacy', labelZh: '条款与隐私' },
+  { href: '/situation/', label: copy('Situation', '全球态势', 'Situation') },
+  { href: '/countries/', label: copy('Countries', '国家/地区', 'Pays') },
+  { href: '/diseases/', label: copy('Disease Directory', '疾病目录', 'Répertoire des maladies') },
+  { href: '/downloads/', label: copy('Downloads', '数据下载', 'Téléchargements') },
+  { href: '/research/', label: copy('Research Radar', '研究雷达', 'Radar de recherche') },
+  { href: '/about/', label: copy('About', '关于', 'À propos') },
+  { href: '/subscribe/', label: copy('Subscribe', '订阅', 'S’abonner') },
+  { href: '/copyright/', label: copy('Copyright Notice', '版权声明', 'Droits d’auteur') },
+  { href: '/terms/', label: copy('Terms & Privacy', '条款与隐私', 'Conditions et confidentialité') },
 ];
-const localizedHref = (href: string) => initialLanguage === 'zh' ? (href === '/' ? '/zh/' : `/zh${href}`) : initialLanguage === 'fr' ? (href === '/' ? '/fr/' : `/fr${href}`) : href;
-const fr = initialLanguage === 'fr';
-const maintainer = initialLanguage === 'zh' ? {
-  title: '维护者',
-  name: '李康国',
-  description: '厦门大学公共卫生学院博士研究生，正在寻找实习机会，也希望提前认识合适的博士后团队。',
-  availability: '关注流行病学、卫生统计、公共卫生数据系统与健康 AI；可全球远程，或在中国大陆及香港线下工作。',
-  learnMore: '了解更多',
-  contact: '邮件联系',
-} : {
+const localizedHref = (href: string) => localizedPath(href, initialLanguage);
+const maintainer = copy({
   title: 'Maintainer',
   name: 'Kangguo Li',
   description: 'Doctoral researcher at Xiamen University, looking for internships and hoping to connect early with potential postdoctoral teams.',
   availability: 'Interested in epidemiology, health statistics, public-health data systems, and health AI. Available remotely worldwide or on site in mainland China and Hong Kong.',
   learnMore: 'Learn more',
   contact: 'Email me',
-};
+}, {
+  title: '维护者',
+  name: '李康国',
+  description: '厦门大学公共卫生学院博士研究生，正在寻找实习机会，也希望提前认识合适的博士后团队。',
+  availability: '关注流行病学、卫生统计、公共卫生数据系统与健康 AI；可全球远程，或在中国大陆及香港线下工作。',
+  learnMore: '了解更多',
+  contact: '邮件联系',
+}, {
+  title: 'Responsable du projet',
+  name: 'Kangguo Li',
+  description: 'Doctorant à l’Université de Xiamen, à la recherche de stages et souhaitant entrer tôt en contact avec de futures équipes postdoctorales.',
+  availability: 'Intéressé par l’épidémiologie, les statistiques de santé, les systèmes de données de santé publique et l’IA en santé. Disponible à distance dans le monde entier ou sur site en Chine continentale et à Hong Kong.',
+  learnMore: 'En savoir plus',
+  contact: 'Me contacter',
+});
 ---
 
 <footer class="site-footer border-t mt-20">
@@ -75,23 +83,20 @@ const maintainer = initialLanguage === 'zh' ? {
           wordmarkClass="h-11 w-auto max-w-[280px]"
         />
         <p class="site-footer-copy text-sm leading-relaxed">
-          {initialLanguage === 'zh'
-            ? '全球传染病监测数据，附官方来源链接与数据使用提示。'
-            : fr ? 'Données mondiales sur les maladies infectieuses, avec liens vers les sources officielles et conseils d’interprétation.'
-            : 'Global infectious disease data with official source links and guidance for interpretation.'}
+          {copy('Global infectious disease data with official source links and guidance for interpretation.', '全球传染病监测数据，附官方来源链接与数据使用提示。', 'Données mondiales sur les maladies infectieuses, avec liens vers les sources officielles et conseils d’interprétation.')}
         </p>
       </div>
 
       <!-- Quick links -->
       <div>
         <h2 class="site-footer-section-title font-semibold text-sm mb-3">
-          {initialLanguage === 'zh' ? '导航' : fr ? 'Navigation' : 'Navigate'}
+          {copy('Navigate', '导航', 'Navigation')}
         </h2>
         <ul class="space-y-2">
-          {links.map(({ href, label, labelZh }) => (
+          {links.map(({ href, label }) => (
             <li>
               <a href={localizedHref(href)} class="site-footer-link text-sm transition-colors">
-                {initialLanguage === 'zh' ? labelZh : fr ? ({ Situation: 'Situation', Countries: 'Pays', 'Disease Directory': 'Répertoire des maladies', Downloads: 'Téléchargements', 'Research Radar': 'Radar de recherche', About: 'À propos', Subscribe: 'S’abonner', 'Copyright Notice': 'Droit d’auteur', 'Terms & Privacy': 'Conditions et confidentialité' }[label] ?? label) : label}
+                {label}
               </a>
             </li>
           ))}
@@ -101,29 +106,29 @@ const maintainer = initialLanguage === 'zh' ? {
       <!-- Data info -->
       <div>
         <h2 class="site-footer-section-title font-semibold text-sm mb-3">
-          {initialLanguage === 'zh' ? '数据' : fr ? 'Données' : 'Data'}
+          {copy('Data', '数据', 'Données')}
         </h2>
         <ul class="site-footer-meta space-y-1.5 text-sm">
           <li>
             <span>
-              {initialLanguage === 'zh' ? '网站更新' : fr ? 'Site mis à jour' : 'Website updated'}
+              {copy('Website updated', '网站更新', 'Site mis à jour')}
             </span>:
             {' '}
             <span class="site-footer-meta-value">
-              {initialLanguage === 'zh' ? siteUpdatedZh : fr ? siteUpdatedFr : siteUpdatedEn}
+              {copy(siteUpdatedEn, siteUpdatedZh, siteUpdatedFr)}
             </span>
           </li>
           <li>
             <span>
-              {initialLanguage === 'zh' ? '数据库最新日期' : fr ? 'Date de la base de données' : 'Latest database date'}
+              {copy('Latest database date', '数据库最新日期', 'Date la plus récente de la base de données')}
             </span>:
             {' '}
             <span class="site-footer-meta-value">
-              {initialLanguage === 'zh' ? databaseLatestZh : fr ? databaseLatestFr : databaseLatestEn}
+              {copy(databaseLatestEn, databaseLatestZh, databaseLatestFr)}
             </span>
           </li>
-          <li><a class="site-footer-link" href={localizedHref('/about/')}>{initialLanguage === 'zh' ? '数据来源与方法' : 'Sources and methods'}</a></li>
-          <li><a class="site-footer-link" href={localizedHref('/copyright/')}>{initialLanguage === 'zh' ? '版权与许可声明' : 'Copyright and licensing notice'}</a></li>
+          <li><a class="site-footer-link" href={localizedHref('/about/')}>{copy('Sources and methods', '数据来源与方法', 'Sources et méthodes')}</a></li>
+          <li><a class="site-footer-link" href={localizedHref('/copyright/')}>{copy('Copyright and licensing notice', '版权与许可声明', 'Avis sur les droits d’auteur et les licences')}</a></li>
         </ul>
       </div>
 
@@ -144,18 +149,15 @@ const maintainer = initialLanguage === 'zh' ? {
       <p class="site-footer-legal text-xs">
         <span>© {year} GIDS</span>
         <span aria-hidden="true"> · </span>
-        <a class="site-footer-link" href={localizedHref('/copyright/')}>{initialLanguage === 'zh' ? '版权声明' : 'Copyright notice'}</a>
+        <a class="site-footer-link" href={localizedHref('/copyright/')}>{copy('Copyright notice', '版权声明', 'Avis de droits d’auteur')}</a>
         <span aria-hidden="true"> · </span>
         <a
           class="site-footer-link"
           href={localizedHref('/changelog/')}
-        >v{siteVersion} · {initialLanguage === 'zh' ? '更新记录' : 'Changelog'}</a>
+        >v{siteVersion} · {copy('Changelog', '更新记录', 'Historique des versions')}</a>
       </p>
       <p class="site-footer-legal-note text-xs">
-        {initialLanguage === 'zh'
-          ? '数据仅供信息参考，请以官方卫生机构发布为准。'
-          : fr ? 'Ces données sont fournies à titre informatif. Consultez toujours les autorités sanitaires officielles.'
-          : 'Data provided for informational purposes only. Always refer to official health authorities.'}
+        {copy('Data provided for informational purposes only. Always refer to official health authorities.', '数据仅供信息参考，请以官方卫生机构发布为准。', 'Ces données sont fournies à titre informatif. Consultez toujours les autorités sanitaires officielles.')}
       </p>
     </div>
   </div>

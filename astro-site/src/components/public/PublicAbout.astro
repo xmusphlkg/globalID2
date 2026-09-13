@@ -10,10 +10,11 @@ interface Props {
 
 const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const about = aboutRaw as any;
 const summary = about.summary ?? {};
-const dateLocale = zh ? 'zh-CN' : 'en-US';
+const dateLocale = zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US';
 const generatedAt = about.generated_at
   ? new Date(about.generated_at).toLocaleDateString(dateLocale, {
       year: 'numeric',
@@ -21,7 +22,7 @@ const generatedAt = about.generated_at
       day: 'numeric',
       timeZone: 'UTC',
     })
-  : zh ? '暂无' : 'Not available';
+  : zh ? '暂无' : fr ? 'Non disponible' : 'Not available';
 
 const copy = zh ? {
   eyebrow: '方法与关于',
@@ -163,8 +164,21 @@ const copy = zh ? {
   },
 };
 
+if (fr) {
+  Object.assign(copy, {
+    eyebrow: 'Méthodes et à propos', title: 'Chaque preuve remonte à sa source',
+    lead: 'GIDS organise les données de surveillance des maladies infectieuses publiées par les autorités de santé, afin de les rendre plus faciles à trouver, comprendre et vérifier tout en préservant le contexte des rapports originaux.',
+    updated: `Instantané public mis à jour le ${generatedAt}. La couverture et les calendriers de publication varient selon les sources.`,
+    onPage: 'Sur cette page', nav: ['Projet et responsable', 'Données et méthodes', 'Utilisation responsable', 'Remerciements'],
+    story: { ...copy.story, kicker: 'Projet et responsable', title: 'D’un relevé personnel à un projet mondial de surveillance', lead: 'GIDS est né en 2021 pour conserver des données de surveillance qui évoluaient et disparaissaient dans des pages web et feuilles de calcul dispersées. Cette archive personnelle est devenue le projet public que je maintiens aujourd’hui.', paperLabel: 'Lire l’article de 2024', current: 'Période actuelle' },
+    maintainer: { ...copy.maintainer, label: 'Responsable', role: 'Doctorant, École de santé publique, Université de Xiamen', bio: 'Je prépare un doctorat en épidémiologie et statistiques de santé, avec une diplomation prévue en 2027. GIDS me permet de réunir questions de santé publique, données réelles, ingénierie logicielle et chaîne de preuves vérifiable.', focus: ['Épidémiologie', 'Statistiques de santé', 'Données de santé', 'Ingénierie des données', 'IA en santé'], opportunityTitle: 'Stages, postdoctorat et collaborations', profile: 'Visiter mon site personnel', email: 'Me contacter par e-mail' },
+    data: { ...copy.data, kicker: 'Données et méthodes', title: 'Comment les données arrivent sur le site', lead: 'Seuls les enregistrements publics qui passent les contrôles de provenance, complétude et cohérence sont publiés. Ces chiffres décrivent l’instantané actuel, pas la charge mondiale complète des maladies infectieuses.', metrics: [['Pays et régions', summary.total_countries ?? 0], ['Maladies suivies', summary.total_diseases ?? 0], ['Enregistrements publiés', summary.total_cases ?? 0], ['Dernière date de déclaration', summary.coverage_end ?? 'Non disponible']], coverage: `Période couverte ${summary.coverage_start ?? '—'} – ${summary.coverage_end ?? '—'}`, steps: [['Collecter', 'Récupérer les nouveaux enregistrements publiés par les autorités sanitaires officielles configurées.'], ['Standardiser', 'Harmoniser noms, lieux, dates et mesures tout en conservant le niveau de détail d’origine.'], ['Vérifier', 'Contrôler complétude, cohérence, provenance et conditions de publication avant diffusion.'], ['Publier', 'Actualiser pages et téléchargements en conservant sources, limites et voies de correction.']], notes: [['Sources officielles', 'Chaque jeu de données conserve l’autorité responsable, le lien source et la période couverte.'], ['Contexte conservé', 'Les systèmes de déclaration ne sont pas supposés directement comparables ; définitions et granularité restent visibles.'], ['Manquant ne signifie pas zéro', 'Les champs indisponibles et périodes non déclarées restent manquants.']] },
+    responsibility: { ...copy.responsibility, kicker: 'Utilisation responsable', title: 'Utiliser GIDS de manière responsable', lead: 'Ces données servent à la surveillance, à la recherche et à l’orientation vers les preuves, mais doivent rester interprétées dans leur système de déclaration d’origine.', items: [['Ni outil clinique ni déclaration d’épidémie', 'GIDS ne remplace pas les autorités sanitaires et ne doit pas servir au diagnostic ou aux décisions de risque personnels.'], ['Les chiffres évoluent et les systèmes diffèrent', 'Définitions de cas, populations couvertes, délais et granularité varient ; lisez les notes sources avant toute comparaison.'], ['L’automatisation exige des corrections publiques', 'La collecte, la standardisation et une partie des synthèses sont assistées par logiciel ; signalez les problèmes avec leur source officielle.'], ['Indépendance et réutilisation', 'GIDS est un projet indépendant d’intérêt public et ne représente pas les institutions liées ; chaque code, donnée ou source suit ses propres règles.']], downloads: 'Explorer les données téléchargeables', reuse: 'Lire les règles de réutilisation', repository: 'Voir le code source', correction: 'Signaler une correction' },
+  });
+}
+
 const ids = ['maintainer', 'data-methods', 'responsible-use', 'acknowledgements'];
-const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[index], labelZh: copy.nav[index] }));
+const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[index], labelZh: copy.nav[index], labelFr: copy.nav[index] }));
 ---
 
 <article class="about-page">
@@ -223,7 +237,7 @@ const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[in
           <h3>{copy.maintainer.name}</h3>
           <p class="maintainer-role">{copy.maintainer.role}</p>
           <p>{copy.maintainer.bio}</p>
-          <ul class="focus-list" aria-label={zh ? '专业方向' : 'Areas of focus'}>
+          <ul class="focus-list" aria-label={zh ? '专业方向' : fr ? 'Domaines d’expertise' : 'Areas of focus'}>
             {copy.maintainer.focus.map(area => <li>{area}</li>)}
           </ul>
         </div>
@@ -306,23 +320,23 @@ const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[in
 
   <section id="acknowledgements" class="section wrap">
     <header class="section-heading acknowledgements-heading">
-      <p class="eyebrow">{zh ? acknowledgementIntro.kickerZh : acknowledgementIntro.kickerEn}</p>
-      <h2>{zh ? acknowledgementIntro.titleZh : acknowledgementIntro.titleEn}</h2>
-      <p>{zh ? acknowledgementIntro.leadZh : acknowledgementIntro.leadEn}</p>
+      <p class="eyebrow">{zh ? acknowledgementIntro.kickerZh : fr ? 'Remerciements' : acknowledgementIntro.kickerEn}</p>
+      <h2>{zh ? acknowledgementIntro.titleZh : fr ? 'Merci aux sources et collaborateurs' : acknowledgementIntro.titleEn}</h2>
+      <p>{zh ? acknowledgementIntro.leadZh : fr ? 'GIDS remercie les autorités, chercheurs et contributeurs qui rendent ces données de surveillance accessibles.' : acknowledgementIntro.leadEn}</p>
     </header>
     <div class="acknowledgements">
       {acknowledgementEntries.map(entry => (
         <article>
           <h3>{entry.name}</h3>
           <p class="affiliation">{zh ? entry.affiliationZh : entry.affiliationEn}</p>
-          <p>{zh ? entry.contributionZh : entry.contributionEn}</p>
-          <ul aria-label={zh ? '贡献类型' : 'Contribution types'}>
-            {entry.roles.map(role => <li>{zh ? role.zh : role.en}</li>)}
+          <p>{zh ? entry.contributionZh : fr ? entry.contributionEn : entry.contributionEn}</p>
+          <ul aria-label={zh ? '贡献类型' : fr ? 'Types de contribution' : 'Contribution types'}>
+            {entry.roles.map(role => <li>{zh ? role.zh : fr ? role.en : role.en}</li>)}
           </ul>
         </article>
       ))}
     </div>
-    <p class="acknowledgement-note">{zh ? acknowledgementIntro.noteZh : acknowledgementIntro.noteEn}</p>
+    <p class="acknowledgement-note">{zh ? acknowledgementIntro.noteZh : fr ? 'Les liens et attributions restent visibles afin de faciliter la vérification et la réutilisation responsable.' : acknowledgementIntro.noteEn}</p>
   </section>
 </article>
 

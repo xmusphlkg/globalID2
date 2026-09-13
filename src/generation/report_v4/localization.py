@@ -17,6 +17,8 @@ BILINGUAL_MARKERS = (
 
 def normalize_language(value: Any) -> str:
     text = str(value or DEFAULT_LOCALE).strip().lower()
+    if text in {"fr", "fra", "fr-fr", "french", "français"}:
+        return "fr"
     if text in {"zh", "cn", "zh_cn", "zh-cn", "bilingual", "zh_en", "zh-en"}:
         return "zh"
     return "en"
@@ -25,15 +27,13 @@ def normalize_language(value: Any) -> str:
 def localized(value: Any, locale: str, fallback: str = "") -> str:
     if isinstance(value, dict):
         direct = value.get(locale)
-        if isinstance(direct, str):
+        if isinstance(direct, str) and direct.strip():
             return direct
+        if locale == "fr":
+            return fallback or "Traduction française en attente."
         default = value.get(DEFAULT_LOCALE)
-        if isinstance(default, str):
+        if isinstance(default, str) and default.strip():
             return default
-        for supported in SUPPORTED_LOCALES:
-            candidate = value.get(supported)
-            if isinstance(candidate, str):
-                return candidate
     if isinstance(value, str):
         return value
     return fallback
@@ -44,6 +44,8 @@ def localized_list(value: Any, locale: str) -> list[str]:
         direct = value.get(locale)
         if isinstance(direct, list):
             return [str(item) for item in direct]
+        if locale == "fr" and value:
+            return ["Traduction française en attente."]
     if isinstance(value, list):
         return [str(item) for item in value]
     return []
@@ -78,6 +80,8 @@ def validate_localized_text(value: Any, path: str) -> list[str]:
         if not isinstance(text, str) or not text.strip():
             issues.append(f"{path}.{locale} is missing")
             continue
+        if locale == "fr" and "Traduction française en attente" in text:
+            issues.append(f"{path}.fr contains the French pending-translation marker")
         for marker in BILINGUAL_MARKERS:
             if marker.lower() in text.lower():
                 issues.append(f"{path}.{locale} contains bilingual marker {marker!r}")
@@ -93,7 +97,7 @@ def validate_report_document(document: dict[str, Any]) -> list[str]:
     if document.get("default_locale") != DEFAULT_LOCALE:
         issues.append("default_locale must be zh")
     if set(document.get("locales") or []) != set(SUPPORTED_LOCALES):
-        issues.append("locales must contain zh and en")
+        issues.append("locales must contain zh, en, and fr")
     issues.extend(validate_localized_text(document.get("title"), "title"))
     issues.extend(validate_localized_text(document.get("summary"), "summary"))
     key_findings = document.get("key_findings")
@@ -106,7 +110,12 @@ def validate_report_document(document: dict[str, Any]) -> list[str]:
                 issues.append(f"key_findings.{locale} is missing")
             else:
                 for index, finding in enumerate(findings):
-                    issues.extend(validate_localized_text({locale: str(finding), "zh" if locale == "en" else "en": "placeholder"}, f"key_findings.{locale}[{index}]"))
+                    if not isinstance(finding, str) or not finding.strip():
+                        issues.append(f"key_findings.{locale}[{index}] is missing")
+                    elif locale == "zh" and looks_english_heavy_in_zh(str(finding)):
+                        issues.append(f"key_findings.{locale}[{index}] appears to contain English fallback text")
+                    elif locale == "en" and looks_chinese_heavy_in_en(str(finding)):
+                        issues.append(f"key_findings.{locale}[{index}] appears to contain Chinese fallback text")
     sections = document.get("sections")
     if not isinstance(sections, list) or not sections:
         issues.append("sections must be a non-empty list")
@@ -117,4 +126,27 @@ def validate_report_document(document: dict[str, Any]) -> list[str]:
                 continue
             issues.extend(validate_localized_text(section.get("title"), f"sections[{index}].title"))
             issues.extend(validate_localized_text(section.get("body"), f"sections[{index}].body"))
+
+    disease_directory = document.get("disease_directory")
+    if isinstance(disease_directory, list):
+        for index, item in enumerate(disease_directory):
+            if not isinstance(item, dict):
+                issues.append(f"disease_directory[{index}] must be an object")
+                continue
+            analysis_sections = item.get("analysis_sections")
+            if not isinstance(analysis_sections, list) or not analysis_sections:
+                issues.append(f"disease_directory[{index}].analysis_sections is missing")
+                continue
+            for section_index, section in enumerate(analysis_sections):
+                if not isinstance(section, dict):
+                    issues.append(f"disease_directory[{index}].analysis_sections[{section_index}] must be an object")
+                    continue
+                issues.extend(validate_localized_text(
+                    section.get("title_i18n"),
+                    f"disease_directory[{index}].analysis_sections[{section_index}].title_i18n",
+                ))
+                issues.extend(validate_localized_text(
+                    section.get("content_i18n"),
+                    f"disease_directory[{index}].analysis_sections[{section_index}].content_i18n",
+                ))
     return [issue for issue in issues if "placeholder" not in issue]

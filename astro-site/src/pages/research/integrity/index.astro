@@ -6,12 +6,13 @@ import {
   normalizeIntegrityAlerts,
 } from '../../../lib/research-integrity';
 import { buildAlternatePaths } from '../../../lib/seo';
+import { translateUi } from '../../../utils/i18n';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T, frValue?: T) => zh ? zhValue : fr ? (frValue ?? en) : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => zh ? zhValue : fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : en;
 
 const alerts = normalizeIntegrityAlerts((researchData as any).integrity_alerts);
 const counts = {

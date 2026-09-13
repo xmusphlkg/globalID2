@@ -79,7 +79,7 @@ export const DISEASE_NAMES_FR: Record<string, string> = {
   "glanders": "Morve",
   "gonococcal-infection": "Blennorragie gonococcique",
   "gonorrhea": "Gonorrhée",
-  "group-a-streptococcal-pharyngitis": "• Pharyngite à streptocoque du groupe A",
+  "group-a-streptococcal-pharyngitis": "Pharyngite à streptocoque du groupe A",
   "h5n1": "Infection humaine par le virus H5N1",
   "h7n9": "Infection humaine par le virus H7N9",
   "haemolytic-uraemic-syndrome-(hus)": "SHU (Syndrome Hémolytique et Urémique)",
@@ -457,7 +457,7 @@ export const DISEASE_NAMES_FR_BY_ID: Record<string, string> = {
   "D221": "Morve",
   "D222": "Fièvre tachetée japonaise",
   "D223": "fièvre pourprée des montagnes rocheuses",
-  "D224": "• Pharyngite à streptocoque du groupe A",
+  "D224": "Pharyngite à streptocoque du groupe A",
   "D225": "Infection streptococcique invasive sevère",
   "D226": "Fièvre hémorragique d'Omsk",
   "D227": "Infection à entérobactéries résistantes au carbapénème",
@@ -500,6 +500,9 @@ export function localizedDiseaseName(record: DiseaseNameRecord, locale: DiseaseN
   // Some compact API payloads identify diseases by D-numbers rather than slugs.
   // Callers can provide a localized name directly when a slug is unavailable.
   if (locale === 'zh') return chinese;
-  if (locale === 'fr') return french ?? english;
+  if (locale === 'fr') {
+    if (!french) throw new Error(`Missing French disease name: ${record.disease_id ?? record.slug ?? english ?? 'unknown'}`);
+    return french;
+  }
   return english;
 }

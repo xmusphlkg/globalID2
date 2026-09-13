@@ -13,6 +13,8 @@ interface Props {
   countryName?: string;
   qualityScore?: number | null;
   summary?: string | null;
+  titleFr?: string | null;
+  summaryFr?: string | null;
   locale?: 'en' | 'zh' | 'fr';
 }
 
@@ -26,11 +28,15 @@ const {
   countryCode,
   countryName,
   summary,
+  titleFr,
+  summaryFr,
   locale = 'en',
 } = Astro.props;
 
 const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
 const href = `${prefix}/countries/${(countryCode ?? 'cn').toLowerCase()}/reports/${id}/`;
+const displayTitle = locale === 'fr' ? (titleFr ?? 'Titre français en attente.') : title;
+const displaySummary = locale === 'fr' ? (summaryFr ?? (summary ? 'Résumé français en attente.' : null)) : summary;
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString(locale === 'zh' ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -41,6 +47,9 @@ const typeLabels: Record<string, string> = {
 };
 const typeLabelsZh: Record<string, string> = {
   DAILY: '日报', WEEKLY: '周报', MONTHLY: '月报', SPECIAL: '专题',
+};
+const typeLabelsFr: Record<string, string> = {
+  DAILY: 'Quotidien', WEEKLY: 'Hebdomadaire', MONTHLY: 'Mensuel', QUARTERLY: 'Trimestriel', ANNUAL: 'Annuel', SPECIAL: 'Spécial',
 };
 ---
 
@@ -53,7 +62,7 @@ const typeLabelsZh: Record<string, string> = {
   <div class="flex items-center justify-between gap-3 mb-3">
     <div class="flex items-center gap-2">
       <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20">
-        {locale === 'zh' ? (typeLabelsZh[reportType] ?? reportType) : (typeLabels[reportType] ?? reportType)}
+        {locale === 'zh' ? (typeLabelsZh[reportType] ?? reportType) : locale === 'fr' ? (typeLabelsFr[reportType] ?? reportType) : (typeLabels[reportType] ?? reportType)}
       </span>
       {countryName && (
         <span class="inline-flex items-center gap-1.5 text-xs text-[rgb(var(--text-muted))]">
@@ -65,12 +74,12 @@ const typeLabelsZh: Record<string, string> = {
   </div>
 
   <h3 class="text-[rgb(var(--text-strong))] font-semibold text-base mb-2 group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors line-clamp-2">
-    {title}
+    {displayTitle}
   </h3>
 
-  {summary && (
+  {displaySummary && (
     <p class="text-sm leading-6 text-[rgb(var(--text-muted))] line-clamp-3">
-      {summary}
+      {displaySummary}
     </p>
   )}
 

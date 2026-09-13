@@ -12,6 +12,7 @@ import {
 } from '../../lib/country-coverage';
 import metaRaw from '../../data/meta.json';
 import { buildAlternatePaths } from '../../lib/seo';
+import { localizedRegionName, translateUi } from '../../utils/i18n';
 import {
   COUNTRY_CLASSIFICATION_METADATA,
   INCOME_GROUP_LABELS,
@@ -25,12 +26,13 @@ import {
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 
 const meta = metaRaw as any;
 const metaCountries = (meta.countries ?? []) as Array<{
-  code: string; name: string; name_en?: string; name_zh?: string; language: string;
+  code: string; name: string; name_en?: string; name_zh?: string; name_fr?: string; language: string;
   location_type?: 'country' | 'subdivision' | string; parent_code?: string | null;
   total_cases: number; total_deaths: number; disease_count: number;
   data_available?: boolean; record_count?: number;
@@ -88,7 +90,7 @@ const latestCoverageEnd = supportedCountries
   .filter((date): date is string => Boolean(date))
   .sort()
   .at(-1) ?? '—';
-const numberFormatter = new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', {
+const numberFormatter = new Intl.NumberFormat(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', {
   notation: 'compact',
   maximumFractionDigits: 1,
 });
@@ -104,7 +106,7 @@ const INCOME_OPTIONS = [...new Set(
 )] as IncomeGroupCode[];
 
 const byLocalizedLabel = <T extends string>(labels: Record<T, { en: string; zh: string; fr: string }>) =>
-  (a: T, b: T) => (labels[a][locale] ?? labels[a].en).localeCompare(labels[b][locale] ?? labels[b].en, zh ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en');
+  (a: T, b: T) => labels[a][locale].localeCompare(labels[b][locale], zh ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en');
 
 WHO_OPTIONS.sort(byLocalizedLabel(WHO_REGION_LABELS));
 WB_REGION_OPTIONS.sort(byLocalizedLabel(WORLD_BANK_REGION_LABELS));
@@ -121,12 +123,22 @@ const CADENCE_ZH: Record<string, string> = {
   Mixed: '混合频率',
   'To be confirmed': '待确认',
 };
+const CADENCE_FR: Record<string, string> = {
+  Weekly: 'Hebdomadaire', Monthly: 'Mensuelle', Daily: 'Quotidienne', Weekdays: 'Jours ouvrés',
+  Periodic: 'Périodique', Annual: 'Annuelle', 'Current aggregate': 'Agrégat actuel',
+  Mixed: 'Fréquence mixte', 'To be confirmed': 'À confirmer',
+};
 
 const TRACK_ZH: Record<string, string> = {
   'National source': '国家级来源',
   'Regional baseline': 'ECDC 基线',
   'Source research': '来源调研',
 };
+const TRACK_FR: Record<string, string> = {
+  'National source': 'Source nationale', 'Regional baseline': 'Référence régionale ECDC', 'Source research': 'Recherche de source',
+};
+const frenchCountryName = (entry: { code: string; name_en: string; name_fr?: string }) =>
+  localizedRegionName('fr', entry.code, { en: entry.name_en, fr: entry.name_fr });
 
 ---
 
@@ -173,7 +185,7 @@ const TRACK_ZH: Record<string, string> = {
         <div class="coverage-map-readout" aria-label={pick('Map status summary', '地图状态摘要')}>
           <strong>{activeCount}</strong>
           <span>{pick('countries live', '个国家已上线')}</span>
-          <small>{pick(`${chinaSubdivisionCount + subdivisionCountries.filter(c => c.parent_code !== 'CN').length} regional feeds`, `${chinaSubdivisionCount + subdivisionCountries.filter(c => c.parent_code !== 'CN').length} 个省级/地区数据源`)}</small>
+          <small>{pick(`${chinaSubdivisionCount + subdivisionCountries.filter(c => c.parent_code !== 'CN').length} regional feeds`, `${chinaSubdivisionCount + subdivisionCountries.filter(c => c.parent_code !== 'CN').length} 个省级/地区数据源`, `${chinaSubdivisionCount + subdivisionCountries.filter(c => c.parent_code !== 'CN').length} flux régionaux`)}</small>
         </div>
       </div>
 
@@ -223,7 +235,7 @@ const TRACK_ZH: Record<string, string> = {
           <h2 class="coverage-section-title">{pick('Countries and regions', '国家/地区')}</h2>
         </div>
         <span class="coverage-summary-pill" id={`country-filter-summary-${locale}`} aria-live="polite">
-          <span>{pick(`${supportedCountries.length} active · ${scheduledCount} scheduled`, `${supportedCountries.length} 个已支持 · ${scheduledCount} 个规划中`)}</span>
+          <span>{pick(`${supportedCountries.length} active · ${scheduledCount} scheduled`, `${supportedCountries.length} 个已支持 · ${scheduledCount} 个规划中`, `${supportedCountries.length} actifs · ${scheduledCount} planifiés`)}</span>
         </span>
       </div>
 
@@ -240,6 +252,7 @@ const TRACK_ZH: Record<string, string> = {
               {pick(
                 `${chinaSubdivisionCount} province-level datasets are grouped under China and excluded from country-level totals.`,
                 `${chinaSubdivisionCount} 个分省数据集统一归入中国，不计入国家级汇总。`,
+                `${chinaSubdivisionCount} jeux de données provinciales sont regroupés sous la Chine et exclus des totaux nationaux.`,
               )}
             </span>
           </span>
@@ -312,9 +325,12 @@ const TRACK_ZH: Record<string, string> = {
           const filterStatus = m && hasData ? 'supported' : 'scheduled';
           const classification = getCountryClassification(c.code)
             ?? getCountryClassification(m?.parent_code ?? '');
-          const searchText = `${c.code} ${c.name_en} ${c.name_zh} ${m?.name ?? ''} ${m?.name_en ?? ''} ${m?.name_zh ?? ''}`.toLowerCase();
+          const nameFr = frenchCountryName({ code: c.code, name_en: c.name_en, name_fr: m?.name_fr });
+          const searchText = `${c.code} ${c.name_en} ${c.name_zh} ${nameFr} ${m?.name ?? ''} ${m?.name_en ?? ''} ${m?.name_zh ?? ''}`.toLowerCase();
           const cadenceZh = c.cadence ? CADENCE_ZH[c.cadence] ?? c.cadence : '';
+          const cadenceFr = c.cadence ? CADENCE_FR[c.cadence] ?? (() => { throw new Error(`Missing French cadence: ${c.cadence}`); })() : '';
           const trackZh = c.onboarding_track ? TRACK_ZH[c.onboarding_track] ?? c.onboarding_track : '';
+          const trackFr = c.onboarding_track ? TRACK_FR[c.onboarding_track] ?? (() => { throw new Error(`Missing French onboarding track: ${c.onboarding_track}`); })() : '';
           if (m && hasData) {
             return (
               <div
@@ -331,6 +347,7 @@ const TRACK_ZH: Record<string, string> = {
                   code={m.code}
                   name={m.name_en ?? m.name}
                   nameZh={m.name_zh ?? c.name_zh}
+                  nameFr={nameFr}
                   totalCases={m.total_cases}
                   totalDeaths={m.total_deaths}
                   diseaseCount={m.disease_count}
@@ -357,7 +374,7 @@ const TRACK_ZH: Record<string, string> = {
                 <div class="flex items-center gap-3">
                   <CountryFlag code={c.code} name={c.name_en} sizeClass="w-9 h-7" />
                   <div>
-                    <h3 class="text-[rgb(var(--text-strong))] font-semibold text-base">{pick(c.name_en, c.name_zh)}</h3>
+                    <h3 class="text-[rgb(var(--text-strong))] font-semibold text-base">{pick(c.name_en, c.name_zh, nameFr)}</h3>
                     <span class="text-[rgb(var(--text-faint))] text-xs font-mono tracking-[0.12em] uppercase">{c.code}</span>
                   </div>
                 </div>
@@ -370,10 +387,10 @@ const TRACK_ZH: Record<string, string> = {
 
               <div class="coverage-source-meta">
                 {c.onboarding_track && (
-                  <span class="coverage-source-track">{pick(c.onboarding_track, trackZh)}</span>
+                  <span class="coverage-source-track">{pick(c.onboarding_track, trackZh, trackFr)}</span>
                 )}
                 {c.cadence && (
-                  <span class="coverage-source-cadence">{pick(`Update: ${c.cadence}`, `更新：${cadenceZh}`)}</span>
+                  <span class="coverage-source-cadence">{pick(`Update: ${c.cadence}`, `更新：${cadenceZh}`, `Mise à jour : ${cadenceFr}`)}</span>
                 )}
               </div>
 
@@ -383,7 +400,7 @@ const TRACK_ZH: Record<string, string> = {
                   href={c.source_url}
                   target="_blank"
                   rel="noreferrer"
-                  aria-label={pick(`${c.name_en} official surveillance source`, `${c.name_zh}官方监测来源`)}
+                  aria-label={pick(`${c.name_en} official surveillance source`, `${c.name_zh}官方监测来源`, `Source officielle de surveillance pour ${nameFr}`)}
                 >
                   <span class="coverage-source-link-label">{pick('Official source', '官方数据源')}</span>
                   <span class="coverage-source-name">{c.source_name}</span>
@@ -403,6 +420,7 @@ const TRACK_ZH: Record<string, string> = {
         {pick(
           `WHO regions and World Bank FY${COUNTRY_CLASSIFICATION_METADATA.worldBankFiscalYear} regions/income groups; snapshot updated ${COUNTRY_CLASSIFICATION_METADATA.updatedAt}.`,
           `WHO 区域及世界银行 ${COUNTRY_CLASSIFICATION_METADATA.worldBankFiscalYear} 财年区域/收入组；快照更新于 ${COUNTRY_CLASSIFICATION_METADATA.updatedAt}。`,
+          `Régions de l’OMS et régions/groupes de revenu de la Banque mondiale pour l’exercice ${COUNTRY_CLASSIFICATION_METADATA.worldBankFiscalYear} ; instantané mis à jour le ${COUNTRY_CLASSIFICATION_METADATA.updatedAt}.`,
         )}
         {' '}
         <a href={COUNTRY_CLASSIFICATION_METADATA.sources.who_regions} target="_blank" rel="noreferrer">WHO ↗</a>

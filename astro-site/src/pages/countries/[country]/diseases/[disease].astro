@@ -5,9 +5,12 @@ import { countryDiseaseCandidates } from '../../../../lib/seo-page-data';
 import {
   buildAlternatePaths,
   buildDatasetStructuredData,
+  clampSeoTitle,
   buildSeoTitle,
   formatYearRange,
 } from '../../../../lib/seo';
+import { localizedDiseaseName } from '../../../../utils/diseaseNames';
+import { localizedRegionName } from '../../../../utils/i18n';
 
 export function getStaticPaths() {
   return countryDiseaseCandidates().map(candidate => ({
@@ -40,10 +43,13 @@ const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => `${prefix}${href}`;
 const countryNameEn = country.country_name_en ?? country.country_name ?? String(code).toUpperCase();
 const countryNameZh = country.country_name_zh ?? countryNameEn;
+const countryNameFr = country.country_name_fr ?? localizedRegionName('fr', code, { en: countryNameEn });
 const diseaseNameEn = series.disease_name_en ?? series.disease_name ?? series.name ?? slug;
 const diseaseNameZh = series.disease_name_zh ?? diseaseNameEn;
-const countryName = zh ? countryNameZh : countryNameEn;
-const diseaseName = zh ? diseaseNameZh : diseaseNameEn;
+const diseaseNameFr = localizedDiseaseName({ disease_id: series.disease_id ?? slug, slug, name_en: diseaseNameEn, name_zh: diseaseNameZh, name_fr: series.disease_name_fr }, 'fr');
+const countryName = zh ? countryNameZh : locale === 'fr' ? countryNameFr : countryNameEn;
+const diseaseName = zh ? diseaseNameZh : locale === 'fr' ? diseaseNameFr : diseaseNameEn;
+const copy = (en: string, zhValue: string, frValue: string) => zh ? zhValue : locale === 'fr' ? frValue : en;
 const dates = Array.isArray(series.dates) ? series.dates : [];
 const cases = Array.isArray(series.cases) ? series.cases : [];
 const coverage = formatYearRange(dates[0], dates.at(-1));
@@ -55,8 +61,8 @@ const canonicalPath = localeHref(`/countries/${code}/diseases/${slug}/`);
 const siteOrigin = Astro.site?.toString().replace(/\/$/, '') ?? 'https://globalinfectiousdisease.com';
 const dataset = buildDatasetStructuredData({
   id: `${siteOrigin}${canonicalPath}#dataset`,
-  name: zh ? `${countryNameZh}${diseaseNameZh}监测` : `${diseaseNameEn} surveillance in ${countryNameEn}`,
-  description: zh ? `${countryNameZh}${diseaseNameZh}官方来源监测数据，覆盖${coverage}。` : `Official-source ${diseaseNameEn} surveillance observations for ${countryNameEn}, covering ${coverage}.`,
+  name: copy(`${diseaseNameEn} surveillance in ${countryNameEn}`, `${countryNameZh}${diseaseNameZh}监测`, `Surveillance de ${diseaseNameFr} en ${countryNameFr}`),
+  description: copy(`Official-source ${diseaseNameEn} surveillance observations for ${countryNameEn}, covering ${coverage}.`, `${countryNameZh}${diseaseNameZh}官方来源监测数据，覆盖${coverage}。`, `Observations de surveillance de ${diseaseNameFr} provenant de sources officielles pour ${countryNameFr}, sur la période ${coverage}.`),
   url: `${siteOrigin}${canonicalPath}`,
   siteOrigin,
   identifier: `gids:${code}:${slug}`,
@@ -71,8 +77,8 @@ const dataset = buildDatasetStructuredData({
   sourceUrls,
 });
 const seo = {
-  title: zh ? `${countryNameZh}${diseaseNameZh}监测 ${coverage} | GIDS` : buildSeoTitle(diseaseNameEn, `surveillance in ${countryNameEn}`, coverage),
-  description: zh ? `${countryNameZh}${diseaseNameZh}监测数据，覆盖${coverage}，包含最新报告值、官方来源、趋势背景和数据入口。` : `${diseaseNameEn} surveillance in ${countryNameEn}: ${coverage} coverage, latest reported value${Number.isFinite(latestCases) ? ` ${latestCases.toLocaleString()} cases` : ''}, official sources, trend context, and downloadable data.`,
+  title: zh ? `${countryNameZh}${diseaseNameZh}监测 ${coverage} | GIDS` : locale === 'fr' ? clampSeoTitle(`${countryNameFr} — ${diseaseNameFr}${coverage ? ` (${coverage})` : ''} | GIDS`) : buildSeoTitle(diseaseNameEn, `surveillance in ${countryNameEn}`, coverage),
+  description: zh ? `${countryNameZh}${diseaseNameZh}监测数据，覆盖${coverage}，包含最新报告值、官方来源、趋势背景和数据入口。` : locale === 'fr' ? `Surveillance de ${diseaseNameFr} en ${countryNameFr} : période ${coverage}, dernière valeur publiée${Number.isFinite(latestCases) ? ` (${latestCases.toLocaleString('fr-FR')} cas)` : ''}, sources officielles et données téléchargeables.` : `${diseaseNameEn} surveillance in ${countryNameEn}: ${coverage} coverage, latest reported value${Number.isFinite(latestCases) ? ` ${latestCases.toLocaleString()} cases` : ''}, official sources, trend context, and downloadable data.`,
   locale,
   canonicalPath,
   alternatePaths: buildAlternatePaths(canonicalPath, locale),
@@ -82,33 +88,33 @@ const seo = {
 ---
 
 <ReportLayout title={seo.title} description={seo.description} initialLanguage={locale} seo={seo} structuredData={dataset} breadcrumbs={[
-  { label: 'Countries', labelZh: '国家/地区', href: localeHref('/countries/') },
-  { label: countryNameEn, labelZh: countryNameZh, href: localeHref(`/countries/${code}/`) },
-  { label: diseaseNameEn, labelZh: diseaseNameZh },
+  { label: 'Countries', labelZh: '国家/地区', labelFr: 'Pays', href: localeHref('/countries/') },
+  { label: countryNameEn, labelZh: countryNameZh, labelFr: countryNameFr, href: localeHref(`/countries/${code}/`) },
+  { label: diseaseNameEn, labelZh: diseaseNameZh, labelFr: diseaseNameFr },
 ]}>
   <article class="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
     <header class="academic-hero">
-      <div class="flex items-center gap-3"><CountryFlag code={String(code)} name={countryName} sizeClass="h-8 w-11" /><span class="academic-kicker">{zh ? '国家疾病监测画像' : 'Country disease surveillance profile'}</span></div>
-      <h1 class="academic-title mt-4">{zh ? `${countryName}${diseaseName}监测` : `${diseaseName} surveillance in ${countryName}`}</h1>
-      <p class="academic-lead">{zh ? '汇总官方来源观测、覆盖范围、趋势解释以及底层国家数据入口。' : 'Official-source observations, coverage details, trend context, and a direct route to the underlying country dataset.'}</p>
+      <div class="flex items-center gap-3"><CountryFlag code={String(code)} name={countryName} sizeClass="h-8 w-11" /><span class="academic-kicker">{copy('Country disease surveillance profile', '国家疾病监测画像', 'Profil de surveillance par pays et maladie')}</span></div>
+      <h1 class="academic-title mt-4">{copy(`${diseaseName} surveillance in ${countryName}`, `${countryName}${diseaseName}监测`, `Surveillance de ${diseaseName} en ${countryName}`)}</h1>
+      <p class="academic-lead">{copy('Official-source observations, coverage details, trend context, and a direct route to the underlying country dataset.', '汇总官方来源观测、覆盖范围、趋势解释以及底层国家数据入口。', 'Observations officielles, couverture, contexte des tendances et accès direct au jeu de données national sous-jacent.')}</p>
       <dl class="academic-meta-grid mt-6">
-        <div class="academic-meta-item"><dt class="academic-meta-label">{zh ? '覆盖区间' : 'Coverage'}</dt><dd class="academic-meta-value text-sm">{coverage}</dd></div>
-        <div class="academic-meta-item"><dt class="academic-meta-label">{zh ? '报告粒度' : 'Reporting granularity'}</dt><dd class="academic-meta-value text-sm">{series.period_granularity ?? (zh ? '未说明' : 'Not specified')}</dd></div>
-        <div class="academic-meta-item"><dt class="academic-meta-label">{zh ? '最新报告值' : 'Latest reported value'}</dt><dd class="academic-meta-value">{Number.isFinite(latestCases) ? latestCases.toLocaleString() : (zh ? '暂无' : 'Not available')}</dd></div>
+        <div class="academic-meta-item"><dt class="academic-meta-label">{copy('Coverage', '覆盖区间', 'Période couverte')}</dt><dd class="academic-meta-value text-sm">{coverage}</dd></div>
+        <div class="academic-meta-item"><dt class="academic-meta-label">{copy('Reporting granularity', '报告粒度', 'Granularité des rapports')}</dt><dd class="academic-meta-value text-sm">{series.period_granularity ?? copy('Not specified', '未说明', 'Non précisée')}</dd></div>
+        <div class="academic-meta-item"><dt class="academic-meta-label">{copy('Latest reported value', '最新报告值', 'Dernière valeur publiée')}</dt><dd class="academic-meta-value">{Number.isFinite(latestCases) ? latestCases.toLocaleString(locale === 'fr' ? 'fr-FR' : undefined) : copy('Not available', '暂无', 'Non disponible')}</dd></div>
       </dl>
     </header>
     <section class="mt-6 grid gap-6 lg:grid-cols-2">
       <div class="figure-panel">
-        <h2 class="figure-title">{zh ? '数据与限制' : 'Data and limitations'}</h2>
-        <p class="figure-caption mt-3">{zh ? '这些数值是监测报告，不是真实疾病负担估计。报告实践、病例定义、完整性和发布时间可能随时间变化。' : 'Values are surveillance reports, not estimates of true disease burden. Reporting practices, case definitions, completeness, and publication timing can change over time.'}</p>
-        <a class="mt-4 inline-flex font-semibold text-brand-500 hover:underline" href={localeHref(`/countries/${code}/`)}>{zh ? `打开${countryName}数据集 →` : `Open the ${countryName} dataset →`}</a>
+        <h2 class="figure-title">{copy('Data and limitations', '数据与限制', 'Données et limites')}</h2>
+        <p class="figure-caption mt-3">{copy('Values are surveillance reports, not estimates of true disease burden. Reporting practices, case definitions, completeness, and publication timing can change over time.', '这些数值是监测报告，不是真实疾病负担估计。报告实践、病例定义、完整性和发布时间可能随时间变化。', 'Ces valeurs sont des déclarations de surveillance et non des estimations de la charge réelle de la maladie. Les pratiques de déclaration, définitions de cas, complétude et délais de publication peuvent évoluer.')}</p>
+        <a class="mt-4 inline-flex font-semibold text-brand-500 hover:underline" href={localeHref(`/countries/${code}/`)}>{copy(`Open the ${countryName} dataset →`, `打开${countryName}数据集 →`, `Ouvrir le jeu de données de ${countryName} →`)}</a>
       </div>
       <div class="figure-panel">
-        <h2 class="figure-title">{zh ? '官方来源' : 'Official sources'}</h2>
+        <h2 class="figure-title">{copy('Official sources', '官方来源', 'Sources officielles')}</h2>
         {sourceUrls.length ? <ul class="mt-3 list-disc space-y-2 pl-5 text-sky-700">
           {sourceUrls.slice(0, 4).map((url) => <li><a href={url} rel="nofollow noopener" target="_blank" class="hover:underline">{url}</a></li>)}
-        </ul> : <p class="mt-3 text-[rgb(var(--text-muted))]">{zh ? '来源 URL 已记录在国家数据集中。' : 'Source URL is recorded in the country dataset.'}</p>}
-        <a class="mt-4 inline-flex font-semibold text-brand-500 hover:underline" href={localeHref(`/diseases/${slug}/`)}>{zh ? `查看全球${diseaseName}画像 →` : `View global ${diseaseName} profile →`}</a>
+        </ul> : <p class="mt-3 text-[rgb(var(--text-muted))]">{copy('Source URL is recorded in the country dataset.', '来源 URL 已记录在国家数据集中。', 'L’URL de la source figure dans le jeu de données national.')}</p>}
+        <a class="mt-4 inline-flex font-semibold text-brand-500 hover:underline" href={localeHref(`/diseases/${slug}/`)}>{copy(`View global ${diseaseName} profile →`, `查看全球${diseaseName}画像 →`, `Voir le profil mondial de ${diseaseName} →`)}</a>
       </div>
     </section>
   </article>

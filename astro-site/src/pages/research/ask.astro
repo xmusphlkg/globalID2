@@ -2,12 +2,14 @@
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import ResearchAskSurveillance from '../../components/research/ResearchAskSurveillance';
 import { buildAlternatePaths } from '../../lib/seo';
+import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
+import { RESEARCH_TOPIC_LABELS, STUDY_TYPE_LABELS, translateUi } from '../../utils/i18n';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 ---
 
 <ReportLayout
@@ -48,7 +50,15 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ?
         </aside>
       </div>
       <div class="ask-query-panel">
-        <form id="research-question-form" class="ask-form" role="search" data-research-locale={locale}>
+        <form
+          id="research-question-form"
+          class="ask-form"
+          role="search"
+          data-research-locale={locale}
+          data-disease-name-map={JSON.stringify({ ...DISEASE_NAMES_FR, ...Object.fromEntries(Object.entries(DISEASE_NAMES_FR_BY_ID).map(([key, value]) => [key.toLowerCase(), value])) })}
+          data-topic-name-map={JSON.stringify(Object.fromEntries(Object.entries(RESEARCH_TOPIC_LABELS).map(([key, labels]) => [key, labels.fr])))}
+          data-study-type-map={JSON.stringify(Object.fromEntries(Object.entries(STUDY_TYPE_LABELS).map(([key, labels]) => [key, labels.fr])))}
+        >
           <label for="research-question">{pick('Research question', '研究问题')}</label>
           <div class="ask-input-row">
             <input id="research-question" class="site-control-input" type="search" autocomplete="off" required minlength="2" maxlength="240" placeholder={pick('What does recent evidence say about pertussis resurgence?', '近期证据如何解释百日咳回升？')} />
@@ -125,6 +135,24 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ?
   const isZh = () => form?.dataset.researchLocale === 'zh';
   const isFr = () => form?.dataset.researchLocale === 'fr';
   const routePrefix = isZh() ? '/zh' : isFr() ? '/fr' : '';
+  const parseMap = (value: string | undefined) => {
+    try { return JSON.parse(value ?? '{}') as Record<string, string>; } catch { return {}; }
+  };
+  const diseaseNameMap = parseMap(form?.dataset.diseaseNameMap);
+  const topicNameMap = parseMap(form?.dataset.topicNameMap);
+  const studyTypeMap = parseMap(form?.dataset.studyTypeMap);
+  const frenchDiseaseName = (item: any) => item.disease_name_fr || item.name_fr
+    || diseaseNameMap[String(item.disease_slug ?? item.slug ?? '').toLowerCase()]
+    || diseaseNameMap[String(item.disease_id ?? '').toLowerCase()]
+    || 'Maladie non précisée';
+  const frenchRegionName = (item: any) => {
+    if (item.name_fr) return item.name_fr;
+    const code = String(item.code ?? '').toUpperCase();
+    if (code === 'CN-SD') return 'Shandong, Chine';
+    if (code === 'CN-GX') return 'Guangxi, Chine';
+    if (!/^[A-Z]{2}$/.test(code)) return 'Région non précisée';
+    try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(code) || 'Région non précisée'; } catch { return 'Région non précisée'; }
+  };
   const SURVEILLANCE_EVENT = 'gids:research-ask-surveillance';
   type SurveillanceDetail = {
     diseaseId: string;
@@ -227,7 +255,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ?
     limitations.textContent = isZh() ? result.limitationsZh : isFr() ? result.limitationsFr : result.limitationsEn;
     themes.replaceChildren(...result.themes.map((item) => {
       const chip = make('span');
-      chip.textContent = `${item.name} · ${item.count}`;
+      chip.textContent = `${isFr() ? (topicNameMap[item.name] || 'Thème non traduit') : item.name} · ${item.count}`;
       return chip;
     }));
 
@@ -237,10 +265,10 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ?
       const signalPath = signal.situation_url || '/situation/';
       link.href = routePrefix && signalPath.startsWith('/') ? `${routePrefix}${signalPath}` : signalPath;
       const title = make('strong');
-      title.textContent = isZh() ? (signal.disease_name_zh || signal.disease_name_en || signal.title || '监测信号') : isFr() ? (signal.disease_name_fr || signal.disease_name_en || signal.title || 'Signal de surveillance') : (signal.disease_name_en || signal.title || 'Surveillance signal');
+      title.textContent = isZh() ? (signal.disease_name_zh || signal.disease_name_en || signal.title || '监测信号') : isFr() ? frenchDiseaseName(signal) : (signal.disease_name_en || signal.title || 'Surveillance signal');
       const detail = make('span');
-      const geographies = (signal.geographies ?? []).map((item: any) => item.name_en || item.name || item.code).filter(Boolean).join(', ');
-      detail.textContent = [geographies, signal.relation_level === 'exact_disease_geography' ? (isZh() ? '疾病与地区精确关联' : 'Exact disease–geography link') : (isZh() ? '疾病背景关联' : 'Disease-context link'), signal.data_through ? formatDate(signal.data_through) : ''].filter(Boolean).join(' · ');
+      const geographies = (signal.geographies ?? []).map((item: any) => isFr() ? frenchRegionName(item) : item.name_en || item.name || item.code).filter(Boolean).join(', ');
+      detail.textContent = [geographies, signal.relation_level === 'exact_disease_geography' ? (isZh() ? '疾病与地区精确关联' : isFr() ? 'Lien exact entre maladie et région' : 'Exact disease–geography link') : (isZh() ? '疾病背景关联' : isFr() ? 'Lien avec le contexte de la maladie' : 'Disease-context link'), signal.data_through ? formatDate(signal.data_through) : ''].filter(Boolean).join(' · ');
       link.append(title, detail);
       return link;
     }));
@@ -251,12 +279,14 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ?
       const diseaseLabel = isZh()
         ? surveillanceDetail.diseaseNameZh || surveillanceDetail.diseaseNameEn || surveillanceDetail.diseaseId
         : isFr()
-          ? surveillanceDetail.diseaseNameFr || surveillanceDetail.diseaseNameEn || surveillanceDetail.diseaseId
+          ? frenchDiseaseName({ disease_id: surveillanceDetail.diseaseId, disease_slug: surveillanceDetail.diseaseSlug, disease_name_fr: surveillanceDetail.diseaseNameFr })
           : surveillanceDetail.diseaseNameEn || surveillanceDetail.diseaseId;
       const countryLabel = surveillanceDetail.countryCodes.length === 1
         ? (isZh()
             ? surveillanceDetail.countryNameZh || surveillanceDetail.countryNameEn || surveillanceDetail.countryCodes[0]
-            : surveillanceDetail.countryNameEn || surveillanceDetail.countryCodes[0])
+            : isFr()
+              ? frenchRegionName({ code: surveillanceDetail.countryCodes[0], name_fr: surveillanceDetail.countryNameFr })
+              : surveillanceDetail.countryNameEn || surveillanceDetail.countryCodes[0])
         : surveillanceDetail.countryCodes.length > 1
           ? (isZh() ? `${surveillanceDetail.countryCodes.length} 个相关国家/地区` : isFr() ? `${surveillanceDetail.countryCodes.length} lieux associés` : `${surveillanceDetail.countryCodes.length} related locations`)
           : (isZh() ? '报告国家/地区' : isFr() ? 'lieux déclarants' : 'reporting locations');
@@ -289,13 +319,14 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ?
       heading.append(internal);
       const level = make('span', `evidence-level evidence-level-${item.evidenceLevel}`);
       level.textContent = item.evidenceLevel === 'exact'
-        ? (isZh() ? '精确匹配' : 'Exact match')
-        : (isZh() ? '背景匹配' : 'Background');
+        ? (isZh() ? '精确匹配' : isFr() ? 'Correspondance exacte' : 'Exact match')
+        : (isZh() ? '背景匹配' : isFr() ? 'Contexte' : 'Background');
       rowHeader.append(level);
       const meta = make('p', 'evidence-meta');
-      meta.textContent = [article.journal, article.study_type, (article.countries ?? []).map((country: any) => country.name_en || country.code).join(', '), formatDate(article.published_at)].filter(Boolean).join(' · ');
+      const studyType = typeof article.study_type === 'string' ? article.study_type : '';
+      meta.textContent = [article.journal, isFr() ? (studyTypeMap[studyType] || 'Type d’étude non traduit') : studyType, (article.countries ?? []).map((country: any) => isFr() ? frenchRegionName(country) : country.name_en || country.code).join(', '), formatDate(article.published_at)].filter(Boolean).join(' · ');
       const matched = make('p', 'evidence-match');
-      matched.textContent = `${isZh() ? '匹配' : 'Matched'}: ${item.matchedTerms.join(isZh() ? '、' : ', ')}`;
+      matched.textContent = `${isZh() ? '匹配' : isFr() ? 'Correspondance' : 'Matched'} : ${item.matchedTerms.join(isZh() ? '、' : ', ')}`;
       const finding = make('p', 'evidence-finding');
       finding.textContent = (isZh() ? item.findingZh : isFr() ? item.findingFr : item.findingEn) || (isZh() ? '该记录尚无已发布的结构化结果摘要；请查看原文。' : isFr() ? 'Aucun résultat structuré publié n’est disponible pour cette référence ; consultez la source.' : 'No published structured finding is available for this record; consult the source.');
       const citations = make('div', 'evidence-citations');

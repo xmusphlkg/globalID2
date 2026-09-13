@@ -2,11 +2,13 @@
 // src/pages/subscribe.astro — Subscribe page
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { buildAlternatePaths } from '../lib/seo';
+import { translateUi } from '../utils/i18n';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 
 const subscriptionsApiBase = (
   import.meta.env.PUBLIC_SUBSCRIPTIONS_API_BASE ||
@@ -267,10 +269,28 @@ const subscriptionsApiBase = (
           resendDone: '确认邮件请求已再次发送。',
           resendUnavailable: '确认邮件投递尚未接入。你的订阅请求仍已保存。',
         },
+        fr: {
+          missingEmail: 'Saisissez une adresse e-mail valide.',
+          missingList: 'Sélectionnez au moins une liste d’abonnement.',
+          missingConsent: 'Acceptez les conditions du service avant de vous abonner.',
+          submitting: 'Envoi de l’abonnement…',
+          received: 'Abonnement reçu. Un e-mail de confirmation sera envoyé par GIDS Alerts. Ajoutez cet expéditeur à votre liste blanche.',
+          emailSent: 'Abonnement reçu. Un e-mail de confirmation a été envoyé par GIDS Alerts. Ajoutez cet expéditeur à votre liste blanche.',
+          failed: 'Échec de l’abonnement. Réessayez dans un instant.',
+          network: 'Erreur réseau lors du contact avec le service d’abonnement.',
+          optionsLoading: 'Chargement des options d’abonnement…',
+          optionsFailed: 'Les options d’abonnement sont indisponibles. Actualisez dans un instant.',
+          rateLimited: 'Trop de tentatives d’abonnement. Patientez avant de réessayer.',
+          emailRateLimited: 'Abonnement enregistré. Un e-mail de confirmation a déjà été envoyé récemment.',
+          resendSending: 'Demande d’un nouvel e-mail de confirmation…',
+          resendDone: 'Demande de confirmation renvoyée.',
+          resendUnavailable: 'La livraison de confirmation n’est pas encore connectée. Votre demande est enregistrée.',
+        },
       };
 
       function currentLang() {
-        return form.getAttribute('data-page-locale') === 'zh' ? 'zh' : 'en';
+        const pageLocale = form.getAttribute('data-page-locale');
+        return pageLocale === 'zh' || pageLocale === 'fr' ? pageLocale : 'en';
       }
 
       function setStatus(type, message) {
@@ -312,13 +332,17 @@ const subscriptionsApiBase = (
       function labelFor(item, lang = currentLang()) {
         return lang === 'zh'
           ? (item.label_zh || item.name_zh || item.label_en || item.name_en || item.value || item.code)
-          : (item.label_en || item.name_en || item.label_zh || item.name_zh || item.value || item.code);
+          : lang === 'fr'
+            ? (item.label_fr || item.name_fr || item.label_en || item.name_en || item.label_zh || item.name_zh || item.value || item.code)
+            : (item.label_en || item.name_en || item.label_zh || item.name_zh || item.value || item.code);
       }
 
       function descriptionFor(item, lang = currentLang()) {
         return lang === 'zh'
           ? (item.description_zh || item.description_en || '')
-          : (item.description_en || item.description_zh || '');
+          : lang === 'fr'
+            ? (item.description_fr || item.description_en || item.description_zh || '')
+            : (item.description_en || item.description_zh || '');
       }
 
       function checkedValues(name) {
@@ -402,7 +426,7 @@ const subscriptionsApiBase = (
 
       function renderAllOptions() {
         if (diseaseSearch) {
-          diseaseSearch.setAttribute('placeholder', currentLang() === 'zh' ? '搜索疾病' : 'Search diseases');
+        diseaseSearch.setAttribute('placeholder', currentLang() === 'zh' ? '搜索疾病' : currentLang() === 'fr' ? 'Rechercher une maladie' : 'Search diseases');
         }
         renderRadioOptions(localeOptions, 'locale', optionState.locales, currentLang());
         renderRadioOptions(frequencyOptions, 'frequency', optionState.frequencies, 'weekly');

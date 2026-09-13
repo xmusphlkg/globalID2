@@ -68,14 +68,34 @@ export const changelogReleases: ChangelogRelease[] = [
         labelFr: 'Amélioré',
         items: [
           {
-            en: 'Language switching now cycles through English, French, and Chinese while preserving the current page and query string.',
-            zh: '语言切换现在支持英文、法文和中文，并保留当前页面与查询参数。',
-            fr: 'Le sélecteur de langue passe désormais entre l’anglais, le français et le chinois en conservant la page et les paramètres de recherche.',
+            en: 'Language switching now uses an explicit English/French/Chinese selector while preserving the current page and query string, making future locale additions straightforward.',
+            zh: '语言切换现在使用英文、法文和中文显式选择器，并保留当前页面与查询参数，为后续新增语言预留扩展空间。',
+            fr: 'Le sélecteur de langue propose explicitement l’anglais, le français et le chinois, conserve la page et les paramètres de recherche et facilite l’ajout de futures langues.',
           },
           {
             en: 'French pages use fr-FR number and date formatting and expose fr-FR document, Open Graph, and structured-data metadata.',
             zh: '法语页面使用 fr-FR 数字和日期格式，并输出 fr-FR 文档、Open Graph 和结构化数据元信息。',
             fr: 'Les pages françaises utilisent les formats de nombres et de dates fr-FR et exposent des métadonnées de document, Open Graph et données structurées en fr-FR.',
+          },
+          {
+            en: 'Refactored shared copy, locale-aware data labels, disease names, regions, study facets, and report controls around a reusable i18n registry.',
+            zh: '将共享文案、本地化数据标签、疾病名称、地区、研究筛选项和报告控件重构为可复用的 i18n 注册表。',
+            fr: 'Refactorisation des textes partagés, libellés de données, noms de maladies, régions, facettes de recherche et contrôles de rapports autour d’un registre i18n réutilisable.',
+          },
+          {
+            en: 'Added an explicit Canadian French (fr-CA) preference that reuses the reviewed French route today and leaves room for future regional terminology and formatting.',
+            zh: '新增加拿大法语（fr-CA）偏好设置，目前复用已审校的法语路由，同时为未来的区域术语和格式化预留空间。',
+            fr: 'Ajout d’une préférence explicite pour le français canadien (fr-CA), qui réutilise pour l’instant la route française contrôlée et prépare les futures variantes terminologiques et de format.',
+          },
+          {
+            en: 'Research Radar enrichment now records translation provenance, per-language outcomes, and retry-pending states for model-center operations.',
+            zh: 'Research Radar 文献增强现在记录翻译来源、按语言处理结果以及模型中心失败后的待重试状态。',
+            fr: 'L’enrichissement du Radar de recherche enregistre désormais la provenance des traductions, les résultats par langue et les états de nouvelle tentative après échec du centre de modèles.',
+          },
+          {
+            en: 'Added French content to the legacy Japan decision brief and made missing historical translations explicit instead of silently displaying another language.',
+            zh: '为旧版日本决策简报补充法语内容，并将历史记录缺失翻译改为明确提示，不再静默显示其他语言。',
+            fr: 'Ajout du contenu français à l’ancienne note décisionnelle sur le Japon et remplacement des repliements silencieux par des indications explicites lorsque des traductions historiques manquent.',
           },
         ],
       },
@@ -91,9 +111,9 @@ export const changelogReleases: ChangelogRelease[] = [
             fr: 'Correction des liens localisés des graphiques, fiches pays, rapports, modules de recherche, fils d’Ariane et pied de page afin de rester dans l’expérience française.',
           },
           {
-            en: 'Added safe English fallback behavior for legacy records that do not yet contain French content.',
-            zh: '为尚未包含法语内容的历史记录增加安全的英文回退机制。',
-            fr: 'Ajout d’un repli anglais sûr pour les enregistrements historiques qui ne disposent pas encore d’un contenu français.',
+            en: 'Removed silent cross-language fallbacks: missing French data now uses a visible French pending state or fails the publication check when required.',
+            zh: '移除静默跨语言回退：缺失法语数据现在显示可见的法语待补状态，必需字段则直接阻止发布检查通过。',
+            fr: 'Suppression des repliements silencieux entre langues : une donnée française manquante affiche désormais un état d’attente explicite en français ou bloque le contrôle de publication lorsqu’elle est obligatoire.',
           },
         ],
       },

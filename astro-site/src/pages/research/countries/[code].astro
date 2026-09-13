@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
 import researchData from '../../../data/research/index.json';
+import { localizedRegionName } from '../../../utils/i18n';
 
 export function getStaticPaths() {
   return ((researchData as any).facets?.countries ?? []).map((facet: any) => ({ params: { code: facet.slug }, props: { facet, code: facet.slug, locale: 'en' } }));
@@ -16,13 +17,14 @@ const file = resolve(`./src/data/research/countries/${facet.slug}.json`);
 const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [] };
 const description = `Published infectious-disease research classified with a high-confidence geographic relationship to ${facet.name_en}.`;
 const descriptionZh = `与${facet.name_zh ?? facet.name_en}形成高置信度地理分类关系的已发布传染病研究。`;
-const countryNameFr = facet.name_fr ?? facet.name_en;
-const descriptionFr = `通过高置信度地理分类关系与 ${countryNameFr} 相关的已发布传染病研究。`;
+const countryNameFr = localizedRegionName('fr', facet.code, { en: facet.name_en, zh: facet.name_zh, fr: facet.name_fr });
+const descriptionFr = `Recherches publiées sur les maladies infectieuses présentant une relation géographique à forte confiance avec ${countryNameFr}.`;
 ---
 
 <ResearchCollectionPage
   eyebrow="Geographic evidence hub"
   eyebrowZh="地区证据专题"
+  eyebrowFr="Pôle géographique de preuves"
   title={`${facet.name_en} research`}
   titleZh={`${facet.name_zh ?? facet.name_en}研究`}
   titleFr={`Recherche sur ${countryNameFr}`}

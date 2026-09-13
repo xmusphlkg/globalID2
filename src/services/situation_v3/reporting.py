@@ -724,6 +724,11 @@ def _context_panels(cards: Iterable[dict[str, Any]]) -> list[ContextPanel]:
         "hospitalized_case_notifications": "住院病例",
         "acute_respiratory_illness_activity": "急性呼吸道疾病活动",
     }
+    label_fr = {
+        "test_positivity": "Taux de positivité des tests",
+        "hospitalized_case_notifications": "Hospitalisations signalées",
+        "acute_respiratory_illness_activity": "Activité des infections respiratoires aiguës",
+    }
     panels: list[ContextPanel] = []
     for card in cards:
         metrics = []
@@ -735,6 +740,7 @@ def _context_panels(cards: Iterable[dict[str, Any]]) -> list[ContextPanel]:
                     label=LocalizedText(
                         en=str(metric.get("label") or metric_type.replace("_", " ")),
                         zh=label_zh.get(metric_type, str(metric.get("label") or metric_type)),
+                        fr=label_fr.get(metric_type, str(metric.get("label") or metric_type)),
                     ),
                     value=metric.get("value"),
                     unit=str(metric.get("unit") or "unknown"),
@@ -754,6 +760,7 @@ def _context_panels(cards: Iterable[dict[str, Any]]) -> list[ContextPanel]:
                     note=LocalizedText(
                         en="Metrics remain separate and are not combined into a synthetic risk score.",
                         zh="各项指标保持独立，不合成为综合风险分数。",
+                        fr="Les indicateurs restent distincts et ne sont pas combinés en un score de risque synthétique.",
                     ),
                 )
             )
@@ -1159,6 +1166,7 @@ def build_daily_report_v3(
             note=LocalizedText(
                 en="Signals cover configured source-native series and are not exhaustive global surveillance.",
                 zh="信号仅覆盖已配置的来源原生序列，并不代表穷尽全球监测。",
+                fr="Les signaux couvrent les séries configurées propres à chaque source et ne constituent pas une surveillance mondiale exhaustive.",
             ),
         ),
         summary=summary,
@@ -1169,10 +1177,12 @@ def build_daily_report_v3(
         narrative=LocalizedText(
             en=f"{len(public_signals)} independently verified signals were published from {modeled} modeled source-native series; statistical candidates are triaged automatically but remain private until verified.",
             zh=f"从 {modeled} 条已建模的来源原生序列中发布了 {len(public_signals)} 个独立验证信号；统计候选会自动分流，但在完成验证前保持非公开。",
+            fr=f"{len(public_signals)} signaux vérifiés de manière indépendante ont été publiés à partir de {modeled} séries modélisées propres aux sources ; les candidats statistiques sont triés automatiquement mais restent privés jusqu’à leur vérification.",
         ),
         limitations=LocalizedText(
             en="Anomaly results prioritize human review. Public-health risk is shown only when attributable official or audited expert evidence exists.",
             zh="异常结果仅用于安排人工复核；只有存在可归因的官方证据或经审计的专家判断时才展示公共卫生风险。",
+            fr="Les résultats d’anomalie servent à prioriser la revue humaine. Le risque pour la santé publique n’est affiché que lorsqu’il existe des preuves officielles attribuables ou une expertise auditée.",
         ),
         quality_gate=gate,
     )
@@ -1348,6 +1358,7 @@ def build_period_report_v3(
         narrative=LocalizedText(
             en=f"{period_key}: {summary.new_count} new, {summary.persistent_count} persistent, and {summary.resolved_count} resolved review signals.",
             zh=f"{period_key}：新增 {summary.new_count} 个、持续 {summary.persistent_count} 个、消退 {summary.resolved_count} 个复核信号。",
+            fr=f"{period_key} : {summary.new_count} signaux de revue nouveaux, {summary.persistent_count} persistants et {summary.resolved_count} résolus.",
         ),
         limitations=latest.limitations,
         quality_gate=gate,

@@ -13,7 +13,7 @@ interface Props {
   locale?: 'en' | 'zh' | 'fr';
 }
 
-const { nameEn, nameZh, nameFr = nameEn, category, icd10, description, slug, locale = 'en' } = Astro.props;
+const { nameEn, nameZh, nameFr, category, icd10, description, slug, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 
@@ -48,7 +48,7 @@ const categoryFr: Record<string, string> = {
   </div>
 
   <h3 class="text-[rgb(var(--text-strong))] font-semibold text-base mb-1 group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors leading-tight">
-    <span>{zh ? nameZh : fr ? nameFr : nameEn}</span>
+      <span>{zh ? nameZh : fr ? (nameFr ?? 'Nom français indisponible') : nameEn}</span>
   </h3>
   <p class="text-[rgb(var(--text-muted))] text-sm mb-3">
     <span>{zh ? nameEn : fr ? nameEn : nameZh}</span>

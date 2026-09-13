@@ -28,10 +28,12 @@ const canonicalPath = zh ? '/zh/search/' : locale === 'fr' ? '/fr/search/' : '/s
   const labels = { country: zh ? '国家与地区' : fr ? 'Pays et régions' : 'Countries', disease: zh ? '疾病' : fr ? 'Maladies' : 'Diseases', situation: zh ? '态势' : fr ? 'Situation' : 'Situation', report: zh ? '报告' : fr ? 'Rapports' : 'Reports', research: zh ? '研究' : fr ? 'Recherche' : 'Research', page: zh ? '页面' : fr ? 'Pages' : 'Pages' };
   const normalized = value => String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   let entries = [];
+  const localizedTitle = entry => zh ? (entry.title.zh || entry.title.en) : fr ? (entry.title.fr || 'Résultat sans titre français') : entry.title.en;
+  const localizedSummary = entry => zh ? (entry.summary?.zh || entry.summary?.en || '') : fr ? (entry.summary?.fr || 'Résumé français indisponible.') : (entry.summary?.en || '');
   function rank(entry, query) {
-    const title = normalized(zh ? (entry.title.zh || entry.title.en) : fr ? (entry.title.fr || entry.title.en) : entry.title.en);
+    const title = normalized(localizedTitle(entry));
     const aliases = (entry.aliases || []).map(normalized);
-    const summary = normalized(zh ? (entry.summary?.zh || entry.summary?.en) : fr ? (entry.summary?.fr || entry.summary?.en) : entry.summary?.en);
+    const summary = normalized(localizedSummary(entry));
     if (title === query) return 100; if (title.startsWith(query)) return 80;
     if (aliases.includes(query)) return 70; if (aliases.some(value => value.startsWith(query))) return 60;
     if (title.includes(query)) return 50; if (aliases.some(value => value.includes(query))) return 35;
@@ -47,7 +49,7 @@ const canonicalPath = zh ? '/zh/search/' : locale === 'fr' ? '/fr/search/' : '/s
     for (const [kind, list] of groups) {
       const section=document.createElement('section'); section.className='search-result-group'; const heading=document.createElement('h2'); heading.textContent=`${labels[kind]} · ${list.length}`; section.append(heading);
       const grid=document.createElement('div'); grid.className='search-result-grid';
-      for (const entry of list) { const link=document.createElement('a'); link.className='search-result-card'; link.href=zh&&entry.href.zh?entry.href.zh:fr&&entry.href.fr?entry.href.fr:entry.href.en; const title=document.createElement('strong'); title.textContent=zh?(entry.title.zh||entry.title.en):fr?(entry.title.fr||entry.title.en):entry.title.en; const summary=document.createElement('span'); summary.textContent=zh?(entry.summary?.zh||entry.summary?.en||''):fr?(entry.summary?.fr||entry.summary?.en||''):(entry.summary?.en||''); link.append(title,summary); grid.append(link); }
+      for (const entry of list) { const link=document.createElement('a'); link.className='search-result-card'; link.href=zh&&entry.href.zh?entry.href.zh:fr&&entry.href.fr?entry.href.fr:entry.href.en; const title=document.createElement('strong'); title.textContent=localizedTitle(entry); const summary=document.createElement('span'); summary.textContent=localizedSummary(entry); link.append(title,summary); grid.append(link); }
       section.append(grid); root.append(section);
     }
   }

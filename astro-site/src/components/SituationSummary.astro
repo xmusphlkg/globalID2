@@ -1,13 +1,16 @@
 ---
 import type { SituationReportV3 } from '../utils/situation';
-import { diseaseHref, formatNumber, geographyLabel, label, labelZh } from '../utils/situation';
+import { diseaseHref, formatNumber, geographyLabel, label, labelFr, labelZh } from '../utils/situation';
+import { localizedDynamicText, translateUi } from '../utils/i18n';
+import { localizedDiseaseName } from '../utils/diseaseNames';
 
 interface Props { snapshot: SituationReportV3; compact?: boolean; locale?: 'en' | 'zh' | 'fr'; }
 
 const { snapshot, compact = false, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 const signals = snapshot.signals.slice(0, compact ? 3 : 5);
 const currency = snapshot.data_currency.by_source ?? [];
 const staleSources = currency.filter(source => source.status === 'stale' || source.status === 'failed').length;
@@ -24,39 +27,44 @@ const guardedAutoMode = publication.mode === 'guarded_auto'
   && publication.auto_verification?.calibration_decision === 'supported';
 const exceptionReviewMode = publication.mode === 'exception_review';
 const assessedRisks = snapshot.signals.filter(signal => signal.assessment.public_health_risk?.status === 'assessed').length;
+const narrative = localizedDynamicText(locale, {
+  en: snapshot.narrative.en,
+  zh: snapshot.narrative.zh,
+  fr: (snapshot.narrative as { fr?: string | null }).fr ?? undefined,
+}, { context: 'le résumé de situation', required: locale === 'fr' });
 const metricCards = snapshot.report.kind === 'daily'
   ? [
-      ['Published signals', '已发布信号', snapshot.summary.unique_signal_count],
-      ['Strong', '强异常', snapshot.summary.strong_count],
-      ['Official events', '官方事件', snapshot.summary.official_event_count],
-      ['Modeled series', '已建模序列', snapshot.coverage.modeled_series_count],
+      ['Published signals', '已发布信号', 'Signaux publiés', snapshot.summary.unique_signal_count],
+      ['Strong', '强异常', 'Forts', snapshot.summary.strong_count],
+      ['Official events', '官方事件', 'Événements officiels', snapshot.summary.official_event_count],
+      ['Modeled series', '已建模序列', 'Séries modélisées', snapshot.coverage.modeled_series_count],
     ]
   : [
-      ['New', '新增', snapshot.summary.new_count],
-      ['Persistent', '持续', snapshot.summary.persistent_count],
-      ['Resolved', '消退', snapshot.summary.resolved_count],
-      ['Active at end', '期末活跃', snapshot.summary.active_at_period_end_count],
+      ['New', '新增', 'Nouveaux', snapshot.summary.new_count],
+      ['Persistent', '持续', 'Persistants', snapshot.summary.persistent_count],
+      ['Resolved', '消退', 'Résolus', snapshot.summary.resolved_count],
+      ['Active at end', '期末活跃', 'Actifs en fin de période', snapshot.summary.active_at_period_end_count],
     ];
 ---
 
 <section class:list={['situation-summary-v3', compact && 'compact']} aria-labelledby={`situation-summary-${snapshot.report.report_id}`}>
   {!snapshot.public_enabled && (
-    <p class="shadow" role="status"><b>Shadow preview</b> · Development-only report</p>
+    <p class="shadow" role="status"><b>{pick('Shadow preview', '影子预览', 'Aperçu en mode observation')}</b> · {pick('Development-only report', '仅限开发环境的报告', 'Rapport réservé au développement')}</p>
   )}
   {shadowMode && (
-    <p class="shadow" role="status">{pick(`Shadow calibration · Numerical signals require analyst verification during the ${publication.shadow_weeks ?? 8}-week observation window.`, `影子校准期 · 在 ${publication.shadow_weeks ?? 8} 周观察窗口内，数值信号须经分析员验证后方可公开。`)}</p>
+    <p class="shadow" role="status">{pick(`Shadow calibration · Numerical signals require analyst verification during the ${publication.shadow_weeks ?? 8}-week observation window.`, `影子校准期 · 在 ${publication.shadow_weeks ?? 8} 周观察窗口内，数值信号须经分析员验证后方可公开。`, `Calibration en phase d’observation · Les signaux numériques doivent être vérifiés par un analyste pendant la fenêtre d’observation de ${publication.shadow_weeks ?? 8} semaines.`)}</p>
   )}
   {guardedAutoMode && (
-    <p class="automation" role="status">{pick('Publication safeguard · Only current, evidence-linked strong signals can be published automatically. Exceptions go to analyst review.', '发布保障 · 仅数据新鲜、证据完整的强信号可自动发布；例外项进入分析员复核。')}</p>
+    <p class="automation" role="status">{pick('Publication safeguard · Only current, evidence-linked strong signals can be published automatically. Exceptions go to analyst review.', '发布保障 · 仅数据新鲜、证据完整的强信号可自动发布；例外项进入分析员复核。', 'Protection de publication · Seuls les signaux forts, récents et liés à des preuves peuvent être publiés automatiquement. Les exceptions sont examinées par un analyste.')}</p>
   )}
   {exceptionReviewMode && (
-    <p class="calibrated" role="status">{pick('Independent verification required · Statistical candidates remain private until supported by an independent official source.', '需要独立核验 · 统计候选在获得独立官方来源支持前保持非公开。')}</p>
+    <p class="calibrated" role="status">{pick('Independent verification required · Statistical candidates remain private until supported by an independent official source.', '需要独立核验 · 统计候选在获得独立官方来源支持前保持非公开。', 'Vérification indépendante requise · Les candidats statistiques restent privés jusqu’à leur confirmation par une source officielle indépendante.')}</p>
   )}
   <header>
     <div>
       <p class="eyebrow">{pick('Situation review', '全球态势复核')}</p>
       <h2 id={`situation-summary-${snapshot.report.report_id}`}>{pick("Today's review brief", '今日复核简报')}</h2>
-      {!compact && <p class="narrative">{pick(snapshot.narrative.en, snapshot.narrative.zh)}</p>}
+      {!compact && <p class="narrative">{narrative}</p>}
     </div>
     <dl class="summary-meta">
       <div><dt>{pick('Provisional periods excluded', '已排除暂定周期')}</dt><dd>{heldBack}</dd></div>
@@ -67,10 +75,10 @@ const metricCards = snapshot.report.kind === 'daily'
   </header>
 
   <dl class="scoreboard">
-    {metricCards.map(([title, titleZh, value]) => (
+    {metricCards.map(([title, titleZh, titleFr, value]) => (
       <div>
-        <dt>{pick(String(title), String(titleZh))}</dt>
-        <dd>{formatNumber(Number(value), 0)}</dd>
+        <dt>{pick(String(title), String(titleZh), String(titleFr))}</dt>
+        <dd>{formatNumber(Number(value), 0, locale)}</dd>
       </div>
     ))}
   </dl>
@@ -79,15 +87,15 @@ const metricCards = snapshot.report.kind === 'daily'
     <ol class="signal-list">
       {signals.map(signal => (
         <li>
-          <a href={`${prefix}${diseaseHref(signal)}`}>{signal.identity.disease_name}</a>
-          <span>{geographyLabel(signal)} · {signal.identity.metric_label}</span>
-          <b class={`state-${signal.anomaly.state}`}>{pick(label(signal.anomaly.state), labelZh(signal.anomaly.state))}</b>
-          <small>q {formatNumber(signal.anomaly.q_value, 4)} · <span>{pick(label(signal.assessment.verification_status), labelZh(signal.assessment.verification_status))}</span></small>
+          <a href={`${prefix}${diseaseHref(signal)}`}>{localizedDiseaseName({ disease_id: signal.identity.disease_id, slug: signal.identity.disease_slug, name_en: signal.identity.disease_name }, locale)}</a>
+          <span>{geographyLabel(signal, locale)} · {fr ? 'Indicateur de surveillance' : signal.identity.metric_label}</span>
+          <b class={`state-${signal.anomaly.state}`}>{pick(label(signal.anomaly.state), labelZh(signal.anomaly.state), labelFr(signal.anomaly.state))}</b>
+          <small>q {formatNumber(signal.anomaly.q_value, 4, locale)} · <span>{pick(label(signal.assessment.verification_status), labelZh(signal.assessment.verification_status), labelFr(signal.assessment.verification_status))}</span></small>
         </li>
       ))}
     </ol>
   ) : (
-    <p class="empty">{pick("No alert-level numerical signal passed this report's quality and effect gates.", '本报告没有数值信号同时通过异常、效应和质量门。')}</p>
+    <p class="empty">{pick("No alert-level numerical signal passed this report's quality and effect gates.", '本报告没有数值信号同时通过异常、效应和质量门。', 'Aucun signal numérique de niveau alerte n’a franchi les contrôles de qualité et d’effet de ce rapport.')}</p>
   )}
   {compact && <a class="open-report" href={`${prefix}/situation/`}>{pick('Open full analysis →', '打开完整分析 →')}</a>}
 </section>

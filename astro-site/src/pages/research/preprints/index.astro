@@ -13,6 +13,7 @@ const fr = locale === 'fr';
 <ResearchCollectionPage
   eyebrow="Separate evidence stream"
   eyebrowZh="独立证据流"
+  eyebrowFr="Flux de preuves distinct"
   title="Published preprints"
   titleZh="已公开预印本"
   titleFr="Prépublications publiées"
@@ -23,9 +24,11 @@ const fr = locale === 'fr';
   articles={preprints}
   contextLabel="Published preprints"
   contextLabelZh="已公开预印本"
+  contextLabelFr="Prépublications publiées"
   feedPath="/research/rss/peer-review/preprint.xml"
   feedLabel="Preprint RSS feed"
   feedLabelZh="预印本 RSS 订阅"
+  feedLabelFr="Flux RSS des prépublications"
   locale={locale}
 >
   <section slot="context" class="preprint-notice" aria-labelledby="preprint-notice-title">

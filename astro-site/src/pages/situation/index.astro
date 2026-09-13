@@ -10,15 +10,18 @@ import {
   formatDate,
   isSituationReportV3,
   label,
+  labelFr,
   labelZh,
   sourceEvidenceUrls,
   type SituationReportV3,
 } from '../../utils/situation';
+import { localizedDynamicText, translateUi } from '../../utils/i18n';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 
 const latestPath = resolve('./src/data/situation/v3/latest.json');
 const shadowPath = resolve('./src/data/situation/v3/shadow-latest.json');
@@ -27,58 +30,68 @@ const previewEnabled = import.meta.env.DEV || process.env.SITUATION_SHADOW_PREVI
 const reportPath = publicReport ? latestPath : previewEnabled && existsSync(shadowPath) ? shadowPath : null;
 const raw: unknown = reportPath ? JSON.parse(readFileSync(reportPath, 'utf-8')) : null;
 const report: SituationReportV3 | null = isSituationReportV3(raw) ? raw : null;
-const periodLabel = report ? `${formatDate(report.report.period_start)} – ${formatDate(report.report.period_end)}` : pick('Latest', '最新');
+const periodLabel = report ? `${formatDate(report.report.period_start, locale)} – ${formatDate(report.report.period_end, locale)}` : pick('Latest', '最新', 'Dernier');
 const title = report ? `Global Infectious Disease Situation — ${report.report.period_key}` : 'Global Infectious Disease Situation Room';
 const titleZh = report ? `全球传染病态势 — ${report.report.period_key}` : '全球传染病态势室';
-const description = report ? pick(report.narrative.en, report.narrative.zh) : pick('A reproducible review queue for GIDS-covered infectious-disease surveillance signals.', '面向 GIDS 覆盖传染病监测信号的可复现复核队列。');
+const titleFr = report ? `Situation mondiale des maladies infectieuses — ${report.report.period_key}` : 'Salle de situation mondiale des maladies infectieuses';
+const description = report ? localizedDynamicText(locale, {
+  en: report.narrative.en,
+  zh: report.narrative.zh,
+  fr: (report.narrative as { fr?: string | null }).fr ?? undefined,
+}, { context: 'la situation mondiale actuelle', required: fr }) : pick('A reproducible review queue for GIDS-covered infectious-disease surveillance signals.', '面向 GIDS 覆盖传染病监测信号的可复现复核队列。', 'Une file de revue reproductible pour les signaux de surveillance des maladies infectieuses suivis par GIDS.');
+const limitations = report ? localizedDynamicText(locale, {
+  en: report.limitations.en,
+  zh: report.limitations.zh,
+  fr: (report.limitations as { fr?: string | null }).fr ?? undefined,
+}, { context: 'les limites de la revue de situation', required: fr }) : '';
 const canonicalPath = `${prefix}/situation/`;
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
 const jsonPath = '/site-data/situation/v3/latest.json';
 const evidenceUrls = report ? sourceEvidenceUrls(report) : [];
 const structuredData = report ? [
   {
-    '@type': 'Report', '@id': `${new URL(canonicalPath, siteOrigin)}#report`, name: pick(title, titleZh),
+    '@type': 'Report', '@id': `${new URL(canonicalPath, siteOrigin)}#report`, name: pick(title, titleZh, titleFr),
     datePublished: report.report.as_of, dateModified: report.report.as_of,
     temporalCoverage: `${report.report.period_start}/${report.report.period_end}`,
     isBasedOn: evidenceUrls, mainEntity: { '@id': `${new URL(canonicalPath, siteOrigin)}#dataset` },
   },
   {
-    '@type': 'Dataset', '@id': `${new URL(canonicalPath, siteOrigin)}#dataset`, name: pick(`${title} data`, `${titleZh}数据`), description,
+    '@type': 'Dataset', '@id': `${new URL(canonicalPath, siteOrigin)}#dataset`, name: pick(`${title} data`, `${titleZh}数据`, `${titleFr} — données`), description,
     dateModified: report.report.as_of, temporalCoverage: `${report.report.period_start}/${report.report.period_end}`,
     isBasedOn: evidenceUrls,
     distribution: [{ '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: new URL(jsonPath, siteOrigin).toString() }],
   },
 ] : [];
 const seo: SeoDocument = {
-  title: `${pick(title, titleZh)} | GIDS`, description, canonicalPath,
+  title: `${pick(title, titleZh, titleFr)} | GIDS`, description, canonicalPath,
   locale,
   alternatePaths: buildAlternatePaths(canonicalPath, locale), noindex: !publicReport,
   pageType: 'Report', datePublished: report?.report.as_of ?? null, dateModified: report?.report.as_of ?? null,
 };
 ---
 
-<ReportLayout title={pick(title, titleZh)} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室') }]}>
+<ReportLayout title={pick(title, titleZh, titleFr)} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室', 'Salle de situation') }]}>
   <div class="situation-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     {report ? <>
       <header class="report-hero">
         <div>
           <p class="eyebrow">{pick('Global surveillance review queue', '全球监测复核队列')}</p>
-          <h1>{pick(title, titleZh)}</h1>
-          <p>{pick('A latency-aware view of source-native surveillance. The system analyzes only mature reporting periods and separates statistical review priority from public-health risk.', '按来源发布延迟校准的原生监测视图。系统仅分析成熟报告周期，并将统计复核优先级与公共卫生风险严格分离。')}</p>
+          <h1>{pick(title, titleZh, titleFr)}</h1>
+          <p>{pick('A latency-aware view of source-native surveillance. The system analyzes only mature reporting periods and separates statistical review priority from public-health risk.', '按来源发布延迟校准的原生监测视图。系统仅分析成熟报告周期，并将统计复核优先级与公共卫生风险严格分离。', 'Une vue de la surveillance native des sources, tenant compte des délais. Le système analyse uniquement les périodes matures et sépare la priorité de revue statistique du risque pour la santé publique.')}</p>
         </div>
         <dl>
           <div><dt>{pick('Report period', '报告期间')}</dt><dd>{periodLabel}</dd></div>
-          <div><dt>{pick('System status', '系统状态')}</dt><dd class={report.quality_gate.status}>{pick(label(report.quality_gate.status), labelZh(report.quality_gate.status))}</dd></div>
+          <div><dt>{pick('System status', '系统状态', 'État du système')}</dt><dd class={report.quality_gate.status}>{pick(label(report.quality_gate.status), labelZh(report.quality_gate.status), labelFr(report.quality_gate.status))}</dd></div>
           <div><dt>{pick('Coverage', '覆盖率')}</dt><dd>{report.coverage.modeled_series_count} / {report.coverage.evaluated_series_count}</dd></div>
           <div><dt>{pick('Revision', '修订版')}</dt><dd>r{report.report.revision}</dd></div>
         </dl>
       </header>
 
-      <nav class="period-nav" aria-label={pick('Situation report archives', '态势报告归档')}>
-        <a href={`${prefix}/situation/weekly/`}>{pick('Weekly reports', '周报')}</a>
-        <a href={`${prefix}/situation/monthly/`}>{pick('Monthly reports', '月报')}</a>
-        <a href={`${prefix}/situation/methodology/`}>{pick('Methodology', '方法说明')}</a>
-        {publicReport && <a href={jsonPath} download>{pick('Download v3 JSON', '下载 v3 JSON')}</a>}
+      <nav class="period-nav" aria-label={pick('Situation report archives', '态势报告归档', 'Archives des rapports de situation')}>
+        <a href={`${prefix}/situation/weekly/`}>{pick('Weekly reports', '周报', 'Rapports hebdomadaires')}</a>
+        <a href={`${prefix}/situation/monthly/`}>{pick('Monthly reports', '月报', 'Rapports mensuels')}</a>
+        <a href={`${prefix}/situation/methodology/`}>{pick('Methodology', '方法说明', 'Méthodologie')}</a>
+        {publicReport && <a href={jsonPath} download>{pick('Download v3 JSON', '下载 v3 JSON', 'Télécharger le JSON v3')}</a>}
       </nav>
 
       <SituationSummary snapshot={report} locale={locale} />
@@ -88,10 +101,10 @@ const seo: SeoDocument = {
       <SituationDetails snapshot={report} locale={locale} />
 
       <footer class="report-footer">
-        <p>{pick(report.limitations.en, report.limitations.zh)}</p>
-        <p><span>{pick('Updated', '更新于')}</span> {formatDate(report.report.as_of)}</p>
+        <p>{limitations}</p>
+        <p><span>{pick('Updated', '更新于')}</span> {formatDate(report.report.as_of, locale)}</p>
       </footer>
-    </> : <section class="placeholder"><p class="eyebrow">{pick('Not yet published', '尚未发布')}</p><h1>{pick('No current situation review is available', '当前暂无态势复核')}</h1><p>{pick('A situation review appears here after its sources, analysis, and evidence links pass publication checks.', '来源、分析与证据链接通过发布检查后，态势复核将在此显示。')}</p><a href={`${prefix}/diseases/`}>{pick('Browse disease datasets', '浏览疾病数据')}</a></section>}
+    </> : <section class="placeholder"><p class="eyebrow">{pick('Not yet published', '尚未发布', 'Pas encore publié')}</p><h1>{pick('No current situation review is available', '当前暂无态势复核', 'Aucune revue de situation actuelle n’est disponible')}</h1><p>{pick('A situation review appears here after its sources, analysis, and evidence links pass publication checks.', '来源、分析与证据链接通过发布检查后，态势复核将在此显示。', 'Une revue de situation apparaît ici une fois ses sources, son analyse et ses liens de preuve validés.')}</p><a href={`${prefix}/diseases/`}>{pick('Browse disease datasets', '浏览疾病数据', 'Parcourir les données par maladie')}</a></section>}
   </div>
 </ReportLayout>
 

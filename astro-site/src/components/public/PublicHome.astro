@@ -1,6 +1,7 @@
 ---
 import CountryCard from '../CountryCard.astro';
-import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { localizedRegionName } from '../../utils/i18n';
 import CountryFlag from '../CountryFlag.astro';
 import { hasCountryDataSnapshot } from '../../lib/country-coverage';
 import { isSituationReportV3, type SituationReportV3 } from '../../utils/situation';
@@ -39,6 +40,19 @@ const copy = zh ? {
   analysis: 'Published analysis', latest: 'Latest surveillance reports', research: 'Browse research evidence', open: 'Open report', empty: 'No public reports are currently available.', unavailable: 'Not available',
 };
 
+if (locale === 'fr') Object.assign(copy, {
+  eyebrow: 'Données de santé publique issues de sources officielles', title: 'Surveillance mondiale des maladies infectieuses',
+  summary: 'Données de surveillance officielles, revue de situation, preuves de recherche et jeux de données réutilisables.',
+  searchLabel: 'Rechercher dans les données', searchPlaceholder: 'Rechercher un pays, une maladie, un rapport ou une étude', search: 'Rechercher',
+  situation: 'Voir la situation actuelle', countries: 'Explorer les pays et régions', diseases: 'Parcourir les maladies',
+  coverage: 'Couverture actuelle', glance: 'Vue d’ensemble', updated: 'Mis à jour', jurisdictions: 'Pays et régions', tracked: 'Maladies suivies', records: 'Enregistrements de surveillance', through: 'Données jusqu’au',
+  coverageNote: 'La couverture et les calendriers de mise à jour varient selon la source.', methods: 'Sources et méthodes',
+  review: 'Revue de situation', attention: 'Points d’attention actuels', reviewText: 'Signaux statistiques de surveillance et événements officiels publiés indépendamment, pour prioriser la revue.',
+  events: 'Événements officiels', signals: 'Signaux publiés', reviewed: 'Juridictions examinées', fullReview: 'Ouvrir la revue complète',
+  explore: 'Données de surveillance', start: 'Régions et maladies', downloads: 'Téléchargements de données', countryList: 'Pays et régions', viewAll: 'Tout voir', common: 'Maladies courantes',
+  analysis: 'Analyses publiées', latest: 'Derniers rapports de surveillance', research: 'Parcourir les preuves', open: 'Ouvrir le rapport', empty: 'Aucun rapport public disponible.', unavailable: 'Indisponible',
+});
+
 const meta = metaRaw as any;
 const countries = (meta.countries ?? []).filter(hasCountryDataSnapshot);
 const featuredCountries = [...countries].sort((a: any, b: any) => Number(b.total_cases ?? 0) - Number(a.total_cases ?? 0)).slice(0, 6);
@@ -51,8 +65,8 @@ const shadowPath = resolve('./src/data/situation/v3/shadow-latest.json');
 const readPath = existsSync(situationPath) ? situationPath : import.meta.env.DEV && existsSync(shadowPath) ? shadowPath : null;
 const rawSituation: unknown = readPath ? JSON.parse(readFileSync(readPath, 'utf-8')) : null;
 const situation: SituationReportV3 | null = isSituationReportV3(rawSituation) ? rawSituation : null;
-const formatDate = (value?: string) => value ? new Date(value).toLocaleDateString(zh ? 'zh-CN' : 'en-US', { year: 'numeric', month: zh ? 'numeric' : 'short', day: 'numeric', timeZone: 'UTC' }) : copy.unavailable;
-const formatNumber = (value: number) => new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', { notation: value >= 1_000_000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value);
+const formatDate = (value?: string) => value ? new Date(value).toLocaleDateString(zh ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: zh ? 'numeric' : 'short', day: 'numeric', timeZone: 'UTC' }) : copy.unavailable;
+const formatNumber = (value: number) => new Intl.NumberFormat(zh ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en-US', { notation: value >= 1_000_000 ? 'compact' : 'standard', maximumFractionDigits: 1 }).format(value);
 const totalCases = countries.reduce((sum: number, item: any) => sum + Number(item.total_cases ?? 0), 0);
 const dataThrough = situation?.data_currency.latest_data_through ?? meta.generated_at;
 ---
@@ -80,13 +94,13 @@ const dataThrough = situation?.data_currency.latest_data_through ?? meta.generat
 
   <section class="home-section"><div class="page-wrap">
     <header class="section-heading"><div><p class="eyebrow">{copy.explore}</p><h2>{copy.start}</h2></div><a href={href('/downloads/')}>{copy.downloads} →</a></header>
-    <div class="explore-grid"><div><div class="subheading"><h3>{copy.countryList}</h3><a href={href('/countries/')}>{copy.viewAll} {countries.length}</a></div><div class="country-grid">{featuredCountries.map((country: any) => <CountryCard code={country.code} name={country.name} nameZh={country.name_zh} totalCases={country.total_cases} totalDeaths={country.total_deaths} diseaseCount={country.disease_count} dateRange={country.date_range} locale={locale} />)}</div></div>
-      <div><div class="subheading"><h3>{copy.common}</h3><a href={href('/diseases/')}>{copy.viewAll}</a></div><div class="disease-list">{featuredDiseases.map((disease: any) => { const frenchName = disease.name_fr ?? DISEASE_NAMES_FR[disease.slug] ?? disease.name_en; return <a href={href(`/diseases/${disease.slug}/`)}><span><strong>{zh ? disease.name_zh ?? disease.name_en : locale === 'fr' ? frenchName : disease.name_en}</strong><small>{zh ? disease.name_en : locale === 'fr' ? disease.name_en : `${disease.name_zh ?? ''} · ${disease.category}`}</small></span><span>→</span></a>; })}</div></div>
+    <div class="explore-grid"><div><div class="subheading"><h3>{copy.countryList}</h3><a href={href('/countries/')}>{copy.viewAll} {countries.length}</a></div><div class="country-grid">{featuredCountries.map((country: any) => <CountryCard code={country.code} name={country.name} nameZh={country.name_zh} nameFr={country.name_fr ?? localizedRegionName('fr', country.code, { en: country.name })} totalCases={country.total_cases} totalDeaths={country.total_deaths} diseaseCount={country.disease_count} dateRange={country.date_range} locale={locale} />)}</div></div>
+      <div><div class="subheading"><h3>{copy.common}</h3><a href={href('/diseases/')}>{copy.viewAll}</a></div><div class="disease-list">{featuredDiseases.map((disease: any) => { const frenchName = localizedDiseaseName(disease, 'fr'); return <a href={href(`/diseases/${disease.slug}/`)}><span><strong>{zh ? disease.name_zh ?? disease.name_en : locale === 'fr' ? frenchName : disease.name_en}</strong><small>{zh ? disease.name_en : locale === 'fr' ? disease.name_en : `${disease.name_zh ?? ''} · ${disease.category}`}</small></span><span>→</span></a>; })}</div></div>
     </div>
   </div></section>
 
   <section class="home-section reports"><div class="page-wrap"><header class="section-heading"><div><p class="eyebrow">{copy.analysis}</p><h2>{copy.latest}</h2></div><a href={href('/research/')}>{copy.research} →</a></header>
-    {latestReports.length ? <div class="report-list">{latestReports.map((report: any) => { const code = String(report.country_code ?? '').toLowerCase(); const name = zh ? report.country_name_zh ?? report.country_name_en ?? report.country_name ?? report.country_code : report.country_name_en ?? report.country_name ?? report.country_code; return <a href={href(`/countries/${code}/reports/${report.id}/`)}><CountryFlag code={report.country_code} name={name} sizeClass="w-9 h-7" /><span><strong>{name}</strong><small>{report.period_start} – {report.period_end}</small></span><b>{copy.open} →</b></a>; })}</div> : <p>{copy.empty}</p>}
+    {latestReports.length ? <div class="report-list">{latestReports.map((report: any) => { const code = String(report.country_code ?? '').toLowerCase(); const name = zh ? report.country_name_zh ?? report.country_name_en ?? report.country_name ?? report.country_code : locale === 'fr' ? (report.country_name_fr ?? localizedRegionName('fr', report.country_code, { en: report.country_name_en ?? report.country_name })) : report.country_name_en ?? report.country_name ?? report.country_code; return <a href={href(`/countries/${code}/reports/${report.id}/`)}><CountryFlag code={report.country_code} name={name} sizeClass="w-9 h-7" /><span><strong>{name}</strong><small>{report.period_start} – {report.period_end}</small></span><b>{copy.open} →</b></a>; })}</div> : <p>{copy.empty}</p>}
   </div></section>
 </div>
 

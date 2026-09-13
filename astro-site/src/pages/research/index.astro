@@ -4,9 +4,10 @@ import ResearchArticleCard from '../../components/research/ResearchArticleCard.a
 import ResearchHotspotCharts from '../../components/research/ResearchHotspotCharts';
 import researchData from '../../data/research/index.json';
 import researchHotspotsData from '../../data/research/hotspots.json';
-import { buildResearchFeedDefinitions, filterResearchFeedArticles, type ResearchFeedScope } from '../../lib/research-feed';
+import { buildResearchFeedDefinitions, filterResearchFeedArticles, toResearchFeedSlug, type ResearchFeedScope } from '../../lib/research-feed';
 import { buildAlternatePaths } from '../../lib/seo';
-import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
+import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID, localizedDiseaseName } from '../../utils/diseaseNames';
+import { localizedRegionName, localizedResearchFacet, localizedResearchTopic, localizedStudyType, RESEARCH_TOPIC_LABELS, STUDY_TYPE_LABELS, translateUi } from '../../utils/i18n';
 
 interface Props {
   locale?: 'en' | 'zh' | 'fr';
@@ -16,7 +17,7 @@ const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? en) : zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 const localeHref = (href: string | null | undefined) => href && (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
 
 const data: any = researchData;
@@ -43,10 +44,11 @@ const historicalBaselineAll = data.historical_baseline ?? articles.filter((artic
 const historicalBaseline = historicalBaselineAll.slice(0, 8);
 const initialVisibleArticles = 8;
 const initialResultCount = articles.length > initialVisibleArticles
-  ? pick(`${initialVisibleArticles} of ${articles.length} publications shown`, `已显示 ${initialVisibleArticles} / ${articles.length} 篇文献`)
-  : pick(`${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}`, `${articles.length} 篇文献`);
+  ? pick(`${initialVisibleArticles} of ${articles.length} publications shown`, `已显示 ${initialVisibleArticles} / ${articles.length} 篇文献`, `${initialVisibleArticles} publications sur ${articles.length} affichées`)
+  : pick(`${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}`, `${articles.length} 篇文献`, `${articles.length} publication${articles.length === 1 ? '' : 's'}`);
 const diseases = [...new Map(articles.flatMap((article: any) => article.diseases ?? []).map((item: any) => [item.disease_id, item])).values()] as any[];
 const countries = [...new Map(articles.flatMap((article: any) => article.countries ?? []).map((item: any) => [item.code, item])).values()] as any[];
+const countryNameFr = (country: any) => localizedRegionName('fr', country.code, { en: country.name_en, fr: country.name_fr });
 const studyTypes = [...new Set(articles.map((article: any) => article.study_type).filter(Boolean))] as string[];
 const topics = [...new Set(articles.flatMap((article: any) => (article.topics ?? []).map((item: any) => item.name)).filter(Boolean))].sort() as string[];
 const pathogenTypes = [...new Map(articles.flatMap((article: any) => article.pathogen_types ?? []).map((item: any) => [item.id, item])).values()] as any[];
@@ -58,20 +60,37 @@ type FeedGroup = {
   scopes: ResearchFeedScope[];
   title: string;
   titleZh: string;
+  titleFr: string;
   feeds: typeof researchFeeds;
   open?: boolean;
 };
 const feedGroupSpecs: Array<Omit<FeedGroup, 'feeds'>> = [
-  { scopes: ['diseases'], title: 'By disease', titleZh: '按疾病' },
-  { scopes: ['countries'], title: 'By country or region', titleZh: '按国家或地区' },
-  { scopes: ['topics'], title: 'By public-health topic', titleZh: '按公共卫生主题' },
-  { scopes: ['study-types'], title: 'By study type', titleZh: '按研究类型' },
-  { scopes: ['collections', 'peer-review'], title: 'Reviews, guidelines & publication status', titleZh: '综述、指南与发表状态', open: true },
+  { scopes: ['diseases'], title: 'By disease', titleZh: '按疾病', titleFr: 'Par maladie' },
+  { scopes: ['countries'], title: 'By country or region', titleZh: '按国家或地区', titleFr: 'Par pays ou région' },
+  { scopes: ['topics'], title: 'By public-health topic', titleZh: '按公共卫生主题', titleFr: 'Par thème de santé publique' },
+  { scopes: ['study-types'], title: 'By study type', titleZh: '按研究类型', titleFr: 'Par type d’étude' },
+  { scopes: ['collections', 'peer-review'], title: 'Reviews, guidelines & publication status', titleZh: '综述、指南与发表状态', titleFr: 'Revues, recommandations et statut de publication', open: true },
 ];
 const feedGroups: FeedGroup[] = feedGroupSpecs.map(group => ({
   ...group,
   feeds: researchFeeds.filter(feed => group.scopes.includes(feed.scope)),
 }));
+const researchFeedLabelFr = (feed: typeof researchFeeds[number]): string => {
+  if (feed.labelFr) return feed.labelFr;
+  if (feed.scope === 'diseases') {
+    const disease = diseases.find((item: any) => toResearchFeedSlug(item.slug ?? item.disease_id) === feed.value);
+    if (disease) return localizedDiseaseName(disease, 'fr');
+  }
+  if (feed.scope === 'countries') {
+    const country = countries.find((item: any) => toResearchFeedSlug(item.code) === feed.value);
+    if (country) return countryNameFr(country);
+  }
+  if (feed.scope === 'study-types') return localizedStudyType('fr', feed.label);
+  if (feed.scope === 'topics') {
+    try { return localizedResearchTopic('fr', feed.label); } catch { /* keep source label for proper nouns pending editorial mapping */ }
+  }
+  return feed.label;
+};
 const hotspots = data.visualizations?.hotspots ?? researchHotspotsData ?? {};
 const hasHotspotVisualizations = Boolean(
   (hotspots.streamgraph?.series ?? []).length
@@ -85,10 +104,13 @@ const lastUpdatedEn = data.last_updated
 const lastUpdatedZh = data.last_updated
   ? new Date(data.last_updated).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
   : '等待首次同步';
+const lastUpdatedFr = data.last_updated
+  ? new Date(data.last_updated).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+  : 'En attente de la première synchronisation';
 const itemList = {
   '@type': 'CollectionPage',
-  name: pick('GIDS Research Radar', 'GIDS 研究雷达'),
-  description: pick('New infectious disease research connected to disease and country surveillance context.', '与疾病和国家监测背景关联的传染病研究。'),
+  name: pick('GIDS Research Radar', 'GIDS 研究雷达', 'Radar de recherche GIDS'),
+  description: pick('New infectious disease research connected to disease and country surveillance context.', '与疾病和国家监测背景关联的传染病研究。', 'Nouvelles recherches sur les maladies infectieuses reliées au contexte de surveillance des maladies et des pays.'),
   mainEntity: {
     '@type': 'ItemList',
     numberOfItems: articles.length,
@@ -103,19 +125,19 @@ const itemList = {
 ---
 
 <ReportLayout
-  title={pick('Research Radar', '研究雷达')}
-  description={pick('Track newly published infectious disease research across journals, diseases, countries, and public-health topics.', '按期刊、疾病、国家和公共卫生主题追踪最新发表的传染病研究。')}
+  title={pick('Research Radar', '研究雷达', 'Radar de recherche')}
+  description={pick('Track newly published infectious disease research across journals, diseases, countries, and public-health topics.', '按期刊、疾病、国家和公共卫生主题追踪最新发表的传染病研究。', 'Suivez les nouvelles recherches sur les maladies infectieuses par revue, maladie, pays et thème de santé publique.')}
   initialLanguage={locale}
   seo={{
-    title: pick('Research Radar | GIDS', '研究雷达 | GIDS'),
-    description: pick('Track newly published infectious disease research across journals, diseases, countries, and public-health topics.', '按期刊、疾病、国家和公共卫生主题追踪最新发表的传染病研究。'),
+    title: pick('Research Radar | GIDS', '研究雷达 | GIDS', 'Radar de recherche | GIDS'),
+    description: pick('Track newly published infectious disease research across journals, diseases, countries, and public-health topics.', '按期刊、疾病、国家和公共卫生主题追踪最新发表的传染病研究。', 'Suivez les nouvelles recherches sur les maladies infectieuses par revue, maladie, pays et thème de santé publique.'),
     locale,
     canonicalPath: `${prefix}/research/`,
     alternatePaths: buildAlternatePaths(`${prefix}/research/`, locale),
     pageType: 'WebPage',
   }}
   structuredData={itemList}
-  breadcrumbs={[{ label: pick('Research Radar', '研究雷达') }]}
+  breadcrumbs={[{ label: pick('Research Radar', '研究雷达', 'Radar de recherche') }]}
 >
   <div class="research-page">
     <section class="academic-hero research-hero">
@@ -126,16 +148,16 @@ const itemList = {
           <p class="academic-lead research-lede">{pick('Find high-signal infectious disease research, organized for quick review across diseases, regions, and public-health topics.', '快速发现高价值的传染病研究，并按疾病、地区和公共卫生主题浏览。')}</p>
           <div class="research-hero-actions">
             <a class="research-primary-link" href="#latest-publications">{pick('Browse latest publications', '浏览最新文献')}</a>
-            <a class="research-secondary-link" href={`${prefix}/research/preprints/`}>{pick(`Browse published preprints (${preprints.length}) →`, `浏览已公开预印本（${preprints.length}）→`)}</a>
-            <a class="research-secondary-link" href={`${prefix}/research/integrity/`}>{pick(`Research integrity alerts (${integrityAlerts.length}) →`, `研究完整性通知（${integrityAlerts.length}）→`)}</a>
-            <a class="research-secondary-link" href={`${prefix}/research/ask/`}>{pick('Ask GIDS with cited evidence →', '使用有引用证据的 Ask GIDS →')}</a>
-            <a class="research-secondary-link" href={`${prefix}/research/graph/`}>{pick('Explore the evidence graph →', '探索证据图谱 →')}</a>
-            {historicalBaseline.length > 0 && <a class="research-secondary-link" href="#historical-baseline">{pick('Browse historical baseline →', '浏览历史基线 →')}</a>}
-            {latestBrief && <a class="research-secondary-link" href={localeHref(latestBrief.url)}>{pick('Read the latest weekly brief →', '阅读最新每周简报 →')}</a>}
+            <a class="research-secondary-link" href={`${prefix}/research/preprints/`}>{pick(`Browse published preprints (${preprints.length}) →`, `浏览已公开预印本（${preprints.length}）→`, `Parcourir les prépublications publiées (${preprints.length}) →`)}</a>
+            <a class="research-secondary-link" href={`${prefix}/research/integrity/`}>{pick(`Research integrity alerts (${integrityAlerts.length}) →`, `研究完整性通知（${integrityAlerts.length}）→`, `Alertes d’intégrité (${integrityAlerts.length}) →`)}</a>
+            <a class="research-secondary-link" href={`${prefix}/research/ask/`}>{pick('Ask GIDS with cited evidence →', '使用有引用证据的 Ask GIDS →', 'Interroger GIDS avec des preuves citées →')}</a>
+            <a class="research-secondary-link" href={`${prefix}/research/graph/`}>{pick('Explore the evidence graph →', '探索证据图谱 →', 'Explorer le graphe des preuves →')}</a>
+            {historicalBaseline.length > 0 && <a class="research-secondary-link" href="#historical-baseline">{pick('Browse historical baseline →', '浏览历史基线 →', 'Parcourir la référence historique →')}</a>}
+            {latestBrief && <a class="research-secondary-link" href={localeHref(latestBrief.url)}>{pick('Read the latest weekly brief →', '阅读最新每周简报 →', 'Lire le dernier brief hebdomadaire →')}</a>}
           </div>
           <div class="research-provenance">
-            <span class="research-updated"><i class="research-pulse" aria-hidden="true"></i><span>{pick(`Updated ${lastUpdatedEn}`, `更新于 ${lastUpdatedZh}`)}</span></span>
-            <span>{pick('Sources: Crossref · Europe PMC · OpenAlex · Unpaywall · historical seed', '来源：Crossref · Europe PMC · OpenAlex · Unpaywall · 历史种子')}</span>
+            <span class="research-updated"><i class="research-pulse" aria-hidden="true"></i><span>{pick(`Updated ${lastUpdatedEn}`, `更新于 ${lastUpdatedZh}`, `Mis à jour le ${lastUpdatedFr}`)}</span></span>
+            <span>{pick('Sources: Crossref · Europe PMC · OpenAlex · Unpaywall · historical seed', '来源：Crossref · Europe PMC · OpenAlex · Unpaywall · 历史种子', 'Sources : Crossref · Europe PMC · OpenAlex · Unpaywall · référence historique')}</span>
           </div>
         </div>
         <aside class="research-week" aria-label={pick('Research Radar at a glance', '研究雷达快速概览')}>
@@ -161,7 +183,7 @@ const itemList = {
         <div class="directory-rows">
           <section>
             <h3>{pick('Diseases', '疾病')}</h3>
-            <ul>{topDiseaseHubs.map((facet: any) => <li><a href={localeHref(facet.url)}><span>{pick(facet.name_en, facet.name_zh ?? facet.name_en, facet.name_fr ?? DISEASE_NAMES_FR[String(facet.slug ?? '').toLowerCase()] ?? DISEASE_NAMES_FR_BY_ID[String(facet.disease_id ?? '').toUpperCase()] ?? facet.name_en)}</span><strong>{facet.count}</strong></a></li>)}</ul>
+            <ul>{topDiseaseHubs.map((facet: any) => <li><a href={localeHref(facet.url)}><span>{localizedDiseaseName(facet, locale)}</span><strong>{facet.count}</strong></a></li>)}</ul>
           </section>
           <section>
             <h3>{pick('Topics', '主题')}</h3>
@@ -186,20 +208,20 @@ const itemList = {
           <h2 id="research-feeds-title">{pick('Subscribe to a focused Research Radar feed', '订阅筛选后的研究雷达')}</h2>
           <p>{pick('Choose a stable RSS address for all research, or narrow it by disease, country, topic, study type, reviews and guidelines, or peer-review status. A count of 0 means no matching public records are available yet; the feed remains active for future releases.', '可订阅全部研究，或按疾病、国家、主题、研究类型、综述与指南以及同行评议状态选择稳定的 RSS 地址。数量为 0 表示目前没有匹配的公开记录；该 feed 仍然有效，可用于接收未来发布。')}</p>
         </div>
-        <a class="feed-all-link" href="/research/rss.xml" type="application/rss+xml">
-          <span>{pick('Subscribe to all research', '订阅全部研究')}</span>
+        <a class="feed-all-link" href={`${fr ? '/fr' : ''}/research/rss.xml`} type="application/rss+xml">
+          <span>{pick('Subscribe to all research', '订阅全部研究', 'S’abonner à toute la recherche')}</span>
           <strong>{articles.length}</strong>
         </a>
       </div>
       <div class="feed-groups">
         {feedGroups.filter(group => group.feeds.length > 0).map(group => (
           <details open={group.open}>
-            <summary><span>{pick(group.title, group.titleZh)}</span><strong>{group.feeds.length}</strong></summary>
+            <summary><span>{pick(group.title, group.titleZh, group.titleFr)}</span><strong>{group.feeds.length}</strong></summary>
             <ul>
               {group.feeds.map(feed => (
                 <li>
                   <a href={feed.path} type="application/rss+xml">
-                    <span>{pick(feed.label, feed.labelZh ?? feed.label)}</span>
+                    <span>{pick(feed.label, feed.labelZh ?? feed.label, researchFeedLabelFr(feed))}</span>
                     <strong>{feed.count}</strong>
                   </a>
                 </li>
@@ -232,21 +254,21 @@ const itemList = {
             const exact = signal.exact_articles ?? [];
             const linkedArticles = (exact.length > 0 ? exact : signal.context_articles ?? []).slice(0, 3);
             const isExact = exact.length > 0;
-            const geography = (signal.geographies ?? []).map((item: any) => pick(item.name_en, item.name_zh ?? item.name_en)).join(' · ') || pick('Geography unavailable', '地区信息暂缺');
+            const geography = (signal.geographies ?? []).map((item: any) => pick(item.name_en, item.name_zh ?? item.name_en, countryNameFr(item))).join(' · ') || pick('Geography unavailable', '地区信息暂缺', 'Zone géographique indisponible');
             return <article class="surveillance-research-card">
               <div class="surveillance-research-status">
-                <span>{pick(isExact ? 'Exact disease + geography' : 'Disease context only', isExact ? '疾病 + 地区精确关联' : '仅疾病背景')}</span>
+                <span>{pick(isExact ? 'Exact disease + geography' : 'Disease context only', isExact ? '疾病 + 地区精确关联' : '仅疾病背景', isExact ? 'Maladie + zone géographique exactes' : 'Contexte de maladie uniquement')}</span>
                 <time datetime={signal.data_through}>{signal.data_through ?? '—'}</time>
               </div>
-              <h3><a href={localeHref(signal.situation_url ?? '/situation/')}>{pick(signal.title, signal.title_zh ?? signal.title)}</a></h3>
-              <p class="surveillance-research-meta"><span>{pick(signal.disease_name_en, signal.disease_name_zh ?? signal.disease_name_en, signal.disease_name_fr ?? DISEASE_NAMES_FR_BY_ID[String(signal.disease_id ?? '').toUpperCase()] ?? signal.disease_name_en)}</span> · {geography}</p>
+              <h3><a href={localeHref(signal.situation_url ?? '/situation/')}>{pick(signal.title, signal.title_zh ?? signal.title, `Événement officiel : ${signal.disease_name_fr ?? DISEASE_NAMES_FR_BY_ID[String(signal.disease_id ?? '').toUpperCase()] ?? 'maladie infectieuse'} — ${geography}`)}</a></h3>
+              <p class="surveillance-research-meta"><span>{localizedDiseaseName({ disease_id: signal.disease_id, name_en: signal.disease_name_en, name_zh: signal.disease_name_zh, name_fr: signal.disease_name_fr }, locale)}</span> · {geography}</p>
               {linkedArticles.length > 0
                 ? <ol>{linkedArticles.map((article: any) => <li><a href={`${prefix}/research/articles/${article.slug}/`}><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></a></li>)}</ol>
                 : <p class="surveillance-research-empty">{pick('No public Research Radar article currently meets this relationship threshold.', '目前没有公开的 Research Radar 文献达到此关联阈值。')}</p>}
             </article>;
           })}
         </div>
-        {surveillanceEvidence.methodology?.en && <p class="research-method-note">{pick(surveillanceEvidence.methodology.en, surveillanceEvidence.methodology.zh ?? surveillanceEvidence.methodology.en)}</p>}
+        {surveillanceEvidence.methodology?.en && <p class="research-method-note">{pick(surveillanceEvidence.methodology.en, surveillanceEvidence.methodology.zh ?? surveillanceEvidence.methodology.en, surveillanceEvidence.methodology.fr ?? (() => { throw new Error('Missing French surveillance-evidence methodology'); })())}</p>}
       </section>
     )}
 
@@ -313,12 +335,12 @@ const itemList = {
       <div class="research-heading"><div><p class="academic-kicker">{pick('Evidence library', '证据库')}</p><h2 class="section-heading">{pick('Latest publications', '最新发表')}</h2></div></div>
       <form class="research-filters" role="search" aria-label={pick('Filter research articles', '筛选研究文献')} data-research-filters data-research-locale={locale}>
         <label class="search-field"><span class="sr-only">{pick('Search', '搜索')}</span><input class="site-control-input" id="research-search" type="search" placeholder={pick('Search title, disease, journal, or topic', '搜索标题、疾病、期刊或主题')} /></label>
-        <label><span>{pick('Disease', '疾病', 'Maladie')}</span><select class="site-control-input" id="research-disease"><option value="">{pick('All diseases', '全部疾病', 'Toutes les maladies')}</option>{diseases.map((item: any) => <option value={item.disease_id.toLowerCase()}>{pick(item.name_en, item.name_zh ?? item.name_en, item.name_fr ?? DISEASE_NAMES_FR_BY_ID[String(item.disease_id ?? '').toUpperCase()] ?? DISEASE_NAMES_FR[String(item.slug ?? '').toLowerCase()] ?? item.name_en)}</option>)}</select></label>
-        <label><span>{pick('Country', '国家')}</span><select class="site-control-input" id="research-country"><option value="">{pick('All countries', '全部国家')}</option>{countries.map((item: any) => <option value={item.code.toLowerCase()}>{pick(item.name_en, item.name_zh ?? item.name_en)}</option>)}</select></label>
-        <label><span>{pick('Study type', '研究类型')}</span><select class="site-control-input" id="research-study"><option value="">{pick('All study types', '全部研究类型')}</option>{studyTypes.map((item) => <option value={item.toLowerCase()}>{item}</option>)}</select></label>
-        <label><span>{pick('Topic', '主题')}</span><select class="site-control-input" id="research-topic"><option value="">{pick('All topics', '全部主题')}</option>{topics.map((item) => <option value={String(item).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}>{item}</option>)}</select></label>
-        <label><span>{pick('Pathogen type', '病原体类型')}</span><select class="site-control-input" id="research-pathogen-type"><option value="">{pick('All pathogen types', '全部病原体类型')}</option>{pathogenTypes.map((item: any) => <option value={item.id}>{item.name}</option>)}</select></label>
-        <label><span>{pick('Population', '研究人群')}</span><select class="site-control-input" id="research-population"><option value="">{pick('All populations', '全部研究人群')}</option>{populations.map((item: any) => <option value={item.id}>{item.name}</option>)}</select></label>
+        <label><span>{pick('Disease', '疾病', 'Maladie')}</span><select class="site-control-input" id="research-disease"><option value="">{pick('All diseases', '全部疾病', 'Toutes les maladies')}</option>{diseases.map((item: any) => <option value={item.disease_id.toLowerCase()}>{localizedDiseaseName(item, locale)}</option>)}</select></label>
+        <label><span>{pick('Country', '国家')}</span><select class="site-control-input" id="research-country"><option value="">{pick('All countries', '全部国家')}</option>{countries.map((item: any) => <option value={item.code.toLowerCase()}>{pick(item.name_en, item.name_zh ?? item.name_en, countryNameFr(item))}</option>)}</select></label>
+        <label><span>{pick('Study type', '研究类型')}</span><select class="site-control-input" id="research-study"><option value="">{pick('All study types', '全部研究类型')}</option>{studyTypes.map((item) => <option value={item.toLowerCase()}>{localizedStudyType(locale, item)}</option>)}</select></label>
+        <label><span>{pick('Topic', '主题')}</span><select class="site-control-input" id="research-topic"><option value="">{pick('All topics', '全部主题')}</option>{topics.map((item) => <option value={String(item).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}>{localizedResearchTopic(locale, item)}</option>)}</select></label>
+        <label><span>{pick('Pathogen type', '病原体类型')}</span><select class="site-control-input" id="research-pathogen-type"><option value="">{pick('All pathogen types', '全部病原体类型')}</option>{pathogenTypes.map((item: any) => <option value={item.id}>{localizedResearchFacet(locale, item.name)}</option>)}</select></label>
+        <label><span>{pick('Population', '研究人群')}</span><select class="site-control-input" id="research-population"><option value="">{pick('All populations', '全部研究人群')}</option>{populations.map((item: any) => <option value={item.id}>{localizedResearchFacet(locale, item.name)}</option>)}</select></label>
         <label><span>{pick('Journal', '期刊')}</span><select class="site-control-input" id="research-journal"><option value="">{pick('All journals', '全部期刊')}</option>{journals.map((item) => <option value={String(item).toLowerCase()}>{item}</option>)}</select></label>
         <label><span>{pick('Publisher', '出版商')}</span><select class="site-control-input" id="research-publisher"><option value="">{pick('All publishers', '全部出版商')}</option>{publishers.map((item) => <option value={String(item).toLowerCase()}>{item}</option>)}</select></label>
         <label><span>{pick('Published from', '起始日期')}</span><input class="site-control-input research-date" id="research-from" type="date" /></label>
@@ -327,7 +349,16 @@ const itemList = {
         <label class="oa-filter"><input id="research-oa" type="checkbox" /><span>{pick('Open access only', '仅开放获取')}</span></label>
       </form>
       <p id="research-result-count" class="result-count" data-total={articles.length} aria-live="polite">{initialResultCount}</p>
-      <div id="research-list" class="research-list" data-initial-visible={initialVisibleArticles} data-total={articles.length}>{articles.slice(0, initialVisibleArticles).map((article: any, index: number) => <ResearchArticleCard article={article} stream index={index} initialVisible={initialVisibleArticles} locale={locale} />)}</div>
+      <div
+        id="research-list"
+        class="research-list"
+        data-initial-visible={initialVisibleArticles}
+        data-total={articles.length}
+        data-disease-name-map={JSON.stringify({ ...DISEASE_NAMES_FR, ...Object.fromEntries(Object.entries(DISEASE_NAMES_FR_BY_ID).map(([key, value]) => [key.toLowerCase(), value])) })}
+        data-region-name-map={JSON.stringify({ 'cn-gx': 'Guangxi, Chine', 'cn-sd': 'Shandong, Chine' })}
+        data-study-type-map={JSON.stringify(Object.fromEntries(Object.entries(STUDY_TYPE_LABELS).map(([key, labels]) => [key, labels.fr])))}
+        data-topic-name-map={JSON.stringify(Object.fromEntries(Object.entries(RESEARCH_TOPIC_LABELS).map(([key, labels]) => [key, labels.fr])))}
+      >{articles.slice(0, initialVisibleArticles).map((article: any, index: number) => <ResearchArticleCard article={article} stream index={index} initialVisible={initialVisibleArticles} locale={locale} />)}</div>
       {articles.length > initialVisibleArticles && <button id="research-load-more" class="research-load-more" type="button" aria-controls="research-list" data-load-more-research>{pick('Load more publications', '加载更多论文')}</button>}
       <div id="research-empty" class:list={['research-empty', articles.length > 0 && 'hidden']}>
         <div class="empty-orbit" aria-hidden="true"></div>
@@ -359,6 +390,13 @@ const itemList = {
     const loadMore = document.querySelector<HTMLButtonElement>('#research-load-more');
     const initialVisible = Number(list?.dataset.initialVisible ?? 60);
     const totalArticles = Number(list?.dataset.total ?? 0);
+    const parseMap = (value: string | undefined) => {
+      try { return JSON.parse(value ?? '{}') as Record<string, string>; } catch { return {}; }
+    };
+    const diseaseNameMap = parseMap(list?.dataset.diseaseNameMap);
+    const regionNameMap = parseMap(list?.dataset.regionNameMap);
+    const studyTypeMap = parseMap(list?.dataset.studyTypeMap);
+    const topicNameMap = parseMap(list?.dataset.topicNameMap);
     let visibleLimit = initialVisible;
     let cataloguePromise: Promise<any[]> | null = null;
     const preset = new URLSearchParams(location.search).get('disease')?.toLowerCase();
@@ -368,7 +406,21 @@ const itemList = {
     const currentLang = () => form?.dataset.researchLocale === 'zh' ? 'zh' : form?.dataset.researchLocale === 'fr' ? 'fr' : 'en';
     const routePrefix = currentLang() === 'zh' ? '/zh' : currentLang() === 'fr' ? '/fr' : '';
     const setLangText = (element: HTMLElement, en: string, zh?: string | null, fr?: string | null) => {
-      element.textContent = currentLang() === 'zh' ? (zh || en) : currentLang() === 'fr' ? (fr || en) : en;
+      element.textContent = currentLang() === 'zh' ? (zh || en) : currentLang() === 'fr' ? (fr || 'Traduction française en attente.') : en;
+    };
+    const frenchDiseaseName = (item: any) => item.name_fr
+      || diseaseNameMap[String(item.slug ?? '').toLowerCase()]
+      || diseaseNameMap[String(item.disease_id ?? '').toLowerCase()]
+      || 'Nom français indisponible';
+    const frenchRegionName = (item: any) => {
+      if (item.name_fr) return item.name_fr;
+      const code = String(item.code ?? '').toUpperCase();
+      const override = regionNameMap[code.toLowerCase()];
+      if (override) return override;
+      if (/^[A-Z]{2}$/.test(code)) {
+        try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(code) || 'Région non précisée'; } catch { return 'Région non précisée'; }
+      }
+      return 'Région non précisée';
     };
     const text = (value: unknown) => String(value ?? '');
     const formatDate = (value: string | undefined, lang: 'en' | 'zh' | 'fr') => {
@@ -421,7 +473,7 @@ const itemList = {
     const makeTopicBadge = (name: string) => {
       const badge = make('a', 'research-badge research-badge-topic');
       badge.href = `${routePrefix}/research/topics/${slugifyTopic(name)}/`;
-      badge.textContent = name;
+      badge.textContent = currentLang() === 'fr' ? (topicNameMap[name] || 'Thème non traduit') : name;
       return badge;
     };
     const renderArticleCard = (article: any) => {
@@ -449,7 +501,7 @@ const itemList = {
       badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer', article.peer_review_status === 'peer_reviewed' ? 'Évalué par les pairs' : 'Prépublication'));
       if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history', 'Référence historique'));
       if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa', 'Accès ouvert'));
-      (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en, '', item.name_fr ?? item.name_en)));
+      (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en, '', frenchDiseaseName(item))));
       (article.topics ?? []).slice(0, 3).forEach((item: any) => badges.appendChild(makeTopicBadge(text(item.name))));
       topline.appendChild(badges);
       if (article.doi) {
@@ -476,13 +528,14 @@ const itemList = {
         const preview = authorNames.slice(0, 3);
         const en = authorNames.length > 3 ? `${preview.join(', ')} +${authorNames.length - preview.length} more` : preview.join(', ');
         const zh = authorNames.length > 3 ? `${preview.join('、')} 等 ${authorNames.length} 位作者` : preview.join('、');
-        setLangText(authors, en, zh);
+        const fr = authorNames.length > 3 ? `${preview.join(', ')} et ${authorNames.length - preview.length} autre${authorNames.length - preview.length === 1 ? '' : 's'}` : preview.join(', ');
+        setLangText(authors, en, zh, fr);
         card.appendChild(authors);
       }
 
       const source = make('p', 'research-card-source');
       const journal = document.createElement('span');
-      journal.textContent = text(article.journal || 'Journal unavailable');
+      setLangText(journal, text(article.journal || 'Journal unavailable'), text(article.journal || '期刊信息暂缺'), text(article.journal || 'Revue indisponible'));
       source.appendChild(journal);
       const separator = document.createElement('span');
       separator.setAttribute('aria-hidden', 'true');
@@ -516,7 +569,7 @@ const itemList = {
           related.href = surveillanceUrl;
           const labelEn = `${surveillance?.disease_name_en || fallbackDisease?.name_en || 'Related'} surveillance →`;
           const labelZh = `${surveillance?.disease_name_zh || surveillance?.disease_name_en || fallbackDisease?.name_zh || fallbackDisease?.name_en || '相关'}监测 →`;
-          const labelFr = `${surveillance?.disease_name_fr || fallbackDisease?.name_fr || fallbackDisease?.name_en || 'Maladie associée'} surveillance →`;
+          const labelFr = `${surveillance?.disease_name_fr || frenchDiseaseName(fallbackDisease ?? {})} — surveillance →`;
           setLangText(related, labelEn, labelZh, labelFr);
           actions.appendChild(related);
         }
@@ -528,14 +581,14 @@ const itemList = {
       const studyDt = document.createElement('dt');
       setLangText(studyDt, 'Type', '类型', 'Type');
       const studyDd = document.createElement('dd');
-      studyDd.textContent = text(article.study_type || 'Journal article');
+      studyDd.textContent = currentLang() === 'fr' ? (studyTypeMap[text(article.study_type || 'Journal article')] || 'Type d’étude non traduit') : text(article.study_type || (currentLang() === 'zh' ? '期刊论文' : 'Journal article'));
       studyFact.append(studyDt, studyDd);
       const geographyFact = document.createElement('div');
       const geographyDt = document.createElement('dt');
       setLangText(geographyDt, 'Scope', '范围', 'Portée');
       const geographyDd = document.createElement('dd');
       geographyDd.textContent = (article.countries ?? []).length > 0
-        ? (article.countries ?? []).slice(0, 3).map((item: any) => currentLang() === 'zh' ? item.name_zh ?? item.name_en : currentLang() === 'fr' ? item.name_fr ?? item.name_en : item.name_en).join(currentLang() === 'zh' ? '、' : ', ')
+        ? (article.countries ?? []).slice(0, 3).map((item: any) => currentLang() === 'zh' ? item.name_zh ?? item.name_en : currentLang() === 'fr' ? frenchRegionName(item) : item.name_en).join(currentLang() === 'zh' ? '、' : ', ')
         : currentLang() === 'zh' ? '未分类' : currentLang() === 'fr' ? 'Non classé' : 'Not classified';
       geographyFact.append(geographyDt, geographyDd);
       facts.append(studyFact, geographyFact);
@@ -587,7 +640,9 @@ const itemList = {
       list.replaceChildren(...visible.map(renderArticleCard));
       if (count) count.textContent = currentLang() === 'zh'
         ? (articles.length === visible.length ? `${articles.length} 篇文献` : `已显示 ${visible.length} / ${articles.length} 篇文献`)
-        : (articles.length === visible.length ? `${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}` : `${visible.length} of ${articles.length} publications shown`);
+        : currentLang() === 'fr'
+          ? (articles.length === visible.length ? `${articles.length} publication${articles.length === 1 ? '' : 's'}` : `${visible.length} publications sur ${articles.length} affichées`)
+          : (articles.length === visible.length ? `${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}` : `${visible.length} of ${articles.length} publications shown`);
       empty?.classList.toggle('hidden', articles.length > 0);
       if (loadMore) loadMore.hidden = articles.length <= visibleLimit;
     };
@@ -595,7 +650,9 @@ const itemList = {
       if (!requireCatalogue) {
         if (count) count.textContent = currentLang() === 'zh'
           ? (totalArticles > initialVisible ? `已显示 ${initialVisible} / ${totalArticles} 篇文献` : `${totalArticles} 篇文献`)
-          : (totalArticles > initialVisible ? `${initialVisible} of ${totalArticles} publications shown` : `${totalArticles} ${totalArticles === 1 ? 'publication' : 'publications'}`);
+          : currentLang() === 'fr'
+            ? (totalArticles > initialVisible ? `${initialVisible} publications sur ${totalArticles} affichées` : `${totalArticles} publication${totalArticles === 1 ? '' : 's'}`)
+            : (totalArticles > initialVisible ? `${initialVisible} of ${totalArticles} publications shown` : `${totalArticles} ${totalArticles === 1 ? 'publication' : 'publications'}`);
         if (loadMore) loadMore.hidden = totalArticles <= initialVisible;
         empty?.classList.toggle('hidden', totalArticles > 0);
         return;

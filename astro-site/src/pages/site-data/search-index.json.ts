@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
 import researchRaw from '../../data/research/index.json';
 import { diseaseIndex, indexableDiseases, publishableReports, siteMeta } from '../../lib/seo-page-data';
-import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { localizedDynamicText, localizedRegionName } from '../../utils/i18n';
 
 export const prerender = true;
 
@@ -23,11 +24,13 @@ export const GET: APIRoute = () => {
   for (const country of siteMeta.countries ?? []) {
     const code = String(country.code ?? '').toLowerCase();
     if (!code || country.data_available === false) continue;
+    const countryNameEn = country.name_en ?? country.name ?? code.toUpperCase();
+    const countryNameFr = localizedRegionName('fr', code, { en: countryNameEn, zh: country.name_zh, fr: country.name_fr });
     entries.push({
       id: `country:${code}`,
       kind: 'country',
       href: localized(`/countries/${code}/`),
-      title: { en: country.name_en ?? country.name ?? code.toUpperCase(), zh: country.name_zh, fr: country.name_fr ?? country.name_en ?? country.name },
+      title: { en: countryNameEn, zh: country.name_zh, fr: countryNameFr },
       summary: { en: `${country.disease_count ?? 0} monitored diseases · official-source coverage`, zh: `${country.disease_count ?? 0} 种疾病 · 官方来源覆盖`, fr: `${country.disease_count ?? 0} maladies surveillées · sources officielles` },
       aliases: clean([country.name, country.name_en, country.name_zh, country.name_fr, country.code]),
       updated_at: country.date_range?.end,
@@ -39,13 +42,14 @@ export const GET: APIRoute = () => {
     if (!indexableIds.has(disease.disease_id)) continue;
     const slug = String(disease.slug ?? '').toLowerCase();
     if (!slug) continue;
+    const diseaseNameFr = localizedDiseaseName(disease, 'fr');
     entries.push({
       id: `disease:${disease.disease_id}`,
       kind: 'disease',
       href: localized(`/diseases/${slug}/`),
-      title: { en: disease.name_en ?? slug, zh: disease.name_zh, fr: disease.name_fr ?? DISEASE_NAMES_FR[slug] ?? disease.name_en },
-      summary: { en: disease.description ?? `${disease.category ?? ''} disease surveillance profile`, zh: `${disease.name_zh ?? disease.name_en}监测数据、趋势与证据说明`, fr: `Profil de surveillance de ${disease.name_fr ?? DISEASE_NAMES_FR[slug] ?? disease.name_en}` },
-      aliases: clean([disease.disease_id, disease.slug, disease.name_en, disease.name_zh, disease.name_fr, DISEASE_NAMES_FR[slug], disease.icd_10, disease.icd_11, disease.category]),
+      title: { en: disease.name_en ?? slug, zh: disease.name_zh, fr: diseaseNameFr },
+      summary: { en: disease.description ?? `${disease.category ?? ''} disease surveillance profile`, zh: `${disease.name_zh ?? disease.name_en}监测数据、趋势与证据说明`, fr: `Profil de surveillance de ${diseaseNameFr}` },
+      aliases: clean([disease.disease_id, disease.slug, disease.name_en, disease.name_zh, disease.name_fr, diseaseNameFr, disease.icd_10, disease.icd_11, disease.category]),
     });
   }
 
@@ -55,12 +59,15 @@ export const GET: APIRoute = () => {
     const title = document.title ?? {};
     const summary = document.summary ?? {};
     const path = `/countries/${report.country}/reports/${report.id}/`;
+    const countryNameFr = localizedRegionName('fr', report.country, { en: detail.country_name_en ?? detail.country_name });
+    const reportTitleFr = localizedDynamicText('fr', { en: title.en ?? `Surveillance report ${report.id}`, fr: title.fr }, { context: `le rapport n° ${report.id}` });
+    const reportSummaryFr = localizedDynamicText('fr', { en: summary.en ?? '', fr: summary.fr }, { context: `le résumé du rapport sur ${countryNameFr}` });
     entries.push({
       id: `report:${report.country}:${report.id}`,
       kind: 'report',
       href: localized(path),
-      title: { en: title.en ?? `Surveillance report ${report.id}`, zh: title.zh ?? detail.title, fr: title.fr ?? title.en },
-      summary: { en: summary.en, zh: summary.zh ?? detail.summary, fr: summary.fr ?? summary.en },
+      title: { en: title.en ?? `Surveillance report ${report.id}`, zh: title.zh ?? detail.title, fr: reportTitleFr },
+      summary: { en: summary.en, zh: summary.zh ?? detail.summary, fr: reportSummaryFr },
       aliases: clean([report.id, report.country, detail.country_name, detail.country_name_en, detail.period_start, detail.period_end]),
       updated_at: detail.created_at,
     });

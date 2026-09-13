@@ -14,6 +14,8 @@ API_PID_FILE="$LOG_DIR/dashboard-api.pid"
 WEB_PID_FILE="$LOG_DIR/dashboard-web.pid"
 WORKER_PID_FILE="$LOG_DIR/dashboard-worker.pid"
 SCHEDULER_PID_FILE="$LOG_DIR/dashboard-scheduler.pid"
+API_PORT="${GLOBALID_API_PORT:-8000}"
+WEB_PORT="${GLOBALID_DASHBOARD_PORT:-3000}"
 
 ACTION="${1:-status}"
 TARGET="${2:-all}"
@@ -127,7 +129,7 @@ is_managed_web_pid() {
   local cwd
   cmd="$(pid_cmdline "$pid")"
   cwd="$(readlink "/proc/$pid/cwd" 2>/dev/null || true)"
-  [[ "$cmd" == *"dashboard/node_modules/.bin/next"* && "$cmd" == *"dev"* && "$cmd" == *"--port 3000"* ]] ||
+  [[ "$cmd" == *"dashboard/node_modules/.bin/next"* && "$cmd" == *"dev"* && "$cmd" == *"--port $WEB_PORT"* ]] ||
     [[ "$cmd" == *"next-server"* && (
       "$cwd" == "$DASHBOARD_DIR"* ||
       "$cwd" == "$LOG_DIR/dashboard-web-releases/"*
@@ -162,12 +164,12 @@ find_scheduler_pid() {
 
 find_web_pid() {
   local port_pid
-  port_pid="$(find_port_pid 3000)"
+  port_pid="$(find_port_pid "$WEB_PORT")"
   if [[ -n "$port_pid" ]] && is_managed_web_pid "$port_pid"; then
     echo "$port_pid"
     return
   fi
-  ps -eo pid=,args= 2>/dev/null | awk '/dashboard\/node_modules\/\.bin\/next/ && /dev/ && /--port 3000/ && !/awk/ {print $1; exit}'
+  ps -eo pid=,args= 2>/dev/null | awk -v port="$WEB_PORT" '$0 ~ /dashboard\/node_modules\/\.bin\/next/ && $0 ~ /dev/ && $0 ~ ("--port " port) && !/awk/ {print $1; exit}'
 }
 
 find_managed_service_pid() {
@@ -175,7 +177,7 @@ find_managed_service_pid() {
   case "$service" in
     api)
       local port_pid
-      port_pid="$(find_port_pid 8000)"
+      port_pid="$(find_port_pid "$API_PORT")"
       if [[ -n "$port_pid" ]] && is_managed_api_pid "$port_pid"; then
         echo "$port_pid"
       fi
@@ -210,7 +212,17 @@ adopt_managed_pid_if_needed() {
 
 pid_is_running() {
   local pid="$1"
-  [[ -n "$pid" ]] && kill -0 "$pid" >/dev/null 2>&1
+  [[ -n "$pid" ]] || return 1
+  kill -0 "$pid" >/dev/null 2>&1 || return 1
+  [[ "$(ps -p "$pid" -o stat= 2>/dev/null | tr -d '[:space:]')" != Z* ]]
+}
+
+pid_owns_port() {
+  local pid="$1"
+  local port="$2"
+  local listener_pid
+  listener_pid="$(find_port_pid "$port")"
+  [[ -n "$listener_pid" && "$listener_pid" == "$pid" ]]
 }
 
 read_pid() {
@@ -312,20 +324,20 @@ start_api() {
   cleanup_pid_file_if_stale "$API_PID_FILE"
   local pid
   pid="$(read_pid "$API_PID_FILE")"
-  if [[ -n "$pid" ]] && pid_is_running "$pid"; then
+  if [[ -n "$pid" ]] && pid_is_running "$pid" && pid_owns_port "$pid" "$API_PORT"; then
     echo "API is already running (PID $pid)"
     return
   fi
 
   local port_pid
-  port_pid="$(find_port_pid 8000)"
+  port_pid="$(find_port_pid "$API_PORT")"
   if [[ -n "$port_pid" ]] && is_managed_api_pid "$port_pid"; then
     echo "$port_pid" > "$API_PID_FILE"
     echo "API is already running (PID $port_pid)"
     return
   fi
 
-  ensure_port_free 8000
+  ensure_port_free "$API_PORT"
 
   local uvicorn_bin
   local api_reload
@@ -333,12 +345,12 @@ start_api() {
   uvicorn_bin="$(resolve_uvicorn)"
   api_reload="${DASHBOARD_API_RELOAD:-0}"
 
-  uvicorn_args=(dashboard.api.main:app --host 0.0.0.0 --port 8000)
+  uvicorn_args=(dashboard.api.main:app --host 0.0.0.0 --port "$API_PORT")
   if [[ "$api_reload" == "1" || "$api_reload" == "true" ]]; then
     uvicorn_args+=(--reload)
-    echo "Starting API on http://localhost:8000 (reload enabled)"
+    echo "Starting API on http://localhost:$API_PORT (reload enabled)"
   else
-    echo "Starting API on http://localhost:8000"
+    echo "Starting API on http://localhost:$API_PORT"
   fi
 
   (
@@ -369,7 +381,7 @@ start_web() {
   cleanup_pid_file_if_stale "$WEB_PID_FILE"
   local pid
   pid="$(read_pid "$WEB_PID_FILE")"
-  if [[ -n "$pid" ]] && pid_is_running "$pid"; then
+  if [[ -n "$pid" ]] && pid_is_running "$pid" && pid_owns_port "$pid" "$WEB_PORT"; then
     echo "Dashboard web is already running (PID $pid)"
     return
   fi
@@ -380,28 +392,33 @@ start_web() {
   fi
 
   local port_pid
-  port_pid="$(find_port_pid 3000)"
+  port_pid="$(find_port_pid "$WEB_PORT")"
   if [[ -n "$port_pid" ]] && is_managed_web_pid "$port_pid"; then
     echo "$port_pid" > "$WEB_PID_FILE"
     echo "Dashboard web is already running (PID $port_pid)"
     return
   fi
 
-  ensure_port_free 3000
+  ensure_port_free "$WEB_PORT"
 
-  echo "Starting dashboard web on http://localhost:3000"
+  echo "Starting dashboard web on http://localhost:$WEB_PORT"
   (
     cd "$DASHBOARD_DIR"
     export_env_from_root_if_unset "DASHBOARD_API_KEY"
     export_env_from_root_if_unset "API_PROXY_TARGET"
-    nohup npm run dev -- --port 3000 > "$WEB_LOG" 2>&1 &
+    export API_PROXY_TARGET="${API_PROXY_TARGET:-http://127.0.0.1:$API_PORT}"
+    if have_command setsid; then
+      nohup setsid npm run dev -- --port "$WEB_PORT" > "$WEB_LOG" 2>&1 &
+    else
+      nohup npm run dev -- --port "$WEB_PORT" > "$WEB_LOG" 2>&1 &
+    fi
     echo $! > "$WEB_PID_FILE"
   )
   sleep 2
 
   local listener_pid
   for _ in {1..10}; do
-    listener_pid="$(find_port_pid 3000)"
+    listener_pid="$(find_port_pid "$WEB_PORT")"
     if [[ -n "$listener_pid" ]] && pid_is_running "$listener_pid"; then
       echo "$listener_pid" > "$WEB_PID_FILE"
       break
@@ -509,6 +526,11 @@ stop_one() {
   cleanup_pid_file_if_stale "$pid_file"
   local pid
   pid="$(read_pid "$pid_file")"
+  if [[ "$service" == "api" && -n "$pid" ]] && ! pid_owns_port "$pid" "$API_PORT"; then
+    pid=""
+  elif [[ "$service" == "web" && -n "$pid" ]] && ! pid_owns_port "$pid" "$WEB_PORT"; then
+    pid=""
+  fi
   if [[ -z "$pid" ]]; then
     pid="$(find_managed_service_pid "$service")"
     if [[ -n "$pid" ]] && pid_is_running "$pid"; then
@@ -553,14 +575,17 @@ status_one() {
   adopt_managed_pid_if_needed "$service" "$pid_file"
   cleanup_pid_file_if_stale "$pid_file"
   local pid
+  local listener_pid
   pid="$(read_pid "$pid_file")"
-  if [[ -n "$pid" ]] && pid_is_running "$pid"; then
+  listener_pid="$(find_port_pid "$port")"
+  if [[ -n "$pid" ]] && pid_is_running "$pid" && {
+    [[ "$service" == "worker" || "$service" == "scheduler" ]] ||
+    [[ -n "$listener_pid" && "$listener_pid" == "$pid" ]]
+  }; then
     echo "$name: running (PID $pid) - $url"
   elif port_has_listener "$port"; then
-    local port_pid
-    port_pid="$(find_port_pid "$port")"
-    if [[ -n "$port_pid" ]]; then
-      echo "$name: port $port is in use by an unmanaged process (PID $port_pid)"
+    if [[ -n "$listener_pid" ]]; then
+      echo "$name: port $port is in use by an unmanaged process (PID $listener_pid)"
     else
       echo "$name: port $port is in use by an unmanaged process"
     fi
@@ -641,7 +666,7 @@ dispatch_stop() {
 
 dispatch_status() {
   case "$1" in
-    api) status_one "API" "$API_PID_FILE" "http://localhost:8000/api/v1/health" 8000 "api" ;;
+    api) status_one "API" "$API_PID_FILE" "http://localhost:$API_PORT/api/v1/health" "$API_PORT" "api" ;;
     worker)
       adopt_managed_pid_if_needed "worker" "$WORKER_PID_FILE"
       cleanup_pid_file_if_stale "$WORKER_PID_FILE"
@@ -664,7 +689,7 @@ dispatch_status() {
         echo "Control-plane scheduler: stopped"
       fi
       ;;
-    web) status_one "Dashboard web" "$WEB_PID_FILE" "http://localhost:3000" 3000 "web" ;;
+    web) status_one "Dashboard web" "$WEB_PID_FILE" "http://localhost:$WEB_PORT" "$WEB_PORT" "web" ;;
   esac
 }
 

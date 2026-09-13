@@ -17,6 +17,7 @@ import {
   buildDatasetDistributions,
   buildDatasetStructuredData,
   buildAlternatePaths,
+  clampSeoTitle,
   buildSeoTitle,
   formatYearRange,
   toSeoSlug,
@@ -24,6 +25,8 @@ import {
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import metaRaw from '../../../data/meta.json';
+import { localizedDiseaseName } from '../../../utils/diseaseNames';
+import { localizedRegionName } from '../../../utils/i18n';
 
 export function getStaticPaths() {
   const metaPath = resolve('./src/data/meta.json');
@@ -37,6 +40,7 @@ export function getStaticPaths() {
 interface Props { countryCode: string; locale?: 'en' | 'zh' | 'fr'; }
 const { countryCode: country, locale = 'en' } = Astro.props as Props;
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (path: string) => `${prefix}${path}`;
 const fallbackCountryCode = String(country ?? '').toUpperCase();
@@ -48,7 +52,7 @@ const childJurisdictions = ((metaRaw as any).countries ?? [])
     zh ? left.name_zh ?? left.name : left.name_en ?? left.name
   ).localeCompare(String(
     zh ? right.name_zh ?? right.name : right.name_en ?? right.name
-  ), zh ? 'zh-CN' : 'en'));
+  ), zh ? 'zh-CN' : fr ? 'fr-FR' : 'en'));
 const dataPath = resolve(`./src/data/countries/${country}.json`);
 const reportsIndexPath = resolve('./src/data/reports/index.json');
 const downloadsPath = resolve('./src/data/downloads.json');
@@ -82,12 +86,12 @@ function fmtNum(n: number | null | undefined) {
 
 const stats = countryData
   ? [
-      { label: 'Total Cases', labelZh: '累计病例', value: fmtNum(countryData.total_cases), accent: 'amber' as const },
+      { label: 'Total Cases', labelZh: '累计病例', labelFr: 'Cas cumulés', value: fmtNum(countryData.total_cases), accent: 'amber' as const },
       ...(countryData.total_deaths > 0
-        ? [{ label: 'Total Deaths', labelZh: '累计死亡', value: fmtNum(countryData.total_deaths), accent: 'red' as const }]
+        ? [{ label: 'Total Deaths', labelZh: '累计死亡', labelFr: 'Décès cumulés', value: fmtNum(countryData.total_deaths), accent: 'red' as const }]
         : []),
-      { label: 'Diseases Tracked', labelZh: '追踪疾病数', value: countryData.disease_count ?? 0, accent: 'teal' as const },
-      { label: 'Reports', labelZh: '已生成报告', value: reports.length, accent: 'blue' as const },
+      { label: 'Diseases Tracked', labelZh: '追踪疾病数', labelFr: 'Maladies suivies', value: countryData.disease_count ?? 0, accent: 'teal' as const },
+      { label: 'Reports', labelZh: '已生成报告', labelFr: 'Rapports', value: reports.length, accent: 'blue' as const },
     ]
   : [];
 
@@ -96,6 +100,7 @@ const diseaseRows = countryData
       disease_id: entry.disease_id,
       name_en: entry.name_en,
       name_zh: entry.name_zh,
+      name_fr: entry.name_fr,
       category: entry.category,
       slug: entry.slug,
       total_cases: entry.total_cases,
@@ -108,34 +113,45 @@ const diseaseRows = countryData
   : [];
 
 const coverageLabel = countryData?.date_range
-  ? `${countryData.date_range.start} → ${countryData.date_range.end ?? (zh ? '至今' : 'present')}`
+  ? `${countryData.date_range.start} → ${countryData.date_range.end ?? (zh ? '至今' : fr ? 'à ce jour' : 'present')}`
   : '—';
 const countryName = countryData?.country_name_en ?? countryData?.country_name ?? fallbackCountryCode;
 const countryNameZh = countryData?.country_name_zh ?? countryDownload?.name_zh ?? countryName;
+const countryNameFr = countryData?.country_name_fr ?? countryDownload?.name_fr ?? localizedRegionName('fr', country, { en: countryName });
 const countryBriefEn = countryData?.brief_en
   ?? `${countryName} surveillance page consolidates infectious disease records, charts, and source metadata for exploratory review.`;
 const countryBriefZh = countryData?.brief_zh
   ?? `${countryNameZh}监测页面整合传染病记录、图表和来源信息，供探索性分析使用。`;
+const countryBriefFr = countryData?.brief_fr
+  ?? `La page de surveillance de ${countryNameFr} rassemble les données de maladies infectieuses, graphiques et informations de source pour une analyse exploratoire.`;
 const surveillanceSystemEn = countryData?.surveillance_system_en
   ?? `Current records are built from configured public surveillance sources for ${countryName}.`;
 const surveillanceSystemZh = countryData?.surveillance_system_zh
   ?? `当前记录来自 ${countryNameZh} 已配置的公开监测来源。`;
+const surveillanceSystemFr = countryData?.surveillance_system_fr
+  ?? `Les données actuelles proviennent des sources publiques configurées pour ${countryNameFr}.`;
 const interpretationEn = countryData?.interpretation_en
   ?? `Coverage spans ${coverageLabel} across ${countryData?.disease_count ?? 0} tracked diseases.`;
 const interpretationZh = countryData?.interpretation_zh
   ?? `当前覆盖 ${coverageLabel}，纳入 ${countryData?.disease_count ?? 0} 种追踪疾病。`;
+const interpretationFr = countryData?.interpretation_fr
+  ?? `La couverture s’étend de ${coverageLabel} et comprend ${countryData?.disease_count ?? 0} maladies suivies.`;
 const reportingCadenceEn = countryData?.reporting_cadence_en
   ?? 'Counts remain at each source\'s declared reporting period; annual, quarterly, monthly, and weekly totals are not frequency-normalized.';
 const reportingCadenceZh = countryData?.reporting_cadence_zh
   ?? '病例数保持各来源声明的报告期间；年度、季度、月度和周度总量不进行频率归一化。';
+const reportingCadenceFr = countryData?.reporting_cadence_fr
+  ?? 'Les comptes conservent la période déclarée par chaque source ; les totaux annuels, trimestriels, mensuels et hebdomadaires ne sont pas normalisés entre fréquences.';
 const limitationsEn = countryData?.limitations_en
   ?? 'Counts reflect reported surveillance records and can be affected by source cadence, case definitions, reporting lag, and missing denominators.';
 const limitationsZh = countryData?.limitations_zh
   ?? '病例数反映已报告监测记录，可能受来源频率、病例定义、报告延迟和分母缺失影响。';
+const limitationsFr = countryData?.limitations_fr
+  ?? 'Les comptes reflètent les déclarations de surveillance et peuvent être affectés par la fréquence de source, les définitions de cas, les retards et les dénominateurs manquants.';
 const sourceSummaryEn = countryData?.source_summary_en ?? 'Configured public surveillance sources';
 const sourceSummaryZh = countryData?.source_summary_zh ?? sourceSummaryEn;
 const countryBriefUpdated = countryData?.country_brief_updated_at
-  ? new Date(countryData.country_brief_updated_at).toLocaleDateString(zh ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  ? new Date(countryData.country_brief_updated_at).toLocaleDateString(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })
   : null;
 
 const chartSourceMeta = buildChartSourceMeta(
@@ -151,7 +167,9 @@ const countryMetaDescriptionEn = buildCountryMetaDescription({
 });
 const countryMetaDescription = zh
   ? `${countryNameZh}传染病监测数据，覆盖${coverageLabel}，包含疾病趋势、报告、官方来源与可下载数据。`
-  : countryMetaDescriptionEn;
+  : fr
+    ? `Données de surveillance des maladies infectieuses de ${countryNameFr}, couvrant ${coverageLabel}, avec tendances, rapports, sources officielles et téléchargements.`
+    : countryMetaDescriptionEn;
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
 const countryPageUrl = new URL(Astro.url.pathname, siteOrigin).toString();
 const countrySourceUrls = [
@@ -161,14 +179,14 @@ const countrySourceUrls = [
 const countryDatasetStructuredData = buildDatasetStructuredData({
   id: `${countryPageUrl}#dataset`,
   url: countryPageUrl,
-  name: zh ? `${countryNameZh}传染病监测数据集` : `${countryName} infectious disease surveillance dataset`,
+  name: zh ? `${countryNameZh}传染病监测数据集` : fr ? `Jeu de données de surveillance des maladies infectieuses — ${countryNameFr}` : `${countryName} infectious disease surveillance dataset`,
   description: countryMetaDescription,
   siteOrigin,
   dateModified: countryData?.country_brief_updated_at ?? countryDownload?.generated_at,
   start: countryData?.date_range?.start,
   end: countryData?.date_range?.end,
-  spatialCoverage: zh ? countryNameZh : countryName,
-  keywords: zh ? [countryNameZh, '传染病监测', '公共卫生数据'] : [countryName, 'infectious disease surveillance', 'public health data'],
+  spatialCoverage: zh ? countryNameZh : fr ? countryNameFr : countryName,
+  keywords: zh ? [countryNameZh, '传染病监测', '公共卫生数据'] : fr ? [countryNameFr, 'surveillance des maladies infectieuses', 'données de santé publique'] : [countryName, 'infectious disease surveillance', 'public health data'],
   distributions: buildDatasetDistributions({
     entry: countryDownload,
     siteOrigin,
@@ -183,13 +201,13 @@ const countryDatasetStructuredData = buildDatasetStructuredData({
 const countryPlaceStructuredData = {
   '@type': 'Place',
   '@id': `${countryPageUrl}#place`,
-  name: zh ? countryNameZh : countryName,
+  name: zh ? countryNameZh : fr ? countryNameFr : countryName,
 };
 const countryPageStructuredData = {
   '@type': 'WebPage',
   '@id': `${countryPageUrl}#country-webpage`,
   url: countryPageUrl,
-  name: zh ? countryNameZh : countryName,
+  name: zh ? countryNameZh : fr ? countryNameFr : countryName,
   about: { '@id': `${countryPageUrl}#place` },
   mainEntity: { '@id': `${countryPageUrl}#dataset` },
   dateModified: countryData?.generated_at ?? countryDownload?.generated_at ?? undefined,
@@ -197,10 +215,12 @@ const countryPageStructuredData = {
 const countrySeo = {
   title: zh
     ? `${countryNameZh}传染病监测数据 ${formatYearRange(countryData?.date_range?.start, countryData?.date_range?.end)} | GIDS`
+    : fr
+      ? clampSeoTitle(`${countryNameFr} — données de surveillance ${formatYearRange(countryData?.date_range?.start, countryData?.date_range?.end)} | GIDS`)
     : buildSeoTitle(countryName, 'infectious disease surveillance data', formatYearRange(countryData?.date_range?.start, countryData?.date_range?.end)),
   description: countryMetaDescription,
   canonicalPath: Astro.url.pathname,
-  alternatePaths: buildAlternatePaths(Astro.url.pathname, 'en'),
+  alternatePaths: buildAlternatePaths(Astro.url.pathname, locale),
   pageType: 'WebPage',
   dateModified: countryData?.generated_at ?? countryDownload?.generated_at,
   structuredData: [countryPageStructuredData, countryPlaceStructuredData, countryDatasetStructuredData],
@@ -209,14 +229,14 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
 ---
 
 <ReportLayout
-  title={zh ? countryNameZh : countryName}
+  title={zh ? countryNameZh : fr ? countryNameFr : countryName}
   description={countryMetaDescription}
   structuredData={[countryPageStructuredData, countryPlaceStructuredData, countryDatasetStructuredData]}
   seo={countrySeo}
   initialLanguage={locale}
   breadcrumbs={[
-    { label: 'Countries and Regions', labelZh: '国家/地区', href: localeHref('/countries/') },
-    { label: countryName, labelZh: countryNameZh },
+    { label: 'Countries and Regions', labelZh: '国家/地区', labelFr: 'Pays et régions', href: localeHref('/countries/') },
+    { label: countryName, labelZh: countryNameZh, labelFr: countryNameFr },
   ]}
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -224,34 +244,34 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
       <div class="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
         <div class="space-y-4">
           <p class="academic-kicker">
-            {zh ? '国家/地区监测简报 | 传染病监测概览' : 'Country/Region Surveillance Brief | Infectious disease profile'}
+            {zh ? '国家/地区监测简报 | 传染病监测概览' : fr ? 'Brief de surveillance par pays/région | Profil des maladies infectieuses' : 'Country/Region Surveillance Brief | Infectious disease profile'}
           </p>
           <div class="flex items-center gap-3">
             <CountryFlag
               code={countryData?.country_code ?? fallbackCountryCode}
-              name={countryName}
+              name={fr ? countryNameFr : countryName}
               sizeClass="w-10 h-8"
             />
             <span class="text-sm uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">{countryData?.country_code ?? fallbackCountryCode}</span>
           </div>
           <div>
             <h1 class="academic-title">
-              {zh ? countryNameZh : countryName}
+              {zh ? countryNameZh : fr ? countryNameFr : countryName}
             </h1>
           </div>
           <p class="academic-lead">
-            {zh ? countryBriefZh : countryBriefEn}
+            {zh ? countryBriefZh : fr ? countryBriefFr : countryBriefEn}
           </p>
         </div>
 
         <div class="space-y-4 xl:max-w-sm">
           <div class="academic-meta-grid xl:grid-cols-2">
             <div class="academic-meta-item">
-              <div class="academic-meta-label">{zh ? '覆盖区间' : 'Coverage window'}</div>
+              <div class="academic-meta-label">{zh ? '覆盖区间' : fr ? 'Période couverte' : 'Coverage window'}</div>
               <div class="academic-meta-value text-sm font-medium">{coverageLabel}</div>
             </div>
             <div class="academic-meta-item">
-              <div class="academic-meta-label">{zh ? '追踪疾病数' : 'Tracked diseases'}</div>
+              <div class="academic-meta-label">{zh ? '追踪疾病数' : fr ? 'Maladies suivies' : 'Tracked diseases'}</div>
               <div class="academic-meta-value font-serif">{countryData?.disease_count ?? 0}</div>
             </div>
           </div>
@@ -260,7 +280,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
               href={localeHref(`/countries/${country}/reports/`)}
               class="site-action-secondary inline-flex items-center gap-2 px-4 py-2 rounded-none border text-sm font-semibold transition-all"
             >
-              <span>{zh ? '查看报告归档' : 'Open report archive'}</span>
+              <span>{zh ? '查看报告归档' : fr ? 'Ouvrir les rapports archivés' : 'Open report archive'}</span>
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
@@ -271,57 +291,57 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
     </section>
 
     <PageAnchorNav locale={locale} items={[
-      ...(childJurisdictions.length > 0 ? [{ href: '#subnational-data', label: 'Subnational data', labelZh: '分省数据' }] : []),
-      { href: '#indicators', label: 'Indicators', labelZh: '核心指标' },
-      { href: '#trends', label: 'Trends', labelZh: '趋势' },
-      { href: '#disease-directory', label: 'Diseases', labelZh: '疾病目录' },
-      { href: '#reports', label: 'Reports', labelZh: '报告' },
-      { href: '#downloads', label: 'Sources & downloads', labelZh: '来源与下载' },
+      ...(childJurisdictions.length > 0 ? [{ href: '#subnational-data', label: 'Subnational data', labelZh: '分省数据', labelFr: 'Données infranationales' }] : []),
+      { href: '#indicators', label: 'Indicators', labelZh: '核心指标', labelFr: 'Indicateurs' },
+      { href: '#trends', label: 'Trends', labelZh: '趋势', labelFr: 'Tendances' },
+      { href: '#disease-directory', label: 'Diseases', labelZh: '疾病目录', labelFr: 'Maladies' },
+      { href: '#reports', label: 'Reports', labelZh: '报告', labelFr: 'Rapports' },
+      { href: '#downloads', label: 'Sources & downloads', labelZh: '来源与下载', labelFr: 'Sources et téléchargements' },
     ]} />
 
     <section id="sources" class="figure-panel scroll-mt-24">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p class="figure-kicker">{zh ? '国家/地区简介' : 'Country/Region Brief'}</p>
+          <p class="figure-kicker">{zh ? '国家/地区简介' : fr ? 'Brief du pays/de la région' : 'Country/Region Brief'}</p>
           <h2 class="figure-title">
-            {zh ? '如何解读本国家/地区监测画像。' : 'How to interpret this surveillance profile.'}
+            {zh ? '如何解读本国家/地区监测画像。' : fr ? 'Comment interpréter ce profil de surveillance.' : 'How to interpret this surveillance profile.'}
           </h2>
         </div>
         <div class="text-xs leading-5 text-[rgb(var(--text-muted))] sm:text-right">
-          <div>{zh ? `来源：${sourceSummaryZh}` : `Sources: ${sourceSummaryEn}`}</div>
+          <div>{zh ? `来源：${sourceSummaryZh}` : fr ? `Sources : ${sourceSummaryEn}` : `Sources: ${sourceSummaryEn}`}</div>
           {countryBriefUpdated && (
-            <div>{zh ? `更新于 ${countryBriefUpdated}` : `Updated ${countryBriefUpdated}`}</div>
+            <div>{zh ? `更新于 ${countryBriefUpdated}` : fr ? `Mis à jour le ${countryBriefUpdated}` : `Updated ${countryBriefUpdated}`}</div>
           )}
         </div>
       </div>
       <details class="country-context">
         <summary>
-          <span>{zh ? '查看解读、报告频率与数据限制' : 'Review interpretation, cadence, and limitations'}</span>
+          <span>{zh ? '查看解读、报告频率与数据限制' : fr ? 'Voir l’interprétation, la fréquence et les limites' : 'Review interpretation, cadence, and limitations'}</span>
           <span aria-hidden="true">＋</span>
         </summary>
       <div class="country-context-grid">
         <div class="border border-[rgb(var(--border))/0.68] bg-[rgb(var(--surface))/0.6] px-4 py-3">
-          <div class="academic-meta-label">{zh ? '监测系统' : 'Surveillance system'}</div>
+          <div class="academic-meta-label">{zh ? '监测系统' : fr ? 'Système de surveillance' : 'Surveillance system'}</div>
           <p class="mt-2 text-sm leading-6 text-[rgb(var(--text-muted))]">
-            {zh ? surveillanceSystemZh : surveillanceSystemEn}
+            {zh ? surveillanceSystemZh : fr ? surveillanceSystemFr : surveillanceSystemEn}
           </p>
         </div>
         <div class="border border-[rgb(var(--border))/0.68] bg-[rgb(var(--surface))/0.6] px-4 py-3">
-          <div class="academic-meta-label">{zh ? '当前解读' : 'Current interpretation'}</div>
+          <div class="academic-meta-label">{zh ? '当前解读' : fr ? 'Interprétation actuelle' : 'Current interpretation'}</div>
           <p class="mt-2 text-sm leading-6 text-[rgb(var(--text-muted))]">
-            {zh ? interpretationZh : interpretationEn}
+            {zh ? interpretationZh : fr ? interpretationFr : interpretationEn}
           </p>
         </div>
         <div class="border border-[rgb(var(--border))/0.68] bg-[rgb(var(--surface))/0.6] px-4 py-3">
-          <div class="academic-meta-label">{zh ? '报告频率' : 'Reporting cadence'}</div>
+          <div class="academic-meta-label">{zh ? '报告频率' : fr ? 'Fréquence de déclaration' : 'Reporting cadence'}</div>
           <p class="mt-2 text-sm leading-6 text-[rgb(var(--text-muted))]">
-            {zh ? reportingCadenceZh : reportingCadenceEn}
+            {zh ? reportingCadenceZh : fr ? reportingCadenceFr : reportingCadenceEn}
           </p>
         </div>
         <div class="border border-[rgb(var(--border))/0.68] bg-[rgb(var(--surface))/0.6] px-4 py-3">
-          <div class="academic-meta-label">{zh ? '数据限制' : 'Data limitations'}</div>
+          <div class="academic-meta-label">{zh ? '数据限制' : fr ? 'Limites des données' : 'Data limitations'}</div>
           <p class="mt-2 text-sm leading-6 text-[rgb(var(--text-muted))]">
-            {zh ? limitationsZh : limitationsEn}
+            {zh ? limitationsZh : fr ? limitationsFr : limitationsEn}
           </p>
         </div>
       </div>
@@ -330,18 +350,19 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
 
     {childJurisdictions.length > 0 && (
       <section id="subnational-data" class="figure-panel scroll-mt-24">
-        <p class="figure-kicker">{zh ? '分层浏览' : 'Hierarchical access'}</p>
+        <p class="figure-kicker">{zh ? '分层浏览' : fr ? 'Accès hiérarchique' : 'Hierarchical access'}</p>
         <h2 class="figure-title">
-          {zh ? `${countryNameZh}分省数据` : `${countryName} subnational datasets`}
+          {zh ? `${countryNameZh}分省数据` : fr ? `Jeux de données infranationaux de ${countryNameFr}` : `${countryName} subnational datasets`}
         </h2>
         <p class="figure-caption mt-2 max-w-3xl">
           {zh
             ? `当前收录 ${childJurisdictions.length} 个分省数据集。分省序列独立展示，不与全国序列叠加，也不进入国家级排行和全球汇总。`
+            : fr ? `${childJurisdictions.length} jeux de données infranationaux sont disponibles. Ces séries sont présentées séparément et ne sont pas ajoutées aux séries nationales, classements ou totaux mondiaux.`
             : `${childJurisdictions.length} subnational datasets are available. These series are shown independently and are not added to the national series, country rankings, or global totals.`}
         </p>
         <details class="subnational-browser mt-5">
           <summary>
-            <span>{zh ? `展开 ${childJurisdictions.length} 个分省数据集` : `Show ${childJurisdictions.length} subnational datasets`}</span>
+            <span>{zh ? `展开 ${childJurisdictions.length} 个分省数据集` : fr ? `Afficher ${childJurisdictions.length} jeux infranationaux` : `Show ${childJurisdictions.length} subnational datasets`}</span>
             <span aria-hidden="true">＋</span>
           </summary>
           <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -350,6 +371,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
                 code={entry.code}
                 name={entry.name_en ?? entry.name}
                 nameZh={entry.name_zh ?? entry.name}
+                nameFr={entry.name_fr ?? localizedRegionName('fr', entry.code, { en: entry.name_en ?? entry.name })}
                 totalCases={entry.total_cases}
                 totalDeaths={entry.total_deaths}
                 diseaseCount={entry.disease_count}
@@ -366,7 +388,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
     {stats.length > 0 && (
         <section id="indicators" class="figure-panel scroll-mt-24">
             <h2 class="figure-title">
-              {zh ? '核心监测指标' : 'Key surveillance indicators'}
+              {zh ? '核心监测指标' : fr ? 'Indicateurs clés de surveillance' : 'Key surveillance indicators'}
             </h2>
           <div class="mt-5">
             <StatBar stats={stats} locale={locale} />
@@ -376,9 +398,9 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
 
     {diseaseRows.length > 0 && (
       <section id="disease-directory" class="figure-panel scroll-mt-24">
-        <p class="figure-kicker">{zh ? '浏览数据' : 'Explore the data'}</p>
+        <p class="figure-kicker">{zh ? '浏览数据' : fr ? 'Explorer les données' : 'Explore the data'}</p>
         <h2 class="figure-title">
-          {zh ? '已追踪疾病画像' : 'Tracked disease profiles'}
+          {zh ? '已追踪疾病画像' : fr ? 'Profils des maladies suivies' : 'Tracked disease profiles'}
         </h2>
         <ul class="mt-4 flex flex-wrap gap-2">
           {[...diseaseRows]
@@ -387,7 +409,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
             .map((row) => (
               <li>
                 <a href={localeHref(`/diseases/${toSeoSlug(row.slug)}/`)} class="site-action-secondary inline-flex px-3 py-1.5 text-sm rounded-none border">
-                  <span>{zh ? row.name_zh : row.name_en}</span>
+                  <span>{zh ? row.name_zh : fr ? localizedDiseaseName(row, 'fr') : row.name_en}</span>
                 </a>
               </li>
             ))}
@@ -397,10 +419,10 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
 
     <section id="trends" class="figure-panel scroll-mt-24">
         <h2 class="figure-title">
-          {zh ? '各疾病监测趋势' : 'Surveillance trends by disease'}
+          {zh ? '各疾病监测趋势' : fr ? 'Tendances de surveillance par maladie' : 'Surveillance trends by disease'}
         </h2>
         <p class="figure-caption mt-2">
-          {zh ? '默认先查看一条监测序列及其历史参照；比较模式仅显示共同观测时间窗，并分开不同报告频率；暴发模式只适用于按发病时间统计的日度或周度数据。' : 'Start with one surveillance series and its historical reference. Comparison mode restricts series to their common observed window and separates unlike reporting cadences; outbreak mode is available only for daily or weekly onset-time data.'}
+          {zh ? '默认先查看一条监测序列及其历史参照；比较模式仅显示共同观测时间窗，并分开不同报告频率；暴发模式只适用于按发病时间统计的日度或周度数据。' : fr ? 'Commencez par une série de surveillance et sa référence historique. Le mode comparaison se limite à la fenêtre commune et sépare les fréquences ; le mode épidémie ne concerne que les données quotidiennes ou hebdomadaires par date d’apparition.' : 'Start with one surveillance series and its historical reference. Comparison mode restricts series to their common observed window and separates unlike reporting cadences; outbreak mode is available only for daily or weekly onset-time data.'}
         </p>
       <div class="mt-5">
         {countryData?.disease_series ? (
@@ -414,14 +436,14 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
             initialLanguage={locale}
           />
         ) : (
-          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">{zh ? '此视图暂无可展示的趋势数据。' : 'No trend data is available for this view.'}</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">{zh ? '此视图暂无可展示的趋势数据。' : fr ? 'Aucune donnée de tendance n’est disponible pour cette vue.' : 'No trend data is available for this view.'}</div>
         )}
       </div>
     </section>
 
     <section class="figure-panel">
         <h2 class="figure-title">
-          {zh ? '季节性变化' : 'Seasonal patterns'}
+          {zh ? '季节性变化' : fr ? 'Profils saisonniers' : 'Seasonal patterns'}
         </h2>
       <div class="mt-5">
         {(countryData?.heatmap?.z?.length ?? 0) > 0 ? (
@@ -433,14 +455,14 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
             initialLanguage={locale}
           />
         ) : (
-          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">{zh ? '当可用序列仅为年度或季度总量时，不展示月度季节性热图。' : 'A monthly seasonal heatmap is not shown when the available series are annual or quarterly totals.'}</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">{zh ? '当可用序列仅为年度或季度总量时，不展示月度季节性热图。' : fr ? 'La carte thermique mensuelle n’est pas affichée lorsque les séries disponibles sont annuelles ou trimestrielles.' : 'A monthly seasonal heatmap is not shown when the available series are annual or quarterly totals.'}</div>
         )}
       </div>
     </section>
 
     <section class="figure-panel">
         <h2 class="figure-title">
-          {zh ? '疾病数据对比' : 'Disease comparison'}
+          {zh ? '疾病数据对比' : fr ? 'Comparaison des données par maladie' : 'Disease comparison'}
         </h2>
       <div class="mt-5">
         {diseaseRows.length > 0 ? (
@@ -452,7 +474,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
             initialLanguage={locale}
           />
         ) : (
-          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">{zh ? '此视图暂无可展示的疾病数据。' : 'No disease data is available for this view.'}</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">{zh ? '此视图暂无可展示的疾病数据。' : fr ? 'Aucune donnée de maladie n’est disponible pour cette vue.' : 'No disease data is available for this view.'}</div>
         )}
       </div>
     </section>
@@ -462,11 +484,11 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6">
           <div>
             <h2 class="figure-title">
-              {zh ? '近期监测摘要' : 'Recent monitoring summaries'}
+              {zh ? '近期监测摘要' : fr ? 'Synthèses de surveillance récentes' : 'Recent monitoring summaries'}
             </h2>
           </div>
           <a href={localeHref(`/countries/${country}/reports/`)} class="text-sm font-semibold text-brand-500 hover:text-brand-400 transition-colors">
-            <span>{zh ? '查看全部报告 →' : 'View all reports →'}</span>
+            <span>{zh ? '查看全部报告 →' : fr ? 'Voir tous les rapports →' : 'View all reports →'}</span>
           </a>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -479,9 +501,11 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
               periodEnd={r.period_end}
               createdAt={r.created_at}
               countryCode={r.country_code}
-              countryName={r.country_name}
+              countryName={zh ? (r.country_name_local ?? r.country_name) : fr ? (r.country_name_fr ?? countryNameFr) : (r.country_name_en ?? r.country_name)}
               qualityScore={r.quality_score}
               summary={r.summary}
+              titleFr={r.title_fr}
+              summaryFr={r.summary_fr}
               locale={locale}
             />
           ))}
@@ -493,9 +517,11 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
       <div id="downloads" class="scroll-mt-24"><DownloadPanel
         entry={{ ...countryDownload, source_info: countryData?.source_info }}
         title="Data access"
+        titleFr="Accès aux données"
         initialLanguage={locale}
         descriptionEn="CSV, JSON, XLSX · source observations, public projection, provenance."
         descriptionZh="CSV、JSON、XLSX · 来源观测、公开投影与溯源。"
+        descriptionFr="CSV, JSON, XLSX · observations sources, projections publiques et provenance."
       /></div>
     )}
   </div>

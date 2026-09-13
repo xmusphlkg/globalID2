@@ -1,5 +1,6 @@
 ---
 import CountryFlag from './CountryFlag.astro';
+import { createTranslator, type Lang } from '../utils/i18n';
 
 interface SourceSummary {
   country_code?: string;
@@ -56,20 +57,24 @@ interface DownloadEntry {
 interface Props {
   entry?: DownloadEntry | null;
   title?: string;
+  titleFr?: string;
   descriptionEn?: string;
   descriptionZh?: string;
-  initialLanguage?: 'en' | 'zh' | 'fr';
+  descriptionFr?: string;
+  initialLanguage?: Lang;
 }
 
 const {
   entry = null,
   title = 'Download data',
+  titleFr = 'Télécharger les données',
   descriptionEn = 'Download this dataset by time range in CSV, JSON or XLSX format.',
   descriptionZh = '按时间范围下载当前数据集，支持 CSV、JSON 和 XLSX 格式。',
+  descriptionFr = 'Téléchargez ce jeu de données par période au format CSV, JSON ou XLSX.',
   initialLanguage = 'en',
 } = Astro.props;
 
-const pick = (en: string, zh: string) => initialLanguage === 'zh' ? zh : en;
+const pick = createTranslator(initialLanguage);
 
 function formatDate(value?: string | null) {
   if (!value) return '—';
@@ -123,6 +128,22 @@ const SOURCE_DESCRIPTION_ZH: Record<string, string> = {
   is_doh_history: '1997—2021 年官方历史登记表，年度与月度事实按原始粒度保留。',
   is_doh_legacy_icd: 'Saga 电子病历 ICD 就诊数；与登记通报不可比并保持独立。',
 };
+const SOURCE_LABEL_FR: Record<string, string> = {
+  jp_weekly: 'Bulletins hebdomadaires NIID/JIHS du Japon',
+  is_doh_annual: 'Tableau annuel des maladies infectieuses de l’Islande',
+  is_doh_sti: 'Tableau islandais de surveillance des IST',
+  is_doh_respiratory: 'Tableau hebdomadaire islandais des infections respiratoires',
+  is_doh_history: 'Registre historique islandais des maladies infectieuses',
+  is_doh_legacy_icd: 'Rapports cliniques mensuels islandais ICD historiques',
+};
+const SOURCE_DESCRIPTION_FR: Record<string, string> = {
+  jp_weekly: 'Données hebdomadaires de surveillance des maladies infectieuses du NIID/JIHS japonais.',
+  is_doh_annual: 'Notifications annuelles islandaises par maladie ; les valeurs historiques peuvent être révisées.',
+  is_doh_sti: 'Faits mensuels de diagnostic des IST issus de la surveillance de laboratoire et des registres.',
+  is_doh_respiratory: 'Diagnostics d’infections respiratoires par semaine ISO ; les hospitalisations et vaccins sont exclus.',
+  is_doh_history: 'Registre historique officiel 1997–2021 conservé à sa granularité annuelle et mensuelle.',
+  is_doh_legacy_icd: 'Consultations ICD des dossiers électroniques islandais, conservées séparément des notifications.',
+};
 
 function sourceZhLabel(source: SourceSummary) {
   return SOURCE_LABEL_ZH[source.scope ?? ''] ?? source.label ?? source.scope ?? '未知来源';
@@ -130,6 +151,12 @@ function sourceZhLabel(source: SourceSummary) {
 
 function sourceZhDescription(source: SourceSummary) {
   return SOURCE_DESCRIPTION_ZH[source.scope ?? ''] ?? source.description ?? '';
+}
+function sourceFrLabel(source: SourceSummary) {
+  return SOURCE_LABEL_FR[source.scope ?? ''] ?? source.label ?? source.scope ?? 'Source inconnue';
+}
+function sourceFrDescription(source: SourceSummary) {
+  return SOURCE_DESCRIPTION_FR[source.scope ?? ''] ?? source.description ?? '';
 }
 
 const rawSourceInfo = entry?.source_info;
@@ -171,9 +198,9 @@ const formatCards = [
   <section class="figure-panel download-panel">
     <div class="download-panel__header">
       <div class="download-panel__intro">
-        <h2 class="figure-title">{pick(title, '数据获取')}</h2>
+        <h2 class="figure-title">{pick(title, '数据获取', titleFr)}</h2>
         <p class="download-panel__summary">
-          {pick(descriptionEn, descriptionZh)}
+          {pick(descriptionEn, descriptionZh, descriptionFr)}
         </p>
       </div>
       {downloadParts.length > 0 && (
@@ -181,32 +208,32 @@ const formatCards = [
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
           </svg>
-          <span>{pick('Download data', '下载数据')}</span>
+          <span>{pick('Download data', '下载数据', 'Télécharger les données')}</span>
         </button>
       )}
     </div>
 
     <div class="download-panel__meta">
       <div class="download-panel__metric">
-        <span>{pick('Rows', '行数')}</span>
+          <span>{pick('Rows', '行数', 'Lignes')}</span>
         <strong>{formatCount(entry.record_count)}</strong>
       </div>
       <div class="download-panel__metric">
-        <span>{pick('Updated', '更新')}</span>
+          <span>{pick('Updated', '更新', 'Mis à jour')}</span>
         <strong>{formatDate(entry.generated_at)}</strong>
       </div>
       <div class="download-panel__metric download-panel__metric--wide">
-        <span>{pick('Coverage', '范围')}</span>
+          <span>{pick('Coverage', '范围', 'Couverture')}</span>
         <strong>{coverageLabel}</strong>
       </div>
       <div class="download-panel__metric">
-        <span>{pick('Partitions', '分块')}</span>
+          <span>{pick('Partitions', '分块', 'Partitions')}</span>
         <strong>{formatCount(downloadParts.length)}</strong>
       </div>
       {entry.includes_series_provenance && (
         <div class="download-panel__metric download-panel__metric--wide">
-          <span>{pick('Source', '来源')}</span>
-          <strong>{formatCount(entry.source_series_count)} {pick('series', '序列')} · {formatCount(entry.source_observation_count)} {pick('observations', '观测')}</strong>
+          <span>{pick('Source', '来源', 'Source')}</span>
+          <strong>{formatCount(entry.source_series_count)} {pick('series', '序列', 'séries')} · {formatCount(entry.source_observation_count)} {pick('observations', '观测', 'observations')}</strong>
         </div>
       )}
     </div>
@@ -214,7 +241,7 @@ const formatCards = [
     {sourceEntries.length > 0 && (
       <details class="source-register">
         <summary>
-          <span><strong>{pick('Official sources', '官方数据来源')}</strong><small>{pick('Authority, cadence, notes', '机构、频率与说明')}</small></span>
+          <span><strong>{pick('Official sources', '官方数据来源', 'Sources officielles')}</strong><small>{pick('Authority, cadence, notes', '机构、频率与说明', 'Autorité, fréquence et notes')}</small></span>
           <b>{sourceEntries.length}</b>
         </summary>
         <div class="source-register-grid">
@@ -224,7 +251,7 @@ const formatCards = [
                 <div class="source-register-card__identity">
                   {source.country_code && <CountryFlag code={source.country_code} name={source.country_name ?? source.country_code} sizeClass="h-6 w-8 shrink-0" />}
                   <div class="min-w-0">
-                    <h3 class="source-register-title">{pick(source.label ?? source.scope ?? 'Unknown Source', sourceZhLabel(source))}</h3>
+                    <h3 class="source-register-title">{pick(source.label ?? source.scope ?? 'Unknown Source', sourceZhLabel(source), sourceFrLabel(source))}</h3>
                     {source.country_name && <p class="source-register-country">{source.country_name}</p>}
                   </div>
                 </div>
@@ -234,21 +261,21 @@ const formatCards = [
                     target="_blank"
                     rel="noopener noreferrer"
                     class="source-register-link"
-                    aria-label={pick('Open official source', '打开官方来源')}
-                    title={pick('Official source', '官方来源')}
+                    aria-label={pick('Open official source', '打开官方来源', 'Ouvrir la source officielle')}
+                    title={pick('Official source', '官方来源', 'Source officielle')}
                   >
-                    <span>{pick('Source', '来源')}</span>
+                    <span>{pick('Source', '来源', 'Source')}</span>
                     <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5h5m0 0v5m0-5L10 14m-3 5h11a2 2 0 002-2V9m-5 10H6a2 2 0 01-2-2h5" /></svg>
                   </a>
                 )}
               </div>
               {(source.cadence || source.type) && (
                 <div class="source-register-tags">
-                  {source.cadence && <span class="source-register-cadence">{pick(source.cadence, CADENCE_ZH[source.cadence] ?? source.cadence)}</span>}
-                  {source.type && <span class="source-register-type">{pick(source.type, TYPE_ZH[source.type] ?? source.type)}</span>}
+                  {source.cadence && <span class="source-register-cadence">{pick(source.cadence, CADENCE_ZH[source.cadence] ?? source.cadence, source.cadence)}</span>}
+                  {source.type && <span class="source-register-type">{pick(source.type, TYPE_ZH[source.type] ?? source.type, source.type)}</span>}
                 </div>
               )}
-              {source.description && <p class="source-register-description">{pick(source.description, sourceZhDescription(source))}</p>}
+              {source.description && <p class="source-register-description">{pick(source.description, sourceZhDescription(source), sourceFrDescription(source))}</p>}
             </article>
           ))}
         </div>
@@ -256,29 +283,29 @@ const formatCards = [
     )}
 
     {downloadParts.length > 0 && (
-      <dialog class="download-dialog" data-download-confirm-dialog aria-label={pick('Choose data download', '选择数据下载')}>
+      <dialog class="download-dialog" data-download-confirm-dialog aria-label={pick('Choose data download', '选择数据下载', 'Choisir un téléchargement')}>
         <div class="download-dialog__toolbar">
           <div class="download-dialog__header">
             <div>
-              <p class="figure-kicker">{pick('Partitioned public data', '分块公开数据')}</p>
-              <h2 class="download-dialog__title">{pick('Choose a time range and format', '选择时间范围和格式')}</h2>
+              <p class="figure-kicker">{pick('Partitioned public data', '分块公开数据', 'Données publiques partitionnées')}</p>
+              <h2 class="download-dialog__title">{pick('Choose a time range and format', '选择时间范围和格式', 'Choisir une période et un format')}</h2>
             </div>
-            <button class="download-dialog__close" type="button" data-download-modal-close aria-label={pick('Close', '关闭')}>×</button>
+            <button class="download-dialog__close" type="button" data-download-modal-close aria-label={pick('Close', '关闭', 'Fermer')}>×</button>
           </div>
-          <div class="download-dialog__filters" aria-label={pick('Download filters', '下载筛选')}>
+          <div class="download-dialog__filters" aria-label={pick('Download filters', '下载筛选', 'Filtres de téléchargement')}>
             <label class="download-filter">
-              <span>{pick('Time range', '时间范围')}</span>
+              <span>{pick('Time range', '时间范围', 'Période')}</span>
               <select data-download-time-filter>
-                <option value="all">{pick('All time ranges', '全部时间范围')}</option>
+                <option value="all">{pick('All time ranges', '全部时间范围', 'Toutes les périodes')}</option>
                 {downloadParts.map((part) => (
-                  <option value={part.id}>{part.label ?? part.id}{part.is_current ? ` · ${pick('Current', '当前')}` : ''}</option>
+                <option value={part.id}>{part.label ?? part.id}{part.is_current ? ` · ${pick('Current', '当前', 'Actuelle')}` : ''}</option>
                 ))}
               </select>
             </label>
             <label class="download-filter">
-              <span>{pick('File format', '文件格式')}</span>
+              <span>{pick('File format', '文件格式', 'Format de fichier')}</span>
               <select data-download-format-filter>
-                <option value="all">{pick('All formats', '全部格式')}</option>
+                <option value="all">{pick('All formats', '全部格式', 'Tous les formats')}</option>
                 {formatCards.map((format) => <option value={format.key}>{format.label}</option>)}
               </select>
             </label>
@@ -301,7 +328,7 @@ const formatCards = [
                     <div class="min-w-0">
                       <div class="flex flex-wrap items-center gap-2">
                         <h3>{part.label ?? part.id}</h3>
-                        {part.is_current && <span class="download-file-item__current">{pick('Current', '当前')}</span>}
+                        {part.is_current && <span class="download-file-item__current">{pick('Current', '当前', 'Actuelle')}</span>}
                       </div>
                       <p>{part.date_range?.start ?? '—'} → {part.date_range?.end ?? '—'}</p>
                     </div>
@@ -309,13 +336,13 @@ const formatCards = [
                       <svg class="download-file-item__action-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
                       </svg>
-                      <span>{pick(`Download ${format.label}`, `下载 ${format.label}`)}</span>
+                      <span>{pick(`Download ${format.label}`, `下载 ${format.label}`, `Télécharger ${format.label}`)}</span>
                     </button>
                   </div>
                   <div class="download-file-item__meta">
-                    <span>{formatCount(part.record_count)} {pick('records', '条记录')}</span>
+                    <span>{formatCount(part.record_count)} {pick('records', '条记录', 'enregistrements')}</span>
                     <span>{formatBytes(file.bytes)}</span>
-                    <span>{pick(format.en, format.zh)}</span>
+                      <span>{pick(format.en, format.zh, format.key === 'csv' ? 'Texte tabulaire' : format.key === 'json' ? 'Données structurées' : 'Classeur Excel')}</span>
                   </div>
                   <a class="download-file-item__raw" href={file.url} target="_blank" rel="noopener noreferrer" title={file.url} data-file-download><code>{file.url}</code></a>
                   <p class="download-file-item__status" data-download-status aria-live="polite"></p>
@@ -323,7 +350,7 @@ const formatCards = [
               );
             }))}
           </div>
-          <p class="download-dialog__empty" data-download-empty hidden>{pick('No files match these filters.', '没有符合筛选条件的文件。')}</p>
+          <p class="download-dialog__empty" data-download-empty hidden>{pick('No files match these filters.', '没有符合筛选条件的文件。', 'Aucun fichier ne correspond à ces filtres.')}</p>
         </div>
       </dialog>
     )}

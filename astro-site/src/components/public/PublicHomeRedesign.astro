@@ -1,7 +1,8 @@
 ---
 import CountryCard from '../CountryCard.astro';
 import CountryFlag from '../CountryFlag.astro';
-import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { localizedRegionName } from '../../utils/i18n';
 import { hasCountryDataSnapshot } from '../../lib/country-coverage';
 import { isSituationReportV3, type SituationReportV3 } from '../../utils/situation';
 import { existsSync, readFileSync } from 'node:fs';
@@ -367,7 +368,7 @@ const explorePaths = [
         </div>
         <div class="country-grid">
           {featuredCountries.map((country: any) => (
-            <CountryCard code={country.code} name={country.name} nameZh={country.name_zh} totalCases={country.total_cases} totalDeaths={country.total_deaths} diseaseCount={country.disease_count} dateRange={country.date_range} locationType={country.location_type} locale={locale} />
+            <CountryCard code={country.code} name={country.name} nameZh={country.name_zh} nameFr={country.name_fr ?? localizedRegionName('fr', country.code, { en: country.name })} totalCases={country.total_cases} totalDeaths={country.total_deaths} diseaseCount={country.disease_count} dateRange={country.date_range} locationType={country.location_type} locale={locale} />
           ))}
         </div>
       </div>
@@ -379,7 +380,7 @@ const explorePaths = [
         <div class="disease-list">
           {featuredDiseases.map((disease: any) => (
             <a href={href(`/diseases/${disease.slug}/`)}>
-              <span><strong>{zh ? disease.name_zh ?? disease.name_en : fr ? (disease.name_fr ?? DISEASE_NAMES_FR[disease.slug] ?? disease.name_en) : disease.name_en}</strong><small>{zh ? disease.name_en : fr ? disease.name_en : `${disease.name_zh ?? ''} · ${disease.category}`}</small></span>
+              <span><strong>{zh ? disease.name_zh ?? disease.name_en : fr ? localizedDiseaseName(disease, 'fr') : disease.name_en}</strong><small>{zh ? disease.name_en : fr ? disease.name_en : `${disease.name_zh ?? ''} · ${disease.category}`}</small></span>
               <span aria-hidden="true">-&gt;</span>
             </a>
           ))}
@@ -401,7 +402,7 @@ const explorePaths = [
         <div class="report-list">
           {latestReports.map((report: any) => {
             const code = String(report.country_code ?? '').toLowerCase();
-            const name = zh ? report.country_name_zh ?? report.country_name_en ?? report.country_name ?? report.country_code : report.country_name_en ?? report.country_name ?? report.country_code;
+            const name = zh ? report.country_name_zh ?? report.country_name_en ?? report.country_name ?? report.country_code : fr ? (report.country_name_fr ?? localizedRegionName('fr', report.country_code, { en: report.country_name_en ?? report.country_name })) : report.country_name_en ?? report.country_name ?? report.country_code;
             return (
               <a href={href(`/countries/${code}/reports/${report.id}/`)}>
                 <CountryFlag code={report.country_code} name={name} sizeClass="w-9 h-7" />

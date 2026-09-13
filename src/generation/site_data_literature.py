@@ -1750,6 +1750,7 @@ async def collect_literature_export(
     )
     for summary in summaries:
         automation = (summary.generation_metadata or {}).get("autopilot") or {}
+        translation = (summary.generation_metadata or {}).get("translation_provenance") or None
         summaries_by_article[summary.article_id][summary.language] = {
             **{field: getattr(summary, field) for field in summary_fields},
             "provenance": {
@@ -1764,6 +1765,7 @@ async def collect_literature_export(
                 "automatically_approved": automation.get("policy_version") is not None,
                 "automation_policy_version": automation.get("policy_version"),
                 "publication_gate": (summary.generation_metadata or {}).get("publication_gate"),
+                "translation": translation,
             },
         }
 
@@ -2073,12 +2075,15 @@ async def collect_literature_export(
         summarized=quality_gated_db_article_count,
         exact_linked=exact_linked_public_articles,
     )
+    french_published_summary_count = sum(
+        bool((item.get("summary") or {}).get("fr")) for item in projected
+    )
     completeness = [
         {"metric": "Disease classified", "count": sum(bool(item["diseases"]) for item in projected), "total": len(projected)},
         {"metric": "Geography classified", "count": sum(bool(item["countries"]) for item in projected), "total": len(projected)},
         {"metric": "Topic classified", "count": sum(bool(item["topics"]) for item in projected), "total": len(projected)},
         {"metric": "Bilingual published summary", "count": len(projected), "total": len(projected)},
-        {"metric": "French published summary", "count": sum(bool((item.get("summary") or {}).get("fr")) for item in projected), "total": len(projected)},
+        {"metric": "French published summary", "count": french_published_summary_count, "total": len(projected)},
         {"metric": "Open access", "count": sum(item["open_access_status"] == "open" for item in projected), "total": len(projected)},
     ]
     return {
@@ -2097,6 +2102,10 @@ async def collect_literature_export(
             "diseases_last_7_days": len({d["disease_id"] for item in recent for d in item["diseases"]}),
             "countries_last_7_days": len({c["code"] for item in recent for c in item["countries"]}),
             "reviews_and_guidelines_last_7_days": sum(item["study_type"] in review_types for item in recent),
+            "french_published_summary_count": french_published_summary_count,
+            "french_summary_coverage": round(
+                french_published_summary_count / len(projected), 4
+            ) if projected else 0.0,
         },
         "featured": sorted(
             [item for item in projected if item["is_featured"]],

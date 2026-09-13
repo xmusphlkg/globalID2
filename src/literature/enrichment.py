@@ -48,6 +48,7 @@ ALLOWED_EVIDENCE = {"title", "abstract", "bibliographic_metadata", "classifier_l
 SUPPORTED_SUMMARY_LANGUAGES = ("en", "zh", "fr")
 TRANSLATION_LANGUAGES = ("zh", "fr")
 LANGUAGE_NAMES = {"en": "English", "zh": "Simplified Chinese", "fr": "French"}
+TRANSLATION_PROVENANCE_VERSION = "translation-provenance.v1"
 
 
 class LiteratureEvidenceAgent(BaseAgent):
@@ -608,6 +609,10 @@ class LiteratureEnrichmentPipeline:
             force=force,
         )
         counts = {"articles": len(articles), "generated": 0, "skipped": 0, "failed": 0}
+        language_counts = {
+            language: {"generated": 0, "skipped": 0, "failed": 0}
+            for language in languages
+        }
         errors: list[dict[str, str]] = []
         provider_auth_failure_count = 0
         total = max(1, len(articles) * max(1, len(languages)))
@@ -644,6 +649,7 @@ class LiteratureEnrichmentPipeline:
                         if await self._should_skip(article, language=language, force=force):
                             async with counts_lock:
                                 counts["skipped"] += 1
+                                language_counts[language]["skipped"] += 1
                             continue
                         result = await generator.generate(
                             article=article,
@@ -663,6 +669,7 @@ class LiteratureEnrichmentPipeline:
                             canonical_fields = dict(result.fields)
                         async with counts_lock:
                             counts["generated"] += 1
+                            language_counts[language]["generated"] += 1
                     except Exception as exc:
                         if language == "en":
                             canonical_fields = None
@@ -670,6 +677,7 @@ class LiteratureEnrichmentPipeline:
                         await self._store_failure(article, language=language, error=exc)
                         async with counts_lock:
                             counts["failed"] += 1
+                            language_counts[language]["failed"] += 1
                             if is_provider_authentication_error(exc):
                                 provider_auth_failure_count += 1
                             errors.append({"article_id": article.article_id, "language": language, "error": str(exc)[:500]})
@@ -686,6 +694,18 @@ class LiteratureEnrichmentPipeline:
         return {
             **counts,
             "languages": languages,
+            "language_counts": language_counts,
+            "translation_queue": {
+                "requested_languages": [language for language in languages if language in TRANSLATION_LANGUAGES],
+                "generated": sum(language_counts[language]["generated"] for language in TRANSLATION_LANGUAGES if language in language_counts),
+                "skipped": sum(language_counts[language]["skipped"] for language in TRANSLATION_LANGUAGES if language in language_counts),
+                "failed": sum(language_counts[language]["failed"] for language in TRANSLATION_LANGUAGES if language in language_counts),
+                "source_language": "en",
+                "provenance_version": TRANSLATION_PROVENANCE_VERSION,
+                "next_action": "retry_failed_targets" if any(
+                    language_counts[language]["failed"] for language in TRANSLATION_LANGUAGES if language in language_counts
+                ) else "editorial_review_or_publish",
+            },
             "errors": errors[:20],
             # This count is intentionally collected before the diagnostic
             # error list is truncated, so schedule decisions see failures
@@ -931,6 +951,16 @@ class LiteratureEnrichmentPipeline:
                 "publication_gate": "autopilot-quality-gate" if self.config.autopilot_enabled else "human-review-required",
                 "quality_attempts": int(existing_metadata.get("quality_attempts") or 0) + 1,
             }
+            if language in TRANSLATION_LANGUAGES:
+                summary.generation_metadata["translation_provenance"] = {
+                    "version": TRANSLATION_PROVENANCE_VERSION,
+                    "source_language": "en",
+                    "target_language": language,
+                    "canonical_summary_fingerprint": result.canonical_summary_fingerprint,
+                    "model": result.model,
+                    "provider": result.provider,
+                    "status": "complete",
+                }
             if language == "zh" and result.canonical_summary_fingerprint:
                 summary.generation_metadata["bilingual_alignment"] = {
                     "protocol_version": LiteratureSummaryGenerator.BILINGUAL_PROTOCOL_VERSION,
@@ -980,6 +1010,18 @@ class LiteratureEnrichmentPipeline:
                 "last_generation_error": type(error).__name__,
                 "last_generation_error_transient": transient,
             }
+            if language in TRANSLATION_LANGUAGES:
+                summary.generation_metadata["translation_provenance"] = {
+                    **dict(existing_metadata.get("translation_provenance") or {}),
+                    "version": TRANSLATION_PROVENANCE_VERSION,
+                    "source_language": "en",
+                    "target_language": language,
+                    "status": "retry_pending",
+                    "last_error": type(error).__name__,
+                    "transient": transient,
+                    "attempt": attempts,
+                    "next_action": "retry_failed_target",
+                }
             summary.review_notes = (
                 f"{summary.review_notes or ''} Generation failed for {language}: {str(error)[:240]}"
             ).strip()
@@ -993,6 +1035,7 @@ __all__ = [
     "LiteratureEvidenceAgent",
     "LiteratureSummaryGenerator",
     "SUMMARY_FIELDS",
+    "TRANSLATION_PROVENANCE_VERSION",
     "canonical_summary_fingerprint",
     "source_fingerprint",
 ]

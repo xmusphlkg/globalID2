@@ -4,6 +4,7 @@
 interface Stat {
   label: string;
   labelZh: string;
+  labelFr?: string;
   value: string | number;
   accent?: 'blue' | 'teal' | 'red' | 'amber';
 }
@@ -15,6 +16,7 @@ interface Props {
 
 const { stats, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 
 const accentColor: Record<string, string> = {
   blue: 'text-brand-400',
@@ -25,10 +27,10 @@ const accentColor: Record<string, string> = {
 ---
 
 <div class="site-stat-grid grid grid-cols-2 sm:grid-cols-4 gap-px rounded-none overflow-hidden border">
-  {stats.map(({ label, labelZh, value, accent = 'blue' }) => (
+  {stats.map(({ label, labelZh, labelFr = label, value, accent = 'blue' }) => (
     <div class="site-stat-item px-6 py-6 text-center">
       <div class="academic-kicker mb-2">
-        <span>{zh ? labelZh : label}</span>
+        <span>{zh ? labelZh : fr ? labelFr : label}</span>
       </div>
       <div class={`font-serif text-3xl font-semibold tabular-nums ${accentColor[accent] ?? 'text-brand-400'}`}>
         {value}

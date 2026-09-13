@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
 import { loadCountryDataset, type CountryDatasetSeriesEntry } from './countryDataset';
-import { DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
 
 type Lang = 'zh' | 'en' | 'fr';
 type AnyRecord = Record<string, any>;
@@ -32,20 +32,27 @@ function asArray(value: unknown): any[] {
   return Array.isArray(value) ? value : [];
 }
 
+function ui(lang: Lang, en: string, zh: string, fr: string): string {
+  return lang === 'zh' ? zh : lang === 'fr' ? fr : en;
+}
+
 function localized(value: unknown, lang: Lang, fallback = ''): string {
   const record = asRecord(value);
   const direct = record[lang];
-  if (typeof direct === 'string') return direct;
-  const zh = record.zh;
-  if (typeof zh === 'string') return zh;
-  return typeof value === 'string' ? value : fallback;
+  if (typeof direct === 'string' && direct.trim()) return direct;
+  if (typeof value === 'string' && value.trim()) return value;
+  if (fallback) return fallback;
+  return ui(lang, 'Translation pending.', '翻译待补充。', 'Traduction française en attente.');
 }
 
 function localizedList(value: unknown, lang: Lang): string[] {
   const direct = asRecord(value)[lang];
   if (Array.isArray(direct)) return direct.map(String);
   if (Array.isArray(value)) return value.map(String);
-  return [];
+  const record = asRecord(value);
+  return Object.keys(record).length > 0
+    ? [ui(lang, 'Translation pending.', '翻译待补充。', 'Traduction française en attente.')]
+    : [];
 }
 
 function escapeHtml(value: string): string {
@@ -70,58 +77,68 @@ function MarkdownBlock({ content }: { content: string }) {
   return <div className="report-markdown" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-function fmtNumber(value: unknown): string {
+function fmtNumber(value: unknown, lang: Lang = 'en'): string {
   const parsed = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(parsed)) return '—';
-  return parsed.toLocaleString('zh-CN');
+  return parsed.toLocaleString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US');
 }
 
-function percent(value: unknown): string {
+function percent(value: unknown, lang: Lang = 'en'): string {
   const parsed = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(parsed)) return '—';
-  return `${Math.round(parsed * 100)}%`;
+  return new Intl.NumberFormat(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', {
+    style: 'percent',
+    maximumFractionDigits: 0,
+  }).format(parsed);
 }
 
-function changePct(value: unknown): string {
+function changePct(value: unknown, lang: Lang = 'en'): string {
   const parsed = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(parsed)) return '—';
   const digits = Math.abs(parsed) >= 10 ? 0 : 1;
-  return `${parsed > 0 ? '+' : ''}${parsed.toFixed(digits)}%`;
+  const formatted = parsed.toLocaleString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+  return `${parsed > 0 ? '+' : ''}${formatted}${lang === 'fr' ? ' ' : ''}%`;
 }
 
 function attentionLabel(value: unknown, lang: Lang): string {
   const key = String(value || 'low').toLowerCase();
   if (lang === 'en') return key;
-  return ({ critical: '极高', high: '高', moderate: '中等', low: '低' } as Record<string, string>)[key] || key;
+  const labels = lang === 'fr'
+    ? { critical: 'critique', high: 'élevée', moderate: 'modérée', low: 'faible' }
+    : { critical: '极高', high: '高', moderate: '中等', low: '低' };
+  return (labels as Record<string, string>)[key] || ui(lang, key, '未知', 'inconnue');
 }
 
 function deathLabel(deathReporting: AnyRecord, lang: Lang): string {
   const status = String(deathReporting.status || 'unknown');
-  if (status === 'not_reported') return lang === 'zh' ? '死亡数未提供' : 'Deaths not reported';
-  if (status === 'unknown') return lang === 'zh' ? '死亡口径未知' : 'Death scope unknown';
-  if (status === 'partial') return lang === 'zh' ? '死亡数部分可用' : 'Deaths partially available';
+  if (status === 'not_reported') return ui(lang, 'Deaths not reported', '死亡数未提供', 'Décès non déclarés');
+  if (status === 'unknown') return ui(lang, 'Death scope unknown', '死亡口径未知', 'Périmètre des décès inconnu');
+  if (status === 'partial') return ui(lang, 'Deaths partially available', '死亡数部分可用', 'Données partielles sur les décès');
   const total = deathReporting.total_deaths;
-  return `${lang === 'zh' ? '死亡' : 'Deaths'} ${fmtNumber(total)}`;
+  return `${ui(lang, 'Deaths', '死亡', 'Décès')} ${fmtNumber(total, lang)}`;
 }
 
 function sectionLabel(value: unknown, lang: Lang): string {
   const key = String(value || '');
-  const labels: Record<string, { zh: string; en: string }> = {
-    decision_summary: { zh: '当前判断', en: 'Current judgement' },
-    priority_actions: { zh: '建议动作', en: 'Priority actions' },
-    signal_evidence: { zh: '关键证据', en: 'Signal evidence' },
-    disease_context: { zh: '疾病背景', en: 'Disease context' },
-    data_interpretation_notes: { zh: '数据口径', en: 'Data notes' },
-    method_appendix: { zh: '方法附录', en: 'Method appendix' },
+  const labels: Record<string, Record<Lang, string>> = {
+    decision_summary: { zh: '当前判断', en: 'Current judgement', fr: 'Évaluation actuelle' },
+    priority_actions: { zh: '建议动作', en: 'Priority actions', fr: 'Actions prioritaires' },
+    signal_evidence: { zh: '关键证据', en: 'Signal evidence', fr: 'Preuves relatives aux signaux' },
+    disease_context: { zh: '疾病背景', en: 'Disease context', fr: 'Contexte des maladies' },
+    data_interpretation_notes: { zh: '数据口径', en: 'Data notes', fr: 'Notes sur les données' },
+    method_appendix: { zh: '方法附录', en: 'Method appendix', fr: 'Annexe méthodologique' },
   };
-  return labels[key]?.[lang as 'zh' | 'en'] || (lang === 'zh' ? '报告章节' : lang === 'fr' ? 'Section du rapport' : key || 'Report section');
+  return labels[key]?.[lang] || ui(lang, key || 'Report section', '报告章节', 'Section du rapport');
 }
 
 function trendLabel(row: AnyRecord, lang: Lang): string {
   const trend = asRecord(row.trend);
   const direct = trend[lang];
   if (typeof direct === 'string' && direct.trim()) return direct;
-  return lang === 'zh' ? '待观察' : 'Watch';
+  return ui(lang, 'Watch', '待观察', 'À surveiller');
 }
 
 function trendDirection(row: AnyRecord): string {
@@ -132,14 +149,10 @@ function trendDirection(row: AnyRecord): string {
 function categoryLabel(value: unknown, lang: Lang): string {
   const key = String(value || 'Other');
   if (lang === 'en') return key || 'Other';
-  return ({
-    Viral: '病毒性',
-    Bacterial: '细菌性',
-    Parasitic: '寄生虫性',
-    Fungal: '真菌性',
-    Prion: '朊病毒',
-    Other: '其他',
-  } as Record<string, string>)[key] || '其他';
+  const labels = lang === 'fr'
+    ? { Viral: 'Virale', Bacterial: 'Bactérienne', Parasitic: 'Parasitaire', Fungal: 'Fongique', Prion: 'Prion', Other: 'Autre' }
+    : { Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫性', Fungal: '真菌性', Prion: '朊病毒', Other: '其他' };
+  return (labels as Record<string, string>)[key] || ui(lang, 'Other', '其他', 'Autre');
 }
 
 function attentionRank(value: unknown): number {
@@ -239,8 +252,8 @@ function currentYearCumulativeCases(record: SparklineSeriesEntry | undefined): n
 
 function currentYearLabel(record: SparklineSeriesEntry | undefined, lang: Lang): string {
   const year = record?.current_year || (Array.isArray(record?.dates) ? String(record?.dates.at(-1) || '').slice(0, 4) : '');
-  if (!year || year.length !== 4) return lang === 'zh' ? '当年累计' : 'YTD cumulative';
-  return lang === 'zh' ? `${year}累计` : `${year} YTD`;
+  if (!year || year.length !== 4) return ui(lang, 'YTD cumulative', '当年累计', 'Cumul annuel');
+  return ui(lang, `${year} YTD`, `${year}累计`, `Cumul ${year}`);
 }
 
 function curveColorClass(direction?: string, tone: 'monthly' | 'annual' = 'monthly'): string {
@@ -306,6 +319,7 @@ function ChangeCurveCell({
   direction,
   title,
   tone,
+  lang,
   className = '',
 }: {
   value: unknown;
@@ -313,6 +327,7 @@ function ChangeCurveCell({
   direction?: string;
   title?: string;
   tone: 'monthly' | 'annual';
+  lang: Lang;
   className?: string;
 }) {
   return (
@@ -322,7 +337,7 @@ function ChangeCurveCell({
     >
       <BackgroundCurve values={values} direction={direction} tone={tone} />
       <span className="relative z-10 inline-flex min-w-[4.5rem] justify-end bg-[rgb(var(--surface)/.65)] px-1.5 py-0.5 backdrop-blur-[1px]">
-        {changePct(value)}
+        {changePct(value, lang)}
       </span>
     </td>
   );
@@ -334,6 +349,7 @@ function CasesMoMCell({
   values,
   direction,
   title,
+  lang,
   className = '',
 }: {
   cases: unknown;
@@ -341,6 +357,7 @@ function CasesMoMCell({
   values: number[];
   direction?: string;
   title?: string;
+  lang: Lang;
   className?: string;
 }) {
   return (
@@ -350,8 +367,8 @@ function CasesMoMCell({
     >
       <BackgroundCurve values={values} direction={direction} tone="monthly" />
       <span className="relative z-10 inline-flex max-w-full items-baseline justify-end gap-1.5 bg-[rgb(var(--surface)/.65)] px-1.5 py-0.5 backdrop-blur-[1px]">
-        <span className="font-semibold text-[rgb(var(--text-strong))]">{fmtNumber(cases)}</span>
-        <span className={`text-xs font-medium ${changeClass(change)}`}>{changePct(change)}</span>
+        <span className="font-semibold text-[rgb(var(--text-strong))]">{fmtNumber(cases, lang)}</span>
+        <span className={`text-xs font-medium ${changeClass(change)}`}>{changePct(change, lang)}</span>
       </span>
     </td>
   );
@@ -451,16 +468,16 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
     <div className="space-y-8">
       <section className="figure-panel">
         <p className="figure-kicker">
-          {lang === 'zh' ? '决策简报' : 'Decision brief'}
+          {ui(lang, 'Decision brief', '决策简报', 'Note décisionnelle')}
         </p>
         <h2 className="figure-title">
-          {lang === 'zh' ? '当前判断与下一步动作' : 'Current judgement and next actions'}
+          {ui(lang, 'Current judgement and next actions', '当前判断与下一步动作', 'Évaluation actuelle et prochaines actions')}
         </h2>
         <div className="mt-5 grid gap-3 sm:grid-cols-4">
-          <Metric label={lang === 'zh' ? '病例' : 'Cases'} value={fmtNumber(metrics.total_cases)} />
-          <Metric label={lang === 'zh' ? '最新病例' : 'Latest cases'} value={fmtNumber(metrics.latest_cases)} />
-          <Metric label={lang === 'zh' ? '死亡口径' : 'Death scope'} value={deathLabel(deathReporting, lang)} />
-          <Metric label={lang === 'zh' ? '数据置信度' : 'Data confidence'} value={percent(dataQuality.score)} />
+          <Metric label={ui(lang, 'Cases', '病例', 'Cas')} value={fmtNumber(metrics.total_cases, lang)} />
+          <Metric label={ui(lang, 'Latest cases', '最新病例', 'Derniers cas')} value={fmtNumber(metrics.latest_cases, lang)} />
+          <Metric label={ui(lang, 'Death scope', '死亡口径', 'Périmètre des décès')} value={deathLabel(deathReporting, lang)} />
+          <Metric label={ui(lang, 'Data confidence', '数据置信度', 'Confiance des données')} value={percent(dataQuality.score, lang)} />
         </div>
         <div className="mt-5">
           <MarkdownBlock content={localized(document.summary, lang)} />
@@ -482,39 +499,39 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <p className="figure-kicker">
-                {lang === 'zh' ? '报告目录' : 'Table of contents'}
+                {ui(lang, 'Table of contents', '报告目录', 'Table des matières')}
               </p>
               <h2 className="figure-title">
-                {lang === 'zh' ? '按疾病进入本期研判' : 'Disease table of contents'}
+                {ui(lang, 'Disease table of contents', '按疾病进入本期研判', 'Sommaire par maladie')}
               </h2>
             </div>
             <div className="flex w-full flex-wrap items-center justify-between gap-2 border border-[rgb(var(--border))] bg-[rgb(var(--surface)/.7)] px-3 py-2 lg:w-auto lg:min-w-[520px]">
               <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[rgb(var(--text-muted))]">
-                {lang === 'zh' ? '目录概览' : 'Snapshot'}
+                {ui(lang, 'Snapshot', '目录概览', 'Vue d’ensemble')}
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs text-[rgb(var(--text-muted))]">
-                <DirectoryStat label={lang === 'zh' ? '当前' : 'Shown'} value={`${visibleDirectoryRows.length}/${directoryRows.length}`} />
-                <DirectoryStat label={lang === 'zh' ? '高关注' : 'High attention+'} value={fmtNumber(directoryStats.elevatedAttention)} tone="risk" />
-                <DirectoryStat label={lang === 'zh' ? '上升' : 'Rising'} value={fmtNumber(directoryStats.rising)} tone="up" />
+                <DirectoryStat label={ui(lang, 'Shown', '当前', 'Affichées')} value={`${visibleDirectoryRows.length}/${directoryRows.length}`} />
+                <DirectoryStat label={ui(lang, 'High attention+', '高关注', 'Attention élevée+')} value={fmtNumber(directoryStats.elevatedAttention, lang)} tone="risk" />
+                <DirectoryStat label={ui(lang, 'Rising', '上升', 'En hausse')} value={fmtNumber(directoryStats.rising, lang)} tone="up" />
               </div>
             </div>
           </div>
 
           <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_180px_180px]">
             <label className="block">
-              <span className="sr-only">{lang === 'zh' ? '搜索疾病' : 'Search diseases'}</span>
+              <span className="sr-only">{ui(lang, 'Search diseases', '搜索疾病', 'Rechercher des maladies')}</span>
               <input
                 id="report-directory-search"
                 name="report-directory-search"
                 type="search"
                 value={directoryQuery}
                 onChange={(event) => setDirectoryQuery(event.target.value)}
-                placeholder={lang === 'zh' ? '搜索疾病、编号、类别、趋势…' : 'Search disease, ID, category, trend...'}
+                placeholder={ui(lang, 'Search disease, ID, category, trend...', '搜索疾病、编号、类别、趋势…', 'Rechercher une maladie, un identifiant, une catégorie ou une tendance…')}
                 className="site-control-input w-full rounded-none border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </label>
             <label className="block">
-              <span className="sr-only">{lang === 'zh' ? '监测关注优先级筛选' : 'Attention-priority filter'}</span>
+              <span className="sr-only">{ui(lang, 'Attention-priority filter', '监测关注优先级筛选', 'Filtre de priorité de surveillance')}</span>
               <select
                 id="report-attention-filter"
                 name="report-attention-filter"
@@ -522,14 +539,14 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
                 onChange={(event) => setDirectoryAttentionFilter(event.target.value)}
                 className="site-control-input w-full rounded-none border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <option value="all">{lang === 'zh' ? '全部关注等级' : 'All attention bands'}</option>
-                <option value="elevated">{lang === 'zh' ? '高关注及以上' : 'High attention+'}</option>
-                <option value="moderate">{lang === 'zh' ? '中等关注' : 'Moderate attention'}</option>
-                <option value="low">{lang === 'zh' ? '低关注' : 'Low attention'}</option>
+                <option value="all">{ui(lang, 'All attention bands', '全部关注等级', 'Tous les niveaux d’attention')}</option>
+                <option value="elevated">{ui(lang, 'High attention+', '高关注及以上', 'Attention élevée ou critique')}</option>
+                <option value="moderate">{ui(lang, 'Moderate attention', '中等关注', 'Attention modérée')}</option>
+                <option value="low">{ui(lang, 'Low attention', '低关注', 'Attention faible')}</option>
               </select>
             </label>
             <label className="block">
-              <span className="sr-only">{lang === 'zh' ? '趋势筛选' : 'Trend filter'}</span>
+              <span className="sr-only">{ui(lang, 'Trend filter', '趋势筛选', 'Filtre de tendance')}</span>
               <select
                 id="report-trend-filter"
                 name="report-trend-filter"
@@ -537,19 +554,22 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
                 onChange={(event) => setDirectoryTrendFilter(event.target.value)}
                 className="site-control-input w-full rounded-none border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <option value="all">{lang === 'zh' ? '全部趋势' : 'All trends'}</option>
-                <option value="rising">{lang === 'zh' ? '上升' : 'Rising'}</option>
-                <option value="falling">{lang === 'zh' ? '下降' : 'Falling'}</option>
-                <option value="stable">{lang === 'zh' ? '平稳' : 'Stable'}</option>
-                <option value="watch">{lang === 'zh' ? '待观察' : 'Watch'}</option>
+                <option value="all">{ui(lang, 'All trends', '全部趋势', 'Toutes les tendances')}</option>
+                <option value="rising">{ui(lang, 'Rising', '上升', 'En hausse')}</option>
+                <option value="falling">{ui(lang, 'Falling', '下降', 'En baisse')}</option>
+                <option value="stable">{ui(lang, 'Stable', '平稳', 'Stable')}</option>
+                <option value="watch">{ui(lang, 'Watch', '待观察', 'À surveiller')}</option>
               </select>
             </label>
           </div>
 
           <p className="mt-3 text-xs leading-5 text-[rgb(var(--text-muted))] dark:text-[rgb(var(--text-muted))]">
-            {lang === 'zh'
-              ? '监测关注分（0–100）只用于安排信号复核顺序，由报告病例负担、变化、可用死亡线索、异常标记、历史位置和数据质量组成；未经概率校准，不代表感染、重症、死亡或暴发风险。'
-              : 'The 0–100 surveillance attention score only orders signal review. It combines reported burden, change, mortality signals when available, anomaly markers, historical position, and data quality; it is uncalibrated and is not infection, severity, mortality, or outbreak risk.'}
+            {ui(
+              lang,
+              'The 0–100 surveillance attention score only orders signal review. It combines reported burden, change, mortality signals when available, anomaly markers, historical position, and data quality; it is uncalibrated and is not infection, severity, mortality, or outbreak risk.',
+              '监测关注分（0–100）只用于安排信号复核顺序，由报告病例负担、变化、可用死亡线索、异常标记、历史位置和数据质量组成；未经概率校准，不代表感染、重症、死亡或暴发风险。',
+              'Le score d’attention de surveillance (0–100) sert uniquement à ordonner l’examen des signaux. Il combine la charge déclarée, les variations, les indices de mortalité disponibles, les anomalies, la position historique et la qualité des données ; il n’est pas étalonné comme une probabilité et ne mesure ni le risque d’infection, ni la gravité, ni la mortalité, ni le risque d’épidémie.',
+            )}
           </p>
 
           <div className="mt-4 h-[560px] overflow-auto border border-[rgb(var(--border))] dark:border-[rgb(var(--border))]">
@@ -566,19 +586,19 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
               <thead className="text-xs text-[rgb(var(--text-muted))] dark:text-[rgb(var(--text-muted))]">
                 <tr>
                   <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-left">#</th>
-                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-left">{lang === 'zh' ? '疾病目录' : 'Disease'}</th>
-                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-left">{lang === 'zh' ? '监测关注级' : 'Attention band'}</th>
-                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{lang === 'zh' ? '病例（环比）' : 'Cases (MoM)'}</th>
-                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{lang === 'zh' ? '报告期病例' : 'Period cases'}</th>
-                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{lang === 'zh' ? '年累计病例' : 'YTD cumulative'}</th>
-                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{lang === 'zh' ? '同比' : 'YoY'}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-left">{ui(lang, 'Disease', '疾病目录', 'Maladie')}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-left">{ui(lang, 'Attention band', '监测关注级', 'Niveau d’attention')}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{ui(lang, 'Cases (MoM)', '病例（环比）', 'Cas (mensuel)')}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{ui(lang, 'Period cases', '报告期病例', 'Cas sur la période')}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{ui(lang, 'YTD cumulative', '年累计病例', 'Cumul annuel')}</th>
+                  <th className="sticky top-0 z-10 bg-[rgb(var(--bg-soft))] px-3 py-3 text-right">{ui(lang, 'YoY', '同比', 'Variation annuelle')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[rgb(var(--border))] text-[rgb(var(--text-strong))]">
                 {visibleDirectoryRows.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-3 py-8 text-center text-sm text-[rgb(var(--text-muted))]">
-                      {lang === 'zh' ? '没有匹配的疾病。' : 'No diseases matched the current filters.'}
+                      {ui(lang, 'No diseases matched the current filters.', '没有匹配的疾病。', 'Aucune maladie ne correspond aux filtres actuels.')}
                     </td>
                   </tr>
                 )}
@@ -588,7 +608,7 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
                   const monthlyCurve = aggregateCurveByPeriod(rowSeries, 'month');
                   const annualCurve = aggregateCurveByPeriod(rowSeries, 'year');
                   const ytdCases = currentYearCumulativeCases(rowSeries);
-                  const diseaseName = lang === 'zh' ? (row.name_zh || row.name_en) : lang === 'fr' ? (row.name_fr || DISEASE_NAMES_FR_BY_ID[diseaseId] || row.name_en || row.name_zh) : (row.name_en || row.name_zh);
+                  const diseaseName = lang === 'zh' ? (row.name_zh || row.name_en) : lang === 'fr' ? localizedDiseaseName({ disease_id: diseaseId, name_en: row.name_en, name_zh: row.name_zh, name_fr: row.name_fr }, 'fr') : (row.name_en || row.name_zh);
                   const href = countryCode && reportId && row.slug
                     ? `${localePrefix}/countries/${countryCode}/reports/${reportId}/${row.slug}/`
                     : undefined;
@@ -622,13 +642,14 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
                         values={monthlyCurve}
                         direction={trendDirection(row)}
                         title={trendLabel(row, lang)}
+                        lang={lang}
                         className={trendBackgroundClass(row)}
                       />
-                      <td className="px-3 py-3 text-right tabular-nums" title={lang === 'zh' ? '当前报告窗口内累计病例' : 'Cumulative cases within the report window'}>
-                        {fmtNumber(row.total_cases)}
+                      <td className="px-3 py-3 text-right tabular-nums" title={ui(lang, 'Cumulative cases within the report window', '当前报告窗口内累计病例', 'Cas cumulés sur la période du rapport')}>
+                        {fmtNumber(row.total_cases, lang)}
                       </td>
                       <td className="px-3 py-3 text-right tabular-nums" title={currentYearLabel(rowSeries, lang)}>
-                        <div>{fmtNumber(ytdCases)}</div>
+                        <div>{fmtNumber(ytdCases, lang)}</div>
                         <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-[rgb(var(--text-muted))]">
                           {currentYearLabel(rowSeries, lang)}
                         </div>
@@ -637,8 +658,9 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
                         value={row.yoy_change_pct}
                         values={annualCurve}
                         direction={directionFromChange(row.yoy_change_pct)}
-                        title={lang === 'zh' ? '同比背景：年度发病曲线' : 'YoY background: annual cases curve'}
+                        title={ui(lang, 'YoY background: annual cases curve', '同比背景：年度发病曲线', 'Contexte annuel : courbe des cas par année')}
                         tone="annual"
+                        lang={lang}
                         className="bg-brand-500/[0.04]"
                       />
                     </tr>
@@ -658,7 +680,7 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries,
               <h2 className="figure-title">{localized(section.title, lang)}</h2>
             </div>
             <span className="mt-2 text-xs uppercase tracking-[0.14em] text-[rgb(var(--text-muted))]">
-              {section.order ? `${lang === 'zh' ? '第' : 'Section '}${section.order}${lang === 'zh' ? '节' : ''}` : ''}
+              {section.order ? ui(lang, `Section ${section.order}`, `第${section.order}节`, `Section ${section.order}`) : ''}
             </span>
           </div>
           <div className="mt-5">

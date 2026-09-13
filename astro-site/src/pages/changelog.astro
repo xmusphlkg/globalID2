@@ -13,7 +13,23 @@ const frenchUi: Record<string, string> = {
   'Public release history across capabilities, refinements, and fixes.': 'Historique public des fonctionnalités, améliorations et corrections.', 'Changelog summary': 'Résumé des modifications', releases: 'versions', 'documented changes': 'changements documentés', 'first published': 'première publication', 'Release navigation': 'Navigation des versions', 'Current release': 'Version actuelle', 'Get future updates': 'Recevoir les prochaines mises à jour', 'Choose the topics you care about.': 'Choisissez les sujets qui vous intéressent.', 'Release history': 'Historique des versions', Latest: 'Dernière version', 'Jump to a version': 'Accéder à une version', 'Link to this release': 'Lien vers cette version',
   'Follow every GIDS release, including new capabilities, improvements, fixes, and release dates.': 'Suivez chaque version de GIDS : nouveautés, améliorations, corrections et dates de publication.', 'Link to version': 'Lien vers la version',
 };
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : fr && typeof en === 'string' ? (frenchUi[en] ?? en) as T : en;
+const pick = <T,>(en: T, zhValue: T) => {
+  if (!fr || typeof en !== 'string') return zh ? zhValue : en;
+  const translated = en.startsWith('Link to version ')
+    ? `Lien vers la version ${en.slice('Link to version '.length)}`
+    : frenchUi[en];
+  if (!translated) throw new Error(`Missing French changelog UI translation: ${en}`);
+  return translated as T;
+};
+
+for (const release of changelogReleases) {
+  if (!release.titleFr || !release.summaryFr) throw new Error(`Missing French changelog release copy: ${release.version}`);
+  for (const section of release.sections) {
+    if (!section.labelFr || section.items.some((item) => !item.fr)) {
+      throw new Error(`Missing French changelog section copy: ${release.version}/${section.labelEn}`);
+    }
+  }
+}
 
 const latestRelease = changelogReleases[0];
 const changeCount = changelogReleases.reduce(
@@ -112,7 +128,7 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN' | 'fr-FR') {
 
             <details class="changelog-release-body" open={index === 0}>
               <summary class="changelog-release-summary-row">
-              <span><strong>v{release.version}</strong><span>{fr ? (release.titleFr ?? release.titleEn) : pick(release.titleEn, release.titleZh)}</span></span>
+              <span><strong>v{release.version}</strong><span>{fr ? release.titleFr : pick(release.titleEn, release.titleZh)}</span></span>
                 <time datetime={release.date}><span>{formatDate(release.date, zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US')}</span></time>
               </summary>
               <header class="changelog-release-header">
@@ -125,8 +141,8 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN' | 'fr-FR') {
                 </time>
               </header>
 
-              <h2>{fr ? (release.titleFr ?? release.titleEn) : pick(release.titleEn, release.titleZh)}</h2>
-              <p class="changelog-release-summary">{fr ? (release.summaryFr ?? release.summaryEn) : pick(release.summaryEn, release.summaryZh)}</p>
+              <h2>{fr ? release.titleFr : pick(release.titleEn, release.titleZh)}</h2>
+              <p class="changelog-release-summary">{fr ? release.summaryFr : pick(release.summaryEn, release.summaryZh)}</p>
 
               <div class="changelog-change-groups">
                 {release.sections.map((section) => {
@@ -135,11 +151,11 @@ function formatDate(date: string, locale: 'en-US' | 'zh-CN' | 'fr-FR') {
                     <section class="changelog-change-group">
                       <div class:list={['changelog-kind', meta.className]}>
                         <span class="changelog-kind-marker" aria-hidden="true">{meta.marker}</span>
-                        <h3>{fr ? (section.labelFr ?? section.labelEn) : pick(section.labelEn, section.labelZh)}</h3>
+                        <h3>{fr ? section.labelFr : pick(section.labelEn, section.labelZh)}</h3>
                       </div>
                       <ul>
                         {section.items.map((item) => (
-                          <li>{fr ? (item.fr ?? item.en) : pick(item.en, item.zh)}</li>
+                          <li>{fr ? item.fr : pick(item.en, item.zh)}</li>
                         ))}
                       </ul>
                     </section>

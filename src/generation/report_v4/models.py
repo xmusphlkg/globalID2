@@ -7,10 +7,10 @@ from typing import Any, Literal
 
 SCHEMA_VERSION = "report_v4.0"
 METHOD_VERSION = "report_v4.1"
-SUPPORTED_LOCALES: tuple[str, str] = ("zh", "en")
+SUPPORTED_LOCALES: tuple[str, str, str] = ("zh", "en", "fr")
 DEFAULT_LOCALE = "zh"
 
-Locale = Literal["zh", "en"]
+Locale = Literal["zh", "en", "fr"]
 DeathReportingStatus = Literal[
     "reported_zero",
     "reported_positive",
@@ -24,9 +24,10 @@ DeathReportingStatus = Literal[
 class LocalizedText:
     zh: str
     en: str
+    fr: str
 
     def to_dict(self) -> dict[str, str]:
-        return {"zh": self.zh, "en": self.en}
+        return {"zh": self.zh, "en": self.en, "fr": self.fr}
 
 
 @dataclass
@@ -93,6 +94,7 @@ class DiseaseDirectoryItem:
     trend_basis: dict[str, Any] = field(default_factory=dict)
     analysis_sections: list[dict[str, Any]] = field(default_factory=list)
     evidence_refs: list[str] = field(default_factory=list)
+    name_fr: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -117,7 +119,7 @@ class ReportDocument:
     evidence_index: dict[str, Any] = field(default_factory=dict)
     schema_version: str = SCHEMA_VERSION
     default_locale: str = DEFAULT_LOCALE
-    locales: tuple[str, str] = SUPPORTED_LOCALES
+    locales: tuple[str, str, str] = SUPPORTED_LOCALES
 
     def to_dict(self) -> dict[str, Any]:
         return {

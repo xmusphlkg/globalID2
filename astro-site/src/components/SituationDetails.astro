@@ -8,18 +8,42 @@ import {
   formatPercent,
   geographyLabel,
   label,
+  labelFr,
   labelZh,
   unitSuffix,
 } from '../utils/situation';
+import { translateUi } from '../utils/i18n';
+import { localizedRegionName } from '../utils/i18n';
+import { localizedDiseaseName } from '../utils/diseaseNames';
 
 interface Props { snapshot: SituationReportV3; locale?: 'en' | 'zh' | 'fr'; }
 const { snapshot, locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 const sourceOptions = [...new Set(snapshot.signals.map(signal => signal.identity.source_system))].sort();
 const stateOptions = [...new Set(snapshot.signals.map(signal => signal.anomaly.state))].sort();
 const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observation.data_status))].sort();
+const WINDOW_FR: Record<string, string> = {
+  'Last 28 days': '28 derniers jours',
+  'Last 4 weeks': '4 dernières semaines',
+  'Latest complete month': 'Dernier mois complet',
+};
+const METRIC_FR: Record<string, string> = {
+  cases: 'Cas', deaths: 'Décès', incidence: 'Incidence', mortality: 'Mortalité',
+  test_positivity: 'Taux de positivité des tests',
+  hospitalized_case_notifications: 'Hospitalisations signalées',
+  acute_respiratory_illness_activity: 'Activité des infections respiratoires aiguës',
+};
+const displayDisease = (id: string | null | undefined, name: string | null | undefined) =>
+  localizedDiseaseName({ disease_id: id, name_en: name }, locale);
+const displayGeography = (code: string | null | undefined, name: string | null | undefined) =>
+  fr && code ? localizedRegionName('fr', code, { en: name ?? undefined }) : (name || code || '—');
+const displayMetric = (type: string, labelValue: string) => fr ? (METRIC_FR[type] ?? 'Indicateur de surveillance') : labelValue;
+const displayContextValue = (value: string | number | null) => fr && typeof value === 'string'
+  ? ({ Low: 'Faible', 'Very Low': 'Très faible', Moderate: 'Modérée', High: 'Élevée', 'Very High': 'Très élevée' }[value] ?? value)
+  : value;
 ---
 
 <section class="analysis" aria-labelledby="signal-table-title" data-locale={locale}>
@@ -38,7 +62,7 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
     </label>
     <label>
       <span>{pick('State', '异常状态')}</span>
-      <select id="signal-state"><option value="">{pick('All states', '全部状态')}</option>{stateOptions.map(state => <option value={state}>{pick(label(state), labelZh(state))}</option>)}</select>
+      <select id="signal-state"><option value="">{pick('All states', '全部状态')}</option>{stateOptions.map(state => <option value={state}>{pick(label(state), labelZh(state), labelFr(state))}</option>)}</select>
     </label>
     <label>
       <span>{pick('Source', '来源')}</span>
@@ -56,7 +80,7 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
     </label>
     <label>
       <span>{pick('Data status', '数据状态')}</span>
-      <select id="signal-data"><option value="">{pick('All data states', '全部数据状态')}</option>{dataOptions.map(state => <option value={state}>{pick(label(state), labelZh(state))}</option>)}</select>
+      <select id="signal-data"><option value="">{pick('All data states', '全部数据状态')}</option>{dataOptions.map(state => <option value={state}>{pick(label(state), labelZh(state), labelFr(state))}</option>)}</select>
     </label>
     <button type="reset">{pick('Reset', '重置')}</button>
   </form>
@@ -93,48 +117,48 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
           data-search={search}
         >
           <summary data-expand={pick('Expand', '展开')}>
-            <span class="identity"><span><i class={`state-pill state-${signal.anomaly.state}`}>{pick(label(signal.anomaly.state), labelZh(signal.anomaly.state))}</i><span class="disease-name">{signal.identity.disease_name}</span></span><small>{geographyLabel(signal)} · {signal.identity.metric_label}</small></span>
-            <span class="measure"><b>{formatNumber(signal.observation.current)}{unitSuffix(signal.identity.unit)}</b><small><i>{pick('expected', '期望')}</i> {formatNumber(signal.observation.expected)} · <i>{pick('upper', '上限')}</i> {formatNumber(signal.observation.predictive_upper_95)}</small></span>
-            <span class="evidence"><b>{formatPercent(signal.observation.relative_change_pct)}</b><small>q {formatNumber(signal.anomaly.q_value, 4)} · <i>{pick(label(signal.assessment.review_priority), labelZh(signal.assessment.review_priority))}</i></small></span>
-            <span class="data-state"><b>{pick(label(signal.observation.data_status), labelZh(signal.observation.data_status))}</b><small><i>{pick('analyzed through', '分析截至')}</i> {formatDate(signal.observation.data_through)}</small></span>
+            <span class="identity"><span><i class={`state-pill state-${signal.anomaly.state}`}>{pick(label(signal.anomaly.state), labelZh(signal.anomaly.state), labelFr(signal.anomaly.state))}</i><span class="disease-name">{displayDisease(signal.identity.disease_id, signal.identity.disease_name)}</span></span><small>{geographyLabel(signal, locale)} · {displayMetric(signal.identity.metric_type, signal.identity.metric_label)}</small></span>
+            <span class="measure"><b>{formatNumber(signal.observation.current, 1, locale)}{unitSuffix(signal.identity.unit, locale)}</b><small><i>{pick('expected', '期望')}</i> {formatNumber(signal.observation.expected, 1, locale)} · <i>{pick('upper', '上限')}</i> {formatNumber(signal.observation.predictive_upper_95, 1, locale)}</small></span>
+            <span class="evidence"><b>{formatPercent(signal.observation.relative_change_pct, 0, locale)}</b><small>q {formatNumber(signal.anomaly.q_value, 4, locale)} · <i>{pick(label(signal.assessment.review_priority), labelZh(signal.assessment.review_priority), labelFr(signal.assessment.review_priority))}</i></small></span>
+            <span class="data-state"><b>{pick(label(signal.observation.data_status), labelZh(signal.observation.data_status), labelFr(signal.observation.data_status))}</b><small><i>{pick('analyzed through', '分析截至')}</i> {formatDate(signal.observation.data_through, locale)}</small></span>
           </summary>
           <div class="signal-detail">
             <div class="trend-panel">
-              <div class="trend-heading"><b>{pick('Observed vs expected', '实际值与期望值')}</b><span>{formatDate(points[0]?.period)} – {formatDate(points.at(-1)?.period)}</span></div>
+              <div class="trend-heading"><b>{pick('Observed vs expected', '实际值与期望值')}</b><span>{formatDate(points[0]?.period, locale)} – {formatDate(points.at(-1)?.period, locale)}</span></div>
               {points.length > 1 ? (
-                <svg viewBox="0 0 520 150" role="img" aria-label={`Observed and expected trend for ${signal.identity.disease_name}`}>
+                  <svg viewBox="0 0 520 150" role="img" aria-label={fr ? `Tendance observée et attendue pour ${displayDisease(signal.identity.disease_id, signal.identity.disease_name)}` : `Observed and expected trend for ${signal.identity.disease_name}`}>
                   <path class="gridline" d="M0,144 H520 M0,75 H520 M0,6 H520" />
                   {geometry.upper && <path class="upper" d={geometry.upper} />}
                   {geometry.expected && <path class="expected" d={geometry.expected} />}
                   <path class="actual" d={geometry.actual} />
                 </svg>
               ) : <p>{pick('No trend points available.', '暂无趋势数据点。')}</p>}
-              <div class="legend"><span class="actual-key">{pick('Observed', '实际值')}</span><span class="expected-key">{pick('Expected', '期望值')}</span><span class="upper-key">{pick('95% upper', '95% 上限')}</span><small>{formatNumber(geometry.min)}–{formatNumber(geometry.max)}</small></div>
+              <div class="legend"><span class="actual-key">{pick('Observed', '实际值')}</span><span class="expected-key">{pick('Expected', '期望值')}</span><span class="upper-key">{pick('95% upper', '95% 上限')}</span><small>{formatNumber(geometry.min, 1, locale)}–{formatNumber(geometry.max, 1, locale)}</small></div>
             </div>
             <dl class="model-facts">
               <div><dt>{pick('Model', '模型')}</dt><dd>{signal.anomaly.model}</dd></div>
-              <div><dt>{pick('Detector tier', '检测分层')}</dt><dd>{pick(label(signal.anomaly.detector_tier), labelZh(signal.anomaly.detector_tier))}</dd></div>
-              <div><dt>{pick('Raw p', '原始 p 值')}</dt><dd>{formatNumber(signal.anomaly.raw_p_value, 5)}</dd></div>
-              <div><dt>{pick('Dispersion', '离散度')}</dt><dd>{formatNumber(signal.anomaly.dispersion, 2)}</dd></div>
-              <div><dt>{pick('Completeness', '完整度')}</dt><dd>{formatPercent(signal.observation.completeness * 100, 0)}</dd></div>
-              <div><dt>{pick('Data through', '数据截至')}</dt><dd>{formatDate(signal.observation.data_through)}</dd></div>
-              <div><dt>{pick('Latest received', '最新收到')}</dt><dd>{formatDate(signal.observation.latest_available_period)}</dd></div>
-              <div><dt>{pick('Data status', '数据状态')}</dt><dd>{pick(label(signal.observation.data_status), labelZh(signal.observation.data_status))}</dd></div>
-              <div><dt>{pick('Temporal relevance', '时间相关性')}</dt><dd>{pick(label(signal.assessment.temporal_relevance), labelZh(signal.assessment.temporal_relevance))}</dd></div>
-              <div><dt>{pick('Verification', '验证状态')}</dt><dd>{pick(label(signal.assessment.verification_status), labelZh(signal.assessment.verification_status))}</dd></div>
-              <div><dt>{pick('Verification basis', '验证依据')}</dt><dd>{pick(label(signal.assessment.verification_basis), labelZh(signal.assessment.verification_basis))}</dd></div>
+              <div><dt>{pick('Detector tier', '检测分层')}</dt><dd>{pick(label(signal.anomaly.detector_tier), labelZh(signal.anomaly.detector_tier), labelFr(signal.anomaly.detector_tier))}</dd></div>
+              <div><dt>{pick('Raw p', '原始 p 值')}</dt><dd>{formatNumber(signal.anomaly.raw_p_value, 5, locale)}</dd></div>
+              <div><dt>{pick('Dispersion', '离散度')}</dt><dd>{formatNumber(signal.anomaly.dispersion, 2, locale)}</dd></div>
+              <div><dt>{pick('Completeness', '完整度')}</dt><dd>{formatPercent(signal.observation.completeness * 100, 0, locale)}</dd></div>
+              <div><dt>{pick('Data through', '数据截至')}</dt><dd>{formatDate(signal.observation.data_through, locale)}</dd></div>
+              <div><dt>{pick('Latest received', '最新收到')}</dt><dd>{formatDate(signal.observation.latest_available_period, locale)}</dd></div>
+              <div><dt>{pick('Data status', '数据状态')}</dt><dd>{pick(label(signal.observation.data_status), labelZh(signal.observation.data_status), labelFr(signal.observation.data_status))}</dd></div>
+              <div><dt>{pick('Temporal relevance', '时间相关性')}</dt><dd>{pick(label(signal.assessment.temporal_relevance), labelZh(signal.assessment.temporal_relevance), labelFr(signal.assessment.temporal_relevance))}</dd></div>
+              <div><dt>{pick('Verification', '验证状态')}</dt><dd>{pick(label(signal.assessment.verification_status), labelZh(signal.assessment.verification_status), labelFr(signal.assessment.verification_status))}</dd></div>
+              <div><dt>{pick('Verification basis', '验证依据')}</dt><dd>{pick(label(signal.assessment.verification_basis), labelZh(signal.assessment.verification_basis), labelFr(signal.assessment.verification_basis))}</dd></div>
               <div><dt>{pick('Reporting lag', '报告延迟')}</dt><dd>{signal.observation.reporting_lag_days} <i>{pick('days', '天')}</i></dd></div>
-              <div><dt>{pick('Fit', '拟合状态')}</dt><dd>{pick(label(signal.anomaly.fit_status), labelZh(signal.anomaly.fit_status))}</dd></div>
+              <div><dt>{pick('Fit', '拟合状态')}</dt><dd>{pick(label(signal.anomaly.fit_status), labelZh(signal.anomaly.fit_status), labelFr(signal.anomaly.fit_status))}</dd></div>
             </dl>
             <div class="explanation">
               <p><b>{pick('Interpretation', '解释')}</b></p>
-              <p>{pick(`The ${signal.observation.window_label.toLowerCase()} observed value was ${formatNumber(signal.observation.current)}, compared with an expected ${formatNumber(signal.observation.expected)} and a one-sided 95% predictive upper bound of ${formatNumber(signal.observation.predictive_upper_95)}. The FDR-adjusted q value is ${formatNumber(signal.anomaly.q_value, 4)}.`, `${signal.observation.window_label}实际值为 ${formatNumber(signal.observation.current)}，模型期望值为 ${formatNumber(signal.observation.expected)}，单侧 95% 预测上限为 ${formatNumber(signal.observation.predictive_upper_95)}，FDR 校正后的 q 值为 ${formatNumber(signal.anomaly.q_value, 4)}。`)}</p>
-              <p class="risk-note">{pick(riskTextEn, riskTextZh)}</p>
+              <p>{pick(`The ${signal.observation.window_label.toLowerCase()} observed value was ${formatNumber(signal.observation.current)}, compared with an expected ${formatNumber(signal.observation.expected)} and a one-sided 95% predictive upper bound of ${formatNumber(signal.observation.predictive_upper_95)}. The FDR-adjusted q value is ${formatNumber(signal.anomaly.q_value, 4)}.`, `${signal.observation.window_label}实际值为 ${formatNumber(signal.observation.current)}，模型期望值为 ${formatNumber(signal.observation.expected)}，单侧 95% 预测上限为 ${formatNumber(signal.observation.predictive_upper_95)}，FDR 校正后的 q 值为 ${formatNumber(signal.anomaly.q_value, 4)}。`, `La valeur observée pour ${WINDOW_FR[signal.observation.window_label] ?? 'la fenêtre analysée'} est de ${formatNumber(signal.observation.current, 1, 'fr')}, contre une valeur attendue de ${formatNumber(signal.observation.expected, 1, 'fr')} et une limite prédictive supérieure unilatérale à 95 % de ${formatNumber(signal.observation.predictive_upper_95, 1, 'fr')}. La valeur q ajustée par FDR est ${formatNumber(signal.anomaly.q_value, 4, 'fr')}.`)}</p>
+              <p class="risk-note">{fr ? (publicHealthRisk?.status === 'assessed' ? 'Le risque a été évalué à partir de preuves attribuables ; consultez la source liée pour le raisonnement officiel.' : 'Le risque pour la santé publique n’a pas été évalué ; la force de l’anomalie statistique n’est pas un niveau de risque.') : pick(riskTextEn, riskTextZh)}</p>
               <a class="disease-link" href={`${prefix}${diseaseHref(signal)}`}>{pick('Open disease profile', '打开疾病档案')}</a>
             </div>
             <details class="provenance">
               <summary>{pick('Raw identity and evidence', '原始 identity 与证据')}</summary>
-              <p>Series <code>{signal.identity.series_code}</code> · canonical geography <code>{signal.identity.canonical_geography_key}</code> · raw geography <code>{signal.identity.source_geography_keys.join(', ')}</code> · dimension <code>{signal.identity.dimension_key}</code></p>
+              <p>{fr ? 'Série' : 'Series'} <code>{signal.identity.series_code}</code> · {fr ? 'géographie canonique' : 'canonical geography'} <code>{signal.identity.canonical_geography_key}</code> · {fr ? 'géographie source' : 'raw geography'} <code>{signal.identity.source_geography_keys.join(', ')}</code> · {fr ? 'dimension' : 'dimension'} <code>{signal.identity.dimension_key}</code></p>
               <ul>{evidenceLinks.map(link => <li><a href={link.url} target="_blank" rel="noreferrer">{link.title}</a></li>)}</ul>
             </details>
           </div>
@@ -151,8 +175,8 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
     <div class="events">
       {snapshot.events.map(event => (
         <article>
-          <header><div><h3>{event.disease_name}</h3><p>{event.geographies.map(place => place.name).join(' · ')}</p></div><span>{formatDate(event.first_published_at)} – {formatDate(event.last_published_at)}</span></header>
-          <ol>{event.updates.map(update => <li><time>{formatDate(update.published_at)}</time><a href={update.url} target="_blank" rel="noreferrer">{update.title}</a><small>{update.source}</small></li>)}</ol>
+          <header><div><h3>{displayDisease(event.disease_id, event.disease_name)}</h3><p>{event.geographies.map(place => displayGeography(place.code, place.name)).join(' · ')}</p></div><span>{formatDate(event.first_published_at, locale)} – {formatDate(event.last_published_at, locale)}</span></header>
+          <ol>{event.updates.map(update => <li><time>{formatDate(update.published_at, locale)}</time><a href={update.url} target="_blank" rel="noreferrer">{update.title}</a><small>{update.source}</small></li>)}</ol>
         </article>
       ))}
     </div>
@@ -162,7 +186,7 @@ const dataOptions = [...new Set(snapshot.signals.map(signal => signal.observatio
 {snapshot.context_panels.length > 0 && (
   <section class="context-section" aria-labelledby="context-title">
     <header class="section-heading"><div><p>{pick('Context only', '背景指标')}</p><h2 id="context-title">{pick('Respiratory indicators remain separate', '呼吸道指标保持分列')}</h2></div></header>
-    <div class="context-grid">{snapshot.context_panels.map(panel => <article><h3>{panel.disease_name || panel.topic}</h3><p>{panel.geography}</p><dl>{panel.metrics.map(metric => <div><dt>{pick(metric.label.en, metric.label.zh)}</dt><dd>{typeof metric.value === 'number' ? formatNumber(metric.value) : metric.value || '—'}{unitSuffix(metric.unit)}<small>{formatDate(metric.data_through)}</small></dd></div>)}</dl></article>)}</div>
+    <div class="context-grid">{snapshot.context_panels.map(panel => <article><h3>{panel.disease_id ? displayDisease(panel.disease_id, panel.disease_name) : (fr ? 'Indicateur respiratoire' : panel.topic)}</h3><p>{fr && panel.geography === 'United States' ? 'États-Unis' : panel.geography}</p><dl>{panel.metrics.map(metric => <div><dt>{fr ? ((metric.label as { fr?: string | null }).fr ?? METRIC_FR[metric.metric_type] ?? 'Indicateur') : pick(metric.label.en, metric.label.zh)}</dt><dd>{typeof metric.value === 'number' ? formatNumber(metric.value, 1, locale) : displayContextValue(metric.value) || '—'}{unitSuffix(metric.unit, locale)}<small>{formatDate(metric.data_through, locale)}</small></dd></div>)}</dl></article>)}</div>
   </section>
 )}
 

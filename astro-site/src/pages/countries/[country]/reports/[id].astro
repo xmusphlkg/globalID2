@@ -29,6 +29,7 @@ const { countryCode, reportId, locale = 'en' } = Astro.props as Props;
 const country = countryCode ?? Astro.params.country;
 const id = reportId ?? Astro.params.id;
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (href: string) => `${prefix}${href}`;
 const downloadsPath = resolve('./src/data/downloads.json');
@@ -66,17 +67,20 @@ const document = report?.report_document_v4 ?? report?.metadata?.report_document
 const reportLanguage = locale;
 const countryNameEn = report?.country_name_en ?? report?.country_name ?? country?.toUpperCase();
 const countryNameZh = report?.country_name_local ?? report?.country_name ?? countryNameEn;
+const countryNameFr = report?.country_name_fr ?? countryData?.country_name_fr ?? countryNameEn;
 const reportTitleEn = document?.title?.en ?? report?.title ?? `Report #${id}`;
 const reportTitleZh = document?.title?.zh ?? report?.title ?? `报告 #${id}`;
+const reportTitleFr = document?.title?.fr ?? report?.title_fr ?? `Titre français du rapport n° ${id} en attente.`;
 const reportSummary = document?.summary?.zh ?? report?.summary ?? '';
 const reportSummaryEn = document?.summary?.en ?? report?.summary ?? '';
+const reportSummaryFr = document?.summary?.fr ?? report?.summary_fr ?? (reportSummaryEn ? 'Résumé français en attente.' : '');
 const reportCoverage = report?.period_start && report?.period_end
   ? `${String(report.period_start).slice(0, 7)}–${String(report.period_end).slice(0, 7)}`
   : '';
 const canonicalPath = localeHref(`/countries/${country}/reports/${id}/`);
 const reportSeo = {
-  title: zh ? `${countryNameZh}传染病监测报告${reportCoverage ? ` ${reportCoverage}` : ''} | GIDS` : buildSeoTitle(countryNameEn, 'weekly infectious disease surveillance report', reportCoverage),
-  description: zh ? `${countryNameZh}传染病监测报告${reportCoverage ? `，覆盖 ${reportCoverage}` : ''}，包含报告周期、摘要、疾病信号、官方来源数据和下载。` : `${countryNameEn} infectious disease surveillance report${reportCoverage ? ` for ${reportCoverage}` : ''}. Includes reporting period, summary, disease signals, official-source data, and downloads.`,
+  title: zh ? `${countryNameZh}传染病监测报告${reportCoverage ? ` ${reportCoverage}` : ''} | GIDS` : fr ? `${countryNameFr} — rapport de surveillance${reportCoverage ? ` ${reportCoverage}` : ''} | GIDS` : buildSeoTitle(countryNameEn, 'weekly infectious disease surveillance report', reportCoverage),
+  description: zh ? `${countryNameZh}传染病监测报告${reportCoverage ? `，覆盖 ${reportCoverage}` : ''}，包含报告周期、摘要、疾病信号、官方来源数据和下载。` : fr ? `Rapport de surveillance des maladies infectieuses pour ${countryNameFr}${reportCoverage ? ` (${reportCoverage})` : ''}, avec période, résumé, signaux, sources officielles et téléchargements.` : `${countryNameEn} infectious disease surveillance report${reportCoverage ? ` for ${reportCoverage}` : ''}. Includes reporting period, summary, disease signals, official-source data, and downloads.`,
   locale,
   canonicalPath,
   alternatePaths: buildAlternatePaths(canonicalPath, locale),
@@ -87,12 +91,12 @@ const reportSeo = {
 const reportStructuredData = {
   '@type': 'Report',
   '@id': `${canonicalPath}#report`,
-  name: zh ? reportTitleZh : reportTitleEn,
+  name: zh ? reportTitleZh : fr ? reportTitleFr : reportTitleEn,
   inLanguage: zh ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en',
   datePublished: report?.created_at,
   dateModified: report?.created_at,
   temporalCoverage: report?.period_start && report?.period_end ? `${report.period_start}/${report.period_end}` : undefined,
-  spatialCoverage: { '@type': 'Place', name: zh ? countryNameZh : countryNameEn },
+  spatialCoverage: { '@type': 'Place', name: zh ? countryNameZh : fr ? countryNameFr : countryNameEn },
   isBasedOn: countryData?.source_info?.primary_url,
 };
 const scoreColor = !report?.quality_score ? 'text-[rgb(var(--text-muted))]'
@@ -168,19 +172,19 @@ const directoryTrendSeries = Object.fromEntries(
 );
 
 function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString(zh ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date(d).toLocaleDateString(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
   const key = String(value ?? '').toUpperCase();
-  const labels: Record<string, { zh: string; en: string }> = {
-    DAILY: { zh: '日报', en: 'Daily report' },
-    WEEKLY: { zh: '周报', en: 'Weekly report' },
-    MONTHLY: { zh: '月报', en: 'Monthly report' },
-    QUARTERLY: { zh: '季报', en: 'Quarterly report' },
-    ANNUAL: { zh: '年报', en: 'Annual report' },
+  const labels: Record<string, { zh: string; en: string; fr: string }> = {
+    DAILY: { zh: '日报', en: 'Daily report', fr: 'Rapport quotidien' },
+    WEEKLY: { zh: '周报', en: 'Weekly report', fr: 'Rapport hebdomadaire' },
+    MONTHLY: { zh: '月报', en: 'Monthly report', fr: 'Rapport mensuel' },
+    QUARTERLY: { zh: '季报', en: 'Quarterly report', fr: 'Rapport trimestriel' },
+    ANNUAL: { zh: '年报', en: 'Annual report', fr: 'Rapport annuel' },
   };
-  return (labels[key]?.[lang as 'zh' | 'en'] ?? (lang === 'zh' ? '报告' : lang === 'fr' ? 'Rapport' : 'Report'));
+  return labels[key]?.[lang] ?? (lang === 'zh' ? '报告' : lang === 'fr' ? 'Rapport' : 'Report');
 }
 ---
 
@@ -191,34 +195,34 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
   seo={reportSeo}
   structuredData={reportStructuredData}
   breadcrumbs={[
-    { label: 'Countries', labelZh: '国家/地区', href: localeHref('/countries/') },
-    { label: countryNameEn, labelZh: countryNameZh, href: localeHref(`/countries/${country}/`) },
-    { label: 'Reports', labelZh: '报告', href: localeHref(`/countries/${country}/reports/`) },
+    { label: 'Countries', labelZh: '国家/地区', labelFr: 'Pays', href: localeHref('/countries/') },
+    { label: countryNameEn, labelZh: countryNameZh, labelFr: countryNameFr, href: localeHref(`/countries/${country}/`) },
+    { label: 'Reports', labelZh: '报告', labelFr: 'Rapports', href: localeHref(`/countries/${country}/reports/`) },
     { label: `#${id}` },
   ]}
 >
   <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
     {!report ? (
       <div class="text-center py-24 text-[rgb(var(--text-muted))]">
-        <span>{zh ? `报告 #${id} 暂不可用。` : `Report #${id} is not available.`}</span>
-        <a href={localeHref(`/countries/${country}/reports/`)} class="text-brand-400 hover:underline ml-2">{zh ? '← 返回报告列表' : '← Back to reports'}</a>
+        <span>{zh ? `报告 #${id} 暂不可用。` : fr ? `Le rapport n° ${id} n’est pas disponible.` : `Report #${id} is not available.`}</span>
+        <a href={localeHref(`/countries/${country}/reports/`)} class="text-brand-400 hover:underline ml-2">{zh ? '← 返回报告列表' : fr ? '← Retour aux rapports' : '← Back to reports'}</a>
       </div>
     ) : (
       <>
         <section class="academic-hero">
           <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
             <div>
-              <p class="academic-kicker mb-3">{zh ? '决策简报' : 'Decision brief'}</p>
+              <p class="academic-kicker mb-3">{zh ? '决策简报' : fr ? 'Brief décisionnel' : 'Decision brief'}</p>
               <div class="flex items-center gap-3 mb-3 flex-wrap">
                 <span class="text-xs font-semibold px-2.5 py-1 rounded-none bg-brand-500/15 text-brand-300 ring-1 ring-brand-500/30">
                   <span>
                     {reportTypeLabel(report.report_type, locale)}
                   </span>
                 </span>
-                <span class="text-sm text-[rgb(var(--text-muted))]">{zh ? countryNameZh : countryNameEn}</span>
+                <span class="text-sm text-[rgb(var(--text-muted))]">{zh ? countryNameZh : fr ? countryNameFr : countryNameEn}</span>
               </div>
               <h1 class="academic-title text-3xl sm:text-4xl leading-tight">
-                {zh ? reportTitleZh : reportTitleEn}
+                {zh ? reportTitleZh : fr ? reportTitleFr : reportTitleEn}
               </h1>
             </div>
             {report.quality_score != null && (
@@ -226,8 +230,8 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
                 <div class={`font-serif text-3xl font-semibold ${scoreColor}`}>
                   {(report.quality_score * 100).toFixed(0)}%
                 </div>
-                <div class="text-xs text-[rgb(var(--text-muted))] mt-1">{zh ? '质量门评分' : 'Quality-gate score'}</div>
-                <a href={localeHref('/about/#quality')} class="mt-1 block text-[11px] font-semibold text-brand-500 hover:underline">{zh ? '定义与方法' : 'Definition & method'}</a>
+                <div class="text-xs text-[rgb(var(--text-muted))] mt-1">{zh ? '质量门评分' : fr ? 'Score du contrôle qualité' : 'Quality-gate score'}</div>
+                <a href={localeHref('/about/#quality')} class="mt-1 block text-[11px] font-semibold text-brand-500 hover:underline">{zh ? '定义与方法' : fr ? 'Définition et méthode' : 'Definition & method'}</a>
               </div>
             )}
           </div>
@@ -235,22 +239,22 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
           <div class="academic-meta-grid text-sm">
             {report.period_start && (
               <div class="academic-meta-item">
-                <div class="academic-meta-label">{zh ? '报告周期' : 'Reporting window'}</div>
+                <div class="academic-meta-label">{zh ? '报告周期' : fr ? 'Période de déclaration' : 'Reporting window'}</div>
                 <div class="academic-meta-value text-sm font-medium">{fmtDate(report.period_start)} → {fmtDate(report.period_end)}</div>
               </div>
             )}
             {report.created_at && (
               <div class="academic-meta-item">
-                <div class="academic-meta-label">{zh ? '生成时间' : 'Generated'}</div>
+                <div class="academic-meta-label">{zh ? '生成时间' : fr ? 'Généré le' : 'Generated'}</div>
                 <div class="academic-meta-value text-sm font-medium">{fmtDate(report.created_at)}</div>
               </div>
             )}
             <div class="academic-meta-item">
-              <div class="academic-meta-label">{zh ? '国家/地区' : 'Country'}</div>
-              <div class="academic-meta-value text-sm font-medium">{zh ? countryNameZh : countryNameEn}</div>
+              <div class="academic-meta-label">{zh ? '国家/地区' : fr ? 'Pays/région' : 'Country'}</div>
+              <div class="academic-meta-value text-sm font-medium">{zh ? countryNameZh : fr ? countryNameFr : countryNameEn}</div>
             </div>
             <div class="academic-meta-item">
-              <div class="academic-meta-label">{zh ? '研判信号' : 'Signals reviewed'}</div>
+              <div class="academic-meta-label">{zh ? '研判信号' : fr ? 'Signaux examinés' : 'Signals reviewed'}</div>
               <div class="academic-meta-value font-serif">{document?.metrics?.disease_count ?? document?.sections?.length ?? 0}</div>
             </div>
           </div>
@@ -258,10 +262,10 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
 
         {(reportSummary || reportSummaryEn) && (
           <section class="figure-panel">
-            <p class="figure-kicker">{zh ? '执行摘要' : 'Executive summary'}</p>
-            <h2 class="figure-title">{zh ? '当前态势' : 'Current Situation'}</h2>
+            <p class="figure-kicker">{zh ? '执行摘要' : fr ? 'Résumé exécutif' : 'Executive summary'}</p>
+            <h2 class="figure-title">{zh ? '当前态势' : fr ? 'Situation actuelle' : 'Current Situation'}</h2>
             <p class="mt-5 text-sm leading-7 text-[rgb(var(--text-muted))]">
-              {zh ? reportSummary : reportSummaryEn}
+              {zh ? reportSummary : fr ? reportSummaryFr : reportSummaryEn}
             </p>
           </section>
         )}
@@ -298,9 +302,11 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
           <DownloadPanel
             entry={{ ...countryDownload, source_info: countryData?.source_info }}
             title="Download Underlying Dataset"
+            titleFr="Télécharger le jeu de données sous-jacent"
             initialLanguage={locale}
             descriptionEn="Download the country dataset used to generate this report, including source metadata."
             descriptionZh="下载生成本报告所依据的国家数据集，并附带数据源信息。"
+            descriptionFr="Téléchargez le jeu de données national utilisé pour générer ce rapport, avec ses métadonnées de source."
           />
         )}
       </>

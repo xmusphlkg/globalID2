@@ -4,7 +4,8 @@ import echarts from '../../lib/echartsResearch';
 import ChartFrame from '../charts/ChartFrame';
 import { useChartLanguage, useChartTheme } from '../charts/chartPreferences';
 import type { EChartsOption } from 'echarts';
-import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { localizedResearchTopic } from '../../utils/i18n';
 
 type HotspotPeriod = {
   period: string;
@@ -116,6 +117,7 @@ type Hotspots = {
   interpretation_note?: {
     en?: string;
     zh?: string;
+    fr?: string;
   };
 };
 
@@ -159,7 +161,25 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
   const [active, setActive] = useState<ChartKey>('stream');
   const [isChartReady, setIsChartReady] = useState(false);
 
-  const t = (en: string, zh: string) => (lang === 'zh' ? zh : en);
+  const t = (en: string, zh: string, fr: string) => (lang === 'zh' ? zh : lang === 'fr' ? fr : en);
+  const topicLabel = (value: string) => localizedResearchTopic(lang, value);
+  const diseaseLabel = (row: HeatmapRow) => localizedDiseaseName({
+    // Heatmap keys are composite `disease_id::topic` identities; only the
+    // disease identifier belongs in the canonical disease-name resolver.
+    disease_id: row.key.split('::', 1)[0],
+    name_en: row.disease_name_en,
+    name_zh: row.disease_name_zh,
+    name_fr: row.disease_name_fr,
+  }, lang);
+  const periodLabel = (period: { period: string; label?: string; start_date?: string }) => {
+    if (lang !== 'fr') return period.label ?? period.period;
+    const quarter = period.period.match(/^(\d{4})-Q([1-4])$/);
+    if (quarter) return `T${quarter[2]} ${quarter[1]}`;
+    const dateValue = period.start_date ?? (/^\d{4}-\d{2}$/.test(period.period) ? `${period.period}-01` : '');
+    return dateValue
+      ? new Intl.DateTimeFormat('fr', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(dateValue))
+      : period.period;
+  };
   const streamPeriods = hotspots.streamgraph?.periods ?? [];
   const streamSeries = hotspots.streamgraph?.series ?? [];
   const heatmapPeriods = hotspots.heatmap?.periods ?? [];
@@ -199,7 +219,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
     )));
     const data: [string, number, string][] = streamPeriods.flatMap((period) => streamSeries.map((series) => {
       const point = pointLookup.get(`${series.topic}::${period.period}`);
-      return [periodDate(period), point?.count ?? 0, series.topic] as [string, number, string];
+      return [periodDate(period), point?.count ?? 0, topicLabel(series.topic)] as [string, number, string];
     }));
     return {
       backgroundColor: 'transparent',
@@ -207,7 +227,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
       aria: {
         enabled: true,
         decal: { show: false },
-        label: { description: t('Monthly theme river showing Research Radar topic attention.', '展示 Research Radar 主题关注度月度变化的主题河流图。') },
+        label: { description: t('Monthly theme river showing Research Radar topic attention.', '展示 Research Radar 主题关注度月度变化的主题河流图。', 'Rivière thématique mensuelle montrant l’attention bibliographique dans le Radar de recherche.') },
       },
       tooltip: {
         trigger: 'axis',
@@ -226,7 +246,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
             .filter((item) => item.count > 0)
             .sort((a, b) => b.count - a.count)
             .slice(0, 8);
-          if (!sorted.length) return t('No topic mentions in this month.', '该月没有主题记录。');
+          if (!sorted.length) return t('No topic mentions in this month.', '该月没有主题记录。', 'Aucune mention de thème ce mois-ci.');
           return `<strong>${escapeHtml(rows[0]?.axisValueLabel ?? rows[0]?.name)}</strong><br/>${sorted.map((item) => `${item.marker}${escapeHtml(item.topic)}: ${item.count}`).join('<br/>')}`;
         },
       },
@@ -235,7 +255,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
         bottom: 0,
         textStyle: { color: colors.muted },
         pageTextStyle: { color: colors.muted },
-        data: streamSeries.map((series) => series.topic),
+        data: streamSeries.map((series) => topicLabel(series.topic)),
       },
       singleAxis: {
         type: 'time',
@@ -269,8 +289,8 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
   }, [colors, lang, streamPeriods, streamSeries]);
 
   const heatmapOption = useMemo<EChartsOption>(() => {
-    const xLabels = heatmapPeriods.map((period) => period.label ?? period.period);
-    const yLabels = heatmapRows.map((row) => `${lang === 'zh' ? (row.disease_name_zh || row.disease_name_en) : lang === 'fr' ? (row.disease_name_fr || DISEASE_NAMES_FR_BY_ID[row.key] || DISEASE_NAMES_FR[row.key] || row.disease_name_en) : row.disease_name_en} · ${row.topic}`);
+    const xLabels = heatmapPeriods.map(periodLabel);
+    const yLabels = heatmapRows.map((row) => `${diseaseLabel(row)} · ${topicLabel(row.topic)}`);
     const maxValue = Math.max(1, ...heatmapRows.flatMap((row) => row.cells.map((cell) => cell.count)));
     const periodIndex = new Map(heatmapPeriods.map((period, index) => [period.period, index]));
     const data: [number, number, number][] = heatmapRows.flatMap((row, rowIndex) => (
@@ -282,7 +302,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
       aria: {
         enabled: true,
         decal: { show: false },
-        label: { description: t('Heatmap of high-confidence disease and topic combinations over time.', '按时间展示高置信疾病与主题组合的热力矩阵。') },
+        label: { description: t('Heatmap of high-confidence disease and topic combinations over time.', '按时间展示高置信疾病与主题组合的热力矩阵。', 'Carte thermique des associations à forte confiance entre maladies et thèmes au fil du temps.') },
       },
       tooltip: {
         confine: true,
@@ -292,7 +312,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
         formatter: (param: any) => {
           const value = param?.data ?? [];
           const row = heatmapRows[value[1]] as HeatmapRow | undefined;
-          return `<strong>${escapeHtml(row ? `${lang === 'zh' ? (row.disease_name_zh || row.disease_name_en) : lang === 'fr' ? (row.disease_name_fr || DISEASE_NAMES_FR_BY_ID[row.key] || DISEASE_NAMES_FR[row.key] || row.disease_name_en) : row.disease_name_en} · ${row.topic}` : '')}</strong><br/>${escapeHtml(xLabels[value[0]] ?? '')}: ${value[2] ?? 0} ${t('papers', '篇论文')}`;
+          return `<strong>${escapeHtml(row ? `${diseaseLabel(row)} · ${topicLabel(row.topic)}` : '')}</strong><br/>${escapeHtml(xLabels[value[0]] ?? '')}: ${value[2] ?? 0} ${t('papers', '篇论文', 'publications')}`;
         },
       },
       grid: { top: 24, right: 42, bottom: 112, left: 240 },
@@ -341,13 +361,13 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
   }, [colors, heatmapPeriods, heatmapRows, lang, theme]);
 
   const burstOption = useMemo<EChartsOption>(() => {
-    const yLabels = bursts.map((burst) => `${burst.label ?? burst.period} · ${burst.topic}`);
+    const yLabels = bursts.map((burst) => `${periodLabel(burst)} · ${topicLabel(burst.topic)}`);
     return {
       backgroundColor: 'transparent',
       color: colors.palette,
       aria: {
         enabled: true,
-        label: { description: t('Ranked monthly topic burst events.', '按月度主题升温事件排序的图表。') },
+        label: { description: t('Ranked monthly topic burst events.', '按月度主题升温事件排序的图表。', 'Classement mensuel des accélérations de thèmes.') },
       },
       tooltip: {
         trigger: 'axis',
@@ -360,13 +380,13 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
           const item = Array.isArray(params) ? params[0] : params;
           const burst = bursts[item?.dataIndex ?? 0];
           if (!burst) return '';
-          return `<strong>${escapeHtml(burst.topic)}</strong><br/>${escapeHtml(burst.label ?? burst.period)} · ${burst.count} ${t('papers', '篇论文')}<br/>${t('Growth', '增长')}: ${burst.growth >= 0 ? '+' : ''}${burst.growth} · ${t('Share move', '占比变化')}: ${percentPoints(burst.share_delta)}<br/>${t('Burst score', '爆发分')}: ${burst.burst_score}`;
+          return `<strong>${escapeHtml(topicLabel(burst.topic))}</strong><br/>${escapeHtml(periodLabel(burst))} · ${burst.count} ${t('papers', '篇论文', 'publications')}<br/>${t('Growth', '增长', 'Croissance')} : ${burst.growth >= 0 ? '+' : ''}${burst.growth} · ${t('Share move', '占比变化', 'Variation de part')} : ${percentPoints(burst.share_delta)}<br/>${t('Burst score', '爆发分', 'Score d’accélération')} : ${burst.burst_score}`;
         },
       },
       grid: { top: 22, right: 112, bottom: 48, left: 230 },
       xAxis: {
         type: 'value',
-        name: t('Burst score', '爆发分'),
+        name: t('Burst score', '爆发分', 'Score d’accélération'),
         nameTextStyle: { color: colors.faint },
         axisLabel: { color: colors.faint },
         splitLine: { lineStyle: { color: colors.line, opacity: 0.5 } },
@@ -425,8 +445,8 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
         value: Math.max(0.1, node.count || 0.1),
         depth,
         period: node.period,
-        period_label: periodDisplay(node.period, alluvialPeriods),
-        topic: node.topic,
+        period_label: periodLabel({ period: node.period, label: periodDisplay(node.period, alluvialPeriods), start_date: alluvialPeriods.find((item) => item.period === node.period)?.start_date }),
+        topic: topicLabel(node.topic),
         count: node.count,
         itemStyle: {
           color: topicColor,
@@ -445,7 +465,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
           lineHeight: 14,
           fontSize: 11,
           fontWeight: 650,
-          formatter: node.topic,
+          formatter: topicLabel(node.topic),
         },
       };
     });
@@ -454,7 +474,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
         source: `${link.source_period}::${link.slug}`,
         target: `${link.target_period}::${link.slug}`,
         value: Math.max(0.1, link.value || link.source_count || link.target_count || 0.1),
-        topic: link.topic,
+        topic: topicLabel(link.topic),
         source_period: link.source_period,
         target_period: link.target_period,
         source_count: link.source_count,
@@ -467,7 +487,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
       color: colors.palette,
       aria: {
         enabled: true,
-        label: { description: t('Quarterly Sankey view of topic attention flow.', '按季度展示主题关注度流向的桑基图。') },
+        label: { description: t('Quarterly Sankey view of topic attention flow.', '按季度展示主题关注度流向的桑基图。', 'Vue de Sankey trimestrielle de l’évolution de l’attention par thème.') },
       },
       tooltip: {
         trigger: 'item',
@@ -478,9 +498,9 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
         formatter: (param: any) => {
           const data = param?.data ?? {};
           if (param?.dataType === 'edge') {
-            return `<strong>${escapeHtml(data.topic)}</strong><br/>${escapeHtml(periodDisplay(data.source_period, alluvialPeriods))} → ${escapeHtml(periodDisplay(data.target_period, alluvialPeriods))}<br/>${data.source_count ?? 0} → ${data.target_count ?? 0} ${t('mentions', '次提及')}`;
+            return `<strong>${escapeHtml(data.topic)}</strong><br/>${escapeHtml(periodLabel({ period: data.source_period }))} → ${escapeHtml(periodLabel({ period: data.target_period }))}<br/>${data.source_count ?? 0} → ${data.target_count ?? 0} ${t('mentions', '次提及', 'mentions')}`;
           }
-          return `<strong>${escapeHtml(data.topic)}</strong><br/>${escapeHtml(data.period_label ?? periodDisplay(data.period, alluvialPeriods))} · ${data.count ?? 0} ${t('mentions', '次提及')}`;
+          return `<strong>${escapeHtml(data.topic)}</strong><br/>${escapeHtml(data.period_label ?? periodLabel({ period: data.period }))} · ${data.count ?? 0} ${t('mentions', '次提及', 'mentions')}`;
         },
       },
       toolbox: {
@@ -526,11 +546,11 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
   }[active];
 
   const activeHeight = active === 'migration' ? 520 : active === 'heatmap' ? 460 : 420;
-  const chartTabs: Array<{ key: ChartKey; labelEn: string; labelZh: string; hintEn: string; hintZh: string; count: number }> = [
-    { key: 'stream', labelEn: 'Topic Streamgraph', labelZh: '主题河流图', hintEn: 'Which topics expand or fade month by month', hintZh: '看主题逐月升温或退潮', count: streamSeries.length },
-    { key: 'burst', labelEn: 'Burst Timeline', labelZh: '升温时间线', hintEn: 'What suddenly rose above the recent baseline', hintZh: '看哪些主题突然上升', count: bursts.length },
-    { key: 'heatmap', labelEn: 'Disease-topic Heatmap', labelZh: '疾病—主题热力图', hintEn: 'Where topic attention concentrates by disease', hintZh: '看疾病下的主题关注集中点', count: heatmapRows.length },
-    { key: 'migration', labelEn: 'Alluvial Flow', labelZh: '冲积流图', hintEn: 'How topic attention persists across quarters', hintZh: '看季度间主题关注延续', count: alluvialLinks.length },
+  const chartTabs: Array<{ key: ChartKey; labelEn: string; labelZh: string; labelFr: string; hintEn: string; hintZh: string; hintFr: string; count: number }> = [
+    { key: 'stream', labelEn: 'Topic Streamgraph', labelZh: '主题河流图', labelFr: 'Rivière thématique', hintEn: 'Which topics expand or fade month by month', hintZh: '看主题逐月升温或退潮', hintFr: 'Thèmes qui progressent ou reculent chaque mois', count: streamSeries.length },
+    { key: 'burst', labelEn: 'Burst Timeline', labelZh: '升温时间线', labelFr: 'Chronologie des accélérations', hintEn: 'What suddenly rose above the recent baseline', hintZh: '看哪些主题突然上升', hintFr: 'Thèmes soudainement supérieurs à la référence récente', count: bursts.length },
+    { key: 'heatmap', labelEn: 'Disease-topic Heatmap', labelZh: '疾病—主题热力图', labelFr: 'Carte maladie-thème', hintEn: 'Where topic attention concentrates by disease', hintZh: '看疾病下的主题关注集中点', hintFr: 'Concentration des thèmes par maladie', count: heatmapRows.length },
+    { key: 'migration', labelEn: 'Alluvial Flow', labelZh: '冲积流图', labelFr: 'Flux alluvial', hintEn: 'How topic attention persists across quarters', hintZh: '看季度间主题关注延续', hintFr: 'Persistance de l’attention entre les trimestres', count: alluvialLinks.length },
   ];
   const hasData = streamSeries.length || heatmapRows.length || bursts.length || alluvialNodes.length;
 
@@ -540,14 +560,14 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
         <table className="data-preview-table">
           <thead>
             <tr>
-              <th className="is-sticky">{t('Month', '月份')}</th>
-              {streamSeries.map((series) => <th key={series.slug}>{series.topic}</th>)}
+              <th className="is-sticky">{t('Month', '月份', 'Mois')}</th>
+              {streamSeries.map((series) => <th key={series.slug}>{topicLabel(series.topic)}</th>)}
             </tr>
           </thead>
           <tbody>
             {streamPeriods.map((period) => (
               <tr key={period.period}>
-                <td className="is-sticky">{period.label ?? period.period}</td>
+                <td className="is-sticky">{periodLabel(period)}</td>
                 {streamSeries.map((series) => (
                   <td key={series.slug}>{series.points.find((point) => point.period === period.period)?.count ?? 0}</td>
                 ))}
@@ -563,18 +583,18 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
         <table className="data-preview-table">
           <thead>
             <tr>
-              <th className="is-sticky">{t('Month', '月份')}</th>
-              <th>{t('Topic', '主题')}</th>
-              <th>{t('Papers', '论文')}</th>
-              <th>{t('Change', '变化')}</th>
-              <th>{t('Burst score', '升温分')}</th>
+              <th className="is-sticky">{t('Month', '月份', 'Mois')}</th>
+              <th>{t('Topic', '主题', 'Thème')}</th>
+              <th>{t('Papers', '论文', 'Publications')}</th>
+              <th>{t('Change', '变化', 'Variation')}</th>
+              <th>{t('Burst score', '升温分', 'Score d’accélération')}</th>
             </tr>
           </thead>
           <tbody>
             {bursts.map((burst) => (
               <tr key={`${burst.period}::${burst.topic}`}>
-                <td className="is-sticky">{burst.label ?? burst.period}</td>
-                <td>{burst.topic}</td>
+                <td className="is-sticky">{periodLabel(burst)}</td>
+                <td>{topicLabel(burst.topic)}</td>
                 <td>{burst.count}</td>
                 <td>{burst.growth >= 0 ? '+' : ''}{burst.growth}</td>
                 <td>{burst.burst_score}</td>
@@ -590,14 +610,14 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
         <table className="data-preview-table">
           <thead>
             <tr>
-              <th className="is-sticky">{t('Disease · topic', '疾病 · 主题')}</th>
-              {heatmapPeriods.map((period) => <th key={period.period}>{period.label ?? period.period}</th>)}
+              <th className="is-sticky">{t('Disease · topic', '疾病 · 主题', 'Maladie · thème')}</th>
+              {heatmapPeriods.map((period) => <th key={period.period}>{periodLabel(period)}</th>)}
             </tr>
           </thead>
           <tbody>
             {heatmapRows.map((row) => (
               <tr key={row.key}>
-                <td className="is-sticky">{lang === 'zh' ? (row.disease_name_zh || row.disease_name_en) : lang === 'fr' ? (row.disease_name_fr || DISEASE_NAMES_FR_BY_ID[row.key] || DISEASE_NAMES_FR[row.key] || row.disease_name_en) : row.disease_name_en} · {row.topic}</td>
+                <td className="is-sticky">{diseaseLabel(row)} · {topicLabel(row.topic)}</td>
                 {heatmapPeriods.map((period) => (
                   <td key={period.period}>{row.cells.find((cell) => cell.period === period.period)?.count ?? 0}</td>
                 ))}
@@ -612,19 +632,19 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
       <table className="data-preview-table">
         <thead>
           <tr>
-            <th className="is-sticky">{t('Topic', '主题')}</th>
-            <th>{t('From', '起始')}</th>
-            <th>{t('To', '终止')}</th>
-            <th>{t('Source', '起始值')}</th>
-            <th>{t('Target', '终止值')}</th>
+            <th className="is-sticky">{t('Topic', '主题', 'Thème')}</th>
+            <th>{t('From', '起始', 'De')}</th>
+            <th>{t('To', '终止', 'À')}</th>
+            <th>{t('Source', '起始值', 'Valeur initiale')}</th>
+            <th>{t('Target', '终止值', 'Valeur finale')}</th>
           </tr>
         </thead>
         <tbody>
           {alluvialLinks.map((link) => (
             <tr key={`${link.slug}::${link.source_period}::${link.target_period}`}>
-              <td className="is-sticky">{link.topic}</td>
-              <td>{periodShort(link.source_period)}</td>
-              <td>{periodShort(link.target_period)}</td>
+              <td className="is-sticky">{topicLabel(link.topic)}</td>
+              <td>{periodLabel({ period: link.source_period })}</td>
+              <td>{periodLabel({ period: link.target_period })}</td>
               <td>{link.source_count}</td>
               <td>{link.target_count}</td>
             </tr>
@@ -635,28 +655,28 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
   };
 
   const toolbar = (
-    <div className="research-chart-switcher" role="group" aria-label={t('Research trend visualization', '研究趋势可视化')}>
+    <div className="research-chart-switcher" role="group" aria-label={t('Research trend visualization', '研究趋势可视化', 'Visualisation des tendances de recherche')}>
       {chartTabs.map((tab) => (
         <button
           key={tab.key}
           type="button"
           className={`chart-toggle ${active === tab.key ? 'chart-toggle-active' : ''}`}
           aria-pressed={active === tab.key}
-          title={`${t(tab.hintEn, tab.hintZh)} · ${tab.count}`}
+          title={`${t(tab.hintEn, tab.hintZh, tab.hintFr)} · ${tab.count}`}
           onClick={() => {
             if (active === tab.key) return;
             setIsChartReady(false);
             setActive(tab.key);
           }}
         >
-          {t(tab.labelEn, tab.labelZh)}
+          {t(tab.labelEn, tab.labelZh, tab.labelFr)}
         </button>
       ))}
     </div>
   );
 
   if (!hasData) {
-    return <p className="research-hotspots-empty">{t('No trend data available.', '暂无趋势数据。')}</p>;
+    return <p className="research-hotspots-empty">{t('No trend data available.', '暂无趋势数据。', 'Aucune donnée de tendance disponible.')}</p>;
   }
 
   return (
@@ -690,6 +710,7 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
         {t(
           hotspots.interpretation_note?.en || 'Hotspots show Research Radar literature attention, not disease risk or incidence.',
           hotspots.interpretation_note?.zh || '热点图展示的是 Research Radar 文献关注度，不代表疾病风险或发病水平。',
+          hotspots.interpretation_note?.fr || 'Les points chauds montrent l’attention bibliographique du Radar de recherche, et non le risque ou l’incidence des maladies.',
         )}
       </p>
       <ChartFrame
@@ -707,13 +728,13 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
                   return (
                     <span key={period} style={{ left, transform, textAlign }}>
                       <i />
-                      <b>{periodDisplay(period, alluvialPeriods)}</b>
+                      <b>{periodLabel({ period, label: periodDisplay(period, alluvialPeriods), start_date: alluvialPeriods.find((item) => item.period === period)?.start_date })}</b>
                     </span>
                   );
                 })}
               </div>
             )}
-            {!isChartReady && <div className="research-hotspot-loading" role="status">{t('Loading chart…', '正在加载图表…')}</div>}
+            {!isChartReady && <div className="research-hotspot-loading" role="status">{t('Loading chart…', '正在加载图表…', 'Chargement du graphique…')}</div>}
             <EChartsReact
               key={active}
               echarts={echarts}

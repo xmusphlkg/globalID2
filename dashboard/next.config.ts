@@ -1,8 +1,17 @@
 import type { NextConfig } from "next";
 
+const allowedDevOrigins = (process.env.GLOBALID_DASHBOARD_ALLOWED_DEV_ORIGINS || "localhost,127.0.0.1,192.168.30.10")
+  .split(",")
+  .map((origin) => origin.trim().replace(/^https?:\/\//, "").replace(/\/$/, ""))
+  .filter(Boolean);
+
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  // Next.js 16 rejects client chunks requested from a LAN hostname unless
+  // the development origin is explicitly trusted. Keep this allowlist
+  // narrow and configurable instead of disabling the protection globally.
+  allowedDevOrigins,
   async headers() {
     return [{
       source: "/:path*",

@@ -1,11 +1,13 @@
 ---
 // src/components/CountryCard.astro
 import CountryFlag from './CountryFlag.astro';
+import { localizedRegionName } from '../utils/i18n';
 
 interface Props {
   code: string;
   name: string;
   nameZh?: string;
+  nameFr?: string;
   totalCases?: number;
   totalDeaths?: number;
   diseaseCount?: number;
@@ -14,7 +16,8 @@ interface Props {
   locale?: 'en' | 'zh' | 'fr';
 }
 
-const { code, name, nameZh = name, totalCases = 0, totalDeaths = 0, diseaseCount = 0, dateRange, locationType = 'country', locale = 'en' } = Astro.props;
+const { code, name, nameZh = name, nameFr, totalCases = 0, totalDeaths = 0, diseaseCount = 0, dateRange, locationType = 'country', locale = 'en' } = Astro.props;
+const resolvedNameFr = nameFr ?? localizedRegionName('fr', code, { en: name });
 
 function fmtNum(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -24,10 +27,12 @@ function fmtNum(n: number) {
 
 const href = `${locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : ''}/countries/${code.toLowerCase()}/`;
 const deathsDisplay = totalDeaths > 0 ? fmtNum(totalDeaths) : '-';
-const displayName = locale === 'zh' ? nameZh : name;
+const displayName = locale === 'zh' ? nameZh : locale === 'fr' ? resolvedNameFr : name;
 const labels = locale === 'zh'
   ? { cases: '病例', deaths: '死亡', diseases: '疾病', present: '至今', subdivision: '省级地区' }
-  : { cases: 'Cases', deaths: 'Deaths', diseases: 'Diseases', present: 'Present', subdivision: 'Province / region' };
+  : locale === 'fr'
+    ? { cases: 'Cas', deaths: 'Décès', diseases: 'Maladies', present: 'À ce jour', subdivision: 'Province / région' }
+    : { cases: 'Cases', deaths: 'Deaths', diseases: 'Diseases', present: 'Present', subdivision: 'Province / region' };
 ---
 
 <a

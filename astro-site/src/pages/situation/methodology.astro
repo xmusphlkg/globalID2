@@ -3,12 +3,33 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
 import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { translateUi } from '../../utils/i18n';
 
 const situationPublic = existsSync(resolve('./src/data/situation/v3/latest.json'));
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
+const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
-const pick = <T,>(en: T, zhValue: T) => zh ? zhValue : en;
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
+
+const methodologyFr: Record<string, string> = {
+  'One source-native identity': 'Une identité propre à la source',
+  'Publication-lag protection': 'Protection contre les retards de publication',
+  'Tiered, frequency-aware detectors': 'Détecteurs hiérarchisés et sensibles à la fréquence',
+  'Multiple testing and effect gates': 'Tests multiples et seuils d’effet',
+  'Calibrated, fail-closed publication': 'Publication calibrée et fermée en cas d’échec',
+  'Events, period reports, and revisions': 'Événements, rapports périodiques et révisions',
+  'Immutable publication': 'Publication immuable',
+};
+const methodologyBodyFr: Record<string, string> = {
+  'One source-native identity': 'Chaque combinaison exacte de maladie, source, indicateur, géographie normalisée et dimension apparaît une seule fois. Les alias géographiques restent auditables mais renvoient à une identité canonique ; les comptes, taux, pourcentages, admissions et positivités ne sont jamais additionnés entre définitions incompatibles.',
+  'Publication-lag protection': 'Les pays et agences publient selon des calendriers différents. GIDS calcule une borne commune par source et fréquence ; une période n’entre dans le modèle qu’après une maturité suffisante. Les observations provisoires restent visibles comme dernières données reçues mais sont exclues de l’analyse.',
+  'Tiered, frequency-aware detectors': 'Les comptes courants utilisent une régression quasi-Poisson robuste avec saisonnalité, tendance optionnelle et surdispersion. Les faibles comptes utilisent une queue exacte de Poisson ou une loi binomiale négative. CUSUM apporte seulement une preuve de persistance ; les taux ne sont modélisés que si numérateur et dénominateur sont disponibles.',
+  'Multiple testing and effect gates': 'Les valeurs p unilatérales sont corrigées par Benjamini–Hochberg au sein de familles définies par niveau de détection, type d’indicateur et fréquence. Les seuils d’alerte et d’anomalie forte exigent à la fois une signification statistique et un effet minimal adapté à la métrique.',
+  'Calibrated, fail-closed publication': 'La collecte, la modélisation, la correction FDR, les liens de preuve, la déduplication, la mise en file et la publication sont automatisées. Les candidats statistiques restent privés jusqu’à vérification indépendante ; le risque de santé publique n’apparaît qu’avec une preuve attribuable et une justification.',
+  'Events, period reports, and revisions': 'Les mises à jour officielles d’une même maladie et de géographies qui se chevauchent sont regroupées en chronologie stable avant la revue. Les rapports hebdomadaires et mensuels exigent que chaque membre quotidien de la période fermée existe et passe le contrôle de qualité.',
+  'Immutable publication': 'Pydantic est la source du contrat pour les schémas JSON, OpenAPI et TypeScript généré. Chaque analyse et décision de revue est immuable ; une révision ne devient publique qu’après validation et archivage réussis.',
+};
 
 const sections = [
   ['One source-native identity', '唯一来源原生 identity', 'Each exact disease, source, metric, normalized geography, and dimension identity appears once. Geography aliases are retained for audit but resolve to one canonical identity. Counts, rates, percentages, admissions, and positivity are never summed across incompatible definitions.', '每个精确疾病、来源、指标、规范化地理和维度 identity 仅出现一次。地理别名保留用于审计，但归并为一个规范 identity。病例数、率、百分比、住院和阳性率不会跨不兼容定义相加。'],
@@ -21,8 +42,8 @@ const sections = [
 ] as const;
 
 const seo: SeoDocument = {
-  title: pick('Situation Room Methodology | GIDS', '全球态势室方法 | GIDS'),
-  description: pick('The statistical model, evidence attribution, quality checks, period reports, revisions, and limitations used by GIDS Situation Room.', '了解 GIDS 全球态势室使用的统计模型、证据归因、质量检查、期间报告、修订与限制。'),
+  title: pick('Situation Room Methodology | GIDS', '全球态势室方法 | GIDS', 'Méthodologie de la salle de situation | GIDS'),
+  description: pick('The statistical model, evidence attribution, quality checks, period reports, revisions, and limitations used by GIDS Situation Room.', '了解 GIDS 全球态势室使用的统计模型、证据归因、质量检查、期间报告、修订与限制。', 'Modèle statistique, attribution des preuves, contrôles qualité, rapports périodiques, révisions et limites de la salle de situation GIDS.'),
   canonicalPath: `${prefix}/situation/methodology/`,
   locale,
   alternatePaths: buildAlternatePaths(`${prefix}/situation/methodology/`, locale),
@@ -30,22 +51,22 @@ const seo: SeoDocument = {
 };
 ---
 
-<ReportLayout title={pick('Situation Room Methodology', '全球态势室方法')} description={seo.description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室'), href: `${prefix}/situation/` }, { label: pick('Methodology', '方法') }]}>
+<ReportLayout title={pick('Situation Room Methodology', '全球态势室方法', 'Méthodologie de la salle de situation')} description={seo.description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室', 'Salle de situation'), href: `${prefix}/situation/` }, { label: pick('Methodology', '方法', 'Méthodologie') }]}>
   <article class="methodology">
     <header>
-      <p class="eyebrow">{pick('Methods', '方法')}</p>
-      <h1>{pick('Signal screening methodology', '信号筛查方法')}</h1>
-      <p>{pick('Reproducible statistical screens for review priority. Not outbreak declarations or clinical guidance.', '用于确定复核优先级的可复现统计筛查；不等同于疫情定性或临床建议。')}</p>
+      <p class="eyebrow">{pick('Methods', '方法', 'Méthodes')}</p>
+      <h1>{pick('Signal screening methodology', '信号筛查方法', 'Méthodologie de filtrage des signaux')}</h1>
+      <p>{pick('Reproducible statistical screens for review priority. Not outbreak declarations or clinical guidance.', '用于确定复核优先级的可复现统计筛查；不等同于疫情定性或临床建议。', 'Filtres statistiques reproductibles pour hiérarchiser les revues. Ils ne constituent ni une déclaration d’épidémie ni un avis clinique.')}</p>
     </header>
     <div class="methodology-grid">
       {sections.map(([headingEn, headingZh, bodyEn, bodyZh], index) => (
         <details open={index === 0}>
           <summary>
             <span>{String(index + 1).padStart(2, '0')}</span>
-            <h2>{pick(headingEn, headingZh)}</h2>
+            <h2>{pick(headingEn, headingZh, methodologyFr[headingEn])}</h2>
             <b aria-hidden="true">+</b>
           </summary>
-          <p>{pick(bodyEn, bodyZh)}</p>
+          <p>{pick(bodyEn, bodyZh, methodologyBodyFr[headingEn])}</p>
         </details>
       ))}
     </div>

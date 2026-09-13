@@ -26,11 +26,14 @@ def compose_report_document(
 
     country_zh = country.get("name_zh") or country.get("name_local") or country.get("name") or country.get("name_en") or "该地区"
     country_en = country.get("name_en") or country.get("name") or country_zh
+    country_fr = country.get("name_fr") or country_en
     period_zh = f"{period_start:%Y-%m-%d} 至 {period_end:%Y-%m-%d}"
     period_en = f"{period_start:%Y-%m-%d} to {period_end:%Y-%m-%d}"
+    period_fr = f"du {period_start:%d/%m/%Y} au {period_end:%d/%m/%Y}"
     lead = attention_ranking[0] if attention_ranking else {}
     lead_zh = lead.get("name_zh") or lead.get("name_en") or "暂无首要信号"
     lead_en = lead.get("name_en") or lead.get("name_zh") or "No lead signal"
+    lead_fr = lead.get("name_fr") or lead_en
     total_cases = int(summary.get("total_cases") or 0)
     latest_cases = int(summary.get("latest_cases") or 0)
     high_attention = int(summary.get("high_attention_diseases", summary.get("high_risk_diseases")) or 0)
@@ -39,6 +42,7 @@ def compose_report_document(
     title = LocalizedText(
         zh=f"{country_zh}传染病监测决策简报 | {period_zh}",
         en=f"{country_en} Infectious Disease Decision Brief | {period_en}",
+        fr=f"Note décisionnelle sur la surveillance des maladies infectieuses — {country_fr} | {period_fr}",
     )
     death_note = death_reporting.get("display_note") or {}
     summary_text = LocalizedText(
@@ -52,6 +56,11 @@ def compose_report_document(
             f"and {latest_cases:,} cases in the latest observation. The lead signal is {lead_en}. "
             f"{death_note.get('en', '')}"
         ),
+        fr=(
+            f"Ce rapport couvre {disease_count} signaux de maladie, soit {total_cases:,} cas au total et "
+            f"{latest_cases:,} cas lors de la dernière observation. Le signal prioritaire concerne {lead_fr}. "
+            f"{death_note.get('fr') or 'Les données de décès sont interprétées selon le périmètre de la source.'}"
+        ),
     )
     key_findings = {
         "zh": [
@@ -64,10 +73,15 @@ def compose_report_document(
             f"The lead signal is {lead_en}; active review is recommended before escalation.",
             death_note.get("en") or "Death data are interpreted under the source-specific reporting scope.",
         ],
+        "fr": [
+            f"Le dossier de preuves comprend {total_cases:,} cas, dont {latest_cases:,} lors de la dernière observation.",
+            f"Le signal prioritaire concerne {lead_fr} ; une revue active est recommandée avant toute escalade.",
+            death_note.get("fr") or "Les données de décès sont interprétées selon le périmètre de la source.",
+        ],
     }
 
     sections = [
-        _decision_summary(summary, death_reporting, lead, country_zh, country_en),
+        _decision_summary(summary, death_reporting, lead, country_zh, country_en, country_fr),
         _priority_actions(summary, death_reporting, lead),
         _signal_evidence(attention_ranking, summary),
         _disease_context(disease_cards),
@@ -123,6 +137,8 @@ def _attention_label(level: Any, lang: str) -> str:
     key = str(level or "low").lower()
     if lang == "en":
         return key
+    if lang == "fr":
+        return {"critical": "critique", "high": "élevée", "moderate": "modérée", "low": "faible"}.get(key, "à surveiller")
     return {"critical": "极高", "high": "高", "moderate": "中等", "low": "低"}.get(key, key)
 
 
@@ -134,7 +150,7 @@ def _fmt_number(value: Any) -> str:
 def _fmt_pct(value: Any, lang: str) -> str:
     number = _num(value)
     if number is None:
-        return "暂无可比数据" if lang == "zh" else "not comparable"
+        return "暂无可比数据" if lang == "zh" else "non comparable" if lang == "fr" else "not comparable"
     digits = 0 if abs(number) >= 10 else 1
     return f"{number:+.{digits}f}%"
 
@@ -142,15 +158,15 @@ def _fmt_pct(value: Any, lang: str) -> str:
 def _fmt_ratio(value: Any, lang: str) -> str:
     number = _num(value)
     if number is None:
-        return "暂无同期基线" if lang == "zh" else "no same-season baseline"
+        return "暂无同期基线" if lang == "zh" else "aucune référence saisonnière" if lang == "fr" else "no same-season baseline"
     return f"{number:.2f}x"
 
 
 def _fmt_percentile(value: Any, lang: str) -> str:
     number = _num(value)
     if number is None:
-        return "暂无历史分位" if lang == "zh" else "no historical percentile"
-    return f"{number:.1f} 分位" if lang == "zh" else f"{number:.1f}th percentile"
+        return "暂无历史分位" if lang == "zh" else "aucun percentile historique" if lang == "fr" else "no historical percentile"
+    return f"{number:.1f} 分位" if lang == "zh" else f"{number:.1f}e percentile" if lang == "fr" else f"{number:.1f}th percentile"
 
 
 def _source_scope_note(death_reporting: dict[str, Any], lang: str) -> str:
@@ -160,23 +176,31 @@ def _source_scope_note(death_reporting: dict[str, Any], lang: str) -> str:
         return (
             "该来源为哨点监测口径，病例数反映哨点报告信号；不宜直接当作全国真实感染人数。"
             if lang == "zh"
+            else "Cette source relève d’une surveillance sentinelle ; les nombres reflètent les signaux déclarés par les sites et non le total national des infections."
+            if lang == "fr"
             else "This source is sentinel surveillance; counts reflect reported sentinel signals and should not be read as total national infections."
         )
     if case_scope == "national":
         return (
             "该来源为全国报告口径，仍需结合报告延迟、检测量和病例定义变化解释。"
             if lang == "zh"
+            else "Cette source utilise une déclaration nationale ; le délai de déclaration, le volume de tests et les changements de définition des cas doivent néanmoins être examinés."
+            if lang == "fr"
             else "This source uses national reporting, but reporting lag, testing volume, and case-definition changes still need review."
         )
     if case_scope == "subnational_jurisdiction":
         return (
             "该来源覆盖明确标注的省级辖区，不代表所属国家的全国总量。"
             if lang == "zh"
+            else "Cette source couvre le territoire provincial indiqué et ne constitue pas un total national pour le pays parent."
+            if lang == "fr"
             else "This source covers the named provincial jurisdiction and is not a national total for its parent country."
         )
     return (
         "病例口径按来源定义解释，趋势判断需结合分层数据复核。"
         if lang == "zh"
+        else "Le périmètre des cas suit la définition de la source ; la tendance doit être vérifiée avec des données stratifiées."
+        if lang == "fr"
         else "Case scope follows the source definition; trend interpretation still requires stratified review."
     )
 
@@ -206,6 +230,7 @@ def _enum_label(kind: str, value: Any, lang: str) -> str:
         "confidence": {
             "zh": {"high": "高", "medium": "中", "low": "低", "unknown": "未知"},
             "en": {"high": "high", "medium": "medium", "low": "low", "unknown": "unknown"},
+            "fr": {"high": "élevée", "medium": "moyenne", "low": "faible", "unknown": "inconnue"},
         },
         "case_scope": {
             "zh": {
@@ -222,6 +247,13 @@ def _enum_label(kind: str, value: Any, lang: str) -> str:
                 "subnational_jurisdiction": "provincial-jurisdiction reporting",
                 "unknown": "unspecified",
             },
+            "fr": {
+                "national": "déclaration nationale",
+                "sentinel": "surveillance sentinelle",
+                "national_or_sentinel": "surveillance nationale ou sentinelle",
+                "subnational_jurisdiction": "déclaration provinciale",
+                "unknown": "non précisé",
+            },
         },
         "rate_basis": {
             "zh": {
@@ -235,6 +267,12 @@ def _enum_label(kind: str, value: Any, lang: str) -> str:
                 "wpp_computed_crude": "population-based crude rate",
                 "unavailable": "unavailable",
                 "unknown": "unspecified",
+            },
+            "fr": {
+                "source_rate": "fourni par la source",
+                "wpp_computed_crude": "taux brut calculé sur la population",
+                "unavailable": "indisponible",
+                "unknown": "non précisé",
             },
         },
         "cadence": {
@@ -254,9 +292,17 @@ def _enum_label(kind: str, value: Any, lang: str) -> str:
                 "yearly": "yearly",
                 "unknown": "source-defined",
             },
+            "fr": {
+                "daily": "quotidienne",
+                "weekly": "hebdomadaire",
+                "monthly": "mensuelle",
+                "quarterly": "trimestrielle",
+                "yearly": "annuelle",
+                "unknown": "définie par la source",
+            },
         },
     }
-    return labels.get(kind, {}).get(lang, {}).get(key, key if lang == "en" else "未说明")
+    return labels.get(kind, {}).get(lang, {}).get(key, key if lang in {"en", "fr"} else "未说明")
 
 
 def _trend_signal(
@@ -473,6 +519,7 @@ def _disease_analysis_sections(
     total = _fmt_number(total_cases)
     delta_zh = "暂无可比差值" if absolute_delta is None else f"{int(absolute_delta):+,} 例"
     delta_en = "not comparable" if absolute_delta is None else f"{int(absolute_delta):+,} cases"
+    delta_fr = "non comparable" if absolute_delta is None else f"{int(absolute_delta):+,} cas"
     mom_zh = _fmt_pct(mom_change_pct, "zh")
     mom_en = _fmt_pct(mom_change_pct, "en")
     yoy_zh = _fmt_pct(yoy_change_pct, "zh")
@@ -532,7 +579,7 @@ def _disease_analysis_sections(
         else "The historical percentile is not extreme, so this reads more like a rapid rise within a seasonal upswing that needs confirmation over subsequent observations."
     )
 
-    return [
+    sections = [
         {
             "section_type": "summary",
             "title": "摘要",
@@ -623,6 +670,59 @@ def _disease_analysis_sections(
             "evidence_refs": [f"disease:{disease_id}.last4_change_pct", f"disease:{disease_id}.latest_to_same_season_median_ratio"],
         },
     ]
+    french_trend = {
+        "low_base_fluctuation": "fluctuation sur une faible base",
+        "new_or_reappearing": "nouveau signal ou réapparition",
+        "short_term_rebound": "rebond à court terme",
+        "elevated_rise": "hausse depuis un niveau élevé",
+        "elevated_decline": "baisse depuis un niveau élevé",
+        "seasonally_elevated": "niveau supérieur à la référence saisonnière",
+        "seasonally_low": "niveau inférieur à la référence saisonnière",
+        "watch": "à surveiller",
+        "stable": "stable",
+    }.get(str(trend.get("status") or "watch"), "à surveiller")
+    french_current = str(current.get("fr") or french_trend)
+    french_seasonal = {
+        "high": "au-dessus de la référence saisonnière",
+        "very_high": "nettement au-dessus de la référence saisonnière",
+        "low": "en dessous de la référence saisonnière",
+        "very_low": "nettement en dessous de la référence saisonnière",
+        "historically_high": "à un niveau historique élevé",
+        "typical": "dans la plage habituelle",
+    }.get(str(seasonal.get("status") or ""), "aucune référence saisonnière")
+    attention_fr = _attention_label(attention_level, "fr")
+    mom_fr = _fmt_pct(mom_change_pct, "fr")
+    yoy_fr = _fmt_pct(yoy_change_pct, "fr")
+    recent_fr = _fmt_pct(recent_change_pct, "fr")
+    long_fr = _fmt_pct(long_window_change_pct, "fr")
+    same_season_fr = _fmt_ratio(seasonal.get("same_season_ratio"), "fr")
+    percentile_fr = _fmt_percentile(seasonal.get("latest_percentile_prior"), "fr")
+    baseline_fr = _fmt_number(seasonal.get("same_season_baseline_count"))
+    death_note_fr = (death_reporting.get("display_note") or {}).get("fr") or "Les données de décès sont interprétées selon le périmètre de la source."
+    source_note_fr = _source_scope_note(death_reporting, "fr")
+    sections[0]["title_i18n"] = {"zh": "摘要", "en": "Summary", "fr": "Résumé"}
+    sections[0]["content_i18n"]["fr"] = f"{name_en} a enregistré {total} cas sur la période du rapport. La dernière observation compte {latest} cas, soit {delta_fr} par rapport aux {previous} cas de l’observation précédente ({mom_fr}). La dynamique combinée est {french_trend}, avec une priorité de surveillance {attention_fr} ({score}). Ce score sert uniquement à ordonner la revue et ne constitue pas une estimation du risque pour la santé publique."
+    sections[1]["title_i18n"] = {"zh": "要点", "en": "Highlights", "fr": "Points clés"}
+    sections[1]["content_i18n"]["fr"] = "\n".join([
+        f"- Dynamique actuelle : {french_current} ; dernière observation {latest} cas, variation {delta_fr}, évolution mensuelle {mom_fr}",
+        f"- Momentum récent : variation des quatre dernières observations {recent_fr} ; évolution sur longue fenêtre {long_fr}",
+        f"- Contexte saisonnier : {french_seasonal} ; ratio médian saisonnier {same_season_fr}, sur {baseline_fr} références",
+        f"- Position historique : dernière valeur au {percentile_fr} des observations antérieures",
+        f"- Limites de périmètre : {source_note_fr} {death_note_fr}",
+    ])
+    sections[2]["title_i18n"] = {"zh": "关键发现", "en": "Key findings", "fr": "Conclusions clés"}
+    sections[2]["content_i18n"]["fr"] = "\n".join([
+        f"- La hausse à court terme est soutenue par le volume : la dernière observation est supérieure de {delta_fr} à la précédente, et ne résulte pas uniquement d’un faible dénominateur.",
+        f"- Le contexte saisonnier est {french_seasonal}, avec une variation annuelle de {yoy_fr} et un ratio médian de {same_season_fr} ; {('la valeur se situe à un niveau historique élevé.' if percentile is not None and percentile >= 90 else 'la position historique n’est pas extrême et nécessite une confirmation au fil des observations.')}",
+        f"- La priorité de surveillance est {attention_fr} ; ce score non étalonné ne permet pas d’établir le statut d’une épidémie, sa gravité ou le risque pour une population.",
+        f"- {source_note_fr}",
+    ])
+    sections[3]["title_i18n"] = {"zh": "趋势分析", "en": "Trend analysis", "fr": "Analyse de tendance"}
+    sections[3]["content_i18n"]["fr"] = f"Tendance : {french_trend}. Les éléments disponibles comprennent une variation de {delta_fr} par rapport à l’observation précédente ; la variation des quatre dernières observations est de {recent_fr}, et celle de la longue fenêtre de {long_fr}. Le ratio saisonnier est {same_season_fr} et la position historique est au {percentile_fr}. Ce signal doit être confirmé par la distribution géographique, les groupes d’âge, la couverture sentinelle ou l’exhaustivité des déclarations."
+    for section in sections:
+        section.setdefault("title_i18n", {}).setdefault("fr", "Traduction française en attente.")
+        section.setdefault("content_i18n", {}).setdefault("fr", "Traduction française en attente.")
+    return sections
 
 
 def _disease_directory(diseases: list[dict[str, Any]], ranking: list[dict[str, Any]], death_reporting: dict[str, Any]) -> list[DiseaseDirectoryItem]:
@@ -665,6 +765,7 @@ def _disease_directory(diseases: list[dict[str, Any]], ranking: list[dict[str, A
                 slug=_slugify(name_en, disease_id),
                 name_zh=name_zh,
                 name_en=name_en,
+                name_fr=item.get("name_fr"),
                 category=item.get("category"),
                 latest_cases=latest_cases,
                 previous_cases=previous_cases,
@@ -713,10 +814,11 @@ def _disease_directory(diseases: list[dict[str, Any]], ranking: list[dict[str, A
     )
 
 
-def _decision_summary(summary: dict[str, Any], death_reporting: dict[str, Any], lead: dict[str, Any], country_zh: str, country_en: str) -> Section:
+def _decision_summary(summary: dict[str, Any], death_reporting: dict[str, Any], lead: dict[str, Any], country_zh: str, country_en: str, country_fr: str) -> Section:
     refs = ["summary:total_cases", "summary:latest_cases"]
     lead_zh = lead.get("name_zh") or lead.get("name_en") or "暂无首要信号"
     lead_en = lead.get("name_en") or lead.get("name_zh") or "No lead signal"
+    lead_fr = lead.get("name_fr") or lead_en
     zh = "\n".join(
         [
             f"- 当前判断：{country_zh}本期以病例信号复核为主，首要关注 {lead_zh}。",
@@ -731,12 +833,20 @@ def _decision_summary(summary: dict[str, Any], death_reporting: dict[str, Any], 
             f"- Death-count scope: {(death_reporting.get('display_note') or {}).get('en', 'Death data are interpreted under the source scope.')}",
         ]
     )
-    return Section("decision_summary", "decision_summary", 1, LocalizedText("当前判断", "Current Judgement"), LocalizedText(zh, en), refs)
+    fr = "\n".join(
+        [
+            f"- Évaluation actuelle : {country_fr} doit considérer {lead_fr} comme le signal prioritaire à examiner activement.",
+            f"- Portée : {int(summary.get('disease_count') or 0)} signaux de maladie et {int(summary.get('total_cases') or 0):,} cas sont inclus.",
+            f"- Données sur les décès : {(death_reporting.get('display_note') or {}).get('fr', 'Les données de décès sont interprétées selon le périmètre de la source.')}",
+        ]
+    )
+    return Section("decision_summary", "decision_summary", 1, LocalizedText("当前判断", "Current Judgement", "Évaluation actuelle"), LocalizedText(zh, en, fr), refs)
 
 
 def _priority_actions(summary: dict[str, Any], death_reporting: dict[str, Any], lead: dict[str, Any]) -> Section:
     lead_zh = lead.get("name_zh") or lead.get("name_en") or "首要信号"
     lead_en = lead.get("name_en") or lead.get("name_zh") or "the lead signal"
+    lead_fr = lead.get("name_fr") or lead_en
     zh = "\n".join(
         [
             f"- 主动复核：优先确认 {lead_zh} 是否持续上升、是否集中在特定地区或人群。",
@@ -753,7 +863,15 @@ def _priority_actions(summary: dict[str, Any], death_reporting: dict[str, Any], 
             f"- Death data: {(death_reporting.get('display_note') or {}).get('en', 'Death data require separate verification.')}",
         ]
     )
-    return Section("priority_actions", "priority_actions", 2, LocalizedText("建议动作", "Priority Actions"), LocalizedText(zh, en), ["summary:high_attention_diseases"])
+    fr = "\n".join(
+        [
+            f"- Revue active : confirmer si {lead_fr} persiste et se concentre dans une région ou un groupe de population.",
+            "- Stratification : examiner en priorité le lieu, la tranche d’âge, la source déclarante et le périmètre des tests avant toute escalade.",
+            "- Critères d’escalade : hausses répétées, signaux de gravité ou corroboration par des rapports d’événements externes.",
+            f"- Données sur les décès : {(death_reporting.get('display_note') or {}).get('fr', 'Les données de décès nécessitent une vérification distincte.')}",
+        ]
+    )
+    return Section("priority_actions", "priority_actions", 2, LocalizedText("建议动作", "Priority Actions", "Actions prioritaires"), LocalizedText(zh, en, fr), ["summary:high_attention_diseases"])
 
 
 def _signal_evidence(ranking: list[dict[str, Any]], summary: dict[str, Any]) -> Section:
@@ -780,8 +898,17 @@ def _signal_evidence(ranking: list[dict[str, Any]], summary: dict[str, Any]) -> 
         *en_rows,
         "- Attention priority is a deterministic triage order, not a probability of infection, severe disease, death, or an outbreak.",
     ])
+    fr_rows = [
+        f"- {row.get('name_fr') or row.get('name_en')}: {int(row.get('latest_cases') or 0):,} cas lors de la dernière observation, priorité de surveillance {_attention_label(row.get('attention_level', row.get('risk_level')), 'fr')}."
+        for row in top_rows
+    ] if top_rows else ["- Aucun signal de maladie classable n’est disponible pour cette période."]
+    fr = "\n".join([
+        f"- La dernière observation compte {int(summary.get('latest_cases') or 0):,} cas.",
+        *fr_rows,
+        "- La priorité d’attention est un ordre de triage déterministe, et non une probabilité d’infection, de gravité, de décès ou d’épidémie.",
+    ])
     refs = ["summary:latest_cases", *[f"disease:{row.get('disease_id')}.latest_cases" for row in top_rows if row.get("disease_id")]]
-    return Section("signal_evidence", "signal_evidence", 3, LocalizedText("关键证据", "Signal Evidence"), LocalizedText(zh, en), refs)
+    return Section("signal_evidence", "signal_evidence", 3, LocalizedText("关键证据", "Signal Evidence", "Preuves relatives aux signaux"), LocalizedText(zh, en, fr), refs)
 
 
 def _disease_context(diseases: list[dict[str, Any]]) -> Section:
@@ -798,8 +925,14 @@ def _disease_context(diseases: list[dict[str, Any]]) -> Section:
             f"- {item.get('name_en') or item.get('name_zh')}: {int((item.get('metrics') or {}).get('total_cases') or 0):,} cumulative cases; interpret with transmission route, seasonality, and risk groups."
             for item in top
         )
+        fr = "\n".join(
+            f"- {item.get('name_fr') or item.get('name_en')}: {int((item.get('metrics') or {}).get('total_cases') or 0):,} cas cumulés ; à interpréter selon le mode de transmission, la saisonnalité et les groupes à risque."
+            for item in top
+        )
+    if not top:
+        fr = "- Aucune fiche de maladie n’est disponible pour l’interprétation contextuelle."
     refs = [f"disease:{item.get('disease_id')}.total_cases" for item in top if item.get("disease_id")]
-    return Section("disease_context", "disease_context", 4, LocalizedText("疾病背景", "Disease Context"), LocalizedText(zh, en), refs)
+    return Section("disease_context", "disease_context", 4, LocalizedText("疾病背景", "Disease Context", "Contexte des maladies"), LocalizedText(zh, en, fr), refs)
 
 
 def _data_notes(packet: dict[str, Any], death_reporting: dict[str, Any]) -> Section:
@@ -811,9 +944,13 @@ def _data_notes(packet: dict[str, Any], death_reporting: dict[str, Any]) -> Sect
     case_scope_en = _enum_label("case_scope", source_policy.get("case_scope"), "en")
     rate_basis_zh = _enum_label("rate_basis", source_policy.get("rate_basis"), "zh")
     rate_basis_en = _enum_label("rate_basis", source_policy.get("rate_basis"), "en")
+    confidence_fr = _enum_label("confidence", quality.get("confidence"), "fr")
+    case_scope_fr = _enum_label("case_scope", source_policy.get("case_scope"), "fr")
+    rate_basis_fr = _enum_label("rate_basis", source_policy.get("rate_basis"), "fr")
     score = quality.get("score")
     score_zh = f"{score}" if score is not None else "暂无评分"
     score_en = f"{score}" if score is not None else "not scored"
+    score_fr = f"{score}" if score is not None else "non noté"
     zh = "\n".join(
         [
             f"- 数据置信度：{confidence_zh}，质量分 {score_zh}。",
@@ -830,7 +967,15 @@ def _data_notes(packet: dict[str, Any], death_reporting: dict[str, Any]) -> Sect
             "- Interpretation limit: increasing cases do not confirm an outbreak without testing volume, reporting lag, and stratified distribution review.",
         ]
     )
-    return Section("data_interpretation_notes", "data_interpretation_notes", 5, LocalizedText("数据口径", "Data Notes"), LocalizedText(zh, en), ["quality:score"])
+    fr = "\n".join(
+        [
+            f"- Confiance des données : {confidence_fr}, score de qualité {score_fr}.",
+            f"- Périmètre des cas : {case_scope_fr} ; base du taux : {rate_basis_fr}.",
+            f"- Données sur les décès : {(death_reporting.get('display_note') or {}).get('fr', 'Le périmètre des décès n’est pas précisé.')}",
+            "- Limite d’interprétation : une hausse des cas ne confirme pas une épidémie sans examen du volume de tests, du délai de déclaration et de la distribution stratifiée.",
+        ]
+    )
+    return Section("data_interpretation_notes", "data_interpretation_notes", 5, LocalizedText("数据口径", "Data Notes", "Notes sur les données"), LocalizedText(zh, en, fr), ["quality:score"])
 
 
 def _method_appendix(packet: dict[str, Any]) -> Section:
@@ -838,6 +983,7 @@ def _method_appendix(packet: dict[str, Any]) -> Section:
     cadence = packet.get("reporting_cadence") or "unknown"
     cadence_zh = _enum_label("cadence", cadence, "zh")
     cadence_en = _enum_label("cadence", cadence, "en")
+    cadence_fr = _enum_label("cadence", cadence, "fr")
     zh = "\n".join(
         [
             "- 本附录用于审计追溯，不作为主阅读路径。",
@@ -856,4 +1002,13 @@ def _method_appendix(packet: dict[str, Any]) -> Section:
             "- Attention priority combines reported burden, short-term change, mortality signals when available, anomaly markers, historical position, and a data-quality penalty. It is uncalibrated and is not a public-health risk score.",
         ]
     )
-    return Section("method_appendix", "method_appendix", 6, LocalizedText("方法附录", "Method Appendix"), LocalizedText(zh, en), ["summary:record_count"])
+    fr = "\n".join(
+        [
+            "- Cette annexe permet la traçabilité de l’audit et ne constitue pas le parcours de lecture principal.",
+            f"- Signature des données : `{signature}`",
+            f"- Version de calcul : `{METHOD_VERSION}`",
+            f"- Fréquence de publication : {cadence_fr}",
+            "- La priorité d’attention combine la charge déclarée, les variations à court terme, les indices de mortalité disponibles, les anomalies, la position historique et une pénalité de qualité des données ; elle n’est pas étalonnée comme un risque de santé publique.",
+        ]
+    )
+    return Section("method_appendix", "method_appendix", 6, LocalizedText("方法附录", "Method Appendix", "Annexe méthodologique"), LocalizedText(zh, en, fr), ["summary:record_count"])

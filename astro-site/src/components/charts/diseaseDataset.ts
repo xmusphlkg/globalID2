@@ -1,5 +1,5 @@
 import type { SourceSeriesMetadata } from './countryDataset';
-import { DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
+import { localizedRegionName } from '../../utils/i18n';
 
 export interface DiseaseDatasetSeriesEntry {
   disease_id: string;
@@ -102,7 +102,7 @@ function normalizeDiseaseDataset(raw: DiseaseDataset | CompactDiseaseDataset): D
       ...raw,
       country_series: Object.fromEntries(Object.entries(raw.country_series).map(([id, entry]) => [
         id,
-        { ...entry, name_fr: entry.name_fr ?? DISEASE_NAMES_FR_BY_ID[entry.disease_id ?? id] ?? entry.name_en },
+        { ...entry, name_fr: localizedRegionName('fr', id, { en: entry.name_en, zh: entry.name_zh, fr: entry.name_fr }) },
       ])),
     };
   }
@@ -127,7 +127,7 @@ function normalizeDiseaseDataset(raw: DiseaseDataset | CompactDiseaseDataset): D
           disease_id: entry.cc,
           name_en: entry.n ?? entry.cc,
           name_zh: entry.n_zh ?? entry.n ?? entry.cc,
-          name_fr: entry.n_fr ?? DISEASE_NAMES_FR_BY_ID[entry.cc] ?? entry.n ?? entry.cc,
+          name_fr: localizedRegionName('fr', entry.cc, { en: entry.n, zh: entry.n_zh, fr: entry.n_fr }),
           dates,
           cases: entry.c ?? [],
           weekly_equiv_cases: entry.w ?? [],

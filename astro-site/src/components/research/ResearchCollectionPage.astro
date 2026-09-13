@@ -2,24 +2,28 @@
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import ResearchArticleCard from './ResearchArticleCard.astro';
 import { buildAlternatePaths, clampSeoTitle, isIndexableResearchCollection } from '../../lib/seo';
-import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
+import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
+import { RESEARCH_TOPIC_LABELS, STUDY_TYPE_LABELS } from '../../utils/i18n';
 
 interface Props {
   eyebrow: string;
   eyebrowZh: string;
+  eyebrowFr: string;
   title: string;
   titleZh: string;
-  titleFr?: string;
+  titleFr: string;
   description: string;
   descriptionZh: string;
-  descriptionFr?: string;
+  descriptionFr: string;
   canonicalPath: string;
   articles: any[];
   contextLabel?: string;
   contextLabelZh?: string;
+  contextLabelFr?: string;
   feedPath?: string;
   feedLabel?: string;
   feedLabelZh?: string;
+  feedLabelFr?: string;
   clientCollectionScope?: 'disease' | 'country' | 'topic' | 'week';
   clientCollectionValue?: string;
   locale?: 'en' | 'zh' | 'fr';
@@ -28,19 +32,22 @@ interface Props {
 const {
   eyebrow,
   eyebrowZh,
+  eyebrowFr,
   title,
   titleZh,
-  titleFr = title,
+  titleFr,
   description,
   descriptionZh,
-  descriptionFr = description,
+  descriptionFr,
   canonicalPath,
   articles,
   contextLabel = 'Published evidence',
   contextLabelZh = '已发布证据',
+  contextLabelFr = 'Preuves publiées',
   feedPath = '/research/rss.xml',
   feedLabel = 'RSS feed',
   feedLabelZh = 'RSS 订阅',
+  feedLabelFr = 'Flux RSS',
   clientCollectionScope,
   clientCollectionValue,
   locale = 'en',
@@ -103,16 +110,16 @@ const structuredData = {
   <div class="research-collection">
     <header class="academic-hero collection-hero">
       <div class="collection-topline">
-        <p class="academic-kicker">{zh ? eyebrowZh : fr ? 'Pôle de preuves sur la maladie' : eyebrow}</p>
+        <p class="academic-kicker">{zh ? eyebrowZh : fr ? eyebrowFr : eyebrow}</p>
         <div class="collection-actions">
           <a href={localeHref('/research/')}>{zh ? '研究首页' : fr ? 'Accueil recherche' : 'Research home'}</a>
-          <a href={localizedFeedPath} type="application/rss+xml">{zh ? feedLabelZh : fr ? 'Flux RSS' : feedLabel}</a>
+          <a href={localizedFeedPath} type="application/rss+xml">{zh ? feedLabelZh : fr ? feedLabelFr : feedLabel}</a>
         </div>
       </div>
       <h1>{zh ? titleZh : fr ? titleFr : title}</h1>
       <p class="collection-lede">{zh ? descriptionZh : fr ? descriptionFr : description}</p>
       <dl class="collection-metrics">
-        <div><dt>{zh ? contextLabelZh : fr ? 'Publications' : contextLabel}</dt><dd>{articles.length}</dd></div>
+        <div><dt>{zh ? contextLabelZh : fr ? contextLabelFr : contextLabel}</dt><dd>{articles.length}</dd></div>
         <div><dt>{zh ? '疾病' : fr ? 'Maladies' : 'Diseases'}</dt><dd>{diseaseCount}</dd></div>
         <div><dt>{zh ? '国家和地区' : fr ? 'Pays et régions' : 'Countries'}</dt><dd>{countryCount}</dd></div>
         <div><dt>{zh ? '主题' : fr ? 'Thèmes' : 'Topics'}</dt><dd>{topicCount}</dd></div>
@@ -139,7 +146,10 @@ const structuredData = {
               data-collection-client-catalogue={useClientCollectionCatalogue ? 'true' : 'false'}
               data-collection-scope={clientCollectionScope}
               data-collection-value={clientCollectionValue}
-              data-disease-name-map={JSON.stringify(DISEASE_NAMES_FR)}
+              data-disease-name-map={JSON.stringify({ ...DISEASE_NAMES_FR, ...Object.fromEntries(Object.entries(DISEASE_NAMES_FR_BY_ID).map(([key, value]) => [key.toLowerCase(), value])) })}
+              data-region-name-map={JSON.stringify({ 'cn-gx': 'Guangxi, Chine', 'cn-sd': 'Shandong, Chine' })}
+              data-study-type-map={JSON.stringify(Object.fromEntries(Object.entries(STUDY_TYPE_LABELS).map(([key, labels]) => [key, labels.fr])))}
+              data-topic-name-map={JSON.stringify(Object.fromEntries(Object.entries(RESEARCH_TOPIC_LABELS).map(([key, labels]) => [key, labels.fr])))}
             >
               {serverRenderedArticles.map((article: any, index: number) => (
                 <ResearchArticleCard article={article} index={index} initialVisible={initialVisibleArticles} locale={locale} />
@@ -176,6 +186,15 @@ const structuredData = {
   const diseaseNameMap = (() => {
     try { return JSON.parse(list?.dataset.diseaseNameMap ?? '{}') as Record<string, string>; } catch { return {}; }
   })();
+  const regionNameMap = (() => {
+    try { return JSON.parse(list?.dataset.regionNameMap ?? '{}') as Record<string, string>; } catch { return {}; }
+  })();
+  const studyTypeMap = (() => {
+    try { return JSON.parse(list?.dataset.studyTypeMap ?? '{}') as Record<string, string>; } catch { return {}; }
+  })();
+  const topicNameMap = (() => {
+    try { return JSON.parse(list?.dataset.topicNameMap ?? '{}') as Record<string, string>; } catch { return {}; }
+  })();
   const locale = list?.dataset.collectionLocale === 'zh' ? 'zh' : list?.dataset.collectionLocale === 'fr' ? 'fr' : 'en';
   const routePrefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
   let visibleLimit = initialVisible;
@@ -183,7 +202,21 @@ const structuredData = {
   const text = (value: unknown) => String(value ?? '');
   const slugifyTopic = (value: string | undefined) => (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const setLangText = (element: HTMLElement, en: string, zh?: string | null, fr?: string | null) => {
-    element.textContent = locale === 'zh' ? (zh || en) : locale === 'fr' ? (fr || en) : en;
+    element.textContent = locale === 'zh' ? (zh || en) : locale === 'fr' ? (fr || 'Traduction française en attente.') : en;
+  };
+  const frenchDiseaseName = (item: any) => item.name_fr
+    || diseaseNameMap[String(item.slug ?? '').toLowerCase()]
+    || diseaseNameMap[String(item.disease_id ?? '').toLowerCase()]
+    || 'Nom français indisponible';
+  const frenchRegionName = (item: any) => {
+    if (item.name_fr) return item.name_fr;
+    const code = String(item.code ?? '').toUpperCase();
+    const override = regionNameMap[code.toLowerCase()];
+    if (override) return override;
+    if (/^[A-Z]{2}$/.test(code)) {
+      try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(code) || 'Région non précisée'; } catch { return 'Région non précisée'; }
+    }
+    return 'Région non précisée';
   };
   const hasToken = (value: string | undefined, token: string) => (value ?? '').split(/\s+/).includes(token);
   const formatDate = (value: string | undefined, lang: 'en' | 'zh' | 'fr') => {
@@ -232,7 +265,7 @@ const structuredData = {
   const makeTopicBadge = (name: string) => {
     const badge = make('a', 'research-badge research-badge-topic');
     badge.href = `${routePrefix}/research/topics/${slugifyTopic(name)}/`;
-    badge.textContent = name;
+    badge.textContent = locale === 'fr' ? (topicNameMap[name] || 'Thème non traduit') : name;
     return badge;
   };
   const renderArticleCard = (article: any) => {
@@ -258,7 +291,7 @@ const structuredData = {
     badges.appendChild(makeBadge(article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint', article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本', 'research-badge-peer', article.peer_review_status === 'peer_reviewed' ? 'Évalué par les pairs' : 'Prépublication'));
     if (article.source_kind === 'historical_seed' || article.historical_baseline) badges.appendChild(makeBadge('Historical baseline', '历史基线', 'research-badge-history', 'Référence historique'));
     if (article.open_access_status === 'open') badges.appendChild(makeBadge('Open access', '开放获取', 'research-badge-oa', 'Accès ouvert'));
-    (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en, '', item.name_fr ?? diseaseNameMap[String(item.slug ?? '').toLowerCase()] ?? diseaseNameMap[String(item.disease_id ?? '').toLowerCase()] ?? item.name_en)));
+    (article.diseases ?? []).slice(0, 2).forEach((item: any) => badges.appendChild(makeBadge(text(item.name_en), item.name_zh ?? item.name_en, '', frenchDiseaseName(item))));
     (article.topics ?? []).slice(0, 3).forEach((item: any) => badges.appendChild(makeTopicBadge(text(item.name))));
     topline.appendChild(badges);
     if (article.doi) {
@@ -284,7 +317,8 @@ const structuredData = {
       const preview = authorNames.slice(0, 3);
       const en = authorNames.length > 3 ? `${preview.join(', ')} +${authorNames.length - preview.length} more` : preview.join(', ');
       const zh = authorNames.length > 3 ? `${preview.join('、')} 等 ${authorNames.length} 位作者` : preview.join('、');
-      setLangText(authors, en, zh);
+      const fr = authorNames.length > 3 ? `${preview.join(', ')} et ${authorNames.length - preview.length} autre${authorNames.length - preview.length === 1 ? '' : 's'}` : preview.join(', ');
+      setLangText(authors, en, zh, fr);
       card.appendChild(authors);
     }
 
@@ -324,7 +358,7 @@ const structuredData = {
         related.href = surveillanceUrl;
         const labelEn = `${surveillance?.disease_name_en || fallbackDisease?.name_en || 'Related'} surveillance →`;
         const labelZh = `${surveillance?.disease_name_zh || surveillance?.disease_name_en || fallbackDisease?.name_zh || fallbackDisease?.name_en || '相关'}监测 →`;
-        const labelFr = `${surveillance?.disease_name_fr || diseaseNameMap[String(fallbackDisease?.slug ?? '').toLowerCase()] || diseaseNameMap[String(fallbackDisease?.disease_id ?? '').toLowerCase()] || fallbackDisease?.name_en || 'Maladie associée'} surveillance →`;
+        const labelFr = `${surveillance?.disease_name_fr || frenchDiseaseName(fallbackDisease ?? {})} — surveillance →`;
         setLangText(related, labelEn, labelZh, labelFr);
         actions.appendChild(related);
       }
@@ -336,14 +370,14 @@ const structuredData = {
     const studyDt = make('dt');
     setLangText(studyDt, 'Type', '类型', 'Type');
     const studyDd = make('dd');
-    studyDd.textContent = text(article.study_type || 'Journal article');
+    studyDd.textContent = locale === 'fr' ? (studyTypeMap[text(article.study_type || 'Journal article')] || 'Type d’étude non traduit') : text(article.study_type || (locale === 'zh' ? '期刊论文' : 'Journal article'));
     studyFact.append(studyDt, studyDd);
     const geographyFact = make('div');
     const geographyDt = make('dt');
     setLangText(geographyDt, 'Scope', '范围', 'Portée');
     const geographyDd = make('dd');
     geographyDd.textContent = (article.countries ?? []).length > 0
-      ? (article.countries ?? []).slice(0, 3).map((item: any) => locale === 'zh' ? item.name_zh ?? item.name_en : locale === 'fr' ? item.name_fr ?? item.name_en : item.name_en).join(locale === 'zh' ? '、' : ', ')
+      ? (article.countries ?? []).slice(0, 3).map((item: any) => locale === 'zh' ? item.name_zh ?? item.name_en : locale === 'fr' ? frenchRegionName(item) : item.name_en).join(locale === 'zh' ? '、' : ', ')
       : (locale === 'zh' ? '未分类' : locale === 'fr' ? 'Non classé' : 'Not classified');
     geographyFact.append(geographyDt, geographyDd);
     facts.append(studyFact, geographyFact);

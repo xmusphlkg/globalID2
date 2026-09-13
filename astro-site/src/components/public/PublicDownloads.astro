@@ -3,7 +3,8 @@ import CountryFlag from '../CountryFlag.astro';
 import downloadsRaw from '../../data/downloads.json';
 import metaRaw from '../../data/meta.json';
 import { toSeoSlug } from '../../lib/seo';
-import { DISEASE_NAMES_FR } from '../../utils/diseaseNames';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { localizedRegionName } from '../../utils/i18n';
 
 interface Props {
   locale?: 'en' | 'zh' | 'fr';
@@ -44,13 +45,15 @@ const countries = downloadableCountries
       id: entry.code,
       name: zh
         ? entry.name_zh ?? entry.name_en ?? entry.code
-        : entry.name_en ?? entry.name ?? entry.code,
-      aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''}`,
+        : fr
+          ? entry.name_fr ?? localizedRegionName('fr', entry.code, { en: entry.name_en ?? entry.name })
+          : entry.name_en ?? entry.name ?? entry.code,
+      aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''} ${entry.name_fr ?? ''}`,
       detail: zh
         ? `${recordCount.toLocaleString('zh-CN')} 条记录 · ${partsCount} 个时间范围`
-        : `${recordCount.toLocaleString('en-US')} records · ${partsCount} time ranges`,
+        : `${recordCount.toLocaleString(fr ? 'fr-FR' : 'en-US')} ${fr ? 'enregistrements' : 'records'} · ${partsCount} ${fr ? 'périodes' : 'time ranges'}`,
       files: part?.files ?? {},
-      period: part?.label ?? (zh ? '最新可用' : 'Latest available'),
+      period: part?.label ?? (zh ? '最新可用' : fr ? 'Dernière période disponible' : 'Latest available'),
       pageHref: `${prefix}/countries/${String(entry.code).toLowerCase()}/#downloads`,
       count: recordCount,
     };
@@ -66,14 +69,14 @@ const diseases = (downloads.diseases ?? []).map((entry: any) => {
     name: zh
       ? entry.name_zh ?? entry.name_en ?? entry.slug
       : fr
-        ? entry.name_fr ?? DISEASE_NAMES_FR[String(entry.slug ?? '').toLowerCase()] ?? entry.name_en ?? entry.slug ?? entry.id
+        ? localizedDiseaseName({ ...entry, disease_id: entry.disease_id ?? entry.id }, 'fr')
         : entry.name_en ?? entry.slug ?? entry.id,
-    aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''} ${entry.name_fr ?? ''} ${DISEASE_NAMES_FR[String(entry.slug ?? '').toLowerCase()] ?? ''} ${entry.slug ?? ''}`,
+    aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''} ${entry.name_fr ?? ''} ${entry.slug ?? ''}`,
     detail: zh
       ? `${recordCount.toLocaleString('zh-CN')} 条记录 · ${countryCount} 个国家/地区`
-      : `${recordCount.toLocaleString('en-US')} records · ${countryCount} countries/regions`,
+      : `${recordCount.toLocaleString(fr ? 'fr-FR' : 'en-US')} ${fr ? 'enregistrements' : 'records'} · ${countryCount} ${fr ? 'pays/régions' : 'countries/regions'}`,
     files: part?.files ?? {},
-    period: part?.label ?? (zh ? '最新可用' : 'Latest available'),
+    period: part?.label ?? (zh ? '最新可用' : fr ? 'Dernière période disponible' : 'Latest available'),
     pageHref: `${prefix}/diseases/${toSeoSlug(entry.slug)}/#downloads`,
     count: recordCount,
   };
@@ -81,18 +84,20 @@ const diseases = (downloads.diseases ?? []).map((entry: any) => {
 
 const entries = [...countries, ...diseases];
 const generatedAt = downloads.generated_at
-  ? new Date(downloads.generated_at).toLocaleDateString(zh ? 'zh-CN' : 'en-US', {
+  ? new Date(downloads.generated_at).toLocaleDateString(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', {
       year: 'numeric',
       month: zh ? 'numeric' : 'long',
       day: 'numeric',
       timeZone: 'UTC',
     })
-  : zh
+    : zh
     ? '暂无'
-    : 'Not available';
+    : fr
+      ? 'Non disponible'
+      : 'Not available';
 const totalRecords = entries.reduce((sum: number, entry: any) => sum + entry.count, 0);
 const compact = (value: number) =>
-  new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', {
+  new Intl.NumberFormat(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', {
     notation: 'compact',
     maximumFractionDigits: 1,
   }).format(value);
@@ -186,6 +191,15 @@ const copy = zh
       terms: 'Read data-use guidance',
       download: 'Download',
     };
+
+if (fr) Object.assign(copy, {
+  kicker: 'Données de surveillance ouvertes', title: 'Téléchargement des données',
+  lead: 'Trouvez les jeux de données par pays et par maladie. Téléchargez les derniers fichiers CSV, JSON ou XLSX.',
+  countrySets: 'Jeux de données par pays', diseaseSets: 'Jeux de données par maladie', records: 'Enregistrements publiés', date: 'Date de l’instantané',
+  catalogue: 'Catalogue des données', choose: 'Choisir un jeu de données', intro: 'Le tableau renvoie vers la période la plus récente. Les pages de détail présentent les périodes historiques et les sources.',
+  subdivisionTitle: 'Les données infranationales sont regroupées par pays', subdivisionNote: `${chinaSubdivisionCount} jeux de données provinciaux chinois sont disponibles mais exclus du catalogue et des totaux nationaux.`, subdivisionLink: 'Parcourir les téléchargements provinciaux de Chine →',
+  search: 'Rechercher des jeux de données', placeholder: 'Pays, maladie ou code', type: 'Type de jeu de données', all: 'Tous', countries: 'Pays', diseases: 'Maladies', sort: 'Trier', featured: 'Ordre recommandé', nameAsc: 'Nom A-Z', recordsDesc: 'Plus d’enregistrements', kindSort: 'Type et nom', showing: 'Affichage', of: 'sur', dataset: 'jeux de données', range: 'Période actuelle', formats: 'Formats', details: 'Toutes les périodes et sources', empty: 'Aucun jeu de données ne correspond à cette recherche.', more: 'Afficher davantage', before: 'Avant d’utiliser les données', context: 'Conserver le contexte de la source', guidance: 'Avant de comparer des lieux ou de combiner des séries temporelles, conservez la source, la définition et le contexte de révision de chaque jeu de données.', methods: 'Lire les méthodes et limites', terms: 'Lire les règles d’utilisation des données', download: 'Télécharger',
+});
 ---
 
 <div class="downloads-page">
