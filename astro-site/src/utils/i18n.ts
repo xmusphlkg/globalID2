@@ -205,6 +205,7 @@ export const STUDY_TYPE_LABELS: Record<string, Record<Lang, string>> = {
   'Mathematical modelling': { en: 'Mathematical modelling', zh: '数学建模', fr: 'Modélisation mathématique' },
   'Outbreak investigation': { en: 'Outbreak investigation', zh: '暴发调查', fr: 'Enquête sur une flambée' },
   'Randomised controlled trial': { en: 'Randomised controlled trial', zh: '随机对照试验', fr: 'Essai contrôlé randomisé' },
+  'Systematic review': { en: 'Systematic review', zh: '系统综述', fr: 'Revue systématique' },
 };
 
 export const RESEARCH_TOPIC_LABELS: Record<string, Record<Lang, string>> = {
@@ -251,6 +252,7 @@ export const RESEARCH_FACET_LABELS: Record<string, Record<Lang, string>> = {
   'Older adults': { en: 'Older adults', zh: '老年人', fr: 'Personnes âgées' },
   'Immunocompromised populations': { en: 'Immunocompromised populations', zh: '免疫功能低下人群', fr: 'Populations immunodéprimées' },
   'Healthcare workers': { en: 'Healthcare workers', zh: '医务人员', fr: 'Professionnels de santé' },
+  'General population': { en: 'General population', zh: '一般人群', fr: 'Population générale' },
   Travellers: { en: 'Travellers', zh: '旅行者', fr: 'Voyageurs' },
 };
 

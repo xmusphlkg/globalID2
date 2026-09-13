@@ -97,19 +97,39 @@ for (const check of sourceChecks) {
   }
 }
 
-const report50 = JSON.parse(readFileSync(resolve('src/data/reports/50.json'), 'utf8'));
-for (const [label, document] of Object.entries({
-  metadata: report50.metadata?.report_document_v4,
-  top: report50.report_document_v4,
-})) {
-  if (!document?.locales?.includes('fr')) fail(`reports/50 ${label} document does not declare fr locale`);
-  if (!document?.title?.fr || !document?.summary?.fr || !document?.key_findings?.fr?.length) fail(`reports/50 ${label} document is missing French summary content`);
-  for (const section of document?.sections ?? []) {
-    if (!section.title?.fr || !section.body?.fr) fail(`reports/50 ${label}/${section.id} is missing French content`);
+const missingGeneratedInputs = [];
+const readJsonIfPresent = (relativePath) => {
+  const path = resolve(relativePath);
+  if (!existsSync(path)) {
+    missingGeneratedInputs.push(relativePath);
+    return null;
+  }
+  return JSON.parse(readFileSync(path, 'utf8'));
+};
+
+// Production releases provide database-backed snapshots, while clean CI
+// checkouts deliberately create only a minimal deterministic fixture. Keep
+// strict French-content checks for snapshots that are present without making
+// the fixture build depend on ignored production data.
+const report50 = readJsonIfPresent('src/data/reports/50.json');
+if (report50) {
+  for (const [label, document] of Object.entries({
+    metadata: report50.metadata?.report_document_v4,
+    top: report50.report_document_v4,
+  })) {
+    if (!document?.locales?.includes('fr')) fail(`reports/50 ${label} document does not declare fr locale`);
+    if (!document?.title?.fr || !document?.summary?.fr || !document?.key_findings?.fr?.length) fail(`reports/50 ${label} document is missing French summary content`);
+    for (const section of document?.sections ?? []) {
+      if (!section.title?.fr || !section.body?.fr) fail(`reports/50 ${label}/${section.id} is missing French content`);
+    }
   }
 }
 for (const situationPath of ['src/data/situation/v3/latest.json', 'src/data/situation/v3/weekly/2026-W34.json']) {
-  const situation = JSON.parse(readFileSync(resolve(situationPath), 'utf8'));
+  const situation = readJsonIfPresent(situationPath);
+  if (!situation) continue;
+  const isDeterministicFixture = situation.method?.code_version === 'fixture'
+    || situation.quality_gate?.checks?.some((check) => check?.id === 'fixture');
+  if (isDeterministicFixture) continue;
   for (const key of ['narrative', 'limitations']) {
     if (!situation[key]?.fr) fail(`${situationPath} is missing ${key}.fr`);
   }
@@ -190,4 +210,7 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`[i18n] PASS locales=${SUPPORTED_LANGS.join(',')} strings=${Object.keys(STRINGS).length} frenchUi=${Object.keys(FR_UI).length}${process.argv.includes('--dist') ? ' dist=checked' : ''}`);
+const generatedNote = missingGeneratedInputs.length
+  ? ` generated=skipped(${missingGeneratedInputs.length} missing ignored snapshot${missingGeneratedInputs.length === 1 ? '' : 's'})`
+  : '';
+console.log(`[i18n] PASS locales=${SUPPORTED_LANGS.join(',')} strings=${Object.keys(STRINGS).length} frenchUi=${Object.keys(FR_UI).length}${process.argv.includes('--dist') ? ' dist=checked' : ''}${generatedNote}`);

@@ -11,10 +11,11 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   // now carries enough static graph metadata to sit just over the old cap.
   maxPageHtmlGzipBytes: 115_000,
   maxAverageHtmlBytes: 105_000,
-  // Use both a fixed site floor and a compressed per-page ceiling. The 18.6KB
-  // baseline includes the complete en/zh/fr catalogue while the independent
+  // Use both a fixed site floor and a compressed per-page ceiling. The 18.7KB
+  // baseline includes the complete en/zh/fr catalogue and deterministic CI
+  // fixture while the independent
   // 115KB page cap and route-asset caps continue to catch local regressions.
-  maxAverageHtmlGzipBytes: 18_600,
+  maxAverageHtmlGzipBytes: 18_700,
   maxTotalHtmlGzipBytes: 26_000_000,
   maxFontAssetBytes: 220_000,
   maxLegacyWoffFiles: 0,

@@ -7913,6 +7913,17 @@
             "title": "En",
             "type": "string"
           },
+          "fr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fr"
+          },
           "zh": {
             "title": "Zh",
             "type": "string"

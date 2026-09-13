@@ -5415,6 +5415,8 @@ export interface components {
         LocalizedText: {
             /** En */
             en: string;
+            /** Fr */
+            fr?: string | null;
             /** Zh */
             zh: string;
         };
