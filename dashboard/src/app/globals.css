@@ -104,11 +104,7 @@ a {
 }
 
 .control-shell { background: var(--cc-workspace); color: var(--cc-text-strong); }
-.control-center-mark { position: relative; display: grid; width: 2.25rem; height: 2.25rem; flex: none; place-items: center; overflow: hidden; border-radius: .3rem; background: var(--cc-brand); }
-.control-center-mark::before, .control-center-mark::after { content: ""; position: absolute; width: 1.55rem; height: 1.55rem; border: 1.5px solid rgb(255 255 255 / .72); border-radius: 50%; }
-.control-center-mark::before { left: -.7rem; }
-.control-center-mark::after { right: -.7rem; }
-.control-center-mark > span { width: .42rem; height: .42rem; border: 2px solid #fff; background: transparent; transform: rotate(45deg); }
+.control-center-logo { display: block; width: 2.25rem; height: 2.25rem; flex: none; object-fit: contain; }
 
 :focus-visible { outline: 3px solid var(--cc-focus); outline-offset: 2px; }
 

@@ -37,7 +37,15 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
 <header class="site-header sticky top-0 z-50 border-b">
   <div class="site-header-inner">
     <div class="site-header-bar">
-      <BrandLogo href={localize('/')} variant="lockup" alt={copy('GIDS — Global Infectious Disease Surveillance', 'GIDS — 全球传染病监测', 'GIDS — Surveillance mondiale des maladies infectieuses')} subtitleText={copy('Global Infectious Disease Surveillance', '全球传染病监测', 'Surveillance mondiale des maladies infectieuses')} class="site-header-brand-block" imgClass="site-header-mark" titleClass="site-header-brandtitle" subtitleClass="site-header-brandline" />
+      <BrandLogo
+        href={localize('/')}
+        variant="lockup"
+        theme="auto"
+        alt={copy('GIDS — Global Infectious Disease Surveillance', 'GIDS — 全球传染病监测', 'GIDS — Surveillance mondiale des maladies infectieuses')}
+        class="site-header-brand-block"
+        imgClass="site-header-mark"
+        wordmarkClass="site-header-wordmark"
+      />
 
       <nav class="site-nav-desktop hidden lg:flex items-center gap-1" aria-label={copy('Primary navigation', '主导航', 'Navigation principale')}>
         {primaryLinks.slice(0, 1).map(link => <a href={localize(link.href)} class:list={['nav-link focus-ring', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
@@ -127,10 +135,8 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   .site-header-inner { width: min(73.75rem, calc(100% - 2rem)); margin-inline: auto; }
   .site-header-bar { display: flex; height: 4.5rem; align-items: center; justify-content: space-between; gap: 1.25rem; }
   .site-header-brand-block { gap: .9rem; }
-  .site-header-brand-copy { display: flex; gap: .12rem; }
-  .site-header-brandtitle { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: 1.08rem; font-weight: 700; line-height: 1.05; white-space: nowrap; }
-  .site-header-brandline { color: rgb(var(--text-muted)); font-size: .68rem; font-weight: 700; letter-spacing: .18em; line-height: 1.05; text-transform: uppercase; white-space: nowrap; }
   .site-header-mark { width: 2.35rem; height: 2.35rem; flex-shrink: 0; padding: 0; background: transparent; box-shadow: none; }
+  .site-header-brand-block .site-header-wordmark { width: auto; max-width: 8rem; height: 3rem; border-radius: 0; box-shadow: none; }
 
   .site-header .nav-link { display: inline-flex; align-items: center; min-height: 2.5rem; padding: .45rem .7rem; color: rgb(var(--text-muted)); border: 0; border-radius: 4px; box-shadow: none; font-size: .82rem; font-weight: 600; text-decoration: none; }
   .site-header .nav-link:hover { color: rgb(var(--text-strong)); background: rgb(var(--bg-soft)); }
@@ -197,15 +203,18 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
 
   @media (min-width: 1024px) { #mobile-menu-toggle { display: none; } }
   @media (min-width: 640px) { .site-mobile-tools { display: none; } }
-  @media (max-width: 1023px) { .site-header-brandline { display: none; } .site-header-actions { gap: .35rem; } }
+  @media (max-width: 1023px) { .site-header-actions { gap: .35rem; } }
   @media (max-width: 639px) {
     .site-header-brand-block { gap: .45rem; }
-    .site-header-brandtitle { font-size: 1.05rem; }
     .site-header-mark { width: 2rem; height: 2rem; }
+    .site-header-brand-block .site-header-wordmark { width: auto; max-width: 6.5rem; height: 2.5rem; }
     .site-language-summary-label { display: none; }
     .site-search-trigger, .site-icon-btn { min-width: 2.75rem; padding: .55rem; }
     .site-search-dialog { width: calc(100vw - 1rem); max-height: calc(100vh - 1rem); }
     .site-search-footer { align-items: flex-start; flex-direction: column; }
+  }
+  @media (max-width: 359px) {
+    .site-header-brand-block .site-header-wordmark { display: none; }
   }
 </style>
 

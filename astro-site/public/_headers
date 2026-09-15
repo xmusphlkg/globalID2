@@ -22,7 +22,7 @@
   Cache-Control: public, max-age=86400
 
 # Static assets
-/favicon.svg
+/logo-mark-128.png
   Cache-Control: public, max-age=86400
 
 /og-default.png

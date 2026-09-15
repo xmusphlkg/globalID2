@@ -80,7 +80,7 @@ const maintainer = copy({
           alt="GIDS"
           class="site-footer-logo"
           loading="lazy"
-          wordmarkClass="h-11 w-auto max-w-[280px]"
+          wordmarkClass="site-footer-wordmark"
         />
         <p class="site-footer-copy text-sm leading-relaxed">
           {copy('Global infectious disease data with official source links and guidance for interpretation.', '全球传染病监测数据，附官方来源链接与数据使用提示。', 'Données mondiales sur les maladies infectieuses, avec liens vers les sources officielles et conseils d’interprétation.')}
@@ -168,6 +168,12 @@ const maintainer = copy({
     display: grid;
     grid-template-columns: 1.25fr .75fr 1fr 1.15fr;
     gap: clamp(2rem, 4vw, 4.5rem);
+  }
+  :global(.site-footer-wordmark) {
+    display: block;
+    width: min(10rem, 100%);
+    height: auto;
+    border-radius: 0;
   }
   .site-footer-maintainer {
     padding-left: 1.25rem;
