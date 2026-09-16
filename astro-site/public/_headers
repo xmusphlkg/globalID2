@@ -25,6 +25,9 @@
 /logo-mark-128.png
   Cache-Control: public, max-age=86400
 
+/scripts/analytics.js
+  Cache-Control: public, max-age=86400
+
 /og-default.png
   Cache-Control: public, max-age=86400
 
