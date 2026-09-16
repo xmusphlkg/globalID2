@@ -81,6 +81,13 @@ SITE_VISUAL_MODULE_PREFIXES = (
     "DiseaseMonthlyBar.",
     "EpidemicCurve.",
 )
+# These files are atomically maintained by background quality automation and
+# are part of the generated public-data snapshot, not source code.  They must
+# not make an otherwise valid unattended release fail its clean-worktree gate.
+# Keep this list deliberately narrow: unknown tracked changes remain blocking.
+RELEASE_RUNTIME_MUTABLE_PATHS = (
+    "configs/literature/weekly_ai_reviews.json",
+)
 AUTO_RELEASE_TASK_TYPES = (
     TaskType.CRAWL_DATA,
     TaskType.PROCESS_DATA,
@@ -1041,7 +1048,14 @@ class DataReleaseService:
             },
             "blockers": [],
         }
-        worktree = await self._git_status_paths()
+        worktree_all = await self._git_status_paths()
+        worktree = release_checks.release_blocking_worktree_paths(
+            worktree_all,
+            runtime_mutable_paths=RELEASE_RUNTIME_MUTABLE_PATHS,
+        )
+        runtime_mutable_worktree = [
+            path for path in worktree_all if path not in worktree
+        ]
         tracked_generated_paths = await self._tracked_generated_paths()
 
         python_path = self._python_executable()
@@ -1112,7 +1126,9 @@ class DataReleaseService:
                 "write_check_output": download_repo["payload"]["write_check_output"],
                 "ssh_transport": download_repo["payload"].get("ssh_transport"),
                 "require_clean_worktree": job.require_clean_worktree,
+                "dirty_paths": worktree_all,
                 "dirty_blocking_paths": worktree,
+                "dirty_runtime_mutable_paths": runtime_mutable_worktree,
             },
             "cloudflare": cloudflare["payload"],
             "raw_archive": raw_archive["payload"],
@@ -1126,6 +1142,7 @@ class DataReleaseService:
                 "generated_paths": list(GENERATED_DATA_PATHS),
                 "tracked_paths": tracked_generated_paths,
                 "enforced": not tracked_generated_paths,
+                "runtime_mutable_paths": list(RELEASE_RUNTIME_MUTABLE_PATHS),
             },
         }
 
@@ -1342,6 +1359,9 @@ class DataReleaseService:
             "source_branch": source_branch or "detached",
             "source_commit": source_commit or "unknown",
             "deployment_branch": deployment_branch,
+            # Keep the provenance flag truthful: runtime-mutated registries do
+            # not block the release, but they are still changes relative to
+            # the source commit and must be surfaced to the deployment system.
             "commit_dirty": bool(await self._git_status_paths()),
         }
 

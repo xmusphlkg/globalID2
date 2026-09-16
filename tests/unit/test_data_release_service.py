@@ -604,6 +604,17 @@ async def test_release_preflight_checks_direct_download_repo_when_enabled(
     assert dirty_checks["git"]["dirty_blocking_paths"] == ["CHANGELOG.md"]
     assert any("worktree is not clean" in item for item in dirty_checks["blockers"])
 
+    # The weekly AI review registry is an atomically-updated runtime artifact;
+    # it must not block the release, but remains visible in the audit payload.
+    worktree_paths.clear()
+    worktree_paths.append("configs/literature/weekly_ai_reviews.json")
+    runtime_only_checks = await service.integration_checks("site-release")
+    assert runtime_only_checks["overall_ready"] is True
+    assert runtime_only_checks["git"]["dirty_blocking_paths"] == []
+    assert runtime_only_checks["git"]["dirty_runtime_mutable_paths"] == [
+        "configs/literature/weekly_ai_reviews.json"
+    ]
+
 
 @pytest.mark.asyncio
 async def test_release_preflight_does_not_invent_production_branch_blocker_on_cloudflare_api_failure(
@@ -889,3 +900,29 @@ async def test_site_release_identity_keeps_checkout_branch_when_deployment_diffe
 
     assert identity["source_branch"] == "feature/release-preview"
     assert identity["deployment_branch"] == "master"
+
+
+@pytest.mark.asyncio
+async def test_site_release_identity_records_runtime_registry_changes_as_dirty(monkeypatch):
+    service = DataReleaseService()
+
+    async def git_status_paths():
+        return ["configs/literature/weekly_ai_reviews.json"]
+
+    async def git_head_full():
+        return "a" * 40
+
+    async def current_git_branch():
+        return "master"
+
+    async def git_branch_commit(_branch):
+        return "a" * 40
+
+    monkeypatch.setattr(service, "_git_status_paths", git_status_paths)
+    monkeypatch.setattr(service, "_git_head_full", git_head_full)
+    monkeypatch.setattr(service, "_current_git_branch", current_git_branch)
+    monkeypatch.setattr(service, "_git_branch_commit", git_branch_commit)
+
+    identity = await service._site_release_identity("master")
+
+    assert identity["commit_dirty"] is True
