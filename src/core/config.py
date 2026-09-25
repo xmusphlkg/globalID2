@@ -780,6 +780,34 @@ class LiteratureSettings(_BaseEnvSettings):
     autopilot_exact_relation_min_confidence: float = Field(default=0.78, ge=0.0, le=1.0)
     autopilot_context_relation_min_confidence: float = Field(default=0.82, ge=0.0, le=1.0)
     autopilot_summary_min_quality: float = Field(default=0.90, ge=0.0, le=1.0)
+    autopilot_reconcile_batch_size: int = Field(
+        default=100,
+        ge=1,
+        le=5000,
+        description="Maximum articles or summaries held in memory per autopilot reconciliation batch",
+    )
+    autopilot_statement_timeout_seconds: int = Field(
+        default=300,
+        ge=30,
+        le=3600,
+        description="PostgreSQL statement timeout applied locally to one autopilot transaction",
+    )
+    autopilot_lock_timeout_seconds: int = Field(
+        default=15,
+        ge=1,
+        le=300,
+        description="PostgreSQL lock wait timeout applied locally to one autopilot transaction",
+    )
+    payload_compaction_enabled: bool = Field(
+        default=True,
+        description="Incrementally compact legacy provider payloads after successful ingest writes",
+    )
+    payload_compaction_batch_size: int = Field(
+        default=1000,
+        ge=1,
+        le=10000,
+        description="Maximum legacy payload rows compacted in one bounded maintenance transaction",
+    )
     autopilot_auto_reject_weak_links: bool = Field(default=True)
     autopilot_auto_exclude_incomplete: bool = Field(default=True)
     autopilot_auto_exclude_preprints: bool = Field(default=True)

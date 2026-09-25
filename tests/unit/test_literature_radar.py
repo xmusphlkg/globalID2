@@ -37,7 +37,11 @@ from src.literature.normalization import normalize_europe_pmc
 from src.domain import LiteratureSummary
 from src.services.literature_gap_service import build_gap_query_plan
 from src.services.literature_automation_service import (
+    _article_reconciliation_statement,
+    _english_summary_fingerprint_statement,
+    _link_reconciliation_statement,
     _published_revalidation_status,
+    _summary_reconciliation_statement,
     decide_article,
     decide_evidence_link,
     decide_summary,
@@ -46,6 +50,30 @@ from dashboard.api.routers.literature import _publication_blockers
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_autopilot_summary_reconciliation_does_not_load_heavy_article_payloads():
+    sql = str(_summary_reconciliation_statement())
+
+    assert "literature_articles.abstract_text" in sql
+    assert "literature_articles.publication_status" in sql
+    assert "literature_articles.source_payload" not in sql
+    assert "literature_articles.source_urls" not in sql
+
+
+def test_autopilot_reconciliation_queries_are_keyset_bounded():
+    link_sql = str(_link_reconciliation_statement(after_id=10, batch_size=25))
+    article_sql = str(_article_reconciliation_statement(after_id=10, batch_size=25))
+    english_sql = str(
+        _english_summary_fingerprint_statement(after_id=10, batch_size=25)
+    )
+
+    assert "literature_signal_article_links.id >" in link_sql
+    assert "literature_articles.source_payload" not in link_sql
+    assert "literature_articles.id >" in article_sql
+    assert "literature_articles.source_payload" not in article_sql
+    assert "literature_summaries.id >" in english_sql
+    assert "literature_articles" not in english_sql
 
 
 def test_disease_evidence_events_separate_guidance_from_vaccine_policy_evidence():

@@ -2,6 +2,19 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## Unreleased
+
+### Changed
+
+- Research Radar governance now reconciles evidence links, articles, and summaries with keyset-bounded queries and minimal article projections instead of retaining the full literature catalogue and provider payloads in worker memory.
+- Literature ingestion now stores a versioned, bounded provider-evidence payload; legacy payloads are compacted incrementally with row locks, resumable maintenance batches, and explicit byte-savings telemetry.
+- Unchanged classifier evidence no longer rewrites relationship rows or churns classification timestamps, reducing database writes during duplicate-heavy incremental crawls.
+
+### Fixed
+
+- Prevented large Research Radar reconciliation transactions from pushing the shared worker to its memory ceiling while country disease crawls are active.
+- Prevented concurrent payload compaction from overwriting newer provider metadata, and isolated maintenance failures so a completed source ingest is not reported as a crawl failure.
+
 ## [0.10.1] - 2026-09-12
 
 ### Added

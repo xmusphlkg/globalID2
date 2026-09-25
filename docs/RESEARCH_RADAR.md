@@ -182,6 +182,32 @@ but no longer consume the actionable human-review budget.
 venv/bin/python scripts/run_literature_autopilot.py --apply
 ```
 
+Reconciliation uses ordered keyset batches and intentionally avoids loading
+private provider payloads for summary checks. The default batch size is 100;
+operators can lower it for a constrained worker without changing policy:
+
+```bash
+venv/bin/python scripts/run_literature_autopilot.py \
+  --batch-size 250 --statement-timeout-seconds 300 --lock-timeout-seconds 15
+```
+
+Source payloads are versioned and reduced to the bounded evidence required for
+reclassification, provenance coverage, OA audit, and correction/retraction
+decisions. New ingests compact on write and retire one legacy batch after each
+successful ingest. Audit the first legacy batch without writes, then run the
+resumable maintenance command when a faster catch-up is required:
+
+```bash
+PYTHONPATH=. venv/bin/python scripts/compact_literature_payloads.py --batch-size 1000
+PYTHONPATH=. venv/bin/python scripts/compact_literature_payloads.py \
+  --apply --batch-size 1000 --max-rows 10000
+```
+
+Each apply batch locks only selected rows and skips rows another compactor has
+already locked, so it cannot replace newer ingest metadata with a stale JSON
+snapshot. The command reports scanned rows and before/after byte totals; repeat
+bounded invocations until fewer than `--batch-size` rows are scanned.
+
 When classifier aliases, controlled metadata rules, or their version changes,
 rehearse and then backfill stored records before the next public release. This
 path makes no provider requests and preserves editorial publication decisions:

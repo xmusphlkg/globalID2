@@ -709,6 +709,29 @@ class LiteraturePipeline:
             if task and not classified_candidates:
                 await task_manager.update_task_progress(task.task_uuid, 95)
 
+            payload_compaction = {
+                "scanned": 0,
+                "compacted": 0,
+                "saved_bytes": 0,
+                "errors": 0,
+            }
+            if getattr(self.config, "payload_compaction_enabled", False):
+                from .storage_maintenance import compact_source_payload_batch
+
+                try:
+                    payload_compaction = await compact_source_payload_batch(
+                        batch_size=int(
+                            getattr(self.config, "payload_compaction_batch_size", 1000)
+                        )
+                    )
+                    payload_compaction["errors"] = 0
+                except Exception as exc:
+                    payload_compaction["errors"] = 1
+                    logger.warning(
+                        "Research Radar payload compaction deferred error_type={}",
+                        type(exc).__name__ or "Exception",
+                    )
+
             automation = None
             # A provider-wide failure means every candidate in this batch may be
             # missing metadata used by the deterministic publication gates.  Do
@@ -782,6 +805,10 @@ class LiteraturePipeline:
                 "autopilot_skipped_degraded_enrichment": int(
                     self.config.autopilot_enabled and enrichment_degraded
                 ),
+                "payload_compaction_scanned": int(payload_compaction["scanned"]),
+                "payload_compaction_compacted": int(payload_compaction["compacted"]),
+                "payload_compaction_saved_bytes": int(payload_compaction["saved_bytes"]),
+                "payload_compaction_errors": int(payload_compaction["errors"]),
                 "source_records_seen": int((source_result.checkpoint if source_result else {}).get("records_seen") or len(raw_records)),
                 "source_records_returned": int((source_result.checkpoint if source_result else {}).get("records_returned") or len(raw_records)),
                 "source_records_prefetched": int(

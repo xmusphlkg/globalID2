@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
+import json
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -18,6 +20,7 @@ from src.domain import (
 
 from .classification import CLASSIFICATION_VERSION
 from .content_policy import content_policy
+from .payloads import SOURCE_PAYLOAD_SCHEMA_VERSION, compact_source_payload
 from .types import ArticleCandidate, Classification
 
 
@@ -58,10 +61,8 @@ def _classification_metadata(
             for match in values
         }
 
-    return {
-        **existing,
+    classification_payload = {
         "classification_version": CLASSIFICATION_VERSION,
-        "classified_at": datetime.now(timezone.utc).isoformat(),
         "discovery_score_evidence": {
             "surveillance_relation_level": classification.surveillance_relation_level,
             "surveillance_relation_score": classification.surveillance_relation_score,
@@ -79,6 +80,22 @@ def _classification_metadata(
                 "matched_terms": classification.research_domain_terms,
             },
         },
+    }
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            classification_payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    if existing.get("classification_fingerprint") == fingerprint:
+        return existing
+    return {
+        **existing,
+        **classification_payload,
+        "classification_fingerprint": fingerprint,
+        "classified_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -141,7 +158,18 @@ class LiteratureRepository:
         article.relevance_score = classification.relevance_score
         article.public_health_score = classification.public_health_score
         article.discovery_score = classification.discovery_score
-        article.source_payload = {**(article.source_payload or {}), **candidate.source_payload}
+        compacted_payload = compact_source_payload({
+            **(article.source_payload or {}),
+            **candidate.source_payload,
+        })
+        if (
+            compacted_payload != (article.source_payload or {})
+            or int(getattr(article, "source_payload_version", 0) or 0)
+            != SOURCE_PAYLOAD_SCHEMA_VERSION
+        ):
+            article.source_payload = compacted_payload
+            article.source_payload_version = SOURCE_PAYLOAD_SCHEMA_VERSION
+            article.source_payload_compacted_at = datetime.now(timezone.utc)
         metadata = dict(article.metadata_ or {})
         if candidate.version_relations:
             mapped_relations = await self._map_version_relations(article, candidate.version_relations)
@@ -159,6 +187,10 @@ class LiteratureRepository:
             metadata["discovery_origins"] = origins[-20:]
         metadata["content_policy"] = content_policy(article)
         article.metadata_ = _classification_metadata(metadata, classification)
+        classification_changed = (
+            article.metadata_.get("classification_fingerprint")
+            != existing_metadata.get("classification_fingerprint")
+        )
         if (
             not editorial_locked
             and not autopilot_locked
@@ -214,7 +246,8 @@ class LiteratureRepository:
                 ))
 
         await self.db.flush()
-        await self._replace_links(candidate.article_id, classification)
+        if inserted or classification_changed:
+            await self._replace_links(candidate.article_id, classification)
         has_rss = "rss" in candidate.source_payload
         has_official_guidance = "official_guidance" in candidate.source_payload
         has_pubmed = "pubmed" in candidate.source_payload

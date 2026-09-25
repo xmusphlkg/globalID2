@@ -1,4 +1,3 @@
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -228,6 +227,8 @@ async def test_apply_backfill_resumes_batches_and_preserves_editorial_state(back
         assert rows[0].source_payload["openalex"]["related_works"] == ["W40"]
         assert "abstract_inverted_index" not in rows[0].source_payload["openalex"]
         assert "oa_locations" not in rows[0].source_payload["unpaywall"]
+        assert rows[0].source_payload_version == 1
+        assert rows[0].source_payload_compacted_at is not None
 
 
 async def test_provider_failure_does_not_advance_checkpoint_past_failed_batch(backfill_database, tmp_path):

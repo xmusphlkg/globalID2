@@ -306,9 +306,9 @@ def test_deployment_probe_does_not_retry_auth_or_configuration_failure(tmp_path:
 
 def test_migration_graph_is_linear_and_database_guard_requires_disposable_opt_in() -> None:
     graph = validate_revision_graph()
-    assert graph["head"] == "0012_literature_source_length"
+    assert graph["head"] == "0013_literature_incremental"
     assert graph["base"] == "0001_control_plane_baseline"
-    assert graph["revision_count"] == 12
+    assert graph["revision_count"] == 13
 
     url = "postgresql://user:pass@localhost/globalid_migration_smoke"
     with pytest.raises(MigrationSmokeError, match="opt_in"):

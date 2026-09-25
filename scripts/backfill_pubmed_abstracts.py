@@ -25,6 +25,10 @@ from src.core.database import get_db  # noqa: E402
 from src.domain import LiteratureArticle  # noqa: E402
 from src.literature.clients import PubMedClient  # noqa: E402
 from src.literature.normalization import compact_text  # noqa: E402
+from src.literature.payloads import (  # noqa: E402
+    SOURCE_PAYLOAD_SCHEMA_VERSION,
+    compact_source_payload,
+)
 
 
 APPLY_LOCK_PATH = ROOT / "data/cache/literature_pubmed_abstract_backfill.lock"
@@ -82,6 +86,8 @@ def _abstract_projection(article: LiteratureArticle) -> dict[str, Any]:
         "abstract_license": article.abstract_license,
         "source_urls": dict(article.source_urls or {}),
         "source_payload": dict(article.source_payload or {}),
+        "source_payload_version": article.source_payload_version,
+        "source_payload_compacted_at": article.source_payload_compacted_at,
     }
 
 
@@ -96,10 +102,12 @@ def _apply_pubmed_payload(article: LiteratureArticle, payload: dict[str, Any]) -
         **dict(article.source_urls or {}),
         "pubmed": f"https://pubmed.ncbi.nlm.nih.gov/{article.pmid}/",
     }
-    article.source_payload = {
+    article.source_payload = compact_source_payload({
         **dict(article.source_payload or {}),
         "pubmed_efetch": payload,
-    }
+    })
+    article.source_payload_version = SOURCE_PAYLOAD_SCHEMA_VERSION
+    article.source_payload_compacted_at = datetime.now(timezone.utc)
     return True
 
 
@@ -189,6 +197,10 @@ async def _main(args: argparse.Namespace) -> dict[str, Any]:
                     article.abstract_license = before["abstract_license"]
                     article.source_urls = before["source_urls"]
                     article.source_payload = before["source_payload"]
+                    article.source_payload_version = before["source_payload_version"]
+                    article.source_payload_compacted_at = before[
+                        "source_payload_compacted_at"
+                    ]
             else:
                 stats["unchanged"] += 1
         if not args.apply:

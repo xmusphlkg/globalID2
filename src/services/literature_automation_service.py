@@ -16,7 +16,8 @@ import re
 from typing import Any, Literal, Mapping
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
+from sqlalchemy.orm import Load
 
 from src.core.config import get_config
 from src.core.database import get_db
@@ -48,11 +49,143 @@ class AutomationDecision:
     reasons: tuple[str, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class _EffectiveLink:
+    link_id: int
+    article_id: str
+    gap_id: str | None
+    relation_level: str
+    status: str
+
+
 _CORRECTION_TITLE = re.compile(r"^\s*(?:correction|corrigendum|erratum)\s*(?::|to\b)", re.IGNORECASE)
 _STRICT_ANIMAL_ONLY_MAX_SCORE = 0.20
 _NON_PUBLIC_RESEARCH_DOMAINS = frozenset({"animal_only", "basic_research", "plant_only"})
 _POLICY_OVERRIDE_FIELDS = frozenset({"autopilot_article_min_score"})
 _SCORED_REASON = re.compile(r"^(?:discovery score|summary quality)\s+[0-9.]+")
+
+
+def _link_reconciliation_statement(*, after_id: int = 0, batch_size: int = 100):
+    return (
+        select(LiteratureSignalArticleLink, LiteratureArticle)
+        .join(
+            LiteratureArticle,
+            LiteratureArticle.article_id == LiteratureSignalArticleLink.article_id,
+        )
+        .options(
+            Load(LiteratureArticle).load_only(
+                LiteratureArticle.id,
+                LiteratureArticle.article_id,
+                LiteratureArticle.title,
+                LiteratureArticle.doi,
+                LiteratureArticle.pmid,
+                LiteratureArticle.pmcid,
+                LiteratureArticle.journal,
+                LiteratureArticle.authors,
+                LiteratureArticle.published_at,
+                LiteratureArticle.peer_review_status,
+                LiteratureArticle.integrity_status,
+                LiteratureArticle.publication_status,
+            )
+        )
+        .where(LiteratureSignalArticleLink.id > after_id)
+        .order_by(LiteratureSignalArticleLink.id)
+        .limit(batch_size)
+    )
+
+
+def _article_reconciliation_statement(*, after_id: int = 0, batch_size: int = 100):
+    return (
+        select(LiteratureArticle)
+        .options(
+            Load(LiteratureArticle).load_only(
+                LiteratureArticle.id,
+                LiteratureArticle.article_id,
+                LiteratureArticle.title,
+                LiteratureArticle.doi,
+                LiteratureArticle.pmid,
+                LiteratureArticle.pmcid,
+                LiteratureArticle.journal,
+                LiteratureArticle.authors,
+                LiteratureArticle.published_at,
+                LiteratureArticle.peer_review_status,
+                LiteratureArticle.integrity_status,
+                LiteratureArticle.discovery_score,
+                LiteratureArticle.publication_status,
+                LiteratureArticle.metadata_,
+            )
+        )
+        .where(
+            LiteratureArticle.publication_status.in_(("review", "published")),
+            LiteratureArticle.id > after_id,
+        )
+        .order_by(LiteratureArticle.id)
+        .limit(batch_size)
+    )
+
+
+def _summary_reconciliation_statement(*, after_id: int = 0, batch_size: int = 100):
+    return (
+        select(LiteratureSummary, LiteratureArticle)
+        .join(
+            LiteratureArticle,
+            LiteratureArticle.article_id == LiteratureSummary.article_id,
+        )
+        .options(
+            Load(LiteratureArticle).load_only(
+                LiteratureArticle.article_id,
+                LiteratureArticle.title,
+                LiteratureArticle.doi,
+                LiteratureArticle.journal,
+                LiteratureArticle.published_at,
+                LiteratureArticle.abstract_text,
+                LiteratureArticle.integrity_status,
+                LiteratureArticle.publication_status,
+            )
+        )
+        .where(
+            LiteratureSummary.status.in_(("review", "published", "archived")),
+            LiteratureSummary.id > after_id,
+        )
+        .order_by(LiteratureSummary.id)
+        .limit(batch_size)
+    )
+
+
+def _english_summary_fingerprint_statement(*, after_id: int = 0, batch_size: int = 100):
+    return (
+        select(
+            LiteratureSummary.id,
+            LiteratureSummary.article_id,
+            *(getattr(LiteratureSummary, field) for field in SUMMARY_FIELDS),
+        )
+        .where(
+            LiteratureSummary.language == "en",
+            LiteratureSummary.status.in_(("review", "published", "archived")),
+            LiteratureSummary.id > after_id,
+        )
+        .order_by(LiteratureSummary.id)
+        .limit(batch_size)
+    )
+
+
+async def _configure_transaction_limits(
+    db: Any,
+    *,
+    statement_timeout_seconds: int,
+    lock_timeout_seconds: int,
+) -> None:
+    bind = db.get_bind()
+    if bind.dialect.name != "postgresql":
+        return
+    await db.execute(
+        text("SELECT set_config('statement_timeout', :value, true)"),
+        {"value": f"{statement_timeout_seconds}s"},
+    )
+    await db.execute(
+        text("SELECT set_config('lock_timeout', :value, true)"),
+        {"value": f"{lock_timeout_seconds}s"},
+    )
 
 
 def _effective_config(config: Any, overrides: Mapping[str, float] | None) -> Any:
@@ -163,7 +296,9 @@ def _has_explicit_correction_parent(article: Any) -> bool:
     """
     if not _CORRECTION_TITLE.search(str(article.title or "")):
         return False
-    source_payload = getattr(article, "source_payload", None)
+    source_payload = getattr(article, "_autopilot_source_payload", None)
+    if source_payload is None:
+        source_payload = getattr(article, "source_payload", None)
     payload = source_payload if isinstance(source_payload, dict) else {}
     updates = payload.get("update-to")
     if not isinstance(updates, list):
@@ -440,13 +575,40 @@ class LiteratureAutomationService:
         export: bool | None = None,
         policy_overrides: Mapping[str, float] | None = None,
         diagnostics: bool = False,
+        batch_size: int | None = None,
+        statement_timeout_seconds: int | None = None,
+        lock_timeout_seconds: int | None = None,
     ) -> dict[str, Any]:
         config = _effective_config(get_config().literature, policy_overrides)
         if not config.autopilot_enabled and not dry_run:
             return {"enabled": False, "dry_run": False, "policy_version": POLICY_VERSION, "changed": 0}
+        effective_batch_size = int(
+            config.autopilot_reconcile_batch_size if batch_size is None else batch_size
+        )
+        effective_statement_timeout = int(
+            config.autopilot_statement_timeout_seconds
+            if statement_timeout_seconds is None
+            else statement_timeout_seconds
+        )
+        effective_lock_timeout = int(
+            config.autopilot_lock_timeout_seconds
+            if lock_timeout_seconds is None
+            else lock_timeout_seconds
+        )
+        if not 1 <= effective_batch_size <= 5000:
+            raise ValueError("batch_size must be between 1 and 5000")
+        if not 30 <= effective_statement_timeout <= 3600:
+            raise ValueError("statement_timeout_seconds must be between 30 and 3600")
+        if not 1 <= effective_lock_timeout <= 300:
+            raise ValueError("lock_timeout_seconds must be between 1 and 300")
         async with _RUN_LOCK:
             result = await self._reconcile_database(
-                config, dry_run=dry_run, diagnostics=diagnostics
+                config,
+                dry_run=dry_run,
+                diagnostics=diagnostics,
+                batch_size=effective_batch_size,
+                statement_timeout_seconds=effective_statement_timeout,
+                lock_timeout_seconds=effective_lock_timeout,
             )
             should_export = config.autopilot_export_on_change if export is None else export
             if not dry_run and should_export and result["changed"]:
@@ -456,7 +618,14 @@ class LiteratureAutomationService:
             return result
 
     async def _reconcile_database(
-        self, config: Any, *, dry_run: bool, diagnostics: bool = False
+        self,
+        config: Any,
+        *,
+        dry_run: bool,
+        diagnostics: bool = False,
+        batch_size: int,
+        statement_timeout_seconds: int,
+        lock_timeout_seconds: int,
     ) -> dict[str, Any]:
         at = _now()
         counts = {
@@ -489,231 +658,303 @@ class LiteratureAutomationService:
                 decision_reasons[entity][_diagnostic_reason(decision)] += 1
 
         async with get_db() as db:
-            links_with_articles = (
-                await db.execute(
-                    select(LiteratureSignalArticleLink, LiteratureArticle).join(
-                        LiteratureArticle,
-                        LiteratureArticle.article_id == LiteratureSignalArticleLink.article_id,
-                    )
-                )
-            ).all()
-            effective_link_status: dict[int, str] = {}
-            links_by_article: dict[str, list[tuple[LiteratureSignalArticleLink, str]]] = {}
-            links_by_gap: dict[str, list[tuple[LiteratureSignalArticleLink, LiteratureArticle]]] = {}
-            article_by_id: dict[str, LiteratureArticle] = {}
-            for link, article in links_with_articles:
-                article_by_id[article.article_id] = article
-                effective = link.status
-                if link.status in {"review", "deprioritized"}:
-                    decision = decide_evidence_link(link, article, config, now=at)
-                    record_reason("links", decision)
-                    if decision.action == "confirm":
-                        effective = "confirmed"
-                        counts["links_confirmed"] += 1
-                    elif decision.action == "reject":
-                        effective = "rejected"
-                        counts["links_rejected"] += 1
-                    elif link.status == "review":
-                        counts["link_exceptions"] += 1
-                    if not dry_run and effective != link.status:
-                        link.status = effective
-                        link.reviewed_at = at
-                        link.reviewed_by = AUTOPILOT_ACTOR
-                        link.review_note = "; ".join(decision.reasons)
-                        link.metadata_ = {**(link.metadata_ or {}), "autopilot": _audit_payload(decision, at=at, config=config)}
-                effective_link_status[link.id] = effective
-                links_by_article.setdefault(article.article_id, []).append((link, effective))
-                if link.gap_id:
-                    links_by_gap.setdefault(link.gap_id, []).append((link, article))
-
-            disease_confidence = {
-                article_id: float(value or 0.0)
-                for article_id, value in (
+            await _configure_transaction_limits(
+                db,
+                statement_timeout_seconds=statement_timeout_seconds,
+                lock_timeout_seconds=lock_timeout_seconds,
+            )
+            confirmed_levels_by_article: dict[str, set[str]] = {}
+            links_by_gap: dict[str, list[_EffectiveLink]] = {}
+            linked_article_status: dict[str, str] = {}
+            link_cursor = 0
+            while True:
+                links_with_articles = (
                     await db.execute(
-                        select(
-                            LiteratureDiseaseLink.article_id,
-                            func.max(LiteratureDiseaseLink.confidence),
+                        _link_reconciliation_statement(
+                            after_id=link_cursor,
+                            batch_size=batch_size,
                         )
-                        .join(
-                            LiteratureArticle,
-                            LiteratureArticle.article_id == LiteratureDiseaseLink.article_id,
-                        )
-                        .where(LiteratureArticle.publication_status.in_(("review", "published")))
-                        .group_by(LiteratureDiseaseLink.article_id)
                     )
                 ).all()
-            }
+                if not links_with_articles:
+                    break
+                link_cursor = int(links_with_articles[-1][0].id)
+                for link, article in links_with_articles:
+                    linked_article_status[article.article_id] = article.publication_status
+                    effective = link.status
+                    if link.status in {"review", "deprioritized"}:
+                        decision = decide_evidence_link(link, article, config, now=at)
+                        record_reason("links", decision)
+                        if decision.action == "confirm":
+                            effective = "confirmed"
+                            counts["links_confirmed"] += 1
+                        elif decision.action == "reject":
+                            effective = "rejected"
+                            counts["links_rejected"] += 1
+                        elif link.status == "review":
+                            counts["link_exceptions"] += 1
+                        if not dry_run and effective != link.status:
+                            link.status = effective
+                            link.reviewed_at = at
+                            link.reviewed_by = AUTOPILOT_ACTOR
+                            link.review_note = "; ".join(decision.reasons)
+                            link.metadata_ = {
+                                **(link.metadata_ or {}),
+                                "autopilot": _audit_payload(decision, at=at, config=config),
+                            }
+                    projected = _EffectiveLink(
+                        link_id=int(link.id),
+                        article_id=article.article_id,
+                        gap_id=link.gap_id,
+                        relation_level=link.relation_level,
+                        status=effective,
+                    )
+                    if effective == "confirmed":
+                        confirmed_levels_by_article.setdefault(
+                            article.article_id, set()
+                        ).add(link.relation_level)
+                    if link.gap_id:
+                        links_by_gap.setdefault(link.gap_id, []).append(projected)
+                if not dry_run:
+                    await db.flush()
+                for link, _article in links_with_articles:
+                    db.expunge(link)
+                unique_articles = {
+                    id(article): article for _link, article in links_with_articles
+                }
+                for article in unique_articles.values():
+                    db.expunge(article)
             # Review rows are candidates for first publication. Autopilot-owned
             # published rows are revalidated so stale policy or classification
             # evidence cannot remain on the public boundary indefinitely.
-            articles = (
-                await db.execute(
-                    select(LiteratureArticle).where(
-                        LiteratureArticle.publication_status.in_(("review", "published"))
+            effective_article_status: dict[str, str] = {}
+            article_cursor = 0
+            while True:
+                articles = (
+                    await db.execute(
+                        _article_reconciliation_statement(
+                            after_id=article_cursor,
+                            batch_size=batch_size,
+                        )
                     )
-                )
-            ).scalars().all()
-            article_by_id.update({article.article_id: article for article in articles})
-            effective_article_status = {
-                article_id: article.publication_status
-                for article_id, article in article_by_id.items()
-            }
-            for article in articles:
-                was_published = article.publication_status == "published"
-                autopilot_managed = _is_autopilot_managed(article.metadata_)
-                if was_published and not autopilot_managed:
-                    continue
-                confirmed_levels = {
-                    link.relation_level
-                    for link, effective in links_by_article.get(article.article_id, [])
-                    if effective == "confirmed"
-                }
-                decision = decide_article(
-                    article,
-                    config,
-                    max_disease_confidence=disease_confidence.get(article.article_id, 0.0),
-                    confirmed_relation_levels=confirmed_levels,
-                    now=at,
-                )
-                record_reason("articles", decision)
-                if was_published:
-                    desired = _published_revalidation_status(article, decision, now=at)
-                    if desired == "published":
-                        effective_article_status[article.article_id] = desired
-                        continue
-                    if desired == "excluded":
-                        counts["articles_excluded"] += 1
-                    else:
-                        counts["articles_reopened"] += 1
-                elif decision.action == "publish":
-                    desired = "published"
-                    counts["articles_published"] += 1
-                    published_article_ids.append(article.article_id)
-                elif decision.action == "exclude":
-                    desired = "excluded"
-                    counts["articles_excluded"] += 1
-                elif decision.action == "defer":
-                    desired = "review"
-                    counts["articles_deferred"] += 1
-                else:
-                    desired = "review"
-                    counts["article_exceptions"] += 1
-                effective_article_status[article.article_id] = desired
-                if dry_run:
-                    continue
-                # Refresh the final evaluated decision even when status remains
-                # review. This replaces stale exclude metadata after a newer
-                # classification legitimately reopens the record.
-                if not (article.metadata_ or {}).get("editorial_locked"):
-                    article.metadata_ = {
-                        **(article.metadata_ or {}),
-                        "autopilot": _audit_payload(decision, at=at, config=config),
+                ).scalars().all()
+                if not articles:
+                    break
+                article_cursor = int(articles[-1].id)
+                article_ids = [article.article_id for article in articles]
+                correction_database_ids = [
+                    int(article.id)
+                    for article in articles
+                    if _CORRECTION_TITLE.search(str(article.title or ""))
+                ]
+                correction_payloads = {}
+                if correction_database_ids:
+                    correction_payloads = {
+                        int(database_id): payload
+                        for database_id, payload in (
+                            await db.execute(
+                                select(
+                                    LiteratureArticle.id,
+                                    LiteratureArticle.source_payload,
+                                ).where(
+                                    LiteratureArticle.id.in_(correction_database_ids)
+                                )
+                            )
+                        ).all()
                     }
-                if desired == article.publication_status:
-                    continue
-                previous = article.publication_status
-                article.publication_status = desired
-                db.add(LiteratureStatusEvent(
-                    article_id=article.article_id,
-                    event_type="publication_status_changed",
-                    previous_status=previous,
-                    current_status=desired,
-                    source=AUTOPILOT_ACTOR,
-                    effective_at=at,
-                    metadata_={"policy_version": POLICY_VERSION, "reasons": list(decision.reasons)},
-                ))
-
-            summaries_with_articles = (
-                await db.execute(
-                    select(LiteratureSummary, LiteratureArticle)
-                    .join(
-                        LiteratureArticle,
-                        LiteratureArticle.article_id == LiteratureSummary.article_id,
+                disease_confidence = {
+                    article_id: float(value or 0.0)
+                    for article_id, value in (
+                        await db.execute(
+                            select(
+                                LiteratureDiseaseLink.article_id,
+                                func.max(LiteratureDiseaseLink.confidence),
+                            )
+                            .where(LiteratureDiseaseLink.article_id.in_(article_ids))
+                            .group_by(LiteratureDiseaseLink.article_id)
+                        )
+                    ).all()
+                }
+                for article in articles:
+                    article._autopilot_source_payload = correction_payloads.get(
+                        int(article.id), {}
                     )
-                    .where(
-                        LiteratureSummary.status.in_(("review", "published", "archived"))
-                    )
-                )
-            ).all()
-            english_canonical_fingerprints = {
-                summary.article_id: canonical_summary_fingerprint({
-                    field: getattr(summary, field) for field in SUMMARY_FIELDS
-                })
-                for summary, _article in summaries_with_articles
-                if summary.language == "en"
-            }
-            for summary, article in summaries_with_articles:
-                article_by_id[article.article_id] = article
-                projected_article_status = effective_article_status.get(
-                    article.article_id, article.publication_status
-                )
-                if dry_run and projected_article_status != article.publication_status:
                     original_status = article.publication_status
-                    article.publication_status = projected_article_status
+                    was_published = original_status == "published"
+                    autopilot_managed = _is_autopilot_managed(article.metadata_)
+                    if was_published and not autopilot_managed:
+                        continue
+                    confirmed_levels = confirmed_levels_by_article.get(
+                        article.article_id, set()
+                    )
+                    decision = decide_article(
+                        article,
+                        config,
+                        max_disease_confidence=disease_confidence.get(article.article_id, 0.0),
+                        confirmed_relation_levels=confirmed_levels,
+                        now=at,
+                    )
+                    record_reason("articles", decision)
+                    if was_published:
+                        desired = _published_revalidation_status(article, decision, now=at)
+                        if desired == "published":
+                            continue
+                        if desired == "excluded":
+                            counts["articles_excluded"] += 1
+                        else:
+                            counts["articles_reopened"] += 1
+                    elif decision.action == "publish":
+                        desired = "published"
+                        counts["articles_published"] += 1
+                        if len(published_article_ids) < 100:
+                            published_article_ids.append(article.article_id)
+                    elif decision.action == "exclude":
+                        desired = "excluded"
+                        counts["articles_excluded"] += 1
+                    elif decision.action == "defer":
+                        desired = "review"
+                        counts["articles_deferred"] += 1
+                    else:
+                        desired = "review"
+                        counts["article_exceptions"] += 1
+                    if desired != original_status:
+                        effective_article_status[article.article_id] = desired
+                    if dry_run:
+                        continue
+                    # Refresh the final evaluated decision even when status remains
+                    # review. This replaces stale exclude metadata after a newer
+                    # classification legitimately reopens the record.
+                    if not (article.metadata_ or {}).get("editorial_locked"):
+                        article.metadata_ = {
+                            **(article.metadata_ or {}),
+                            "autopilot": _audit_payload(decision, at=at, config=config),
+                        }
+                    if desired == original_status:
+                        continue
+                    article.publication_status = desired
+                    db.add(LiteratureStatusEvent(
+                        article_id=article.article_id,
+                        event_type="publication_status_changed",
+                        previous_status=original_status,
+                        current_status=desired,
+                        source=AUTOPILOT_ACTOR,
+                        effective_at=at,
+                        metadata_={"policy_version": POLICY_VERSION, "reasons": list(decision.reasons)},
+                    ))
+                if not dry_run:
+                    await db.flush()
+                for article in articles:
+                    db.expunge(article)
+
+            english_canonical_fingerprints: dict[str, str] = {}
+            english_summary_cursor = 0
+            while True:
+                english_summary_rows = (
+                    await db.execute(
+                        _english_summary_fingerprint_statement(
+                            after_id=english_summary_cursor,
+                            batch_size=batch_size,
+                        )
+                    )
+                ).all()
+                if not english_summary_rows:
+                    break
+                english_summary_cursor = int(english_summary_rows[-1][0])
+                for row in english_summary_rows:
+                    english_canonical_fingerprints[row[1]] = canonical_summary_fingerprint({
+                        field: row[index + 2]
+                        for index, field in enumerate(SUMMARY_FIELDS)
+                    })
+            summary_cursor = 0
+            while True:
+                summaries_with_articles = (
+                    await db.execute(
+                        _summary_reconciliation_statement(
+                            after_id=summary_cursor,
+                            batch_size=batch_size,
+                        )
+                    )
+                ).all()
+                if not summaries_with_articles:
+                    break
+                summary_cursor = int(summaries_with_articles[-1][0].id)
+                for summary, article in summaries_with_articles:
+                    projected_article_status = effective_article_status.get(
+                        article.article_id, article.publication_status
+                    )
+                    original_status = article.publication_status
+                    if projected_article_status != original_status:
+                        article.publication_status = projected_article_status
                     decision = decide_summary(
                         summary,
                         article,
                         config,
-                        expected_canonical_summary_fingerprint=english_canonical_fingerprints.get(summary.article_id),
+                        expected_canonical_summary_fingerprint=english_canonical_fingerprints.get(
+                            summary.article_id
+                        ),
                     )
                     article.publication_status = original_status
-                else:
-                    decision = decide_summary(
-                        summary,
-                        article,
-                        config,
-                        expected_canonical_summary_fingerprint=english_canonical_fingerprints.get(summary.article_id),
-                    )
-                record_reason("summaries", decision)
-                if decision.action == "publish":
-                    if summary.status != "published":
-                        counts["summaries_published"] += 1
-                    if not dry_run and summary.status != "published":
-                        summary.status = "published"
-                        summary.generation_metadata = {
-                            **(summary.generation_metadata or {}),
-                            "publication_gate": "automated-quality-gate",
-                            "autopilot": _audit_payload(decision, at=at, config=config),
-                        }
-                        summary.review_notes = (
-                            f"{summary.review_notes or ''} Automatically published by {POLICY_VERSION}."
-                        ).strip()
-                elif decision.action == "archive":
-                    if summary.status != "archived":
-                        counts["summaries_archived"] += 1
-                    if not dry_run and summary.status != "archived":
-                        summary.status = "archived"
-                        summary.generation_metadata = {
-                            **(summary.generation_metadata or {}),
-                            "publication_gate": "parent-article-excluded",
-                            "autopilot": _audit_payload(decision, at=at, config=config),
-                        }
-                elif decision.action == "defer":
-                    counts["summaries_deferred"] += 1
-                    if summary.status == "archived":
-                        counts["summaries_restored"] += 1
-                    elif summary.status == "published" and (summary.generation_metadata or {}).get("autopilot"):
+                    record_reason("summaries", decision)
+                    if decision.action == "publish":
+                        if summary.status != "published":
+                            counts["summaries_published"] += 1
+                        if not dry_run and summary.status != "published":
+                            summary.status = "published"
+                            summary.generation_metadata = {
+                                **(summary.generation_metadata or {}),
+                                "publication_gate": "automated-quality-gate",
+                                "autopilot": _audit_payload(decision, at=at, config=config),
+                            }
+                            summary.review_notes = (
+                                f"{summary.review_notes or ''} Automatically published by {POLICY_VERSION}."
+                            ).strip()
+                    elif decision.action == "archive":
+                        if summary.status != "archived":
+                            counts["summaries_archived"] += 1
+                        if not dry_run and summary.status != "archived":
+                            summary.status = "archived"
+                            summary.generation_metadata = {
+                                **(summary.generation_metadata or {}),
+                                "publication_gate": "parent-article-excluded",
+                                "autopilot": _audit_payload(decision, at=at, config=config),
+                            }
+                    elif decision.action == "defer":
+                        counts["summaries_deferred"] += 1
+                        if summary.status == "archived":
+                            counts["summaries_restored"] += 1
+                        elif summary.status == "published" and (summary.generation_metadata or {}).get("autopilot"):
+                            counts["summaries_reopened"] += 1
+                        if not dry_run:
+                            if summary.status in {"archived", "published"}:
+                                summary.status = "review"
+                            summary.generation_metadata = {
+                                **(summary.generation_metadata or {}),
+                                "publication_gate": "awaiting-article-decision",
+                                "autopilot": _audit_payload(decision, at=at, config=config),
+                            }
+                    elif summary.status == "review":
+                        counts["summary_exceptions"] += 1
+                    elif (summary.generation_metadata or {}).get("autopilot"):
                         counts["summaries_reopened"] += 1
-                    if not dry_run:
-                        if summary.status in {"archived", "published"}:
+                        counts["summary_exceptions"] += 1
+                        if not dry_run:
                             summary.status = "review"
-                        summary.generation_metadata = {
-                            **(summary.generation_metadata or {}),
-                            "publication_gate": "awaiting-article-decision",
-                            "autopilot": _audit_payload(decision, at=at, config=config),
-                        }
-                elif summary.status == "review":
-                    counts["summary_exceptions"] += 1
-                elif (summary.generation_metadata or {}).get("autopilot"):
-                    counts["summaries_reopened"] += 1
-                    counts["summary_exceptions"] += 1
-                    if not dry_run:
-                        summary.status = "review"
-                        summary.generation_metadata = {
-                            **(summary.generation_metadata or {}),
-                            "publication_gate": "automatic-revalidation-failed",
-                            "autopilot_revalidation": _audit_payload(decision, at=at, config=config),
-                        }
+                            summary.generation_metadata = {
+                                **(summary.generation_metadata or {}),
+                                "publication_gate": "automatic-revalidation-failed",
+                                "autopilot_revalidation": _audit_payload(
+                                    decision, at=at, config=config
+                                ),
+                            }
+                if not dry_run:
+                    await db.flush()
+                for summary, _article in summaries_with_articles:
+                    db.expunge(summary)
+                unique_articles = {
+                    id(article): article for _summary, article in summaries_with_articles
+                }
+                for article in unique_articles.values():
+                    db.expunge(article)
 
             gaps = (
                 await db.execute(
@@ -725,14 +966,17 @@ class LiteratureAutomationService:
             for gap in gaps:
                 related = links_by_gap.get(gap.gap_id, [])
                 is_covered = any(
-                    effective_link_status.get(link.id, link.status) == "confirmed"
+                    link.status == "confirmed"
                     and link.relation_level == "exact_disease_geography"
-                    and effective_article_status.get(article.article_id, article.publication_status) == "published"
-                    for link, article in related
+                    and effective_article_status.get(
+                        link.article_id,
+                        linked_article_status.get(link.article_id, "review"),
+                    ) == "published"
+                    for link in related
                 )
                 has_exception = any(
-                    effective_link_status.get(link.id, link.status) == "review"
-                    for link, _ in related
+                    link.status == "review"
+                    for link in related
                 )
                 if is_covered:
                     desired = "covered"
@@ -792,6 +1036,9 @@ class LiteratureAutomationService:
             "dry_run": dry_run,
             "policy_version": POLICY_VERSION,
             "effective_article_min_score": float(config.autopilot_article_min_score),
+            "reconcile_batch_size": batch_size,
+            "statement_timeout_seconds": statement_timeout_seconds,
+            "lock_timeout_seconds": lock_timeout_seconds,
             "run_uuid": run_uuid,
             **counts,
             "changed": changed,

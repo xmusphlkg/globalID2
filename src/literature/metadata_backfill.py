@@ -18,6 +18,7 @@ from src.domain import LiteratureArticle
 
 from .clients import OpenAlexClient, UnpaywallClient
 from .normalization import apply_openalex, apply_unpaywall, normalize_doi
+from .payloads import SOURCE_PAYLOAD_SCHEMA_VERSION, compact_source_payload
 from .reclassification import candidate_from_stored_article
 
 
@@ -131,7 +132,9 @@ def _apply_candidate_projection(article: LiteratureArticle, candidate: Any) -> N
     article.open_access_status = candidate.open_access_status
     article.open_access_url = candidate.open_access_url
     article.license_url = candidate.license_url
-    article.source_payload = dict(candidate.source_payload or {})
+    article.source_payload = compact_source_payload(candidate.source_payload)
+    article.source_payload_version = SOURCE_PAYLOAD_SCHEMA_VERSION
+    article.source_payload_compacted_at = datetime.now(timezone.utc)
 
 
 async def backfill_existing_literature_metadata(
