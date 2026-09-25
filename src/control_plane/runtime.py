@@ -35,6 +35,7 @@ class ThreadedRuntimeGuard:
         instance_id: str,
         lease_ttl_seconds: int,
         heartbeat_ttl_seconds: int,
+        lease_loss_shutdown_timeout_seconds: int,
         metadata: RuntimeMetadata | None,
         on_lease_lost: Callable[[], None],
     ) -> None:
@@ -44,6 +45,9 @@ class ThreadedRuntimeGuard:
         self.instance_id = instance_id
         self.lease_ttl_seconds = lease_ttl_seconds
         self.heartbeat_ttl_seconds = heartbeat_ttl_seconds
+        self.lease_loss_shutdown_timeout_seconds = max(
+            1, lease_loss_shutdown_timeout_seconds
+        )
         self.metadata = metadata or {}
         self.on_lease_lost = on_lease_lost
         self._stop = threading.Event()
@@ -79,6 +83,21 @@ class ThreadedRuntimeGuard:
             ensure_ascii=False,
             default=str,
         )
+
+    def _stop_after_lease_loss(self) -> None:
+        """Ask the service loop to stop, then bound how long it can stay ownerless."""
+        self.on_lease_lost()
+        if self._stop.wait(self.lease_loss_shutdown_timeout_seconds):
+            return
+        logger.critical(
+            "Runtime service '{}' did not stop within {}s after losing its lease; terminating for stale-task recovery",
+            self.service,
+            self.lease_loss_shutdown_timeout_seconds,
+        )
+        # The event loop can be blocked inside a synchronous crawler and may
+        # never handle the scheduled stop callback. Exiting lets systemd restart
+        # the worker; persisted task leases are recovered by the next instance.
+        os._exit(1)
 
     def _run(self) -> None:
         lease_key = f"{self.key_prefix}:lease:{self.service}"
@@ -123,7 +142,7 @@ class ThreadedRuntimeGuard:
                             "Runtime lease '{}' ownership was lost in threaded guard",
                             self.service,
                         )
-                        self.on_lease_lost()
+                        self._stop_after_lease_loss()
                         return
                     client.set(
                         heartbeat_key,
@@ -140,7 +159,7 @@ class ThreadedRuntimeGuard:
                             pass
                         client = None
                     if time.monotonic() - last_renewed >= self.lease_ttl_seconds:
-                        self.on_lease_lost()
+                        self._stop_after_lease_loss()
                         return
                 self._stop.wait(interval)
         finally:
@@ -489,6 +508,7 @@ class RuntimeRegistry:
         heartbeat_ttl_seconds: int,
         metadata: RuntimeMetadata | None,
         on_lease_lost: Callable[[], None],
+        lease_loss_shutdown_timeout_seconds: int = 45,
     ) -> ThreadedRuntimeGuard:
         guard = ThreadedRuntimeGuard(
             redis_url=get_config().redis.url,
@@ -497,6 +517,7 @@ class RuntimeRegistry:
             instance_id=instance_id,
             lease_ttl_seconds=lease_ttl_seconds,
             heartbeat_ttl_seconds=heartbeat_ttl_seconds,
+            lease_loss_shutdown_timeout_seconds=lease_loss_shutdown_timeout_seconds,
             metadata=metadata,
             on_lease_lost=on_lease_lost,
         )
