@@ -35,7 +35,7 @@ class ThreadedRuntimeGuard:
         instance_id: str,
         lease_ttl_seconds: int,
         heartbeat_ttl_seconds: int,
-        lease_loss_shutdown_timeout_seconds: int,
+        lease_loss_shutdown_timeout_seconds: int = 45,
         metadata: RuntimeMetadata | None,
         on_lease_lost: Callable[[], None],
     ) -> None:
