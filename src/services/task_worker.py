@@ -605,6 +605,7 @@ async def run_worker() -> None:
         instance_id,
         lease_ttl_seconds=RUNTIME_LEASE_TTL_SECONDS,
         heartbeat_ttl_seconds=RUNTIME_HEARTBEAT_TTL_SECONDS,
+        lease_loss_shutdown_timeout_seconds=SHUTDOWN_GRACE_SECONDS + 15,
         metadata=lambda: {
             "concurrency": MAX_CONCURRENT_TASKS,
             "ai_concurrency_max": MAX_CONCURRENT_AI_TASKS,
