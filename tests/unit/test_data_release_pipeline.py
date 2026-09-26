@@ -201,11 +201,148 @@ async def test_pipeline_local_only_success_preserves_stage_order():
         "Build Astro Site",
         "Validate Situation Release Gate",
     ]
-    assert progress == [5, 15, 22, 35, 60, 88, 100]
+    assert progress == [5, 15, 22, 35, 45, 60, 88, 100]
     assert output["direct_downloads_published"] is False
     assert output["raw_archive_published"] is False
     assert output["pages_deployed"] is False
     assert stored_task.output_data == output
+
+
+@pytest.mark.asyncio
+async def test_pipeline_passes_local_gates_before_remote_publication():
+    commands = []
+    stored_task = SimpleNamespace(output_data=None)
+
+    class Manager:
+        async def add_workbook_entry(self, *_args, **_kwargs):
+            return None
+
+        async def update_task_progress(self, *_args):
+            return None
+
+    class Database:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def get(self, *_args):
+            return stored_task
+
+        async def commit(self):
+            return None
+
+    class Service:
+        def _config(self):
+            return SimpleNamespace(timezone="UTC")
+
+        async def load_jobs(self):
+            return [SimpleNamespace(
+                job_id="site-release",
+                name="Site Release",
+                timezone="UTC",
+                cloudflare_project_name="globalid",
+                github_branch="main",
+                include_git_push=True,
+                include_cloudflare_deploy=False,
+                commit_message_template="publish {branch}",
+            )]
+
+        async def integration_checks(self, _job_id):
+            return {
+                "overall_ready": True,
+                "blockers": [],
+                "git": {"ssh_transport": "default"},
+                "cloudflare": {"production_branch": "main"},
+                "raw_archive": {"ssh_transport": "default"},
+            }
+
+        def _cloudflare_project_name(self, value):
+            return value
+
+        def _download_repo_url(self):
+            return "git@example/downloads.git"
+
+        def _download_repo_raw_base(self, _job):
+            return "https://raw.example/main"
+
+        def _download_repo_branch(self, _job):
+            return "main"
+
+        def _build_git_env(self, *_args, **_kwargs):
+            return {}
+
+        def _render_commit_message(self, *_args, **_kwargs):
+            return "publish main"
+
+        def _python_executable(self):
+            return Path("/venv/python")
+
+        async def _current_git_branch(self):
+            return "main"
+
+        async def _site_release_identity(self, branch):
+            return {
+                "release_id": "release-1",
+                "source_commit": "abc123",
+                "source_branch": "main",
+                "deployment_branch": branch,
+                "built_at": "2026-08-05T00:00:00+00:00",
+                "commit_dirty": False,
+            }
+
+        def _generate_site_data_command(self, **_kwargs):
+            return ["generate"]
+
+        def _update_situation_room_command(self, **_kwargs):
+            return ["update"]
+
+        def _validate_situation_release_command(self, **_kwargs):
+            return ["validate"]
+
+        def _publish_download_repo_command(self, **_kwargs):
+            return ["publish-downloads"]
+
+        def _publish_raw_archive_command(self, **_kwargs):
+            return ["publish-raw"]
+
+        async def _run_logged_command(self, _task_uuid, *, title, **_kwargs):
+            commands.append(title)
+
+        def _write_site_release_manifest(self, identity):
+            return identity
+
+        async def _sync_subscription_options_if_needed(self, *_args, **_kwargs):
+            return False
+
+    raw_archive = SimpleNamespace(
+        enabled=True,
+        repo_url="git@example/raw.git",
+        branch="main",
+        git_timeout_seconds=60,
+    )
+    runtime = pipeline.ReleasePipelineRuntime(
+        **{
+            **_runtime(Manager()).__dict__,
+            "get_config": lambda: SimpleNamespace(raw_archive=raw_archive),
+            "get_database": Database,
+        }
+    )
+    task = SimpleNamespace(
+        id=9,
+        task_uuid="task-publish-order",
+        input_data={"release_job_id": "site-release"},
+    )
+
+    await pipeline.execute_release_task(Service(), task, runtime=runtime)
+
+    assert commands.index("Build Astro Site") < commands.index(
+        "Archive Raw Crawler Data"
+    )
+    assert commands.index("Validate Situation Release Gate") < commands.index(
+        "Publish Partitioned Data Downloads"
+    )
 
 
 @pytest.mark.asyncio

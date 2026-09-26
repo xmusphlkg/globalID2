@@ -1199,11 +1199,22 @@ class BaseAgent(ABC):
                 )
             else:
                 response = await request
+            response_text = (
+                response[0] if isinstance(response, tuple) and response else None
+            )
+            if not isinstance(response_text, str) or not response_text.strip():
+                # Admission controls provider pressure. An empty provider reply
+                # is not a successful call and must not earn more concurrency.
+                raise RuntimeError("Model returned an empty completion response")
         except BaseException as exc:
-            self._runtime_route_request_duration_seconds = time.perf_counter() - request_started_at
+            self._runtime_route_request_duration_seconds = (
+                time.perf_counter() - request_started_at
+            )
             await admission.release(success=False, error=exc)
             raise
-        self._runtime_route_request_duration_seconds = time.perf_counter() - request_started_at
+        self._runtime_route_request_duration_seconds = (
+            time.perf_counter() - request_started_at
+        )
         await admission.release(success=True)
         return response
 

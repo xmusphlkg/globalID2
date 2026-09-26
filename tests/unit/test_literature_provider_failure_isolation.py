@@ -528,3 +528,14 @@ async def test_empty_connect_error_persists_nonempty_redacted_task_error(monkeyp
     assert lifecycle_module.safe_exception_summary(
         RuntimeError("failed at https://secret.example/path?token=abc token=abc")
     ) == "RuntimeError: failed at [redacted-url] token=[redacted]"
+
+
+def test_safe_exception_summary_preserves_final_diagnostic_when_truncated():
+    summary = lifecycle_module.safe_exception_summary(
+        RuntimeError("build output " + ("x" * 1400) + "\nperformance-budget FAIL")
+    )
+
+    assert len(summary) == 1000
+    assert summary.startswith("RuntimeError: build output")
+    assert "output truncated" in summary
+    assert summary.endswith("performance-budget FAIL")

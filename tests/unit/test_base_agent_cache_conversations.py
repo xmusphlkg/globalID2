@@ -580,6 +580,31 @@ async def test_runtime_request_timeout_starts_after_model_center_admission(monke
 
 
 @pytest.mark.asyncio
+async def test_empty_runtime_completion_releases_admission_as_failure(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    agent = AdmissionBoundaryAgent(name="AdmissionBoundary", model="dummy", provider="dummy")
+    releases = []
+
+    class Lease:
+        async def release(self, *, success: bool, error=None):
+            releases.append((success, str(error) if error else None))
+
+    async def acquire(_route):
+        return Lease()
+
+    async def empty_response(*_args, **_kwargs):
+        return "", {}
+
+    monkeypatch.setattr("src.ai.agents.base.acquire_runtime_route_admission", acquire)
+    monkeypatch.setattr(agent, "_complete_with_admitted_runtime_route", empty_response)
+
+    with pytest.raises(RuntimeError, match="empty completion response"):
+        await agent._complete_with_runtime_route(runtime_route("dummy"), "hello")
+
+    assert releases == [(False, "Model returned an empty completion response")]
+
+
+@pytest.mark.asyncio
 async def test_empty_runtime_completion_falls_through_to_next_model(monkeypatch):
     monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
     routes = [runtime_route("empty-model"), runtime_route("fallback-model")]

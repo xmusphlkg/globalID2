@@ -183,8 +183,47 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     pages_deployed = False
     situation_alert_dispatch_attempted = False
     cloudflare_deployment = None
-    repository_publications: list[tuple[str, Awaitable[None]]] = []
+    # Complete every local, side-effect-free release gate before publishing to
+    # remote repositories. A failed site build must never leave downloads and
+    # raw archives ahead of the production site.
+    await runtime.task_manager.update_task_progress(task.task_uuid, 45)
+    await service._run_logged_command(
+        task.task_uuid,
+        title="Build Astro Site",
+        cmd=["npm", "run", "build"],
+        cwd=runtime.astro_dir,
+        env={
+            "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
+            "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
+            "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
+            "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],
+            "PUBLIC_GIDS_DEPLOY_BRANCH": release_identity["deployment_branch"],
+            "PUBLIC_GIDS_BUILT_AT": release_identity["built_at"],
+        },
+        metadata={"event": "astro_build", "release_job_id": job.job_id},
+        timeout_seconds=runtime.astro_build_timeout_seconds,
+    )
+    await service._run_logged_command(
+        task.task_uuid,
+        title="Validate Situation Release Gate",
+        cmd=service._validate_situation_release_command(python_path=python_path),
+        cwd=runtime.root_dir,
+        env=git_env,
+        metadata={"event": "situation_release_gate", "release_job_id": job.job_id},
+        timeout_seconds=120,
+    )
+    release_manifest = service._write_site_release_manifest(release_identity)
+    await runtime.task_manager.add_workbook_entry(
+        task.task_uuid,
+        entry_type="info",
+        title="Site Release Identity",
+        content=json.dumps(release_manifest, ensure_ascii=False, indent=2),
+        content_type="json",
+        metadata={"event": "site_release_identity", "release_job_id": job.job_id},
+    )
+    await runtime.task_manager.update_task_progress(task.task_uuid, 60)
 
+    repository_publications: list[tuple[str, Awaitable[None]]] = []
     if raw_archive_cfg.enabled:
         raw_git_transport = str(
             (checks.get("raw_archive") or {}).get("ssh_transport") or "default"
@@ -258,44 +297,8 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     raw_archive_published = "raw_archive" in completed_publications
     downloads_published = "direct_downloads" in completed_publications
 
-    # The site only goes live after its direct public file links exist.  This
-    # prevents a newly deployed page from pointing at a package that failed to
-    # publish, and the generated URLs carry the package cache key.
-    await runtime.task_manager.update_task_progress(task.task_uuid, 60)
-    await service._run_logged_command(
-        task.task_uuid,
-        title="Build Astro Site",
-        cmd=["npm", "run", "build"],
-        cwd=runtime.astro_dir,
-        env={
-            "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
-            "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
-            "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
-            "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],
-            "PUBLIC_GIDS_DEPLOY_BRANCH": release_identity["deployment_branch"],
-            "PUBLIC_GIDS_BUILT_AT": release_identity["built_at"],
-        },
-        metadata={"event": "astro_build", "release_job_id": job.job_id},
-        timeout_seconds=runtime.astro_build_timeout_seconds,
-    )
-    await service._run_logged_command(
-        task.task_uuid,
-        title="Validate Situation Release Gate",
-        cmd=service._validate_situation_release_command(python_path=python_path),
-        cwd=runtime.root_dir,
-        env=git_env,
-        metadata={"event": "situation_release_gate", "release_job_id": job.job_id},
-        timeout_seconds=120,
-    )
-    release_manifest = service._write_site_release_manifest(release_identity)
-    await runtime.task_manager.add_workbook_entry(
-        task.task_uuid,
-        entry_type="info",
-        title="Site Release Identity",
-        content=json.dumps(release_manifest, ensure_ascii=False, indent=2),
-        content_type="json",
-        metadata={"event": "site_release_identity", "release_job_id": job.job_id},
-    )
+    # The site only goes live after its direct public file links exist. This
+    # prevents a deployed page from pointing at a package that failed to publish.
     subscription_options_synced = await service._sync_subscription_options_if_needed(
         task.task_uuid,
         job_id=job.job_id,

@@ -266,6 +266,13 @@ async def test_run_logged_command_failure_includes_output_tail(monkeypatch, tmp_
 
     output_entries = [entry for entry in entries if "Output" in entry["title"]]
     assert output_entries[0]["content"] == "first line\nfailure detail"
+    failed_entry = entries[-1]
+    assert failed_entry["title"] == "Failed Command Failed"
+    assert failed_entry["entry_type"] == "error"
+    assert failed_entry["content"].endswith("failure detail")
+    assert failed_entry["metadata"]["event"] == "command_failed"
+    assert failed_entry["metadata"]["command_event"] is None
+    assert failed_entry["metadata"]["returncode"] == 3
 
 
 @pytest.mark.asyncio

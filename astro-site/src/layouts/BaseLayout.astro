@@ -64,38 +64,42 @@ const maintenanceMessage = import.meta.env.PUBLIC_GIDS_MAINTENANCE_MESSAGE?.trim
 const extraStructuredData = Array.isArray(additionalStructuredData)
   ? additionalStructuredData
   : [additionalStructuredData];
+const isLocalizedHomePage = ['/', '/zh/', '/fr/'].includes(canonicalURL.pathname);
+const siteStructuredData: JsonLdNode[] = isLocalizedHomePage ? [
+  {
+    '@type': 'WebSite',
+    '@id': `${siteOrigin}#website`,
+    url: siteOrigin,
+    name: 'Global Infectious Disease Surveillance',
+    alternateName: 'GIDS',
+    description: 'Official-source infectious disease surveillance data, trends, downloadable datasets, and methodology.',
+    inLanguage: ['en', 'zh-CN', 'fr-FR'],
+    publisher: {
+      '@id': `${siteOrigin}#organization`,
+    },
+  },
+  {
+    '@type': 'Organization',
+    '@id': `${siteOrigin}#organization`,
+    name: 'Global Infectious Disease Surveillance',
+    alternateName: 'GIDS',
+    url: siteOrigin,
+    logo: new URL('/logo.png', siteOrigin).toString(),
+    sameAs: ['https://github.com/xmusphlkg/globalID2'],
+    publishingPrinciples: new URL('/about/#editorial-responsibility', siteOrigin).toString(),
+  },
+  {
+    '@type': 'DataCatalog',
+    '@id': `${siteOrigin}#catalog`,
+    name: 'GIDS infectious disease surveillance data catalog',
+    url: new URL('/diseases/', siteOrigin).toString(),
+    publisher: { '@id': `${siteOrigin}#organization` },
+  },
+] : [];
 const structuredData = {
   '@context': 'https://schema.org',
   '@graph': [
-    {
-      '@type': 'WebSite',
-      '@id': `${siteOrigin}#website`,
-      url: siteOrigin,
-      name: 'Global Infectious Disease Surveillance',
-      alternateName: 'GIDS',
-      description: 'Official-source infectious disease surveillance data, trends, downloadable datasets, and methodology.',
-      inLanguage: ['en', 'zh-CN', 'fr-FR'],
-      publisher: {
-        '@id': `${siteOrigin}#organization`,
-      },
-    },
-    {
-      '@type': 'Organization',
-      '@id': `${siteOrigin}#organization`,
-      name: 'Global Infectious Disease Surveillance',
-      alternateName: 'GIDS',
-      url: siteOrigin,
-      logo: new URL('/logo.png', siteOrigin).toString(),
-      sameAs: ['https://github.com/xmusphlkg/globalID2'],
-      publishingPrinciples: new URL('/about/#editorial-responsibility', siteOrigin).toString(),
-    },
-    {
-      '@type': 'DataCatalog',
-      '@id': `${siteOrigin}#catalog`,
-      name: 'GIDS infectious disease surveillance data catalog',
-      url: new URL('/diseases/', siteOrigin).toString(),
-      publisher: { '@id': `${siteOrigin}#organization` },
-    },
+    ...siteStructuredData,
     {
       '@type': pageType,
       '@id': `${canonicalURL}#webpage`,
@@ -125,10 +129,9 @@ const structuredData = {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="generator" content={Astro.generator} />
     <meta name="gids-release-id" content={siteReleaseId} />
-    <meta name="gids-source-commit" content={siteSourceCommit} />
-    <meta name="gids-deployment-branch" content={siteDeploymentBranch} />
+    {isLocalizedHomePage && <meta name="gids-source-commit" content={siteSourceCommit} />}
+    {isLocalizedHomePage && <meta name="gids-deployment-branch" content={siteDeploymentBranch} />}
 
     <!-- SEO -->
     <title>{pageTitle}</title>

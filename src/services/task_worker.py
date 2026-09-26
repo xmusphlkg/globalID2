@@ -80,7 +80,9 @@ RELEASE_SHARED_BLOCKED_TASK_TYPES = (
 # These operations persist their checkpoints and are designed to be resumed.
 # On a controlled worker restart, returning them to QUEUED is preferable to
 # waiting for a long model timeout or treating the deployment as a failure.
-GRACEFUL_REQUEUE_TASK_TYPES = AI_TASK_TYPES | KNOWLEDGE_SOURCE_TASK_TYPES
+GRACEFUL_REQUEUE_TASK_TYPES = (
+    AI_TASK_TYPES | KNOWLEDGE_SOURCE_TASK_TYPES | {TaskType.SYNC_LITERATURE}
+)
 
 ModelRouteLoader = Callable[[], Awaitable[list[dict[str, Any]]]]
 
