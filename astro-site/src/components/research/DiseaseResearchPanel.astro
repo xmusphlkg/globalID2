@@ -23,7 +23,7 @@ const previewArticles = articles.slice(0, 5);
       </div>
       <a href={`${prefix}/research/?disease=${diseaseId}`}>{zh ? '查看全部研究 →' : fr ? 'Voir toutes les recherches →' : 'View all research →'}</a>
     </div>
-    <div class="mt-5">{previewArticles.map((article: any) => <ResearchArticleCard article={article} compact locale={locale} />)}</div>
+    <div class="research-panel-list mt-5">{previewArticles.map((article: any) => <ResearchArticleCard article={article} compact locale={locale} />)}</div>
     {articles.length > previewArticles.length && (
       <p class="research-panel-count">
         {zh ? `显示 ${articles.length} 篇相关论文中的 ${previewArticles.length} 篇。` : fr ? `${previewArticles.length} publications associées sur ${articles.length} affichées.` : `Showing ${previewArticles.length} of ${articles.length} related publications.`}
@@ -36,6 +36,7 @@ const previewArticles = articles.slice(0, 5);
 <style>
   .research-panel-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
   .research-panel-heading > a { flex: none; color: rgb(var(--color-brand)); font-size: .78rem; font-weight: 650; }
+  .research-panel-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: .6rem; }
   .research-panel-count { margin-top: .75rem; color: rgb(var(--text-faint)); font: 500 .68rem/1.4 ui-monospace, monospace; }
   .research-panel-note { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .72rem; line-height: 1.5; }
   @media (max-width: 640px) { .research-panel-heading { align-items: start; flex-direction: column; } }
