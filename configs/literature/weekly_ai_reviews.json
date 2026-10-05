@@ -63,11 +63,23 @@
     },
     {
       "week": "2026-W39",
-      "brief_fingerprint": "657d187db7c8b6e3ef8dcc38aefa6fa8de95ce24406b88ee91732f0a031f53d7",
+      "brief_fingerprint": "acd067b54e2d4ab778d5386639a5e2bb562e1338b6c4cf119be477c0d7a830db",
       "review": {
         "verdict": "pass",
         "issue_codes": [],
-        "reviewed_at": "2026-09-26T02:19:55+00:00",
+        "reviewed_at": "2026-10-05T06:16:52+00:00",
+        "protocol_version": "research-weekly-ai-review.v1",
+        "model": "configured-review-model",
+        "provider": "model-center"
+      }
+    },
+    {
+      "week": "2026-W40",
+      "brief_fingerprint": "9b79016b4a8c9437edeebe16dbc636c3fcbc1fe0a5012f3ff485494b421842a9",
+      "review": {
+        "verdict": "pass",
+        "issue_codes": [],
+        "reviewed_at": "2026-10-05T09:22:15+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center"

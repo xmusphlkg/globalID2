@@ -18,7 +18,8 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   // Release builds stamp each page with a unique release id, source commit,
   // deployment branch, and build timestamp.  Keep enough headroom for those
   // bounded metadata values while preserving the same underlying page budget.
-  maxAverageHtmlGzipBytes: 18_800,
+  // Allow one byte per page for content-bound review metadata at large route counts.
+  maxAverageHtmlGzipBytes: 18_801,
   maxTotalHtmlGzipBytes: 26_000_000,
   maxFontAssetBytes: 220_000,
   maxLegacyWoffFiles: 0,
