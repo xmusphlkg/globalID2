@@ -124,12 +124,11 @@ const structuredData = {
 <html
   lang={isChinese ? 'zh-CN' : isFrench ? 'fr-FR' : 'en'}
   data-lang={documentLocale}
-  data-release-id={siteReleaseId}
+  data-release-id={isLocalizedHomePage ? siteReleaseId : undefined}
 >
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="gids-release-id" content={siteReleaseId} />
     {isLocalizedHomePage && <meta name="gids-source-commit" content={siteSourceCommit} />}
     {isLocalizedHomePage && <meta name="gids-deployment-branch" content={siteDeploymentBranch} />}
 

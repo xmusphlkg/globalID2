@@ -59,6 +59,11 @@ export const changelogReleases: ChangelogRelease[] = [
             zh: '文献维护任务现在会拒绝非法参数，保留准确的重试提示和处理进度，并在中断时清理资源。',
             fr: 'La maintenance bibliographique rejette désormais les paramètres invalides, conserve des consignes de reprise et une progression cohérentes, et libère les ressources en cas d’interruption.',
           },
+          {
+            en: 'Reduced repeated build metadata across static pages while preserving release identification on each localized homepage.',
+            zh: '精简静态页面中重复的构建元数据，并在各语言首页保留版本标识。',
+            fr: 'Réduction des métadonnées de compilation répétées sur les pages statiques, avec conservation de l’identifiant de version sur chaque page d’accueil localisée.',
+          },
         ],
       },
     ],

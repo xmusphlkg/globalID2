@@ -22,6 +22,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Shared process locking and database cleanup across literature metadata backfill, PubMed abstract backfill, and payload compaction commands; database pools now close before the command's event loop exits.
 - Consolidated metadata-backfill checkpoint serialization and cache command error handling to keep failure behavior consistent across execution paths.
 - AI request admission now counts retries and fallback-model attempts individually while cache hits consume no request capacity.
+- Static pages keep release identification on localized homepages without repeating release metadata across thousands of generated pages.
 
 ### Fixed
 
