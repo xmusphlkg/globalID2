@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
 import json
-from pathlib import Path
 import uuid
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
 
 import pycountry
 from sqlalchemy import select
@@ -30,14 +31,17 @@ from .clients import (
     SpringerNatureClient,
     UnpaywallClient,
 )
-from .controlled_discovery import build_controlled_query_batches, fetch_controlled_discovery
+from .controlled_discovery import (
+    build_controlled_query_batches,
+    fetch_controlled_discovery,
+)
 from .normalization import (
     apply_europe_pmc,
     apply_openalex,
     apply_pubmed_abstract,
     apply_unpaywall,
-    normalize_crossref,
     normalize_biorxiv,
+    normalize_crossref,
     normalize_elsevier,
     normalize_europe_pmc,
     normalize_official_guidance,
@@ -48,7 +52,6 @@ from .normalization import (
 from .repository import LiteratureRepository
 from .types import ArticleCandidate, Classification
 
-
 logger = get_logger(__name__)
 ROOT = Path(__file__).resolve().parents[2]
 _INGEST_SOURCE_MAX_LENGTH = 256
@@ -58,7 +61,7 @@ def _load_json(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
     if not isinstance(payload, dict):
-        raise ValueError(f"Expected a JSON object in {path}")
+        raise TypeError(f"Expected a JSON object in {path}")
     return payload
 
 
@@ -126,7 +129,7 @@ async def _retry_postgres_deadlock(
             if not _is_postgres_deadlock(exc) or retry_index >= max_retries:
                 raise
             delay = base_delay_seconds * (2**retry_index)
-            logger.warning(
+            logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
                 "Research Radar persistence deadlock; retrying transaction "
                 "attempt={}/{} delay_seconds={:.2f}",
                 retry_index + 2,
@@ -239,9 +242,9 @@ async def _isolate_optional_source(provider: str, request: Awaitable[Any]) -> tu
     """Contain optional-source failures without logging URLs, queries, or credentials."""
     try:
         return await request, None
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - isolate failures from optional providers.
         error_type = type(exc).__name__ or "Exception"
-        logger.warning(
+        logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
             "Optional literature discovery failed provider={} error_type={}",
             provider,
             error_type,
@@ -300,8 +303,15 @@ def _global_country_catalogue(
 class LiteraturePipeline:
     def __init__(self, config: Any) -> None:
         self.config = config
+        self._latest_completed_checkpoint: dict[str, Any] | None = None
+        self._latest_completed_checkpoint_loaded = False
 
     async def execute(self, task: Task | None = None) -> dict[str, Any]:
+        # All source cursors in a run come from the same committed ingest row.
+        # Reset the snapshot for each execution so reusing a pipeline instance
+        # cannot carry a stale cursor into a later run.
+        self._latest_completed_checkpoint = None
+        self._latest_completed_checkpoint_loaded = False
         now = datetime.now(timezone.utc)
         since, resume_after = await self._resolve_start(now, task)
         run_uuid = str(uuid.uuid4())
@@ -344,7 +354,7 @@ class LiteraturePipeline:
                 crossref_error = type(exc).__name__ or "Exception"
                 if not getattr(self.config, "pubmed_enabled", False):
                     raise
-                logger.warning(
+                logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
                     "Crossref core journal sync failed; attempting PubMed fallback error_type={}",
                     crossref_error,
                 )
@@ -368,7 +378,7 @@ class LiteraturePipeline:
                     raise
                 pubmed_core_records = pubmed_core_result.records
             taxonomy = _load_json(ROOT / self.config.taxonomy_path)
-            diseases, countries = await self._classification_catalogues()
+            diseases, countries = await self._classification_catalogues(taxonomy)
 
             controlled_result = None
             controlled_error: str | None = None
@@ -452,9 +462,12 @@ class LiteraturePipeline:
                         checkpoint=official_guidance_checkpoint,
                     )
                     official_guidance_records = official_guidance_result.records
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001 - optional source must not fail core ingestion.
                     official_guidance_error = f"{type(exc).__name__}: {exc}"[:500]
-                    logger.warning("WHO IRIS guidance metadata discovery failed: {}", official_guidance_error)
+                    logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
+                        "WHO IRIS guidance metadata discovery failed: {}",
+                        official_guidance_error,
+                    )
 
             springer_result = None
             springer_records: list[dict[str, Any]] = []
@@ -725,9 +738,9 @@ class LiteraturePipeline:
                         )
                     )
                     payload_compaction["errors"] = 0
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001 - maintenance is best-effort.
                     payload_compaction["errors"] = 1
-                    logger.warning(
+                    logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
                         "Research Radar payload compaction deferred error_type={}",
                         type(exc).__name__ or "Exception",
                     )
@@ -738,7 +751,9 @@ class LiteraturePipeline:
             # not let the global reconcile immediately undo the review hold; a
             # later healthy run can re-evaluate the same records normally.
             if self.config.autopilot_enabled and not enrichment_degraded:
-                from src.services.literature_automation_service import literature_automation_service
+                from src.services.literature_automation_service import (
+                    literature_automation_service,
+                )
 
                 automation = await literature_automation_service.reconcile()
 
@@ -914,7 +929,14 @@ class LiteraturePipeline:
 
     async def _enrich_candidates(self, candidates: list[ArticleCandidate]) -> dict[str, Any]:
         """Apply optional enrichers independently without blocking core ingestion."""
-        dois = list(dict.fromkeys(candidate.doi for candidate in candidates if candidate.doi))
+        candidates_by_doi: dict[str, list[ArticleCandidate]] = {}
+        candidates_by_pmid: dict[str, list[ArticleCandidate]] = {}
+        for candidate in candidates:
+            if candidate.doi:
+                candidates_by_doi.setdefault(candidate.doi, []).append(candidate)
+            if candidate.pmid:
+                candidates_by_pmid.setdefault(candidate.pmid, []).append(candidate)
+        dois = list(candidates_by_doi)
         counts: dict[str, Any] = {
             "europe_pmc_enriched": 0,
             "unpaywall_enriched": 0,
@@ -933,7 +955,7 @@ class LiteraturePipeline:
             counts[f"{provider}_errors"] = 1
             counts["enrichment_errors"] += 1
             counts["enrichment_failed_providers"].append(provider.replace("_", "-"))
-            logger.warning(
+            logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
                 "Literature metadata enrichment failed provider={} error_type={}",
                 provider.replace("_", "-"),
                 type(exc).__name__ or "Exception",
@@ -946,21 +968,23 @@ class LiteraturePipeline:
                     retries=self.config.max_retries,
                 ).enrich_by_dois(dois[: self.config.max_europe_pmc_records])
                 counts["europe_pmc_enriched"] = len(enrichment)
-                for candidate in candidates:
-                    if candidate.doi and candidate.doi in enrichment:
-                        apply_europe_pmc(candidate, enrichment[candidate.doi])
-            except Exception as exc:
+                for doi, metadata in enrichment.items():
+                    for candidate in candidates_by_doi.get(doi, ()):
+                        apply_europe_pmc(candidate, metadata)
+            except Exception as exc:  # noqa: BLE001 - provider failures are isolated by design.
                 record_failure("europe_pmc", exc)
 
         if getattr(self.config, "pubmed_enabled", False):
             try:
                 minimum_abstract_length = int(getattr(self.config, "ai_min_abstract_characters", 180))
-                pmids = list(dict.fromkeys(
-                    candidate.pmid
-                    for candidate in candidates
-                    if candidate.pmid
-                    and len(candidate.abstract_text or "") < minimum_abstract_length
-                ))
+                pmids = [
+                    pmid
+                    for pmid, matching_candidates in candidates_by_pmid.items()
+                    if any(
+                        len(candidate.abstract_text or "") < minimum_abstract_length
+                        for candidate in matching_candidates
+                    )
+                ]
                 abstracts = await PubMedClient(
                     contact_email=self.config.contact_email,
                     api_key=getattr(self.config, "pubmed_api_key", ""),
@@ -972,10 +996,10 @@ class LiteraturePipeline:
                     pmids[: getattr(self.config, "max_pubmed_records", 200)]
                 )
                 counts["pubmed_abstract_enriched"] = len(abstracts)
-                for candidate in candidates:
-                    if candidate.pmid and candidate.pmid in abstracts:
-                        apply_pubmed_abstract(candidate, abstracts[candidate.pmid])
-            except Exception as exc:
+                for pmid, abstract in abstracts.items():
+                    for candidate in candidates_by_pmid.get(pmid, ()):
+                        apply_pubmed_abstract(candidate, abstract)
+            except Exception as exc:  # noqa: BLE001 - provider failures are isolated by design.
                 record_failure("pubmed_abstract", exc)
 
         # Unpaywall is the dedicated legal-OA source, so it gets first chance
@@ -992,10 +1016,10 @@ class LiteraturePipeline:
                     min_interval_seconds=self.config.metadata_enrichment_min_interval_seconds,
                 )
                 counts["unpaywall_enriched"] = len(enrichment)
-                for candidate in candidates:
-                    if candidate.doi and candidate.doi in enrichment:
-                        apply_unpaywall(candidate, enrichment[candidate.doi])
-            except Exception as exc:
+                for doi, metadata in enrichment.items():
+                    for candidate in candidates_by_doi.get(doi, ()):
+                        apply_unpaywall(candidate, metadata)
+            except Exception as exc:  # noqa: BLE001 - provider failures are isolated by design.
                 record_failure("unpaywall", exc)
 
         if getattr(self.config, "openalex_enabled", False):
@@ -1012,10 +1036,10 @@ class LiteraturePipeline:
                     min_interval_seconds=self.config.metadata_enrichment_min_interval_seconds,
                 )
                 counts["openalex_enriched"] = len(enrichment)
-                for candidate in candidates:
-                    if candidate.doi and candidate.doi in enrichment:
-                        apply_openalex(candidate, enrichment[candidate.doi])
-            except Exception as exc:
+                for doi, metadata in enrichment.items():
+                    for candidate in candidates_by_doi.get(doi, ()):
+                        apply_openalex(candidate, metadata)
+            except Exception as exc:  # noqa: BLE001 - provider failures are isolated by design.
                 record_failure("openalex", exc)
 
         return counts
@@ -1030,30 +1054,15 @@ class LiteraturePipeline:
             parsed = datetime.fromisoformat(str(requested).replace("Z", "+00:00"))
             since = parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
             return since, None
-        async with get_db() as db:
-            latest = (
-                await db.execute(
-                    select(LiteratureIngestRun)
-                    .where(
-                        LiteratureIngestRun.status == "completed",
-                        LiteratureIngestRun.source.like("crossref%"),
-                    )
-                    .order_by(
-                        LiteratureIngestRun.completed_at.desc(),
-                        LiteratureIngestRun.id.desc(),
-                        LiteratureIngestRun.through_indexed_at.desc(),
-                    )
-                    .limit(1)
-                )
-            ).scalar_one_or_none()
-        if latest and latest.through_indexed_at:
-            checkpoint = latest.checkpoint or {}
+        checkpoint_snapshot = await self._load_latest_completed_checkpoint()
+        if checkpoint_snapshot and checkpoint_snapshot["through_indexed_at"]:
+            checkpoint = checkpoint_snapshot["checkpoint"]
             if checkpoint.get("truncated"):
                 next_from = _parse_checkpoint_datetime(checkpoint.get("next_from_indexed_at"))
                 if next_from is not None:
                     resume_after = checkpoint.get("resume_after")
                     return next_from, resume_after if isinstance(resume_after, dict) else None
-            value = latest.through_indexed_at
+            value = checkpoint_snapshot["through_indexed_at"]
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
             # Crossref's index date is the update watermark, and the inclusive
@@ -1073,7 +1082,15 @@ class LiteraturePipeline:
         return await self._resolve_nested_checkpoint("rss")
 
     async def _resolve_nested_checkpoint(self, key: str) -> dict[str, Any] | None:
-        """Load a committed secondary-source checkpoint independently of Crossref."""
+        """Return a source cursor from the current run's checkpoint snapshot."""
+        snapshot = await self._load_latest_completed_checkpoint()
+        checkpoint = snapshot["checkpoint"].get(key) if snapshot else None
+        return checkpoint if isinstance(checkpoint, dict) else None
+
+    async def _load_latest_completed_checkpoint(self) -> dict[str, Any] | None:
+        """Read and cache the last completed Crossref run for this execution."""
+        if self._latest_completed_checkpoint_loaded:
+            return self._latest_completed_checkpoint
         async with get_db() as db:
             latest = (
                 await db.execute(
@@ -1089,13 +1106,23 @@ class LiteraturePipeline:
                     .limit(1)
                 )
             ).scalar_one_or_none()
-        checkpoint = (latest.checkpoint or {}).get(key) if latest else None
-        return checkpoint if isinstance(checkpoint, dict) else None
+        if latest is not None:
+            checkpoint = latest.checkpoint if isinstance(latest.checkpoint, dict) else {}
+            self._latest_completed_checkpoint = {
+                "through_indexed_at": latest.through_indexed_at,
+                "checkpoint": checkpoint,
+            }
+        self._latest_completed_checkpoint_loaded = True
+        return self._latest_completed_checkpoint
 
-    async def _classification_catalogues(self) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    async def _classification_catalogues(
+        self,
+        taxonomy: dict[str, Any] | None = None,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
         alias_payload = _load_json(ROOT / self.config.disease_aliases_path)
         aliases_by_id = alias_payload.get("aliases") or {}
-        taxonomy = _load_json(ROOT / self.config.taxonomy_path)
+        if taxonomy is None:
+            taxonomy = _load_json(ROOT / self.config.taxonomy_path)
         async with get_db() as db:
             disease_rows = (
                 await db.execute(select(StandardDisease).where(StandardDisease.is_active.is_(True)))

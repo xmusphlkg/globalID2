@@ -551,10 +551,14 @@ async def test_pipeline_checkpoint_lookup_ignores_newer_autopilot_and_keeps_stab
         ])
         session.commit()
 
-    monkeypatch.setattr(
-        "src.literature.pipeline.get_db",
-        lambda: _SqliteResolveDbContext(engine),
-    )
+    db_contexts = []
+
+    def resolve_db_context():
+        context = _SqliteResolveDbContext(engine)
+        db_contexts.append(context)
+        return context
+
+    monkeypatch.setattr("src.literature.pipeline.get_db", resolve_db_context)
     pipeline = LiteraturePipeline(SimpleNamespace(index_overlap_days=2, initial_lookback_days=14))
 
     since, restored = await pipeline._resolve_start(
@@ -566,6 +570,7 @@ async def test_pipeline_checkpoint_lookup_ignores_newer_autopilot_and_keeps_stab
     assert since == boundary
     assert restored == resume_after
     assert nested == {"selected": "newer-id-tie"}
+    assert len(db_contexts) == 1
     engine.dispose()
 
 

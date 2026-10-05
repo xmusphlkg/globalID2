@@ -1,5 +1,6 @@
 import json
 from types import SimpleNamespace
+from typing import ClassVar
 
 import httpx
 import pytest
@@ -7,7 +8,10 @@ import pytest
 from src.domain import TaskStatus, TaskType
 from src.literature.clients.crossref import CrossrefIncrementalResult
 from src.literature.clients.pubmed import PubMedResult
-from src.literature.pipeline import LiteraturePipeline, _hold_degraded_enrichment_for_review
+from src.literature.pipeline import (
+    LiteraturePipeline,
+    _hold_degraded_enrichment_for_review,
+)
 from src.literature.types import ArticleCandidate, Classification
 from src.services import _lifecycle as lifecycle_module
 
@@ -137,7 +141,7 @@ async def test_optional_provider_failures_are_isolated_and_other_providers_conti
 
 async def test_pubmed_efetch_enriches_short_abstract_candidates(monkeypatch):
     class AbstractPubMed:
-        calls = []
+        calls: ClassVar[list[list[str]]] = []
 
         def __init__(self, **_kwargs) -> None:
             pass
@@ -329,7 +333,7 @@ async def test_crossref_connect_failure_uses_pubmed_fallback_without_advancing_c
     async def finish_run(_run_uuid, status, **kwargs):
         finished.append((status, kwargs))
 
-    async def classify_catalogues():
+    async def classify_catalogues(_taxonomy=None):
         return [], []
 
     async def enrich_candidates(_candidates):
@@ -460,7 +464,7 @@ async def test_full_pipeline_autopilot_cannot_publish_crossref_record_when_opena
     async def finish_run(_run_uuid, status, **kwargs):
         finished.append((status, kwargs))
 
-    async def catalogues():
+    async def catalogues(_taxonomy=None):
         return (
             [{"disease_id": "D021", "name_en": "Dengue", "name_zh": "登革热", "aliases": []}],
             [{"code": "JP", "name": "Japan", "name_en": "Japan", "name_zh": "日本"}],
