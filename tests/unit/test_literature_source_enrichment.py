@@ -7,7 +7,12 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from src.domain import Base, LiteratureArticle, LiteratureIngestRun, LiteratureStatusEvent
+from src.domain import (
+    Base,
+    LiteratureArticle,
+    LiteratureIngestRun,
+    LiteratureStatusEvent,
+)
 from src.literature.clients.crossref import CrossrefClient
 from src.literature.clients.openalex import OpenAlexClient
 from src.literature.clients.unpaywall import UnpaywallClient
@@ -753,6 +758,49 @@ class _UpsertDb:
 
     def add_all(self, _values):
         return None
+
+
+async def test_repository_preserves_existing_owner_when_provider_supplies_conflicting_pmcid():
+    article = SimpleNamespace(
+        article_id="lit_preprint",
+        slug="preprint",
+        doi="10.1000/test",
+        pmid=None,
+        pmcid=None,
+        openalex_id=None,
+        abstract_license=None,
+        source_urls={},
+        open_access_status="unknown",
+        open_access_url=None,
+        license_url=None,
+        integrity_status="current",
+        source_payload={},
+        metadata_={},
+        publication_status="review",
+    )
+    owner = SimpleNamespace(article_id="lit_published")
+
+    class ConflictDb(_UpsertDb):
+        async def execute(self, statement):
+            self.execute_count += 1
+            if self.execute_count == 1:
+                return _ScalarResult(article)
+            if "literature_articles.pmcid" in str(statement):
+                return _ScalarResult(owner)
+            return _ScalarResult(None)
+
+    candidate = _candidate(pmcid="PMC_SHARED")
+    db = ConflictDb(article)
+
+    inserted = await LiteratureRepository(db).upsert(candidate, Classification())
+
+    assert inserted is False
+    assert article.pmcid is None
+    assert article.metadata_["identifier_conflicts"] == [{
+        "field": "pmcid",
+        "value": "PMC_SHARED",
+        "owner_article_id": "lit_published",
+    }]
 
 
 async def test_repository_persists_openalex_id_and_does_not_downgrade_existing_open_access():

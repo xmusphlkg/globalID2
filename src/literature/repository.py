@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import hashlib
 import json
+from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.logging import get_logger
 from src.domain import (
     LiteratureArticle,
     LiteratureCountryLink,
@@ -22,6 +23,8 @@ from .classification import CLASSIFICATION_VERSION
 from .content_policy import content_policy
 from .payloads import SOURCE_PAYLOAD_SCHEMA_VERSION, compact_source_payload
 from .types import ArticleCandidate, Classification
+
+logger = get_logger(__name__)
 
 
 def _merge_version_relations(
@@ -112,6 +115,7 @@ class LiteratureRepository:
         new_publication_status: str | None = None,
         preserve_existing_publication_status: bool = False,
     ) -> bool:
+        await self._lock_candidate_identifiers(candidate)
         article = await self._find(candidate)
         inserted = article is None
         if article is None:
@@ -124,6 +128,7 @@ class LiteratureRepository:
             previous_publication_status = article.publication_status
 
         existing_metadata = dict(article.metadata_ or {})
+        identifier_conflicts = await self._find_identifier_conflicts(article, candidate)
         editorial_locked = bool(existing_metadata.get("editorial_locked"))
         autopilot_locked = bool(
             existing_metadata.get("autopilot", {}).get("decision") == "publish"
@@ -131,10 +136,26 @@ class LiteratureRepository:
         )
         existing_oa_status = article.open_access_status or "unknown"
         existing_oa_url = article.open_access_url
-        article.doi = candidate.doi or article.doi
-        article.pmid = candidate.pmid or article.pmid
-        article.pmcid = candidate.pmcid or article.pmcid
-        article.openalex_id = candidate.openalex_id or article.openalex_id
+        conflicted_fields = {item["field"] for item in identifier_conflicts}
+        if identifier_conflicts:
+            previous_conflicts = [
+                item
+                for item in (existing_metadata.get("identifier_conflicts") or [])
+                if isinstance(item, dict)
+            ]
+            merged_conflicts = {
+                (item.get("field"), item.get("value"), item.get("owner_article_id")): item
+                for item in [*previous_conflicts, *identifier_conflicts]
+            }
+            existing_metadata["identifier_conflicts"] = list(merged_conflicts.values())[-50:]
+            logger.warning(
+                f"Literature identifier collision for article {article.article_id}: "
+                f"{identifier_conflicts}"
+            )
+        for field in ("doi", "pmid", "pmcid", "openalex_id"):
+            value = getattr(candidate, field, None)
+            if value and field not in conflicted_fields:
+                setattr(article, field, value)
         article.title = candidate.title
         article.journal = candidate.journal
         article.issn = candidate.issn
@@ -170,7 +191,7 @@ class LiteratureRepository:
             article.source_payload = compacted_payload
             article.source_payload_version = SOURCE_PAYLOAD_SCHEMA_VERSION
             article.source_payload_compacted_at = datetime.now(timezone.utc)
-        metadata = dict(article.metadata_ or {})
+        metadata = dict(existing_metadata)
         if candidate.version_relations:
             mapped_relations = await self._map_version_relations(article, candidate.version_relations)
             metadata["version_relations"] = _merge_version_relations(
@@ -280,6 +301,58 @@ class LiteratureRepository:
                 metadata_={},
             ))
         return inserted
+
+    async def _find_identifier_conflicts(
+        self,
+        article: LiteratureArticle | None,
+        candidate: ArticleCandidate,
+    ) -> list[dict[str, str]]:
+        """Keep provider identifier collisions from aborting an entire ingest batch.
+
+        A provider record can occasionally combine identifiers belonging to
+        different article versions. Stable IDs are unique in the database, so
+        never overwrite an existing owner with a conflicting value. The
+        incoming source payload is still retained for later review.
+        """
+
+        conflicts: list[dict[str, str]] = []
+        for field in ("doi", "pmid", "pmcid", "openalex_id"):
+            value = getattr(candidate, field, None)
+            if not value or (article is not None and getattr(article, field, None) == value):
+                continue
+            column = getattr(LiteratureArticle, field)
+            owner = (
+                await self.db.execute(select(LiteratureArticle).where(column == value))
+            ).scalar_one_or_none()
+            if owner is None or (article is not None and owner.article_id == article.article_id):
+                continue
+            conflicts.append({
+                "field": field,
+                "value": str(value),
+                "owner_article_id": str(owner.article_id),
+            })
+        return conflicts
+
+    async def _lock_candidate_identifiers(self, candidate: ArticleCandidate) -> None:
+        """Serialize writes that claim overlapping stable identifiers on PostgreSQL."""
+
+        get_bind = getattr(self.db, "get_bind", None)
+        if get_bind is None:
+            return
+        bind = get_bind()
+        if getattr(getattr(bind, "dialect", None), "name", None) != "postgresql":
+            return
+
+        lock_keys = sorted(
+            f"literature-identifier:{field}:{value}"
+            for field in ("doi", "pmid", "pmcid", "openalex_id")
+            if (value := getattr(candidate, field, None))
+        )
+        for key in lock_keys:
+            await self.db.execute(
+                text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+                {"key": key},
+            )
 
     async def _map_version_relations(
         self,
