@@ -15,6 +15,28 @@ This file records release-level changes to the GIDS application and its data ope
 - Prevented large Research Radar reconciliation transactions from pushing the shared worker to its memory ceiling while country disease crawls are active.
 - Prevented concurrent payload compaction from overwriting newer provider metadata, and isolated maintenance failures so a completed source ingest is not reported as a crawl failure.
 
+## [0.10.2] - 2026-10-05
+
+### Changed
+
+- Shared process locking and database cleanup across literature metadata backfill, PubMed abstract backfill, and payload compaction commands; database pools now close before the command's event loop exits.
+- Consolidated metadata-backfill checkpoint serialization and cache command error handling to keep failure behavior consistent across execution paths.
+- AI request admission now counts retries and fallback-model attempts individually while cache hits consume no request capacity.
+
+### Fixed
+
+- Redis connection failures and command timeouts now degrade to cache misses or unsuccessful writes instead of aborting otherwise valid AI completions. Concurrent initial connections are serialized, unsuccessful clients are closed, and task cancellation remains observable.
+- Fixed the default cache TTL configuration lookup and conversion from hours to seconds; reject invalid TTLs before accessing Redis.
+- Prevented concurrent rate-limit waiters from exceeding an instance's sliding-window capacity after waking together. Window timing now uses a monotonic clock, expires records at the exact boundary, and prunes stale request history.
+- Reject invalid maintenance batch limits, zero concurrency, non-finite request intervals, and malformed checkpoint cursors before processing data.
+- Preserve provider-failure retry instructions when a metadata backfill reaches its row limit, and keep reported cursors aligned with saved progress after an empty candidate batch.
+- Use unique temporary checkpoint files and clean them up on write failure while preserving the previous checkpoint.
+
+### Validation
+
+- Passed all 1,422 Python unit tests, including cache-outage, concurrent admission, cancellation, CLI-boundary, and checkpoint-recovery regressions. The suite still reports four dependency-deprecation or asynchronous connection-cleanup warnings.
+- Passed targeted Python static checks and Git diff whitespace validation.
+
 ## [0.10.1] - 2026-09-12
 
 ### Added

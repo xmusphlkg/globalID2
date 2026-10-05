@@ -4,7 +4,6 @@ GlobalID V2 AI Base Agent
 AI Agent Base Class - Provides unified LLM interaction functionality with multi-platform AI provider support
 """
 import asyncio
-import json
 import re
 import time
 from abc import ABC, abstractmethod
@@ -673,8 +672,8 @@ class BaseAgent(ABC):
         Returns:
             Generated text
         """
-        # Internal retry guard for a one-shot quota recovery pass.
-        quota_recovery_attempted = bool(kwargs.pop("_quota_recovery_attempted", False))
+        # Consume the legacy flag; the round counter below bounds recovery.
+        kwargs.pop("_quota_recovery_attempted", None)
         quota_recovery_round = int(kwargs.pop("_quota_recovery_round", 0) or 0)
         recovery_round_override = kwargs.pop("max_quota_recovery_rounds", None)
         wait_for_model_recovery = bool(kwargs.pop("wait_for_model_recovery", True))
@@ -722,11 +721,6 @@ class BaseAgent(ABC):
                     )
                 logger.debug(f"Cache hit for agent '{self.name}'")
                 return cached_response if cached_response is not None else cached
-        
-        # Rate limiting
-        if self.config.ai.enable_rate_limiting:
-            await self.rate_limiter.wait_if_needed()
-            self.rate_limiter.record_request()
         
         # 调用 LLM：运行时路由由模型中心统一管理；env 链路只用于初始化模型中心。
         route_cache_ttl = max(1, int(getattr(self.config.ai, "route_cache_ttl_seconds", 15)))
@@ -838,6 +832,9 @@ class BaseAgent(ABC):
             start_time = time.time()
 
             while retry_count < attempt_limit:
+                # Retries and fallback routes also consume request capacity.
+                # Admission waits are not provider latency or provider errors.
+                await self.rate_limiter.acquire()
                 attempt_started_at = time.perf_counter()
                 try:
                     if model_name not in attempted_models:

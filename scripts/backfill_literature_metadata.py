@@ -4,49 +4,30 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
-from contextlib import contextmanager
-import fcntl
 import json
-from pathlib import Path
 import sys
-from typing import Iterator, TextIO
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.literature.maintenance_cli import (  # noqa: E402
+    ConcurrentApplyError,
+    exclusive_apply_lock,
+    run_maintenance,
+)
 from src.literature.metadata_backfill import (  # noqa: E402
     DEFAULT_CHECKPOINT_PATH,
     SUPPORTED_PROVIDERS,
     backfill_existing_literature_metadata,
 )
 
-
 APPLY_LOCK_PATH = ROOT / "data/cache/literature_metadata_backfill.lock"
 
 
-class ConcurrentApplyError(RuntimeError):
-    """Raised when a second metadata writer is already active."""
-
-
-@contextmanager
-def _exclusive_apply_lock(path: Path = APPLY_LOCK_PATH) -> Iterator[TextIO]:
-    """Fail closed when another metadata apply process owns the workspace lock."""
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    handle = path.open("a+", encoding="utf-8")
-    try:
-        try:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as exc:
-            raise ConcurrentApplyError(
-                "another literature metadata backfill --apply process is already running"
-            ) from exc
-        yield handle
-    finally:
-        handle.close()
+def _exclusive_apply_lock(path: Path = APPLY_LOCK_PATH):
+    return exclusive_apply_lock(path, operation="literature metadata backfill")
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -115,13 +96,20 @@ async def _main(args: argparse.Namespace) -> dict:
     )
 
 
-if __name__ == "__main__":
+def main(argv: list[str] | None = None) -> int:
     parser = _parser()
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(argv)
     if arguments.batch_size < 1 or arguments.batch_size > 500:
         parser.error("--batch-size must be between 1 and 500")
     if arguments.limit is not None and arguments.limit < 1:
         parser.error("--limit must be at least 1")
+    providers = {value.strip().lower() for value in arguments.providers.split(",") if value.strip()}
+    if not providers or not providers.issubset(SUPPORTED_PROVIDERS):
+        parser.error(f"--providers must be selected from {', '.join(SUPPORTED_PROVIDERS)}")
+    if arguments.concurrency is not None and not 1 <= arguments.concurrency <= 12:
+        parser.error("--concurrency must be between 1 and 12")
+    if arguments.min_interval_seconds is not None and not 0 <= arguments.min_interval_seconds <= 10:
+        parser.error("--min-interval-seconds must be between 0 and 10")
     for flag, value in (
         ("--openalex-target", arguments.openalex_target),
         ("--unpaywall-target", arguments.unpaywall_target),
@@ -131,11 +119,14 @@ if __name__ == "__main__":
     try:
         if arguments.apply:
             with _exclusive_apply_lock():
-                result = asyncio.run(_main(arguments))
+                result = run_maintenance(lambda: _main(arguments))
         else:
-            result = asyncio.run(_main(arguments))
+            result = run_maintenance(lambda: _main(arguments))
     except ConcurrentApplyError as exc:
         parser.exit(2, f"metadata backfill refused: {exc}\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    if result["failure_count"]:
-        raise SystemExit(2)
+    return 2 if result["failure_count"] else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

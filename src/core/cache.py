@@ -1,9 +1,11 @@
 """GlobalID V2 缓存服务"""
 
-import hashlib
+import asyncio
 import json
 from typing import Any, Optional
+
 import redis.asyncio as redis
+from redis.exceptions import RedisError
 
 from .config import get_config
 from .logging import get_logger
@@ -17,30 +19,53 @@ class CacheService:
     def __init__(self):
         self.config = get_config()
         self._redis: Optional[redis.Redis] = None
+        self._connection_lock = asyncio.Lock()
 
     async def connect(self) -> None:
         """连接 Redis"""
-        if self._redis is None:
+        async with self._connection_lock:
+            if self._redis is not None:
+                return
+            client = redis.from_url(
+                self.config.redis.url,
+                encoding="utf-8",
+                decode_responses=True,
+                socket_connect_timeout=5,
+                socket_timeout=5,
+            )
             try:
-                self._redis = await redis.from_url(
-                    self.config.redis.url,
-                    encoding="utf-8",
-                    decode_responses=True,
-                    socket_connect_timeout=5,
-                )
-                await self._redis.ping()
-                logger.info(f"Redis connected")
-            except Exception as e:
-                logger.error(f"Redis connection failed: {e}")
-                self._redis = None
+                await client.ping()
+            except BaseException:
+                # The candidate is not shared until it is ready. Also close it
+                # when initialization is cancelled, before releasing the lock.
+                try:
+                    await client.aclose()
+                except Exception as exc:
+                    logger.warning("Failed to close uninitialized cache client: {}", exc)
                 raise
+            self._redis = client
+            logger.info("Redis connected")
 
     async def disconnect(self) -> None:
         """断开连接"""
-        if self._redis:
-            await self._redis.close()
-            logger.info("Redis disconnected")
+        async with self._connection_lock:
+            client = self._redis
             self._redis = None
+            if client is not None:
+                await client.aclose()
+                logger.info("Redis disconnected")
+
+    async def _execute(self, command: str, *args: Any, default: Any, **kwargs: Any) -> Any:
+        """Treat unavailable cache storage as a miss, including initial connect."""
+        try:
+            await self.connect()
+            client = self._redis
+            if client is None:
+                return default
+            return await getattr(client, command)(*args, **kwargs)
+        except (RedisError, OSError) as exc:
+            logger.warning("Cache {} unavailable: {}", command, exc)
+            return default
 
     @staticmethod
     def _make_key(key: str, prefix: str = "globalid") -> str:
@@ -52,20 +77,13 @@ class CacheService:
         if not self.config.ai.enable_cache:
             return None
 
-        await self.connect()
-        if not self._redis:
+        value = await self._execute("get", self._make_key(key), default=None)
+        if value is None:
             return None
-
-        cache_key = self._make_key(key)
         try:
-            value = await self._redis.get(cache_key)
-            if value:
-                logger.debug(f"Cache hit: {key}")
-                return json.loads(value)
-            logger.debug(f"Cache miss: {key}")
-            return None
-        except Exception as e:
-            logger.error(f"Cache get error: {e}")
+            return json.loads(value)
+        except (ValueError, TypeError) as exc:
+            logger.warning("Invalid cached JSON for {}: {}", key, exc)
             return None
 
     async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
@@ -73,62 +91,31 @@ class CacheService:
         if not self.config.ai.enable_cache:
             return False
 
-        await self.connect()
-        if not self._redis:
+        ttl = self.config.ai.cache_ttl * 3600 if ttl is None else ttl
+        if type(ttl) is not int or ttl <= 0:
+            logger.warning("Cache TTL must be a positive integer number of seconds")
             return False
-
-        cache_key = self._make_key(key)
-        ttl = ttl or self.config.cache_ttl
-
         try:
             json_value = json.dumps(value, ensure_ascii=False)
-            await self._redis.set(cache_key, json_value, ex=ttl)
-            logger.debug(f"Cache set: {key}, TTL: {ttl}s")
-            return True
-        except Exception as e:
-            logger.error(f"Cache set error: {e}")
+        except (ValueError, TypeError) as exc:
+            logger.warning("Cache value cannot be serialized for {}: {}", key, exc)
             return False
+        return bool(await self._execute(
+            "set", self._make_key(key), json_value, ex=ttl, default=False,
+        ))
 
     async def delete(self, key: str) -> bool:
         """删除缓存"""
-        await self.connect()
-        if not self._redis:
-            return False
-
-        cache_key = self._make_key(key)
-        try:
-            await self._redis.delete(cache_key)
-            logger.debug(f"Cache deleted: {key}")
-            return True
-        except Exception as e:
-            logger.error(f"Cache delete error: {e}")
-            return False
+        result = await self._execute("delete", self._make_key(key), default=None)
+        return result is not None
 
     async def exists(self, key: str) -> bool:
         """检查缓存是否存在"""
-        await self.connect()
-        if not self._redis:
-            return False
-
-        cache_key = self._make_key(key)
-        try:
-            return await self._redis.exists(cache_key) > 0
-        except Exception as e:
-            logger.error(f"Cache exists check error: {e}")
-            return False
+        return bool(await self._execute("exists", self._make_key(key), default=False))
 
     async def get_ttl(self, key: str) -> int:
         """获取缓存剩余存活时间"""
-        await self.connect()
-        if not self._redis:
-            return -2
-
-        cache_key = self._make_key(key)
-        try:
-            return await self._redis.ttl(cache_key)
-        except Exception as e:
-            logger.error(f"Cache TTL check error: {e}")
-            return -2
+        return await self._execute("ttl", self._make_key(key), default=-2)
 
 
 _cache_service: Optional[CacheService] = None

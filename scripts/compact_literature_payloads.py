@@ -4,19 +4,24 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.literature.storage_maintenance import compact_source_payload_batch  # noqa: E402
+from src.literature.maintenance_cli import run_maintenance  # noqa: E402
+from src.literature.storage_maintenance import (
+    compact_source_payload_batch,  # noqa: E402
+)
 
 
 async def run(*, apply: bool, batch_size: int, max_rows: int | None) -> dict:
+    if not 1 <= batch_size <= 10_000:
+        raise ValueError("batch_size must be between 1 and 10000")
+    if max_rows is not None and max_rows < 1:
+        raise ValueError("max_rows must be at least 1")
     totals = {
         "scanned": 0,
         "compacted": 0,
@@ -48,8 +53,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--batch-size", type=int, default=1000)
     parser.add_argument("--max-rows", type=int)
     args = parser.parse_args(argv)
+    if not 1 <= args.batch_size <= 10_000:
+        parser.error("--batch-size must be between 1 and 10000")
+    if args.max_rows is not None and args.max_rows < 1:
+        parser.error("--max-rows must be at least 1")
     print(json.dumps(
-        asyncio.run(run(apply=args.apply, batch_size=args.batch_size, max_rows=args.max_rows)),
+        run_maintenance(lambda: run(apply=args.apply, batch_size=args.batch_size, max_rows=args.max_rows)),
         ensure_ascii=False,
         indent=2,
     ))

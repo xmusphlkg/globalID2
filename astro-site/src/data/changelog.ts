@@ -26,6 +26,44 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.10.2',
+    date: '2026-10-05',
+    titleEn: 'More reliable AI requests and literature maintenance',
+    titleZh: 'AI 请求与文献维护可靠性改进',
+    titleFr: 'Fiabilité accrue des requêtes IA et de la maintenance bibliographique',
+    summaryEn:
+      'This update improves recovery from cache outages, makes concurrent AI request limits more reliable, and strengthens resumable literature maintenance.',
+    summaryZh:
+      '本次更新改善缓存故障时的处理，修复并发 AI 请求的限流问题，并增强文献维护任务的断点恢复能力。',
+    summaryFr:
+      'Cette mise à jour améliore la gestion des pannes de cache, fiabilise les limites des requêtes IA simultanées et renforce la reprise des tâches de maintenance bibliographique.',
+    sections: [
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrigé',
+        items: [
+          {
+            en: 'AI generation can continue when the cache is unavailable; cache failures no longer abort a valid request or cause a successful model call to be repeated.',
+            zh: '缓存不可用时 AI 生成仍可继续，缓存故障不再中断有效请求或导致已成功的模型调用被重复执行。',
+            fr: 'La génération IA peut continuer lorsque le cache est indisponible ; les pannes de cache ne provoquent plus l’arrêt des requêtes valides ni la répétition des appels au modèle déjà réussis.',
+          },
+          {
+            en: 'Concurrent requests now recheck available capacity after waiting, and retries and fallback-model calls each count toward the request limit.',
+            zh: '并发请求等待后会重新检查可用额度，重试和备用模型调用也分别计入请求限额。',
+            fr: 'Les requêtes simultanées vérifient à nouveau la capacité disponible après leur attente ; chaque nouvelle tentative et chaque appel à un modèle de secours est comptabilisé dans la limite.',
+          },
+          {
+            en: 'Literature maintenance now rejects invalid parameters, preserves accurate retry instructions and saved progress, and cleans up resources when interrupted.',
+            zh: '文献维护任务现在会拒绝非法参数，保留准确的重试提示和处理进度，并在中断时清理资源。',
+            fr: 'La maintenance bibliographique rejette désormais les paramètres invalides, conserve des consignes de reprise et une progression cohérentes, et libère les ressources en cas d’interruption.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.10.1',
     date: '2026-09-11',
     titleEn: 'French interface and internationalized navigation',
