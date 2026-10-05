@@ -394,6 +394,14 @@ class _ScalarResult:
     def __init__(self, value) -> None:
         self.value = value
 
+    def scalars(self):
+        return self
+
+    def all(self):
+        if self.value is None:
+            return []
+        return self.value if isinstance(self.value, list) else [self.value]
+
     def scalar_one_or_none(self):
         return self.value
 
@@ -630,9 +638,16 @@ class _FindDb:
         return _ScalarResult(self.responses.pop(0))
 
 
-async def test_repository_identifier_lookup_order_is_stable_and_avoids_fuzzy_title_merges():
-    existing = SimpleNamespace(article_id="lit_existing", slug="existing")
-    db = _FindDb([None, None, None, existing])
+async def test_repository_identifier_lookup_is_single_query_and_avoids_fuzzy_title_merges():
+    existing = SimpleNamespace(
+        article_id="lit_existing",
+        slug="existing",
+        doi=None,
+        pmid=None,
+        pmcid=None,
+        openalex_id="W123",
+    )
+    db = _FindDb([[existing]])
     candidate = _candidate(pmid="123", pmcid="PMC123", openalex_id="W123")
 
     found = await LiteratureRepository(db)._find(candidate)
@@ -640,12 +655,11 @@ async def test_repository_identifier_lookup_order_is_stable_and_avoids_fuzzy_tit
     assert found is existing
     assert candidate.article_id == "lit_existing"
     assert candidate.slug == "existing"
-    assert [
-        "literature_articles.doi" in db.statements[0],
-        "literature_articles.pmid" in db.statements[1],
-        "literature_articles.pmcid" in db.statements[2],
-        "literature_articles.openalex_id" in db.statements[3],
-    ] == [True, True, True, True]
+    assert len(db.statements) == 1
+    assert all(
+        f"literature_articles.{field}" in db.statements[0]
+        for field in ("doi", "pmid", "pmcid", "openalex_id", "article_id")
+    )
 
 
 async def test_repository_falls_back_to_deterministic_article_id_without_title_matching():
@@ -784,9 +798,13 @@ async def test_repository_preserves_existing_owner_when_provider_supplies_confli
         async def execute(self, statement):
             self.execute_count += 1
             if self.execute_count == 1:
-                return _ScalarResult(article)
-            if "literature_articles.pmcid" in str(statement):
-                return _ScalarResult(owner)
+                return _ScalarResult([
+                    article,
+                    SimpleNamespace(
+                        article_id=owner.article_id,
+                        pmcid="PMC_SHARED",
+                    ),
+                ])
             return _ScalarResult(None)
 
     candidate = _candidate(pmcid="PMC_SHARED")

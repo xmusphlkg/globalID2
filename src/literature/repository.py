@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import get_logger
@@ -116,7 +116,9 @@ class LiteratureRepository:
         preserve_existing_publication_status: bool = False,
     ) -> bool:
         await self._lock_candidate_identifiers(candidate)
-        article = await self._find(candidate)
+        matches = await self._find_identifier_matches(candidate)
+        article = self._select_article_match(candidate, matches)
+        identifier_conflicts = self._find_identifier_conflicts(article, candidate, matches)
         inserted = article is None
         if article is None:
             article = LiteratureArticle(article_id=candidate.article_id, slug=candidate.slug, title=candidate.title)
@@ -128,7 +130,6 @@ class LiteratureRepository:
             previous_publication_status = article.publication_status
 
         existing_metadata = dict(article.metadata_ or {})
-        identifier_conflicts = await self._find_identifier_conflicts(article, candidate)
         editorial_locked = bool(existing_metadata.get("editorial_locked"))
         autopilot_locked = bool(
             existing_metadata.get("autopilot", {}).get("decision") == "publish"
@@ -302,10 +303,57 @@ class LiteratureRepository:
             ))
         return inserted
 
-    async def _find_identifier_conflicts(
+    async def _find_identifier_matches(
         self,
+        candidate: ArticleCandidate,
+    ) -> list[LiteratureArticle]:
+        """Fetch all matching records with one indexed query.
+
+        A provider response can contain identifiers that point to separate
+        article versions. Fetching every owner together avoids per-identifier
+        round trips while still letting the caller apply deterministic priority.
+        """
+
+        predicates = [
+            getattr(LiteratureArticle, field) == value
+            for field in ("doi", "pmid", "pmcid", "openalex_id")
+            if (value := getattr(candidate, field, None))
+        ]
+        predicates.append(LiteratureArticle.article_id == candidate.article_id)
+        result = await self.db.execute(
+            select(LiteratureArticle).where(or_(*predicates))
+        )
+        return list(result.scalars().all())
+
+    @staticmethod
+    def _select_article_match(
+        candidate: ArticleCandidate,
+        matches: list[LiteratureArticle],
+    ) -> LiteratureArticle | None:
+        """Choose the same stable-identifier priority used by historical lookup."""
+
+        for field in ("doi", "pmid", "pmcid", "openalex_id"):
+            value = getattr(candidate, field, None)
+            if not value:
+                continue
+            article = next(
+                (row for row in matches if getattr(row, field, None) == value),
+                None,
+            )
+            if article is not None:
+                candidate.article_id = article.article_id
+                candidate.slug = article.slug
+                return article
+        return next(
+            (row for row in matches if row.article_id == candidate.article_id),
+            None,
+        )
+
+    @staticmethod
+    def _find_identifier_conflicts(
         article: LiteratureArticle | None,
         candidate: ArticleCandidate,
+        matches: list[LiteratureArticle],
     ) -> list[dict[str, str]]:
         """Keep provider identifier collisions from aborting an entire ingest batch.
 
@@ -320,10 +368,10 @@ class LiteratureRepository:
             value = getattr(candidate, field, None)
             if not value or (article is not None and getattr(article, field, None) == value):
                 continue
-            column = getattr(LiteratureArticle, field)
-            owner = (
-                await self.db.execute(select(LiteratureArticle).where(column == value))
-            ).scalar_one_or_none()
+            owner = next(
+                (row for row in matches if getattr(row, field, None) == value),
+                None,
+            )
             if owner is None or (article is not None and owner.article_id == article.article_id):
                 continue
             conflicts.append({
@@ -411,27 +459,8 @@ class LiteratureRepository:
         # Prefer stable, provider-issued identifiers. Deliberately avoid fuzzy
         # title matching: same-title articles in the same year are common and
         # an incorrect automatic merge is difficult to unwind safely.
-        lookups = (
-            (LiteratureArticle.doi, candidate.doi),
-            (LiteratureArticle.pmid, candidate.pmid),
-            (LiteratureArticle.pmcid, candidate.pmcid),
-            (LiteratureArticle.openalex_id, candidate.openalex_id),
-        )
-        for column, value in lookups:
-            if not value:
-                continue
-            article = (
-                await self.db.execute(select(LiteratureArticle).where(column == value))
-            ).scalar_one_or_none()
-            if article is not None:
-                candidate.article_id = article.article_id
-                candidate.slug = article.slug
-                return article
-        return (
-            await self.db.execute(
-                select(LiteratureArticle).where(LiteratureArticle.article_id == candidate.article_id)
-            )
-        ).scalar_one_or_none()
+        matches = await self._find_identifier_matches(candidate)
+        return self._select_article_match(candidate, matches)
 
     async def _replace_links(self, article_id: str, classification: Classification) -> None:
         for model in (LiteratureDiseaseLink, LiteratureCountryLink, LiteratureTopicLink):
