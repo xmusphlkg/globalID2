@@ -19,7 +19,7 @@ def test_installer_manifest_and_dry_run_include_every_systemd_template(
 
     manifest_units = set(
         re.findall(
-            r"^\s+([^\s]+\.(?:service|target))\s*$",
+            r"^\s+([^\s]+\.(?:service|target|timer))\s*$",
             manifest_match.group(1),
             re.MULTILINE,
         )
