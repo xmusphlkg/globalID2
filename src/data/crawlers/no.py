@@ -7,8 +7,9 @@ rows so a front-end/API change cannot silently become plausible disease data.
 The monthly endpoint aggregates years when a range is requested.  We therefore
 request exactly one year at a time and retain the year locally.  For an active
 year the endpoint returns zero-filled future months; those placeholders are
-always removed.  The current month is also excluded by default because it is
-still open, but can be emitted explicitly with ``DataStatus=provisional``.
+always removed.  The current month is excluded by default because it is still
+open; callers may request provisional values, but an all-zero disease panel is
+treated as an unpublished placeholder and omitted.
 """
 
 from __future__ import annotations
@@ -724,6 +725,24 @@ class NorwayMSISCrawler(BaseCrawler):
                 as_of=today,
                 include_current_month=include_current_month,
             )
+
+        current_month = _month_key(today)
+        current_rows = [
+            row
+            for row in live_rows
+            if _month_key(date.fromisoformat(row["Date"])) == current_month
+        ]
+        if current_rows and all(int(row["Cases"]) == 0 for row in current_rows):
+            logger.info(
+                "[NO-FHI-MSIS] Omitting all-zero provisional month | month={} diagnoses={}",
+                today.strftime("%Y-%m"),
+                len(current_rows),
+            )
+            live_rows = [
+                row
+                for row in live_rows
+                if _month_key(date.fromisoformat(row["Date"])) != current_month
+            ]
 
         existing_rows = self._read_existing_rows(Path(output_csv))
         preserved: List[Dict[str, str]] = []
