@@ -18,8 +18,10 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   // Release builds stamp each page with a unique release id, source commit,
   // deployment branch, and build timestamp.  Keep enough headroom for those
   // bounded metadata values while preserving the same underlying page budget.
-  // Allow one byte per page for content-bound review metadata at large route counts.
-  maxAverageHtmlGzipBytes: 18_801,
+  // The 2026-10 jurisdiction expansion adds state/territory profile routes,
+  // raising the full-site average to about 19.0KB while individual page and
+  // route-asset limits remain unchanged.
+  maxAverageHtmlGzipBytes: 19_050,
   maxTotalHtmlGzipBytes: 26_000_000,
   maxFontAssetBytes: 220_000,
   maxLegacyWoffFiles: 0,
