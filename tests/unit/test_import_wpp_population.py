@@ -1,8 +1,55 @@
+import sqlite3
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
 
 from scripts import import_wpp_population
+
+
+@pytest.mark.asyncio
+async def test_wpp_refresh_preserves_official_population_and_fills_other_years(
+    monkeypatch, tmp_path
+):
+    connection = sqlite3.connect(":memory:")
+    connection.executescript("""
+        CREATE TABLE countries (id INTEGER, code TEXT, metadata TEXT, is_active BOOLEAN);
+        INSERT INTO countries VALUES (1, 'CN', '{}', 1);
+        CREATE TABLE population_records (country_id INTEGER, year INTEGER, population REAL,
+            source TEXT, metadata TEXT, created_at TEXT, updated_at TEXT, UNIQUE(country_id,year));
+        INSERT INTO population_records VALUES (1,2025,1404890000,'NBS','official','original','original');
+        INSERT INTO population_records VALUES (1,2026,100,'WPP','old','original','original');
+    """)
+
+    class Session:
+        async def execute(self, statement, params=None):
+            return connection.execute(str(statement), params or {})
+
+    @asynccontextmanager
+    async def get_db():
+        yield Session()
+
+    async def ensure_table(_session):
+        pass
+
+    monkeypatch.setattr(import_wpp_population, "get_db", get_db)
+    monkeypatch.setattr(import_wpp_population, "ensure_table", ensure_table)
+    source = tmp_path / "wpp.csv"
+    source.write_text(
+        "Iso2,Time,Value,Sex,Age,AgeStart,AgeEnd,IndicatorName\n"
+        "CN,2025,1400000000,Both sexes,Total,0,-1,Total population by sex\n"
+        "CN,2026,1390000000,Both sexes,Total,0,-1,Total population by sex\n"
+    )
+    try:
+        await import_wpp_population.ensure_wpp_population(source)
+        assert connection.execute(
+            "SELECT population,source,metadata,updated_at FROM population_records WHERE year=2025"
+        ).fetchone() == (1404890000, "NBS", "official", "original")
+        assert connection.execute(
+            "SELECT population,source FROM population_records WHERE year=2026"
+        ).fetchone() == (1390000000, "WPP")
+    finally:
+        connection.close()
 
 
 def test_default_wpp_input_prefers_existing_history_snapshot(
@@ -55,10 +102,10 @@ def test_population_plan_automatically_includes_new_database_countries() -> None
     import_wpp_population.validate_population_import_plan(plan)
     assert plan["mapped_country_codes"] == ["JP", "UK"]
     assert len(plan["rows"]) == 4
-    assert {
-        (row.country_code, row.wpp_iso2)
-        for row in plan["rows"]
-    } == {("JP", "JP"), ("UK", "GB")}
+    assert {(row.country_code, row.wpp_iso2) for row in plan["rows"]} == {
+        ("JP", "JP"),
+        ("UK", "GB"),
+    }
 
 
 def test_population_plan_rejects_unmatched_or_incomplete_new_country() -> None:
@@ -78,7 +125,9 @@ def test_population_plan_rejects_unmatched_or_incomplete_new_country() -> None:
     assert "KR missing 1 year" in str(error.value)
 
 
-def test_population_plan_excludes_subdivision_without_using_parent_denominator() -> None:
+def test_population_plan_excludes_subdivision_without_using_parent_denominator() -> (
+    None
+):
     rows = [import_wpp_population.PopulationRow("CA", 2026, 40000000.0)]
     plan = import_wpp_population.build_population_import_plan(
         rows,
@@ -90,6 +139,9 @@ def test_population_plan_excludes_subdivision_without_using_parent_denominator()
     assert plan["mapped_country_codes"] == ["CA"]
     assert plan["excluded_location_codes"] == ["CA-ON"]
     assert all(row.country_code != "CA-ON" for row in plan["rows"])
-    assert import_wpp_population.is_wpp_population_target(
-        {"location_type": "subdivision", "iso_subdivision_code": "CA-ON"}
-    ) is False
+    assert (
+        import_wpp_population.is_wpp_population_target(
+            {"location_type": "subdivision", "iso_subdivision_code": "CA-ON"}
+        )
+        is False
+    )

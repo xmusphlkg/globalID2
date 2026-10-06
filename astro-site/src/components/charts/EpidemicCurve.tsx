@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import ChartFrame from './ChartFrame';
 import CurveEntitySelector from './CurveEntitySelector';
 import EpidemicCurvePlot from './EpidemicCurvePlot';
@@ -27,6 +27,7 @@ import {
   reconcileDateWindow,
   selectSourceSeries,
   type EpidemicAnalysisMode,
+  type EpidemicMetric,
   type CurveEntityType,
   type CurveSeries,
 } from './epidemicCurveModel';
@@ -42,6 +43,10 @@ interface Props {
   sourceMeta?: ChartSourceMeta | null;
   sourceSeriesUrl?: string;
   initialLanguage?: 'en' | 'zh' | 'fr';
+  initialAnalysisMode?: 'monitor' | 'compare';
+  initialMetric?: EpidemicMetric;
+  contextControls?: ReactNode;
+  allowSelectAll?: boolean;
 }
 
 const SERIES_COLORS = [
@@ -182,6 +187,10 @@ export default function EpidemicCurve({
   sourceMeta = null,
   sourceSeriesUrl,
   initialLanguage = 'en',
+  initialAnalysisMode = 'monitor',
+  initialMetric = 'cases',
+  contextControls,
+  allowSelectAll = false,
 }: Props) {
   const hasInitialSeries = Boolean(initialSeries && Object.keys(initialSeries).length > 0);
   const remoteDataset = useCountryDataset(dataUrl, !hasInitialSeries);
@@ -190,7 +199,7 @@ export default function EpidemicCurve({
     : (remoteDataset.data?.disease_series ?? EMPTY_SERIES);
   const sourceSeries = useCountrySourceSeries(sourceSeriesUrl, !hasInitialSeries);
   const [sourceSelectionById, setSourceSelectionById] = useState<Record<string, string>>({});
-  const [analysisMode, setAnalysisMode] = useState<EpidemicAnalysisMode>('monitor');
+  const [analysisMode, setAnalysisMode] = useState<EpidemicAnalysisMode>(initialAnalysisMode);
   const [comparisonFrequencyMode, setComparisonFrequencyMode] = useState<
     'native' | 'seasonal_index' | 'annual_total'
   >('native');
@@ -245,7 +254,8 @@ export default function EpidemicCurve({
     entityIds,
     topN,
     caseOnlyEntityIds,
-    initialSelectionMode: 'single',
+    initialSelectionMode: initialAnalysisMode === 'compare' ? 'multiple' : 'single',
+    initialMetric,
   });
   const colorById = useMemo(
     () => buildStableSeriesColorMap(Object.keys(series), SERIES_COLORS),
@@ -598,17 +608,13 @@ export default function EpidemicCurve({
     (item) => provisionalDisplayScope(item) === 'series'
   ).length;
   const primaryMetrics = curveState.availableMetrics.filter((metric) => (
-    analysisMode === 'outbreak'
-      ? metric === 'cases'
-      : analysisMode === 'compare'
-        ? !['trend_index', 'weekly_equiv_cases'].includes(metric)
-        : !['historical_index', 'trend_index', 'weekly_equiv_cases'].includes(metric)
+    analysisMode === 'outbreak' ? metric === 'cases' : ['cases', 'deaths', 'incidence_rates'].includes(metric)
   ));
-  const displayedPrimaryMetrics = primaryMetrics.includes(curveState.metric)
+  const displayedPrimaryMetrics = primaryMetrics.includes(effectiveMetric)
     ? primaryMetrics
-    : [...primaryMetrics, curveState.metric];
+    : [...primaryMetrics, effectiveMetric];
   const advancedMetrics = curveState.availableMetrics.filter((metric) => (
-    ['trend_index', 'weekly_equiv_cases'].includes(metric)
+    !['cases', 'deaths', 'incidence_rates'].includes(metric)
   ));
   const setMode = (nextMode: EpidemicAnalysisMode) => {
     setAnalysisMode(nextMode);
@@ -620,12 +626,20 @@ export default function EpidemicCurve({
       nextMode === 'compare'
       && ['trend_index', 'weekly_equiv_cases'].includes(curveState.metric)
     ) {
-      curveState.setMetric(
-        curveState.availableMetrics.includes('historical_index') ? 'historical_index' : 'cases'
-      );
+      curveState.setMetric('cases');
     }
   };
-  const emptyMessage = comparisonBlocked
+  const missingRateItems = effectiveMetric === 'incidence_rates'
+    ? activeItems.filter((item) => !getMetricValues(item, 'incidence_rates').some((value) => value != null))
+    : [];
+  const missingRateNames = missingRateItems.map((item) => lang === 'zh' ? item.name_zh : lang === 'fr' ? item.name_fr ?? item.name_en : item.name_en);
+  const emptyMessage = missingRateItems.length > 0 && comparisonBlocked
+    ? (lang === 'zh'
+        ? '所选地区缺少发病率或对应人口分母。请补充人口数据、移除缺失地区，或切换病例数查看。'
+        : lang === 'fr'
+          ? 'Des taux ou dénominateurs de population manquent. Ajoutez les données, retirez ces lieux ou consultez les cas.'
+          : 'Selected locations lack incidence rates or population denominators. Add population data, remove missing locations, or view case counts.')
+    : comparisonBlocked
     ? (effectiveComparisonFrequencyMode === 'annual_total' && !annualCommonWindow
         ? (lang === 'zh'
             ? '所选序列没有共同的完整自然年，不能进行年度总量比较。'
@@ -639,6 +653,13 @@ export default function EpidemicCurve({
           : 'The current data do not meet the requirements for a daily/weekly onset-time outbreak curve.')
       : (lang === 'zh' ? '当前指标没有可绘制数据。' : 'No plottable data for the current metric.');
   const statusMessages: string[] = [];
+  if (missingRateNames.length > 0) {
+    statusMessages.push(lang === 'zh'
+      ? `缺少发病率／人口分母：${missingRateNames.join('、')}；不会用全国人口替代省级人口`
+      : lang === 'fr'
+        ? `Taux ou population manquants : ${missingRateNames.join(', ')}. La population nationale ne remplace pas celle d’une province.`
+        : `Missing rates / population: ${missingRateNames.join(', ')}. National population is not used for subdivisions.`);
+  }
   if (analysisMode === 'compare') {
     if (curveState.activeIds.length < 2) {
       statusMessages.push(lang === 'zh'
@@ -783,6 +804,7 @@ export default function EpidemicCurve({
 
   const toolbar = (
     <>
+      {contextControls}
       <div className="chart-primary-controls">
         <div className="chart-selection-mode" role="group" aria-label={lang === 'zh' ? '查看方式' : 'View mode'}>
           <button
@@ -793,7 +815,7 @@ export default function EpidemicCurve({
           >
             {analysisMode === 'outbreak'
               ? (lang === 'zh' ? '返回趋势' : 'Back to trend')
-              : (lang === 'zh' ? '查看趋势' : 'View trend')}
+              : (lang === 'zh' ? '趋势' : 'Trend')}
           </button>
           <button
             type="button"
@@ -801,43 +823,9 @@ export default function EpidemicCurve({
             aria-pressed={analysisMode === 'compare'}
             className={`chart-toggle ${analysisMode === 'compare' ? 'chart-toggle-active' : ''}`}
           >
-            {lang === 'zh' ? '开始比较' : 'Start comparison'}
+            {lang === 'zh' ? '比较' : 'Compare'}
           </button>
         </div>
-        {analysisMode === 'compare' && (
-          <div className="chart-comparison-frequency" role="group" aria-label={lang === 'zh' ? '比较对齐方式' : 'Comparison alignment'}>
-            <span className="chart-control-label">{lang === 'zh' ? '对齐' : 'Align'}</span>
-            <button
-              type="button"
-              onClick={() => setComparisonFrequencyMode('native')}
-              aria-pressed={effectiveComparisonFrequencyMode === 'native'}
-              className={`chart-toggle chart-toggle-small ${effectiveComparisonFrequencyMode === 'native' ? 'chart-toggle-active' : ''}`}
-              title={lang === 'zh' ? '保留原始报告频率，并按频率分面' : 'Keep native reporting cadence and facet by frequency'}
-            >
-              {lang === 'zh' ? '原频率' : 'Native'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setComparisonFrequencyMode('seasonal_index')}
-              disabled={!seasonalComparisonAvailable}
-              aria-pressed={effectiveComparisonFrequencyMode === 'seasonal_index'}
-              className={`chart-toggle chart-toggle-small ${effectiveComparisonFrequencyMode === 'seasonal_index' ? 'chart-toggle-active' : ''}`}
-              title={lang === 'zh' ? '相对各自历史同期预期的异常强度' : 'Anomaly intensity relative to each series’ historical expectation'}
-            >
-              {lang === 'zh' ? '同期异常' : 'Seasonal'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setComparisonFrequencyMode('annual_total')}
-              disabled={!annualAggregation.eligible}
-              aria-pressed={effectiveComparisonFrequencyMode === 'annual_total'}
-              className={`chart-toggle chart-toggle-small ${effectiveComparisonFrequencyMode === 'annual_total' ? 'chart-toggle-active' : ''}`}
-              title={lang === 'zh' ? '仅聚合完整自然年的可加报告计数' : 'Sum additive reported counts for complete calendar years only'}
-            >
-              {lang === 'zh' ? '完整年度' : 'Annual'}
-            </button>
-          </div>
-        )}
         <label className="chart-metric-select">
           <span>{lang === 'zh' ? '指标' : 'Metric'}</span>
           <select
@@ -909,10 +897,44 @@ export default function EpidemicCurve({
       )}
       <details className="chart-advanced-controls">
         <summary>
-          {lang === 'zh' ? '高级分析与数据来源' : 'Advanced analysis & data source'}
+          {lang === 'zh' ? '更多设置 · 分析与来源' : 'More settings · analysis & sources'}
           {sourceOnlySelectionRequired ? (lang === 'zh' ? '（需要选择）' : ' (selection required)') : ''}
         </summary>
         <div className="chart-advanced-body">
+          {analysisMode === 'compare' && (
+            <div className="chart-comparison-frequency" role="group" aria-label={lang === 'zh' ? '比较对齐方式' : 'Comparison alignment'}>
+              <span className="chart-control-label">{lang === 'zh' ? '对齐' : 'Align'}</span>
+              <button
+                type="button"
+                onClick={() => setComparisonFrequencyMode('native')}
+                aria-pressed={effectiveComparisonFrequencyMode === 'native'}
+                className={`chart-toggle chart-toggle-small ${effectiveComparisonFrequencyMode === 'native' ? 'chart-toggle-active' : ''}`}
+                title={lang === 'zh' ? '保留原始报告频率，并按频率分面' : 'Keep native reporting cadence and facet by frequency'}
+              >
+                {lang === 'zh' ? '原频率' : 'Native'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setComparisonFrequencyMode('seasonal_index')}
+                disabled={!seasonalComparisonAvailable}
+                aria-pressed={effectiveComparisonFrequencyMode === 'seasonal_index'}
+                className={`chart-toggle chart-toggle-small ${effectiveComparisonFrequencyMode === 'seasonal_index' ? 'chart-toggle-active' : ''}`}
+                title={lang === 'zh' ? '相对各自历史同期预期的异常强度' : 'Anomaly intensity relative to each series’ historical expectation'}
+              >
+                {lang === 'zh' ? '同期异常' : 'Seasonal'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setComparisonFrequencyMode('annual_total')}
+                disabled={!annualAggregation.eligible}
+                aria-pressed={effectiveComparisonFrequencyMode === 'annual_total'}
+                className={`chart-toggle chart-toggle-small ${effectiveComparisonFrequencyMode === 'annual_total' ? 'chart-toggle-active' : ''}`}
+                title={lang === 'zh' ? '仅聚合完整自然年的可加报告计数' : 'Sum additive reported counts for complete calendar years only'}
+              >
+                {lang === 'zh' ? '完整年度' : 'Annual'}
+              </button>
+            </div>
+          )}
           <div className="chart-toolbar">
             {advancedMetrics.map((metric) => (
               <button
@@ -920,6 +942,7 @@ export default function EpidemicCurve({
                 type="button"
                 onClick={() => {
                   if (analysisMode === 'outbreak') setMode('monitor');
+                  setComparisonFrequencyMode('native');
                   curveState.setMetric(metric);
                 }}
                 className={`chart-toggle ${curveState.metric === metric ? 'chart-toggle-active' : ''}`}
@@ -987,10 +1010,10 @@ export default function EpidemicCurve({
     </div>
   );
   const notes = sourceNotes.length > 0 ? (
-    <details className="chart-note-details" open={sourceNotes.length <= 3}>
+    <details className="chart-note-details">
       <summary>
         {lang === 'zh'
-          ? `注释信息（${sourceNotes.length} 条当前曲线）`
+          ? `数据口径与注释（${sourceNotes.length} 条曲线）`
           : `Data notes (${sourceNotes.length} active series)`}
       </summary>
       <ul className="chart-note-list">
@@ -1019,6 +1042,7 @@ export default function EpidemicCurve({
     onQueryChange: curveState.setQuery,
     onToggle: curveState.toggleSelection,
     onReset: curveState.resetSelection,
+    onSelectAll: allowSelectAll ? curveState.selectAll : undefined,
   };
   const compactSelector = (
     <CurveEntitySelector

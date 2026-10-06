@@ -170,6 +170,15 @@ const FRENCH_REGION_OVERRIDES: Record<string, string> = {
   'AU-ACT': 'Territoire de la capitale australienne', 'AU-NSW': 'Nouvelle-Galles du Sud',
   'AU-NT': 'Territoire du Nord', 'AU-QLD': 'Queensland', 'AU-SA': 'Australie-Méridionale',
   'AU-TAS': 'Tasmanie', 'AU-VIC': 'Victoria', 'AU-WA': 'Australie-Occidentale', 'CA-ON': 'Ontario, Canada',
+  'BR-AC': 'Acre, Brésil', 'BR-AL': 'Alagoas, Brésil', 'BR-AP': 'Amapá, Brésil',
+  'BR-AM': 'Amazonas, Brésil', 'BR-BA': 'Bahia, Brésil', 'BR-CE': 'Ceará, Brésil',
+  'BR-DF': 'District fédéral, Brésil', 'BR-ES': 'Espírito Santo, Brésil', 'BR-GO': 'Goiás, Brésil',
+  'BR-MA': 'Maranhão, Brésil', 'BR-MT': 'Mato Grosso, Brésil', 'BR-MS': 'Mato Grosso do Sul, Brésil',
+  'BR-MG': 'Minas Gerais, Brésil', 'BR-PA': 'Pará, Brésil', 'BR-PB': 'Paraíba, Brésil',
+  'BR-PR': 'Paraná, Brésil', 'BR-PE': 'Pernambouc, Brésil', 'BR-PI': 'Piauí, Brésil',
+  'BR-RJ': 'Rio de Janeiro, Brésil', 'BR-RN': 'Rio Grande do Norte, Brésil', 'BR-RS': 'Rio Grande do Sul, Brésil',
+  'BR-RO': 'Rondônia, Brésil', 'BR-RR': 'Roraima, Brésil', 'BR-SC': 'Santa Catarina, Brésil',
+  'BR-SP': 'São Paulo, Brésil', 'BR-SE': 'Sergipe, Brésil', 'BR-TO': 'Tocantins, Brésil',
 };
 
 /** Localize ISO country/region codes; subdivisions use the shared override table. */

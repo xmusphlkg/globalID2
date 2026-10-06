@@ -1,0 +1,14 @@
+{
+  "coverage_date": "2026-10-06",
+  "files": {
+    "abs_310104_mar2026.xlsx": "2bcc8b90b39032707f0f8b2cea482d98df6317d2a07ee53cc9573a999fd749b2",
+    "cn_nbs_year_end_2000_2024.csv": "7b5f40832648f66088837a6863be5af90d670931ae2707ba191ffdf05b0ebecb",
+    "nbs_2012.xls": "2abdfc95f14f6486fcd5ed0cf601b0514ceee6e8f07fb74879b7405aa42744d6",
+    "nbs_2014.xls": "feb24eb08acbc090e53b270241f3208a208967b78fc37d719ed0574f96a32363",
+    "nbs_2021.xls": "d37e151bc215751887f0121ea50f2177417f87649c122fc8a3e8765279574dc3",
+    "nbs_2021_C02-05.jpg": "39ed8eb1f3224ceb7a0d829ecd79a084d9ef1469b2d5db448e4c6310623849d3",
+    "nbs_2025_C02-05.jpg": "6afd253cf5acbab9205abb9cbdcd6aae2cff977420a94f9d338f83b7f50bf32c",
+    "official_population_latest.csv": "d8dbc5a0808692acba26dfdf2eb5f0eecd7660fc907233e249db5b82b0de67a2",
+    "official_sources_latest.json": "30cf9f52271a71a569198363fc340c750a2ae4b4ab05ed93b1214a49c5ba2647"
+  }
+}

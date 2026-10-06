@@ -271,3 +271,15 @@ async def test_series_query_exports_inactive_history_with_active_selection_flag(
         "code": "IS",
         "geography_key": "country:IS:national",
     }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("code,parent", [("CN-GD", "CN"), ("AU-NSW", "AU"), ("BR-SP", "BR")])
+async def test_subdivision_registry_uses_parent_but_population_uses_local_id(code, parent):
+    session = FakeSession(FakeRows([]))
+    await site_data_queries.fetch_disease_series_records(session, code, True)
+    sql, params = session.calls[0]
+    assert params == {"code": parent, "geography_key": f"country:{code}:national", "population_code": code}
+    assert "pr.country_id = registry_country.id" in sql
+    assert "pr.year = EXTRACT(YEAR FROM dso.time)::int" in sql
+    assert "lower(pr.source) || '_computed'" in sql

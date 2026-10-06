@@ -287,6 +287,7 @@ async def import_rows(rows: list[PopulationRow], dry_run: bool) -> None:
                         population = EXCLUDED.population,
                         source = EXCLUDED.source,
                         updated_at = CURRENT_TIMESTAMP
+                    WHERE population_records.source = 'WPP'
                     """
                 ),
                 {
@@ -357,6 +358,7 @@ async def ensure_wpp_population(
                         source = EXCLUDED.source,
                         metadata = EXCLUDED.metadata,
                         updated_at = CURRENT_TIMESTAMP
+                    WHERE population_records.source = 'WPP'
                     """
                 ),
                 {

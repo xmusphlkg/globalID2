@@ -389,7 +389,7 @@ async def collect_site_export_context(
         population_enabled = await has_population_table(session)
         if population_enabled:
             print(
-                "  Population table detected: incidence will use WPP-based computation"
+                "  Population table detected: incidence will use jurisdiction-specific annual population"
             )
         else:
             print(

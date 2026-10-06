@@ -1,7 +1,7 @@
 {
   "name": "globalid-report-site",
   "type": "module",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "scripts": {
     "postinstall": "npm run sync:flags",
     "sync:flags": "node scripts/sync-flags.mjs",
@@ -10,9 +10,9 @@
     "build": "npm run sync:flags && npm run check:styles && npm run check:i18n && node scripts/build-site.mjs && npm run optimize:map && npm run check:perf && npm run check:seo-output && npm run check:i18n:dist",
     "build:astro": "npm run sync:flags && npm run check:styles && npm run check:i18n && node scripts/build-site.mjs && npm run optimize:map && npm run check:perf && npm run check:seo-output && npm run check:i18n:dist",
     "build:with-data": "npm run site:data && npm run build",
-    "test:curve": "node --experimental-strip-types --test src/components/charts/epidemicCurveModel.test.ts",
+    "test:curve": "node --experimental-strip-types --test src/components/charts/epidemicCurveModel.test.ts src/components/charts/curveGeography.test.ts",
     "test:monthly": "node --experimental-strip-types --test src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
-    "test:charts": "npm run sync:flags && node --experimental-strip-types --test src/lib/echartsReact.test.ts src/lib/country-coverage.test.ts src/lib/country-classifications.test.ts src/components/charts/epidemicCurveModel.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
+    "test:charts": "npm run sync:flags && node --experimental-strip-types --test src/lib/echartsReact.test.ts src/lib/country-coverage.test.ts src/lib/country-classifications.test.ts src/components/charts/epidemicCurveModel.test.ts src/components/charts/curveGeography.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
     "test:knowledge": "node --experimental-strip-types --test src/utils/knowledge.test.ts",
     "test:research": "node --experimental-strip-types --test src/lib/research-ask.test.ts src/lib/research-ui.test.ts",
     "test:i18n": "node --experimental-strip-types --test src/utils/i18n.test.ts",

@@ -15,6 +15,24 @@ This file records release-level changes to the GIDS application and its data ope
 - Prevented large Research Radar reconciliation transactions from pushing the shared worker to its memory ceiling while country disease crawls are active.
 - Prevented concurrent payload compaction from overwriting newer provider metadata, and isolated maintenance failures so a completed source ingest is not reported as a crawl failure.
 
+## [0.10.3] - 2026-10-06
+
+### Added
+
+- Added historical Australian state and territory disease series and Brazilian state and Federal District notification series, enabling jurisdiction-level comparisons alongside national curves.
+- Added dynamic refresh of official population denominators from China's National Bureau of Statistics, the Australian Bureau of Statistics, and Brazil's IBGE, including subnational populations where available.
+- Added monthly population refresh and weekly Brazilian state-case refresh services.
+
+### Changed
+
+- Simplified epidemic-curve geography selection and comparison so users can compare all Chinese provinces for one disease, or compare a Chinese province with other countries and supported subnational jurisdictions.
+- Incidence-rate curves now use each jurisdiction's matching official population by year and retain missing rates when a denominator is unavailable.
+
+### Fixed
+
+- Brazilian state case counts now use residence geography, combine overlapping annual-source contributions without double-counting duplicate files, and retain source provenance.
+- Preserved national Brazilian totals while exporting state-level series and local-population rates.
+
 ## [0.10.2] - 2026-10-05
 
 ### Changed

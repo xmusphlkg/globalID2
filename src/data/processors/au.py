@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -270,7 +271,11 @@ class AUMonthlyUpdater:
                         "Year": str(parsed_date.year),
                         "Month": str(parsed_date.month),
                         "Date": parsed_date.isoformat(),
-                        "Cases": str(max(0, _parse_int(row.get("Cases")) or 0)),
+                        "Cases": (
+                            _norm_text(row.get("Cases"))
+                            if _norm_text(row.get("Cases")).startswith("<")
+                            else str(max(0, _parse_int(row.get("Cases")) or 0))
+                        ),
                         "Population": row.get("Population", ""),
                         "Incidence": row.get("Incidence", ""),
                         "JurisdictionCode": row.get("JurisdictionCode", "AU"),
@@ -525,7 +530,9 @@ class AUMonthlyUpdater:
                 disease = _norm_text(row.get("Disease"))
                 report_date = _parse_date(row)
                 cases = _parse_int(row.get("Cases"))
-                if not disease or report_date is None or cases is None:
+                suppressed_value = _norm_text(row.get("Cases")).strip("'\"")
+                suppressed = re.fullmatch(r'<\s*\d+(?:\.\d+)?', suppressed_value) is not None
+                if not disease or report_date is None or (cases is None and not suppressed):
                     continue
 
                 rows.append(
@@ -533,7 +540,7 @@ class AUMonthlyUpdater:
                         "Date": report_date.isoformat(),
                         "RawDiseaseLabel": disease,
                         "DiseaseFull": _norm_text(row.get("DiseaseFull")) or disease,
-                        "Cases": str(max(0, cases)),
+                        "Cases": suppressed_value if suppressed else str(max(0, cases)),
                         "Group": _norm_text(row.get("Group")),
                         "Incidence": _norm_text(row.get("Incidence")),
                         "Population": _norm_text(row.get("Population")),
@@ -731,6 +738,7 @@ class AUMonthlyUpdater:
                 "location_type": row.get("LocationType", ""),
                 "reporting_area": row.get("ReportingArea", ""),
                 "geography_key": row.get("GeographyKey", self.series_geography_key),
+                "source_value_suppressed": _norm_text(row.get("Cases")).startswith("<"),
                 "death_reporting": "not_provided_by_source",
                 "death_reporting_note": "Australia NNDSS notification feed used here reports cases, not death counts.",
             }
@@ -745,7 +753,7 @@ class AUMonthlyUpdater:
                     "time": day,
                     "disease_id": disease_id,
                     "country_id": country_id,
-                    "cases": cases if cases is not None else 0,
+                    "cases": cases,
                     "deaths": None,
                     "region": row.get("ReportingArea") if self.is_subdivision else None,
                     "data_source": row.get("Source", self.source_name),

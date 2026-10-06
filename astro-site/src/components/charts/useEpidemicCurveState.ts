@@ -18,6 +18,7 @@ interface Options {
   topN: number;
   caseOnlyEntityIds?: string[];
   initialSelectionMode?: CurveSelectionMode;
+  initialMetric?: EpidemicMetric;
 }
 
 export function useEpidemicCurveState({
@@ -26,10 +27,11 @@ export function useEpidemicCurveState({
   topN,
   caseOnlyEntityIds = [],
   initialSelectionMode = 'single',
+  initialMetric = 'cases',
 }: Options) {
   const [viewState, dispatchView] = useReducer(
     epidemicCurveViewReducer,
-    INITIAL_CURVE_VIEW_STATE
+    { ...INITIAL_CURVE_VIEW_STATE, metric: initialMetric }
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectionMode, setSelectionModeState] = useState<CurveSelectionMode>(initialSelectionMode);
@@ -61,10 +63,11 @@ export function useEpidemicCurveState({
 
   const activeIds = useMemo(() => {
     const source = selectedIds.length > 0 ? selectedIds : defaultIds;
-    return source
+    const selection = selectionMode === 'single' ? source.slice(0, 1) : source;
+    return selection
       .filter((id) => eligibleRank.has(id))
       .sort((a, b) => (eligibleRank.get(a) ?? 0) - (eligibleRank.get(b) ?? 0));
-  }, [defaultIds, eligibleRank, selectedIds]);
+  }, [defaultIds, eligibleRank, selectedIds, selectionMode]);
   const activeIdSet = useMemo(() => new Set(activeIds), [activeIds]);
   const caseOnlyEntityIdSet = useMemo(
     () => new Set(caseOnlyEntityIds),
@@ -109,9 +112,9 @@ export function useEpidemicCurveState({
     const hasIncidence = activeIds.some((id) => (
       (series[id]?.incidence_rates ?? []).some((value) => value != null)
     ));
-    if (hasIncidence) metrics.push('incidence_rates');
+    if (hasIncidence || initialMetric === 'incidence_rates') metrics.push('incidence_rates');
     return metrics;
-  }, [activeIds, caseOnlyEntityIdSet, series]);
+  }, [activeIds, caseOnlyEntityIdSet, initialMetric, series]);
 
   useEffect(() => {
     if (!availableMetrics.includes(viewState.metric)) {
@@ -175,10 +178,15 @@ export function useEpidemicCurveState({
   }, [activeIdSet, activeIds.length, defaultIds, eligibleRank, selectOnly, selectionMode]);
 
   const resetSelection = useCallback(() => {
-    setSelectedIds(defaultIds.slice(0, 1));
-  }, [defaultIds]);
+    setSelectedIds(activeIds.slice(0, 1));
+  }, [activeIds]);
+
+  const selectAll = useCallback(() => {
+    if (selectionMode === 'multiple') setSelectedIds(eligibleIds);
+  }, [eligibleIds, selectionMode]);
 
   return {
+    selectAll,
     metric: viewState.metric,
     setMetric,
     availableMetrics,

@@ -1,7 +1,7 @@
 import type { CountryDatasetSeriesEntry } from './countryDataset';
 
 export type CurveSeries = CountryDatasetSeriesEntry;
-export type CurveEntityType = 'disease' | 'country';
+export type CurveEntityType = 'disease' | 'country' | 'location';
 export type EpidemicMetric = 'weekly_equiv_cases' | 'cases' | 'historical_index' | 'trend_index' | 'deaths' | 'incidence_rates';
 export type CurveSelectionMode = 'single' | 'multiple';
 export type EpidemicAnalysisMode = 'monitor' | 'compare' | 'outbreak';

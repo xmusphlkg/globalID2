@@ -26,6 +26,57 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.10.3',
+    date: '2026-10-06',
+    titleEn: 'Subnational disease comparisons and live population updates',
+    titleZh: '省州级疾病比较与人口数据动态更新',
+    titleFr: 'Comparaisons infranationales et actualisation des populations',
+    summaryEn:
+      'Compare disease trends across Chinese provinces and supported state-level jurisdictions, with incidence rates based on refreshed official local populations.',
+    summaryZh:
+      '支持比较中国各省及已接入州级数据的地区，并使用持续更新的官方本地人口计算发病率。',
+    summaryFr:
+      'Comparez les tendances entre les provinces chinoises et les autres juridictions infranationales disponibles, avec des taux calculés à partir des populations locales officielles actualisées.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveau',
+        items: [
+          {
+            en: 'Australian state and territory disease history and Brazilian state and Federal District notification data are available for geographic comparisons.',
+            zh: '新增澳大利亚各州和领地疾病历史数据，以及巴西各州和联邦区通知病例数据，可用于地区比较。',
+            fr: 'Les historiques par État et territoire australien ainsi que les notifications par État et dans le District fédéral brésilien sont disponibles pour les comparaisons géographiques.',
+          },
+          {
+            en: 'Official population data from China’s National Bureau of Statistics, the Australian Bureau of Statistics, and Brazil’s IBGE can be refreshed automatically.',
+            zh: '中国国家统计局、澳大利亚统计局和巴西地理统计局的人口数据现可自动更新。',
+            fr: 'Les données officielles de population du Bureau national des statistiques de Chine, de l’Office australien des statistiques et de l’IBGE au Brésil peuvent être actualisées automatiquement.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '改进',
+        labelFr: 'Amélioré',
+        items: [
+          {
+            en: 'Epidemic curves make it easier to compare Chinese provinces with each other or compare a province with national and supported state-level series.',
+            zh: '流行曲线现在更便于横向比较中国各省，也支持将单个省份与其他国家和已接入的州级地区比较。',
+            fr: 'Les courbes épidémiques facilitent la comparaison des provinces chinoises entre elles ou avec les séries nationales et infranationales disponibles.',
+          },
+          {
+            en: 'Incidence rates use the matching jurisdiction and year’s official population; unavailable denominators remain unreported.',
+            zh: '发病率使用对应地区和年份的官方人口；缺少分母的年份会保留为空。',
+            fr: 'Les taux d’incidence utilisent la population officielle correspondant à la juridiction et à l’année ; les dénominateurs indisponibles restent non renseignés.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.10.2',
     date: '2026-10-05',
     titleEn: 'More reliable AI requests and literature maintenance',
