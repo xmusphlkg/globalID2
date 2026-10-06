@@ -26,6 +26,7 @@ OUTPUT_CHUNK_MAX_CHARS = 4000
 MAX_PERSISTED_OUTPUT_CHUNKS = 2
 OUTPUT_TAIL_MAX_LINES = 120
 COMPLETION_TAIL_LINES = 12
+FAILURE_TAIL_LINES = 40
 OUTPUT_READ_CHUNK_BYTES = 8192
 ANSI_ESCAPE_RE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
@@ -302,8 +303,41 @@ async def run_logged_command(
     await flush_chunk(force=True)
 
     if returncode != 0:
+        failure_tail = "\n".join(output_tail[-FAILURE_TAIL_LINES:])
+        failure_metadata = {
+            **metadata,
+            "event": "command_failed",
+            "command_event": metadata.get("event"),
+            "returncode": returncode,
+            "total_output_lines": total_output_lines,
+            "stored_output_chunks": persisted_output_chunks,
+            "suppressed_output_chunks": suppressed_output_chunks,
+            "suppressed_output_lines": suppressed_output_lines,
+            "output_compacted": suppressed_output_chunks > 0,
+        }
+        failure_content = (
+            f"Command failed with exit code {returncode}.\n"
+            f"Output: {total_output_lines} lines total; "
+            f"{suppressed_output_lines} lines omitted from chunk records.\n"
+            + (
+                f"Final output:\n{failure_tail}"
+                if failure_tail
+                else "No output was captured."
+            )
+        )
+        try:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="error",
+                title=f"{title} Failed",
+                content=failure_content,
+                content_type="text",
+                metadata=failure_metadata,
+            )
+        except Exception as exc:  # pragma: no cover - lifecycle records the error.
+            logger.warning("Failed to write command failure workbook entry: {}", exc)
         raise ReleaseCommandError(
-            f"{title} failed with exit code {returncode}.\n" + "\n".join(output_tail[-40:]),
+            f"{title} failed with exit code {returncode}.\n{failure_tail}".rstrip(),
             release_stage=str(metadata.get("event") or "").strip() or None,
             title=title,
             returncode=returncode,

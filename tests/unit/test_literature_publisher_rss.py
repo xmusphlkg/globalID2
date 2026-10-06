@@ -468,12 +468,14 @@ async def test_pipeline_routes_rss_through_shared_dedup_classification_and_revie
     assert output["normalized"] == 2
     assert output["same_batch_duplicates"] == 1
     assert output["inserted"] == 2
+    assert len(output["inserted_article_ids"]) == 2
     assert output["publisher_rss_fetched"] == 2
 
     with Session(engine) as session:
         articles = session.execute(select(LiteratureArticle).order_by(LiteratureArticle.doi)).scalars().all()
         events = session.execute(select(LiteratureStatusEvent).order_by(LiteratureStatusEvent.id)).scalars().all()
         assert len(articles) == 2
+        assert set(output["inserted_article_ids"]) == {article.article_id for article in articles}
         rss_only = next(article for article in articles if article.doi is None)
         shared = next(article for article in articles if article.doi is not None)
         assert rss_only.abstract_text is None

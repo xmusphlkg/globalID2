@@ -45,8 +45,10 @@ def test_at_de_reviewed_manifests_cover_full_source_inventory() -> None:
         "CN": 1,
         "DE": 142,
         "IE": 111,
+        "JP": 56,
         "NZ": 36,
         "SG": 76,
+        "US": 21,
     })
     assert Counter(item.country_code for item in mappings) == expected_counts
     assert all(

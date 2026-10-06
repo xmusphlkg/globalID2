@@ -41,6 +41,7 @@ async def _run(args: argparse.Namespace) -> dict:
         limit=args.limit or cfg.weekly_ai_review_batch_size,
         timeout_seconds=cfg.weekly_ai_review_timeout_seconds,
         max_attempts=cfg.weekly_ai_review_max_attempts,
+        recheck_after_hours=cfg.weekly_ai_review_recheck_hours,
         apply=args.apply,
     )
     return {"ok": result["counts"]["failed"] == 0, "status": "applied" if args.apply else "dry_run", **result}

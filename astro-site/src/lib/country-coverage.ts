@@ -209,7 +209,7 @@ export function resolveCoverageStatus(
 
 export function getCoverageDisplayName(
   country: Pick<CountryCoverageItem, 'name_en' | 'name_zh'>,
-  lang: 'en' | 'zh',
+  lang: 'en' | 'zh' | 'fr',
   fallbackName?: string,
 ) {
   return lang === 'zh'

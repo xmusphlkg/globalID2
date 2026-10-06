@@ -49,6 +49,9 @@ _MODEL_TEST_PROMPT = (
     "This is a production model-center health check. "
     f"Reply with exactly this text and nothing else: {_MODEL_TEST_MARKER}"
 )
+
+_ROUTE_CHANNEL_FAILURE_CODES = {"get_channel_failed"}
+
 _STRUCTURED_MODEL_TEST_PROMPT = (
     "This is a production model-center literature workload probe. Return JSON only. "
     "Use exactly this top-level shape: "
@@ -1445,6 +1448,31 @@ def is_model_unavailable_error(error: Any) -> bool:
         return True
 
     return message_hit
+
+
+def is_model_channel_failure(error: Any) -> bool:
+    """Detect temporary runtime routing failures when provider channels are missing."""
+    status_code = getattr(error, "status_code", None)
+    response = getattr(error, "response", None)
+    if status_code is None and response is not None:
+        status_code = getattr(response, "status_code", None)
+
+    code_candidates = _extract_error_codes(error)
+    if any(code in _ROUTE_CHANNEL_FAILURE_CODES for code in code_candidates):
+        return True
+
+    # NewAI/compatible providers emit this as a 500 code with explicit channel
+    # routing context in the message.
+    try:
+        normalized_status = int(status_code) if status_code is not None else None
+    except (TypeError, ValueError):
+        normalized_status = None
+
+    if normalized_status == 500:
+        message = str(error).lower()
+        return "可用渠道不存在" in str(error) or "no available channel" in message
+
+    return False
 
 
 def _effective_route_check_status(model_status: Any, provider_status: Any) -> str:

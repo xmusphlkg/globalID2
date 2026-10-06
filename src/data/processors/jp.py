@@ -31,7 +31,7 @@ MAPPING_SOURCE_ID = "SRC_JP_NIID"
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_CSV = ROOT / "data/current/jp/weekly_cases_standardized.csv"
 DEFAULT_REPORTING_AREA = "総数"
-DEFAULT_SOURCE_NAME = "Japan NIID Weekly Sentinel"
+DEFAULT_SOURCE_NAME = "Japan JIHS IDWR Weekly"
 
 
 @dataclass
@@ -170,6 +170,7 @@ class JPWeeklyUpdater:
                         "MMWRYear": str(year),
                         "MMWRWeek": str(week),
                         "RawDiseaseLabel": disease,
+                        "SurveillanceType": _norm_text(row.get("SurveillanceType", "")),
                         "Cases": str(max(0, cases)),
                         "CurrentWeekFlag": _norm_text(row.get("Current week, flag", "")),
                         "Source": self.source_name,
@@ -274,6 +275,7 @@ class JPWeeklyUpdater:
                 "mmwr_year": row.get("MMWRYear", ""),
                 "mmwr_week": row.get("MMWRWeek", ""),
                 "current_week_flag": row.get("CurrentWeekFlag", ""),
+                "surveillance_type": row.get("SurveillanceType", ""),
                 "source_file": row.get("__source_file", ""),
                 "death_reporting": "not_provided_by_source",
                 "death_reporting_note": "Japan IDWR weekly feed used here reports cases only.",

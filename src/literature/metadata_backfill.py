@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
 import json
 import math
-from pathlib import Path
-from typing import Any, Callable, Mapping
+import tempfile
 import uuid
+from collections.abc import Callable, Mapping
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
 from sqlalchemy import and_, case, func, or_, select
 
@@ -18,8 +20,8 @@ from src.domain import LiteratureArticle
 
 from .clients import OpenAlexClient, UnpaywallClient
 from .normalization import apply_openalex, apply_unpaywall, normalize_doi
+from .payloads import SOURCE_PAYLOAD_SCHEMA_VERSION, compact_source_payload
 from .reclassification import candidate_from_stored_article
-
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CHECKPOINT_PATH = ROOT / "data/cache/literature_metadata_backfill.json"
@@ -36,6 +38,12 @@ def _load_checkpoint(path: Path, providers: tuple[str, ...]) -> dict[str, Any] |
         raise ValueError(f"Unsupported metadata-backfill checkpoint: {path}")
     if tuple(payload.get("providers") or []) != providers:
         raise ValueError("Checkpoint providers differ from this run; use --no-resume or a different checkpoint file")
+    cursors = payload.get("provider_cursors", {})
+    if not isinstance(cursors, dict) or any(
+        type(cursor) is not int or cursor < 0
+        for cursor in (payload.get("last_database_id", 0), *cursors.values())
+    ):
+        raise ValueError("Checkpoint cursors must be an object of non-negative integers")
     return payload
 
 
@@ -109,9 +117,50 @@ def _normalize_targets(
 
 def _write_checkpoint(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
-    temporary.replace(path)
+    content = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
+    handle = tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=path.parent,
+        prefix=f".{path.name}.", suffix=".tmp", delete=False,
+    )
+    temporary = Path(handle.name)
+    try:
+        with handle:
+            handle.write(content)
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _checkpoint_payload(
+    stats: Mapping[str, Any],
+    coverage: Mapping[str, Any],
+    *,
+    updated_at: str,
+) -> dict[str, Any]:
+    """Use the same checkpoint schema during a batch and at completion."""
+
+    return {
+        "version": CHECKPOINT_VERSION,
+        **{
+            key: stats[key]
+            for key in (
+                "providers", "last_database_id", "last_article_id", "provider_cursors",
+                "coverage_targets", "next_action_code", "status", "run_id",
+            )
+        },
+        "coverage": coverage,
+        "target_reached": all(values["deficit"] == 0 for values in coverage.values()),
+        "updated_at": updated_at,
+        "run_stats": {
+            key: stats[key]
+            for key in (
+                "examined", "batches", "updated", "unchanged",
+                "planned_batch_size_min", "planned_batch_size_max",
+                "failure_count", "provider_stats",
+            )
+        },
+        "failures": stats["failures"][:100],
+    }
 
 
 def _backfill_projection(value: Any) -> dict[str, Any]:
@@ -131,7 +180,9 @@ def _apply_candidate_projection(article: LiteratureArticle, candidate: Any) -> N
     article.open_access_status = candidate.open_access_status
     article.open_access_url = candidate.open_access_url
     article.license_url = candidate.license_url
-    article.source_payload = dict(candidate.source_payload or {})
+    article.source_payload = compact_source_payload(candidate.source_payload)
+    article.source_payload_version = SOURCE_PAYLOAD_SCHEMA_VERSION
+    article.source_payload_compacted_at = datetime.now(timezone.utc)
 
 
 async def backfill_existing_literature_metadata(
@@ -182,7 +233,9 @@ async def backfill_existing_literature_metadata(
     last_database_id = min(provider_cursors.values(), default=legacy_cursor)
     last_article_id = (previous or {}).get("last_article_id")
     resumed_from_id = last_database_id
-    request_concurrency = concurrency or settings.metadata_enrichment_concurrency
+    request_concurrency = (
+        settings.metadata_enrichment_concurrency if concurrency is None else concurrency
+    )
     request_interval = (
         settings.metadata_enrichment_min_interval_seconds
         if min_interval_seconds is None
@@ -190,7 +243,7 @@ async def backfill_existing_literature_metadata(
     )
     if request_concurrency < 1 or request_concurrency > 12:
         raise ValueError("concurrency must be between 1 and 12")
-    if request_interval < 0 or request_interval > 10:
+    if not 0 <= request_interval <= 10:
         raise ValueError("min_interval_seconds must be between 0 and 10")
     targets = _normalize_targets(normalized_providers, coverage_targets, settings)
 
@@ -348,6 +401,8 @@ async def backfill_existing_literature_metadata(
             if not articles:
                 for provider in active_providers:
                     provider_cursors[provider] = maximum_database_id
+                stats["provider_cursors"] = dict(provider_cursors)
+                stats["last_database_id"] = min(provider_cursors.values())
                 stats["status"] = "completed_below_target"
                 stats["next_action_code"] = "review_provider_match_gap"
                 break
@@ -458,30 +513,9 @@ async def backfill_existing_literature_metadata(
             last_article_id = articles[-1].article_id
             stats["last_article_id"] = last_article_id
             if apply:
-                checkpoint = {
-                    "version": CHECKPOINT_VERSION,
-                    "providers": list(normalized_providers),
-                    "last_database_id": last_database_id,
-                    "last_article_id": last_article_id,
-                    "provider_cursors": dict(provider_cursors),
-                    "coverage_targets": targets,
-                    "coverage": coverage,
-                    "target_reached": all(
-                        values["deficit"] == 0 for values in coverage.values()
-                    ),
-                    "status": "running",
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                    "run_id": stats["run_id"],
-                    "run_stats": {
-                        key: stats[key]
-                        for key in (
-                            "examined", "batches", "updated", "unchanged",
-                            "planned_batch_size_min", "planned_batch_size_max",
-                            "provider_stats",
-                        )
-                    },
-                }
-                _write_checkpoint(checkpoint_file, checkpoint)
+                _write_checkpoint(checkpoint_file, _checkpoint_payload(
+                    stats, coverage, updated_at=datetime.now(timezone.utc).isoformat(),
+                ))
                 stats["checkpoint_written"] = True
         else:
             stats["status"] = "completed_at_limit"
@@ -504,35 +538,17 @@ async def backfill_existing_literature_metadata(
         if stats["status"] == "completed_at_limit":
             stats["status"] = "completed"
         stats["next_action_code"] = "none"
+    elif failed_providers:
+        stats["status"] = "stopped_on_provider_error"
+        stats["next_action_code"] = "retry_failed_provider_batch"
     elif stats["status"] == "completed_at_limit":
         stats["next_action_code"] = "continue_bounded_backfill"
     stats["failures"] = stats["failures"][:100]
     stats["completed_at"] = datetime.now(timezone.utc).isoformat()
     if apply:
-        checkpoint = {
-            "version": CHECKPOINT_VERSION,
-            "providers": list(normalized_providers),
-            "last_database_id": stats["last_database_id"],
-            "last_article_id": stats["last_article_id"],
-            "provider_cursors": dict(provider_cursors),
-            "coverage_targets": targets,
-            "coverage": stats["coverage_after"],
-            "target_reached": stats["target_reached"],
-            "next_action_code": stats["next_action_code"],
-            "status": stats["status"],
-            "updated_at": stats["completed_at"],
-            "run_id": stats["run_id"],
-            "run_stats": {
-                key: stats[key]
-                for key in (
-                    "examined", "batches", "updated", "unchanged",
-                    "planned_batch_size_min", "planned_batch_size_max",
-                    "failure_count", "provider_stats",
-                )
-            },
-            "failures": stats["failures"],
-        }
-        _write_checkpoint(checkpoint_file, checkpoint)
+        _write_checkpoint(checkpoint_file, _checkpoint_payload(
+            stats, stats["coverage_after"], updated_at=stats["completed_at"],
+        ))
         stats["checkpoint_written"] = True
     return stats
 

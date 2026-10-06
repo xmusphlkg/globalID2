@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+import asyncio
 import json
-from pathlib import Path
 import uuid
-from typing import Any, Awaitable
+from collections.abc import Awaitable, Callable
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
 
 import pycountry
 from sqlalchemy import select
@@ -29,14 +31,17 @@ from .clients import (
     SpringerNatureClient,
     UnpaywallClient,
 )
-from .controlled_discovery import build_controlled_query_batches, fetch_controlled_discovery
+from .controlled_discovery import (
+    build_controlled_query_batches,
+    fetch_controlled_discovery,
+)
 from .normalization import (
     apply_europe_pmc,
     apply_openalex,
     apply_pubmed_abstract,
     apply_unpaywall,
-    normalize_crossref,
     normalize_biorxiv,
+    normalize_crossref,
     normalize_elsevier,
     normalize_europe_pmc,
     normalize_official_guidance,
@@ -47,16 +52,16 @@ from .normalization import (
 from .repository import LiteratureRepository
 from .types import ArticleCandidate, Classification
 
-
 logger = get_logger(__name__)
 ROOT = Path(__file__).resolve().parents[2]
+_INGEST_SOURCE_MAX_LENGTH = 256
 
 
 def _load_json(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
     if not isinstance(payload, dict):
-        raise ValueError(f"Expected a JSON object in {path}")
+        raise TypeError(f"Expected a JSON object in {path}")
     return payload
 
 
@@ -80,6 +85,58 @@ def _candidate_key(candidate: ArticleCandidate) -> str:
     if candidate.openalex_id:
         return f"openalex:{candidate.openalex_id.strip().upper()}"
     return f"article:{candidate.article_id}"
+
+
+def _is_postgres_deadlock(exc: BaseException) -> bool:
+    """Recognize PostgreSQL deadlocks through wrapped asyncpg/SQLAlchemy errors."""
+    pending: list[BaseException] = [exc]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        if any(
+            str(getattr(current, attribute, "") or "") == "40P01"
+            for attribute in ("sqlstate", "pgcode")
+        ):
+            return True
+        name = type(current).__name__.casefold()
+        message = str(current).casefold()
+        if "deadlock" in name or "deadlock detected" in message:
+            return True
+        for nested in (
+            getattr(current, "orig", None),
+            getattr(current, "__cause__", None),
+            getattr(current, "__context__", None),
+        ):
+            if isinstance(nested, BaseException):
+                pending.append(nested)
+    return False
+
+
+async def _retry_postgres_deadlock(
+    operation: Callable[[], Awaitable[Any]],
+    *,
+    max_retries: int,
+    base_delay_seconds: float,
+) -> Any:
+    """Retry only transactions PostgreSQL explicitly aborted as deadlock victims."""
+    for retry_index in range(max(0, max_retries) + 1):
+        try:
+            return await operation()
+        except Exception as exc:
+            if not _is_postgres_deadlock(exc) or retry_index >= max_retries:
+                raise
+            delay = base_delay_seconds * (2**retry_index)
+            logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
+                "Research Radar persistence deadlock; retrying transaction "
+                "attempt={}/{} delay_seconds={:.2f}",
+                retry_index + 2,
+                max_retries + 1,
+                delay,
+            )
+            await asyncio.sleep(delay)
 
 
 def _merge_candidate(primary: ArticleCandidate, incoming: ArticleCandidate) -> None:
@@ -185,9 +242,9 @@ async def _isolate_optional_source(provider: str, request: Awaitable[Any]) -> tu
     """Contain optional-source failures without logging URLs, queries, or credentials."""
     try:
         return await request, None
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - isolate failures from optional providers.
         error_type = type(exc).__name__ or "Exception"
-        logger.warning(
+        logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
             "Optional literature discovery failed provider={} error_type={}",
             provider,
             error_type,
@@ -246,8 +303,15 @@ def _global_country_catalogue(
 class LiteraturePipeline:
     def __init__(self, config: Any) -> None:
         self.config = config
+        self._latest_completed_checkpoint: dict[str, Any] | None = None
+        self._latest_completed_checkpoint_loaded = False
 
     async def execute(self, task: Task | None = None) -> dict[str, Any]:
+        # All source cursors in a run come from the same committed ingest row.
+        # Reset the snapshot for each execution so reusing a pipeline instance
+        # cannot carry a stale cursor into a later run.
+        self._latest_completed_checkpoint = None
+        self._latest_completed_checkpoint_loaded = False
         now = datetime.now(timezone.utc)
         since, resume_after = await self._resolve_start(now, task)
         run_uuid = str(uuid.uuid4())
@@ -276,11 +340,21 @@ class LiteraturePipeline:
                     resume_after=resume_after,
                 )
                 raw_records = source_result.records
+                # If every journal stream failed, treat Crossref as
+                # unavailable so the existing PubMed fallback can take over.
+                # Partial Crossref results remain usable and are persisted.
+                if (
+                    int((source_result.checkpoint or {}).get("source_errors") or 0) > 0
+                    and not raw_records
+                ):
+                    crossref_error = "JournalStreamError"
+                    source_result = None
+                    raise RuntimeError("Crossref journal streams unavailable")
             except Exception as exc:
                 crossref_error = type(exc).__name__ or "Exception"
                 if not getattr(self.config, "pubmed_enabled", False):
                     raise
-                logger.warning(
+                logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
                     "Crossref core journal sync failed; attempting PubMed fallback error_type={}",
                     crossref_error,
                 )
@@ -304,9 +378,10 @@ class LiteraturePipeline:
                     raise
                 pubmed_core_records = pubmed_core_result.records
             taxonomy = _load_json(ROOT / self.config.taxonomy_path)
-            diseases, countries = await self._classification_catalogues()
+            diseases, countries = await self._classification_catalogues(taxonomy)
 
             controlled_result = None
+            controlled_error: str | None = None
             controlled_crossref_records: list[dict[str, Any]] = []
             controlled_europe_pmc_records: list[dict[str, Any]] = []
             controlled_pubmed_records: list[dict[str, Any]] = []
@@ -321,48 +396,52 @@ class LiteraturePipeline:
                         8,
                     ),
                 )
-                controlled_result = await fetch_controlled_discovery(
-                    crossref=crossref,
-                    europe_pmc=(
-                        EuropePmcClient(
-                            timeout_seconds=self.config.request_timeout_seconds,
-                            retries=self.config.max_retries,
-                        )
-                        if self.config.europe_pmc_enabled
-                        else None
+                controlled_result, controlled_error = await _isolate_optional_source(
+                    "controlled-query",
+                    fetch_controlled_discovery(
+                        crossref=crossref,
+                        europe_pmc=(
+                            EuropePmcClient(
+                                timeout_seconds=self.config.request_timeout_seconds,
+                                retries=self.config.max_retries,
+                            )
+                            if self.config.europe_pmc_enabled
+                            else None
+                        ),
+                        pubmed=(
+                            PubMedClient(
+                                contact_email=self.config.contact_email,
+                                api_key=getattr(self.config, "pubmed_api_key", ""),
+                                tool=getattr(self.config, "pubmed_tool", "GIDSResearchRadar"),
+                                timeout_seconds=self.config.request_timeout_seconds,
+                                retries=self.config.max_retries,
+                                min_interval_seconds=getattr(self.config, "pubmed_min_interval_seconds", 0.34),
+                            )
+                            if getattr(self.config, "pubmed_enabled", False)
+                            else None
+                        ),
+                        batches=query_batches,
+                        checkpoint=controlled_checkpoint,
+                        since=since,
+                        until=now,
+                        max_queries=getattr(self.config, "controlled_discovery_queries_per_run", 8),
+                        records_per_query=getattr(
+                            self.config,
+                            "controlled_discovery_records_per_query",
+                            15,
+                        ),
+                        max_records=getattr(
+                            self.config,
+                            "controlled_discovery_max_records_per_run",
+                            120,
+                        ),
+                        concurrency=self.config.source_concurrency,
                     ),
-                    pubmed=(
-                        PubMedClient(
-                            contact_email=self.config.contact_email,
-                            api_key=getattr(self.config, "pubmed_api_key", ""),
-                            tool=getattr(self.config, "pubmed_tool", "GIDSResearchRadar"),
-                            timeout_seconds=self.config.request_timeout_seconds,
-                            retries=self.config.max_retries,
-                            min_interval_seconds=getattr(self.config, "pubmed_min_interval_seconds", 0.34),
-                        )
-                        if getattr(self.config, "pubmed_enabled", False)
-                        else None
-                    ),
-                    batches=query_batches,
-                    checkpoint=controlled_checkpoint,
-                    since=since,
-                    until=now,
-                    max_queries=getattr(self.config, "controlled_discovery_queries_per_run", 8),
-                    records_per_query=getattr(
-                        self.config,
-                        "controlled_discovery_records_per_query",
-                        15,
-                    ),
-                    max_records=getattr(
-                        self.config,
-                        "controlled_discovery_max_records_per_run",
-                        120,
-                    ),
-                    concurrency=self.config.source_concurrency,
                 )
-                controlled_crossref_records = controlled_result.crossref_records
-                controlled_europe_pmc_records = controlled_result.europe_pmc_records
-                controlled_pubmed_records = controlled_result.pubmed_records
+                if controlled_result is not None:
+                    controlled_crossref_records = controlled_result.crossref_records
+                    controlled_europe_pmc_records = controlled_result.europe_pmc_records
+                    controlled_pubmed_records = controlled_result.pubmed_records
 
             official_guidance_result = None
             official_guidance_records: list[dict[str, Any]] = []
@@ -383,9 +462,12 @@ class LiteraturePipeline:
                         checkpoint=official_guidance_checkpoint,
                     )
                     official_guidance_records = official_guidance_result.records
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001 - optional source must not fail core ingestion.
                     official_guidance_error = f"{type(exc).__name__}: {exc}"[:500]
-                    logger.warning("WHO IRIS guidance metadata discovery failed: {}", official_guidance_error)
+                    logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
+                        "WHO IRIS guidance metadata discovery failed: {}",
+                        official_guidance_error,
+                    )
 
             springer_result = None
             springer_records: list[dict[str, Any]] = []
@@ -528,45 +610,140 @@ class LiteraturePipeline:
             if task:
                 await task_manager.update_task_progress(task.task_uuid, 55)
 
-            inserted = updated = excluded = published = preprints_held_for_review = 0
-            async with get_db() as db:
-                repository = LiteratureRepository(db)
-                for index, candidate in enumerate(candidates):
-                    classification = classify_candidate(
-                        candidate,
-                        diseases=diseases,
-                        countries=countries,
-                        taxonomy=taxonomy,
-                        now=now,
-                        auto_publish_min_score=self.config.auto_publish_min_score,
+            persisted = {
+                "inserted": 0,
+                "updated": 0,
+                "excluded": 0,
+                "published": 0,
+                "preprints_held_for_review": 0,
+                "enrichment_degraded_review": 0,
+            }
+            inserted_article_ids: list[str] = []
+            classified_candidates: list[tuple[ArticleCandidate, Classification]] = []
+            # Classify before opening a transaction, then persist in a stable
+            # article order so concurrent syncs acquire row locks consistently.
+            for candidate in sorted(candidates, key=_candidate_key):
+                classification = classify_candidate(
+                    candidate,
+                    diseases=diseases,
+                    countries=countries,
+                    taxonomy=taxonomy,
+                    now=now,
+                    auto_publish_min_score=self.config.auto_publish_min_score,
+                )
+                if _hold_degraded_enrichment_for_review(
+                    classification,
+                    enrichment_degraded=enrichment_degraded,
+                ):
+                    persisted["enrichment_degraded_review"] += 1
+                persisted["preprints_held_for_review"] += int(
+                    _hold_preprint_for_review(candidate, classification)
+                )
+                # Autopilot owns publication so that every automatic decision
+                # passes the complete metadata/integrity gate and is audited.
+                if (
+                    self.config.autopilot_enabled
+                    and classification.publication_status == "published"
+                ):
+                    classification.publication_status = "review"
+                persisted["excluded"] += int(
+                    classification.publication_status == "excluded"
+                )
+                persisted["published"] += int(
+                    classification.publication_status == "published"
+                )
+                classified_candidates.append((candidate, classification))
+
+            batch_size = max(
+                1,
+                int(getattr(self.config, "persistence_batch_size", 25)),
+            )
+            max_deadlock_retries = int(
+                getattr(self.config, "persistence_deadlock_max_retries", 3)
+            )
+            deadlock_retry_base = float(
+                getattr(
+                    self.config,
+                    "persistence_deadlock_retry_base_seconds",
+                    0.25,
+                )
+            )
+            for offset in range(0, len(classified_candidates), batch_size):
+                batch = tuple(classified_candidates[offset : offset + batch_size])
+
+                async def persist_batch(
+                    batch_to_write: tuple[tuple[ArticleCandidate, Classification], ...] = batch,
+                ) -> dict[str, int]:
+                    batch_counts = {"inserted": 0, "updated": 0}
+                    async with get_db() as db:
+                        repository = LiteratureRepository(db)
+                        for candidate, classification in batch_to_write:
+                            was_inserted = await repository.upsert(
+                                candidate,
+                                classification,
+                                preserve_existing_publication_status=enrichment_degraded,
+                            )
+                            batch_counts["inserted"] += int(was_inserted)
+                            batch_counts["updated"] += int(not was_inserted)
+                            if was_inserted:
+                                inserted_article_ids.append(candidate.article_id)
+                    return batch_counts
+
+                batch_counts = await _retry_postgres_deadlock(
+                    persist_batch,
+                    max_retries=max_deadlock_retries,
+                    base_delay_seconds=deadlock_retry_base,
+                )
+                persisted["inserted"] += batch_counts["inserted"]
+                persisted["updated"] += batch_counts["updated"]
+                if task:
+                    committed = min(offset + len(batch), len(classified_candidates))
+                    await task_manager.update_task_progress(
+                        task.task_uuid,
+                        min(
+                            95,
+                            55
+                            + int(
+                                40
+                                * committed
+                                / max(1, len(classified_candidates))
+                            ),
+                        ),
                     )
-                    if _hold_degraded_enrichment_for_review(
-                        classification,
-                        enrichment_degraded=enrichment_degraded,
-                    ):
-                        enrichment_counts["enrichment_degraded_review"] += 1
-                    preprints_held_for_review += int(
-                        _hold_preprint_for_review(candidate, classification)
-                    )
-                    # Autopilot owns publication so that every automatic decision
-                    # passes the complete metadata/integrity gate and is audited.
-                    if self.config.autopilot_enabled and classification.publication_status == "published":
-                        classification.publication_status = "review"
-                    was_inserted = await repository.upsert(
-                        candidate,
-                        classification,
-                        preserve_existing_publication_status=enrichment_degraded,
-                    )
-                    inserted += int(was_inserted)
-                    updated += int(not was_inserted)
-                    excluded += int(classification.publication_status == "excluded")
-                    published += int(classification.publication_status == "published")
-                    if task and index % 20 == 0:
-                        await task_manager.update_task_progress(
-                            task.task_uuid,
-                            min(95, 55 + int(40 * (index + 1) / max(1, len(candidates)))),
+
+            inserted = persisted["inserted"]
+            updated = persisted["updated"]
+            excluded = persisted["excluded"]
+            published = persisted["published"]
+            preprints_held_for_review = persisted["preprints_held_for_review"]
+            enrichment_counts["enrichment_degraded_review"] += persisted[
+                "enrichment_degraded_review"
+            ]
+            if task and not classified_candidates:
+                await task_manager.update_task_progress(task.task_uuid, 95)
+
+            payload_compaction = {
+                "scanned": 0,
+                "compacted": 0,
+                "saved_bytes": 0,
+                "errors": 0,
+            }
+            if getattr(self.config, "payload_compaction_enabled", False):
+                from .storage_maintenance import compact_source_payload_batch
+
+                try:
+                    payload_compaction = await compact_source_payload_batch(
+                        batch_size=int(
+                            getattr(self.config, "payload_compaction_batch_size", 1000)
                         )
-                await db.commit()
+                    )
+                    payload_compaction["errors"] = 0
+                except Exception as exc:  # noqa: BLE001 - maintenance is best-effort.
+                    payload_compaction["errors"] = 1
+                    logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
+                        "Research Radar payload compaction deferred error_type={}",
+                        type(exc).__name__ or "Exception",
+                    )
 
             automation = None
             # A provider-wide failure means every candidate in this batch may be
@@ -574,7 +751,9 @@ class LiteraturePipeline:
             # not let the global reconcile immediately undo the review hold; a
             # later healthy run can re-evaluate the same records normally.
             if self.config.autopilot_enabled and not enrichment_degraded:
-                from src.services.literature_automation_service import literature_automation_service
+                from src.services.literature_automation_service import (
+                    literature_automation_service,
+                )
 
                 automation = await literature_automation_service.reconcile()
 
@@ -629,6 +808,7 @@ class LiteraturePipeline:
                 "controlled_discovery_query_errors": len(
                     (controlled_result.checkpoint if controlled_result else {}).get("query_errors") or []
                 ),
+                "controlled_discovery_source_errors": int(controlled_error is not None),
                 "normalized": len(candidates),
                 "same_batch_duplicates": same_batch_duplicates,
                 "inserted": inserted,
@@ -640,6 +820,10 @@ class LiteraturePipeline:
                 "autopilot_skipped_degraded_enrichment": int(
                     self.config.autopilot_enabled and enrichment_degraded
                 ),
+                "payload_compaction_scanned": int(payload_compaction["scanned"]),
+                "payload_compaction_compacted": int(payload_compaction["compacted"]),
+                "payload_compaction_saved_bytes": int(payload_compaction["saved_bytes"]),
+                "payload_compaction_errors": int(payload_compaction["errors"]),
                 "source_records_seen": int((source_result.checkpoint if source_result else {}).get("records_seen") or len(raw_records)),
                 "source_records_returned": int((source_result.checkpoint if source_result else {}).get("records_returned") or len(raw_records)),
                 "source_records_prefetched": int(
@@ -733,6 +917,10 @@ class LiteraturePipeline:
                 "from_indexed_at": since.isoformat(),
                 "through_indexed_at": through_indexed_at.isoformat(),
                 **counts,
+                # Keep this lightweight operational hint out of the durable
+                # ingest-run counts JSON; the service uses it to enqueue a
+                # targeted summary task immediately after this transaction.
+                "inserted_article_ids": inserted_article_ids,
                 "automation": automation,
             }
         except Exception as exc:
@@ -741,7 +929,14 @@ class LiteraturePipeline:
 
     async def _enrich_candidates(self, candidates: list[ArticleCandidate]) -> dict[str, Any]:
         """Apply optional enrichers independently without blocking core ingestion."""
-        dois = list(dict.fromkeys(candidate.doi for candidate in candidates if candidate.doi))
+        candidates_by_doi: dict[str, list[ArticleCandidate]] = {}
+        candidates_by_pmid: dict[str, list[ArticleCandidate]] = {}
+        for candidate in candidates:
+            if candidate.doi:
+                candidates_by_doi.setdefault(candidate.doi, []).append(candidate)
+            if candidate.pmid:
+                candidates_by_pmid.setdefault(candidate.pmid, []).append(candidate)
+        dois = list(candidates_by_doi)
         counts: dict[str, Any] = {
             "europe_pmc_enriched": 0,
             "unpaywall_enriched": 0,
@@ -760,7 +955,7 @@ class LiteraturePipeline:
             counts[f"{provider}_errors"] = 1
             counts["enrichment_errors"] += 1
             counts["enrichment_failed_providers"].append(provider.replace("_", "-"))
-            logger.warning(
+            logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
                 "Literature metadata enrichment failed provider={} error_type={}",
                 provider.replace("_", "-"),
                 type(exc).__name__ or "Exception",
@@ -773,21 +968,23 @@ class LiteraturePipeline:
                     retries=self.config.max_retries,
                 ).enrich_by_dois(dois[: self.config.max_europe_pmc_records])
                 counts["europe_pmc_enriched"] = len(enrichment)
-                for candidate in candidates:
-                    if candidate.doi and candidate.doi in enrichment:
-                        apply_europe_pmc(candidate, enrichment[candidate.doi])
-            except Exception as exc:
+                for doi, metadata in enrichment.items():
+                    for candidate in candidates_by_doi.get(doi, ()):
+                        apply_europe_pmc(candidate, metadata)
+            except Exception as exc:  # noqa: BLE001 - provider failures are isolated by design.
                 record_failure("europe_pmc", exc)
 
         if getattr(self.config, "pubmed_enabled", False):
             try:
                 minimum_abstract_length = int(getattr(self.config, "ai_min_abstract_characters", 180))
-                pmids = list(dict.fromkeys(
-                    candidate.pmid
-                    for candidate in candidates
-                    if candidate.pmid
-                    and len(candidate.abstract_text or "") < minimum_abstract_length
-                ))
+                pmids = [
+                    pmid
+                    for pmid, matching_candidates in candidates_by_pmid.items()
+                    if any(
+                        len(candidate.abstract_text or "") < minimum_abstract_length
+                        for candidate in matching_candidates
+                    )
+                ]
                 abstracts = await PubMedClient(
                     contact_email=self.config.contact_email,
                     api_key=getattr(self.config, "pubmed_api_key", ""),
@@ -799,10 +996,10 @@ class LiteraturePipeline:
                     pmids[: getattr(self.config, "max_pubmed_records", 200)]
                 )
                 counts["pubmed_abstract_enriched"] = len(abstracts)
-                for candidate in candidates:
-                    if candidate.pmid and candidate.pmid in abstracts:
-                        apply_pubmed_abstract(candidate, abstracts[candidate.pmid])
-            except Exception as exc:
+                for pmid, abstract in abstracts.items():
+                    for candidate in candidates_by_pmid.get(pmid, ()):
+                        apply_pubmed_abstract(candidate, abstract)
+            except Exception as exc:  # noqa: BLE001 - provider failures are isolated by design.
                 record_failure("pubmed_abstract", exc)
 
         # Unpaywall is the dedicated legal-OA source, so it gets first chance
@@ -819,10 +1016,10 @@ class LiteraturePipeline:
                     min_interval_seconds=self.config.metadata_enrichment_min_interval_seconds,
                 )
                 counts["unpaywall_enriched"] = len(enrichment)
-                for candidate in candidates:
-                    if candidate.doi and candidate.doi in enrichment:
-                        apply_unpaywall(candidate, enrichment[candidate.doi])
-            except Exception as exc:
+                for doi, metadata in enrichment.items():
+                    for candidate in candidates_by_doi.get(doi, ()):
+                        apply_unpaywall(candidate, metadata)
+            except Exception as exc:  # noqa: BLE001 - provider failures are isolated by design.
                 record_failure("unpaywall", exc)
 
         if getattr(self.config, "openalex_enabled", False):
@@ -839,10 +1036,10 @@ class LiteraturePipeline:
                     min_interval_seconds=self.config.metadata_enrichment_min_interval_seconds,
                 )
                 counts["openalex_enriched"] = len(enrichment)
-                for candidate in candidates:
-                    if candidate.doi and candidate.doi in enrichment:
-                        apply_openalex(candidate, enrichment[candidate.doi])
-            except Exception as exc:
+                for doi, metadata in enrichment.items():
+                    for candidate in candidates_by_doi.get(doi, ()):
+                        apply_openalex(candidate, metadata)
+            except Exception as exc:  # noqa: BLE001 - provider failures are isolated by design.
                 record_failure("openalex", exc)
 
         return counts
@@ -857,30 +1054,15 @@ class LiteraturePipeline:
             parsed = datetime.fromisoformat(str(requested).replace("Z", "+00:00"))
             since = parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
             return since, None
-        async with get_db() as db:
-            latest = (
-                await db.execute(
-                    select(LiteratureIngestRun)
-                    .where(
-                        LiteratureIngestRun.status == "completed",
-                        LiteratureIngestRun.source.like("crossref%"),
-                    )
-                    .order_by(
-                        LiteratureIngestRun.completed_at.desc(),
-                        LiteratureIngestRun.id.desc(),
-                        LiteratureIngestRun.through_indexed_at.desc(),
-                    )
-                    .limit(1)
-                )
-            ).scalar_one_or_none()
-        if latest and latest.through_indexed_at:
-            checkpoint = latest.checkpoint or {}
+        checkpoint_snapshot = await self._load_latest_completed_checkpoint()
+        if checkpoint_snapshot and checkpoint_snapshot["through_indexed_at"]:
+            checkpoint = checkpoint_snapshot["checkpoint"]
             if checkpoint.get("truncated"):
                 next_from = _parse_checkpoint_datetime(checkpoint.get("next_from_indexed_at"))
                 if next_from is not None:
                     resume_after = checkpoint.get("resume_after")
                     return next_from, resume_after if isinstance(resume_after, dict) else None
-            value = latest.through_indexed_at
+            value = checkpoint_snapshot["through_indexed_at"]
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
             # Crossref's index date is the update watermark, and the inclusive
@@ -900,7 +1082,15 @@ class LiteraturePipeline:
         return await self._resolve_nested_checkpoint("rss")
 
     async def _resolve_nested_checkpoint(self, key: str) -> dict[str, Any] | None:
-        """Load a committed secondary-source checkpoint independently of Crossref."""
+        """Return a source cursor from the current run's checkpoint snapshot."""
+        snapshot = await self._load_latest_completed_checkpoint()
+        checkpoint = snapshot["checkpoint"].get(key) if snapshot else None
+        return checkpoint if isinstance(checkpoint, dict) else None
+
+    async def _load_latest_completed_checkpoint(self) -> dict[str, Any] | None:
+        """Read and cache the last completed Crossref run for this execution."""
+        if self._latest_completed_checkpoint_loaded:
+            return self._latest_completed_checkpoint
         async with get_db() as db:
             latest = (
                 await db.execute(
@@ -916,13 +1106,23 @@ class LiteraturePipeline:
                     .limit(1)
                 )
             ).scalar_one_or_none()
-        checkpoint = (latest.checkpoint or {}).get(key) if latest else None
-        return checkpoint if isinstance(checkpoint, dict) else None
+        if latest is not None:
+            checkpoint = latest.checkpoint if isinstance(latest.checkpoint, dict) else {}
+            self._latest_completed_checkpoint = {
+                "through_indexed_at": latest.through_indexed_at,
+                "checkpoint": checkpoint,
+            }
+        self._latest_completed_checkpoint_loaded = True
+        return self._latest_completed_checkpoint
 
-    async def _classification_catalogues(self) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    async def _classification_catalogues(
+        self,
+        taxonomy: dict[str, Any] | None = None,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
         alias_payload = _load_json(ROOT / self.config.disease_aliases_path)
         aliases_by_id = alias_payload.get("aliases") or {}
-        taxonomy = _load_json(ROOT / self.config.taxonomy_path)
+        if taxonomy is None:
+            taxonomy = _load_json(ROOT / self.config.taxonomy_path)
         async with get_db() as db:
             disease_rows = (
                 await db.execute(select(StandardDisease).where(StandardDisease.is_active.is_(True)))
@@ -996,7 +1196,11 @@ class LiteraturePipeline:
             run.status = status
             run.completed_at = datetime.now(timezone.utc)
             if source is not None:
-                run.source = source
+                # Keep persistence resilient if a future provider adds a
+                # longer label than the schema allows. The database column is
+                # intentionally generous, while this guard prevents a new
+                # label from turning a successful fallback into a failed run.
+                run.source = str(source)[:_INGEST_SOURCE_MAX_LENGTH]
             if through_indexed_at is not None:
                 run.through_indexed_at = through_indexed_at
             if checkpoint is not None:

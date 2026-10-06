@@ -278,6 +278,7 @@ def _source_row(
         if source_id == DATACENTER_SOURCE_ID
         else "CN_PROVINCE_MONTHLY_REPORT_V1"
     )
+    definition = str(disease.get("definition_version") or definition)
     return {
         "Date": report_date.isoformat(),
         "RawDiseaseLabel": raw_label,
@@ -707,6 +708,12 @@ class ProvinceMonthlyReportCrawler:
             link.url,
             headers={"Referer": config.index_url} if config.index_url else None,
         )
+        # Some Chinese government sites omit a charset in HTTP headers while
+        # declaring UTF-8 in the HTML meta tag. Requests then defaults to
+        # ISO-8859-1, which turns Chinese table labels into mojibake before
+        # pandas can map them. Honor its byte-level encoding detection here.
+        if response.encoding and response.encoding.lower() in {"iso-8859-1", "latin-1"}:
+            response.encoding = response.apparent_encoding or response.encoding
         retrieved_at = datetime.now(timezone.utc).isoformat()
         page_hash = hashlib.sha256(response.content).hexdigest()
         parser = config.parser
@@ -716,7 +723,7 @@ class ProvinceMonthlyReportCrawler:
             )
         if parser == "html_table":
             try:
-                tables = pd.read_html(io.BytesIO(response.content), flavor="lxml")
+                tables = pd.read_html(io.StringIO(response.text), flavor="lxml")
                 rows = self._normalize_tables(
                     tables,
                     link=link,
@@ -744,7 +751,7 @@ class ProvinceMonthlyReportCrawler:
             # Some publishers alternate between attachments and an inline
             # table without changing the section or report naming scheme.
             try:
-                tables = pd.read_html(io.BytesIO(response.content), flavor="lxml")
+                tables = pd.read_html(io.StringIO(response.text), flavor="lxml")
             except ValueError:
                 tables = []
             rows = self._normalize_tables(

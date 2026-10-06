@@ -517,7 +517,7 @@ def build_country_data(
         "incidence_rate_basis": {
             "formula": "cases / population * 100000",
             "unit": "per_100k",
-            "population_source": "WPP",
+            "population_source": " / ".join(sorted({source.removesuffix("_computed").upper() for source in incidence_source_counts if source.endswith("_computed")})) or None,
             "source_counts": dict(incidence_source_counts),
             "period_semantics": "per_source_reporting_period",
             "note_en": "Values are cases per 100,000 population for each source reporting period (for example, per week, month, or year); they are not annualized. When population is unavailable, original database incidence is shown.",

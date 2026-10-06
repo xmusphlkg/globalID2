@@ -4,17 +4,13 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
-from contextlib import contextmanager
-from datetime import datetime, timezone
-import fcntl
 import json
-from pathlib import Path
 import sys
-from typing import Any, Iterator, TextIO
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
 from sqlalchemy import func, or_, select
-
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -24,31 +20,23 @@ from src.core.config import get_config  # noqa: E402
 from src.core.database import get_db  # noqa: E402
 from src.domain import LiteratureArticle  # noqa: E402
 from src.literature.clients import PubMedClient  # noqa: E402
+from src.literature.maintenance_cli import (  # noqa: E402
+    ConcurrentApplyError,
+    exclusive_apply_lock,
+    run_maintenance,
+)
 from src.literature.normalization import compact_text  # noqa: E402
-
+from src.literature.payloads import (  # noqa: E402
+    SOURCE_PAYLOAD_SCHEMA_VERSION,
+    compact_source_payload,
+)
 
 APPLY_LOCK_PATH = ROOT / "data/cache/literature_pubmed_abstract_backfill.lock"
 DEFAULT_STATUSES = ("published", "review")
 
 
-class ConcurrentApplyError(RuntimeError):
-    """Raised when a second PubMed abstract writer is already active."""
-
-
-@contextmanager
-def _exclusive_apply_lock(path: Path = APPLY_LOCK_PATH) -> Iterator[TextIO]:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    handle = path.open("a+", encoding="utf-8")
-    try:
-        try:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as exc:
-            raise ConcurrentApplyError(
-                "another PubMed abstract backfill --apply process is already running"
-            ) from exc
-        yield handle
-    finally:
-        handle.close()
+def _exclusive_apply_lock(path: Path = APPLY_LOCK_PATH):
+    return exclusive_apply_lock(path, operation="PubMed abstract backfill")
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -82,6 +70,8 @@ def _abstract_projection(article: LiteratureArticle) -> dict[str, Any]:
         "abstract_license": article.abstract_license,
         "source_urls": dict(article.source_urls or {}),
         "source_payload": dict(article.source_payload or {}),
+        "source_payload_version": article.source_payload_version,
+        "source_payload_compacted_at": article.source_payload_compacted_at,
     }
 
 
@@ -96,10 +86,12 @@ def _apply_pubmed_payload(article: LiteratureArticle, payload: dict[str, Any]) -
         **dict(article.source_urls or {}),
         "pubmed": f"https://pubmed.ncbi.nlm.nih.gov/{article.pmid}/",
     }
-    article.source_payload = {
+    article.source_payload = compact_source_payload({
         **dict(article.source_payload or {}),
         "pubmed_efetch": payload,
-    }
+    })
+    article.source_payload_version = SOURCE_PAYLOAD_SCHEMA_VERSION
+    article.source_payload_compacted_at = datetime.now(timezone.utc)
     return True
 
 
@@ -189,6 +181,10 @@ async def _main(args: argparse.Namespace) -> dict[str, Any]:
                     article.abstract_license = before["abstract_license"]
                     article.source_urls = before["source_urls"]
                     article.source_payload = before["source_payload"]
+                    article.source_payload_version = before["source_payload_version"]
+                    article.source_payload_compacted_at = before[
+                        "source_payload_compacted_at"
+                    ]
             else:
                 stats["unchanged"] += 1
         if not args.apply:
@@ -198,9 +194,9 @@ async def _main(args: argparse.Namespace) -> dict[str, Any]:
     return stats
 
 
-if __name__ == "__main__":
+def main(argv: list[str] | None = None) -> int:
     parser = _parser()
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(argv)
     if arguments.limit < 1:
         parser.error("--limit must be at least 1")
     if arguments.batch_size < 1 or arguments.batch_size > 500:
@@ -210,9 +206,14 @@ if __name__ == "__main__":
     try:
         if arguments.apply:
             with _exclusive_apply_lock():
-                result = asyncio.run(_main(arguments))
+                result = run_maintenance(lambda: _main(arguments))
         else:
-            result = asyncio.run(_main(arguments))
+            result = run_maintenance(lambda: _main(arguments))
     except ConcurrentApplyError as exc:
         parser.exit(2, f"PubMed abstract backfill refused: {exc}\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

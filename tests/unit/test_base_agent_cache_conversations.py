@@ -1,9 +1,12 @@
 import asyncio
 import time
+from unittest.mock import AsyncMock, Mock
 
 import pytest
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 from src.ai.agents.base import BaseAgent
+from src.core.cache import CacheService
 
 
 class DummyCache:
@@ -212,6 +215,63 @@ def _stub_persisted_runtime_health(monkeypatch):
 
     monkeypatch.setattr("src.ai.agents.base.record_route_runtime_success", _success)
     monkeypatch.setattr("src.ai.agents.base.record_route_runtime_failure", _failure)
+
+
+@pytest.fixture
+def live_agent(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [runtime_route("dummy-model")])
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time())
+    monkeypatch.setattr(BaseAgent, "MODEL_COOLDOWNS", {})
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {})
+    agent = DummyAgent()
+    monkeypatch.setattr(agent.config.ai, "enable_cache", False)
+    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", True)
+    return agent
+
+
+async def test_redis_outage_does_not_abort_or_repeat_model_request(live_agent, monkeypatch):
+    monkeypatch.setattr(live_agent.config.ai, "enable_cache", True)
+    live_agent.cache = CacheService()
+    monkeypatch.setattr(
+        "src.core.cache.redis.from_url",
+        Mock(side_effect=RedisConnectionError("offline")),
+    )
+
+    result = await live_agent.complete(prompt="hello")
+
+    assert result == "live-response"
+    assert live_agent.provider_calls == 1
+    assert len(live_agent.conversation_history) == 1
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+async def test_each_retry_and_fallback_reserves_a_rate_limit_slot(live_agent, monkeypatch, fallback):
+    if fallback:
+        monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [
+            runtime_route("dummy-model"), runtime_route("fallback-model"),
+        ])
+    live_agent.max_retries = 2
+    provider = AsyncMock(side_effect=[RuntimeError("temporary upstream failure"), ("ok", {})])
+    monkeypatch.setattr(live_agent, "_complete_with_runtime_route", provider)
+    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", AsyncMock())
+
+    result = await live_agent.complete(
+        prompt="hello", max_attempts_per_model=1 if fallback else 2,
+        max_quota_recovery_rounds=0, wait_for_model_recovery=False,
+    )
+
+    assert result == "ok"
+    assert provider.await_count == 2
+    assert live_agent.rate_limiter.get_stats()["current_requests"] == 2
+
+
+async def test_cache_hit_does_not_consume_rate_limit_slot(live_agent, monkeypatch):
+    monkeypatch.setattr(live_agent.config.ai, "enable_cache", True)
+    live_agent.cache = DummyCache({"response": "cached"})
+    assert await live_agent.complete(prompt="hello") == "cached"
+    assert live_agent.rate_limiter.get_stats()["current_requests"] == 0
+    assert live_agent.provider_calls == 0
 
 
 def test_runtime_candidates_do_not_include_configured_model_failover(monkeypatch):
@@ -577,6 +637,31 @@ async def test_runtime_request_timeout_starts_after_model_center_admission(monke
 
     assert result[0] == "admitted-response"
     assert 0 <= agent._runtime_route_request_duration_seconds < 0.01
+
+
+@pytest.mark.asyncio
+async def test_empty_runtime_completion_releases_admission_as_failure(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    agent = AdmissionBoundaryAgent(name="AdmissionBoundary", model="dummy", provider="dummy")
+    releases = []
+
+    class Lease:
+        async def release(self, *, success: bool, error=None):
+            releases.append((success, str(error) if error else None))
+
+    async def acquire(_route):
+        return Lease()
+
+    async def empty_response(*_args, **_kwargs):
+        return "", {}
+
+    monkeypatch.setattr("src.ai.agents.base.acquire_runtime_route_admission", acquire)
+    monkeypatch.setattr(agent, "_complete_with_admitted_runtime_route", empty_response)
+
+    with pytest.raises(RuntimeError, match="empty completion response"):
+        await agent._complete_with_runtime_route(runtime_route("dummy"), "hello")
+
+    assert releases == [(False, "Model returned an empty completion response")]
 
 
 @pytest.mark.asyncio

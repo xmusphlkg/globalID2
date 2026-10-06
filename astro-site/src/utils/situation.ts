@@ -1,4 +1,6 @@
 import type { components } from '../generated/api';
+import type { Lang } from './i18n';
+import { formatLocaleDate, formatLocaleNumber, localizedRegionName } from './i18n';
 
 export type SituationReportV3 = components['schemas']['SituationReportV3'];
 export type SituationSignalV3 = components['schemas']['SituationSignalV3'];
@@ -10,11 +12,8 @@ export function isSituationReportV3(value: unknown): value is SituationReportV3 
   return (value as { schema_version?: unknown }).schema_version === 'situation_room.v3';
 }
 
-export function formatDate(value: string | null | undefined): string {
-  if (!value) return '—';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString('en-US', {
+export function formatDate(value: string | null | undefined, locale: Lang = 'en'): string {
+  return formatLocaleDate(value, locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -22,16 +21,16 @@ export function formatDate(value: string | null | undefined): string {
   });
 }
 
-export function formatNumber(value: number | null | undefined, digits = 1): string {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? value.toLocaleString('en-US', { maximumFractionDigits: digits })
-    : '—';
+export function formatNumber(value: number | null | undefined, digits = 1, locale: Lang = 'en'): string {
+  return formatLocaleNumber(value, locale, { maximumFractionDigits: digits });
 }
 
-export function formatPercent(value: number | null | undefined, digits = 0): string {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? `${value >= 0 ? '+' : ''}${value.toFixed(digits)}%`
-    : '—';
+export function formatPercent(value: number | null | undefined, digits = 0, locale: Lang = 'en'): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+  const formatted = locale === 'fr'
+    ? value.toLocaleString('fr', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+    : value.toFixed(digits);
+  return `${value >= 0 ? '+' : ''}${formatted}${locale === 'fr' ? ' %' : '%'}`;
 }
 
 export function label(value: string | null | undefined, fallback = 'not assessed'): string {
@@ -57,12 +56,36 @@ const ZH_LABELS: Record<string, string> = {
   degraded: '降级可发布',
 };
 
+const FR_LABELS: Record<string, string> = {
+  active: 'actif', alert: 'alerte', assessed: 'évalué', completed: 'terminé',
+  context_only_missing_denominator: 'contexte uniquement (dénominateur manquant)', corrected: 'corrigé',
+  daily: 'quotidien', failed: 'échec', fresh: 'à jour', high: 'élevé', increasing: 'en hausse',
+  merged: 'fusionné', mixed: 'fréquence mixte', monthly: 'mensuel', new: 'nouveau',
+  not_assessed: 'non évalué', not_checked: 'non vérifié', not_modeled: 'non modélisé',
+  partial: 'partiel', passed: 'validé', persistent: 'persistant', published: 'publié',
+  respiratory: 'respiratoire', resolved: 'résolu', routine: 'courant', severity: 'gravité',
+  standard: 'standard', stale: 'obsolète', strong: 'anomalie forte', suppressed: 'supprimé',
+  unusual: 'inhabituel', weekly: 'hebdomadaire', watch: 'à surveiller', official_match: 'événement officiel associé',
+  current: 'disponible', held_back: 'dernière période retenue', delayed: 'source en retard',
+  common_count: 'compte courant', rare_count: 'compte rare', rate: 'taux', context_only: 'contexte uniquement',
+  lagged: 'en retard', historical: 'signal historique', unreviewed: 'non révisé', under_review: 'en cours de revue',
+  verified: 'vérifié', rejected: 'rejeté', statistical_signal: 'signal statistique',
+  not_verified: 'non vérifié', automated_policy: 'politique automatisée contrôlée', analyst_review: 'revue analyste',
+  officially_correlated_signal: 'signal corrélé à un événement officiel', non_converged: 'ajustement non convergé',
+  degraded: 'publication dégradée',
+};
+
 export function labelZh(value: string | null | undefined, fallback = '未评估'): string {
   return ZH_LABELS[value || ''] || fallback;
 }
 
-export function unitSuffix(unit: string | null | undefined): string {
+export function labelFr(value: string | null | undefined, fallback = 'non évalué'): string {
+  return FR_LABELS[value || ''] || fallback;
+}
+
+export function unitSuffix(unit: string | null | undefined, locale: Lang = 'en'): string {
   if (unit === 'percent') return '%';
+  if (unit === 'CDC activity level') return locale === 'fr' ? ' · niveau d’activité CDC' : locale === 'zh' ? ' · CDC 活动等级' : ' · CDC activity level';
   return !unit || unit === 'count' ? '' : ` ${unit}`;
 }
 
@@ -96,10 +119,12 @@ export function diseaseHref(signal: SituationSignalV3): string {
     : '/diseases/';
 }
 
-export function geographyLabel(signal: SituationSignalV3): string {
-  return signal.identity.country_name
-    || signal.identity.country_code
-    || signal.identity.canonical_geography_key;
+export function geographyLabel(signal: SituationSignalV3, locale: Lang = 'en'): string {
+  const code = signal.identity.country_code;
+  if (locale === 'fr' && code) {
+    return localizedRegionName('fr', code, { en: signal.identity.country_name ?? undefined });
+  }
+  return signal.identity.country_name || code || signal.identity.canonical_geography_key;
 }
 
 export function sourceEvidenceUrls(report: SituationReportV3): string[] {

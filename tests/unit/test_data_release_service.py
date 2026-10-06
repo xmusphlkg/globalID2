@@ -266,6 +266,13 @@ async def test_run_logged_command_failure_includes_output_tail(monkeypatch, tmp_
 
     output_entries = [entry for entry in entries if "Output" in entry["title"]]
     assert output_entries[0]["content"] == "first line\nfailure detail"
+    failed_entry = entries[-1]
+    assert failed_entry["title"] == "Failed Command Failed"
+    assert failed_entry["entry_type"] == "error"
+    assert failed_entry["content"].endswith("failure detail")
+    assert failed_entry["metadata"]["event"] == "command_failed"
+    assert failed_entry["metadata"]["command_event"] is None
+    assert failed_entry["metadata"]["returncode"] == 3
 
 
 @pytest.mark.asyncio
@@ -505,6 +512,22 @@ def test_generate_site_data_command_builds_direct_downloads_without_publishing(t
     }.isdisjoint(command)
 
 
+def test_generate_site_data_command_carries_incremental_country_scope(tmp_path):
+    service = DataReleaseService()
+    command = service._generate_site_data_command(
+        python_path=tmp_path / "python",
+        download_url_base="https://raw.example/data/main",
+        incremental_country_codes=["cn", " CA-ON "],
+    )
+
+    assert command[-4:] == [
+        "--incremental-country",
+        "CN",
+        "--incremental-country",
+        "CA-ON",
+    ]
+
+
 @pytest.mark.asyncio
 async def test_release_preflight_checks_direct_download_repo_when_enabled(
     monkeypatch, tmp_path
@@ -587,6 +610,17 @@ async def test_release_preflight_checks_direct_download_repo_when_enabled(
     assert dirty_checks["overall_ready"] is False
     assert dirty_checks["git"]["dirty_blocking_paths"] == ["CHANGELOG.md"]
     assert any("worktree is not clean" in item for item in dirty_checks["blockers"])
+
+    # The weekly AI review registry is an atomically-updated runtime artifact;
+    # it must not block the release, but remains visible in the audit payload.
+    worktree_paths.clear()
+    worktree_paths.append("configs/literature/weekly_ai_reviews.json")
+    runtime_only_checks = await service.integration_checks("site-release")
+    assert runtime_only_checks["overall_ready"] is True
+    assert runtime_only_checks["git"]["dirty_blocking_paths"] == []
+    assert runtime_only_checks["git"]["dirty_runtime_mutable_paths"] == [
+        "configs/literature/weekly_ai_reviews.json"
+    ]
 
 
 @pytest.mark.asyncio
@@ -873,3 +907,29 @@ async def test_site_release_identity_keeps_checkout_branch_when_deployment_diffe
 
     assert identity["source_branch"] == "feature/release-preview"
     assert identity["deployment_branch"] == "master"
+
+
+@pytest.mark.asyncio
+async def test_site_release_identity_records_runtime_registry_changes_as_dirty(monkeypatch):
+    service = DataReleaseService()
+
+    async def git_status_paths():
+        return ["configs/literature/weekly_ai_reviews.json"]
+
+    async def git_head_full():
+        return "a" * 40
+
+    async def current_git_branch():
+        return "master"
+
+    async def git_branch_commit(_branch):
+        return "a" * 40
+
+    monkeypatch.setattr(service, "_git_status_paths", git_status_paths)
+    monkeypatch.setattr(service, "_git_head_full", git_head_full)
+    monkeypatch.setattr(service, "_current_git_branch", current_git_branch)
+    monkeypatch.setattr(service, "_git_branch_commit", git_branch_commit)
+
+    identity = await service._site_release_identity("master")
+
+    assert identity["commit_dirty"] is True

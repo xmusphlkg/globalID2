@@ -1,4 +1,4 @@
-export type KnowledgeLanguage = 'en' | 'zh';
+export type KnowledgeLanguage = 'en' | 'zh' | 'fr';
 
 export type KnowledgeTextAssessment = {
   available: boolean;

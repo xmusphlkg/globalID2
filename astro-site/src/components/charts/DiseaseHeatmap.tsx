@@ -12,6 +12,7 @@ import {
 } from './countryDataset';
 import { useChartLanguage, useChartTheme } from './chartPreferences';
 import { useCountryDataset } from './useCountryDataset';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
 
 type HeatmapData = CountryDatasetHeatmap;
 type DiseaseSeriesEntry = CountryDatasetSeriesEntry;
@@ -27,7 +28,7 @@ interface Props {
   dataUrl?: string;
   height?: number;
   sourceMeta?: ChartSourceMeta | null;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
 function fromLogValue(value: number) {
@@ -102,7 +103,9 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
           const entry = id ? series?.[id] : undefined;
           return lang === 'zh'
             ? (entry?.name_zh || entry?.name_en || loadedData.disease_labels[index])
-            : (entry?.name_en || entry?.name_zh || loadedData.disease_labels[index]);
+            : lang === 'fr'
+              ? localizedDiseaseName({ disease_id: id, name_en: entry?.name_en ?? loadedData.disease_labels[index], name_fr: entry?.name_fr }, 'fr')
+              : (entry?.name_en || entry?.name_zh || loadedData.disease_labels[index]);
         }),
         months: loadedData.months,
         z: rowIndexes.map((index) => loadedData.z[index]),
@@ -127,7 +130,9 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
         disease_labels: diseaseEntries.map((entry) => (
           lang === 'zh'
             ? (entry.name_zh || entry.name_en || entry.disease_id)
-            : (entry.name_en || entry.name_zh || entry.disease_id)
+            : lang === 'fr'
+              ? localizedDiseaseName(entry, 'fr')
+              : (entry.name_en || entry.name_zh || entry.disease_id)
         )),
         months,
         z: diseaseEntries.map((entry) => {

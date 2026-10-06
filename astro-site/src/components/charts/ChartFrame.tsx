@@ -5,7 +5,7 @@ import type { ChartSourceMeta } from '../../utils/chartMeta';
 type RenderablePanel = ReactNode | ((state: { isFullscreen: boolean }) => ReactNode);
 
 interface Props {
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
   toolbar?: ReactNode;
   chart: RenderablePanel;
   table: RenderablePanel;

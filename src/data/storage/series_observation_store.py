@@ -230,6 +230,9 @@ class SeriesObservationStore:
 
     def __init__(self, ontology: DiseaseOntology | None = None) -> None:
         self.ontology = ontology or load_disease_ontology()
+        # The ontology is immutable for this store's lifetime. Many locations
+        # and months share a source identity; resolve it once per batch/store.
+        self._resolved_series_cache: dict[tuple, list[dict[str, Any]]] = {}
 
     def enrich_registry_identities(
         self,
@@ -705,6 +708,7 @@ class SeriesObservationStore:
         observations: list[dict[str, Any]] = []
         observation_by_key: dict[tuple[object, ...], dict[str, Any]] = {}
         series_by_category: dict[int, DiseaseSurveillanceSeries] = {}
+        categories_by_identity: dict[tuple, SourceDiseaseCategory | None] = {}
         handled = 0
 
         for row in rows:
@@ -747,16 +751,19 @@ class SeriesObservationStore:
                 _first_text(row, "DefinitionVersion", "definition_version")
                 or "source-current"
             )
-            category = (
-                await db.execute(
-                    select(SourceDiseaseCategory).where(
-                        SourceDiseaseCategory.source_id == resolved_source,
-                        SourceDiseaseCategory.source_code == source_code,
-                        SourceDiseaseCategory.definition_version == definition_version,
-                        SourceDiseaseCategory.is_active.is_(True),
+            category_identity = (resolved_source, source_code, definition_version)
+            if category_identity not in categories_by_identity:
+                categories_by_identity[category_identity] = (
+                    await db.execute(
+                        select(SourceDiseaseCategory).where(
+                            SourceDiseaseCategory.source_id == resolved_source,
+                            SourceDiseaseCategory.source_code == source_code,
+                            SourceDiseaseCategory.definition_version == definition_version,
+                            SourceDiseaseCategory.is_active.is_(True),
+                        )
                     )
-                )
-            ).scalar_one_or_none()
+                ).scalar_one_or_none()
+            category = categories_by_identity[category_identity]
             if category is None:
                 continue
 
@@ -998,6 +1005,9 @@ class SeriesObservationStore:
         local_code: str | None,
         local_label: str | None,
     ) -> list[dict[str, Any]]:
+        cache_key = (country_code, source_id, local_code, local_label)
+        if cache_key in self._resolved_series_cache:
+            return self._resolved_series_cache[cache_key]
         filters = {
             "country_code": country_code,
             "source_id": source_id,
@@ -1008,6 +1018,7 @@ class SeriesObservationStore:
             **{key: value for key, value in filters.items() if value}
         )
         if isinstance(matches, list) and matches:
+            self._resolved_series_cache[cache_key] = matches
             return matches
 
         # Some source extracts omit one side of their code/label pair.  Retry
@@ -1024,7 +1035,9 @@ class SeriesObservationStore:
             if isinstance(fallback, list):
                 for item in fallback:
                     candidates[item["id"]] = item
-        return [candidates[key] for key in sorted(candidates)]
+        resolved = [candidates[key] for key in sorted(candidates)]
+        self._resolved_series_cache[cache_key] = resolved
+        return resolved
 
 
 def _mapping_coverage_issues(

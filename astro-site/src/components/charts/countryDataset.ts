@@ -1,3 +1,5 @@
+import { localizedDiseaseName } from '../../utils/diseaseNames';
+
 export interface SourceSeriesMetadata {
   series_code?: string;
   source_series_code?: string;
@@ -37,6 +39,7 @@ export interface CountryDatasetSeriesEntry {
   disease_id: string;
   name_en: string;
   name_zh: string;
+  name_fr?: string;
   category?: string;
   slug?: string;
   dates: string[];
@@ -94,6 +97,7 @@ interface CompactCountryDatasetSeriesEntry {
   id: string;
   en: string;
   zh: string;
+  fr?: string;
   cat?: string;
   slug?: string;
   tc?: number;
@@ -151,7 +155,14 @@ function isCompactCountryDataset(value: unknown): value is CompactCountryDataset
 
 function normalizeCountryDataset(raw: CountryDataset | CompactCountryDataset): CountryDataset {
   if (!isCompactCountryDataset(raw)) {
-    return raw;
+    if (!raw.disease_series) return raw;
+    return {
+      ...raw,
+      disease_series: Object.fromEntries(Object.entries(raw.disease_series).map(([id, entry]) => [
+        id,
+        { ...entry, name_fr: localizedDiseaseName({ ...entry, disease_id: entry.disease_id ?? id }, 'fr') },
+      ])),
+    };
   }
 
   const sourceLabels = raw.sources ?? [];
@@ -174,6 +185,7 @@ function normalizeCountryDataset(raw: CountryDataset | CompactCountryDataset): C
           disease_id: entry.id,
           name_en: entry.en,
           name_zh: entry.zh,
+          name_fr: localizedDiseaseName({ disease_id: entry.id, slug: entry.slug, name_en: entry.en, name_zh: entry.zh, name_fr: entry.fr }, 'fr'),
           category: entry.cat,
           slug: entry.slug,
           dates,

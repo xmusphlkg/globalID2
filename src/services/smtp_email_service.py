@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import smtplib
 import ssl
+import time
+from email.utils import make_msgid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -15,6 +17,64 @@ from src.core import get_logger
 from src.services.settings_service import system_settings_service
 
 logger = get_logger(__name__)
+
+_SMTP_MAX_ATTEMPTS = 3
+_SMTP_RETRY_BASE_DELAY_SECONDS = 1.0
+_SMTP_AUTH_FAILURE_COOLDOWN_SECONDS = 300.0
+_smtp_auth_failure_retry_after: float = 0.0
+
+
+def _is_retryable_smtp_error(exc: BaseException) -> bool:
+    if isinstance(
+        exc,
+        (
+            smtplib.SMTPAuthenticationError,
+            smtplib.SMTPRecipientsRefused,
+            smtplib.SMTPSenderRefused,
+            smtplib.SMTPNotSupportedError,
+        ),
+    ):
+        return False
+    if isinstance(exc, smtplib.SMTPResponseException):
+        return 400 <= int(exc.smtp_code) < 500
+    return isinstance(
+        exc,
+        (
+            smtplib.SMTPConnectError,
+            smtplib.SMTPServerDisconnected,
+            TimeoutError,
+            OSError,
+        ),
+    )
+
+
+def _is_auth_failure_error(exc: BaseException) -> bool:
+    if isinstance(exc, smtplib.SMTPAuthenticationError):
+        return True
+    if isinstance(exc, smtplib.SMTPResponseException):
+        try:
+            return int(exc.smtp_code) == 535
+        except (TypeError, ValueError):
+            return False
+    return False
+
+
+def _record_auth_failure_cooldown(now: float, *, message: str) -> None:
+    global _smtp_auth_failure_retry_after
+    _smtp_auth_failure_retry_after = now + _SMTP_AUTH_FAILURE_COOLDOWN_SECONDS
+    logger.warning("SMTP auth-related failure; suppressing retries for {}s: {}", int(_SMTP_AUTH_FAILURE_COOLDOWN_SECONDS), message)
+
+
+def _close_smtp_connection(server: smtplib.SMTP, *, delivered: bool) -> None:
+    try:
+        server.quit()
+    except Exception as exc:
+        if delivered:
+            # Delivery has already succeeded. A dropped QUIT response must not
+            # convert it into a failure and trigger a duplicate alert.
+            logger.warning("SMTP email delivered but connection close failed: {}", exc)
+        else:
+            logger.debug("SMTP connection close failed after send error: {}", exc)
 
 
 class SMTPEmailService:
@@ -64,6 +124,14 @@ class SMTPEmailService:
             logger.warning("SMTP email skipped: no recipients configured")
             return False
 
+        now = time.time()
+        if _smtp_auth_failure_retry_after and now < _smtp_auth_failure_retry_after:
+            logger.warning(
+                "SMTP auth configuration issue active; skipping send for {} more second(s).",
+                int(_smtp_auth_failure_retry_after - now),
+            )
+            return False
+
         from_email = config["smtp_from_email"]
 
         try:
@@ -71,6 +139,7 @@ class SMTPEmailService:
             msg["From"] = from_email
             msg["To"] = ", ".join(recipient_list)
             msg["Subject"] = subject
+            msg["Message-ID"] = make_msgid()
 
             cc_list = [addr.strip() for addr in (cc_recipients or []) if addr and addr.strip()]
             bcc_list = [addr.strip() for addr in (bcc_recipients or []) if addr and addr.strip()]
@@ -114,13 +183,45 @@ class SMTPEmailService:
             if bcc_list:
                 all_recipients.extend(bcc_list)
 
-            server = self._create_connection()
-            try:
-                server.sendmail(from_email, all_recipients, msg.as_string())
-                logger.info(f"Sent SMTP email to {len(recipient_list)} recipient(s)")
-                return True
-            finally:
-                server.quit()
+            message = msg.as_string()
+            last_error: Exception | None = None
+            for attempt in range(1, _SMTP_MAX_ATTEMPTS + 1):
+                server = None
+                delivered = False
+                try:
+                    server = self._create_connection()
+                    server.sendmail(from_email, all_recipients, message)
+                    delivered = True
+                except Exception as exc:
+                    last_error = exc
+                finally:
+                    if server is not None:
+                        _close_smtp_connection(server, delivered=delivered)
+
+                if delivered:
+                    logger.info(f"Sent SMTP email to {len(recipient_list)} recipient(s)")
+                    return True
+                if (
+                    last_error is None
+                    or not _is_retryable_smtp_error(last_error)
+                    or attempt >= _SMTP_MAX_ATTEMPTS
+                ):
+                    break
+                delay = _SMTP_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
+                logger.warning(
+                    "Transient SMTP failure; retrying attempt={}/{} delay_seconds={:.1f} error_type={}",
+                    attempt + 1,
+                    _SMTP_MAX_ATTEMPTS,
+                    delay,
+                    type(last_error).__name__,
+                )
+                time.sleep(delay)
+
+            if last_error is not None:
+                if _is_auth_failure_error(last_error):
+                    _record_auth_failure_cooldown(time.time(), message=str(last_error))
+                raise last_error
+            raise RuntimeError("SMTP delivery failed without an error")
         except Exception as exc:
             logger.error(f"Failed to send SMTP email: {exc}")
             if raise_on_error:

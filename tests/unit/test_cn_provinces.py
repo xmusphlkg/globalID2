@@ -49,11 +49,11 @@ def test_each_province_has_an_independent_adapter_module() -> None:
     assert "xinjiang" in modules
 
 
-def test_province_registry_covers_all_49_phsm_non_total_disease_categories() -> None:
+def test_province_registry_covers_phsm_categories_and_reviewed_monthly_additions() -> None:
     diseases = load_config()["diseases"]
 
-    assert len(diseases) == 49
-    assert len({item["code"] for item in diseases}) == 49
+    assert len(diseases) == 59
+    assert len({item["code"] for item in diseases}) == 59
     assert {item["code"] for item in diseases} >= {
         "viral_hepatitis",
         "hepatitis_d",
@@ -358,17 +358,29 @@ def test_both_sources_resolve_to_distinct_registered_series() -> None:
     assert report.observations[0]["series_code"] == "SER_CN_PROV_REPORT_HEPATITIS_A"
 
 
-def test_all_49_province_diseases_have_both_registered_source_series() -> None:
+def test_province_source_series_include_49_phsm_categories_and_monthly_additions() -> None:
     ontology = load_disease_ontology()
 
     center = ontology.series_lookup(source_id=DATACENTER_SOURCE_ID)
     report = ontology.series_lookup(source_id=MONTHLY_REPORT_SOURCE_ID)
 
     assert len(center) == 49
-    assert len(report) == 49
-    assert {item["local_codes"][0] for item in center} == {
-        item["local_codes"][0] for item in report
-    }
+    assert len(report) == 59
+    center_codes = {item["local_codes"][0] for item in center}
+    report_codes = {item["local_codes"][0] for item in report}
+    assert center_codes <= report_codes
+    assert {
+        "novel_influenza",
+        "sfts",
+        "chikungunya",
+        "mers",
+        "streptococcus_suis_human",
+        "ebola",
+        "zika",
+        "lassa_fever",
+        "clonorchiasis",
+        "acute_flaccid_paralysis",
+    } <= report_codes
     viral_hepatitis = next(
         item for item in center if item["local_codes"] == ["viral_hepatitis"]
     )

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -7,7 +8,11 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from src.domain import LiteratureArticle
-from src.literature.metadata_backfill import backfill_existing_literature_metadata
+from src.literature.metadata_backfill import (
+    _load_checkpoint,
+    _write_checkpoint,
+    backfill_existing_literature_metadata,
+)
 
 
 class _AsyncSessionAdapter:
@@ -228,6 +233,8 @@ async def test_apply_backfill_resumes_batches_and_preserves_editorial_state(back
         assert rows[0].source_payload["openalex"]["related_works"] == ["W40"]
         assert "abstract_inverted_index" not in rows[0].source_payload["openalex"]
         assert "oa_locations" not in rows[0].source_payload["unpaywall"]
+        assert rows[0].source_payload_version == 1
+        assert rows[0].source_payload_compacted_at is not None
 
 
 async def test_provider_failure_does_not_advance_checkpoint_past_failed_batch(backfill_database, tmp_path):
@@ -354,3 +361,87 @@ async def test_no_match_pass_finishes_below_target_with_operator_action(backfill
     assert result["coverage_after"]["openalex"]["deficit"] == 3
     assert result["next_action_code"] == "review_provider_match_gap"
     assert len(no_matches.calls) == 2
+
+
+@pytest.mark.parametrize("overrides", [
+    {"concurrency": 0},
+    {"concurrency": 13},
+    {"min_interval_seconds": float("nan")},
+    {"min_interval_seconds": float("inf")},
+])
+async def test_invalid_request_settings_rejected_before_database_access(overrides):
+    def unexpected_database():
+        pytest.fail("invalid settings must not access the database")
+
+    with pytest.raises(ValueError):
+        await backfill_existing_literature_metadata(
+            config=_settings(), db_factory=unexpected_database, **overrides,
+        )
+
+
+async def test_failure_at_limit_retains_retry_instruction_and_cursor(backfill_database, tmp_path):
+    _engine, database = backfill_database
+    checkpoint = tmp_path / "failure-at-limit.json"
+    result = await backfill_existing_literature_metadata(
+        apply=True, batch_size=1, limit=1,
+        checkpoint_path=checkpoint, config=_settings(), db_factory=database,
+        openalex_client=_FakeOpenAlex(fail_on_call=1), unpaywall_client=_FakeUnpaywall(),
+    )
+    assert result["status"] == "stopped_on_provider_error"
+    assert result["next_action_code"] == "retry_failed_provider_batch"
+    assert result["provider_cursors"] == {"openalex": 0, "unpaywall": 1}
+    stored = json.loads(checkpoint.read_text())
+    assert stored["status"] == result["status"]
+    assert stored["next_action_code"] == result["next_action_code"]
+    assert stored["last_database_id"] == 0
+
+
+async def test_empty_batch_keeps_report_and_checkpoint_cursors_consistent(backfill_database, tmp_path):
+    engine, database = backfill_database
+
+    class ConcurrentEnrichment(_FakeOpenAlex):
+        async def enrich_by_dois(self, dois, **kwargs):
+            # Another writer covers the rest after the initial coverage count.
+            with Session(engine) as session:
+                for article in session.scalars(select(LiteratureArticle).where(LiteratureArticle.id > 1)):
+                    article.openalex_id = f"W{article.id}"
+                session.commit()
+            return await super().enrich_by_dois(dois, **kwargs)
+
+    checkpoint = tmp_path / "empty-batch.json"
+    result = await backfill_existing_literature_metadata(
+        apply=True, batch_size=1, providers=("openalex",),
+        checkpoint_path=checkpoint, config=_settings(), db_factory=database,
+        min_interval_seconds=0, openalex_client=ConcurrentEnrichment(),
+    )
+    stored = json.loads(checkpoint.read_text())
+    assert result["provider_cursors"] == stored["provider_cursors"] == {"openalex": 3}
+    assert result["last_database_id"] == stored["last_database_id"] == 3
+
+
+@pytest.mark.parametrize("updates", [
+    {"last_database_id": -1},
+    {"last_database_id": True},
+    {"last_database_id": "10"},
+    {"provider_cursors": []},
+    {"provider_cursors": {"openalex": 1.5}},
+])
+def test_corrupt_checkpoint_cursors_are_rejected(tmp_path, updates):
+    path = tmp_path / "checkpoint.json"
+    path.write_text(json.dumps({"version": 2, "providers": ["openalex"], **updates}))
+    with pytest.raises(ValueError, match="[Cc]heckpoint"):
+        _load_checkpoint(path, ("openalex",))
+
+
+def test_checkpoint_replace_failure_preserves_previous_file_and_cleans_temp(monkeypatch, tmp_path):
+    path = tmp_path / "checkpoint.json"
+    _write_checkpoint(path, {"version": 1})
+
+    def fail_replace(self, target):
+        raise OSError("replace failed")
+
+    monkeypatch.setattr(Path, "replace", fail_replace)
+    with pytest.raises(OSError, match="replace failed"):
+        _write_checkpoint(path, {"version": 2})
+    assert json.loads(path.read_text()) == {"version": 1}
+    assert list(tmp_path.iterdir()) == [path]

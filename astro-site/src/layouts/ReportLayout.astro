@@ -9,8 +9,8 @@ import {
 interface Props {
   title: string;
   description?: string;
-  breadcrumbs?: Array<{ label: string; labelZh?: string; href?: string }>;
-  initialLanguage?: 'en' | 'zh';
+  breadcrumbs?: Array<{ label: string; labelZh?: string; labelFr?: string; href?: string }>;
+  initialLanguage?: 'en' | 'zh' | 'fr';
   structuredData?: JsonLdNode | JsonLdNode[];
   seo?: import('../lib/seo').SeoDocument;
   hideLanguageToggle?: boolean;
@@ -25,8 +25,8 @@ const {
   seo,
   hideLanguageToggle = false,
 } = Astro.props;
-const homeLabel = initialLanguage === 'zh' ? '首页' : 'Home';
-const localePrefix = initialLanguage === 'zh' ? '/zh' : '';
+const homeLabel = initialLanguage === 'zh' ? '首页' : initialLanguage === 'fr' ? 'Accueil' : 'Home';
+const localePrefix = initialLanguage === 'zh' ? '/zh' : initialLanguage === 'fr' ? '/fr' : '';
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
 const breadcrumbStructuredData = buildBreadcrumbStructuredData({
   siteOrigin,
@@ -68,10 +68,10 @@ const additionalStructuredData = [
                     href={crumb.href}
                     class="site-breadcrumb-link transition-colors"
                   >
-                    {initialLanguage === 'zh' ? (crumb.labelZh ?? crumb.label) : crumb.label}
+                    {initialLanguage === 'zh' ? (crumb.labelZh ?? crumb.label) : initialLanguage === 'fr' ? (crumb.labelFr ?? crumb.label) : crumb.label}
                   </a>
                 ) : (
-                  <span class="site-breadcrumb-current">{initialLanguage === 'zh' ? (crumb.labelZh ?? crumb.label) : crumb.label}</span>
+                  <span class="site-breadcrumb-current">{initialLanguage === 'zh' ? (crumb.labelZh ?? crumb.label) : initialLanguage === 'fr' ? (crumb.labelFr ?? crumb.label) : crumb.label}</span>
                 )}
               </li>
             </>

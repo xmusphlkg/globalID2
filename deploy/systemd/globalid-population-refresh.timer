@@ -1,0 +1,11 @@
+[Unit]
+Description=Check published official populations monthly
+
+[Timer]
+OnCalendar=*-*-01 08:15:00 Asia/Shanghai
+RandomizedDelaySec=3600
+Persistent=true
+Unit=globalid-population-refresh.service
+
+[Install]
+WantedBy=timers.target

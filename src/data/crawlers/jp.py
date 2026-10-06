@@ -188,15 +188,22 @@ class JapanIDWRCrawler(BaseCrawler):
                 debug_logs=debug_logs,
             )
 
-        merged: Dict[tuple[str, str, str, str], Tuple[int, Dict[str, str]]] = {}
+        merged: Dict[tuple[str, str, str, str, str], Tuple[int, Dict[str, str]]] = {}
         if output_csv.exists() and not force:
             with output_csv.open("r", encoding="utf-8-sig", newline="") as handle:
                 for row in csv.DictReader(handle):
+                    # Rows from pre-SurveillanceType snapshots are retained
+                    # as explicitly unspecified rather than discarded or
+                    # silently conflated with the all-case feed.
+                    row["SurveillanceType"] = (
+                        _norm_text(row.get("SurveillanceType")) or "unspecified"
+                    )
                     key = (
                         row.get("Reporting Area", ""),
                         row.get("Current MMWR Year", ""),
                         row.get("MMWR WEEK", ""),
                         row.get("Disease", ""),
+                        row.get("SurveillanceType", ""),
                     )
                     if all(key):
                         merged[key] = (2, dict(row))
@@ -211,11 +218,22 @@ class JapanIDWRCrawler(BaseCrawler):
             normalized = self._normalize_rows(table, reporting_area=reporting_area, source_kind=source_kind)
             debug_logs.append(f"[parse] {source_kind}: {csv_url} -> {len(normalized)} rows")
             for row in normalized:
+                row["SurveillanceType"] = _norm_text(
+                    row.get("SurveillanceType")
+                    or (
+                        "all_case"
+                        if source_kind == "zensu"
+                        else "sentinel"
+                        if source_kind == "teiten"
+                        else "unspecified"
+                    )
+                )
                 key = (
                     row.get("Reporting Area", ""),
                     row.get("Current MMWR Year", ""),
                     row.get("MMWR WEEK", ""),
                     row.get("Disease", ""),
+                    row.get("SurveillanceType", ""),
                 )
                 priority = 0 if source_kind == "zensu" else 1
                 existing = merged.get(key)
@@ -240,6 +258,7 @@ class JapanIDWRCrawler(BaseCrawler):
                     "Current MMWR Year",
                     "MMWR WEEK",
                     "Disease",
+                    "SurveillanceType",
                     "Current week",
                     "Current week, flag",
                 ],
@@ -548,6 +567,10 @@ class JapanIDWRCrawler(BaseCrawler):
                         "Current MMWR Year": str(year),
                         "MMWR WEEK": str(week),
                         "Disease": disease,
+                        "SurveillanceType": _norm_text(
+                            src.get("SurveillanceType")
+                            or ("all_case" if source_kind == "zensu" else "sentinel" if source_kind == "teiten" else "")
+                        ),
                         "Current week": str(max(0, cases)),
                         "Current week, flag": flag,
                     }
@@ -638,6 +661,7 @@ class JapanIDWRCrawler(BaseCrawler):
                     "Current MMWR Year": str(year),
                     "MMWR WEEK": str(week),
                     "Disease": disease,
+                    "SurveillanceType": "all_case" if source_kind == "zensu" else "sentinel" if source_kind == "teiten" else "",
                     "Current week": str(max(0, cases)),
                     "Current week, flag": "",
                 }

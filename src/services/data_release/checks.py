@@ -156,6 +156,29 @@ async def git_status_paths(*, run_capture: Capture, root_dir: Path) -> list[str]
     return paths
 
 
+def release_blocking_worktree_paths(
+    paths: list[str] | tuple[str, ...],
+    *,
+    runtime_mutable_paths: tuple[str, ...] = (),
+) -> list[str]:
+    """Return worktree paths that must block a release.
+
+    A release is built from the current checkout, but a small, explicit set of
+    atomically-written runtime registries is intentionally allowed to change
+    between upstream jobs and the release.  Keeping this allow-list at the
+    preflight boundary prevents background quality jobs from making every
+    automatic release fail while ensuring all unknown code changes remain
+    fail-closed.
+    """
+    allowed = {str(path).replace("\\", "/").strip() for path in runtime_mutable_paths}
+    return [
+        normalized
+        for path in paths
+        if (normalized := str(path).replace("\\", "/").strip())
+        and normalized not in allowed
+    ]
+
+
 async def tracked_generated_paths(
     *,
     run_capture: Capture,

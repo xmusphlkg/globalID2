@@ -182,6 +182,32 @@ but no longer consume the actionable human-review budget.
 venv/bin/python scripts/run_literature_autopilot.py --apply
 ```
 
+Reconciliation uses ordered keyset batches and intentionally avoids loading
+private provider payloads for summary checks. The default batch size is 100;
+operators can lower it for a constrained worker without changing policy:
+
+```bash
+venv/bin/python scripts/run_literature_autopilot.py \
+  --batch-size 250 --statement-timeout-seconds 300 --lock-timeout-seconds 15
+```
+
+Source payloads are versioned and reduced to the bounded evidence required for
+reclassification, provenance coverage, OA audit, and correction/retraction
+decisions. New ingests compact on write and retire one legacy batch after each
+successful ingest. Audit the first legacy batch without writes, then run the
+resumable maintenance command when a faster catch-up is required:
+
+```bash
+PYTHONPATH=. venv/bin/python scripts/compact_literature_payloads.py --batch-size 1000
+PYTHONPATH=. venv/bin/python scripts/compact_literature_payloads.py \
+  --apply --batch-size 1000 --max-rows 10000
+```
+
+Each apply batch locks only selected rows and skips rows another compactor has
+already locked, so it cannot replace newer ingest metadata with a stale JSON
+snapshot. The command reports scanned rows and before/after byte totals; repeat
+bounded invocations until fewer than `--batch-size` rows are scanned.
+
 When classifier aliases, controlled metadata rules, or their version changes,
 rehearse and then backfill stored records before the next public release. This
 path makes no provider requests and preserves editorial publication decisions:
@@ -281,7 +307,7 @@ It receives only public `cited_findings`, `monitoring_context`,
 `evidence_gaps`, and `methodology`; browsing, retrieval, outside knowledge,
 abstracts, private notes, and database rows are excluded. Deterministic checks
 run first. The model must return one bounded JSON object using an issue-code
-allowlist. Prose, unknown codes, malformed output, unavailable routes, and
+allowlist; one otherwise empty JSON code fence is tolerated. Prose, unknown codes, malformed output, unavailable routes, and
 missing credentials all fail closed; raw output and reasoning are not stored.
 
 The feature is off by default. A configured Model Center route can run it on
@@ -302,7 +328,10 @@ PYTHONPATH=. venv/bin/python scripts/ai_review_research_weekly_briefs.py --week 
 
 A pass is shown as `ai_reviewed` with an explicit “not editorial review”
 disclosure. Content changes invalidate it, and a matching human review always
-wins. Failures keep the public unreviewed label and fail a scheduled worker
+wins. An unchanged brief held for editorial attention is automatically
+re-reviewed after `LITERATURE__WEEKLY_AI_REVIEW_RECHECK_HOURS` (six hours by
+default); a strictly newer valid AI pass clears the older AI hold and publishes
+the `ai_reviewed` status. Failures keep the public unreviewed label and fail a scheduled worker
 task with `weekly_brief_ai_review_failed_closed`, so health cannot appear green
 while the route is failing; site generation remains available.
 

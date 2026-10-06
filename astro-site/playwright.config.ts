@@ -16,7 +16,9 @@ export default defineConfig({
     use: { browserName: 'chromium', viewport: { width, height: width <= 390 ? 844 : 900 } },
   })),
   webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 4322',
+    // Keep the supervised test server in the foreground even when Playwright
+    // runs under an agent-detected environment that normally backgrounds Astro.
+    command: 'ASTRO_DEV_BACKGROUND=0 npm run dev -- --host 127.0.0.1 --port 4322',
     url: 'http://127.0.0.1:4322',
     reuseExistingServer: true,
     timeout: 120_000,

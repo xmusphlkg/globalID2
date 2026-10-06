@@ -249,7 +249,7 @@ async def fetch_disease_records_direct(
         incidence_source_expr = """
             CASE
                 WHEN pr.population IS NOT NULL AND pr.population > 0 AND dr.cases IS NOT NULL
-                    THEN 'wpp_computed'
+                    THEN CASE WHEN pr.source = 'WPP' THEN 'wpp_computed' ELSE lower(pr.source) || '_computed' END
                 WHEN dr.incidence_rate IS NOT NULL
                     THEN 'original_db'
                 ELSE 'missing_population'
@@ -338,10 +338,9 @@ async def fetch_disease_series_records(
     use_population_table: bool,
 ) -> list[dict]:
     """Read national, unstratified registry facts suitable for site export."""
-    # Province pages are independent public jurisdictions, but the two source
-    # registries are owned by CN. Their geography keys keep province facts
-    # isolated from the national China series.
-    series_country_code = "CN" if country_code.startswith("CN-") else country_code
+    # CN/AU/BR subdivisions share the parent source registry, while geography
+    # and population keys always stay local to the selected subdivision.
+    series_country_code = country_code.split("-", 1)[0] if country_code.startswith(("CN-", "AU-", "BR-")) else country_code
     incidence_expr = "NULL::double precision"
     incidence_source_expr = "'missing_population'"
     population_join = ""
@@ -353,7 +352,7 @@ async def fetch_disease_series_records(
         )
         incidence_source_expr = (
             "CASE WHEN pr.population IS NOT NULL AND pr.population > 0 "
-            "THEN 'wpp_computed' ELSE 'missing_population' END"
+            "THEN CASE WHEN pr.source = 'WPP' THEN 'wpp_computed' ELSE lower(pr.source) || '_computed' END ELSE 'missing_population' END"
         )
         population_join = (
             "LEFT JOIN countries registry_country "
@@ -474,7 +473,7 @@ async def fetch_disease_series_records(
 
 async def fetch_country_frequency_meta(session, country_code: str) -> dict:
     """Describe source periods without converting period totals into weekly rates."""
-    series_country_code = "CN" if country_code.startswith("CN-") else country_code
+    series_country_code = country_code.split("-", 1)[0] if country_code.startswith(("CN-", "AU-", "BR-")) else country_code
     source_frequencies: list[str] = []
     registry_tables_exist = await has_table(
         session, "disease_surveillance_series"

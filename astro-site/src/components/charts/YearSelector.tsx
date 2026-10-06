@@ -4,7 +4,7 @@ import type { YearSummary } from './monthlyBarModel';
 
 interface Props {
   density?: 'compact' | 'full';
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
   allYears: string[];
   recentYears: string[];
   selectedYearSet: Set<string>;

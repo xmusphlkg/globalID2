@@ -1733,15 +1733,7 @@
   text-transform: uppercase;
 }
 
-.research-card-compact {
-  padding: .82rem 0;
-}
-
-.research-card-compact .research-card-title {
-  margin-top: .48rem;
-  font-size: 1rem;
-}
-
+.research-card-compact,
 .research-card-featured,
 .research-card-stream {
   display: flex;
@@ -1754,12 +1746,26 @@
   transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
 }
 
+.research-card-compact {
+  padding: .86rem .9rem .92rem 1rem;
+}
+
+.research-card-compact:first-child,
 .research-card-featured:first-child,
 .research-card-stream:first-child {
   border-top: 1px solid rgb(var(--border) / .72);
+}
+
+.research-card-compact:first-child {
+  padding-top: .86rem;
+}
+
+.research-card-featured:first-child,
+.research-card-stream:first-child {
   padding-top: .95rem;
 }
 
+.research-card-compact:hover,
 .research-card-featured:hover,
 .research-card-stream:hover {
   z-index: 1;
@@ -1768,6 +1774,7 @@
   transform: translateY(-2px);
 }
 
+.research-card-compact::before,
 .research-card-featured::before,
 .research-card-stream::before {
   content: '';
@@ -1778,6 +1785,7 @@
   opacity: .7;
 }
 
+.research-card-compact .research-card-title,
 .research-card-featured .research-card-title,
 .research-card-stream .research-card-title {
   display: -webkit-box;
@@ -1786,6 +1794,40 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
+}
+
+.research-card-compact .research-card-title {
+  margin-top: .58rem;
+  font-size: 1rem;
+  line-height: 1.32;
+}
+
+.research-card-compact .research-card-topline {
+  flex-direction: column;
+  gap: .46rem;
+}
+
+.research-card-compact .research-card-doi {
+  max-width: 100%;
+  font-size: .68rem;
+  text-align: left;
+}
+
+.research-card-compact .research-card-authors {
+  display: -webkit-box;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.research-card-compact .research-card-source {
+  font-size: .72rem;
+}
+
+.research-card-compact .research-card-actions {
+  margin-top: auto;
+  padding-top: .7rem;
 }
 
 .research-card-featured .research-card-title {

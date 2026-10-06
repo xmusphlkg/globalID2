@@ -14,3 +14,9 @@ test("the five workspace navigation is available", async ({ page }) => {
     await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
   }
 });
+
+test("integrations loads runtime settings instead of leaving the loading shell", async ({ page }) => {
+  await page.goto("/settings/integrations");
+  await expect(page.getByText("Email notifications", { exact: true })).toBeVisible();
+  await expect(page.getByText("Loading settings…", { exact: true })).toHaveCount(0);
+});

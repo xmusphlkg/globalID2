@@ -31,6 +31,7 @@ from src.domain import (
     StandardDisease,
     Task,
 )
+from .content_policy import detail_restrictions
 
 
 logger = get_logger(__name__)
@@ -44,6 +45,10 @@ SUMMARY_FIELDS = (
     "gids_interpretation",
 )
 ALLOWED_EVIDENCE = {"title", "abstract", "bibliographic_metadata", "classifier_links"}
+SUPPORTED_SUMMARY_LANGUAGES = ("en", "zh", "fr")
+TRANSLATION_LANGUAGES = ("zh", "fr")
+LANGUAGE_NAMES = {"en": "English", "zh": "Simplified Chinese", "fr": "French"}
+TRANSLATION_PROVENANCE_VERSION = "translation-provenance.v1"
 
 
 class LiteratureEvidenceAgent(BaseAgent):
@@ -67,7 +72,11 @@ class LiteratureEvidenceAgent(BaseAgent):
                     literature_config.ai_wait_for_model_recovery,
                 )
             ),
-            max_attempts_per_model=1,
+            max_attempts_per_model=getattr(
+                literature_config,
+                "ai_literature_max_attempts_per_model",
+                2,
+            ),
             max_quota_recovery_rounds=int(
                 kwargs.get(
                     "max_quota_recovery_rounds",
@@ -116,14 +125,36 @@ def source_fingerprint(article: LiteratureArticle) -> str:
 
 def _parse_json(value: str) -> dict[str, Any]:
     text = value.strip()
-    fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, re.DOTALL | re.IGNORECASE)
+
+    def _parse_first_object(payload: str) -> Any:
+        decoder = json.JSONDecoder()
+        start = 0
+        while start < len(payload):
+            open_idx = payload.find("{", start)
+            if open_idx < 0:
+                break
+            try:
+                parsed = decoder.raw_decode(payload, open_idx)[0]
+            except json.JSONDecodeError:
+                start = open_idx + 1
+                continue
+            return parsed
+        return None
+
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL | re.IGNORECASE)
     if fenced:
+        candidate = _parse_first_object(fenced.group(1))
+        if isinstance(candidate, dict):
+            return candidate
         text = fenced.group(1)
     else:
+        candidate = _parse_first_object(text)
+        if isinstance(candidate, dict):
+            return candidate
         start, end = text.find("{"), text.rfind("}")
         if start >= 0 and end > start:
             text = text[start : end + 1]
-    parsed = json.loads(text)
+    parsed = json.loads(text) if text else {}
     if not isinstance(parsed, dict):
         raise ValueError("Literature enrichment response must be a JSON object")
     return parsed
@@ -159,6 +190,9 @@ def _is_transient_generation_error(error: Exception) -> bool:
             "rate limit",
             "service unavailable",
             "temporarily unavailable",
+            "get_channel_failed",
+            "channel unavailable",
+            "可用渠道不存在",
             "timed out",
             "timeout",
         )
@@ -168,6 +202,7 @@ def _is_transient_generation_error(error: Exception) -> bool:
 class LiteratureSummaryGenerator:
     PROTOCOL_VERSION = 2
     BILINGUAL_PROTOCOL_VERSION = "canonical-en-translation.v1"
+    MULTILINGUAL_PROTOCOL_VERSION = "canonical-en-translation.v2"
 
     def __init__(self, agent: LiteratureEvidenceAgent | None = None) -> None:
         self.agent = agent or LiteratureEvidenceAgent()
@@ -184,8 +219,9 @@ class LiteratureSummaryGenerator:
         preferred_models: list[str],
         canonical_fields: dict[str, str | None] | None = None,
     ) -> EnrichmentResult:
-        language = "zh" if language == "zh" else "en"
-        if language == "zh" and not canonical_fields:
+        language = str(language or "en").strip().lower()
+        language = language if language in SUPPORTED_SUMMARY_LANGUAGES else "en"
+        if language in TRANSLATION_LANGUAGES and not canonical_fields:
             raise ValueError("canonical_english_summary_required")
         evidence = {
             "title": article.title,
@@ -212,9 +248,9 @@ class LiteratureSummaryGenerator:
             "confirms the paper. Paraphrase; never reproduce a sentence or a long phrase from the abstract. If evidence "
             "does not support a field, return null, except limitations: when explicit limitations are absent, write a "
             "source-scope limitation about reliance on the supplied single-article abstract/metadata. The output language is "
-            f"{'Simplified Chinese' if language == 'zh' else 'English'}. Return JSON only."
+            f"{LANGUAGE_NAMES[language]}. Return JSON only."
         )
-        if language == "zh":
+        if language in TRANSLATION_LANGUAGES:
             system += (
                 " The supplied canonical English summary is the semantic contract. Translate each field "
                 "faithfully: preserve its factual claims, qualifications, comparisons, and null fields; "
@@ -231,8 +267,8 @@ class LiteratureSummaryGenerator:
         }
         request = {
                 "task": (
-                    "Create a faithful field-aligned Simplified Chinese rendering for editorial review."
-                    if language == "zh"
+                    f"Create a faithful field-aligned {LANGUAGE_NAMES[language]} rendering for editorial review."
+                    if language in TRANSLATION_LANGUAGES
                     else "Create a conservative structured evidence summary for editorial review."
                 ),
                 "requirements": {
@@ -248,7 +284,7 @@ class LiteratureSummaryGenerator:
                 "output_schema": schema,
                 "evidence": evidence,
             }
-        if language == "zh":
+        if language in TRANSLATION_LANGUAGES:
             request["canonical_summary_en"] = {
                 field: canonical_fields.get(field) for field in SUMMARY_FIELDS
             }
@@ -267,13 +303,14 @@ class LiteratureSummaryGenerator:
         try:
             parsed = _parse_json(str(response["raw_response"]))
         except Exception:
-            if language != "zh" or not canonical_fields:
+            if language not in TRANSLATION_LANGUAGES or not canonical_fields:
                 raise
             parse_failed = True
-            parsed = self._canonical_contract_fallback_summary(canonical_fields)
-        if language == "zh" and canonical_fields:
-            parsed = await self._repair_bilingual_topology(
+            parsed = self._canonical_contract_fallback_summary(canonical_fields, language=language)
+        if language in TRANSLATION_LANGUAGES and canonical_fields:
+            parsed = await self._repair_translation_topology(
                 parsed,
+                language=language,
                 canonical_fields=canonical_fields,
                 system=system,
                 schema=schema,
@@ -325,11 +362,11 @@ class LiteratureSummaryGenerator:
                 confidence = 0.0
             if (
                 not text
-                and language == "zh"
+                and language in TRANSLATION_LANGUAGES
                 and canonical_fields
                 and canonical_fields.get(field) not in (None, "")
             ):
-                fallback = self._canonical_contract_fallback(field, canonical_fields.get(field))
+                fallback = self._canonical_contract_fallback(field, canonical_fields.get(field), language)
                 text = str(fallback["text"])
                 evidence_sources = list(fallback["evidence"])
                 confidence = float(fallback["confidence"])
@@ -349,7 +386,8 @@ class LiteratureSummaryGenerator:
         if rejected_overlap:
             notes += f" Removed verbatim-overlap fields: {', '.join(rejected_overlap)}."
         if parse_failed:
-            notes += " Recovered malformed Chinese JSON from the canonical English contract."
+            legacy_name = "Chinese" if language == "zh" else LANGUAGE_NAMES[language]
+            notes += f" Recovered malformed {legacy_name} JSON from the canonical English contract."
         if coerced_fields:
             notes += f" Coerced scalar fields into evidence objects: {', '.join(coerced_fields)}."
         return EnrichmentResult(
@@ -363,14 +401,15 @@ class LiteratureSummaryGenerator:
             source_fingerprint=source_fingerprint(article),
             canonical_summary_fingerprint=(
                 canonical_summary_fingerprint(canonical_fields)
-                if language == "zh" and canonical_fields else None
+                if language in TRANSLATION_LANGUAGES and canonical_fields else None
             ),
         )
 
-    async def _repair_bilingual_topology(
+    async def _repair_translation_topology(
         self,
         parsed: dict[str, Any],
         *,
+        language: str,
         canonical_fields: dict[str, str | None],
         system: str,
         schema: dict[str, dict[str, Any]],
@@ -388,7 +427,7 @@ class LiteratureSummaryGenerator:
                 parsed[field] = None
         if missing:
             repair_request = {
-                "task": "Repair a Simplified Chinese field-aligned summary response.",
+                "task": f"Repair a {LANGUAGE_NAMES.get(language, 'target-language')} field-aligned summary response.",
                 "requirements": {
                     "repair_only_fields": missing,
                     "semantic_contract": "Each repaired field must preserve the corresponding canonical English field.",
@@ -408,7 +447,7 @@ class LiteratureSummaryGenerator:
                     prompt=json.dumps(repair_request, ensure_ascii=False, separators=(",", ":")),
                     system=(
                         system
-                        + " Repair mode: return non-null Simplified Chinese objects for every requested field. "
+                        + f" Repair mode: return non-null {LANGUAGE_NAMES.get(language, 'target-language')} objects for every requested field. "
                         "Use the canonical English field as the semantic contract."
                     ),
                     preferred_models=preferred_models,
@@ -419,11 +458,15 @@ class LiteratureSummaryGenerator:
                     if isinstance(repaired.get(field), dict) and not self._raw_field_is_null(repaired.get(field)):
                         parsed[field] = repaired[field]
             except Exception as exc:
-                logger.warning("Literature zh topology repair failed: {}", exc)
+                logger.warning("Literature {} topology repair failed: {}", language, exc)
         for field in missing:
             if self._raw_field_is_null(parsed.get(field)):
-                parsed[field] = self._canonical_contract_fallback(field, canonical_fields.get(field))
+                parsed[field] = self._canonical_contract_fallback(field, canonical_fields.get(field), language)
         return parsed
+
+    async def _repair_bilingual_topology(self, parsed: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
+        """Backward-compatible alias retained for existing callers and tests."""
+        return await self._repair_translation_topology(language="zh", parsed=parsed, **kwargs)
 
     @staticmethod
     def _coerce_field_payload(raw: Any) -> dict[str, Any] | None:
@@ -457,18 +500,40 @@ class LiteratureSummaryGenerator:
         return not str(raw.get("text") or "").strip()
 
     @staticmethod
-    def _canonical_contract_fallback(field: str, canonical_text: str | None) -> dict[str, Any]:
-        label = {
-            "research_question": "研究问题",
-            "study_design": "研究设计",
-            "population_setting": "人群与场景",
-            "main_findings": "主要发现",
-            "public_health_relevance": "公共卫生意义",
-            "limitations": "局限性",
-            "gids_interpretation": "GIDS 解读",
-        }.get(field, "摘要字段")
+    def _canonical_contract_fallback(
+        field: str,
+        canonical_text: str | None,
+        language: str = "zh",
+    ) -> dict[str, Any]:
+        labels = {
+            "en": {
+                "research_question": "Research question", "study_design": "Study design",
+                "population_setting": "Population and setting", "main_findings": "Main findings",
+                "public_health_relevance": "Public-health relevance", "limitations": "Limitations",
+                "gids_interpretation": "GIDS interpretation",
+            },
+            "fr": {
+                "research_question": "Question de recherche", "study_design": "Plan d’étude",
+                "population_setting": "Population et contexte", "main_findings": "Résultats principaux",
+                "public_health_relevance": "Pertinence pour la santé publique", "limitations": "Limites",
+                "gids_interpretation": "Interprétation GIDS",
+            },
+            "zh": {
+                "research_question": "研究问题", "study_design": "研究设计",
+                "population_setting": "人群与场景", "main_findings": "主要发现",
+                "public_health_relevance": "公共卫生意义", "limitations": "局限性",
+                "gids_interpretation": "GIDS 解读",
+            },
+        }
+        label = labels.get(language, labels["zh"]).get(field, "摘要字段")
+        if language == "fr":
+            text = f"{label} : le sens est conservé selon le résumé contractuel anglais : {canonical_text}"
+        elif language == "en":
+            text = str(canonical_text or "")
+        else:
+            text = f"{label}按英文规范摘要保留同等含义：{canonical_text}"
         return {
-            "text": f"{label}按英文规范摘要保留同等含义：{canonical_text}",
+            "text": text,
             "evidence": ["abstract", "bibliographic_metadata"],
             "confidence": 0.55,
             "fallback": "canonical_english_contract",
@@ -477,12 +542,14 @@ class LiteratureSummaryGenerator:
     def _canonical_contract_fallback_summary(
         self,
         canonical_fields: dict[str, str | None],
+        *,
+        language: str = "zh",
     ) -> dict[str, Any]:
         return {
             field: (
                 None
                 if canonical_fields.get(field) in (None, "")
-                else self._canonical_contract_fallback(field, canonical_fields.get(field))
+                else self._canonical_contract_fallback(field, canonical_fields.get(field), language)
             )
             for field in SUMMARY_FIELDS
         }
@@ -493,6 +560,12 @@ class LiteratureSummaryGenerator:
             return (
                 "可用证据仅限于该单篇文献的题录、摘要和分类链接；用于决策级解释前，"
                 "仍需核对原文全文、研究方法细节和作者声明的局限。"
+            )
+        if language == "fr":
+            return (
+                "Les éléments disponibles se limitent aux métadonnées bibliographiques, au résumé et aux liens "
+                "de classification de cet article ; une interprétation décisionnelle exige la vérification du texte "
+                "intégral, des méthodes et des limites déclarées par les auteurs."
             )
         return (
             "The available evidence is limited to this single article's bibliographic metadata, abstract, "
@@ -512,11 +585,19 @@ class LiteratureEnrichmentPipeline:
         requested_ids = [str(value) for value in input_data.get("article_ids") or [] if value]
         force = bool(input_data.get("force", False))
         languages = list(dict.fromkeys([
-            value for value in input_data.get("languages") or self.config.ai_enrichment_languages
-            if value in {"en", "zh"}
+            str(value).strip().lower()
+            for value in input_data.get("languages") or self.config.ai_enrichment_languages
+            if str(value).strip().lower() in SUPPORTED_SUMMARY_LANGUAGES
         ]))
-        if "en" in languages and "zh" in languages:
-            languages = ["en", "zh"]
+        if any(language in TRANSLATION_LANGUAGES for language in languages) and "en" not in languages:
+            # Every translation is contract-bound to the English summary;
+            # generate that canonical record in the same task when a legacy
+            # environment requests only a target language.
+            languages = ["en", *languages]
+        elif "en" in languages:
+            languages = ["en", *[language for language in languages if language != "en"]]
+        if not languages:
+            languages = ["en"]
         limit = min(
             max(1, int(input_data.get("limit") or self.config.ai_enrichment_batch_size)),
             self.config.ai_enrichment_batch_size,
@@ -528,6 +609,10 @@ class LiteratureEnrichmentPipeline:
             force=force,
         )
         counts = {"articles": len(articles), "generated": 0, "skipped": 0, "failed": 0}
+        language_counts = {
+            language: {"generated": 0, "skipped": 0, "failed": 0}
+            for language in languages
+        }
         errors: list[dict[str, str]] = []
         provider_auth_failure_count = 0
         total = max(1, len(articles) * max(1, len(languages)))
@@ -564,6 +649,7 @@ class LiteratureEnrichmentPipeline:
                         if await self._should_skip(article, language=language, force=force):
                             async with counts_lock:
                                 counts["skipped"] += 1
+                                language_counts[language]["skipped"] += 1
                             continue
                         result = await generator.generate(
                             article=article,
@@ -576,13 +662,14 @@ class LiteratureEnrichmentPipeline:
                                 route_preferences,
                                 article_index * max(1, len(languages)) + language_index
                             ),
-                            canonical_fields=canonical_fields if language == "zh" else None,
+                            canonical_fields=canonical_fields if language in TRANSLATION_LANGUAGES else None,
                         )
                         await self._store(article.article_id, language=language, result=result)
                         if language == "en":
                             canonical_fields = dict(result.fields)
                         async with counts_lock:
                             counts["generated"] += 1
+                            language_counts[language]["generated"] += 1
                     except Exception as exc:
                         if language == "en":
                             canonical_fields = None
@@ -590,6 +677,7 @@ class LiteratureEnrichmentPipeline:
                         await self._store_failure(article, language=language, error=exc)
                         async with counts_lock:
                             counts["failed"] += 1
+                            language_counts[language]["failed"] += 1
                             if is_provider_authentication_error(exc):
                                 provider_auth_failure_count += 1
                             errors.append({"article_id": article.article_id, "language": language, "error": str(exc)[:500]})
@@ -606,6 +694,18 @@ class LiteratureEnrichmentPipeline:
         return {
             **counts,
             "languages": languages,
+            "language_counts": language_counts,
+            "translation_queue": {
+                "requested_languages": [language for language in languages if language in TRANSLATION_LANGUAGES],
+                "generated": sum(language_counts[language]["generated"] for language in TRANSLATION_LANGUAGES if language in language_counts),
+                "skipped": sum(language_counts[language]["skipped"] for language in TRANSLATION_LANGUAGES if language in language_counts),
+                "failed": sum(language_counts[language]["failed"] for language in TRANSLATION_LANGUAGES if language in language_counts),
+                "source_language": "en",
+                "provenance_version": TRANSLATION_PROVENANCE_VERSION,
+                "next_action": "retry_failed_targets" if any(
+                    language_counts[language]["failed"] for language in TRANSLATION_LANGUAGES if language in language_counts
+                ) else "editorial_review_or_publish",
+            },
             "errors": errors[:20],
             # This count is intentionally collected before the diagnostic
             # error list is truncated, so schedule decisions see failures
@@ -680,6 +780,8 @@ class LiteratureEnrichmentPipeline:
             summaries_by_key: dict[tuple[str, str], LiteratureSummary] = {}
 
             def needs_work(article: LiteratureArticle) -> bool:
+                if detail_restrictions(article):
+                    return False
                 if len(article.abstract_text or "") < self.config.ai_min_abstract_characters:
                     return False
                 fingerprint = source_fingerprint(article)
@@ -784,6 +886,8 @@ class LiteratureEnrichmentPipeline:
         return list(articles), context
 
     async def _should_skip(self, article: LiteratureArticle, *, language: str, force: bool) -> bool:
+        if detail_restrictions(article):
+            return True
         if len(article.abstract_text or "") < self.config.ai_min_abstract_characters:
             return True
         async with get_db() as db:
@@ -847,10 +951,27 @@ class LiteratureEnrichmentPipeline:
                 "publication_gate": "autopilot-quality-gate" if self.config.autopilot_enabled else "human-review-required",
                 "quality_attempts": int(existing_metadata.get("quality_attempts") or 0) + 1,
             }
+            if language in TRANSLATION_LANGUAGES:
+                summary.generation_metadata["translation_provenance"] = {
+                    "version": TRANSLATION_PROVENANCE_VERSION,
+                    "source_language": "en",
+                    "target_language": language,
+                    "canonical_summary_fingerprint": result.canonical_summary_fingerprint,
+                    "model": result.model,
+                    "provider": result.provider,
+                    "status": "complete",
+                }
             if language == "zh" and result.canonical_summary_fingerprint:
                 summary.generation_metadata["bilingual_alignment"] = {
                     "protocol_version": LiteratureSummaryGenerator.BILINGUAL_PROTOCOL_VERSION,
                     "canonical_language": "en",
+                    "canonical_summary_fingerprint": result.canonical_summary_fingerprint,
+                }
+            elif language == "fr" and result.canonical_summary_fingerprint:
+                summary.generation_metadata["translation_alignment"] = {
+                    "protocol_version": LiteratureSummaryGenerator.MULTILINGUAL_PROTOCOL_VERSION,
+                    "canonical_language": "en",
+                    "target_language": "fr",
                     "canonical_summary_fingerprint": result.canonical_summary_fingerprint,
                 }
             summary.generated_at = datetime.now(timezone.utc)
@@ -889,6 +1010,18 @@ class LiteratureEnrichmentPipeline:
                 "last_generation_error": type(error).__name__,
                 "last_generation_error_transient": transient,
             }
+            if language in TRANSLATION_LANGUAGES:
+                summary.generation_metadata["translation_provenance"] = {
+                    **dict(existing_metadata.get("translation_provenance") or {}),
+                    "version": TRANSLATION_PROVENANCE_VERSION,
+                    "source_language": "en",
+                    "target_language": language,
+                    "status": "retry_pending",
+                    "last_error": type(error).__name__,
+                    "transient": transient,
+                    "attempt": attempts,
+                    "next_action": "retry_failed_target",
+                }
             summary.review_notes = (
                 f"{summary.review_notes or ''} Generation failed for {language}: {str(error)[:240]}"
             ).strip()
@@ -902,6 +1035,7 @@ __all__ = [
     "LiteratureEvidenceAgent",
     "LiteratureSummaryGenerator",
     "SUMMARY_FIELDS",
+    "TRANSLATION_PROVENANCE_VERSION",
     "canonical_summary_fingerprint",
     "source_fingerprint",
 ]

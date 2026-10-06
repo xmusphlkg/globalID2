@@ -27,11 +27,59 @@
     },
     {
       "week": "2026-W36",
-      "brief_fingerprint": "e48f6ce5514317dbf2795a14718686057126615bf0c8a1e08963d297cce66218",
+      "brief_fingerprint": "6bcfc6e2321a013a24b74fadd47fc7a92c27d554df6b0a4f3e8dfa364a0c66a9",
       "review": {
         "verdict": "pass",
         "issue_codes": [],
-        "reviewed_at": "2026-09-04T14:59:30+00:00",
+        "reviewed_at": "2026-09-12T13:41:31+00:00",
+        "protocol_version": "research-weekly-ai-review.v1",
+        "model": "configured-review-model",
+        "provider": "model-center"
+      }
+    },
+    {
+      "week": "2026-W37",
+      "brief_fingerprint": "ca383397942c02d5ab3b549aec7002e6d26be6761cee5ea5349718f182fe1462",
+      "review": {
+        "verdict": "pass",
+        "issue_codes": [],
+        "reviewed_at": "2026-09-15T14:27:24+00:00",
+        "protocol_version": "research-weekly-ai-review.v1",
+        "model": "configured-review-model",
+        "provider": "model-center"
+      }
+    },
+    {
+      "week": "2026-W38",
+      "brief_fingerprint": "8e3b1d52498923ea75d9eef7aee7f3698941ed9de3d34b2c7120abbdd0d18d52",
+      "review": {
+        "verdict": "pass",
+        "issue_codes": [],
+        "reviewed_at": "2026-09-15T14:30:24+00:00",
+        "protocol_version": "research-weekly-ai-review.v1",
+        "model": "configured-review-model",
+        "provider": "model-center"
+      }
+    },
+    {
+      "week": "2026-W39",
+      "brief_fingerprint": "acd067b54e2d4ab778d5386639a5e2bb562e1338b6c4cf119be477c0d7a830db",
+      "review": {
+        "verdict": "pass",
+        "issue_codes": [],
+        "reviewed_at": "2026-10-05T06:16:52+00:00",
+        "protocol_version": "research-weekly-ai-review.v1",
+        "model": "configured-review-model",
+        "provider": "model-center"
+      }
+    },
+    {
+      "week": "2026-W40",
+      "brief_fingerprint": "9b79016b4a8c9437edeebe16dbc636c3fcbc1fe0a5012f3ff485494b421842a9",
+      "review": {
+        "verdict": "pass",
+        "issue_codes": [],
+        "reviewed_at": "2026-10-05T09:22:15+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center"

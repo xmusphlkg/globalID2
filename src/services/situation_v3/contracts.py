@@ -20,6 +20,9 @@ class ContractModel(BaseModel):
 class LocalizedText(ContractModel):
     en: str
     zh: str
+    # Optional for backward compatibility with archived v3 reports. All newly
+    # generated public reports populate French and publication checks enforce it.
+    fr: str | None = None
 
 
 class ReportMetadata(ContractModel):

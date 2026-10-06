@@ -1,7 +1,7 @@
 """
 GlobalID V2 Population Record Model
 
-人口记录模型：存储国家年度人口（WPP）
+人口记录模型：存储国家与省级地区年度人口（WPP、NBS、ABS、IBGE）
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from .base import BaseModel
 
 
 class PopulationRecord(BaseModel):
-    """国家年度人口记录。"""
+    """国家或省级地区的年度人口及来源、参照日期。"""
 
     __tablename__ = "population_records"
 

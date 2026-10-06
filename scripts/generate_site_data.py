@@ -192,6 +192,16 @@ def main() -> None:
         action="store_true",
         help="Allow overwriting site data even when the database currently exports zero disease records",
     )
+    parser.add_argument(
+        "--incremental-country",
+        dest="incremental_country_codes",
+        action="append",
+        default=[],
+        help=(
+            "Refresh only the listed country scopes and merge them into the existing "
+            "site snapshot; repeat for multiple countries"
+        ),
+    )
     args = parser.parse_args()
     print(f"Exporting site data to {args.output} …")
     print(f"Writing partitioned CSV/JSON/XLSX files to {args.direct_download_output} …")
@@ -206,6 +216,7 @@ def main() -> None:
             direct_download_url_base=args.direct_download_url_base,
             direct_download_max_file_bytes=args.direct_download_max_file_bytes,
             direct_download_workers=args.direct_download_workers,
+            incremental_country_codes=args.incremental_country_codes,
         )
     )
 

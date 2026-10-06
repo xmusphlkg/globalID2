@@ -80,7 +80,9 @@ RELEASE_SHARED_BLOCKED_TASK_TYPES = (
 # These operations persist their checkpoints and are designed to be resumed.
 # On a controlled worker restart, returning them to QUEUED is preferable to
 # waiting for a long model timeout or treating the deployment as a failure.
-GRACEFUL_REQUEUE_TASK_TYPES = AI_TASK_TYPES | KNOWLEDGE_SOURCE_TASK_TYPES
+GRACEFUL_REQUEUE_TASK_TYPES = (
+    AI_TASK_TYPES | KNOWLEDGE_SOURCE_TASK_TYPES | {TaskType.SYNC_LITERATURE}
+)
 
 ModelRouteLoader = Callable[[], Awaitable[list[dict[str, Any]]]]
 
@@ -605,6 +607,7 @@ async def run_worker() -> None:
         instance_id,
         lease_ttl_seconds=RUNTIME_LEASE_TTL_SECONDS,
         heartbeat_ttl_seconds=RUNTIME_HEARTBEAT_TTL_SECONDS,
+        lease_loss_shutdown_timeout_seconds=SHUTDOWN_GRACE_SECONDS + 15,
         metadata=lambda: {
             "concurrency": MAX_CONCURRENT_TASKS,
             "ai_concurrency_max": MAX_CONCURRENT_AI_TASKS,

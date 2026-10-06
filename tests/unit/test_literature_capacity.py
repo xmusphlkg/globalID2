@@ -29,6 +29,8 @@ def test_literature_capacity_defaults_match_observed_arrival_rate():
     assert config.catch_up_max_exception_backlog == 500
     assert config.ai_enrichment_interval_minutes == 15
     assert config.ai_enrichment_catch_up_interval_minutes == 1
+    assert config.ai_enrichment_auto_on_ingest is True
+    assert config.ai_enrichment_languages == ["en", "zh", "fr"]
     assert config.ai_model_request_timeout_seconds == 35
 
 
@@ -115,6 +117,41 @@ async def test_catch_up_backlog_counts_distinct_current_review_articles_in_sqlit
 
     assert await _count_catch_up_exception_backlog() == 3
     engine.dispose()
+
+
+async def test_new_articles_enqueue_canonical_english_and_french_enrichment(monkeypatch):
+    config = SimpleNamespace(
+        ai_enrichment_enabled=True,
+        ai_enrichment_auto_on_ingest=True,
+        ai_enrichment_languages=["en", "zh"],  # legacy environment; French is enforced
+        ai_enrichment_batch_size=50,
+    )
+    service = LiteratureService()
+    calls = []
+
+    async def enqueue(**kwargs):
+        calls.append(kwargs)
+        return {"status": "queued", "task_uuid": "enrichment-task"}
+
+    monkeypatch.setattr(service, "_config", lambda: config)
+    monkeypatch.setattr(service, "trigger_enrichment", enqueue)
+
+    result = await service._enqueue_new_article_enrichment({
+        "inserted_article_ids": ["article-1", "article-1", "article-2"],
+    })
+
+    assert result == {
+        "status": "queued",
+        "selected_articles": 2,
+        "languages": ["en", "zh", "fr"],
+        "task_uuid": "enrichment-task",
+    }
+    assert calls == [{
+        "article_ids": ["article-1", "article-2"],
+        "languages": ["en", "zh", "fr"],
+        "limit": 2,
+        "manual": False,
+    }]
 
 
 async def test_catch_up_backlog_excludes_only_explicit_deferred_or_archived_work(monkeypatch):

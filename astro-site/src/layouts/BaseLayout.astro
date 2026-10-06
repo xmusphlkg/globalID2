@@ -11,7 +11,7 @@ interface Props {
   description?: string;
   image?: string;
   noindex?: boolean;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
   additionalStructuredData?: JsonLdNode | JsonLdNode[];
   seo?: SeoDocument;
   hideLanguageToggle?: boolean;
@@ -35,6 +35,8 @@ const siteBase = Astro.site?.toString() ?? Astro.url.origin;
 const canonicalURL = new URL(seo?.canonicalPath ?? Astro.url.pathname, siteBase);
 const siteOrigin = new URL(siteBase).origin;
 const documentLocale = seo?.locale ?? initialLanguage;
+const isChinese = documentLocale === 'zh';
+const isFrench = documentLocale === 'fr';
 const pageTitle = seo?.title ?? (title === 'GIDS' ? title : `${title} | GIDS`);
 const pageDescription = seo?.description ?? description;
 const metaDescription = clampSeoDescription(pageDescription);
@@ -62,38 +64,42 @@ const maintenanceMessage = import.meta.env.PUBLIC_GIDS_MAINTENANCE_MESSAGE?.trim
 const extraStructuredData = Array.isArray(additionalStructuredData)
   ? additionalStructuredData
   : [additionalStructuredData];
+const isLocalizedHomePage = ['/', '/zh/', '/fr/'].includes(canonicalURL.pathname);
+const siteStructuredData: JsonLdNode[] = isLocalizedHomePage ? [
+  {
+    '@type': 'WebSite',
+    '@id': `${siteOrigin}#website`,
+    url: siteOrigin,
+    name: 'Global Infectious Disease Surveillance',
+    alternateName: 'GIDS',
+    description: 'Official-source infectious disease surveillance data, trends, downloadable datasets, and methodology.',
+    inLanguage: ['en', 'zh-CN', 'fr-FR'],
+    publisher: {
+      '@id': `${siteOrigin}#organization`,
+    },
+  },
+  {
+    '@type': 'Organization',
+    '@id': `${siteOrigin}#organization`,
+    name: 'Global Infectious Disease Surveillance',
+    alternateName: 'GIDS',
+    url: siteOrigin,
+    logo: new URL('/logo.png', siteOrigin).toString(),
+    sameAs: ['https://github.com/xmusphlkg/globalID2'],
+    publishingPrinciples: new URL('/about/#editorial-responsibility', siteOrigin).toString(),
+  },
+  {
+    '@type': 'DataCatalog',
+    '@id': `${siteOrigin}#catalog`,
+    name: 'GIDS infectious disease surveillance data catalog',
+    url: new URL('/diseases/', siteOrigin).toString(),
+    publisher: { '@id': `${siteOrigin}#organization` },
+  },
+] : [];
 const structuredData = {
   '@context': 'https://schema.org',
   '@graph': [
-    {
-      '@type': 'WebSite',
-      '@id': `${siteOrigin}#website`,
-      url: siteOrigin,
-      name: 'Global Infectious Disease Surveillance',
-      alternateName: 'GIDS',
-      description: 'Official-source infectious disease surveillance data, trends, downloadable datasets, and methodology.',
-      inLanguage: ['en', 'zh'],
-      publisher: {
-        '@id': `${siteOrigin}#organization`,
-      },
-    },
-    {
-      '@type': 'Organization',
-      '@id': `${siteOrigin}#organization`,
-      name: 'Global Infectious Disease Surveillance',
-      alternateName: 'GIDS',
-      url: siteOrigin,
-      logo: new URL('/logo.png', siteOrigin).toString(),
-      sameAs: ['https://github.com/xmusphlkg/globalID2'],
-      publishingPrinciples: new URL('/about/#editorial-responsibility', siteOrigin).toString(),
-    },
-    {
-      '@type': 'DataCatalog',
-      '@id': `${siteOrigin}#catalog`,
-      name: 'GIDS infectious disease surveillance data catalog',
-      url: new URL('/diseases/', siteOrigin).toString(),
-      publisher: { '@id': `${siteOrigin}#organization` },
-    },
+    ...siteStructuredData,
     {
       '@type': pageType,
       '@id': `${canonicalURL}#webpage`,
@@ -105,7 +111,7 @@ const structuredData = {
       isPartOf: {
         '@id': `${siteOrigin}#website`,
       },
-      inLanguage: documentLocale === 'zh' ? 'zh-CN' : 'en',
+      inLanguage: isChinese ? 'zh-CN' : isFrench ? 'fr-FR' : 'en',
       ...(seo?.datePublished ? { datePublished: seo.datePublished } : {}),
       ...(seo?.dateModified ? { dateModified: seo.dateModified } : {}),
     },
@@ -116,24 +122,22 @@ const structuredData = {
 
 <!doctype html>
 <html
-  lang={documentLocale === 'zh' ? 'zh-CN' : 'en'}
+  lang={isChinese ? 'zh-CN' : isFrench ? 'fr-FR' : 'en'}
   data-lang={documentLocale}
-  data-release-id={siteReleaseId}
+  data-release-id={isLocalizedHomePage ? siteReleaseId : undefined}
 >
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="generator" content={Astro.generator} />
-    <meta name="gids-release-id" content={siteReleaseId} />
-    <meta name="gids-source-commit" content={siteSourceCommit} />
-    <meta name="gids-deployment-branch" content={siteDeploymentBranch} />
+    {isLocalizedHomePage && <meta name="gids-source-commit" content={siteSourceCommit} />}
+    {isLocalizedHomePage && <meta name="gids-deployment-branch" content={siteDeploymentBranch} />}
 
     <!-- SEO -->
     <title>{pageTitle}</title>
     <meta name="description" content={metaDescription} />
     <link rel="canonical" href={canonicalURL} />
     {alternateUrls.map(({ locale, url }) => (
-      <link rel="alternate" hreflang={locale === 'zh' ? 'zh-CN' : 'en'} href={url} />
+      <link rel="alternate" hreflang={locale === 'zh' ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en'} href={url} />
     ))}
     {alternatePaths.en && <link rel="alternate" hreflang="x-default" href={new URL(alternatePaths.en, siteBase)} />}
     <meta name="robots" content={robotsContent} />
@@ -142,8 +146,8 @@ const structuredData = {
     <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content="GIDS" />
-    <meta property="og:locale" content={documentLocale === 'zh' ? 'zh_CN' : 'en_US'} />
-    <meta property="og:locale:alternate" content={documentLocale === 'zh' ? 'en_US' : 'zh_CN'} />
+    <meta property="og:locale" content={isChinese ? 'zh_CN' : isFrench ? 'fr_FR' : 'en_US'} />
+    <meta property="og:locale:alternate" content={isChinese ? 'en_US' : isFrench ? 'en_US' : 'zh_CN'} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={metaDescription} />
     <meta property="og:image" content={new URL(pageImage, siteBase)} />
@@ -161,10 +165,17 @@ const structuredData = {
     <meta name="twitter:image" content={new URL(pageImage, siteBase)} />
     <meta name="twitter:image:alt" content={pageImageAlt} />
     <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
-    {validGaMeasurementId && <script is:inline set:html={`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config','${validGaMeasurementId}');document.addEventListener('click',function(event){const target=event.target instanceof Element?event.target.closest('[data-seo-event],[data-file-download]'):null;if(!target)return;gtag('event',target.getAttribute('data-seo-event')||'dataset_download');});(function(){let started=false;function loadAnalytics(){if(started)return;started=true;const script=document.createElement('script');script.async=true;script.src='https://www.googletagmanager.com/gtag/js?id=${validGaMeasurementId}';document.head.appendChild(script)}function deferAnalytics(){window.setTimeout(function(){if('requestIdleCallback'in window){window.requestIdleCallback(loadAnalytics,{timeout:2000})}else{loadAnalytics()}},2000)}if(document.readyState==='complete'){deferAnalytics()}else{window.addEventListener('load',deferAnalytics,{once:true})}})();`} />}
+    {validGaMeasurementId && (
+      <script
+        is:inline
+        defer
+        src="/scripts/analytics.js"
+        data-measurement-id={validGaMeasurementId}
+      ></script>
+    )}
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="128x128" href="/logo-mark-128.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
 
     <!-- Apply theme before first paint to avoid flashing -->
@@ -178,13 +189,14 @@ const structuredData = {
     </script>
   </head>
   <body class="min-h-screen flex flex-col">
-    <a class="skip-link" href="#main-content">{documentLocale === 'zh' ? '跳到主要内容' : 'Skip to main content'}</a>
+    <a class="skip-link" href="#main-content">{isChinese ? '跳到主要内容' : isFrench ? 'Aller au contenu principal' : 'Skip to main content'}</a>
     <Header initialLanguage={initialLanguage} hideLanguageToggle={hideLanguageToggle} />
     {maintenanceMessage && <div class="site-update-banner border-b" role="status" aria-live="polite">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 text-sm font-medium text-center">
         <span>
-          {initialLanguage === 'zh'
+          {isChinese
             ? '网站正在维护，部分功能可能暂时不可用。'
+            : isFrench ? 'Le site est en maintenance; certaines fonctionnalités peuvent être temporairement indisponibles.'
             : maintenanceMessage}
         </span>
       </div>

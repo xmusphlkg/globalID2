@@ -94,6 +94,10 @@ class ReportV4Persistence:
                             "title": section_payload["title"]["en"],
                             "content": section_payload["body"]["en"],
                         },
+                        "fr": {
+                            "title": section_payload["title"]["fr"],
+                            "content": section_payload["body"]["fr"],
+                        },
                     },
                     "evidence_refs": section_payload.get("evidence_refs") or [],
                     "quality_flags": section_payload.get("quality_flags") or [],
@@ -138,6 +142,7 @@ class ReportV4FileExporter:
                     "locales": {
                         "zh": {"title": section["title"]["zh"], "content": section["body"]["zh"]},
                         "en": {"title": section["title"]["en"], "content": section["body"]["en"]},
+                        "fr": {"title": section["title"]["fr"], "content": section["body"]["fr"]},
                     }
                 },
                 "figures": section.get("figures") or [],

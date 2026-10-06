@@ -479,6 +479,41 @@ def test_reused_partition_metadata_uses_the_current_download_base(tmp_path) -> N
     } == bytes_before
 
 
+def test_incremental_download_build_only_rewrites_selected_country(tmp_path) -> None:
+    base = "https://raw.githubusercontent.com/example/data/main"
+    first = build_direct_download_files(
+        _context(),
+        tmp_path,
+        download_url_base=base,
+    )
+    before = {
+        file_meta["relative_path"]: (tmp_path / file_meta["relative_path"]).read_bytes()
+        for entry in first["countries"] + first["diseases"]
+        for part in entry["parts"]
+        for file_meta in part["files"].values()
+    }
+
+    changed = _context(["2010-01-01", "2015-01-01", "2020-01-01", "2026-01-01", "2027-01-01"])
+    second = build_direct_download_files(
+        changed,
+        tmp_path,
+        download_url_base=base,
+        changed_country_codes={"CN"},
+        changed_disease_ids=set(),
+    )
+
+    assert second["generation"]["changed_files"] >= 1
+    disease_paths = {
+        file_meta["relative_path"]
+        for part in first["diseases"][0]["parts"]
+        for file_meta in part["files"].values()
+    }
+    assert {
+        relative_path: (tmp_path / relative_path).read_bytes()
+        for relative_path in disease_paths
+    } == {relative_path: before[relative_path] for relative_path in disease_paths}
+
+
 def test_corrupted_reused_artifact_is_regenerated(tmp_path) -> None:
     manifest = build_direct_download_files(
         _context(),

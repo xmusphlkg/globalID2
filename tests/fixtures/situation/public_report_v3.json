@@ -43,7 +43,7 @@
     "jurisdiction_count": 1,
     "disease_count": 1,
     "rejection_reasons": {},
-    "note": {"en": "Fixture coverage.", "zh": "测试覆盖。"}
+    "note": {"en": "Fixture coverage.", "zh": "测试覆盖。", "fr": "Couverture de la fixture."}
   },
   "summary": {
     "unique_signal_count": 1,
@@ -152,8 +152,8 @@
     "item_count": 1,
     "error": null
   }],
-  "narrative": {"en": "One unique review signal.", "zh": "一个唯一复核信号。"},
-  "limitations": {"en": "Review signal, not a risk rating.", "zh": "复核信号并非风险评级。"},
+  "narrative": {"en": "One unique review signal.", "zh": "一个唯一复核信号。", "fr": "Un signal unique examiné."},
+  "limitations": {"en": "Review signal, not a risk rating.", "zh": "复核信号并非风险评级。", "fr": "Un signal examiné, et non une évaluation du risque."},
   "quality_gate": {
     "status": "passed",
     "passed": true,

@@ -98,7 +98,18 @@ class ATMonthlyUpdater:
         if not force:
             wanted = set(targets)
             rows = [row for row in rows if (parsed := _parse_date(row)) and (parsed.year, parsed.month) in wanted]
-        return ATUpdateFetchResult(rows, summary.latest_date, self.output_csv, [f"[crawler] prepared {summary.row_count} AGES source-native rows across {summary.months_fetched} issue(s)", "[gate] public release disabled pending AGES license review"])
+        script_logs = [
+            f"[crawler] prepared {summary.row_count} AGES source-native rows across {summary.months_fetched} issue(s)",
+            "[gate] public release disabled pending AGES license review",
+        ]
+        if summary.months_fetched == 0:
+            requested = ", ".join(f"{year:04d}-{month:02d}" for year, month in targets)
+            latest = summary.latest_date.isoformat() if summary.latest_date else "unknown"
+            script_logs.append(
+                f"[crawler] no issue matched requested months ({requested}); "
+                f"latest available issue is {latest}; cached source data preserved"
+            )
+        return ATUpdateFetchResult(rows, summary.latest_date, self.output_csv, script_logs)
 
     async def get_db_latest_date(self, db: AsyncSession) -> Optional[date]:
         value = (await db.execute(text("SELECT MAX(obs.time) FROM disease_series_observations obs JOIN disease_surveillance_series series ON series.series_code=obs.series_code WHERE series.country_code=:code"), {"code": self.country_code})).scalar()

@@ -38,15 +38,21 @@ def build_generate_site_data_command(
     *,
     python_path: Path,
     download_url_base: str,
+    incremental_country_codes: list[str] | tuple[str, ...] | None = None,
 ) -> list[str]:
     """Generate site assets and partitioned CSV/JSON/XLSX downloads locally."""
 
-    return [
+    command = [
         str(python_path),
         "scripts/generate_site_data.py",
         "--direct-download-url-base",
         download_url_base,
     ]
+    for country_code in incremental_country_codes or ():
+        normalized = str(country_code or "").strip().upper()
+        if normalized:
+            command.extend(["--incremental-country", normalized])
+    return command
 
 
 def build_update_situation_room_command(*, python_path: Path) -> list[str]:

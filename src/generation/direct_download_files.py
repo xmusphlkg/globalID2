@@ -929,6 +929,8 @@ def build_direct_download_files(
     download_url_base: str,
     max_file_bytes: int = DEFAULT_TARGET_FILE_BYTES,
     workers: int | None = None,
+    changed_country_codes: set[str] | None = None,
+    changed_disease_ids: set[str] | None = None,
 ) -> dict:
     """Write deterministic CSV/JSON/XLSX partitions and return the manifest.
 
@@ -972,7 +974,27 @@ def build_direct_download_files(
     }
     country_exports = context["country_exports"]
     disease_exports = context["disease_exports"]
-    task_count = len(country_exports) + len(disease_exports)
+    selected_country_codes = (
+        {str(code).strip().upper() for code in changed_country_codes}
+        if changed_country_codes is not None
+        else {str(item["code"]).upper() for item in country_exports}
+    )
+    selected_disease_ids = (
+        {str(disease_id).strip() for disease_id in changed_disease_ids}
+        if changed_disease_ids is not None
+        else {str(item["disease_id"]) for item in disease_exports}
+    )
+    selected_country_exports = [
+        item for item in country_exports if item["code"].upper() in selected_country_codes
+    ]
+    selected_disease_exports = [
+        item for item in disease_exports if item["disease_id"] in selected_disease_ids
+    ]
+    tasks: list[tuple[str, dict]] = [
+        *[("country", item) for item in selected_country_exports],
+        *[("disease", item) for item in selected_disease_exports],
+    ]
+    task_count = len(tasks)
     worker_count = min(max(1, workers or DEFAULT_EXPORT_WORKERS), max(1, task_count))
     results_by_index: dict[int, dict] = {}
 
@@ -989,8 +1011,9 @@ def build_direct_download_files(
                 nonlocal next_index
                 index = next_index
                 next_index += 1
-                if index < len(country_exports):
-                    country_export = country_exports[index]
+                kind, item = tasks[index]
+                if kind == "country":
+                    country_export = item
                     path_id = country_export["code"].lower()
                     future = executor.submit(
                         _build_country_parts_task,
@@ -1001,7 +1024,7 @@ def build_direct_download_files(
                         existing_country_parts.get(path_id, {}),
                     )
                 else:
-                    disease_export = disease_exports[index - len(country_exports)]
+                    disease_export = item
                     future = executor.submit(
                         _build_disease_parts_task,
                         disease_export,
@@ -1025,8 +1048,8 @@ def build_direct_download_files(
                     if next_index < task_count:
                         submit_next()
 
-    country_entries: list[dict] = []
-    disease_entries: list[dict] = []
+    processed_country_results: dict[str, dict] = {}
+    processed_disease_results: dict[str, dict] = {}
     changed_files = 0
     for index in range(task_count):
         result = results_by_index[index]
@@ -1035,19 +1058,73 @@ def build_direct_download_files(
         expected_paths.update(result["paths"])
         changed_files += result["changed"]
         if kind == "country":
-            entry = dict(country_entries_by_id[dataset["path_id"]])
-            entry.update(
-                {
-                    "record_count": result["row_count"],
-                    **result["provenance_counts"],
-                    "includes_series_provenance": True,
-                    "parts": result["parts"],
-                    "source_info": result["source_info"],
-                }
-            )
-            country_entries.append(entry)
+            processed_country_results[dataset["path_id"]] = result
             continue
+        processed_disease_results[dataset["dataset_id"]] = result
 
+    def reuse_existing_entry(entry: dict) -> dict:
+        reused = dict(entry)
+        reused["generated_at"] = generated_at
+        for part in (entry or {}).get("parts") or []:
+            for file_meta in (part.get("files") or {}).values():
+                relative_path = str(file_meta.get("relative_path") or "")
+                if relative_path:
+                    expected_paths.add(output_dir / relative_path)
+                    file_meta["url"] = _download_url(
+                        download_url_base,
+                        relative_path,
+                    )
+        return reused
+
+    country_entries: list[dict] = []
+    for country_export in country_exports:
+        path_id = country_export["code"].lower()
+        result = processed_country_results.get(path_id)
+        if result is None:
+            entry = existing_manifest.get("countries") or []
+            existing_entry = next(
+                (item for item in entry if item.get("id") == path_id),
+                None,
+            )
+            if existing_entry is None:
+                raise RuntimeError(
+                    f"Incremental download manifest is missing country {path_id}"
+                )
+            country_entries.append(reuse_existing_entry(existing_entry))
+            continue
+        dataset = result["dataset"]
+        entry = dict(country_entries_by_id[dataset["path_id"]])
+        entry.update(
+            {
+                "record_count": result["row_count"],
+                **result["provenance_counts"],
+                "includes_series_provenance": True,
+                "parts": result["parts"],
+                "source_info": result["source_info"],
+            }
+        )
+        country_entries.append(entry)
+
+    disease_entries: list[dict] = []
+    for disease_export in disease_exports:
+        disease_id = disease_export["disease_id"]
+        result = processed_disease_results.get(disease_id)
+        if result is None:
+            existing_entry = next(
+                (
+                    item
+                    for item in (existing_manifest.get("diseases") or [])
+                    if item.get("disease_id") == disease_id
+                ),
+                None,
+            )
+            if existing_entry is None:
+                raise RuntimeError(
+                    f"Incremental download manifest is missing disease {disease_id}"
+                )
+            disease_entries.append(reuse_existing_entry(existing_entry))
+            continue
+        dataset = result["dataset"]
         entry = dict(disease_entries_by_id[dataset["dataset_id"]])
         entry.update(
             {

@@ -4,7 +4,6 @@ GlobalID V2 AI Base Agent
 AI Agent Base Class - Provides unified LLM interaction functionality with multi-platform AI provider support
 """
 import asyncio
-import json
 import re
 import time
 from abc import ABC, abstractmethod
@@ -19,6 +18,7 @@ from src.ai.model_center import (
     acquire_runtime_route_admission,
     clear_route_rate_limit,
     extract_retry_after_seconds,
+    is_model_channel_failure,
     get_active_model_routes,
     get_runtime_routes,
     is_model_unavailable_error,
@@ -672,8 +672,8 @@ class BaseAgent(ABC):
         Returns:
             Generated text
         """
-        # Internal retry guard for a one-shot quota recovery pass.
-        quota_recovery_attempted = bool(kwargs.pop("_quota_recovery_attempted", False))
+        # Consume the legacy flag; the round counter below bounds recovery.
+        kwargs.pop("_quota_recovery_attempted", None)
         quota_recovery_round = int(kwargs.pop("_quota_recovery_round", 0) or 0)
         recovery_round_override = kwargs.pop("max_quota_recovery_rounds", None)
         wait_for_model_recovery = bool(kwargs.pop("wait_for_model_recovery", True))
@@ -721,11 +721,6 @@ class BaseAgent(ABC):
                     )
                 logger.debug(f"Cache hit for agent '{self.name}'")
                 return cached_response if cached_response is not None else cached
-        
-        # Rate limiting
-        if self.config.ai.enable_rate_limiting:
-            await self.rate_limiter.wait_if_needed()
-            self.rate_limiter.record_request()
         
         # 调用 LLM：运行时路由由模型中心统一管理；env 链路只用于初始化模型中心。
         route_cache_ttl = max(1, int(getattr(self.config.ai, "route_cache_ttl_seconds", 15)))
@@ -837,6 +832,9 @@ class BaseAgent(ABC):
             start_time = time.time()
 
             while retry_count < attempt_limit:
+                # Retries and fallback routes also consume request capacity.
+                # Admission waits are not provider latency or provider errors.
+                await self.rate_limiter.acquire()
                 attempt_started_at = time.perf_counter()
                 try:
                     if model_name not in attempted_models:
@@ -986,6 +984,7 @@ class BaseAgent(ABC):
 
                     quota_related = is_rate_limit_error(e)
                     unavailable_related = is_model_unavailable_error(e)
+                    channel_failed_related = is_model_channel_failure(e)
                     retry_after_seconds = extract_retry_after_seconds(e)
                     cooldown_seconds = retry_after_seconds or int(
                         getattr(self.config.ai, "rate_limit_cooldown_seconds", 300)
@@ -1055,6 +1054,30 @@ class BaseAgent(ABC):
                             except Exception as persist_exc:
                                 logger.warning(
                                     f"Failed to persist route cooldown for '{route_key}': {persist_exc}"
+                                )
+                        BaseAgent.AVAILABLE_MODEL_ROUTES = None
+                        BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
+                        break
+
+                    if channel_failed_related:
+                        channel_cooldown_seconds = max(60, int(cooldown_seconds))
+                        logger.warning(
+                            "Detected model channel failure for '{}'; "
+                            f"cooling down model/route for {channel_cooldown_seconds}s before probing alternatives.",
+                            self.model,
+                        )
+                        BaseAgent._mark_model_cooling_down(self.model, channel_cooldown_seconds)
+                        BaseAgent._mark_route_cooling_down(route_key, channel_cooldown_seconds)
+                        if route:
+                            try:
+                                await mark_route_rate_limited(
+                                    route,
+                                    str(e),
+                                    retry_after_seconds=cooldown_seconds,
+                                )
+                            except Exception as persist_exc:
+                                logger.warning(
+                                    f"Failed to persist channel-failure cooldown for '{route_key}': {persist_exc}"
                                 )
                         BaseAgent.AVAILABLE_MODEL_ROUTES = None
                         BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
@@ -1173,11 +1196,22 @@ class BaseAgent(ABC):
                 )
             else:
                 response = await request
+            response_text = (
+                response[0] if isinstance(response, tuple) and response else None
+            )
+            if not isinstance(response_text, str) or not response_text.strip():
+                # Admission controls provider pressure. An empty provider reply
+                # is not a successful call and must not earn more concurrency.
+                raise RuntimeError("Model returned an empty completion response")
         except BaseException as exc:
-            self._runtime_route_request_duration_seconds = time.perf_counter() - request_started_at
+            self._runtime_route_request_duration_seconds = (
+                time.perf_counter() - request_started_at
+            )
             await admission.release(success=False, error=exc)
             raise
-        self._runtime_route_request_duration_seconds = time.perf_counter() - request_started_at
+        self._runtime_route_request_duration_seconds = (
+            time.perf_counter() - request_started_at
+        )
         await admission.release(success=True)
         return response
 

@@ -30,6 +30,7 @@ from src.domain import (
 from src.generation.site_data_queries import has_table
 from src.generation.site_data_writer import remove_stale_json_files, write_compact_json, write_pretty_json
 from src.literature.knowledge_graph import build_knowledge_graph
+from src.literature.content_policy import content_policy
 from src.literature.recommendations import attach_related_research
 from src.literature.weekly_briefs import enrich_weekly_briefs, load_weekly_review_registry
 from src.literature.weekly_ai_review import load_weekly_ai_review_registry
@@ -86,6 +87,10 @@ def _date_label(value: datetime | None, precision: str, *, lang: str) -> str | N
         return None
     if precision == "year":
         return f"{value.year}年" if lang == "zh" else str(value.year)
+    if lang == "fr":
+        months = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre")
+        month = months[value.month - 1]
+        return f"{month} {value.year}" if precision == "month" else f"{value.day} {month} {value.year}"
     if precision == "month":
         return value.strftime("%Y年%-m月") if lang == "zh" else value.strftime("%B %Y")
     return value.strftime("%Y年%-m月%-d日") if lang == "zh" else value.strftime("%B %-d, %Y")
@@ -133,6 +138,7 @@ def _project_historical_seed_article(
             "slug": link.get("slug") or disease.get("slug"),
             "name_en": link.get("name_en") or disease.get("name_en") or disease.get("standard_name_en") or disease_id,
             "name_zh": link.get("name_zh") or disease.get("name_zh") or disease.get("standard_name_zh"),
+            "name_fr": link.get("name_fr") or disease.get("name_fr"),
             "confidence": float(link.get("confidence") or 0.94),
         })
     country_rows = [
@@ -193,6 +199,7 @@ def _project_historical_seed_article(
         "publication_date_precision": precision,
         "publication_date_label_en": item.get("publication_date_label_en") or _date_label(published, precision, lang="en"),
         "publication_date_label_zh": item.get("publication_date_label_zh") or _date_label(published, precision, lang="zh"),
+        "publication_date_label_fr": item.get("publication_date_label_fr") or _date_label(published, precision, lang="fr"),
         "open_access_status": str(item.get("open_access_status") or ("open" if open_access_url else "unknown")),
         "open_access_url": open_access_url,
         "license_url": item.get("license_url"),
@@ -219,11 +226,14 @@ def _project_historical_seed_article(
         "why_it_matters_zh": item.get("why_it_matters_zh")
         or (summary.get("zh") or {}).get("public_health_relevance")
         or "该文献作为历史基线纳入，用于理解长期传染病监测背景。",
+        "why_it_matters_fr": item.get("why_it_matters_fr")
+        or (summary.get("fr") or {}).get("public_health_relevance")
+        or "Cette étude est conservée comme référence historique pour interpréter le contexte de la surveillance des maladies infectieuses.",
         "why_it_matters_source": "historical_seed",
         "source_kind": "historical_seed",
         "classification_version": "curated-historical-v1",
         "historical_baseline": True,
-        "content_tier": "curated_bilingual_evidence",
+        "content_tier": "curated_multilingual_evidence" if summary.get("fr") else "curated_bilingual_evidence",
         "indexable": True,
         "source_urls": {key: value for key, value in source_urls.items() if key in {"doi", "publisher", "pubmed", "pmc"}},
         "updated_at": _seed_datetime(item.get("curated_at")).isoformat()
@@ -463,6 +473,7 @@ def build_hotspot_visualizations(
                 disease_id = str(disease.get("disease_id") or "")
                 disease_name = str(disease.get("name_en") or disease_id)
                 disease_name_zh = disease.get("name_zh")
+                disease_name_fr = disease.get("name_fr")
                 for topic in topics:
                     key = (disease_id, topic)
                     disease_topic_counts[key] += 1
@@ -472,6 +483,7 @@ def build_hotspot_visualizations(
                         "disease_name_en": disease_name,
                         "disease_name_zh": disease_name_zh,
                         "topic": topic,
+                        **({"disease_name_fr": disease_name_fr} if disease_name_fr else {}),
                     }
                     monthly_disease_topic_counts[month][key] += 1
         if quarter in quarter_keys:
@@ -818,6 +830,7 @@ def build_surveillance_coverage_matrix(projection: dict[str, Any]) -> dict[str, 
             "disease_id": disease_id,
             "name_en": signal.get("disease_name_en") or disease_id,
             "name_zh": signal.get("disease_name_zh"),
+            **({"name_fr": signal.get("disease_name_fr")} if signal.get("disease_name_fr") else {}),
         }
         geographies = signal.get("geographies") or [{"code": "unknown", "name_en": "Geography unavailable"}]
         for geography in geographies:
@@ -894,6 +907,9 @@ def _article_reference(
         "relation_level": relation_level,
         "recency_status": recency_status,
         "evidence_age_days": evidence_age_days,
+        "detail_available": not bool(article.get("related_only")),
+        "related_only": bool(article.get("related_only")),
+        "content_tier": article.get("content_tier"),
     }
 
 
@@ -930,17 +946,23 @@ def _signal_evidence_anchor(
 def _signal_geographies(item: dict[str, Any]) -> list[dict[str, str]]:
     geographies: list[dict[str, str]] = []
     if item.get("country_code"):
-        geographies.append({
+        geography = {
             "code": str(item["country_code"]),
             "name_en": str(item.get("country_name") or item["country_code"]),
-        })
-    for geography in item.get("geographies") or []:
-        code = str(geography.get("code") or "").strip()
+        }
+        if item.get("country_name_fr"):
+            geography["name_fr"] = str(item["country_name_fr"])
+        geographies.append(geography)
+    for raw_geography in item.get("geographies") or []:
+        code = str(raw_geography.get("code") or "").strip()
         if code and all(existing["code"] != code for existing in geographies):
-            geographies.append({
+            geography = {
                 "code": code,
-                "name_en": str(geography.get("name") or code),
-            })
+                "name_en": str(raw_geography.get("name") or code),
+            }
+            if raw_geography.get("name_fr"):
+                geography["name_fr"] = str(raw_geography["name_fr"])
+            geographies.append(geography)
     return geographies
 
 
@@ -1110,6 +1132,11 @@ def build_surveillance_evidence(
                 or disease_meta.get("standard_name_zh")
                 or disease_name_en
             )
+            disease_name_fr = (
+                disease_meta.get("name_fr")
+                or disease_meta.get("standard_name_fr")
+                or item.get("disease_name_fr")
+            )
             exact_articles: list[dict[str, Any]] = []
             context_articles: list[dict[str, Any]] = []
             evidence_anchor = _signal_evidence_anchor(item, situation_snapshot)
@@ -1119,6 +1146,7 @@ def build_surveillance_evidence(
                 if decision and decision.get("status") == "rejected":
                     continue
                 article_published = _optional_public_datetime(article.get("published_at"))
+                related_only = bool(article.get("related_only"))
                 evidence_age_days = (
                     max(0, (evidence_anchor.date() - article_published.date()).days)
                     if evidence_anchor and article_published
@@ -1132,10 +1160,17 @@ def build_surveillance_evidence(
                 if decision and decision.get("status") == "confirmed":
                     relation_level = str(decision.get("relation_level") or "disease_context")
                     requested_exact = relation_level == "exact_disease_geography"
-                    is_exact = requested_exact and not outside_exact_window and not date_unverifiable
+                    is_exact = (
+                        requested_exact
+                        and not related_only
+                        and not outside_exact_window
+                        and not date_unverifiable
+                    )
                     if requested_exact and outside_exact_window:
                         relation_level = "historical_disease_geography_context"
                     elif requested_exact and date_unverifiable:
+                        relation_level = "disease_context"
+                    elif requested_exact and related_only:
                         relation_level = "disease_context"
                 else:
                     if disease_id not in article_disease_ids.get(article_id, set()):
@@ -1146,7 +1181,12 @@ def build_surveillance_evidence(
                     )
                     # A classifier-only record without a publication date cannot
                     # demonstrate that it is current enough to close a signal gap.
-                    is_exact = geographic_match and not outside_exact_window and not date_unverifiable
+                    is_exact = (
+                        geographic_match
+                        and not related_only
+                        and not outside_exact_window
+                        and not date_unverifiable
+                    )
                     relation_level = (
                         "exact_disease_geography"
                         if is_exact
@@ -1180,6 +1220,7 @@ def build_surveillance_evidence(
                 "disease_id": disease_id,
                 "disease_name_en": disease_name_en,
                 "disease_name_zh": disease_name_zh,
+                **({"disease_name_fr": disease_name_fr} if disease_name_fr else {}),
                 "disease_slug": disease_meta.get("slug"),
                 "geographies": geographies,
                 "data_through": item.get("data_through") or item.get("published_at"),
@@ -1222,6 +1263,7 @@ def build_surveillance_evidence(
                     "disease_id": disease_id,
                     "disease_name_en": disease_name_en,
                     "disease_name_zh": disease_name_zh,
+                    **({"disease_name_fr": disease_name_fr} if disease_name_fr else {}),
                     "geographies": geographies,
                     "gap_type": "geography_coverage_gap" if context_articles else "catalogue_coverage_gap",
                     "section": section,
@@ -1250,6 +1292,7 @@ def build_surveillance_evidence(
                     "disease_id": disease_id,
                     "disease_name_en": disease_name_en,
                     "disease_name_zh": disease_name_zh,
+                    **({"disease_name_fr": disease_name_fr} if disease_name_fr else {}),
                     "geographies": geographies,
                     "data_through": signal["data_through"],
                     "window": signal["window"],
@@ -1286,6 +1329,7 @@ def build_surveillance_evidence(
         "methodology": {
             "en": f"Signals come unchanged from the Situation Room snapshot. Exact links require classifier confidence of at least 0.78 for both disease and geography and publication within {max_exact_evidence_age_days} days of the signal release anchor; older or disease-only links are contextual. Gaps describe this catalogue's coverage, not the absence of research.",
             "zh": f"信号原样来自全球态势室快照。精确关联要求疾病和地区分类置信度均不低于 0.78，且论文发表于信号发布锚点前 {max_exact_evidence_age_days} 天内；更早或仅疾病匹配的文献只作为背景。缺口描述的是本目录覆盖情况，并不表示相关研究不存在。",
+            "fr": f"Les signaux sont repris tels quels du snapshot de la Situation Room. Les liens exacts exigent une confiance d’au moins 0,78 pour la maladie et la géographie, ainsi qu’une publication dans les {max_exact_evidence_age_days} jours précédant l’ancrage de diffusion du signal ; les liens plus anciens ou limités à la maladie restent contextuels. Les lacunes décrivent la couverture de ce catalogue, et non l’absence de recherche.",
         },
     }
 
@@ -1297,8 +1341,12 @@ def attach_surveillance_evidence(
     diseases_by_id: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Attach signal evidence and article backlinks without mutating input."""
+    evidence_articles = [
+        *(payload.get("articles") or []),
+        *(payload.get("related_only_articles") or []),
+    ]
     projection = build_surveillance_evidence(
-        payload.get("articles") or [],
+        evidence_articles,
         situation_snapshot,
         diseases_by_id=diseases_by_id,
         relation_decisions=payload.get("_signal_article_links") or [],
@@ -1327,6 +1375,13 @@ def attach_surveillance_evidence(
     return {
         **public_payload,
         "articles": projected_articles,
+        "related_only_articles": [
+            {
+                **article,
+                "related_signals": related_by_article.get(str(article.get("article_id") or ""), []),
+            }
+            for article in payload.get("related_only_articles") or []
+        ],
         "featured": [by_id.get(article.get("article_id"), article) for article in payload.get("featured") or []],
         "reviews_and_guidelines": [
             by_id.get(article.get("article_id"), article)
@@ -1374,6 +1429,7 @@ def empty_literature_export() -> dict[str, Any]:
         "featured": [],
         "articles": [],
         "preprints": [],
+        "related_only_articles": [],
         "integrity_alerts": [],
         "historical_baseline": [],
         "reviews_and_guidelines": [],
@@ -1676,6 +1732,7 @@ async def collect_literature_export(
             "slug": disease.get("slug"),
             "name_en": disease.get("name_en") or disease.get("standard_name_en") or link.disease_id,
             "name_zh": disease.get("name_zh") or disease.get("standard_name_zh"),
+            "name_fr": disease.get("name_fr"),
             "confidence": link.confidence,
         })
     for link in country_links:
@@ -1693,6 +1750,7 @@ async def collect_literature_export(
     )
     for summary in summaries:
         automation = (summary.generation_metadata or {}).get("autopilot") or {}
+        translation = (summary.generation_metadata or {}).get("translation_provenance") or None
         summaries_by_article[summary.article_id][summary.language] = {
             **{field: getattr(summary, field) for field in summary_fields},
             "provenance": {
@@ -1707,6 +1765,7 @@ async def collect_literature_export(
                 "automatically_approved": automation.get("policy_version") is not None,
                 "automation_policy_version": automation.get("policy_version"),
                 "publication_gate": (summary.generation_metadata or {}).get("publication_gate"),
+                "translation": translation,
             },
         }
 
@@ -1721,8 +1780,10 @@ async def collect_literature_export(
         country_phrase_en = ", ".join(country["name_en"] for country in countries[article.article_id][:2])
         study_type = article.study_type or "journal article"
         summary = summaries_by_article.get(article.article_id, {})
+        policy = content_policy(article)
         summary_relevance_en = (summary.get("en") or {}).get("public_health_relevance")
         summary_relevance_zh = (summary.get("zh") or {}).get("public_health_relevance")
+        summary_relevance_fr = (summary.get("fr") or {}).get("public_health_relevance")
         context_en = (
             summary_relevance_en
             or (
@@ -1735,6 +1796,11 @@ async def collect_literature_export(
         context_zh = (
             summary_relevance_zh
             or f"该记录被分类为与{primary_disease_zh}相关的{study_type}证据。正式引用或应用结论前，请先核对原始文献。"
+        )
+        primary_disease_fr = (article_diseases[0].get("name_fr") if article_diseases else None) or primary_disease_en
+        context_fr = (
+            summary_relevance_fr
+            or f"Cette étude est classée comme une preuve de type {study_type.lower()} concernant {primary_disease_fr}. Vérifiez la publication originale avant toute citation ou application."
         )
         article_countries = sorted(countries[article.article_id], key=lambda item: item["confidence"], reverse=True)
         related_surveillance = build_related_surveillance(
@@ -1800,6 +1866,9 @@ async def collect_literature_export(
             "study_type": article.study_type,
             "published_at": article.published_at.isoformat() if article.published_at else None,
             "indexed_at": article.indexed_at.isoformat() if article.indexed_at else None,
+            "publication_date_label_en": _date_label(article.published_at, "day", lang="en"),
+            "publication_date_label_zh": _date_label(article.published_at, "day", lang="zh"),
+            "publication_date_label_fr": _date_label(article.published_at, "day", lang="fr"),
             "open_access_status": article.open_access_status,
             "open_access_url": article.open_access_url,
             "license_url": article.license_url,
@@ -1819,15 +1888,22 @@ async def collect_literature_export(
             "populations": controlled_entities("populations"),
             "related_surveillance": related_surveillance,
             "summary": summary,
+            "content_policy": policy,
             "content_tier": (
-                "quality_gated_bilingual_evidence"
+                "related_only"
+                if policy["related_only"]
+                else "quality_gated_multilingual_evidence"
+                if summary.get("en") and summary.get("zh") and summary.get("fr")
+                else "quality_gated_bilingual_evidence"
                 if summary.get("en") and summary.get("zh")
                 else "metadata_only"
             ),
-            "indexable": bool(summary.get("en") and summary.get("zh")),
+            "related_only": policy["related_only"],
+            "indexable": bool(summary.get("en") and summary.get("zh")) and not policy["related_only"],
             "why_it_matters_en": context_en,
             "why_it_matters_zh": context_zh,
-            "why_it_matters_source": "published_summary" if summary_relevance_en or summary_relevance_zh else "classifier_metadata",
+            "why_it_matters_fr": context_fr,
+            "why_it_matters_source": "published_summary" if summary_relevance_en or summary_relevance_zh or summary_relevance_fr else "classifier_metadata",
             "source_urls": {
                 key: value
                 for key, value in (article.source_urls or {}).items()
@@ -1837,6 +1913,11 @@ async def collect_literature_export(
         })
 
     projected, preprints = partition_public_literature_articles(projected)
+    related_only_articles = [
+        article
+        for article in [*projected, *preprints]
+        if article.get("related_only") is True
+    ]
     # A published editorial state is necessary but not sufficient for a
     # public evidence page. Legacy metadata-only records remain in the control
     # plane until both published language summaries pass their quality gates.
@@ -1924,7 +2005,9 @@ async def collect_literature_export(
         if item.get("published_at") and _parse_public_datetime(item["published_at"]) <= now:
             published = _parse_public_datetime(item["published_at"])
             iso_year, iso_week, _ = published.isocalendar()
-            weekly_articles[f"{iso_year}-W{iso_week:02d}"].append(item)
+            publication_week = f"{iso_year}-W{iso_week:02d}"
+            item["publication_week"] = publication_week
+            weekly_articles[publication_week].append(item)
     disease_facets = [
         {**disease_meta[key], "count": len(items), "url": f"/research/diseases/{disease_meta[key]['slug']}/"}
         for key, items in sorted(disease_articles.items(), key=lambda pair: (-len(pair[1]), pair[0]))
@@ -1992,11 +2075,15 @@ async def collect_literature_export(
         summarized=quality_gated_db_article_count,
         exact_linked=exact_linked_public_articles,
     )
+    french_published_summary_count = sum(
+        bool((item.get("summary") or {}).get("fr")) for item in projected
+    )
     completeness = [
         {"metric": "Disease classified", "count": sum(bool(item["diseases"]) for item in projected), "total": len(projected)},
         {"metric": "Geography classified", "count": sum(bool(item["countries"]) for item in projected), "total": len(projected)},
         {"metric": "Topic classified", "count": sum(bool(item["topics"]) for item in projected), "total": len(projected)},
         {"metric": "Bilingual published summary", "count": len(projected), "total": len(projected)},
+        {"metric": "French published summary", "count": french_published_summary_count, "total": len(projected)},
         {"metric": "Open access", "count": sum(item["open_access_status"] == "open" for item in projected), "total": len(projected)},
     ]
     return {
@@ -2015,6 +2102,10 @@ async def collect_literature_export(
             "diseases_last_7_days": len({d["disease_id"] for item in recent for d in item["diseases"]}),
             "countries_last_7_days": len({c["code"] for item in recent for c in item["countries"]}),
             "reviews_and_guidelines_last_7_days": sum(item["study_type"] in review_types for item in recent),
+            "french_published_summary_count": french_published_summary_count,
+            "french_summary_coverage": round(
+                french_published_summary_count / len(projected), 4
+            ) if projected else 0.0,
         },
         "featured": sorted(
             [item for item in projected if item["is_featured"]],
@@ -2023,6 +2114,7 @@ async def collect_literature_export(
         )[:6],
         "articles": projected,
         "preprints": preprints,
+        "related_only_articles": related_only_articles,
         "integrity_alerts": integrity_alerts,
         "historical_baseline": sorted(
             [item for item in projected if item.get("source_kind") == "historical_seed"],

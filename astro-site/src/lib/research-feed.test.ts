@@ -18,10 +18,11 @@ const data: ResearchFeedData = {
       study_type: 'Systematic review',
       article_type: 'journal-article',
       peer_review_status: 'peer_reviewed',
-      diseases: [{ disease_id: 'D028', slug: 'pertussis', name_en: 'Pertussis' }],
-      countries: [{ code: 'CN', name_en: 'China' }],
+      diseases: [{ disease_id: 'D028', slug: 'pertussis', name_en: 'Pertussis', name_fr: 'Coqueluche' }],
+      countries: [{ code: 'CN', name_en: 'China', name_fr: 'Chine' }],
       topics: [{ name: 'Vaccination' }],
       why_it_matters_en: 'Review & synthesis.',
+      why_it_matters_fr: 'Revue et synthèse.',
     },
     {
       slug: 'model-main',
@@ -53,10 +54,10 @@ const data: ResearchFeedData = {
   reviews_and_guidelines: [{ slug: 'review-one' }],
   facets: {
     diseases: [
-      { disease_id: 'D028', slug: 'pertussis', name_en: 'Pertussis', name_zh: '百日咳' },
+      { disease_id: 'D028', slug: 'pertussis', name_en: 'Pertussis', name_zh: '百日咳', name_fr: 'Coqueluche' },
       { disease_id: 'D021', slug: 'dengue', name_en: 'Dengue', name_zh: '登革热' },
     ],
-    countries: [{ code: 'CN', slug: 'cn', name_en: 'China', name_zh: '中国' }],
+    countries: [{ code: 'CN', slug: 'cn', name_en: 'China', name_zh: '中国', name_fr: 'Chine' }],
     topics: [{ slug: 'vaccination', name: 'Vaccination' }],
   },
 };
@@ -97,4 +98,16 @@ test('renders a self-identifying, escaped, newest-first filtered RSS document', 
   assert.match(xml, /A systematic review of A&amp;B/);
   assert.match(xml, /Review &amp; synthesis\./);
   assert.doesNotMatch(xml, /Transmission model/);
+});
+
+test('renders French feeds with localized metadata and links', () => {
+  const definition = buildResearchFeedDefinitions(data).find(item => item.path === '/research/rss/diseases/pertussis.xml');
+  assert.ok(definition);
+  const xml = renderResearchFeedXml({ data, definition, site: 'https://example.com', language: 'fr' });
+  assert.match(xml, /<title>Radar de recherche GIDS · Coqueluche<\/title>/);
+  assert.match(xml, /<language>fr<\/language>/);
+  assert.match(xml, /href="https:\/\/example\.com\/fr\/research\/rss\/diseases\/pertussis\.xml"/);
+  assert.match(xml, /<link>https:\/\/example\.com\/fr\/research\/articles\/review-one\/<\/link>/);
+  assert.match(xml, /Revue et synthèse\./);
+  assert.match(xml, /Coqueluche/);
 });

@@ -649,9 +649,32 @@ class LiteratureSettings(_BaseEnvSettings):
         le=1.0,
         description="Coverage target used by bounded resumable Unpaywall backfill runs",
     )
-    source_concurrency: int = Field(default=4, ge=1, le=12)
+    source_concurrency: int = Field(
+        default=2,
+        ge=1,
+        le=12,
+        description="Concurrent requests per literature provider; kept conservative for Crossref TLS stability",
+    )
     request_timeout_seconds: int = Field(default=30, ge=5, le=120)
     max_retries: int = Field(default=3, ge=1, le=5)
+    persistence_deadlock_max_retries: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description="Retry a rolled-back Research Radar persistence transaction after PostgreSQL deadlocks",
+    )
+    persistence_deadlock_retry_base_seconds: float = Field(
+        default=0.25,
+        ge=0.01,
+        le=10.0,
+        description="Initial exponential backoff for Research Radar deadlock retries",
+    )
+    persistence_batch_size: int = Field(
+        default=25,
+        ge=1,
+        le=500,
+        description="Maximum Research Radar articles committed in one database transaction",
+    )
     auto_publish_min_score: float = Field(default=0.72, ge=0.0, le=1.0)
     public_article_limit: int = Field(default=500, ge=20, le=5000)
     ai_enrichment_enabled: bool = Field(
@@ -662,6 +685,10 @@ class LiteratureSettings(_BaseEnvSettings):
         default=False,
         description="Continuously process the next eligible summary batch on the scheduler",
     )
+    ai_enrichment_auto_on_ingest: bool = Field(
+        default=True,
+        description="Queue a targeted evidence-summary task for newly inserted literature after each sync",
+    )
     ai_enrichment_interval_minutes: int = Field(default=15, ge=15, le=10080)
     ai_enrichment_catch_up_interval_minutes: int = Field(
         default=1,
@@ -671,7 +698,7 @@ class LiteratureSettings(_BaseEnvSettings):
     )
     ai_enrichment_batch_size: int = Field(default=50, ge=1, le=50)
     ai_enrichment_concurrency: int = Field(
-        default=12,
+        default=8,
         ge=1,
         le=24,
         description="Maximum article-level concurrency within one Research Radar AI enrichment task",
@@ -688,7 +715,7 @@ class LiteratureSettings(_BaseEnvSettings):
         le=5,
         description="Maximum automatic generations per unchanged article/language before exception review",
     )
-    ai_enrichment_languages_raw: str = Field(default="en,zh")
+    ai_enrichment_languages_raw: str = Field(default="en,zh,fr")
     ai_min_abstract_characters: int = Field(default=180, ge=80, le=2000)
     ai_require_open_access: bool = Field(
         default=False,
@@ -698,6 +725,12 @@ class LiteratureSettings(_BaseEnvSettings):
     ai_wait_for_model_recovery: bool = Field(
         default=True,
         description="Wait once for Model Center route recovery before failing literature AI enrichment",
+    )
+    ai_literature_max_attempts_per_model: int = Field(
+        default=2,
+        ge=1,
+        le=3,
+        description="Maximum retries per model for literature enrichment requests",
     )
     ai_quota_recovery_rounds: int = Field(
         default=1,
@@ -712,6 +745,15 @@ class LiteratureSettings(_BaseEnvSettings):
     weekly_ai_review_batch_size: int = Field(default=2, ge=1, le=8)
     weekly_ai_review_timeout_seconds: int = Field(default=60, ge=10, le=180)
     weekly_ai_review_max_attempts: int = Field(default=2, ge=1, le=2)
+    weekly_ai_review_recheck_hours: int = Field(
+        default=6,
+        ge=1,
+        le=168,
+        description=(
+            "Minimum delay before automatically re-reviewing an unchanged weekly brief "
+            "that AI previously held for editorial attention"
+        ),
+    )
     gap_discovery_enabled: bool = Field(
         default=True,
         description="Enable review-only targeted literature discovery for Situation Room evidence gaps",
@@ -738,6 +780,34 @@ class LiteratureSettings(_BaseEnvSettings):
     autopilot_exact_relation_min_confidence: float = Field(default=0.78, ge=0.0, le=1.0)
     autopilot_context_relation_min_confidence: float = Field(default=0.82, ge=0.0, le=1.0)
     autopilot_summary_min_quality: float = Field(default=0.90, ge=0.0, le=1.0)
+    autopilot_reconcile_batch_size: int = Field(
+        default=100,
+        ge=1,
+        le=5000,
+        description="Maximum articles or summaries held in memory per autopilot reconciliation batch",
+    )
+    autopilot_statement_timeout_seconds: int = Field(
+        default=300,
+        ge=30,
+        le=3600,
+        description="PostgreSQL statement timeout applied locally to one autopilot transaction",
+    )
+    autopilot_lock_timeout_seconds: int = Field(
+        default=15,
+        ge=1,
+        le=300,
+        description="PostgreSQL lock wait timeout applied locally to one autopilot transaction",
+    )
+    payload_compaction_enabled: bool = Field(
+        default=True,
+        description="Incrementally compact legacy provider payloads after successful ingest writes",
+    )
+    payload_compaction_batch_size: int = Field(
+        default=1000,
+        ge=1,
+        le=10000,
+        description="Maximum legacy payload rows compacted in one bounded maintenance transaction",
+    )
     autopilot_auto_reject_weak_links: bool = Field(default=True)
     autopilot_auto_exclude_incomplete: bool = Field(default=True)
     autopilot_auto_exclude_preprints: bool = Field(default=True)
@@ -749,7 +819,7 @@ class LiteratureSettings(_BaseEnvSettings):
     @property
     def ai_enrichment_languages(self) -> list[str]:
         languages = [value.strip().lower() for value in self.ai_enrichment_languages_raw.split(",")]
-        return [value for value in dict.fromkeys(languages) if value in {"en", "zh"}] or ["en"]
+        return [value for value in dict.fromkeys(languages) if value in {"en", "zh", "fr"}] or ["en"]
 
 class AppSettingsConfig(BaseSettings):
     """应用基础配置"""

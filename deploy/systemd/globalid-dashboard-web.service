@@ -3,6 +3,7 @@ Description=GlobalID dashboard web
 After=globalid-dashboard-api.service
 Wants=globalid-dashboard-api.service
 PartOf=globalid-stack.target
+OnFailure=globalid-notify-failure@%n.service
 
 [Service]
 Type=simple

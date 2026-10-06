@@ -1,0 +1,11 @@
+[Unit]
+Description=Check official Brazil state case revisions weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 07:45:00 Asia/Shanghai
+RandomizedDelaySec=1800
+Persistent=true
+Unit=globalid-br-subdivisions.service
+
+[Install]
+WantedBy=timers.target

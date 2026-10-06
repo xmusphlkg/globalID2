@@ -26,6 +26,8 @@ _URL_RE = re.compile(r"(?:https?|ftp)://\S+", re.IGNORECASE)
 _SECRET_RE = re.compile(
     r"(?i)\b(api[_-]?key|access[_-]?token|token|password|secret)=([^\s&,;]+)"
 )
+_ERROR_SUMMARY_LIMIT = 1000
+_ERROR_SUMMARY_HEAD = 300
 
 
 def safe_exception_summary(exc: BaseException) -> str:
@@ -36,7 +38,12 @@ def safe_exception_summary(exc: BaseException) -> str:
         return error_type
     message = _URL_RE.sub("[redacted-url]", message)
     message = _SECRET_RE.sub(lambda match: f"{match.group(1)}=[redacted]", message)
-    return f"{error_type}: {message}"[:1000]
+    summary = f"{error_type}: {message}"
+    if len(summary) <= _ERROR_SUMMARY_LIMIT:
+        return summary
+    separator = "\n… output truncated …\n"
+    tail_length = _ERROR_SUMMARY_LIMIT - _ERROR_SUMMARY_HEAD - len(separator)
+    return summary[:_ERROR_SUMMARY_HEAD] + separator + summary[-tail_length:]
 
 
 @asynccontextmanager

@@ -37,7 +37,11 @@ from src.literature.normalization import normalize_europe_pmc
 from src.domain import LiteratureSummary
 from src.services.literature_gap_service import build_gap_query_plan
 from src.services.literature_automation_service import (
+    _article_reconciliation_statement,
+    _english_summary_fingerprint_statement,
+    _link_reconciliation_statement,
     _published_revalidation_status,
+    _summary_reconciliation_statement,
     decide_article,
     decide_evidence_link,
     decide_summary,
@@ -46,6 +50,30 @@ from dashboard.api.routers.literature import _publication_blockers
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_autopilot_summary_reconciliation_does_not_load_heavy_article_payloads():
+    sql = str(_summary_reconciliation_statement())
+
+    assert "literature_articles.abstract_text" in sql
+    assert "literature_articles.publication_status" in sql
+    assert "literature_articles.source_payload" not in sql
+    assert "literature_articles.source_urls" not in sql
+
+
+def test_autopilot_reconciliation_queries_are_keyset_bounded():
+    link_sql = str(_link_reconciliation_statement(after_id=10, batch_size=25))
+    article_sql = str(_article_reconciliation_statement(after_id=10, batch_size=25))
+    english_sql = str(
+        _english_summary_fingerprint_statement(after_id=10, batch_size=25)
+    )
+
+    assert "literature_signal_article_links.id >" in link_sql
+    assert "literature_articles.source_payload" not in link_sql
+    assert "literature_articles.id >" in article_sql
+    assert "literature_articles.source_payload" not in article_sql
+    assert "literature_summaries.id >" in english_sql
+    assert "literature_articles" not in english_sql
 
 
 def test_disease_evidence_events_separate_guidance_from_vaccine_policy_evidence():
@@ -1107,6 +1135,22 @@ async def test_model_enrichment_coerces_scalar_field_payloads():
     assert "Coerced scalar fields" in result.review_notes
 
 
+def test_parse_json_supports_mixed_prefix_and_suffix() -> None:
+    parsed = enrichment_module._parse_json(
+        "prefix text\n```json\n{\"research_question\": {\"text\": \"ok\"}, \"study_design\": null, \"population_setting\": null, \"main_findings\": null, \"public_health_relevance\": null, \"limitations\": null, \"gids_interpretation\": null}\n```tail"
+    )
+
+    assert parsed["research_question"]["text"] == "ok"
+
+
+def test_parse_json_extracts_first_json_object_from_messy_text() -> None:
+    parsed = enrichment_module._parse_json(
+        'noise {"research_question": {"text": "ok"}, "study_design": null, "population_setting": null, "main_findings": null, "public_health_relevance": null, "limitations": null, "gids_interpretation": null} trailing'
+    )
+
+    assert parsed["research_question"]["text"] == "ok"
+
+
 @pytest.mark.asyncio
 async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeypatch):
     captured = {}
@@ -1135,7 +1179,7 @@ async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeyp
 
     assert captured["wait_for_model_recovery"] is True
     assert captured["max_quota_recovery_rounds"] == 1
-    assert captured["max_attempts_per_model"] == 1
+    assert captured["max_attempts_per_model"] == 2
 
 
 @pytest.mark.asyncio
@@ -1279,6 +1323,8 @@ async def test_enrichment_generation_failures_record_attempts_and_stop_requeue(m
     assert db.summary.generation_metadata["publication_gate"] == "generation-failed"
     assert db.summary.generation_metadata["quality_attempts"] == 1
     assert db.summary.generation_metadata["last_generation_error"] == "ValueError"
+    assert db.summary.generation_metadata["translation_provenance"]["target_language"] == "zh"
+    assert db.summary.generation_metadata["translation_provenance"]["status"] == "retry_pending"
     assert await pipeline._should_skip(article, language="zh", force=False) is False
 
     await pipeline._store_failure(
@@ -1319,6 +1365,7 @@ async def test_transient_enrichment_failures_do_not_consume_quality_attempts(mon
     assert db.summary.generation_metadata["publication_gate"] == "generation-transient-failure"
     assert db.summary.generation_metadata["quality_attempts"] == 0
     assert db.summary.generation_metadata["last_generation_error_transient"] is True
+    assert "translation_provenance" not in db.summary.generation_metadata
     assert await pipeline._should_skip(article, language="en", force=False) is False
 
 
@@ -1774,3 +1821,25 @@ def test_autopilot_holds_protocol_v2_chinese_summary_without_alignment_evidence(
         _autopilot_config(),
         expected_canonical_summary_fingerprint="abc123",
     ).action == "publish"
+
+
+@pytest.mark.asyncio
+async def test_french_enrichment_uses_canonical_english_contract():
+    candidate = normalize_crossref(_crossref_payload())
+    assert candidate is not None
+    canonical = {field: f"Canonical {field}." for field in SUMMARY_FIELDS}
+    agent = _FakeLiteratureAgent()
+    result = await LiteratureSummaryGenerator(agent=agent).generate(
+        article=candidate,
+        language="fr",
+        diseases=["Dengue"],
+        countries=["Japan"],
+        topics=["Surveillance"],
+        timeout_seconds=10,
+        preferred_models=[],
+        canonical_fields=canonical,
+    )
+    assert result.canonical_summary_fingerprint
+    request = json.loads(agent.calls[0]["prompt"])
+    assert "French" in agent.calls[0]["system"]
+    assert request["canonical_summary_en"]["main_findings"] == canonical["main_findings"]

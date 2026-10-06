@@ -68,6 +68,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                 "slug": "influenza",
                 "name_en": "Influenza",
                 "name_zh": "流感",
+                "name_fr": "Grippe",
             }
         ],
         "countries": [
@@ -76,6 +77,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                 "slug": "us",
                 "name_en": "United States",
                 "name_zh": "美国",
+                "name_fr": "États-Unis",
             }
         ],
         "topics": [{"name": "Surveillance", "slug": "surveillance"}],
@@ -88,6 +90,11 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                 "url": "/situation/",
                 "disease_name_en": "Influenza",
                 "disease_name_zh": "流感",
+                "disease_name_fr": "Grippe",
+                "country_code": "US",
+                "country_name_en": "United States",
+                "country_name_zh": "美国",
+                "country_name_fr": "États-Unis",
                 "relation_level": "exact_disease_geography",
             }
         ],
@@ -99,7 +106,8 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                 "disease_id": "D001",
                 "disease_name_en": "Influenza",
                 "disease_name_zh": "流感",
-                "geographies": [{"code": "US", "name_en": "United States"}],
+                "disease_name_fr": "Grippe",
+                "geographies": [{"code": "US", "name_en": "United States", "name_fr": "États-Unis"}],
                 "data_through": "2000-01-01",
                 "relation_level": "exact_disease_geography",
                 "situation_url": "/situation/",
@@ -110,6 +118,10 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
             "without using production literature data."
         ),
         "why_it_matters_zh": "该 CI 夹具在不使用生产文献数据的情况下填充研究雷达页面和测试。",
+        "why_it_matters_fr": (
+            "Cette fixture CI alimente les pages et les tests du Radar de recherche "
+            "sans utiliser de données bibliographiques de production."
+        ),
         "summary": {
             "en": {
                 "research_question": "Can CI render a populated Research Radar release?",
@@ -147,6 +159,24 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                     "editorially_approved": False,
                 },
             },
+            "fr": {
+                "research_question": "Le CI peut-il afficher un Radar de recherche correctement renseigné ?",
+                "study_design": "Fixture de revue synthétique",
+                "population_setting": "Entrées publiques et déterministes de construction",
+                "main_findings": "La fixture fournit une revue citée, un thème et un lien de surveillance.",
+                "public_health_relevance": "Elle valide uniquement le rendu et ne constitue pas une preuve épidémiologique.",
+                "limitations": "Données synthétiques réservées au CI.",
+                "gids_interpretation": "Utilisez les exports de production pour les éléments probants publics.",
+                "provenance": {
+                    "generated_by": "ci_fixture",
+                    "provider": "repository",
+                    "model": "none",
+                    "quality_score": 1.0,
+                    "publication_gate": "ci_fixture",
+                    "automation_policy_version": "ci_fixture_v1",
+                    "editorially_approved": False,
+                },
+            },
         },
         "knowledge_graph": {"stats": {"edges": 1}, "edges": []},
     }
@@ -157,7 +187,8 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
         "disease_id": "D001",
         "disease_name_en": "Influenza",
         "disease_name_zh": "流感",
-        "geographies": [{"code": "US", "name_en": "United States"}],
+        "disease_name_fr": "Grippe",
+        "geographies": [{"code": "US", "name_en": "United States", "name_fr": "États-Unis"}],
         "data_through": "2000-01-01",
         "relation_level": "exact_disease_geography",
         "situation_url": "/situation/",
@@ -201,6 +232,9 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                     "id": "disease:D001",
                     "type": "disease",
                     "label": "Influenza",
+                    "disease_id": "D001",
+                    "slug": "influenza",
+                    "name_fr": "Grippe",
                     "url": "/research/diseases/influenza/",
                 },
             ],
@@ -223,6 +257,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                     "slug": "influenza",
                     "name_en": "Influenza",
                     "name_zh": "流感",
+                    "name_fr": "Grippe",
                     "count": 1,
                     "url": "/research/diseases/influenza/",
                 }
@@ -233,6 +268,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                     "slug": "us",
                     "name_en": "United States",
                     "name_zh": "美国",
+                    "name_fr": "États-Unis",
                     "count": 1,
                     "url": "/research/countries/us/",
                 }
@@ -263,6 +299,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                 "interpretation_note": {
                     "en": "Research attention is not disease risk or incidence.",
                     "zh": "研究关注度不代表疾病风险或发病率。",
+                    "fr": "L’attention de la recherche ne représente ni le risque ni l’incidence d’une maladie.",
                 }
             }
         },
@@ -279,6 +316,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                 "byline": {
                     "name_en": "GIDS Research Radar automated compiler",
                     "name_zh": "GIDS Research Radar 自动编译器",
+                    "name_fr": "Compilateur automatique du Radar de recherche GIDS",
                 },
             }
         ],
@@ -289,6 +327,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
             "methodology": {
                 "en": "CI fixture links one public signal to one published article.",
                 "zh": "CI 夹具将一个公开信号关联到一篇已发布文章。",
+                "fr": "La fixture CI relie un signal public à une publication validée.",
             },
             "evidence_gaps": [],
         },
@@ -304,19 +343,20 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
         "interpretation_note": {
             "en": "Research attention is not disease risk or incidence.",
             "zh": "研究关注度不代表疾病风险或发病率。",
+            "fr": "L’attention de la recherche ne représente ni le risque ni l’incidence d’une maladie.",
         },
     }
     fixture_diseases = [
-        ("D001", "influenza", "Influenza"),
-        ("CI002", "example-disease", "Example disease"),
-        ("CI003", "erythema-infectiosum-fifth-disease", "Erythema infectiosum (fifth disease)"),
-        ("CI004", "respiratory-syncytial-virus-infection-rsv", "Respiratory syncytial virus infection (RSV)"),
-        ("CI005", "roseola-exanthem-subitum", "Roseola (exanthem subitum)"),
-        ("CI006", "flavivirus-infection-unspecified", "Flavivirus infection (unspecified)"),
-        ("CI007", "haemolytic-uraemic-syndrome-hus", "Haemolytic uraemic syndrome (HUS)"),
-        ("CI008", "meningitis-all-reported-etiologies", "Meningitis (all reported etiologies)"),
-        ("CI009", "methicillin-resistant-staphylococcus-aureus-mrsa-surveillance", "MRSA surveillance"),
-        ("CI010", "escherichia-coli-enteritis-all-reported-pathotypes", "Escherichia coli enteritis"),
+        ("D001", "influenza", "Influenza", "Grippe"),
+        ("CI002", "example-disease", "Example disease", "Maladie exemple"),
+        ("CI003", "erythema-infectiosum-fifth-disease", "Erythema infectiosum (fifth disease)", "Érythème infectieux (cinquième maladie)"),
+        ("CI004", "respiratory-syncytial-virus-infection-rsv", "Respiratory syncytial virus infection (RSV)", "Infection par le virus respiratoire syncytial (VRS)"),
+        ("CI005", "roseola-exanthem-subitum", "Roseola (exanthem subitum)", "Roséole (exanthème subit)"),
+        ("CI006", "flavivirus-infection-unspecified", "Flavivirus infection (unspecified)", "Infection à flavivirus (non précisée)"),
+        ("CI007", "haemolytic-uraemic-syndrome-hus", "Haemolytic uraemic syndrome (HUS)", "Syndrome hémolytique et urémique (SHU)"),
+        ("CI008", "meningitis-all-reported-etiologies", "Meningitis (all reported etiologies)", "Méningite (toutes étiologies signalées)"),
+        ("CI009", "methicillin-resistant-staphylococcus-aureus-mrsa-surveillance", "MRSA surveillance", "Surveillance du SARM"),
+        ("CI010", "escherichia-coli-enteritis-all-reported-pathotypes", "Escherichia coli enteritis", "Entérite à Escherichia coli"),
     ]
     payloads = {
         "src/data/meta.json": {
@@ -334,10 +374,11 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                 "slug": slug,
                 "name_en": name,
                 "name_zh": name,
+                "name_fr": name_fr,
                 "category": "Other",
                 "country_count": 0,
             }
-            for disease_id, slug, name in fixture_diseases
+            for disease_id, slug, name, name_fr in fixture_diseases
         ],
         "src/data/reports/index.json": [],
         "src/data/about.json": {
@@ -364,6 +405,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
             "country_name": "Japan",
             "country_name_en": "Japan",
             "country_name_zh": "日本",
+            "country_name_fr": "Japon",
             "total_cases": 12,
             "total_deaths": 0,
             "disease_count": 1,
@@ -373,6 +415,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                     "disease_id": "D038",
                     "name_en": "Influenza",
                     "name_zh": "流感",
+                    "name_fr": "Grippe",
                     "dates": ["2000-01-01", "2000-01-08", "2000-01-15", "2000-01-22"],
                     "cases": [1, 3, 2, 6],
                 }
@@ -383,6 +426,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
             "country_name": "China",
             "country_name_en": "China",
             "country_name_zh": "中国",
+            "country_name_fr": "Chine",
             "total_cases": 14,
             "total_deaths": 0,
             "disease_count": 1,
@@ -392,6 +436,7 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                     "disease_id": "D038",
                     "name_en": "Influenza",
                     "name_zh": "流感",
+                    "name_fr": "Grippe",
                     "dates": ["2000-01-01", "2000-01-08", "2000-01-15", "2000-01-22"],
                     "cases": [2, 4, 1, 7],
                 }
@@ -402,12 +447,13 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
         "public/site-data/situation/v3/latest.json": dict(situation),
         "public/site-data/situation/latest.json": dict(situation),
     }
-    for disease_id, slug, name in fixture_diseases:
+    for disease_id, slug, name, name_fr in fixture_diseases:
         payloads[f"src/data/diseases/{disease_id.lower()}.json"] = {
             "disease_id": disease_id,
             "slug": slug,
             "name_en": name,
             "name_zh": name,
+            "name_fr": name_fr,
             "category": "Other",
             "total_cases": 0,
             "total_deaths": 0,

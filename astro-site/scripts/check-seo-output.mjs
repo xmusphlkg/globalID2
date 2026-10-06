@@ -97,6 +97,12 @@ export function auditSeoOutput(distDirectory) {
     pages.set(route, { isIndexable });
     if (isIndexable) indexable += 1; else noindex += 1;
 
+    // Astro emits a small HTML redirect document for `Astro.redirect()` routes
+    // when building a static site. It intentionally has no document structure
+    // or social metadata; the redirect target is what needs auditing instead.
+    const isGeneratedRedirect = /<meta\b[^>]*http-equiv=["']?refresh\b/i.test(html);
+    if (isGeneratedRedirect) continue;
+
     if ((html.match(/<main\b/gi) ?? []).length !== 1) errors.push(`${route}: must contain exactly one <main>`);
     if ((html.match(/<h1\b/gi) ?? []).length !== 1) errors.push(`${route}: must contain exactly one <h1>`);
     if (!title) errors.push(`${route}: missing title`);
@@ -104,13 +110,17 @@ export function auditSeoOutput(distDirectory) {
     if (description.length !== 1 || !description[0].content) errors.push(`${route}: missing or duplicate meta description`);
     if (description[0]?.content && [...description[0].content].length > 160) errors.push(`${route}: meta description exceeds 160 characters`);
     if (canonical.length !== 1) errors.push(`${route}: missing or duplicate canonical`);
-    if (isIndexable && [...hreflang].sort().join(',') !== 'en,x-default,zh-CN') errors.push(`${route}: incomplete hreflang set`);
+    if (isIndexable && [...hreflang].sort().join(',') !== 'en,fr-FR,x-default,zh-CN') errors.push(`${route}: incomplete hreflang set`);
     if (!ogImage || !ogImageAlt || !twitterImageAlt) errors.push(`${route}: incomplete social image metadata`);
     if (ogImage?.endsWith('/logo-2.png')) errors.push(`${route}: legacy undersized social image`);
 
     if (isIndexable) {
-      if (indexableTitles.has(title)) errors.push(`${route}: duplicate indexable title also used by ${indexableTitles.get(title)}`);
-      else indexableTitles.set(title, route);
+      // Localized routes are expected to reuse the same subject title in each
+      // language. Detect collisions within a locale, not across translations.
+      const locale = route.startsWith('/fr/') ? 'fr' : route.startsWith('/zh/') ? 'zh' : 'en';
+      const titleKey = `${locale}:${title}`;
+      if (indexableTitles.has(titleKey)) errors.push(`${route}: duplicate indexable title also used by ${indexableTitles.get(titleKey)}`);
+      else indexableTitles.set(titleKey, route);
       if (canonical[0]?.href) {
         if (indexableCanonicals.has(canonical[0].href)) errors.push(`${route}: duplicate canonical also used by ${indexableCanonicals.get(canonical[0].href)}`);
         else indexableCanonicals.set(canonical[0].href, route);

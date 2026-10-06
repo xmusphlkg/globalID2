@@ -22,6 +22,10 @@ UNIT_NAMES=(
   globalid-dashboard-worker.service
   globalid-dashboard-web.service
   globalid-site.service
+  globalid-population-refresh.service
+  globalid-population-refresh.timer
+  globalid-br-subdivisions.service
+  globalid-br-subdivisions.timer
   globalid-notify-failure@.service
 )
 
@@ -34,7 +38,7 @@ Options:
   --user NAME         Linux user that should run the app services
   --group NAME        Linux group for the app services
   --project-dir PATH  Project root (default: current repository)
-  --enable            Enable globalid-stack.target at boot
+  --enable            Enable the stack and official population/state-case timers at boot
   --start             Start or restart the stack immediately
   --uninstall         Remove installed units and disable autostart
   --dry-run           Render unit files to a temp directory without installing
@@ -128,6 +132,8 @@ if [[ "$UNINSTALL_SERVICES" == "1" ]]; then
 
   systemctl stop globalid-stack.target >/dev/null 2>&1 || true
   systemctl disable globalid-stack.target >/dev/null 2>&1 || true
+  systemctl disable --now globalid-population-refresh.timer globalid-br-subdivisions.timer >/dev/null 2>&1 || true
+  systemctl stop globalid-population-refresh.service globalid-br-subdivisions.service >/dev/null 2>&1 || true
 
   for unit_name in "${UNIT_NAMES[@]}"; do
     rm -f "$SYSTEMD_DIR/$unit_name"
@@ -179,11 +185,12 @@ fi
 systemctl daemon-reload
 
 if [[ "$ENABLE_SERVICES" == "1" ]]; then
-  systemctl enable globalid-stack.target
+  systemctl enable globalid-stack.target globalid-population-refresh.timer globalid-br-subdivisions.timer
 fi
 
 if [[ "$START_SERVICES" == "1" ]]; then
   systemctl restart globalid-stack.target
+  systemctl start globalid-population-refresh.timer globalid-br-subdivisions.timer
 fi
 
 echo "Installed GlobalID systemd units into $SYSTEMD_DIR"

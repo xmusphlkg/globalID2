@@ -206,6 +206,7 @@ def test_controlled_restart_requeues_only_resumable_tasks(monkeypatch):
         task_worker._requeue_interrupted_tasks_for_restart(
             [
                 ("knowledge-task", TaskType.UPDATE_DISEASE_KNOWLEDGE),
+                ("literature-sync", TaskType.SYNC_LITERATURE),
                 ("export-task", TaskType.EXPORT_DATA),
             ],
             "worker-1",
@@ -216,6 +217,7 @@ def test_controlled_restart_requeues_only_resumable_tasks(monkeypatch):
     assert [call[:2] for call in calls] == [
         ("requeue", "knowledge-task"),
         ("workbook", "knowledge-task"),
+        ("requeue", "literature-sync"),
     ]
 
 

@@ -63,6 +63,7 @@ class ReportV4Pipeline:
             "name": country.name_local or country.name or country.name_en,
             "name_zh": country.name_local or country.name or country.name_en,
             "name_en": country.name_en or country.name or country.name_local,
+            "name_fr": (country.metadata_ or {}).get("name_fr") if isinstance(country.metadata_, dict) else None,
             "name_local": country.name_local,
         }
         evidence_packet = build_evidence_packet(
@@ -122,6 +123,7 @@ class ReportV4Pipeline:
                 "name": row.name,
                 "name_en": row.name_en or row.name,
                 "name_zh": _disease_name_zh(row),
+                "name_fr": _disease_name_fr(row),
                 "category": row.category,
                 "icd_10": row.icd_10,
                 "icd_11": row.icd_11,
@@ -143,3 +145,12 @@ def _disease_name_zh(disease: Disease) -> str:
         if any("\u3400" <= char <= "\u9fff" for char in text):
             return text
     return disease.name_en or disease.name
+
+
+def _disease_name_fr(disease: Disease) -> str | None:
+    metadata = disease.metadata_ if isinstance(disease.metadata_, dict) else {}
+    for key in ("name_fr", "fr_name", "standard_name_fr"):
+        value = metadata.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None

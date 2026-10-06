@@ -46,6 +46,32 @@ def _quality_observation(
     }
 
 
+def test_series_resolution_reuses_source_identity_across_months(monkeypatch) -> None:
+    store = SeriesObservationStore()
+    original = store.ontology.series_lookup
+    calls = []
+
+    def counted(**kwargs):
+        calls.append(kwargs)
+        return original(**kwargs)
+
+    monkeypatch.setattr(store.ontology, "series_lookup", counted)
+    rows = [
+        {
+            "Date": month,
+            "DiseaseCode": "AIDA",
+            "Cases": "7",
+            "GeographyKey": f"country:{code}:national",
+        }
+        for code in ("BR-SP", "BR-RJ")
+        for month in ("2025-01-01", "2025-02-01")
+    ]
+    result = store.build_observations(rows, "BR", source_id="SRC_BR_SINAN")
+    assert len(result.observations) == 4
+    assert len(calls) == 1
+    assert len({row["geography_key"] for row in result.observations}) == 2
+
+
 def test_registry_selection_forwards_nonblank_unknown_rows_to_holding() -> None:
     row = {
         "Date": "2026-08-01",
@@ -173,15 +199,15 @@ async def test_unknown_category_builds_nonprojectable_holding_observation() -> N
 
     observations, handled = await SeriesObservationStore()._build_holding_observations(
         db,
-        rows,
+        [*rows, {**rows[0], "Date": "2026-09-01"}],
         "ZZ",
         source_id="SRC_ZZ_TEST",
         value_field="Cases",
         geography_key=None,
     )
 
-    assert handled == 1
-    assert len(observations) == 1
+    assert handled == 2
+    assert len(observations) == 2
     assert observations[0]["value"] == 7
     assert observations[0]["metadata"]["dynamic_holding"] is True
     assert observations[0]["metadata"]["local_code"] == "NEW-001"

@@ -237,6 +237,10 @@ export function useUpdateAIProvider() {
       apiFetch(`/ai/models/providers/${encodeURIComponent(providerKey)}`, {
         method: "PUT",
         body: JSON.stringify(payload),
+        // Saving is local, but a busy API/DB during a provider refresh can
+        // exceed the generic 10s UI timeout. Testing/discovery have their own
+        // longer timeouts below; keep the save request bounded but forgiving.
+        timeoutMs: 30_000,
       }),
     onSuccess: () => invalidateAIModelQueries(queryClient),
   });

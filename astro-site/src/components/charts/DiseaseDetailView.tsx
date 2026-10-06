@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import EChartsReact from '../../lib/echartsReact';
 import { marked } from 'marked';
 import echarts from '../../lib/echarts';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,15 +16,16 @@ interface DiseaseSection {
   title: string;
   content: string;
   content_html?: string;
-  title_i18n?: Record<'zh' | 'en', string>;
-  content_i18n?: Record<'zh' | 'en', string>;
-  content_html_i18n?: Record<'zh' | 'en', string>;
+  title_i18n?: Partial<Record<'zh' | 'en' | 'fr', string>>;
+  content_i18n?: Partial<Record<'zh' | 'en' | 'fr', string>>;
+  content_html_i18n?: Partial<Record<'zh' | 'en' | 'fr', string>>;
 }
 
 interface DiseaseMeta {
   disease_id: string;
   name_en: string;
   name_zh: string;
+  name_fr?: string;
   category: string;
   slug: string;
 }
@@ -52,7 +54,7 @@ interface Props {
   series: DiseaseSeries | null;
   reportMeta: ReportMeta;
   globalDiseasePath?: string | null;
-  initialLanguage?: 'en' | 'zh';
+  initialLanguage?: 'en' | 'zh' | 'fr';
 }
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
@@ -74,8 +76,12 @@ function useTheme() {
   return theme;
 }
 
-function useLang(initialLanguage: 'en' | 'zh') {
+function useLang(initialLanguage: 'en' | 'zh' | 'fr') {
   return initialLanguage;
+}
+
+function ui(lang: 'en' | 'zh' | 'fr', en: string, zh: string, fr: string): string {
+  return lang === 'zh' ? zh : lang === 'fr' ? fr : en;
 }
 
 // ─── Chart color tokens ───────────────────────────────────────────────────────
@@ -128,8 +134,8 @@ function fmtNum(n: number): string {
   return n.toLocaleString();
 }
 
-function fmtDate(d: string, lang: 'en' | 'zh') {
-  return new Date(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short' });
+function fmtDate(d: string, lang: 'en' | 'zh' | 'fr') {
+  return new Date(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short' });
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -150,14 +156,14 @@ const YEAR_PALETTE_LIGHT = [
 function EpidemicCurveChart({ series, theme, lang, showDeaths }: {
   series: DiseaseSeries;
   theme: 'light' | 'dark';
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
   showDeaths: boolean;
 }) {
   const t = chartTokens(theme);
 
   const option = useMemo(() => {
-    const casesLabel = lang === 'zh' ? '病例数' : 'Cases';
-    const deathsLabel = lang === 'zh' ? '死亡数' : 'Deaths';
+    const casesLabel = ui(lang, 'Cases', '病例数', 'Cas');
+    const deathsLabel = ui(lang, 'Deaths', '死亡数', 'Décès');
 
     return {
       backgroundColor: t.bg,
@@ -170,7 +176,7 @@ function EpidemicCurveChart({ series, theme, lang, showDeaths }: {
         textStyle: { color: t.tooltipFont, fontSize: 12 },
         formatter: (params: any[]) => {
           const d = params[0]?.axisValue;
-          const dateStr = d ? new Date(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'short' }) : '';
+          const dateStr = d ? new Date(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short' }) : '';
           let html = `<div style="font-size:11px;color:${t.font};margin-bottom:4px">${dateStr}</div>`;
           params.forEach((p: any) => {
             const v = p.value?.[1] ?? p.value ?? 0;
@@ -286,14 +292,14 @@ function MonthlyDistributionChart({ series, metric, theme, lang }: {
   series: DiseaseSeries;
   metric: 'cases' | 'deaths';
   theme: 'light' | 'dark';
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
 }) {
   const t = chartTokens(theme);
   const palette = theme === 'light' ? YEAR_PALETTE_LIGHT : YEAR_PALETTE_DARK;
   const values = metric === 'cases' ? series.cases : series.deaths;
   const label = metric === 'cases'
-    ? (lang === 'zh' ? '病例数' : 'Cases')
-    : (lang === 'zh' ? '死亡数' : 'Deaths');
+    ? ui(lang, 'Cases', '病例数', 'Cas')
+    : ui(lang, 'Deaths', '死亡数', 'Décès');
 
   const grouped = useMemo(() => {
     const byYear: Record<string, number[]> = {};
@@ -365,8 +371,10 @@ function MonthlyDistributionChart({ series, metric, theme, lang }: {
 
 // ─── Section renderer ─────────────────────────────────────────────────────────
 
-function localizedText(value: Record<'zh' | 'en', string> | undefined, lang: 'en' | 'zh', fallback: string) {
-  return value?.[lang] || value?.zh || fallback;
+function localizedText(value: Partial<Record<'zh' | 'en' | 'fr', string>> | undefined, lang: 'en' | 'zh' | 'fr', fallback: string) {
+  if (value?.[lang]) return value[lang] as string;
+  if (fallback) return fallback;
+  return ui(lang, 'Translation pending.', '翻译待补充。', 'Traduction française en attente.');
 }
 
 function markdownHtml(value: string) {
@@ -376,7 +384,7 @@ function markdownHtml(value: string) {
 function SectionBlock({ section, theme, lang }: {
   section: DiseaseSection;
   theme: 'light' | 'dark';
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
 }) {
   const isLight = theme === 'light';
   const borderColor = isLight ? '#e2e8f0' : '#1e293b';
@@ -387,15 +395,16 @@ function SectionBlock({ section, theme, lang }: {
     trend_analysis: isLight ? '#0891b2' : '#38bdf8',
   }[section.section_type] ?? (isLight ? '#475569' : '#64748b');
 
-  const labels: Record<string, { en: string; zh: string; icon: string }> = {
-    summary:        { en: 'Summary',        zh: '摘要',   icon: '◈' },
-    highlights:     { en: 'Highlights',     zh: '要点',   icon: '◆' },
-    key_findings:   { en: 'Key Findings',   zh: '关键发现', icon: '◉' },
-    trend_analysis: { en: 'Trend Analysis', zh: '趋势分析', icon: '◎' },
+  const labels: Record<string, { en: string; zh: string; fr: string; icon: string }> = {
+    summary:        { en: 'Summary',        zh: '摘要',   fr: 'Résumé', icon: '◈' },
+    highlights:     { en: 'Highlights',     zh: '要点',   fr: 'Points clés', icon: '◆' },
+    key_findings:   { en: 'Key Findings',   zh: '关键发现', fr: 'Conclusions clés', icon: '◉' },
+    trend_analysis: { en: 'Trend Analysis', zh: '趋势分析', fr: 'Analyse de tendance', icon: '◎' },
   };
-  const meta = labels[section.section_type] ?? { en: section.section_type, zh: section.section_type, icon: '○' };
-  const content = localizedText(section.content_i18n, lang, section.content);
-  const contentHtml = section.content_html_i18n?.[lang] || section.content_html || markdownHtml(content);
+  const meta = labels[section.section_type] ?? { en: section.section_type, zh: section.section_type, fr: section.section_type, icon: '○' };
+  const content = localizedText(section.content_i18n, lang, lang === 'fr' ? '' : section.content);
+  const contentHtml = section.content_html_i18n?.[lang]
+    || (lang === 'fr' ? markdownHtml(content) : section.content_html || markdownHtml(content));
 
   return (
     <div
@@ -415,7 +424,7 @@ function SectionBlock({ section, theme, lang }: {
         <span style={{ color: accentColor, fontSize: '16px', fontWeight: 700 }}>{meta.icon}</span>
         <h2 style={{ color: accentColor }}
           className="text-xs font-bold uppercase tracking-[0.15em]">
-          {lang === 'zh' ? meta.zh : meta.en}
+          {meta[lang]}
         </h2>
       </div>
       {contentHtml ? (
@@ -445,7 +454,7 @@ function Figure({ number, caption, children, theme, lang }: {
   caption: string;
   children: React.ReactNode;
   theme: 'light' | 'dark';
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
 }) {
   const isLight = theme === 'light';
   const figureRef = useRef<HTMLElement>(null);
@@ -486,8 +495,8 @@ function Figure({ number, caption, children, theme, lang }: {
       <div className="mb-3 flex justify-end">
         <button type="button" onClick={toggleFullscreen} className="chart-link-btn">
           {isFullscreen
-            ? (lang === 'zh' ? '退出全屏' : 'Exit full-screen')
-            : (lang === 'zh' ? '进入全屏' : 'Enter full-screen')}
+            ? ui(lang, 'Exit full-screen', '退出全屏', 'Quitter le plein écran')
+            : ui(lang, 'Enter full-screen', '进入全屏', 'Plein écran')}
         </button>
       </div>
       <div className="mb-3">
@@ -497,7 +506,7 @@ function Figure({ number, caption, children, theme, lang }: {
         style={{ color: isLight ? '#64748b' : '#94a3b8', fontSize: '12px', lineHeight: '1.5', borderTop: `1px solid ${isLight ? '#f1f5f9' : '#1e293b'}` }}
         className="text-center mt-2 pt-3"
       >
-        <span style={{ fontWeight: 700 }}>{lang === 'zh' ? `图 ${number}。` : `Figure ${number}.`}</span> {caption}
+        <span style={{ fontWeight: 700 }}>{ui(lang, `Figure ${number}.`, `图 ${number}。`, `Figure ${number}.`)}</span> {caption}
       </figcaption>
     </figure>
   );
@@ -512,14 +521,12 @@ const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string
   Fungal:    { bg: 'rgba(167,139,250,0.1)', text: '#a78bfa', border: 'rgba(167,139,250,0.25)' },
 };
 
-function categoryLabel(value: string, lang: 'en' | 'zh') {
+function categoryLabel(value: string, lang: 'en' | 'zh' | 'fr') {
   if (lang === 'en') return value || 'Unclassified';
-  return ({
-    Viral: '病毒性',
-    Bacterial: '细菌性',
-    Parasitic: '寄生虫性',
-    Fungal: '真菌性',
-  } as Record<string, string>)[value] || '未分类';
+  const labels = lang === 'fr'
+    ? { Viral: 'Virale', Bacterial: 'Bactérienne', Parasitic: 'Parasitaire', Fungal: 'Fongique' }
+    : { Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫性', Fungal: '真菌性' };
+  return (labels as Record<string, string>)[value] || ui(lang, 'Unclassified', '未分类', 'Non classée');
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -527,7 +534,7 @@ function categoryLabel(value: string, lang: 'en' | 'zh') {
 export default function DiseaseDetailView({ diseaseMeta, sections, series, reportMeta, globalDiseasePath = null, initialLanguage = 'en' }: Props) {
   const theme = useTheme();
   const lang = useLang(initialLanguage);
-  const localePrefix = lang === 'zh' ? '/zh' : '';
+  const localePrefix = lang === 'zh' ? '/zh' : lang === 'fr' ? '/fr' : '';
   const isLight = theme === 'light';
 
   const bgPage   = isLight ? '#f8fafc' : '#060d1b';
@@ -596,7 +603,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
               </span>
               <span style={{ color: textMute }} className="text-sm">{reportMeta.country_name}</span>
               <span style={{ color: textMute }} className="text-xs opacity-60">
-                {lang === 'zh' ? `报告 #${reportMeta.id}` : `Report #${reportMeta.id}`}
+                {ui(lang, `Report #${reportMeta.id}`, `报告 #${reportMeta.id}`, `Rapport n° ${reportMeta.id}`)}
               </span>
             </div>
             <a
@@ -607,7 +614,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              {lang === 'zh' ? '返回报告' : 'Back to report'}
+              {ui(lang, 'Back to report', '返回报告', 'Retour au rapport')}
             </a>
           </div>
 
@@ -619,8 +626,8 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
                 className={`chart-toggle ${showDeathMetrics ? 'chart-toggle-active' : ''}`}
               >
                 {showDeathMetrics
-                  ? (lang === 'zh' ? '隐藏死亡数/病死率' : 'Hide deaths / CFR')
-                  : (lang === 'zh' ? '显示死亡数/病死率' : 'Show deaths / CFR')}
+                  ? ui(lang, 'Hide deaths / CFR', '隐藏死亡数/病死率', 'Masquer les décès / létalité')
+                  : ui(lang, 'Show deaths / CFR', '显示死亡数/病死率', 'Afficher les décès / létalité')}
               </button>
             </div>
           )}
@@ -628,11 +635,11 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
           {/* Disease title */}
           <div className="mb-6">
             <h1 style={{ color: textHead }} className="text-3xl md:text-4xl font-bold tracking-tight leading-tight mb-1">
-              {lang === 'zh' && diseaseMeta.name_zh ? diseaseMeta.name_zh : diseaseMeta.name_en}
+              {localizedDiseaseName(diseaseMeta, lang)}
             </h1>
-            {diseaseMeta.name_zh && (
+            {(diseaseMeta.name_zh || diseaseMeta.name_fr) && (
               <p style={{ color: textMute }} className="text-base mt-1">
-                {lang === 'zh' ? `英文名：${diseaseMeta.name_en}` : diseaseMeta.name_zh}
+                {lang === 'zh' ? `英文名：${diseaseMeta.name_en}` : lang === 'fr' ? `Nom anglais : ${diseaseMeta.name_en}` : diseaseMeta.name_zh}
               </p>
             )}
           </div>
@@ -644,13 +651,13 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
               className="grid grid-cols-2 sm:grid-cols-4 gap-0"
             >
               {[
-                { label: lang === 'zh' ? '累计病例' : 'Total Cases',  value: fmtNum(totalCases),  color: isLight ? '#2563eb' : '#60a5fa' },
+                { label: ui(lang, 'Total Cases', '累计病例', 'Cas cumulés'),  value: fmtNum(totalCases),  color: isLight ? '#2563eb' : '#60a5fa' },
                 ...(showDeathMetrics ? [
-                  { label: lang === 'zh' ? '累计死亡' : 'Total Deaths', value: fmtNum(totalDeaths), color: isLight ? '#dc2626' : '#f87171' },
-                  { label: lang === 'zh' ? '病死率'   : 'Case Fatality', value: cfr.toFixed(3) + '%', color: isLight ? '#d97706' : '#fbbf24' },
+                  { label: ui(lang, 'Total Deaths', '累计死亡', 'Décès cumulés'), value: fmtNum(totalDeaths), color: isLight ? '#dc2626' : '#f87171' },
+                  { label: ui(lang, 'Case Fatality', '病死率', 'Létalité'), value: cfr.toFixed(3) + '%', color: isLight ? '#d97706' : '#fbbf24' },
                 ] : []),
                 {
-                  label: lang === 'zh' ? '数据跨度' : 'Data Span',
+                  label: ui(lang, 'Data Span', '数据跨度', 'Période couverte'),
                   value: series.dates[0]
                     ? `${series.dates[0].substring(0,7)} – ${series.dates[series.dates.length-1].substring(0,7)}`
                     : '—',
@@ -674,7 +681,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className="text-sm">
-                <span style={{ color: textMute }}>{lang === 'zh' ? '报告周期' : 'Report period'}: </span>
+                <span style={{ color: textMute }}>{ui(lang, 'Report period', '报告周期', 'Période du rapport')}: </span>
                 <span style={{ color: textHead }}>
                   {fmtDate(reportMeta.period_start, lang)} → {fmtDate(reportMeta.period_end, lang)}
                 </span>
@@ -687,7 +694,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
         <div className="flex items-center gap-4">
           <div style={{ flex: 1, height: '1px', background: `linear-gradient(to right, ${border}, transparent)` }} />
           <span style={{ color: textMute, fontSize: '10px', letterSpacing: '0.2em', fontWeight: 600 }} className="uppercase">
-            {lang === 'zh' ? '疾病监测报告' : 'Surveillance Analysis'}
+            {ui(lang, 'Surveillance Analysis', '疾病监测报告', 'Analyse de surveillance')}
           </span>
           <div style={{ flex: 1, height: '1px', background: `linear-gradient(to left, ${border}, transparent)` }} />
         </div>
@@ -729,7 +736,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
             <div className="flex items-center gap-3 mb-5">
               <div style={{ width: '3px', height: '20px', background: isLight ? '#0891b2' : '#38bdf8', borderRadius: 0 }} />
               <h2 style={{ color: textHead }} className="text-sm font-bold uppercase tracking-[0.15em]">
-                {lang === 'zh' ? '图表分析' : 'Figures'}
+                {ui(lang, 'Figures', '图表分析', 'Figures')}
               </h2>
             </div>
 
@@ -740,10 +747,14 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
                 showDeathMetrics
                   ? (lang === 'zh'
                     ? `${diseaseMeta.name_zh || diseaseMeta.name_en} 流行曲线——月度病例数（柱）与死亡数（线），双纵轴`
-                    : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases (bars, left axis) and deaths (line, right axis) over the full surveillance period.`)
+                    : lang === 'fr'
+                      ? `Courbe épidémique de ${localizedDiseaseName(diseaseMeta, 'fr')} — cas mensuels (barres) et décès (ligne), double axe`
+                      : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases (bars, left axis) and deaths (line, right axis) over the full surveillance period.`)
                   : (lang === 'zh'
                     ? `${diseaseMeta.name_zh || diseaseMeta.name_en} 流行曲线——完整监测期的月度病例数`
-                    : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases over the full surveillance period.`)
+                    : lang === 'fr'
+                      ? `Courbe épidémique de ${localizedDiseaseName(diseaseMeta, 'fr')} — cas mensuels sur toute la période de surveillance`
+                      : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases over the full surveillance period.`)
               }
               theme={theme}
               lang={lang}
@@ -755,7 +766,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
               <Figure
                 number={2}
-                caption={lang === 'zh' ? '月度病例分布（按年分组）' : 'Monthly distribution of cases by year.'}
+                caption={ui(lang, 'Monthly distribution of cases by year.', '月度病例分布（按年分组）', 'Répartition mensuelle des cas par année.')}
                 theme={theme}
                 lang={lang}
               >
@@ -764,7 +775,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
               {showDeathMetrics && hasDeathsData && (
                 <Figure
                   number={3}
-                  caption={lang === 'zh' ? '月度死亡分布（按年分组）' : 'Monthly distribution of deaths by year.'}
+                  caption={ui(lang, 'Monthly distribution of deaths by year.', '月度死亡分布（按年分组）', 'Répartition mensuelle des décès par année.')}
                   theme={theme}
                   lang={lang}
                 >
@@ -795,14 +806,14 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            {lang === 'zh' ? '← 返回国家总览' : '← Back to overview'}
+            {ui(lang, '← Back to overview', '← 返回国家总览', '← Retour à la vue du pays')}
           </a>
           {globalDiseasePath && <a
             href={`${localePrefix}${globalDiseasePath}`}
             style={{ color: textBody }}
             className="flex items-center gap-2 text-sm hover:text-brand-400 transition-colors"
           >
-            {lang === 'zh' ? '查看全球历史数据 →' : 'View global disease page →'}
+            {ui(lang, 'View global disease page →', '查看全球历史数据 →', 'Voir les données mondiales →')}
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>

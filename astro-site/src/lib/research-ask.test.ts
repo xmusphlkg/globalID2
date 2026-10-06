@@ -47,6 +47,31 @@ test('ranking prioritizes disease, geography, and title matches over recency alo
   assert.ok(ranked[0].findingEn?.includes('waning immunity'));
 });
 
+test('question prepositions do not activate a colliding two-letter country code', () => {
+  const ranked = rankResearchArticles('dengue surveillance in Brazil', [
+    ...articles,
+    {
+      article_id: 'brazil-surveillance',
+      title: 'Dengue surveillance in Brazil',
+      countries: [{ code: 'BR', name_en: 'Brazil', confidence: 0.95 }],
+      diseases: [{ disease_id: 'D021', name_en: 'Dengue', confidence: 0.95 }],
+      topics: [{ name: 'Surveillance', confidence: 0.95 }],
+    },
+    {
+      article_id: 'india-background',
+      title: 'Dengue surveillance methods',
+      countries: [{ code: 'IN', name_en: 'India', confidence: 0.95 }],
+      diseases: [{ disease_id: 'D021', name_en: 'Dengue', confidence: 0.95 }],
+      topics: [{ name: 'Surveillance', confidence: 0.95 }],
+    },
+  ], { now: new Date('2026-08-17T00:00:00Z') });
+
+  const brazil = ranked.find((item) => item.article.article_id === 'brazil-surveillance');
+  assert.ok(brazil);
+  assert.equal(brazil.evidenceLevel, 'exact');
+  assert.ok(!brazil.matchReasons.some((reason) => reason.queryTerm === 'India'));
+});
+
 test('English aliases expand into structured disease, country, and topic matches', () => {
   const ranked = rankResearchArticles('whooping cough vaccine evidence in JP', articles, {
     now: new Date('2026-08-17T00:00:00Z'),
@@ -77,6 +102,23 @@ test('Chinese aliases use bilingual summaries and expose numbered source citatio
   assert.equal(answer.exactEvidence[0].citation.marker, '[1]');
   assert.equal(answer.citations[0].sourceUrl, 'https://doi.org/10.1000/pertussis');
   assert.match(answer.summaryZh, /\[1\]/);
+});
+
+test('French aliases rank French structured findings and return a French answer', () => {
+  const frenchArticles = articles.map((article) => article.article_id === 'a1'
+    ? {
+        ...article,
+        diseases: [{ ...article.diseases[0], name_fr: 'Coqueluche' }],
+        countries: [{ ...article.countries[0], name_fr: 'Japon' }],
+        summary: { ...article.summary, fr: { main_findings: 'Les auteurs rapportent des résultats compatibles avec une baisse de l’immunité.' } },
+      }
+    : article);
+  const answer = answerResearchQuestion('coqueluche au Japon', frenchArticles, {
+    now: new Date('2026-08-17T00:00:00Z'),
+  });
+  assert.equal(answer.exactEvidence[0].article.article_id, 'a1');
+  assert.match(answer.exactEvidence[0].findingFr ?? '', /baisse de l’immunité/);
+  assert.match(answer.summaryFr, /référence/);
 });
 
 test('title, tags, and bilingual summaries are searchable with deterministic field weights', () => {

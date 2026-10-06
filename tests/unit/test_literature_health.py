@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import replace
-from datetime import datetime, timedelta, timezone
 import json
-from pathlib import Path
 import subprocess
 import sys
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
@@ -16,7 +16,6 @@ from src.literature.health import (
     evaluate_health,
     exit_code_for,
 )
-
 
 NOW = datetime(2026, 8, 17, 12, 0, tzinfo=timezone.utc)
 ROOT = Path(__file__).resolve().parents[2]
@@ -709,6 +708,8 @@ def test_exception_backlog_excludes_only_explicit_deferred_and_archived_state() 
 
 
 def test_threshold_mapping_rejects_typos_and_invalid_ratios() -> None:
+    with pytest.raises(TypeError, match="must be a JSON object"):
+        HealthThresholds.from_mapping([])
     with pytest.raises(ValueError, match="unknown health threshold"):
         HealthThresholds.from_mapping({"max_syn_age_hours": 1})
     with pytest.raises(ValueError, match="between zero and one"):

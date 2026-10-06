@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.logging import get_logger
 from src.domain import (
     LiteratureArticle,
     LiteratureCountryLink,
@@ -17,7 +20,11 @@ from src.domain import (
 )
 
 from .classification import CLASSIFICATION_VERSION
+from .content_policy import content_policy
+from .payloads import SOURCE_PAYLOAD_SCHEMA_VERSION, compact_source_payload
 from .types import ArticleCandidate, Classification
+
+logger = get_logger(__name__)
 
 
 def _merge_version_relations(
@@ -57,10 +64,8 @@ def _classification_metadata(
             for match in values
         }
 
-    return {
-        **existing,
+    classification_payload = {
         "classification_version": CLASSIFICATION_VERSION,
-        "classified_at": datetime.now(timezone.utc).isoformat(),
         "discovery_score_evidence": {
             "surveillance_relation_level": classification.surveillance_relation_level,
             "surveillance_relation_score": classification.surveillance_relation_score,
@@ -79,6 +84,22 @@ def _classification_metadata(
             },
         },
     }
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            classification_payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    if existing.get("classification_fingerprint") == fingerprint:
+        return existing
+    return {
+        **existing,
+        **classification_payload,
+        "classification_fingerprint": fingerprint,
+        "classified_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 class LiteratureRepository:
@@ -94,7 +115,10 @@ class LiteratureRepository:
         new_publication_status: str | None = None,
         preserve_existing_publication_status: bool = False,
     ) -> bool:
-        article = await self._find(candidate)
+        await self._lock_candidate_identifiers(candidate)
+        matches = await self._find_identifier_matches(candidate)
+        article = self._select_article_match(candidate, matches)
+        identifier_conflicts = self._find_identifier_conflicts(article, candidate, matches)
         inserted = article is None
         if article is None:
             article = LiteratureArticle(article_id=candidate.article_id, slug=candidate.slug, title=candidate.title)
@@ -113,10 +137,26 @@ class LiteratureRepository:
         )
         existing_oa_status = article.open_access_status or "unknown"
         existing_oa_url = article.open_access_url
-        article.doi = candidate.doi or article.doi
-        article.pmid = candidate.pmid or article.pmid
-        article.pmcid = candidate.pmcid or article.pmcid
-        article.openalex_id = candidate.openalex_id or article.openalex_id
+        conflicted_fields = {item["field"] for item in identifier_conflicts}
+        if identifier_conflicts:
+            previous_conflicts = [
+                item
+                for item in (existing_metadata.get("identifier_conflicts") or [])
+                if isinstance(item, dict)
+            ]
+            merged_conflicts = {
+                (item.get("field"), item.get("value"), item.get("owner_article_id")): item
+                for item in [*previous_conflicts, *identifier_conflicts]
+            }
+            existing_metadata["identifier_conflicts"] = list(merged_conflicts.values())[-50:]
+            logger.warning(
+                f"Literature identifier collision for article {article.article_id}: "
+                f"{identifier_conflicts}"
+            )
+        for field in ("doi", "pmid", "pmcid", "openalex_id"):
+            value = getattr(candidate, field, None)
+            if value and field not in conflicted_fields:
+                setattr(article, field, value)
         article.title = candidate.title
         article.journal = candidate.journal
         article.issn = candidate.issn
@@ -140,8 +180,19 @@ class LiteratureRepository:
         article.relevance_score = classification.relevance_score
         article.public_health_score = classification.public_health_score
         article.discovery_score = classification.discovery_score
-        article.source_payload = {**(article.source_payload or {}), **candidate.source_payload}
-        metadata = dict(article.metadata_ or {})
+        compacted_payload = compact_source_payload({
+            **(article.source_payload or {}),
+            **candidate.source_payload,
+        })
+        if (
+            compacted_payload != (article.source_payload or {})
+            or int(getattr(article, "source_payload_version", 0) or 0)
+            != SOURCE_PAYLOAD_SCHEMA_VERSION
+        ):
+            article.source_payload = compacted_payload
+            article.source_payload_version = SOURCE_PAYLOAD_SCHEMA_VERSION
+            article.source_payload_compacted_at = datetime.now(timezone.utc)
+        metadata = dict(existing_metadata)
         if candidate.version_relations:
             mapped_relations = await self._map_version_relations(article, candidate.version_relations)
             metadata["version_relations"] = _merge_version_relations(
@@ -156,7 +207,12 @@ class LiteratureRepository:
             ]
             origins.append(discovery_context)
             metadata["discovery_origins"] = origins[-20:]
+        metadata["content_policy"] = content_policy(article)
         article.metadata_ = _classification_metadata(metadata, classification)
+        classification_changed = (
+            article.metadata_.get("classification_fingerprint")
+            != existing_metadata.get("classification_fingerprint")
+        )
         if (
             not editorial_locked
             and not autopilot_locked
@@ -212,7 +268,8 @@ class LiteratureRepository:
                 ))
 
         await self.db.flush()
-        await self._replace_links(candidate.article_id, classification)
+        if inserted or classification_changed:
+            await self._replace_links(candidate.article_id, classification)
         has_rss = "rss" in candidate.source_payload
         has_official_guidance = "official_guidance" in candidate.source_payload
         has_pubmed = "pubmed" in candidate.source_payload
@@ -245,6 +302,105 @@ class LiteratureRepository:
                 metadata_={},
             ))
         return inserted
+
+    async def _find_identifier_matches(
+        self,
+        candidate: ArticleCandidate,
+    ) -> list[LiteratureArticle]:
+        """Fetch all matching records with one indexed query.
+
+        A provider response can contain identifiers that point to separate
+        article versions. Fetching every owner together avoids per-identifier
+        round trips while still letting the caller apply deterministic priority.
+        """
+
+        predicates = [
+            getattr(LiteratureArticle, field) == value
+            for field in ("doi", "pmid", "pmcid", "openalex_id")
+            if (value := getattr(candidate, field, None))
+        ]
+        predicates.append(LiteratureArticle.article_id == candidate.article_id)
+        result = await self.db.execute(
+            select(LiteratureArticle).where(or_(*predicates))
+        )
+        return list(result.scalars().all())
+
+    @staticmethod
+    def _select_article_match(
+        candidate: ArticleCandidate,
+        matches: list[LiteratureArticle],
+    ) -> LiteratureArticle | None:
+        """Choose the same stable-identifier priority used by historical lookup."""
+
+        for field in ("doi", "pmid", "pmcid", "openalex_id"):
+            value = getattr(candidate, field, None)
+            if not value:
+                continue
+            article = next(
+                (row for row in matches if getattr(row, field, None) == value),
+                None,
+            )
+            if article is not None:
+                candidate.article_id = article.article_id
+                candidate.slug = article.slug
+                return article
+        return next(
+            (row for row in matches if row.article_id == candidate.article_id),
+            None,
+        )
+
+    @staticmethod
+    def _find_identifier_conflicts(
+        article: LiteratureArticle | None,
+        candidate: ArticleCandidate,
+        matches: list[LiteratureArticle],
+    ) -> list[dict[str, str]]:
+        """Keep provider identifier collisions from aborting an entire ingest batch.
+
+        A provider record can occasionally combine identifiers belonging to
+        different article versions. Stable IDs are unique in the database, so
+        never overwrite an existing owner with a conflicting value. The
+        incoming source payload is still retained for later review.
+        """
+
+        conflicts: list[dict[str, str]] = []
+        for field in ("doi", "pmid", "pmcid", "openalex_id"):
+            value = getattr(candidate, field, None)
+            if not value or (article is not None and getattr(article, field, None) == value):
+                continue
+            owner = next(
+                (row for row in matches if getattr(row, field, None) == value),
+                None,
+            )
+            if owner is None or (article is not None and owner.article_id == article.article_id):
+                continue
+            conflicts.append({
+                "field": field,
+                "value": str(value),
+                "owner_article_id": str(owner.article_id),
+            })
+        return conflicts
+
+    async def _lock_candidate_identifiers(self, candidate: ArticleCandidate) -> None:
+        """Serialize writes that claim overlapping stable identifiers on PostgreSQL."""
+
+        get_bind = getattr(self.db, "get_bind", None)
+        if get_bind is None:
+            return
+        bind = get_bind()
+        if getattr(getattr(bind, "dialect", None), "name", None) != "postgresql":
+            return
+
+        lock_keys = sorted(
+            f"literature-identifier:{field}:{value}"
+            for field in ("doi", "pmid", "pmcid", "openalex_id")
+            if (value := getattr(candidate, field, None))
+        )
+        for key in lock_keys:
+            await self.db.execute(
+                text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+                {"key": key},
+            )
 
     async def _map_version_relations(
         self,
@@ -303,27 +459,8 @@ class LiteratureRepository:
         # Prefer stable, provider-issued identifiers. Deliberately avoid fuzzy
         # title matching: same-title articles in the same year are common and
         # an incorrect automatic merge is difficult to unwind safely.
-        lookups = (
-            (LiteratureArticle.doi, candidate.doi),
-            (LiteratureArticle.pmid, candidate.pmid),
-            (LiteratureArticle.pmcid, candidate.pmcid),
-            (LiteratureArticle.openalex_id, candidate.openalex_id),
-        )
-        for column, value in lookups:
-            if not value:
-                continue
-            article = (
-                await self.db.execute(select(LiteratureArticle).where(column == value))
-            ).scalar_one_or_none()
-            if article is not None:
-                candidate.article_id = article.article_id
-                candidate.slug = article.slug
-                return article
-        return (
-            await self.db.execute(
-                select(LiteratureArticle).where(LiteratureArticle.article_id == candidate.article_id)
-            )
-        ).scalar_one_or_none()
+        matches = await self._find_identifier_matches(candidate)
+        return self._select_article_match(candidate, matches)
 
     async def _replace_links(self, article_id: str, classification: Classification) -> None:
         for model in (LiteratureDiseaseLink, LiteratureCountryLink, LiteratureTopicLink):
