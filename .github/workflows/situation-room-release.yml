@@ -8,6 +8,11 @@ on:
         required: false
         default: false
         type: boolean
+      dispatch_alerts:
+        description: Dispatch reviewed Situation alerts after a successful deployment
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -201,7 +206,7 @@ jobs:
   dispatch-reviewed-alerts:
     name: Dispatch reviewed Situation alerts
     needs: deploy-production
-    if: needs.deploy-production.result == 'success'
+    if: needs.deploy-production.result == 'success' && inputs.dispatch_alerts == true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: situation-production
