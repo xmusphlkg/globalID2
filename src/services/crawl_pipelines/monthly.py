@@ -77,6 +77,7 @@ CONFIGS = {
     "TW": MonthlyPipelineConfig(
         country_code="TW",
         raw_dir_name="tw",
+        refresh_in_thread=True,
         start_year=1998,
         recent_months=3,
         default_months_label="3",
