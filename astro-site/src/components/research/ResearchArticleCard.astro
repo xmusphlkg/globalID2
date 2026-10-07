@@ -7,11 +7,12 @@ interface Props {
   index?: number;
   initialVisible?: number;
   locale?: 'en' | 'zh' | 'fr';
+  searchable?: boolean;
 }
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedDynamicText, localizedRegionName, localizedResearchTopic, localizedStudyType } from '../../utils/i18n';
 
-const { article, compact = false, featured = false, stream = false, index, initialVisible, locale = 'en' } = Astro.props;
+const { article, compact = false, featured = false, stream = false, index, initialVisible, locale = 'en', searchable = true } = Astro.props;
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
@@ -77,7 +78,7 @@ const whyItMattersFr = localizedDynamicText('fr', {
   hidden={initiallyHidden}
   data-research-card
   data-card-index={index}
-  data-search={filterText}
+  data-search={searchable ? filterText : undefined}
   data-disease={diseaseText}
   data-disease-ids={diseaseIds.join(' ')}
   data-country={countryText}
