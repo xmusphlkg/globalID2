@@ -26,6 +26,31 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.10.5',
+    date: '2026-10-12',
+    titleEn: 'Compact surveillance data tables',
+    titleZh: '监测数据表格更紧凑',
+    titleFr: 'Tableaux de surveillance plus compacts',
+    summaryEn: 'Long surveillance tables now scroll within a bounded panel, keeping the page layout compact.',
+    summaryZh: '较长的监测数据表现在会在限定高度的区域内滚动，避免撑长页面。',
+    summaryFr: 'Les longs tableaux défilent désormais dans un panneau de hauteur limitée, pour préserver la mise en page.',
+    sections: [
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'The data view has a bounded scroll area and a sticky header for easier reading of long series.',
+            zh: '数据视图改为限定高度的滚动区域，并固定表头，便于查看较长序列。',
+            fr: 'La vue des données utilise une zone de défilement limitée avec un en-tête fixe pour faciliter la lecture des longues séries.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.10.4',
     date: '2026-10-12',
     titleEn: 'Clearer surveillance curves and frequency labels',

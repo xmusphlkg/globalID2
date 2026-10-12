@@ -333,7 +333,9 @@
 }
 .surveillance-table-wrap {
   max-width: 100%;
-  overflow-x: auto;
+  max-height: min(62vh, 560px);
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 .surveillance-table-wrap:focus-visible {
   outline: 2px solid rgb(var(--color-brand));
@@ -358,6 +360,12 @@
 }
 .surveillance-table th {
   font-weight: 500;
+}
+.surveillance-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgb(var(--surface));
 }
 .surveillance-table small,
 .surveillance-methods small {
@@ -481,6 +489,9 @@
   }
   .surveillance-heading {
     align-items: flex-start;
+  }
+  .surveillance-table-wrap {
+    max-height: 55vh;
   }
   .surveillance-actions {
     width: 100%;
