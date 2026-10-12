@@ -26,6 +26,36 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.10.4',
+    date: '2026-10-12',
+    titleEn: 'Clearer surveillance curves and frequency labels',
+    titleZh: '更清晰的监测曲线与频率标注',
+    titleFr: 'Courbes de surveillance et fréquences plus claires',
+    summaryEn: 'Country, disease, report, and research curves now share a simpler query and display flow, with a compact series picker and clearly marked frequency estimates for legacy data.',
+    summaryZh: '国家、疾病、报告和研究曲线统一了查询展示流程，序列选择更紧凑，旧数据的频率推断也会明确标注。',
+    summaryFr: 'Les courbes des pays, maladies, rapports et recherches partagent une consultation simplifiée, avec une sélection compacte et des fréquences estimées clairement signalées.',
+    sections: [
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'The series picker uses compact rows; full-screen charts and controls follow the site design. Dataset downloads remain in each page’s data access section.',
+            zh: '序列选择栏改为紧凑列表；全屏图表及控件沿用站点设计。数据文件继续在页面下载区获取。',
+            fr: 'La sélection des séries est plus compacte ; le plein écran et les contrôles suivent le style du site. Les fichiers restent dans la section de téléchargement.',
+          },
+          {
+            en: 'Legacy series with a clear date pattern show an inferred reporting frequency; sparse or mixed series remain unspecified.',
+            zh: '日期规律明确的旧序列显示推断频率；稀疏或混合序列仍标为未明确。',
+            fr: 'Les séries anciennes à dates régulières affichent une fréquence estimée ; les séries rares ou mixtes restent non précisées.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.10.3',
     date: '2026-10-06',
     titleEn: 'Subnational disease comparisons and live population updates',

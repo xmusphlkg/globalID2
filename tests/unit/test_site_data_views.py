@@ -1,8 +1,34 @@
 from __future__ import annotations
 
 from scripts import generate_site_data as legacy_api
+from src.core.reporting_period import infer_display_cadence
 from src.generation import site_data_views as views
 from src.generation.site_series_projection import SERIES_DATA_LAYER
+
+
+def test_inferred_legacy_frequency_requires_a_regular_date_pattern() -> None:
+    assert infer_display_cadence([f"2024-{month:02d}-01" for month in range(1, 9)]) == "monthly"
+    assert infer_display_cadence([f"{year}-01-01" for year in range(2019, 2025)]) == "annual"
+    assert infer_display_cadence(["2024-01-01", "2024-03-01", "2025-07-01"]) is None
+    assert infer_display_cadence(["2024-01-01", "2024-02-01", "2024-03-01", "2025-01-01", "2026-01-01", "2026-02-01"]) is None
+
+
+def test_legacy_frequency_hint_survives_both_site_projections() -> None:
+    records = []
+    for month in range(1, 9):
+        record = _record(f"2024-{month:02d}-01", month)
+        record.pop("_series_context")
+        records.append(record)
+    disease_info = {"name_en": "Test", "name_zh": "测试", "category": "Test", "slug": "test"}
+    country = views.build_country_data("ZZ", "Test country", records, {"D_TEST": disease_info})
+    disease = views.build_disease_data("D_TEST", {"disease_id": "D_TEST", **disease_info}, {"ZZ": records})
+    for entry in (country["disease_series"]["D_TEST"], disease["country_series"]["ZZ"]):
+        assert entry["period_granularity"] == "monthly"
+        assert entry["period_granularity_basis"] == "date_pattern"
+        assert entry["weekly_equiv_cases"] == []
+    assert disease["global_monthly"]["coverage"]["inferred_monthly_jurisdictions"] == 1
+    assert views.build_country_site_data(country)["series"][0]["period_granularity_basis"] == "date_pattern"
+    assert views.build_disease_site_data(disease)["series"][0]["period_granularity_basis"] == "date_pattern"
 
 
 def _record(
@@ -22,6 +48,10 @@ def _record(
         "incidence_rate": float(cases),
         "incidence_rate_source": "test_population",
         "mortality_rate": None,
+        "metric_type": "case_notifications",
+        "reporting_basis": "notification",
+        "definition_version": "test-v1",
+        "comparability": "direct",
         "_series_context": {
             "data_layer": SERIES_DATA_LAYER,
             "projection_policy": "single_series",
@@ -75,6 +105,35 @@ def test_subdivision_display_name_prefers_chinese_database_name_over_code_fallba
     ) == ("Shanghai, China", "上海市")
 
 
+def test_disease_compact_data_keeps_source_only_country() -> None:
+    disease = {
+        "disease_id": "D_TEST",
+        "country_series": {
+            "XX": {
+                "dates": [],
+                "cases": [],
+                "deaths": [],
+                "data_layer": "source_observations_only",
+                "source_series": [
+                    {
+                        "series_code": "SER_SOURCE",
+                        "metric_type": "case_notifications",
+                        "temporal_granularity": "monthly",
+                    }
+                ],
+            },
+            "YY": {"dates": [], "source_series": []},
+        },
+    }
+
+    compact = views.build_disease_site_data(disease)
+
+    assert compact["dates"] == []
+    assert [entry["cc"] for entry in compact["series"]] == ["XX"]
+    assert compact["series"][0]["source_series"][0]["series_code"] == "SER_SOURCE"
+    assert compact["series"][0]["data_layer"] == "source_observations_only"
+
+
 def test_country_builders_preserve_schema_sorting_and_compaction() -> None:
     records = [
         _record("2024-02-01", 20, 2),
@@ -116,11 +175,15 @@ def test_country_builders_preserve_schema_sorting_and_compaction() -> None:
         "non_additive_series_disease_ids": [],
     }
 
+    country["recorded_at_as_of"] = "2025-02-03T04:05:06+00:00"
+    country["recorded_history_complete"] = False
     compact = views.build_country_site_data(country)
     assert compact["v"] == 1
     assert compact["dates"] == ["2024-01-01", "2024-02-01"]
     assert compact["series"][0]["x"] == [0, 1]
     assert compact["series"][0]["c"] == [10, 20]
+    assert compact["meta"]["recorded_at_as_of"] == country["recorded_at_as_of"]
+    assert compact["meta"]["recorded_history_complete"] is False
     assert compact["series"][0]["source_series"] == [
         {
             "series_code": "SER_TEST",
@@ -231,6 +294,7 @@ def test_disease_builders_preserve_country_order_and_sorted_summary_codes() -> N
             "ZZ": [_record("2024-02-01", 2)],
             "AA": [_record("2024-01-01", 1)],
         },
+        jurisdiction_codes=["ZZ", "AA", "CC"],
     )
 
     assert list(disease["country_series"]) == ["ZZ", "AA"]
@@ -238,6 +302,17 @@ def test_disease_builders_preserve_country_order_and_sorted_summary_codes() -> N
         "months": ["2024-01", "2024-02"],
         "cases": [1, 2],
         "deaths": [0, 0],
+        "coverage": {
+            "scope": "national_jurisdictions_only",
+            "jurisdiction_universe_size": 3,
+            "excluded_weekly_jurisdictions": 0,
+            "excluded_unknown_jurisdictions": 0,
+            "inferred_monthly_jurisdictions": 0,
+            "cases_reported_jurisdictions": [1, 1],
+            "deaths_reported_jurisdictions": [1, 1],
+            "cases_incompatible_months": [False, False],
+            "deaths_incompatible_months": [False, False],
+        },
     }
     assert disease["data_layer_summary"]["series_registry_country_codes"] == [
         "AA",
@@ -252,6 +327,15 @@ def test_disease_builders_preserve_country_order_and_sorted_summary_codes() -> N
     assert [entry["cc"] for entry in compact["series"]] == ["ZZ", "AA"]
     assert compact["dates"] == ["2024-01-01", "2024-02-01"]
     assert compact["monthly"] == disease["global_monthly"]
+    disease["recorded_at_as_of"] = "2025-02-03T04:05:06+00:00"
+    disease["recorded_history_complete"] = False
+    compact = views.build_disease_site_data(
+        disease,
+        {"ZZ": "Zed", "AA": "Alpha"},
+        {"ZZ": "泽德", "AA": "阿尔法"},
+    )
+    assert compact["meta"]["recorded_at_as_of"] == disease["recorded_at_as_of"]
+    assert compact["meta"]["recorded_history_complete"] is False
 
 
 def test_disease_global_summary_excludes_subdivision_double_counting() -> None:
@@ -277,6 +361,124 @@ def test_disease_global_summary_excludes_subdivision_double_counting() -> None:
         "months": ["2024-01"],
         "cases": [105],
         "deaths": [11],
+        "coverage": {
+            "scope": "national_jurisdictions_only",
+            "jurisdiction_universe_size": 2,
+            "excluded_weekly_jurisdictions": 0,
+            "excluded_unknown_jurisdictions": 0,
+            "inferred_monthly_jurisdictions": 0,
+            "cases_reported_jurisdictions": [2],
+            "deaths_reported_jurisdictions": [2],
+            "cases_incompatible_months": [False],
+            "deaths_incompatible_months": [False],
+        },
     }
     assert disease["aggregation_scope"] == "national_jurisdictions_only"
     assert disease["subdivision_country_codes"] == ["CN-SH"]
+
+
+def test_national_monthly_subtotal_marks_unreported_jurisdictions_and_months() -> None:
+    disease = views.build_disease_data(
+        "D_TEST",
+        {"disease_id": "D_TEST", "name_en": "Test", "name_zh": "测试"},
+        {
+            "AA": [_record("2024-01-01", 5), _record("2024-03-01", 0)],
+            "BB": [_record("2024-01-01", 7)],
+        },
+    )
+    monthly = disease["global_monthly"]
+    assert monthly["months"] == ["2024-01", "2024-02", "2024-03"]
+    assert monthly["cases"] == [12, None, 0]
+    assert monthly["coverage"]["cases_reported_jurisdictions"] == [2, 0, 1]
+    assert monthly["coverage"]["jurisdiction_universe_size"] == 2
+
+    disease = views.build_disease_data(
+        "D_TEST",
+        {"disease_id": "D_TEST", "name_en": "Test", "name_zh": "测试"},
+        {
+            "AA": [_record("2024-01-01", 5)],
+            "BB": [_record("2024-02-01", 7)],
+        },
+    )
+    assert disease["global_monthly"]["cases"] == [5, 7]
+    assert (
+        disease["global_monthly"]["coverage"]["cases_reported_jurisdictions"]
+        == [1, 1]
+    )
+
+
+def test_national_monthly_subtotal_excludes_weeks_that_can_cross_months() -> None:
+    monthly = views.build_national_monthly_summary(
+        {
+            "AA": {
+                "dates": ["2024-01-01"],
+                "cases": [10],
+                "deaths": [0],
+                "period_granularity": "monthly",
+            },
+            "BB": {
+                "dates": ["2024-01-28"],
+                "cases": [70],
+                "deaths": [7],
+                "period_granularity": "weekly",
+            },
+        },
+        ["AA", "BB"],
+    )
+
+    assert monthly["cases"] == [10]
+    assert monthly["deaths"] == [0]
+    assert monthly["coverage"]["cases_reported_jurisdictions"] == [1]
+    assert monthly["coverage"]["excluded_weekly_jurisdictions"] == 1
+
+
+def test_national_monthly_subtotal_discloses_legacy_month_inference() -> None:
+    monthly = views.build_national_monthly_summary(
+        {
+            "AA": {
+                "dates": ["2024-01-01", "2024-02-01"],
+                "cases": [2, 3],
+            },
+            "BB": {
+                "dates": ["2024-01-07", "2024-01-14"],
+                "cases": [70, 80],
+            },
+        },
+        ["AA", "BB"],
+    )
+
+    assert monthly["cases"] == [2, 3]
+    assert monthly["coverage"]["inferred_monthly_jurisdictions"] == 1
+    assert monthly["coverage"]["excluded_unknown_jurisdictions"] == 1
+
+
+def test_national_monthly_subtotal_withholds_incompatible_country_definitions() -> None:
+    monthly = views.build_national_monthly_summary(
+        {
+            "AA": {
+                "dates": ["2024-01-01"],
+                "cases": [10],
+                "deaths": [1],
+                "period_granularity": "monthly",
+                "metric_type": "case_notifications",
+                "reporting_basis": "notification",
+                "definition_version": "definition-a",
+                "comparability": "conditional",
+            },
+            "BB": {
+                "dates": ["2024-01-01"],
+                "cases": [20],
+                "deaths": [2],
+                "period_granularity": "monthly",
+                "metric_type": "case_notifications",
+                "reporting_basis": "notification",
+                "definition_version": "definition-b",
+                "comparability": "conditional",
+            },
+        },
+    )
+
+    assert monthly["cases"] == [None]
+    assert monthly["deaths"] == [None]
+    assert monthly["coverage"]["cases_reported_jurisdictions"] == [2]
+    assert monthly["coverage"]["cases_incompatible_months"] == [True]

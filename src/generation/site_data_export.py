@@ -55,6 +55,7 @@ from src.generation.site_data_views import (
     build_country_source_series_data,
     build_disease_data,
     build_disease_site_data,
+    build_national_monthly_summary,
     resolve_country_display_names,
 )
 from src.generation.site_data_writer import (
@@ -172,6 +173,7 @@ async def _collect_country_export(
     catalogue_ids: set[str],
     country_briefs: dict[str, dict[str, dict]],
     population_enabled: bool,
+    recorded_at_as_of=None,
     session=None,
 ) -> dict:
     """Fetch and project one country using an isolated database session."""
@@ -188,6 +190,7 @@ async def _collect_country_export(
                 catalogue_ids=catalogue_ids,
                 country_briefs=country_briefs,
                 population_enabled=population_enabled,
+                recorded_at_as_of=recorded_at_as_of,
                 session=country_session,
             )
 
@@ -198,7 +201,10 @@ async def _collect_country_export(
         database_config=country,
     )
     records, source_records = await fetch_disease_export_layers(
-        session, code, population_enabled
+        session,
+        code,
+        population_enabled,
+        recorded_at_as_of=recorded_at_as_of,
     )
 
     validate_record_catalogue_coverage(
@@ -214,6 +220,17 @@ async def _collect_country_export(
         frequency_meta,
         source_records,
     )
+    if recorded_at_as_of is not None:
+        country_data["recorded_at_as_of"] = recorded_at_as_of.isoformat()
+        country_data["recorded_history_complete"] = bool(source_records) and all(
+            record.get("recorded_history_complete") is True
+            for record in source_records
+        )
+        for entry in (country_data.get("disease_series") or {}).values():
+            entry["recorded_at_as_of"] = country_data["recorded_at_as_of"]
+            entry["recorded_history_complete"] = country_data[
+                "recorded_history_complete"
+            ]
     country_metadata = (
         country.get("metadata") if isinstance(country.get("metadata"), dict) else {}
     )
@@ -254,6 +271,7 @@ def _merge_incremental_disease_snapshot(
     *,
     disease_id: str,
     updated_country_data: dict[str, dict],
+    jurisdiction_codes: list[str] | None = None,
 ) -> dict:
     """Replace changed country slices while retaining the existing snapshot."""
 
@@ -273,38 +291,13 @@ def _merge_incremental_disease_snapshot(
     national_series = {
         code: series for code, series in country_series.items() if "-" not in code
     }
-    monthly: dict[str, dict[str, int]] = defaultdict(
-        lambda: {"cases": 0, "deaths": 0}
+    global_monthly = build_national_monthly_summary(
+        national_series, jurisdiction_codes
     )
-    for series in national_series.values():
-        granularity = str(
-            series.get("period_granularity")
-            or series.get("temporal_granularity")
-            or ""
-        ).lower()
-        if granularity in {"annual", "yearly", "quarterly"}:
-            continue
-        dates = series.get("dates") or []
-        cases = series.get("cases") or []
-        deaths = series.get("deaths") or []
-        for index, value_date in enumerate(dates):
-            year_month = str(value_date or "")[:7]
-            if not year_month:
-                continue
-            if index < len(cases) and cases[index] is not None:
-                monthly[year_month]["cases"] += int(cases[index] or 0)
-            if index < len(deaths) and deaths[index] is not None:
-                monthly[year_month]["deaths"] += int(deaths[index] or 0)
-
-    months_sorted = sorted(monthly)
     merged.update(
         {
             "country_series": country_series,
-            "global_monthly": {
-                "months": months_sorted,
-                "cases": [monthly[month]["cases"] for month in months_sorted],
-                "deaths": [monthly[month]["deaths"] for month in months_sorted],
-            },
+            "global_monthly": global_monthly,
             "total_cases": sum(
                 sum(value for value in (series.get("cases") or []) if value is not None)
                 for series in national_series.values()
@@ -348,6 +341,7 @@ async def collect_site_export_context(
     incremental_country_codes: list[str] | tuple[str, ...] | None = None,
     *,
     public_site_data_dir: Path = DEFAULT_PUBLIC_SITE_DATA_OUTPUT,
+    recorded_at_as_of=None,
 ) -> dict:
     """Read and project all database-backed data without writing artifacts."""
     await ensure_site_export_database_ready()
@@ -357,6 +351,10 @@ async def collect_site_export_context(
         if str(code).strip()
     }
     incremental = bool(incremental_codes)
+    if incremental and recorded_at_as_of is not None:
+        raise ValueError(
+            "Historical site exports must be complete builds, not incremental merges."
+        )
     if incremental and not (output_dir / "meta.json").is_file():
         raise RuntimeError(
             "Incremental site export requires an existing snapshot; run one full export first."
@@ -482,6 +480,7 @@ async def collect_site_export_context(
                     catalogue_ids=catalogue_ids,
                     country_briefs=country_briefs,
                     population_enabled=population_enabled,
+                    recorded_at_as_of=recorded_at_as_of,
                 )
 
         if configured_pool_size <= 1:
@@ -496,6 +495,7 @@ async def collect_site_export_context(
                     catalogue_ids=catalogue_ids,
                     country_briefs=country_briefs,
                     population_enabled=population_enabled,
+                    recorded_at_as_of=recorded_at_as_of,
                     session=session,
                 )
                 for country in countries_to_refresh
@@ -634,18 +634,7 @@ async def collect_site_export_context(
             country_data = country_export["country_data"]
             country_source_info = country_export["source_info"]
             country_data["generated_at"] = generated_at
-            if incremental and code not in incremental_codes:
-                country_site_data = _read_json_file(
-                    public_site_data_dir / "countries" / f"{code.lower()}.json",
-                    None,
-                )
-                if not isinstance(country_site_data, dict):
-                    raise RuntimeError(
-                        "Incremental site export is missing the existing public "
-                        f"country artifact for {code}."
-                    )
-            else:
-                country_site_data = build_country_site_data(country_data)
+            country_site_data = build_country_site_data(country_data)
             country_record_count = sum(
                 len(series.get("dates") or [])
                 for series in (country_data.get("disease_series") or {}).values()
@@ -689,6 +678,9 @@ async def collect_site_export_context(
                         existing_disease_data,
                         disease_id=did,
                         updated_country_data=refreshed_country_data,
+                        jurisdiction_codes=[
+                            str(country.get("code") or "") for country in countries
+                        ],
                     )
                     changed_disease_ids.add(did)
                 else:
@@ -707,23 +699,34 @@ async def collect_site_export_context(
                     disease,
                     disease_records_by_country,
                     disease_source_records_by_country,
+                    jurisdiction_codes=[
+                        str(country.get("code") or "") for country in countries
+                    ],
                 )
-            if incremental and did not in changed_disease_ids:
-                disease_site_data = _read_json_file(
-                    public_site_data_dir / "diseases" / f"{did.lower()}.json",
-                    None,
-                )
-                if not isinstance(disease_site_data, dict):
-                    raise RuntimeError(
-                        "Incremental site export is missing the existing public "
-                        f"disease artifact for {did}."
+                if recorded_at_as_of is not None:
+                    disease_data["recorded_at_as_of"] = recorded_at_as_of.isoformat()
+                    disease_data["recorded_history_complete"] = (
+                        all(
+                            item["country_data"].get(
+                                "recorded_history_complete"
+                            )
+                            is True
+                            for item in country_exports
+                        )
                     )
-            else:
-                disease_site_data = build_disease_site_data(
-                    disease_data,
-                    country_name_by_code,
-                    country_name_zh_by_code,
+            if incremental:
+                monthly = build_national_monthly_summary(
+                    disease_data.get("country_series") or {},
+                    [str(country.get("code") or "") for country in countries],
                 )
+                if disease_data.get("global_monthly") != monthly:
+                    disease_data["global_monthly"] = monthly
+                    changed_disease_ids.add(did)
+            disease_site_data = build_disease_site_data(
+                disease_data,
+                country_name_by_code,
+                country_name_zh_by_code,
+            )
             disease_countries = sorted(
                 (disease_data.get("country_series") or {}).keys()
             )
@@ -828,6 +831,17 @@ async def collect_site_export_context(
         "incremental": incremental,
         "incremental_country_codes": sorted(incremental_codes),
         "changed_disease_ids": sorted(changed_disease_ids),
+        "recorded_at_as_of": (
+            recorded_at_as_of.isoformat() if recorded_at_as_of else None
+        ),
+        "recorded_history_complete": (
+            all(
+                item["country_data"].get("recorded_history_complete") is True
+                for item in country_exports
+            )
+            if recorded_at_as_of is not None
+            else None
+        ),
     }
 
 
@@ -1092,7 +1106,7 @@ def write_incremental_site_export_artifacts(
     output_dir: Path,
     public_site_data_dir: Path,
 ) -> None:
-    """Write only country and disease artifacts affected by an incremental run."""
+    """Write changed full snapshots and refresh every compact browser projection."""
 
     prepare_site_output_dirs(output_dir, public_site_data_dir)
     changed_countries = set(context.get("incremental_country_codes") or ())
@@ -1113,6 +1127,12 @@ def write_incremental_site_export_artifacts(
             output_dir / "countries" / f"{code.lower()}.json",
             country_data,
         )
+
+    # Compact browser artifacts are cheap projections of the saved snapshots.
+    # Rebuild them even for unchanged countries so an incremental release also
+    # applies fixes to the projection contract.
+    for code, country_export in countries_by_code.items():
+        country_data = country_export["country_data"]
         write_compact_json(
             public_site_data_dir / "countries" / f"{code.lower()}.json",
             country_export["site_data"],
@@ -1138,6 +1158,8 @@ def write_incremental_site_export_artifacts(
                 context["disease_knowledge_briefs"].get(disease_id),
             ),
         )
+
+    for disease_id, disease_export in diseases_by_id.items():
         write_compact_json(
             public_site_data_dir / "diseases" / f"{disease_id.lower()}.json",
             disease_export["site_data"],
@@ -1203,6 +1225,7 @@ async def export(
     direct_download_max_file_bytes: int = DEFAULT_TARGET_FILE_BYTES,
     direct_download_workers: int | None = None,
     incremental_country_codes: list[str] | tuple[str, ...] | None = None,
+    recorded_at_as_of=None,
 ) -> None:
     """Package and write one complete or scoped incremental export."""
     context = await collect_site_export_context(
@@ -1210,6 +1233,7 @@ async def export(
         allow_empty_export,
         incremental_country_codes,
         public_site_data_dir=public_site_data_dir,
+        recorded_at_as_of=recorded_at_as_of,
     )
     country_download_entries = context["country_download_entries"]
     disease_download_entries = context["disease_download_entries"]

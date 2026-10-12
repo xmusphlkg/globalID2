@@ -18,6 +18,10 @@ from .dataset import DatasetBuilder
 from .evidence import build_evidence_packet
 from .exporters import ReportV4FileExporter, ReportV4Persistence
 from .quality import ReportV4QualityGate
+from .surveillance_snapshot import (
+    build_surveillance_snapshot,
+    ensure_snapshot_matches_evidence,
+)
 
 logger = get_logger(__name__)
 
@@ -88,20 +92,29 @@ class ReportV4Pipeline:
         document["metrics"]["country_name_en"] = country_payload["name_en"]
 
         quality_gate = self.quality_gate.ensure_passed(document)
+        surveillance_snapshot = build_surveillance_snapshot(
+            normalized,
+            diseases=disease_payloads,
+            period_start=context.period_start,
+            period_end=context.period_end,
+        )
+        ensure_snapshot_matches_evidence(surveillance_snapshot, evidence_packet)
         persisted_sections = await self.persistence.persist(
             db=context.db,
             report=context.report,
             document=document,
             quality_gate=quality_gate,
             evidence_packet=evidence_packet,
+            surveillance_snapshot=surveillance_snapshot,
         )
         self.file_exporter.write_files(
             report=context.report,
             output_dir=context.output_dir,
             document=document,
+            surveillance_snapshot=surveillance_snapshot,
         )
         await context.db.commit()
-        logger.info("Report v4 generated with {} sections", len(persisted_sections))
+        logger.info(f"Report v4 generated with {len(persisted_sections)} sections")
         return persisted_sections
 
     @staticmethod

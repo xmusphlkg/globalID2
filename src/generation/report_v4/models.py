@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 SCHEMA_VERSION = "report_v4.0"
-METHOD_VERSION = "report_v4.1"
+METHOD_VERSION = "report_v4.3"
 SUPPORTED_LOCALES: tuple[str, str, str] = ("zh", "en", "fr")
 DEFAULT_LOCALE = "zh"
 

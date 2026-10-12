@@ -709,114 +709,6 @@
     @apply px-2 py-1 text-[10px];
   }
 
-  .chart-selection-mode {
-    @apply inline-flex items-center;
-  }
-
-  .chart-selection-mode .chart-toggle + .chart-toggle {
-    border-left: none;
-  }
-
-  .chart-primary-controls {
-    @apply flex flex-wrap items-center gap-2;
-  }
-
-  .chart-metric-select {
-    color: rgb(var(--text-muted));
-    @apply inline-flex items-center gap-2 text-[11px] font-semibold;
-  }
-
-  .chart-metric-select select {
-    min-width: 9.5rem;
-    color: rgb(var(--text-strong));
-  }
-
-  .chart-date-range {
-    color: rgb(var(--text-muted));
-    @apply text-[11px] tabular-nums;
-  }
-
-  .chart-date-shortcuts,
-  .chart-selector-sort,
-  .chart-comparison-frequency {
-    @apply inline-flex items-center;
-  }
-
-  .chart-date-shortcuts .chart-toggle + .chart-toggle,
-  .chart-selector-sort .chart-toggle + .chart-toggle,
-  .chart-comparison-frequency .chart-toggle + .chart-toggle {
-    border-left: none;
-  }
-
-  .chart-control-label {
-    color: rgb(var(--text-muted));
-    @apply mr-1 text-[10px] font-semibold;
-  }
-
-  .chart-toggle:disabled {
-    cursor: not-allowed;
-    opacity: 0.42;
-  }
-
-  .chart-status-line {
-    width: 100%;
-    border-left: 2px solid rgb(var(--color-brand) / 0.5);
-    background-color: rgb(var(--surface-raised) / 0.35);
-    color: rgb(var(--text-muted));
-    @apply px-2.5 py-1.5 text-[11px] leading-5;
-  }
-
-  .chart-status-line-warning {
-    border-left-color: #d97706;
-    background: color-mix(in srgb, #f59e0b 8%, rgb(var(--surface)));
-    color: color-mix(in srgb, #b45309 70%, rgb(var(--text-strong)));
-  }
-
-  .chart-advanced-controls {
-    width: 100%;
-    border-top: 1px solid rgb(var(--border) / 0.62);
-    color: rgb(var(--text-muted));
-    @apply pt-2 text-xs;
-  }
-
-  .chart-advanced-controls > summary {
-    cursor: pointer;
-    width: fit-content;
-    color: rgb(var(--text));
-    @apply select-none font-semibold leading-5;
-  }
-
-  .chart-advanced-controls > summary:hover {
-    color: rgb(var(--text-strong));
-  }
-
-  .chart-advanced-body {
-    border-left: 1px solid rgb(var(--border) / 0.64);
-    @apply mt-2 flex flex-col gap-3 pl-3;
-  }
-
-  .chart-advanced-note {
-    color: rgb(var(--text-muted));
-    @apply text-[11px] leading-5;
-  }
-
-  .chart-source-controls {
-    border-top: 1px solid rgb(var(--border) / 0.5);
-    @apply pt-3;
-  }
-
-  .chart-source-controls-required {
-    width: 100%;
-    border: 1px solid color-mix(in srgb, #d97706 52%, rgb(var(--border)));
-    background: color-mix(in srgb, #f59e0b 7%, rgb(var(--surface)));
-    @apply px-3 pb-3;
-  }
-
-  .chart-source-controls-title {
-    color: rgb(var(--text-strong));
-    @apply text-xs font-semibold;
-  }
-
   .chart-chip {
     border: 1px solid rgb(var(--border) / 0.7);
     background-color: rgb(var(--surface) / 0.88);
@@ -851,66 +743,6 @@
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-  }
-
-  .epidemic-curve-plot {
-    position: relative;
-    min-height: 0;
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden;
-  }
-
-  .epidemic-curve-empty {
-    position: absolute;
-    z-index: 2;
-    inset: 32px 18px 70px 64px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgb(var(--border) / 0.76);
-    background-color: rgb(var(--surface) / 0.76);
-    color: rgb(var(--text-muted));
-    text-align: center;
-    @apply px-6 text-sm;
-  }
-
-  .epidemic-curve-reset {
-    position: absolute;
-    z-index: 3;
-    right: 18px;
-    bottom: 16px;
-    display: inline-flex;
-    width: 24px;
-    height: 24px;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgb(var(--border) / 0.9);
-    background-color: rgb(var(--surface) / 0.96);
-    color: rgb(var(--text-muted));
-    transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, opacity 140ms ease;
-    touch-action: manipulation;
-  }
-
-  .epidemic-curve-reset svg {
-    width: 14px;
-    height: 14px;
-  }
-
-  .epidemic-curve-reset:hover:not(:disabled) {
-    border-color: rgb(var(--color-brand) / 0.58);
-    background-color: rgb(var(--surface-raised));
-    color: rgb(var(--text-strong));
-  }
-
-  .epidemic-curve-reset:focus-visible {
-    outline: 2px solid rgb(var(--color-brand) / 0.62);
-    outline-offset: 2px;
-  }
-
-  .epidemic-curve-reset:disabled {
-    cursor: default;
-    opacity: 0.34;
   }
 
   .chart-scroll-x {
@@ -974,25 +806,6 @@
     background-color: rgb(var(--surface) / 0.78);
     color: rgb(var(--text-muted));
     @apply px-3 py-2 text-xs leading-5;
-  }
-
-  .chart-note-details summary {
-    color: rgb(var(--text-strong));
-    cursor: pointer;
-    @apply font-semibold;
-  }
-
-  .chart-note-list {
-    @apply mt-2 flex flex-col gap-1.5;
-  }
-
-  .chart-note-list li {
-    @apply min-w-0;
-  }
-
-  .chart-note-name {
-    color: rgb(var(--text-strong));
-    @apply mr-1 font-semibold;
   }
 
   .chart-sidebar {

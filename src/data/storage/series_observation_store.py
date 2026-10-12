@@ -10,13 +10,14 @@ from dataclasses import dataclass, field as dataclass_field
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Iterable, Mapping
 
-from sqlalchemy import and_, case, or_, select
+from sqlalchemy import and_, case, or_, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
 from src.domain import (
     DiseaseSeriesObservation,
+    DiseaseSeriesObservationRevision,
     DiseaseSurveillanceSeries,
     SourceDiseaseCategory,
 )
@@ -29,6 +30,144 @@ _QUALITY_MODES = {"off", "report", "quarantine", "fail_closed"}
 _REGISTRY_COVERAGE_MODES = {"auto", "required", "legacy_only"}
 _SEVERITY_RANK = {"info": 0, "warning": 1, "error": 2, "critical": 3}
 _UNMAPPED_GROUP_CODE = "G_UNMAPPED_SOURCE_CATEGORIES"
+_REVISION_KEY_COLUMNS = ("time", "series_code", "geography_key", "dimension_key")
+_REVISION_STATE_COLUMNS = (
+    "value",
+    "unit",
+    "suppressed",
+    "suppression_reason",
+    "quality_status",
+    "dimensions",
+    "raw_data",
+    "metadata",
+)
+_REVISION_COMPARISON_COLUMNS = (
+    "value",
+    "unit",
+    "suppressed",
+    "suppression_reason",
+    "quality_status",
+    "dimensions",
+)
+
+
+def _revision_identity(row: Mapping[str, Any]) -> tuple[Any, ...]:
+    return tuple(
+        _as_utc(row[key]) if key == "time" else row[key]
+        for key in _REVISION_KEY_COLUMNS
+    )
+
+
+def _revision_state(row: Mapping[str, Any]) -> str:
+    # Retrieval timestamps and raw artifact locations may change on a routine
+    # refresh. Preserve them in snapshots, but only create a new value revision
+    # when the reported observation or its interpretation actually changes.
+    state = {key: row.get(key) for key in _REVISION_COMPARISON_COLUMNS}
+    return json.dumps(state, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _revision_snapshot(row: Mapping[str, Any], recorded_at: datetime) -> dict[str, Any]:
+    snapshot = {
+        key: (_as_utc(row[key]) if key == "time" else row[key])
+        for key in _REVISION_KEY_COLUMNS
+    }
+    snapshot.update({key: row.get(key) for key in _REVISION_STATE_COLUMNS})
+    snapshot["recorded_at"] = _as_utc(recorded_at)
+    return snapshot
+
+
+async def _persist_observation_revisions(
+    db: AsyncSession,
+    observations: list[dict[str, Any]],
+    *,
+    recorded_at: datetime,
+    seed_current_state: bool,
+) -> int:
+    """Seed legacy current rows once, then append only changed accepted states."""
+    if not observations:
+        return 0
+    keys = list(dict.fromkeys(_revision_identity(row) for row in observations))
+    current_result = await db.execute(
+        select(
+            DiseaseSeriesObservation.time,
+            DiseaseSeriesObservation.series_code,
+            DiseaseSeriesObservation.geography_key,
+            DiseaseSeriesObservation.dimension_key,
+            DiseaseSeriesObservation.value,
+            DiseaseSeriesObservation.unit,
+            DiseaseSeriesObservation.suppressed,
+            DiseaseSeriesObservation.suppression_reason,
+            DiseaseSeriesObservation.quality_status,
+            DiseaseSeriesObservation.dimensions,
+            DiseaseSeriesObservation.raw_data,
+            DiseaseSeriesObservation.metadata_.label("metadata"),
+            DiseaseSeriesObservation.created_at,
+            DiseaseSeriesObservation.updated_at,
+        ).where(
+            tuple_(
+                DiseaseSeriesObservation.time,
+                DiseaseSeriesObservation.series_code,
+                DiseaseSeriesObservation.geography_key,
+                DiseaseSeriesObservation.dimension_key,
+            ).in_(keys)
+        )
+    )
+    current = [dict(row) for row in current_result.mappings().all()]
+    if not current:
+        return 0
+
+    history_result = await db.execute(
+        select(
+            DiseaseSeriesObservationRevision.time,
+            DiseaseSeriesObservationRevision.series_code,
+            DiseaseSeriesObservationRevision.geography_key,
+            DiseaseSeriesObservationRevision.dimension_key,
+            DiseaseSeriesObservationRevision.recorded_at,
+            DiseaseSeriesObservationRevision.value,
+            DiseaseSeriesObservationRevision.unit,
+            DiseaseSeriesObservationRevision.suppressed,
+            DiseaseSeriesObservationRevision.suppression_reason,
+            DiseaseSeriesObservationRevision.quality_status,
+            DiseaseSeriesObservationRevision.dimensions,
+            DiseaseSeriesObservationRevision.raw_data,
+            DiseaseSeriesObservationRevision.metadata_.label("metadata"),
+        )
+        .where(
+            tuple_(
+                DiseaseSeriesObservationRevision.time,
+                DiseaseSeriesObservationRevision.series_code,
+                DiseaseSeriesObservationRevision.geography_key,
+                DiseaseSeriesObservationRevision.dimension_key,
+            ).in_(keys)
+        )
+        .order_by(DiseaseSeriesObservationRevision.recorded_at.desc())
+    )
+    revisions = [dict(row) for row in history_result.mappings().all()]
+
+    inserts: list[dict[str, Any]] = []
+    if seed_current_state:
+        known = {_revision_identity(row) for row in revisions}
+        for row in current:
+            if _revision_identity(row) not in known:
+                timestamp = row.get("updated_at") or row.get("created_at") or recorded_at
+                inserts.append(_revision_snapshot(row, timestamp))
+    else:
+        latest: dict[tuple[Any, ...], Mapping[str, Any]] = {}
+        for row in revisions:
+            latest.setdefault(_revision_identity(row), row)
+        for row in current:
+            previous = latest.get(_revision_identity(row))
+            if previous is None or _revision_state(previous) != _revision_state(row):
+                inserts.append(_revision_snapshot(row, recorded_at))
+
+    if not inserts:
+        return 0
+    statement = pg_insert(DiseaseSeriesObservationRevision.__table__).values(inserts)
+    statement = statement.on_conflict_do_nothing(
+        constraint="uq_disease_series_observation_revision"
+    )
+    result = await db.execute(statement)
+    return max(0, int(getattr(result, "rowcount", len(inserts)) or 0))
 
 
 @dataclass(frozen=True)
@@ -618,6 +757,13 @@ class SeriesObservationStore:
         # rolls back both stores instead of leaving a partially imported batch.
         self.enforce_quality(quality_report, policy)
 
+        revision_time = datetime.now(timezone.utc)
+        await _persist_observation_revisions(
+            db,
+            observations,
+            recorded_at=revision_time,
+            seed_current_state=True,
+        )
         affected_rows = 0
         for offset in range(0, len(observations), _WRITE_BATCH_SIZE):
             batch = observations[offset : offset + _WRITE_BATCH_SIZE]
@@ -675,6 +821,13 @@ class SeriesObservationStore:
             ).returning(DiseaseSeriesObservation.series_code)
             write_result = await db.execute(statement)
             affected_rows += len(write_result.scalars().all())
+
+        await _persist_observation_revisions(
+            db,
+            observations,
+            recorded_at=revision_time,
+            seed_current_state=False,
+        )
 
         return SeriesObservationSaveResult(
             upserted=affected_rows,

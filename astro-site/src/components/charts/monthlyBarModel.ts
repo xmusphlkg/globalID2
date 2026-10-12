@@ -1,15 +1,26 @@
 export interface MonthlyData {
   months: string[];
-  cases: number[];
-  deaths: number[];
+  cases: (number | null)[];
+  deaths: (number | null)[];
+  coverage?: {
+    jurisdiction_universe_size: number;
+    excluded_weekly_jurisdictions?: number;
+    excluded_unknown_jurisdictions?: number;
+    inferred_monthly_jurisdictions?: number;
+    cases_reported_jurisdictions: number[];
+    deaths_reported_jurisdictions: number[];
+    cases_incompatible_months?: boolean[];
+    deaths_incompatible_months?: boolean[];
+  };
 }
 
 export type MonthlyMetric = 'cases' | 'deaths';
 
 export interface YearSummary {
   year: string;
-  values: number[];
-  total: number;
+  values: (number | null)[];
+  total: number | null;
+  monthlyCoverage: Array<{ reported: number; eligible: number; status: string } | null>;
   peakMonth: string;
   peakValue: number;
   color: string;
@@ -58,30 +69,67 @@ export function buildYearSummaries(
   metric: MonthlyMetric
 ): YearSummary[] {
   const years = collectYears(data.months);
-  const totalsByYear = new Map(
-    years.map((year) => [year, new Array<number>(12).fill(0)])
+  const valuesByYear = new Map(
+    years.map((year) => [year, new Array<number | null>(12).fill(null)]),
+  );
+  const coverageByYear = new Map(
+    years.map((year) => [
+      year,
+      new Array<YearSummary['monthlyCoverage'][number]>(12).fill(null),
+    ]),
   );
   const metricValues = metric === 'cases' ? data.cases : data.deaths;
 
   data.months.forEach((yearMonth, index) => {
     const [year, month] = yearMonth.split('-');
     const monthIndex = Number(month) - 1;
-    const values = totalsByYear.get(year);
+    const values = valuesByYear.get(year);
     if (!values || monthIndex < 0 || monthIndex >= 12) return;
-    const value = Number(metricValues[index]);
-    if (Number.isFinite(value)) values[monthIndex] += value;
+    const rawValue = metricValues[index];
+    if (rawValue != null && Number.isFinite(rawValue)) {
+      values[monthIndex] = (values[monthIndex] ?? 0) + rawValue;
+    }
+    if (data.coverage) {
+      const reportedCounts = metric === 'cases'
+        ? data.coverage.cases_reported_jurisdictions
+        : data.coverage.deaths_reported_jurisdictions;
+      const reported = reportedCounts[index] ?? 0;
+      const incompatible = (metric === 'cases'
+        ? data.coverage.cases_incompatible_months
+        : data.coverage.deaths_incompatible_months)?.[index] ?? false;
+      const status = incompatible
+        ? 'incompatible'
+        : reported === 0
+        ? 'no_data'
+        : data.coverage.jurisdiction_universe_size > 0 &&
+            reported === data.coverage.jurisdiction_universe_size
+          ? 'complete'
+          : 'partial';
+      coverageByYear.get(year)![monthIndex] = {
+        reported,
+        eligible: data.coverage.jurisdiction_universe_size,
+        status,
+      };
+    }
   });
 
   return years.map((year, index) => {
-    const values = totalsByYear.get(year) ?? new Array<number>(12).fill(0);
-    const total = values.reduce((sum, value) => sum + value, 0);
-    const peakValue = Math.max(0, ...values);
-    const peakMonthIndex = values.findIndex((value) => value === peakValue);
+    const values = valuesByYear.get(year) ?? new Array<number | null>(12).fill(null);
+    const monthlyCoverage = coverageByYear.get(year) ??
+      new Array<YearSummary['monthlyCoverage'][number]>(12).fill(null);
+    const coverageComplete = monthlyCoverage.every((item) => item === null || item.status === 'complete');
+    const total = values.every((value) => value !== null) && coverageComplete
+      ? values.reduce<number>((sum, value) => sum + (value ?? 0), 0)
+      : null;
+    const observed = values.filter((value): value is number => value !== null);
+    const peakValue = Math.max(0, ...observed);
+    const peakMonthIndex = values.findIndex((value) => value !== null && value === peakValue);
 
     return {
       year,
       values,
       total,
+      monthlyCoverage,
       peakMonth: peakValue > 0 ? (MONTH_NAMES[peakMonthIndex] ?? '—') : '—',
       peakValue,
       color: YEAR_COLORS[index % YEAR_COLORS.length],

@@ -10,6 +10,7 @@ from src.data.storage.series_observation_store import (
     SeriesObservationQualityPolicy,
     SeriesObservationQuarantinedError,
     SeriesObservationStore,
+    _persist_observation_revisions,
     _quality_status,
 )
 from src.domain import DiseaseSurveillanceSeries, SourceDiseaseCategory
@@ -44,6 +45,87 @@ def _quality_observation(
         "suppressed": False,
         "metadata": {"frequency": frequency},
     }
+
+
+@pytest.mark.asyncio
+async def test_revision_capture_seeds_existing_state_and_appends_only_changes() -> None:
+    point_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    first_seen = datetime(2025, 2, 1, tzinfo=timezone.utc)
+    changed_at = datetime(2025, 3, 1, tzinfo=timezone.utc)
+    current = {
+        "time": point_time,
+        "series_code": "SER_ZZ_CASES",
+        "geography_key": "country:ZZ:national",
+        "dimension_key": "all",
+        "value": 10,
+        "unit": "count",
+        "suppressed": False,
+        "suppression_reason": None,
+        "quality_status": "validated",
+        "dimensions": {},
+        "raw_data": {"artifact": "source.json"},
+        "metadata": {"frequency": "monthly"},
+        "created_at": first_seen,
+        "updated_at": first_seen,
+    }
+    revisions: list[dict] = []
+
+    class Result:
+        def __init__(self, rows=None, rowcount=0):
+            self.rows = rows or []
+            self.rowcount = rowcount
+
+        def mappings(self):
+            return self
+
+        def all(self):
+            return self.rows
+
+    class FakeDB:
+        async def execute(self, statement):
+            sql = str(statement)
+            if getattr(statement, "is_select", False):
+                rows = (
+                    sorted(revisions, key=lambda row: row["recorded_at"], reverse=True)
+                    if "disease_series_observation_revisions" in sql
+                    else [current]
+                )
+                return Result(rows)
+            statement.compile(dialect=postgresql.dialect())
+            batch = statement._multi_values[0]
+            inserted = []
+            for row in batch:
+                key = tuple(row[column] for column in ("time", "series_code", "geography_key", "dimension_key", "recorded_at"))
+                if not any(
+                    tuple(existing[column] for column in ("time", "series_code", "geography_key", "dimension_key", "recorded_at")) == key
+                    for existing in revisions
+                ):
+                    revisions.append(dict(row))
+                    inserted.append(row)
+            return Result(rowcount=len(inserted))
+
+    observation = {
+        key: current[key]
+        for key in ("time", "series_code", "geography_key", "dimension_key")
+    }
+    db = FakeDB()
+    assert await _persist_observation_revisions(
+        db, [observation], recorded_at=first_seen, seed_current_state=True
+    ) == 1
+    assert revisions[0]["value"] == 10
+    current["value"] = 12
+    current["quality_status"] = "revised"
+    current["updated_at"] = changed_at
+    assert await _persist_observation_revisions(
+        db, [observation], recorded_at=changed_at, seed_current_state=False
+    ) == 1
+    current["raw_data"] = {"artifact": "source-new.json"}
+    current["metadata"] = {"frequency": "monthly", "retrieved_at": "later"}
+    assert await _persist_observation_revisions(
+        db, [observation], recorded_at=datetime(2025, 4, 1, tzinfo=timezone.utc), seed_current_state=False
+    ) == 0
+    assert [row["value"] for row in revisions] == [10, 12]
+    assert [row["recorded_at"] for row in revisions] == [first_seen, changed_at]
 
 
 def test_series_resolution_reuses_source_identity_across_months(monkeypatch) -> None:

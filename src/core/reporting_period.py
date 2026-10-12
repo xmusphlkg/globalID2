@@ -27,6 +27,48 @@ def report_date(value: Any) -> date | None:
         return None
 
 
+def infer_display_cadence(values: Iterable[Any]) -> str | None:
+    """Name a regular legacy date pattern without claiming a declared source period.
+
+    Sparse or mixed date sequences stay unknown. Callers must retain the
+    distinction between this display hint and source-defined period boundaries.
+    """
+
+    dates = sorted({parsed for value in values if (parsed := report_date(value))})
+    if len(dates) < 4:
+        return None
+    gaps = [(right - left).days for left, right in zip(dates, dates[1:])]
+    if any(gap <= 0 for gap in gaps):
+        return None
+
+    if len(dates) >= 4 and len({(day.month, day.day) for day in dates}) == 1:
+        years = [day.year for day in dates]
+        year_gaps = [right - left for left, right in zip(years, years[1:])]
+        if year_gaps.count(1) >= 2 and all(1 <= gap <= 3 for gap in year_gaps):
+            return "annual"
+
+    if all(day.day == 1 and day.month in {1, 4, 7, 10} for day in dates):
+        quarters = [day.year * 4 + (day.month - 1) // 3 for day in dates]
+        quarter_gaps = [right - left for left, right in zip(quarters, quarters[1:])]
+        if quarter_gaps.count(1) >= 3 and sum(1 <= gap <= 2 for gap in quarter_gaps) >= len(quarter_gaps) * 0.8:
+            return "quarterly"
+
+    if len(dates) >= 6 and all(day.day == 1 for day in dates):
+        months = [day.year * 12 + day.month for day in dates]
+        month_gaps = [right - left for left, right in zip(months, months[1:])]
+        if month_gaps.count(1) >= 4 and sum(1 <= gap <= 3 for gap in month_gaps) >= len(month_gaps) * 0.8:
+            return "monthly"
+
+    if len(dates) >= 8 and len({day.weekday() for day in dates}) == 1:
+        if gaps.count(7) >= 5 and sum(gap in {7, 14, 21, 28} for gap in gaps) >= len(gaps) * 0.8:
+            return "weekly"
+
+    if len(dates) >= 14 and gaps.count(1) >= 10:
+        if sum(1 <= gap <= 3 for gap in gaps) >= len(gaps) * 0.8:
+            return "daily"
+    return None
+
+
 def report_period_key(value: Any, temporal_granularity: str | None = None) -> str:
     """Return the source reporting-period identity used for layer overlays.
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 import statistics
 from collections import defaultdict
+from datetime import datetime, timezone
 
 from sqlalchemy import text
 
@@ -76,6 +77,8 @@ def compact_report_metadata(
         if include_figures:
             compact["figures"] = document.get("figures") or []
             compact["figure_data"] = metadata.get("figure_data") or {}
+            if isinstance(metadata.get("surveillance_snapshot"), dict):
+                compact["surveillance_snapshot"] = metadata["surveillance_snapshot"]
             compact["report_document_v4"] = document
         return compact
 
@@ -197,22 +200,35 @@ async def fetch_disease_records(
 
 
 async def fetch_disease_export_layers(
-    session, country_code: str, use_population_table: bool
+    session,
+    country_code: str,
+    use_population_table: bool,
+    *,
+    recorded_at_as_of: datetime | None = None,
 ) -> tuple[list[dict], list[dict]]:
-    """Return public projections and lossless source observations separately."""
+    """Return public projections and lossless source observations separately.
+
+    Historical builds use the revision ledger only; current-only legacy rows
+    are excluded so one export cannot silently mix observation versions.
+    """
 
     public_config = get_country_bootstrap_config(country_code)
     legacy_records = (
         await fetch_disease_records_direct(
             session, country_code, use_population_table
         )
-        if public_config.get("public_legacy_enabled", True) is not False
+        if recorded_at_as_of is None
+        and public_config.get("public_legacy_enabled", True) is not False
         else []
     )
     registry_tables_exist = await has_table(
         session, "disease_surveillance_series"
     ) and await has_table(session, "disease_series_observations")
     if not registry_tables_exist:
+        if recorded_at_as_of is not None:
+            raise RuntimeError(
+                "Historical site export requires the surveillance revision ledger."
+            )
         return (
             apply_disease_cutover_projection(
                 legacy_records, [], country_code=country_code
@@ -220,8 +236,18 @@ async def fetch_disease_export_layers(
             [],
         )
 
+    if recorded_at_as_of is not None and not await has_table(
+        session, "disease_series_observation_revisions"
+    ):
+        raise RuntimeError(
+            "Historical site export requires the surveillance revision ledger."
+        )
+
     series_records = await fetch_disease_series_records(
-        session, country_code, use_population_table
+        session,
+        country_code,
+        use_population_table,
+        recorded_at_as_of=recorded_at_as_of,
     )
     return (
         apply_disease_cutover_projection(
@@ -336,8 +362,14 @@ async def fetch_disease_series_records(
     session,
     country_code: str,
     use_population_table: bool,
+    *,
+    recorded_at_as_of: datetime | None = None,
 ) -> list[dict]:
-    """Read national, unstratified registry facts suitable for site export."""
+    """Read registry facts, optionally reconstructing an ingestion-time version.
+
+    The as-of boundary is when this application recorded an observation state;
+    upstream publication dates are not inferred from it.
+    """
     # CN/AU/BR subdivisions share the parent source registry, while geography
     # and population keys always stay local to the selected subdivision.
     series_country_code = country_code.split("-", 1)[0] if country_code.startswith(("CN-", "AU-", "BR-")) else country_code
@@ -346,12 +378,14 @@ async def fetch_disease_series_records(
     population_join = ""
     if use_population_table:
         incidence_expr = (
-            "CASE WHEN pr.population IS NOT NULL AND pr.population > 0 "
+            "CASE WHEN dso.dimension_key = 'all' "
+            "AND pr.population IS NOT NULL AND pr.population > 0 "
             "THEN (dso.value::double precision / pr.population) * 100000.0 "
             "ELSE NULL END"
         )
         incidence_source_expr = (
-            "CASE WHEN pr.population IS NOT NULL AND pr.population > 0 "
+            "CASE WHEN dso.dimension_key = 'all' "
+            "AND pr.population IS NOT NULL AND pr.population > 0 "
             "THEN CASE WHEN pr.source = 'WPP' THEN 'wpp_computed' ELSE lower(pr.source) || '_computed' END ELSE 'missing_population' END"
         )
         population_join = (
@@ -366,8 +400,98 @@ async def fetch_disease_series_records(
         "code": series_country_code,
         "geography_key": f"country:{country_code}:national",
     }
+    if recorded_at_as_of is not None:
+        if recorded_at_as_of.tzinfo is None:
+            raise ValueError("recorded_at_as_of must include a timezone")
+        query_params["recorded_at_as_of"] = recorded_at_as_of.astimezone(
+            timezone.utc
+        )
+        observation_relation = """(
+            WITH latest_revisions AS (
+                SELECT DISTINCT ON (
+                    r.time, r.series_code, r.geography_key, r.dimension_key
+                ) r.time, r.series_code, r.geography_key, r.dimension_key,
+                  r.value, r.unit, r.suppressed, r.suppression_reason,
+                  r.quality_status, r.dimensions, r.raw_data, r.metadata,
+                  r.recorded_at
+                FROM disease_series_observation_revisions r
+                JOIN disease_surveillance_series revision_series
+                  ON revision_series.series_code = r.series_code
+                WHERE r.recorded_at <= :recorded_at_as_of
+                  AND revision_series.country_code = :code
+                  AND r.geography_key = :geography_key
+                ORDER BY r.time, r.series_code, r.geography_key,
+                         r.dimension_key, r.recorded_at DESC
+            ),
+            current_fallback AS (
+                SELECT current.time, current.series_code,
+                  current.geography_key, current.dimension_key, current.value,
+                  current.unit, current.suppressed, current.suppression_reason,
+                  current.quality_status, current.dimensions, current.raw_data,
+                  current.metadata, current.updated_at AS recorded_at
+                FROM disease_series_observations current
+                JOIN disease_surveillance_series current_series
+                  ON current_series.series_code = current.series_code
+                WHERE current_series.country_code = :code
+                  AND current.geography_key = :geography_key
+                  AND current.updated_at <= :recorded_at_as_of
+                  AND NOT EXISTS (
+                    SELECT 1 FROM disease_series_observation_revisions prior
+                    WHERE prior.time = current.time
+                      AND prior.series_code = current.series_code
+                      AND prior.geography_key = current.geography_key
+                      AND prior.dimension_key = current.dimension_key
+                      AND prior.recorded_at <= :recorded_at_as_of
+                  )
+            ),
+            history_coverage AS (
+                SELECT NOT EXISTS (
+                    SELECT 1 FROM disease_series_observations current
+                    JOIN disease_surveillance_series current_series
+                      ON current_series.series_code = current.series_code
+                    WHERE current_series.country_code = :code
+                      AND current.geography_key = :geography_key
+                      AND current.updated_at > :recorded_at_as_of
+                      AND NOT EXISTS (
+                        SELECT 1
+                        FROM disease_series_observation_revisions prior
+                        WHERE prior.time = current.time
+                          AND prior.series_code = current.series_code
+                          AND prior.geography_key = current.geography_key
+                          AND prior.dimension_key = current.dimension_key
+                          AND prior.recorded_at <= :recorded_at_as_of
+                      )
+                ) AS complete
+            )
+            SELECT resolved.*, history_coverage.complete
+              AS recorded_history_complete
+            FROM (
+                SELECT * FROM latest_revisions
+                UNION ALL
+                SELECT * FROM current_fallback
+            ) resolved
+            CROSS JOIN history_coverage
+        ) AS dso"""
+        recorded_at_expression = "dso.recorded_at"
+        history_complete_expression = "dso.recorded_history_complete"
+    else:
+        observation_relation = "disease_series_observations AS dso"
+        recorded_at_expression = "NULL::timestamptz"
+        history_complete_expression = "NULL::boolean"
     if use_population_table:
         query_params["population_code"] = country_code
+
+    population_expr = (
+        "CASE WHEN dso.dimension_key = 'all' THEN pr.population::double precision "
+        "ELSE NULL::double precision END"
+        if use_population_table
+        else "NULL::double precision"
+    )
+    population_source_expr = (
+        "CASE WHEN dso.dimension_key = 'all' THEN pr.source ELSE NULL::text END"
+        if use_population_table
+        else "NULL::text"
+    )
 
     rows = await session.execute(
         text(f"""
@@ -380,6 +504,11 @@ async def fetch_disease_series_records(
                 NULL::bigint AS recoveries,
                 {incidence_expr} AS incidence_rate,
                 {incidence_source_expr} AS incidence_rate_source,
+                {population_expr} AS population,
+                {population_source_expr} AS population_source,
+                NULLIF(dso.metadata::jsonb ->> 'period_start', '') AS period_start,
+                NULLIF(dso.metadata::jsonb ->> 'period_end_exclusive', '') AS period_end_exclusive,
+                NULLIF(dss.metadata::jsonb ->> 'calendar', '') AS calendar,
                 NULL::double precision AS mortality_rate,
                 dso.quality_status AS data_quality,
                 dso.series_code,
@@ -418,15 +547,17 @@ async def fetch_disease_series_records(
                 dss.is_active AS series_is_active,
                 dso.quality_status,
                 dso.geography_key,
-                dso.dimension_key
-            FROM disease_series_observations dso
+                dso.dimension_key,
+                dso.dimensions,
+                {recorded_at_expression} AS recorded_at,
+                {history_complete_expression} AS recorded_history_complete
+            FROM {observation_relation}
             JOIN disease_surveillance_series dss
               ON dss.series_code = dso.series_code
             {population_join}
             WHERE dss.country_code = :code
               AND dss.disease_id IS NOT NULL
               AND dso.geography_key = :geography_key
-              AND dso.dimension_key = 'all'
               AND dso.suppressed IS FALSE
               AND dso.value IS NOT NULL
               AND dso.unit = dss.unit
@@ -464,6 +595,12 @@ async def fetch_disease_series_records(
             record.get("incidence_rate_source") or "missing_population"
         )
         record["mortality_rate"] = safe_float(record.get("mortality_rate"))
+        record["recorded_at"] = iso_or_none(record.get("recorded_at"))
+        record["recorded_at_as_of"] = (
+            query_params["recorded_at_as_of"].isoformat()
+            if recorded_at_as_of is not None
+            else None
+        )
         for field in ("valid_from", "valid_to"):
             value = record.get(field)
             record[field] = value.isoformat() if value else None

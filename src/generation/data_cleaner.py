@@ -5,8 +5,8 @@
 根据数据采集频率（月度/周度/日度）进行聚合与展示，
 避免日期过长、信息丢失。
 """
-from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Tuple
+
+from typing import Any, Literal
 
 import pandas as pd
 
@@ -15,13 +15,39 @@ from src.core.missing_values import normalize_rate_columns
 
 logger = get_logger(__name__)
 
-Frequency = Literal["monthly", "weekly", "daily"]
+Frequency = Literal["daily", "weekly", "monthly", "quarterly", "annual"]
+
+FREQUENCY_ALIASES: dict[str, Frequency] = {
+    "day": "daily", "daily": "daily", "week": "weekly", "weekly": "weekly",
+    "month": "monthly", "monthly": "monthly", "quarter": "quarterly",
+    "quarterly": "quarterly", "year": "annual", "yearly": "annual",
+    "annual": "annual",
+}
+
+
+def resolve_frequency(group: pd.DataFrame, time_col: str = "time") -> Frequency | None:
+    """Resolve one disease's period grain; a lone undated observation is unknown."""
+    declared: set[Frequency] = set()
+    for metadata in group.get("metadata", pd.Series(dtype=object)):
+        if not isinstance(metadata, dict):
+            continue
+        raw = metadata.get("temporal_granularity") or metadata.get("frequency")
+        value = FREQUENCY_ALIASES.get(str(raw).strip().lower())
+        if value:
+            declared.add(value)
+    if len(declared) > 1:
+        raise ValueError(f"Conflicting declared reporting frequencies: {sorted(declared)}")
+    if declared:
+        return next(iter(declared))
+    if time_col not in group or group[time_col].dropna().nunique() < 2:
+        return None
+    return infer_frequency(group.drop_duplicates(time_col), time_col)
 
 
 def infer_frequency(df: pd.DataFrame, time_col: str = "time") -> Frequency:
     """
     根据时间列推断数据采集频率。
-    - 若日期多为月初（1日）且间隔约1月 → monthly
+    - 若日期多为期初且间隔约1年/1季/1月 → annual/quarterly/monthly
     - 若间隔约7天 → weekly
     - 否则 → daily
     """
@@ -44,6 +70,10 @@ def infer_frequency(df: pd.DataFrame, time_col: str = "time") -> Frequency:
     day_of_month = times.dt.day
     pct_first = (day_of_month == 1).mean()
 
+    if median_days >= 330 and pct_first >= 0.5:
+        return "annual"
+    if 75 <= median_days <= 105 and pct_first >= 0.5:
+        return "quarterly"
     if median_days >= 25 and pct_first >= 0.5:
         return "monthly"
     if 5 <= median_days <= 10:
@@ -55,9 +85,13 @@ def _format_period(ts: pd.Timestamp, freq: Frequency) -> str:
     """将时间戳格式化为简短周期字符串。"""
     if freq == "monthly":
         return ts.strftime("%Y-%m")
+    if freq == "quarterly":
+        return f"{ts.year}-Q{ts.quarter}"
+    if freq == "annual":
+        return ts.strftime("%Y")
     if freq == "weekly":
         # ISO 周：2025-W01
-        return ts.strftime("%Y-W%V")
+        return ts.strftime("%G-W%V")
     return ts.strftime("%Y-%m-%d")
 
 
@@ -65,7 +99,7 @@ def long_to_wide(
     df: pd.DataFrame,
     freq: Frequency,
     time_col: str = "time",
-    value_cols: Optional[List[str]] = None,
+    value_cols: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     将长表转为宽表：按周期聚合，行=周期，列=指标。
@@ -85,7 +119,11 @@ def long_to_wide(
     ]
     cols = value_cols or [c for c in default_cols if c in df.columns]
     if not cols:
-        cols = [c for c in df.columns if c not in (time_col, "disease_id") and df[c].dtype in ("int64", "float64")]
+        cols = [
+            c
+            for c in df.columns
+            if c not in (time_col, "disease_id") and df[c].dtype in ("int64", "float64")
+        ]
 
     df = normalize_rate_columns(df)
     # Report periods are UTC-defined. Normalizing here also handles mixed
@@ -100,18 +138,23 @@ def long_to_wide(
     agg_dict = {}
     for c in cols:
         if c in df.columns:
-            agg_dict[c] = _sum_preserve_missing if c in ("cases", "deaths", "new_cases", "new_deaths", "recoveries") else "mean"
+            agg_dict[c] = (
+                _sum_preserve_missing
+                if c in ("cases", "deaths", "new_cases", "new_deaths", "recoveries")
+                else "mean"
+            )
     if not agg_dict:
         return pd.DataFrame()
 
-    if freq == "monthly":
+    if freq in {"monthly", "quarterly", "annual"}:
         monthly_time = df[time_col]
         if isinstance(monthly_time.dtype, pd.DatetimeTZDtype):
             # Month boundaries are defined in UTC for the report pipeline.
             # Convert explicitly before removing the timezone so pandas does
             # not silently drop timezone information inside ``to_period``.
             monthly_time = monthly_time.dt.tz_convert("UTC").dt.tz_localize(None)
-        df["_period"] = monthly_time.dt.to_period("M").dt.to_timestamp()
+        calendar_period = {"monthly": "M", "quarterly": "Q", "annual": "Y"}[freq]
+        df["_period"] = monthly_time.dt.to_period(calendar_period).dt.to_timestamp()
         wide = df.groupby("_period", as_index=True).agg(agg_dict).reset_index()
     elif freq == "weekly":
         # W-MON: 周一起始，符合 ISO 周习惯
@@ -140,7 +183,11 @@ def wide_to_markdown_table(
         return ""
 
     # 使用 period_col 作为首列，其余为指标
-    cols = [c for c in wide.columns if c not in ("_period", "_period_str") and c != period_col]
+    cols = [
+        c
+        for c in wide.columns
+        if c not in ("_period", "_period_str") and c != period_col
+    ]
     if period_col in wide.columns:
         out_cols = [period_col] + cols
     else:
@@ -152,9 +199,8 @@ def wide_to_markdown_table(
 
     # 数值格式化
     for c in cols:
-        if c in header.columns:
-            if header[c].dtype in ("int64", "float64"):
-                header[c] = header[c].apply(_fmt_num)
+        if c in header.columns and header[c].dtype in ("int64", "float64"):
+            header[c] = header[c].apply(_fmt_num)
 
     # 周期列简短
     if period_col in header.columns:
@@ -199,7 +245,7 @@ def clean_and_format_for_ai(
     df: pd.DataFrame,
     time_col: str = "time",
     max_rows: int = 24,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     清洗数据并格式化为供 AI 使用的结构。
 
@@ -241,15 +287,21 @@ def clean_and_format_for_ai(
 
     period_range = ""
     if "_period_str" in wide.columns:
-        period_range = f"{wide['_period_str'].iloc[0]} to {wide['_period_str'].iloc[-1]}"
+        period_range = (
+            f"{wide['_period_str'].iloc[0]} to {wide['_period_str'].iloc[-1]}"
+        )
 
     summary_stats = {}
     for c in ["cases", "deaths"]:
         if c in wide.columns:
             numeric = pd.to_numeric(wide[c], errors="coerce")
             observed = numeric.dropna()
-            summary_stats[f"total_{c}"] = int(observed.sum()) if not observed.empty else None
-            summary_stats[f"avg_{c}"] = round(float(observed.mean()), 1) if not observed.empty else None
+            summary_stats[f"total_{c}"] = (
+                int(observed.sum()) if not observed.empty else None
+            )
+            summary_stats[f"avg_{c}"] = (
+                round(float(observed.mean()), 1) if not observed.empty else None
+            )
             summary_stats[f"{c}_observed_periods"] = int(observed.count())
             summary_stats[f"{c}_missing_periods"] = int(numeric.isna().sum())
     if "deaths" in wide.columns:

@@ -62,7 +62,7 @@ export default function MonthlyBar({
     : (lang === 'zh' ? '死亡数' : 'Deaths');
   const peakValue = Math.max(
     0,
-    ...state.activeYearSummaries.flatMap((summary) => summary.values)
+    ...state.activeYearSummaries.flatMap((summary) => summary.values.filter((value): value is number => value !== null))
   );
 
   const toolbar = (
@@ -88,6 +88,52 @@ export default function MonthlyBar({
           ? `显示 ${state.activeYearSummaries.length} / ${state.allYears.length} 个年份`
           : `${state.activeYearSummaries.length}/${state.allYears.length} years`}
       </span>
+      {data.coverage && (
+        <span className="chart-chip" role="note">
+          {lang === 'zh'
+            ? `国家级已报告部分合计；覆盖分母为数据导出中的 ${data.coverage.jurisdiction_universe_size} 个国家/地区，具体报告数见悬浮提示。`
+            : lang === 'fr'
+              ? `Sous-totaux nationaux déclarés ; couverture mesurée sur ${data.coverage.jurisdiction_universe_size} juridictions nationales dans cet export. Voir les infobulles pour le détail mensuel.`
+              : `National reported subtotals; coverage is measured against ${data.coverage.jurisdiction_universe_size} national jurisdictions in this export. See tooltips for monthly coverage.`}
+        </span>
+      )}
+      {!!data.coverage?.excluded_weekly_jurisdictions && (
+        <span className="chart-chip" role="note">
+          {lang === 'zh'
+            ? `${data.coverage.excluded_weekly_jurisdictions} 条国家级周序列未计入月度合计（周期间可能跨月）。`
+            : lang === 'fr'
+              ? `${data.coverage.excluded_weekly_jurisdictions} séries hebdomadaires nationales exclues du sous-total mensuel (semaines pouvant chevaucher deux mois).`
+              : `${data.coverage.excluded_weekly_jurisdictions} national weekly series excluded from monthly subtotals because weeks may cross months.`}
+        </span>
+      )}
+      {!!data.coverage?.excluded_unknown_jurisdictions && (
+        <span className="chart-chip" role="note">
+          {lang === 'zh'
+            ? `${data.coverage.excluded_unknown_jurisdictions} 条粒度不明的国家级序列未计入月度合计。`
+            : lang === 'fr'
+              ? `${data.coverage.excluded_unknown_jurisdictions} séries nationales de périodicité inconnue exclues du sous-total mensuel.`
+              : `${data.coverage.excluded_unknown_jurisdictions} national series of unknown cadence excluded from monthly subtotals.`}
+        </span>
+      )}
+      {!!data.coverage?.inferred_monthly_jurisdictions && (
+        <span className="chart-chip" role="note">
+          {lang === 'zh'
+            ? `${data.coverage.inferred_monthly_jurisdictions} 条旧序列仅按月初日期推断为月度，来源未声明粒度。`
+            : lang === 'fr'
+              ? `${data.coverage.inferred_monthly_jurisdictions} séries historiques interprétées comme mensuelles d'après leurs dates ; périodicité non déclarée.`
+              : `${data.coverage.inferred_monthly_jurisdictions} legacy series treated as monthly from month-start dates; source cadence is undeclared.`}
+        </span>
+      )}
+      {!!(data.coverage?.cases_incompatible_months?.some(Boolean)
+        || data.coverage?.deaths_incompatible_months?.some(Boolean)) && (
+        <span className="chart-chip" role="note">
+          {lang === 'zh'
+            ? '来源定义不兼容的月份不计算多国合计；报告数仍见悬浮提示。'
+            : lang === 'fr'
+              ? 'Les mois aux définitions incompatibles n’ont pas de total multinational ; le nombre de déclarants reste indiqué.'
+              : 'Months with incompatible source definitions have no multi-country subtotal; reporting counts remain visible.'}
+        </span>
+      )}
       <span className="chart-chip">
         {lang === 'zh'
           ? `月峰值 ${peakValue.toLocaleString()}`
@@ -108,7 +154,9 @@ export default function MonthlyBar({
             <div>
               <div className="chart-legend-name">{summary.year}</div>
               <div className="chart-legend-meta">
-                {lang === 'zh' ? '年度合计' : 'Year total'} {formatValue(summary.total)}
+                {summary.total == null
+                  ? (lang === 'zh' ? '年度总量不可完整计算' : 'Annual total incomplete')
+                  : <>{lang === 'zh' ? '完整年度合计' : 'Complete-year total'} {formatValue(summary.total)}</>}
                 {' · '}
                 {lang === 'zh' ? '峰值' : 'Peak'} {summary.peakMonth}
                 {summary.peakMonth !== '—' ? ` (${formatValue(summary.peakValue)})` : ''}
@@ -178,6 +226,7 @@ export default function MonthlyBar({
         <MonthlyBarPlot
           summaries={state.activeYearSummaries}
           metricLabel={metricLabel}
+          lang={lang}
           colors={colors}
           title={title}
           height={isFullscreen ? '100%' : height}

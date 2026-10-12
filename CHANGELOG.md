@@ -2,6 +2,23 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.10.4] - 2026-10-12
+
+### Changed
+
+- Rebuilt surveillance curves around one query, chart, and table flow across country, disease, report, and research views.
+- Matched the curve controls and full-screen view to the site chart design; compacted the series picker and kept file downloads in the page's data access section.
+- Added conservative date-pattern frequency hints for legacy series whose source period is not declared, with the inference marked separately from source metadata.
+
+### Fixed
+
+- Preserved source-specific observations, report snapshots, and selected time windows across the shared curve views.
+- Kept sparse and mixed-date series unspecified instead of assigning an unsupported reporting frequency.
+
+### Validation
+
+- Passed 1,484 Python unit tests, 56 chart tests, full/compact surveillance projection checks, desktop and mobile browser regressions, and a 5,680-page production build with style, performance, SEO, and localization checks.
+
 ## [0.10.3] - 2026-10-06
 
 ### Added
