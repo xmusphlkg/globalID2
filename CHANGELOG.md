@@ -2,6 +2,12 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.10.5] - 2026-10-12
+
+### Fixed
+
+- Constrained the surveillance data table to a scrollable panel with a sticky header so long time series no longer stretch the page.
+
 ## [0.10.4] - 2026-10-12
 
 ### Changed
