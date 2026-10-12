@@ -113,7 +113,10 @@ GENERATE_SITE_DATA_TIMEOUT_SECONDS = 30 * 60
 ASTRO_BUILD_TIMEOUT_SECONDS = 60 * 60
 CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS = 15 * 60
 SUBSCRIPTION_SYNC_TIMEOUT_SECONDS = 10 * 60
-DOWNLOAD_PUBLISH_TIMEOUT_SECONDS = 15 * 60
+# The initial partitioned download publication can introduce tens of thousands
+# of files and a multi-gigabyte Git pack. Keep this bounded, while giving the
+# first full sync enough time to upload after the raw archive is published.
+DOWNLOAD_PUBLISH_TIMEOUT_SECONDS = 60 * 60
 DOWNLOAD_REPO_BRANCH = get_data_share_repo_branch()
 DIRECT_DOWNLOAD_DIR = ROOT_DIR / "exports" / "site-downloads"
 

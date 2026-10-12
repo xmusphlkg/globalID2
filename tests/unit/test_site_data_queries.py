@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
 import pytest
 
 from scripts import generate_site_data
 from src.generation import site_data_queries
-
 
 QUERY_EXPORTS = (
     "compact_report_metadata",
@@ -266,11 +265,58 @@ async def test_series_query_exports_inactive_history_with_active_selection_flag(
     sql, params = session.calls[0]
     assert "dss.is_active AS series_is_active" in sql
     assert "metadata::jsonb ->> 'time_basis'" in sql
+    assert "dso.dimensions" in sql
+    assert "AND dso.dimension_key = 'all'" not in sql
     assert "dss.is_active IS TRUE" not in sql
     assert params == {
         "code": "IS",
         "geography_key": "country:IS:national",
     }
+
+
+@pytest.mark.asyncio
+async def test_series_query_can_reconstruct_latest_recorded_state_as_of() -> None:
+    cutoff = datetime(2025, 6, 1, tzinfo=timezone.utc)
+    session = FakeSession(
+        FakeRows(
+            [
+                mapped_row(
+                    date=date(2025, 1, 1),
+                    year_month="2025-01",
+                    disease_id="D001",
+                    cases=8,
+                    deaths=None,
+                    recoveries=None,
+                    incidence_rate=None,
+                    incidence_rate_source="missing_population",
+                    mortality_rate=None,
+                    recorded_at=cutoff,
+                    recorded_history_complete=False,
+                )
+            ]
+        )
+    )
+    records = await site_data_queries.fetch_disease_series_records(
+        session, "ZZ", False, recorded_at_as_of=cutoff
+    )
+    assert records[0]["recorded_at"] == cutoff.isoformat()
+    assert records[0]["recorded_history_complete"] is False
+    sql, params = session.calls[0]
+    assert "FROM disease_series_observation_revisions" in sql
+    assert "recorded_at <= :recorded_at_as_of" in sql
+    assert "DISTINCT ON" in sql
+    assert params["recorded_at_as_of"] == cutoff
+
+
+@pytest.mark.asyncio
+async def test_as_of_query_requires_timezone_aware_recorded_time() -> None:
+    with pytest.raises(ValueError, match="must include a timezone"):
+        await site_data_queries.fetch_disease_series_records(
+            FakeSession(FakeRows([])),
+            "ZZ",
+            False,
+            recorded_at_as_of=datetime(2025, 6, 1),
+        )
 
 
 @pytest.mark.asyncio
@@ -283,3 +329,4 @@ async def test_subdivision_registry_uses_parent_but_population_uses_local_id(cod
     assert "pr.country_id = registry_country.id" in sql
     assert "pr.year = EXTRACT(YEAR FROM dso.time)::int" in sql
     assert "lower(pr.source) || '_computed'" in sql
+    assert "CASE WHEN dso.dimension_key = 'all'" in sql

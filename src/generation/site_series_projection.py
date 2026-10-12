@@ -7,6 +7,8 @@ can migrate without a flag day.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from collections import defaultdict
 
@@ -74,11 +76,19 @@ def _series_is_case_count(record: dict) -> bool:
 def _source_series_details(records: list[dict]) -> list[dict]:
     """Build lossless, JSON-ready source-series payloads for one concept."""
 
-    by_series: dict[str, list[dict]] = defaultdict(list)
+    by_series: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
     for record in records:
         series_code = str(record.get("series_code") or "").strip()
         if series_code:
-            by_series[series_code].append(record)
+            dimension_key = str(record.get("dimension_key") or "all").strip() or "all"
+            dimensions = record.get("dimensions") or {}
+            if isinstance(dimensions, str):
+                try:
+                    dimensions = json.loads(dimensions)
+                except (TypeError, ValueError):
+                    dimensions = {}
+            dimensions_key = json.dumps(dimensions, sort_keys=True, separators=(",", ":"))
+            by_series[(series_code, dimension_key, dimensions_key)].append(record)
 
     metadata_fields = (
         "source_system", "source_series_code", "source_label",
@@ -90,13 +100,27 @@ def _source_series_details(records: list[dict]) -> list[dict]:
         "comparability_break",
         "comparability_set", "projection_policy", "projection_priority",
         "series_is_active",
+        "calendar",
     )
     details: list[dict] = []
-    for series_code in sorted(by_series):
+    for series_code, dimension_key, dimensions_key in sorted(by_series):
+        series_records_for_dimension = by_series[(series_code, dimension_key, dimensions_key)]
         series_records = sorted(
-            by_series[series_code], key=lambda item: str(item.get("date") or "")
+            series_records_for_dimension,
+            key=lambda item: str(item.get("date") or ""),
         )
         first = series_records[0]
+        dimensions = first.get("dimensions") or {}
+        if isinstance(dimensions, str):
+            try:
+                dimensions = json.loads(dimensions)
+            except (TypeError, ValueError):
+                dimensions = {}
+        selection_key = series_code
+        if dimension_key != "all" or dimensions:
+            identity = f"{dimension_key}:{dimensions_key}"
+            digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:12]
+            selection_key = f"{series_code}::{dimension_key}::{digest}"
         dates = [item.get("date") for item in series_records if item.get("date")]
         dated_records = [item for item in series_records if item.get("date")]
         values = [_normalise_count(item.get("cases")) for item in dated_records]
@@ -114,12 +138,34 @@ def _source_series_details(records: list[dict]) -> list[dict]:
         details.append(
             {
                 "series_code": series_code,
+                "selection_key": selection_key,
                 **{field: first.get(field) for field in metadata_fields},
                 "unit": first.get("series_unit") or first.get("unit"),
                 "geography_key": first.get("geography_key"),
                 "dimension_key": first.get("dimension_key"),
+                "dimensions": dimensions if isinstance(dimensions, dict) else {},
                 "dates": dates,
                 "values": values,
+                "incidence_rates": [
+                    _safe_float(item.get("incidence_rate")) for item in dated_records
+                ],
+                "incidence_sources": [
+                    item.get("incidence_rate_source") for item in dated_records
+                ],
+                "has_incidence_rates": any(
+                    _safe_float(item.get("incidence_rate")) is not None
+                    for item in dated_records
+                ),
+                "population_values": [
+                    _safe_float(item.get("population")) for item in dated_records
+                ],
+                "population_sources": [
+                    item.get("population_source") for item in dated_records
+                ],
+                "period_starts": [item.get("period_start") for item in dated_records],
+                "period_ends_exclusive": [
+                    item.get("period_end_exclusive") for item in dated_records
+                ],
                 "total_value": sum(value for value in values if value is not None),
                 "observation_count": len(values),
                 "quality_statuses": quality_statuses,
@@ -399,6 +445,7 @@ def _partition_compatible_legacy_records(
         item
         for item in context.get("source_series") or []
         if str(item.get("series_code") or "") in selected_codes
+        and str(item.get("dimension_key") or "all").strip().lower() == "all"
     ]
     field_specs = (
         ("temporal_granularity", True),
@@ -553,6 +600,7 @@ def apply_series_first_projection(
             legacy_by_disease[disease_id].append(record)
     all_series: dict[str, list[dict]] = defaultdict(list)
     case_count_series: dict[str, list[dict]] = defaultdict(list)
+    public_case_count_series: dict[str, list[dict]] = defaultdict(list)
     eligible_series: dict[str, list[dict]] = defaultdict(list)
     for record in series_records:
         disease_id = str(record.get("disease_id") or "").strip()
@@ -560,7 +608,12 @@ def apply_series_first_projection(
             all_series[disease_id].append(record)
             if is_case_count_metric(record):
                 case_count_series[disease_id].append(record)
-            if _series_is_case_count(record):
+                if str(record.get("dimension_key") or "all").strip().lower() == "all":
+                    public_case_count_series[disease_id].append(record)
+            if (
+                str(record.get("dimension_key") or "all").strip().lower() == "all"
+                and _series_is_case_count(record)
+            ):
                 eligible_series[disease_id].append(record)
 
     result: list[dict] = []
@@ -616,7 +669,7 @@ def apply_series_first_projection(
                     )
             result.extend(overlaid)
             continue
-        if case_count_series.get(disease_id):
+        if public_case_count_series.get(disease_id):
             # A typed case-count fact with an unsafe ontology relation remains
             # downloadable as a source observation.  It must not be replaced
             # by an opaque legacy cases row.

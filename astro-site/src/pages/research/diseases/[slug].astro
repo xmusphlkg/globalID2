@@ -27,11 +27,12 @@ const publications = new Map((research.publication_timeline ?? []).map((item: an
 const evidenceEvents: any[] = research.evidence_events ?? [];
 const months: string[] = surveillance?.global_monthly?.months ?? [];
 const cases: Array<number | null> = surveillance?.global_monthly?.cases ?? [];
+const caseCoverage = surveillance?.global_monthly?.coverage;
 const timeline = months.slice(-24).map((month, offset) => {
   const index = months.length - Math.min(24, months.length) + offset;
-  return { month, cases: Number(cases[index] ?? 0), publications: Number(publications.get(month) ?? 0) };
+  return { month, cases: cases[index] ?? null, reported: caseCoverage?.cases_reported_jurisdictions?.[index] ?? null, eligible: caseCoverage?.eligible_jurisdictions ?? null, publications: Number(publications.get(month) ?? 0) };
 });
-const maxCases = Math.max(1, ...timeline.map((item) => item.cases));
+const maxCases = Math.max(1, ...timeline.map((item) => item.cases ?? 0));
 const maxPublications = Math.max(1, ...timeline.map((item) => item.publications));
 const description = `A curated view of published ${facet.name_en} research, auditable classifier relationships, and the available GIDS surveillance timeline.`;
 const descriptionZh = `${facet.name_zh ?? facet.name_en}已发布研究、可审计分类关系与可用 GIDS 监测时间线的专题视图。`;
@@ -63,7 +64,7 @@ const descriptionFr = `Une vue ciblée des recherches publiées sur ${diseaseNam
     {timeline.length > 0 ? <div class="timeline-table" role="table" aria-label="Monthly surveillance cases and publication volume">
       {timeline.map((item) => <div class="timeline-row" role="row">
         <time role="cell" datetime={`${item.month}-01`}>{item.month}</time>
-        <div class="bar-cell" role="cell"><span class="cases-bar" style={`width:${Math.max(item.cases ? 3 : 0, item.cases / maxCases * 100)}%`}></span><strong>{item.cases.toLocaleString()}</strong></div>
+        <div class="bar-cell" role="cell"><span class="cases-bar" style={`width:${Math.max(item.cases ? 3 : 0, (item.cases ?? 0) / maxCases * 100)}%`}></span><strong>{item.cases == null ? '—' : item.cases.toLocaleString()}{item.reported != null && item.eligible != null ? ` · ${item.reported}/${item.eligible}` : ''}</strong></div>
         <div class="bar-cell" role="cell"><span class="papers-bar" style={`width:${Math.max(item.publications ? 8 : 0, item.publications / maxPublications * 100)}%`}></span><strong>{item.publications}</strong></div>
       </div>)}
       <div class="timeline-legend"><span><i class="cases-dot"></i><b>{zh ? 'GIDS 报告记录' : fr ? 'Cas déclarés à GIDS' : 'GIDS reported records'}</b></span><span><i class="papers-dot"></i><b>{zh ? '研究雷达发表数量' : fr ? 'Publications du Radar de recherche' : 'Research Radar publications'}</b></span></div>
@@ -76,7 +77,7 @@ const descriptionFr = `Une vue ciblée des recherches publiées sur ${diseaseNam
         <strong>{event.title}</strong>
       </a>)}
     </div>}
-    <p class="timeline-note">{zh ? '两组条形使用独立刻度。并列展示仅用于导航和比较，并不表示发表活动能够解释监测活动。' : fr ? 'Les deux barres utilisent des échelles indépendantes. Leur alignement facilite uniquement la navigation et la comparaison ; il ne signifie pas que les publications expliquent l’activité de surveillance.' : 'The two bars use independent scales. Their alignment supports navigation and comparison only; it does not claim that publication activity explains surveillance activity.'}</p>
+    <p class="timeline-note">{zh ? '病例数字是国家级已报告部分小计；每月 x/y 表示该月报告国家数/本次导出国家级辖区数。两组条形使用独立刻度，并列不表示发表活动能够解释监测活动。' : fr ? 'Les nombres de cas sont des sous-totaux nationaux déclarés ; x/y indique les juridictions déclarantes sur celles de cet export. Les barres utilisent des échelles indépendantes et leur alignement ne suggère pas que les publications expliquent la surveillance.' : 'Case values are national reported subtotals; x/y shows reporting jurisdictions over national jurisdictions in this export. Bars use independent scales; their alignment does not imply publications explain surveillance activity.'}</p>
     <p class="timeline-note">{zh ? '指南与政策标记表示已收录文献的发布日期；该标记本身不代表官方政策一定在当日发生变化。' : fr ? 'Les marqueurs de recommandations et de politiques indiquent la date des publications du catalogue ; ils n’établissent pas à eux seuls qu’une politique officielle a changé ce jour-là.' : 'Guidance and policy markers identify dated publications in the curated catalogue; they do not by themselves establish that an official policy changed on that date.'}</p>
   </section>
 </ResearchCollectionPage>

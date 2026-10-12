@@ -95,10 +95,9 @@ export default function ResearchAskSurveillance({ initialLanguage = 'en' }: { in
         </div>
       </div>
       <DiseaseCountryCurve
+        contextKind="research"
         dataUrl={`/site-data/diseases/${diseaseId}.json`}
         entityIds={countryCodes.length > 0 ? countryCodes : undefined}
-        topN={countryCodes.length > 0 ? countryCodes.length : 6}
-        height={420}
         initialLanguage={lang}
       />
       <p className="ask-surveillance-note">

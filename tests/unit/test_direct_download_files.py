@@ -393,7 +393,14 @@ def test_iceland_exports_all_125_series_and_9396_observations_without_false_curv
         )
 
     compact = build_country_site_data(country)
-    assert {item["id"] for item in compact["series"]} == {"D033"}
+    assert {item["id"] for item in compact["series"]} == {
+        "D033", *source_only_diseases,
+    }
+    for item in compact["series"]:
+        if item["id"] in source_only_diseases:
+            assert item["x"] == []
+            assert item["c"] == []
+            assert item["available_series_count"] == 2
 
     rows = build_country_download_rows(
         country,

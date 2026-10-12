@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
+from itertools import pairwise
 
 from src.core.country_library import get_country_display_name
+from src.core.reporting_period import infer_display_cadence
 from src.generation.site_series_projection import (
     LEGACY_DATA_LAYER,
     MIXED_DATA_LAYER,
@@ -74,6 +76,164 @@ def latest_or_none(values: list[int | float | None]) -> int | float | None:
         if value is not None:
             return value
     return None
+
+
+def build_national_monthly_summary(
+    country_series: dict[str, dict],
+    jurisdiction_codes: list[str] | tuple[str, ...] | None = None,
+) -> dict:
+    """Build a national-only monthly subtotal with explicit reporting coverage.
+
+    A missing country-month is unknown, never an implicit zero. The subtotal
+    remains useful when partial, but its coverage is carried beside every
+    monthly value so consumers cannot mistake it for a complete global total.
+    """
+    eligible: dict[str, dict] = {}
+    excluded_weekly = 0
+    excluded_unknown = 0
+    inferred_monthly = 0
+    for code, series in country_series.items():
+        if "-" in code:
+            continue
+        granularity = str(series.get("period_granularity") or "").strip().lower()
+        dates = series.get("dates") or []
+        if granularity == "weekly":
+            excluded_weekly += bool(dates)
+            continue
+        if granularity in {"annual", "yearly", "quarterly"}:
+            continue
+        if not dates:
+            continue
+        if granularity == "monthly" and series.get("period_granularity_basis") == "date_pattern":
+            inferred_monthly += 1
+        if granularity in {"", "unknown"}:
+            month_ordinals = [
+                int(date[:4]) * 12 + int(date[5:7])
+                for date in dates
+                if len(date) >= 10
+                and date[:4].isdigit()
+                and date[4:5] == "-"
+                and date[5:7].isdigit()
+                and date[7:10] == "-01"
+            ]
+            month_aligned = (
+                len(month_ordinals) == len(dates)
+                and len(set(month_ordinals)) == len(dates)
+                and any(
+                    right - left == 1
+                    for left, right in pairwise(month_ordinals)
+                )
+            )
+            if not month_aligned:
+                excluded_unknown += 1
+                continue
+            inferred_monthly += 1
+        eligible[code] = series
+
+    by_month: dict[str, dict] = defaultdict(
+        lambda: {
+            "cases": 0,
+            "deaths": 0,
+            "reported_cases": set(),
+            "reported_deaths": set(),
+            "case_definitions": set(),
+            "death_definitions": set(),
+            "case_comparability": set(),
+            "death_comparability": set(),
+        }
+    )
+    for code, series in eligible.items():
+        dates = series.get("dates") or []
+        cases = series.get("cases") or []
+        deaths = series.get("deaths") or []
+        definition = (
+            series.get("metric_type"),
+            series.get("reporting_basis"),
+            series.get("definition_version"),
+        )
+        comparability = str(series.get("comparability") or "").lower()
+        for index, value_date in enumerate(dates):
+            month = str(value_date or "")[:7]
+            if len(month) != 7 or month[4] != "-":
+                continue
+            bucket = by_month[month]
+            if index < len(cases) and cases[index] is not None:
+                bucket["cases"] += cases[index]
+                bucket["reported_cases"].add(code)
+                bucket["case_definitions"].add(definition)
+                bucket["case_comparability"].add(comparability)
+            if index < len(deaths) and deaths[index] is not None:
+                bucket["deaths"] += deaths[index]
+                bucket["reported_deaths"].add(code)
+                bucket["death_definitions"].add(definition)
+                bucket["death_comparability"].add(comparability)
+
+    observed_months = sorted(by_month)
+    months = observed_months
+    if observed_months:
+        try:
+            first_year, first_month = map(int, observed_months[0].split("-"))
+            last_year, last_month = map(int, observed_months[-1].split("-"))
+            first_ordinal = first_year * 12 + first_month - 1
+            last_ordinal = last_year * 12 + last_month - 1
+            months = [
+                f"{ordinal // 12:04d}-{ordinal % 12 + 1:02d}"
+                for ordinal in range(first_ordinal, last_ordinal + 1)
+            ]
+        except (ValueError, IndexError):
+            # Malformed date labels remain visible as observed input labels;
+            # the normal dataset validator reports their source separately.
+            months = observed_months
+    universe = {
+        str(code).strip().upper()
+        for code in (jurisdiction_codes or tuple(country_series))
+        if str(code).strip() and "-" not in str(code)
+    }
+    expected = len(universe or eligible)
+    cases_reported = [len(by_month[month]["reported_cases"]) for month in months]
+    deaths_reported = [len(by_month[month]["reported_deaths"]) for month in months]
+
+    def incompatible(bucket: dict, metric: str) -> bool:
+        reported = bucket[f"reported_{metric}"]
+        if len(reported) < 2:
+            return False
+        definitions = bucket[f"{metric[:-1]}_definitions"]
+        comparability = bucket[f"{metric[:-1]}_comparability"]
+        return (
+            len(definitions) != 1
+            or not all(next(iter(definitions)))
+            or not comparability <= {"direct", "conditional"}
+        )
+
+    cases_incompatible = [incompatible(by_month[month], "cases") for month in months]
+    deaths_incompatible = [incompatible(by_month[month], "deaths") for month in months]
+
+    return {
+        "months": months,
+        "cases": [
+            by_month[month]["cases"]
+            if cases_reported[i] and not cases_incompatible[i]
+            else None
+            for i, month in enumerate(months)
+        ],
+        "deaths": [
+            by_month[month]["deaths"]
+            if deaths_reported[i] and not deaths_incompatible[i]
+            else None
+            for i, month in enumerate(months)
+        ],
+        "coverage": {
+            "scope": "national_jurisdictions_only",
+            "jurisdiction_universe_size": expected,
+            "excluded_weekly_jurisdictions": excluded_weekly,
+            "excluded_unknown_jurisdictions": excluded_unknown,
+            "inferred_monthly_jurisdictions": inferred_monthly,
+            "cases_reported_jurisdictions": cases_reported,
+            "deaths_reported_jurisdictions": deaths_reported,
+            "cases_incompatible_months": cases_incompatible,
+            "deaths_incompatible_months": deaths_incompatible,
+        },
+    }
 
 
 def trailing_provisional_from(
@@ -245,7 +405,11 @@ def _data_layer_summary(disease_series: dict[str, dict]) -> dict:
 def _compact_source_series_metadata(source_series: list[dict]) -> list[dict]:
     """Keep definition/projection semantics in chart payloads without facts duplication."""
 
-    omitted = {"dates", "values", "quality_statuses", "point_quality_statuses"}
+    omitted = {
+        "dates", "values", "quality_statuses", "point_quality_statuses",
+        "incidence_rates", "incidence_sources", "population_values",
+        "population_sources", "period_starts", "period_ends_exclusive",
+    }
     return [
         {key: value for key, value in item.items() if key not in omitted}
         for item in source_series
@@ -392,6 +556,8 @@ def build_country_data(
             recs,
             source_by_disease.get(disease_id) if source_records is not None else None,
         )
+        declared_granularity = provenance.get("period_granularity")
+        display_granularity = declared_granularity or infer_display_cadence(series_dates)
         weekly_equiv_cases = calculate_weekly_equivalent(
             series_dates,
             series_cases,
@@ -435,6 +601,11 @@ def build_country_data(
                 [rec.get("definition_version") for rec in recs]
             ),
             **provenance,
+            "period_granularity": display_granularity,
+            "period_granularity_basis": (
+                "source" if declared_granularity else
+                "date_pattern" if display_granularity else "unknown"
+            ),
         }
 
     incidence_source_counts: dict[str, int] = defaultdict(int)
@@ -563,7 +734,7 @@ def build_country_site_data(country_data: dict) -> dict:
     compact_series = []
     for entry in disease_series.values():
         dates = entry.get("dates") or []
-        if not dates:
+        if not dates and not entry.get("source_series"):
             continue
         incidence_rates = entry.get("incidence_rates") or []
         incidence_sources = entry.get("incidence_sources") or []
@@ -610,6 +781,7 @@ def build_country_site_data(country_data: dict) -> dict:
             "projection_policy": entry.get("projection_policy") or "legacy_fallback",
             "loss_risk": entry.get("loss_risk"),
             "period_granularity": entry.get("period_granularity"),
+            "period_granularity_basis": entry.get("period_granularity_basis"),
             "available_series_count": entry.get("available_series_count") or 0,
             "coverage_status": entry.get("coverage_status"),
             "selected_series_codes": entry.get("selected_series_codes") or [],
@@ -621,6 +793,8 @@ def build_country_site_data(country_data: dict) -> dict:
             "point_granularities": entry.get("point_granularities") or [],
             "point_series_codes": entry.get("point_series_codes") or [],
             "point_data_layers": entry.get("point_data_layers") or [],
+            "recorded_at_as_of": entry.get("recorded_at_as_of"),
+            "recorded_history_complete": entry.get("recorded_history_complete"),
         }
         if ri:
             compact_entry["ri"] = ri
@@ -643,6 +817,10 @@ def build_country_site_data(country_data: dict) -> dict:
             "dc": country_data.get("disease_count"),
             "dr": country_data.get("date_range"),
             "data_layer_summary": country_data.get("data_layer_summary") or {},
+            "recorded_at_as_of": country_data.get("recorded_at_as_of"),
+            "recorded_history_complete": country_data.get(
+                "recorded_history_complete"
+            ),
         },
         "dates": shared_dates,
         "sources": source_labels,
@@ -693,6 +871,8 @@ def build_disease_data(
     disease_info: dict,
     all_records_by_country: dict[str, list],
     source_records_by_country: dict[str, list] | None = None,
+    *,
+    jurisdiction_codes: list[str] | tuple[str, ...] | None = None,
 ) -> dict:
     """Build per-disease JSON with time-series across all countries."""
     country_series = {}
@@ -775,6 +955,8 @@ def build_disease_data(
             disease_records,
             disease_source_records if source_records_by_country else None,
         )
+        declared_granularity = provenance.get("period_granularity")
+        display_granularity = declared_granularity or infer_display_cadence(series_dates)
         country_series[country_code] = {
             "dates": series_dates,
             "cases": series_cases,
@@ -810,7 +992,26 @@ def build_disease_data(
             "definition_version": dominant_value(
                 [rec.get("definition_version") for rec in disease_records]
             ),
+            "recorded_at_as_of": dominant_value(
+                [rec.get("recorded_at_as_of") for rec in disease_source_records]
+            ),
+            "recorded_history_complete": (
+                bool(disease_source_records)
+                and all(
+                    rec.get("recorded_history_complete") is True
+                    for rec in disease_source_records
+                )
+                if any(
+                    rec.get("recorded_at_as_of") for rec in disease_source_records
+                )
+                else None
+            ),
             **provenance,
+            "period_granularity": display_granularity,
+            "period_granularity_basis": (
+                "source" if declared_granularity else
+                "date_pattern" if display_granularity else "unknown"
+            ),
         }
 
     # Country-level global summaries must not add child jurisdictions to their
@@ -822,35 +1023,16 @@ def build_disease_data(
     subdivision_country_codes = sorted(
         code for code in country_series if "-" in code
     )
-    all_disease_records = [
-        r
-        for country_code, recs in all_records_by_country.items()
-        if "-" not in country_code
-        for r in recs
-        if r["disease_id"] == disease_id
-    ]
-    monthly: dict[str, dict] = defaultdict(lambda: {"cases": 0, "deaths": 0})
-    for r in all_disease_records:
-        granularity = str(
-            _series_context_for_records([r]).get("period_granularity") or ""
-        ).lower()
-        if granularity in {"annual", "yearly", "quarterly"}:
-            continue
-        if r["year_month"]:
-            if r.get("cases") is not None:
-                monthly[r["year_month"]]["cases"] += r["cases"]
-            if r.get("deaths") is not None:
-                monthly[r["year_month"]]["deaths"] += r["deaths"]
-    months_sorted = sorted(monthly.keys())
+    global_monthly = build_national_monthly_summary(
+        national_country_series,
+        jurisdiction_codes
+        or [code for code in all_records_by_country if "-" not in code],
+    )
 
     return {
         **disease_info,
         "country_series": country_series,
-        "global_monthly": {
-            "months": months_sorted,
-            "cases": [monthly[m]["cases"] for m in months_sorted],
-            "deaths": [monthly[m]["deaths"] for m in months_sorted],
-        },
+        "global_monthly": global_monthly,
         "total_cases": sum(cs["total_cases"] for cs in national_country_series.values()),
         "total_deaths": sum(cs["total_deaths"] for cs in national_country_series.values()),
         "aggregation_scope": "national_jurisdictions_only",
@@ -892,7 +1074,7 @@ def build_disease_site_data(
     compact_series = []
     for country_code, entry in country_series.items():
         dates = entry.get("dates") or []
-        if not dates:
+        if not dates and not entry.get("source_series"):
             continue
         incidence_rates = entry.get("incidence_rates") or []
         incidence_sources = entry.get("incidence_sources") or []
@@ -935,6 +1117,7 @@ def build_disease_site_data(
             "projection_policy": entry.get("projection_policy") or "legacy_fallback",
             "loss_risk": entry.get("loss_risk"),
             "period_granularity": entry.get("period_granularity"),
+            "period_granularity_basis": entry.get("period_granularity_basis"),
             "available_series_count": entry.get("available_series_count") or 0,
             "coverage_status": entry.get("coverage_status"),
             "selected_series_codes": entry.get("selected_series_codes") or [],
@@ -966,6 +1149,10 @@ def build_disease_site_data(
             "td": disease_data.get("total_deaths"),
             "cc": len(country_series),
             "data_layer_summary": disease_data.get("data_layer_summary") or {},
+            "recorded_at_as_of": disease_data.get("recorded_at_as_of"),
+            "recorded_history_complete": disease_data.get(
+                "recorded_history_complete"
+            ),
         },
         "dates": shared_dates,
         "sources": source_labels,
@@ -974,5 +1161,6 @@ def build_disease_site_data(
             "months": global_monthly.get("months") or [],
             "cases": global_monthly.get("cases") or [],
             "deaths": global_monthly.get("deaths") or [],
+            "coverage": global_monthly.get("coverage"),
         },
     }

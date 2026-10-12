@@ -94,6 +94,7 @@ pnpm-debug.log*
 /data/backups/
 /backups/
 /data/system-settings.json
+/data/*.lock
 !/data/.gitkeep
 /configs/literature/weekly_ai_reviews.json.lock
 

@@ -11,6 +11,7 @@ import {
 interface Props {
   summaries: YearSummary[];
   metricLabel: string;
+  lang: 'en' | 'zh' | 'fr';
   colors: MonthlyBarChartColors;
   title?: string;
   height: number | string;
@@ -19,6 +20,7 @@ interface Props {
 export default function MonthlyBarPlot({
   summaries,
   metricLabel,
+  lang,
   colors,
   title,
   height,
@@ -27,10 +29,11 @@ export default function MonthlyBarPlot({
     () => buildMonthlyBarOption({
       summaries,
       metricLabel,
+      lang,
       colors,
       title,
     }),
-    [colors, metricLabel, summaries, title]
+    [colors, lang, metricLabel, summaries, title]
   );
 
   return (

@@ -38,7 +38,7 @@ def _packet() -> dict:
 def test_attention_score_is_canonical_and_legacy_risk_keys_are_aliases() -> None:
     packet = _packet()
 
-    assert packet["method_version"] == "report_v4.1"
+    assert packet["method_version"] == "report_v4.3"
     assert packet["score_semantics"]["type"] == "surveillance_attention_priority"
     assert "not a public-health risk estimate" in packet["score_semantics"]["description"]["en"]
     assert packet["attention_ranking"] == packet["risk_ranking"]

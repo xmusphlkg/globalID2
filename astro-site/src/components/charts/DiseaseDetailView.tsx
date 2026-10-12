@@ -1,3 +1,4 @@
+import ReportSurveillanceCurve from './surveillance/components/ReportSurveillanceCurve';
 // src/components/charts/DiseaseDetailView.tsx
 // Journal-publication-style disease detail view for individual disease pages.
 // Sections: Summary → Highlights → Key Findings → Trend Analysis
@@ -8,6 +9,7 @@ import EChartsReact from '../../lib/echartsReact';
 import { marked } from 'marked';
 import echarts from '../../lib/echarts';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
+import type { CountryDatasetSeriesEntry } from './countryDataset';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,14 +32,9 @@ interface DiseaseMeta {
   slug: string;
 }
 
-interface DiseaseSeries {
-  dates: string[];
-  cases: number[];
-  deaths: number[];
-  incidence_rates: (number | null)[];
-  total_cases: number;
-  total_deaths: number;
-}
+type DiseaseSeries = Pick<CountryDatasetSeriesEntry, 'dates' | 'cases' | 'deaths' | 'incidence_rates' | 'total_cases'>
+  & Partial<CountryDatasetSeriesEntry>
+  & { snapshot_version?: string };
 
 interface ReportMeta {
   id: number;
@@ -46,12 +43,14 @@ interface ReportMeta {
   period_end: string;
   country_name: string;
   country_code: string;
+  snapshot_version?: string | null;
 }
 
 interface Props {
   diseaseMeta: DiseaseMeta;
   sections: DiseaseSection[];
   series: DiseaseSeries | null;
+  latestSeries?: DiseaseSeries | null;
   reportMeta: ReportMeta;
   globalDiseasePath?: string | null;
   initialLanguage?: 'en' | 'zh' | 'fr';
@@ -151,143 +150,6 @@ const YEAR_PALETTE_LIGHT = [
   '#0891b2', '#65a30d',
 ];
 
-// ─── Epidemic Curve (dual-axis: cases bars + deaths line) ────────────────────
-
-function EpidemicCurveChart({ series, theme, lang, showDeaths }: {
-  series: DiseaseSeries;
-  theme: 'light' | 'dark';
-  lang: 'en' | 'zh' | 'fr';
-  showDeaths: boolean;
-}) {
-  const t = chartTokens(theme);
-
-  const option = useMemo(() => {
-    const casesLabel = ui(lang, 'Cases', '病例数', 'Cas');
-    const deathsLabel = ui(lang, 'Deaths', '死亡数', 'Décès');
-
-    return {
-      backgroundColor: t.bg,
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'cross', crossStyle: { color: t.line } },
-        backgroundColor: t.tooltipBg,
-        borderColor: t.tooltipBorder,
-        borderWidth: 1,
-        textStyle: { color: t.tooltipFont, fontSize: 12 },
-        formatter: (params: any[]) => {
-          const d = params[0]?.axisValue;
-          const dateStr = d ? new Date(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'short' }) : '';
-          let html = `<div style="font-size:11px;color:${t.font};margin-bottom:4px">${dateStr}</div>`;
-          params.forEach((p: any) => {
-            const v = p.value?.[1] ?? p.value ?? 0;
-            html += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
-              <span style="width:8px;height:8px;border-radius:50%;background:${p.color};display:inline-block"></span>
-              <span style="color:${t.font}">${p.seriesName}:</span>
-              <span style="color:${t.tooltipFont};font-weight:600">${v.toLocaleString()}</span>
-            </div>`;
-          });
-          return html;
-        },
-      },
-      legend: {
-        show: showDeaths,
-        top: 4, right: 8,
-        textStyle: { color: t.font, fontSize: 11 },
-        itemWidth: 14, itemHeight: 8,
-        backgroundColor: t.legendBg,
-        borderColor: t.legendBorder,
-        borderWidth: 1,
-        padding: [4, 8],
-        borderRadius: 0,
-      },
-      grid: { left: 60, right: showDeaths ? 60 : 16, top: showDeaths ? 44 : 20, bottom: 60 },
-      xAxis: {
-        type: 'time' as const,
-        axisLabel: {
-          color: t.font, fontSize: 10,
-          formatter: (val: number) => {
-            const d = new Date(val);
-            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-          },
-          rotate: 30,
-        },
-        axisLine: { lineStyle: { color: t.line } },
-        axisTick: { lineStyle: { color: t.tick } },
-        splitLine: { show: false },
-      },
-      yAxis: showDeaths ? [
-        {
-          type: 'value' as const,
-          name: casesLabel,
-          nameTextStyle: { color: t.casesColor, fontSize: 11, fontWeight: 600, padding: [0, 0, 0, 50] },
-          axisLabel: { color: t.font, fontSize: 10, formatter: fmtNum },
-          axisLine: { lineStyle: { color: t.casesColor, width: 2 } },
-          splitLine: { lineStyle: { color: t.grid } },
-          min: 0,
-        },
-        {
-          type: 'value' as const,
-          name: deathsLabel,
-          nameTextStyle: { color: t.deathsColor, fontSize: 11, fontWeight: 600, padding: [0, 50, 0, 0] },
-          axisLabel: { color: t.font, fontSize: 10, formatter: fmtNum },
-          axisLine: { lineStyle: { color: t.deathsColor, width: 2 } },
-          splitLine: { show: false },
-          min: 0,
-        },
-      ] : {
-        type: 'value' as const,
-        name: casesLabel,
-        nameTextStyle: { color: t.casesColor, fontSize: 11, fontWeight: 600, padding: [0, 0, 0, 50] },
-        axisLabel: { color: t.font, fontSize: 10, formatter: fmtNum },
-        axisLine: { lineStyle: { color: t.casesColor, width: 2 } },
-        splitLine: { lineStyle: { color: t.grid } },
-        min: 0,
-      },
-      dataZoom: [{
-        type: 'slider' as const, bottom: 4, height: 18,
-        backgroundColor: t.sliderBg, borderColor: t.line,
-        textStyle: { color: t.font, fontSize: 9 },
-        fillerColor: theme === 'light' ? 'rgba(37,99,235,0.12)' : 'rgba(96,165,250,0.12)',
-        start: Math.max(0, 100 - Math.round(60 / series.dates.length * 100)),
-        end: 100,
-      }],
-      series: [
-        {
-          name: casesLabel,
-          type: 'bar' as const,
-          yAxisIndex: 0,
-          barMaxWidth: 10,
-          itemStyle: { color: t.casesColor, opacity: 0.8 },
-          emphasis: { itemStyle: { opacity: 1 } },
-          data: series.dates.map((d, i) => [d, series.cases[i] ?? 0]),
-        },
-        ...(showDeaths ? [{
-          name: deathsLabel,
-          type: 'line' as const,
-          yAxisIndex: 1,
-          smooth: true,
-          showSymbol: false,
-          symbolSize: 4,
-          lineStyle: { color: t.deathsColor, width: 2 },
-          itemStyle: { color: t.deathsColor },
-          data: series.dates.map((d, i) => [d, series.deaths[i] ?? 0]),
-        }] : []),
-      ],
-    };
-  }, [series, theme, lang, t, showDeaths]);
-
-  return (
-    <EChartsReact
-      echarts={echarts}
-      option={option}
-      notMerge
-      style={{ width: '100%', height: 360 }}
-    />
-  );
-}
-
-// ─── Monthly Distribution Chart ───────────────────────────────────────────────
-
 function MonthlyDistributionChart({ series, metric, theme, lang }: {
   series: DiseaseSeries;
   metric: 'cases' | 'deaths';
@@ -302,12 +164,12 @@ function MonthlyDistributionChart({ series, metric, theme, lang }: {
     : ui(lang, 'Deaths', '死亡数', 'Décès');
 
   const grouped = useMemo(() => {
-    const byYear: Record<string, number[]> = {};
+    const byYear: Record<string, (number | null)[]> = {};
     series.dates.forEach((d, i) => {
       const [year, mon] = d.substring(0, 7).split('-');
       const monIdx = parseInt(mon, 10) - 1;
-      if (!byYear[year]) byYear[year] = new Array(12).fill(0);
-      byYear[year][monIdx] = values[i] ?? 0;
+      if (!byYear[year]) byYear[year] = new Array(12).fill(null);
+      if (values[i] != null) byYear[year][monIdx] = (byYear[year][monIdx] ?? 0) + values[i]!;
     });
     return byYear;
   }, [series, values]);
@@ -531,7 +393,7 @@ function categoryLabel(value: string, lang: 'en' | 'zh' | 'fr') {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function DiseaseDetailView({ diseaseMeta, sections, series, reportMeta, globalDiseasePath = null, initialLanguage = 'en' }: Props) {
+export default function DiseaseDetailView({ diseaseMeta, sections, series, latestSeries, reportMeta, globalDiseasePath = null, initialLanguage = 'en' }: Props) {
   const theme = useTheme();
   const lang = useLang(initialLanguage);
   const localePrefix = lang === 'zh' ? '/zh' : lang === 'fr' ? '/fr' : '';
@@ -561,7 +423,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
   const totalCases  = series?.total_cases ?? 0;
   const totalDeaths = series?.total_deaths ?? 0;
   const cfr = totalCases > 0 ? ((totalDeaths / totalCases) * 100) : 0;
-  const hasDeathsData = (series?.deaths ?? []).some((value) => (value ?? 0) > 0) || totalDeaths > 0;
+  const hasDeathsData = [...(series?.deaths ?? []), ...(latestSeries?.deaths ?? [])].some((value) => (value ?? 0) > 0) || totalDeaths > 0;
   const [showDeathMetrics, setShowDeathMetrics] = useState(hasDeathsData);
 
   useEffect(() => {
@@ -569,6 +431,23 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
   }, [hasDeathsData]);
 
   const hasSeries = !!series && series.dates.length > 0;
+  const curveCaption: [string, string, string] = reportMeta.snapshot_version
+    ? latestSeries?.dates.length
+      ? [
+          'Archived report observations are compared with current published data over the report period. Cases and deaths have separate panels.',
+          '将报告归档观察值与报告时段内的当前发布数据对照。病例与死亡使用独立面板。',
+          'Les observations archivées sont comparées aux données publiées actuelles sur la période du rapport. Cas et décès en panneaux séparés.',
+        ]
+      : [
+          'Archived observations from this report. Cases and deaths have separate panels.',
+          '本报告归档的观察值。病例与死亡使用独立面板。',
+          'Observations archivées avec ce rapport. Cas et décès en panneaux séparés.',
+        ]
+    : [
+        'Reported observations within this report’s period, using the currently published dataset. Cases and deaths have separate panels; this is not an archived data snapshot.',
+        '使用当前发布数据，查看报告期间内的观察值。病例与死亡使用独立面板；此视图并非归档数据快照。',
+        'Observations de la période du rapport issues des données actuellement publiées. Cas et décès en panneaux séparés ; il ne s’agit pas d’un instantané archivé.',
+      ];
 
   // Fix highlights: replace bullet "• " and <br/> with proper HTML
   function renderHighlights(html: string) {
@@ -743,23 +622,11 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
             {/* Figure 1: Epidemic Curve */}
             <Figure
               number={1}
-              caption={
-                showDeathMetrics
-                  ? (lang === 'zh'
-                    ? `${diseaseMeta.name_zh || diseaseMeta.name_en} 流行曲线——月度病例数（柱）与死亡数（线），双纵轴`
-                    : lang === 'fr'
-                      ? `Courbe épidémique de ${localizedDiseaseName(diseaseMeta, 'fr')} — cas mensuels (barres) et décès (ligne), double axe`
-                      : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases (bars, left axis) and deaths (line, right axis) over the full surveillance period.`)
-                  : (lang === 'zh'
-                    ? `${diseaseMeta.name_zh || diseaseMeta.name_en} 流行曲线——完整监测期的月度病例数`
-                    : lang === 'fr'
-                      ? `Courbe épidémique de ${localizedDiseaseName(diseaseMeta, 'fr')} — cas mensuels sur toute la période de surveillance`
-                      : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases over the full surveillance period.`)
-              }
+              caption={ui(lang, ...curveCaption)}
               theme={theme}
               lang={lang}
             >
-              <EpidemicCurveChart series={series!} theme={theme} lang={lang} showDeaths={showDeathMetrics && hasDeathsData} />
+              <ReportSurveillanceCurve series={series!} latestSeries={latestSeries} disease={diseaseMeta} report={reportMeta} lang={lang} showDeaths={showDeathMetrics && hasDeathsData} />
             </Figure>
 
             {/* Figures 2 & 3: Monthly Distribution side by side */}

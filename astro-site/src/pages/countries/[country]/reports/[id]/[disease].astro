@@ -4,6 +4,7 @@
 import ReportLayout from '../../../../../layouts/ReportLayout.astro';
 import DownloadPanel from '../../../../../components/DownloadPanel.astro';
 import DiseaseDetailView from '../../../../../components/charts/DiseaseDetailView';
+import { readReportSnapshotSeries } from '../../../../../components/charts/surveillance/adapters/reportSnapshot';
 import { isReportV4 } from '../../../../../lib/report-routes';
 import {
   loadReportDetail,
@@ -140,22 +141,36 @@ function sourceScopeNote(lang: Lang) {
     : 'Case scope follows the source definition; trend interpretation still requires stratified review.';
 }
 
-function diseaseSeries(row: any) {
-  if (!row || !countryData?.disease_series) return null;
+function currentDiseaseSeries(row: any) {
+  if (!row) return null;
+  if (!countryData?.disease_series) return null;
   const byId = countryData.disease_series[row.disease_id];
   const bySlug = Object.values(countryData.disease_series).find((item: any) => item.slug === row.slug) as any;
   const source = byId ?? bySlug;
   if (!source) return null;
   const deaths = Array.isArray(source.deaths) ? source.deaths : [];
   return {
+    ...source,
     dates: source.dates ?? [],
     cases: source.cases ?? [],
     deaths,
     incidence_rates: source.incidence_rates ?? [],
-    total_cases: Number(row.total_cases ?? 0),
-    total_deaths: deaths.some((value: number) => Number(value) > 0)
-      ? deaths.reduce((sum: number, value: number) => sum + Number(value || 0), 0)
-      : 0,
+    total_cases: Number(source.total_cases ?? source.cases?.reduce((sum: number, value: number | null) => sum + Number(value ?? 0), 0) ?? 0),
+    total_deaths: deaths.some((value: number | null) => value !== null && value !== undefined)
+      ? deaths.reduce((sum: number, value: number | null) => sum + Number(value ?? 0), 0)
+      : null,
+  };
+}
+
+function diseaseSeries(row: any) {
+  if (!row) return null;
+  const archived = readReportSnapshotSeries(report?.metadata?.surveillance_snapshot, row.disease_id);
+  if (!archived) return currentDiseaseSeries(row);
+  return {
+    ...archived,
+    name_en: row.name_en ?? archived.name_en,
+    name_zh: row.name_zh ?? archived.name_zh,
+    name_fr: row.name_fr ?? archived.name_fr,
   };
 }
 
@@ -305,6 +320,7 @@ function buildSections(row: any, series: any) {
 }
 
 const series = diseaseSeries(diseaseRow);
+const latestSeries = series?.snapshot_version ? currentDiseaseSeries(diseaseRow) : null;
 const sections = buildSections(diseaseRow, series);
 const diseaseMeta = diseaseRow ? {
   disease_id: diseaseRow.disease_id,
@@ -361,6 +377,7 @@ const seo = {
         diseaseMeta={diseaseMeta}
         sections={sections}
         series={series}
+        latestSeries={latestSeries}
         reportMeta={{
           id: Number(id),
           title: zh ? reportTitleZh : fr ? (document?.title?.fr ?? `Rapport n° ${id}`) : reportTitleEn,
@@ -368,6 +385,7 @@ const seo = {
           period_end: report.period_end,
           country_name: zh ? countryNameZh : countryNameEn,
           country_code: String(country),
+          snapshot_version: series?.snapshot_version ?? null,
         }}
         globalDiseasePath={globalDiseasePath}
         initialLanguage={locale}

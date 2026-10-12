@@ -422,7 +422,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
           {zh ? '各疾病监测趋势' : fr ? 'Tendances de surveillance par maladie' : 'Surveillance trends by disease'}
         </h2>
         <p class="figure-caption mt-2">
-          {zh ? '默认先查看一条监测序列及其历史参照；比较模式仅显示共同观测时间窗，并分开不同报告频率；暴发模式只适用于按发病时间统计的日度或周度数据。' : fr ? 'Commencez par une série de surveillance et sa référence historique. Le mode comparaison se limite à la fenêtre commune et sépare les fréquences ; le mode épidémie ne concerne que les données quotidiennes ou hebdomadaires par date d’apparition.' : 'Start with one surveillance series and its historical reference. Comparison mode restricts series to their common observed window and separates unlike reporting cadences; outbreak mode is available only for daily or weekly onset-time data.'}
+          {zh ? '选择疾病和指标，调整时间范围后查看图表或数据表。页面下方提供完整数据下载。不同来源或报告频率的数据会分别标明。' : fr ? 'Choisissez une maladie et une mesure, ajustez la période, puis consultez le graphique ou le tableau. Le jeu de données complet est disponible plus bas. Les sources et fréquences différentes sont signalées séparément.' : 'Choose a disease and measure, adjust the time range, then view the chart or table. Download the full dataset below. Different sources and reporting frequencies are labeled separately.'}
         </p>
       <div class="mt-5">
         {countryData?.disease_series ? (
@@ -430,8 +430,6 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
             client:visible
             dataUrl={countryDataUrl}
             sourceSeriesUrl={countrySourceSeriesUrl}
-            topN={10}
-            height={420}
             sourceMeta={chartSourceMeta}
             initialLanguage={locale}
           />

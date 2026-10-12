@@ -152,7 +152,7 @@ const structuredData = {
               data-topic-name-map={JSON.stringify(Object.fromEntries(Object.entries(RESEARCH_TOPIC_LABELS).map(([key, labels]) => [key, labels.fr])))}
             >
               {serverRenderedArticles.map((article: any, index: number) => (
-                <ResearchArticleCard article={article} index={index} initialVisible={initialVisibleArticles} locale={locale} />
+                <ResearchArticleCard article={article} index={index} initialVisible={initialVisibleArticles} locale={locale} searchable={false} />
               ))}
             </div>
             {articles.length > initialVisibleArticles && (
@@ -240,7 +240,6 @@ const structuredData = {
     topicText: (article.topics ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
     topicSlugs: (article.topics ?? []).map((item: any) => slugifyTopic(item.name)).filter(Boolean).join(' '),
   });
-  const articleSearchText = (article: any, tokens = articleTokens(article)) => `${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText}`.toLowerCase();
   const loadCatalogue = () => {
     if (!cataloguePromise) {
       cataloguePromise = fetch('/research/catalogue.json')
@@ -272,7 +271,6 @@ const structuredData = {
     const tokens = articleTokens(article);
     const card = make('article', 'research-card');
     card.dataset.researchCard = '';
-    card.dataset.search = articleSearchText(article, tokens);
     card.dataset.disease = tokens.diseaseText;
     card.dataset.diseaseIds = tokens.diseaseIds;
     card.dataset.country = tokens.countryText;

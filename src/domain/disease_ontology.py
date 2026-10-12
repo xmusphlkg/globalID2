@@ -617,6 +617,55 @@ class DiseaseSeriesObservation(BaseModel):
     )
 
 
+class DiseaseSeriesObservationRevision(BaseModel):
+    """Immutable ingestion-time snapshot of a changed source observation.
+
+    ``recorded_at`` means the application first observed this exact source
+    state. It is not a substitute for an upstream publication timestamp.
+    The initial ledger entry may be seeded from the current row's audit time
+    when an older observation is first touched after this table is introduced.
+    """
+
+    __tablename__ = "disease_series_observation_revisions"
+
+    time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    series_code: Mapped[str] = mapped_column(
+        String(180),
+        ForeignKey("disease_surveillance_series.series_code", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    geography_key: Mapped[str] = mapped_column(String(240), nullable=False)
+    dimension_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    value: Mapped[Optional[float]] = mapped_column(Float)
+    unit: Mapped[str] = mapped_column(String(80), nullable=False)
+    suppressed: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    suppression_reason: Mapped[Optional[str]] = mapped_column(String(240))
+    quality_status: Mapped[str] = mapped_column(String(30), nullable=False)
+    dimensions = Column(JSON, nullable=False, default=dict)
+    raw_data = Column(JSON, nullable=False, default=dict)
+    metadata_ = Column("metadata", JSON, nullable=False, default=dict)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "time",
+            "series_code",
+            "geography_key",
+            "dimension_key",
+            "recorded_at",
+            name="uq_disease_series_observation_revision",
+        ),
+        Index(
+            "idx_disease_series_observation_revision_asof",
+            "series_code",
+            "geography_key",
+            "dimension_key",
+            "time",
+            "recorded_at",
+        ),
+    )
+
+
 __all__ = [
     "AGGREGATION_POLICY_VALUES",
     "ASSERTION_STATUS_VALUES",
@@ -627,11 +676,12 @@ __all__ = [
     "SERIES_AVAILABILITY_VALUES",
     "SOURCE_AVAILABILITY_STATUS_VALUES",
     "SOURCE_AVAILABILITY_TARGET_KIND_VALUES",
-    "DiseaseTaxonomyNode",
-    "DiseaseTaxonomyEdge",
     "DiseaseConceptAssignment",
     "DiseaseConceptRelation",
-    "DiseaseSurveillanceSeries",
-    "DiseaseSourceAvailability",
     "DiseaseSeriesObservation",
+    "DiseaseSeriesObservationRevision",
+    "DiseaseSourceAvailability",
+    "DiseaseSurveillanceSeries",
+    "DiseaseTaxonomyEdge",
+    "DiseaseTaxonomyNode",
 ]

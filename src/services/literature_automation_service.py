@@ -602,13 +602,21 @@ class LiteratureAutomationService:
         if not 1 <= effective_lock_timeout <= 300:
             raise ValueError("lock_timeout_seconds must be between 1 and 300")
         async with _RUN_LOCK:
-            result = await self._reconcile_database(
-                config,
-                dry_run=dry_run,
-                diagnostics=diagnostics,
-                batch_size=effective_batch_size,
-                statement_timeout_seconds=effective_statement_timeout,
-                lock_timeout_seconds=effective_lock_timeout,
+            from src.literature.pipeline import _retry_postgres_deadlock
+
+            # Retry the whole rolled-back transaction with a fresh session and
+            # counters. Export only after a successful commit.
+            result = await _retry_postgres_deadlock(
+                lambda: self._reconcile_database(
+                    config,
+                    dry_run=dry_run,
+                    diagnostics=diagnostics,
+                    batch_size=effective_batch_size,
+                    statement_timeout_seconds=effective_statement_timeout,
+                    lock_timeout_seconds=effective_lock_timeout,
+                ),
+                max_retries=config.persistence_deadlock_max_retries,
+                base_delay_seconds=config.persistence_deadlock_retry_base_seconds,
             )
             should_export = config.autopilot_export_on_change if export is None else export
             if not dry_run and should_export and result["changed"]:
