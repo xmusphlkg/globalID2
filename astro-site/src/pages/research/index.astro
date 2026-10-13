@@ -370,6 +370,7 @@ const itemList = {
   </div>
 
   <script>
+  import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
     const search = document.querySelector<HTMLInputElement>('#research-search');
     const disease = document.querySelector<HTMLSelectElement>('#research-disease');
     const country = document.querySelector<HTMLSelectElement>('#research-country');
@@ -398,7 +399,6 @@ const itemList = {
     const studyTypeMap = parseMap(list?.dataset.studyTypeMap);
     const topicNameMap = parseMap(list?.dataset.topicNameMap);
     let visibleLimit = initialVisible;
-    let cataloguePromise: Promise<any[]> | null = null;
     const preset = new URLSearchParams(location.search).get('disease')?.toLowerCase();
     if (preset && disease && [...disease.options].some(option => option.value === preset)) disease.value = preset;
     const hasToken = (value: string | undefined, token: string) => (value ?? '').split(/\s+/).includes(token);
@@ -449,17 +449,7 @@ const itemList = {
       populationText: (article.populations ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
     });
     const articleSearchText = (article: any, tokens = articleTokens(article)) => `${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText} ${tokens.pathogenText} ${tokens.populationText}`.toLowerCase();
-    const loadCatalogue = () => {
-      if (!cataloguePromise) {
-        cataloguePromise = fetch('/research/catalogue.json')
-          .then(response => {
-            if (!response.ok) throw new Error(`Research catalogue request failed: ${response.status}`);
-            return response.json();
-          })
-          .then(payload => Array.isArray(payload?.articles) ? payload.articles : []);
-      }
-      return cataloguePromise;
-    };
+    const loadCatalogue = (limit?: number) => loadResearchCatalogue({ limit });
     const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
       const element = document.createElement(tag);
       if (className) element.className = className;
@@ -634,17 +624,17 @@ const itemList = {
         && (!publishedTo?.value || String(article.published_at ?? '').slice(0, 10) <= publishedTo.value)
         && (!oa?.checked || article.open_access_status === 'open');
     };
-    const renderArticles = (articles: any[]) => {
+    const renderArticles = (articles: any[], knownTotal = articles.length) => {
       if (!list) return;
       const visible = articles.slice(0, visibleLimit);
       list.replaceChildren(...visible.map(renderArticleCard));
       if (count) count.textContent = currentLang() === 'zh'
-        ? (articles.length === visible.length ? `${articles.length} 篇文献` : `已显示 ${visible.length} / ${articles.length} 篇文献`)
+        ? (knownTotal === visible.length ? `${knownTotal} 篇文献` : `已显示 ${visible.length} / ${knownTotal} 篇文献`)
         : currentLang() === 'fr'
-          ? (articles.length === visible.length ? `${articles.length} publication${articles.length === 1 ? '' : 's'}` : `${visible.length} publications sur ${articles.length} affichées`)
-          : (articles.length === visible.length ? `${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}` : `${visible.length} of ${articles.length} publications shown`);
-      empty?.classList.toggle('hidden', articles.length > 0);
-      if (loadMore) loadMore.hidden = articles.length <= visibleLimit;
+          ? (knownTotal === visible.length ? `${knownTotal} publication${knownTotal === 1 ? '' : 's'}` : `${visible.length} publications sur ${knownTotal} affichées`)
+          : (knownTotal === visible.length ? `${knownTotal} ${knownTotal === 1 ? 'publication' : 'publications'}` : `${visible.length} of ${knownTotal} publications shown`);
+      empty?.classList.toggle('hidden', knownTotal > 0);
+      if (loadMore) loadMore.hidden = knownTotal <= visibleLimit;
     };
     const applyFilters = async (requireCatalogue = filtersAreActive() || visibleLimit > initialVisible) => {
       if (!requireCatalogue) {
@@ -658,8 +648,10 @@ const itemList = {
         return;
       }
       try {
-        const articles = await loadCatalogue();
-        renderArticles(articles.filter(matchesFilters));
+        const activeFilters = filtersAreActive();
+        const articles = await loadCatalogue(activeFilters ? undefined : visibleLimit);
+        const matching = articles.filter(matchesFilters);
+        renderArticles(matching, activeFilters ? matching.length : totalArticles);
       } catch (error) {
         console.error(error);
         if (loadMore) loadMore.hidden = true;

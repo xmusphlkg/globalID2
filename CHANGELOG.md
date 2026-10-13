@@ -2,6 +2,19 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.10.6] - 2026-10-13
+
+### Changed
+
+- Rebuild only changed Research Radar article pages and social cards during data releases; automatically rebuild all articles when shared templates or assets change.
+- Split the browser research catalogue into bounded JSON chunks, so catalogue growth no longer creates one ever-growing static file.
+- Read site and database dates from small current release artifacts, allowing unchanged article pages to be reused safely.
+- Literature-triggered releases skip raw crawler archive and download repository publication while retaining existing GitHub download links.
+
+### Validation
+
+- Verified full and incremental production builds, catalogue integrity, SEO, localization, and the published release.
+
 ## [0.10.5] - 2026-10-12
 
 ### Fixed

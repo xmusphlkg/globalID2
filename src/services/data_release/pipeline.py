@@ -137,12 +137,16 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     raw_archive_branch = str(
         getattr(raw_archive_cfg, "branch", runtime.raw_archive_branch) or runtime.raw_archive_branch
     )
-    if not raw_archive_cfg.enabled:
+    literature_only = bool(input_data.get("incremental_site")) and not input_data.get("incremental_country_codes")
+    if not raw_archive_cfg.enabled or literature_only:
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid,
             entry_type="info",
             title="Raw Crawler Archive Skipped",
-            content="RAW_ARCHIVE__ENABLED is disabled for this run.",
+            content=(
+                "Literature-triggered incremental release; raw crawler archives publish on the full release path."
+                if literature_only else "RAW_ARCHIVE__ENABLED is disabled for this run."
+            ),
             content_type="text",
             metadata={
                 "event": "raw_git_archive_skipped",
@@ -225,7 +229,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     await runtime.task_manager.update_task_progress(task.task_uuid, 60)
 
     repository_publications: list[tuple[str, Awaitable[None]]] = []
-    if raw_archive_cfg.enabled:
+    if raw_archive_cfg.enabled and not literature_only:
         raw_git_transport = str(
             (checks.get("raw_archive") or {}).get("ssh_transport") or "default"
         )
@@ -255,7 +259,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             )
         )
 
-    if job.include_git_push:
+    if job.include_git_push and not literature_only:
         repository_publications.append(
             (
                 "direct_downloads",
@@ -284,7 +288,10 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             task.task_uuid,
             entry_type="info",
             title="Direct Download Publish Skipped",
-            content="The validated CSV/JSON/XLSX partitions remain local for this run.",
+            content=(
+                "Literature-triggered release: existing GitHub download files remain published."
+                if literature_only else "The validated CSV/JSON/XLSX partitions remain local for this run."
+            ),
             content_type="text",
             metadata={
                 "event": "github_direct_download_publish_skipped",

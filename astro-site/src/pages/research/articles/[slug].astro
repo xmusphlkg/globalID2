@@ -9,7 +9,11 @@ import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../../utils/disease
 import { localizedRegionName, translateUi } from '../../../utils/i18n';
 
 export function getStaticPaths() {
+  const plan = process.env.GIDS_RESEARCH_BUILD_PLAN
+    ? new Set(JSON.parse(readFileSync(process.env.GIDS_RESEARCH_BUILD_PLAN, 'utf8')).selected as string[])
+    : null;
   return ((researchRoutes as any).articles ?? [])
+    .filter((article: any) => !plan || plan.has(article.slug))
     .map((article: any) => ({ params: { slug: article.slug }, props: { articleSlug: article.slug, locale: 'en' } }));
 }
 

@@ -8,8 +8,11 @@ import { renderResearchSocialCardSvg } from '../../../lib/research-social-card';
 export const prerender = true;
 
 export function getStaticPaths() {
+  const plan = process.env.GIDS_RESEARCH_BUILD_PLAN
+    ? new Set(JSON.parse(readFileSync(process.env.GIDS_RESEARCH_BUILD_PLAN, 'utf8')).selected as string[])
+    : null;
   return ((researchRoutes as any).articles ?? [])
-    .filter((article: any) => article.indexable !== false)
+    .filter((article: any) => article.indexable !== false && (!plan || plan.has(article.slug)))
     .map((article: any) => ({ params: { slug: article.slug }, props: { slug: article.slug } }));
 }
 

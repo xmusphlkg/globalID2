@@ -343,6 +343,11 @@ async def test_pipeline_passes_local_gates_before_remote_publication():
     assert commands.index("Validate Situation Release Gate") < commands.index(
         "Publish Partitioned Data Downloads"
     )
+    commands.clear()
+    task.input_data = {"release_job_id": "site-release", "incremental_site": True}
+    await pipeline.execute_release_task(Service(), task, runtime=runtime)
+    assert "Archive Raw Crawler Data" not in commands
+    assert "Publish Partitioned Data Downloads" not in commands
 
 
 @pytest.mark.asyncio

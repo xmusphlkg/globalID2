@@ -174,6 +174,7 @@ const structuredData = {
 </ReportLayout>
 
 <script>
+  import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
   const list = document.querySelector<HTMLElement>('#collection-list');
   const cards = [...document.querySelectorAll<HTMLElement>('[data-research-card]')].filter(card => card.closest('#collection-list'));
   const count = document.querySelector<HTMLElement>('#collection-result-count');
@@ -198,7 +199,6 @@ const structuredData = {
   const locale = list?.dataset.collectionLocale === 'zh' ? 'zh' : list?.dataset.collectionLocale === 'fr' ? 'fr' : 'en';
   const routePrefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
   let visibleLimit = initialVisible;
-  let cataloguePromise: Promise<any[]> | null = null;
   const text = (value: unknown) => String(value ?? '');
   const slugifyTopic = (value: string | undefined) => (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const setLangText = (element: HTMLElement, en: string, zh?: string | null, fr?: string | null) => {
@@ -240,17 +240,10 @@ const structuredData = {
     topicText: (article.topics ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
     topicSlugs: (article.topics ?? []).map((item: any) => slugifyTopic(item.name)).filter(Boolean).join(' '),
   });
-  const loadCatalogue = () => {
-    if (!cataloguePromise) {
-      cataloguePromise = fetch('/research/catalogue.json')
-        .then(response => {
-          if (!response.ok) throw new Error(`Research catalogue request failed: ${response.status}`);
-          return response.json();
-        })
-        .then(payload => Array.isArray(payload?.articles) ? payload.articles : []);
-    }
-    return cataloguePromise;
-  };
+  const loadCatalogue = () => loadResearchCatalogue({
+    scope: ['disease', 'country', 'topic', 'week'].includes(collectionScope) ? collectionScope as 'disease' | 'country' | 'topic' | 'week' : undefined,
+    value: collectionValue,
+  });
   const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
     const element = document.createElement(tag);
     if (className) element.className = className;

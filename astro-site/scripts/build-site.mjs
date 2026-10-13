@@ -1,9 +1,10 @@
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeBuildRedirects } from './build-redirects.mjs';
+import { planPath, planResearchBuild, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, stageReusablePages, writePending } from './research-build-cache.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..', '..');
 const settingsPath = resolve(projectRoot, 'data', 'system-settings.json');
@@ -71,14 +72,37 @@ const astroBinary = resolve(
   '.bin',
   process.platform === 'win32' ? 'astro.cmd' : 'astro',
 );
-const result = spawnSync(astroBinary, ['build'], {
+const snapshot = sourceSnapshot();
+let plan = planResearchBuild({
+  incremental: Boolean(process.env.PUBLIC_GIDS_RELEASE_ID || process.env.GIDS_RESEARCH_INCREMENTAL === '1'),
+  snapshot,
+});
+const stage = plan.reused.length ? stageReusablePages(plan) : null;
+mkdirSync(resolve(projectRoot, 'data', 'cache'), { recursive: true });
+writeFileSync(planPath, JSON.stringify({ selected: plan.selected }));
+process.stdout.write(`[research-cache] ${plan.mode}: render ${plan.selected.length}, reuse ${plan.reused.length} article bundles\n`);
+
+const runAstro = selectedPath => spawnSync(astroBinary, ['build'], {
   cwd: resolve(import.meta.dirname, '..'),
   env: {
     ...process.env,
     PUBLIC_GA4_MEASUREMENT_ID: measurementId,
+    ...(selectedPath ? { GIDS_RESEARCH_BUILD_PLAN: selectedPath } : { GIDS_RESEARCH_BUILD_PLAN: '' }),
   },
   stdio: 'inherit',
 });
+let result = runAstro(plan.mode === 'incremental' ? planPath : null);
+
+if ((result.status ?? 1) === 0 && stage) {
+  restoreReusablePages(plan, stage);
+  if (!reusedAssetReferencesAvailable(plan)) {
+    process.stdout.write('[research-cache] cached page asset missing; rebuilding all article bundles\n');
+    result = runAstro(null);
+    plan = { ...plan, mode: 'full', selected: Object.keys(snapshot.articles), reused: [] };
+  }
+}
+if (stage) rmSync(stage, { recursive: true, force: true });
+rmSync(planPath, { force: true });
 
 if (result.error) {
   process.stderr.write(`${result.error.message}\n`);
@@ -95,4 +119,9 @@ if (researchFingerprintAfter !== researchFingerprintBefore) {
   );
   process.exit(3);
 }
+if ((result.status ?? 1) === 0 && JSON.stringify(sourceSnapshot()) !== JSON.stringify(snapshot)) {
+  process.stderr.write('Research detail data or shared templates changed during the Astro build.\n');
+  process.exit(3);
+}
+if ((result.status ?? 1) === 0) writePending(plan);
 process.exit(result.status ?? 1);

@@ -26,6 +26,32 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.10.6',
+    date: '2026-10-13',
+    titleEn: 'Faster research publishing',
+    titleZh: '加快文献发布',
+    titleFr: 'Publication plus rapide des recherches',
+    summaryEn: 'Research releases now reuse unchanged article pages and serve the catalogue in smaller files.',
+    summaryZh: '文献发布现在复用未变化的详情页，并通过较小的文件提供目录。',
+    summaryFr: 'Les publications réutilisent les pages d’articles inchangées et répartissent le catalogue en fichiers plus petits.',
+    sections: [{
+      kind: 'improved', labelEn: 'Improved', labelZh: '优化', labelFr: 'Améliorations',
+      items: [{
+        en: 'Changed articles and cards are rebuilt while unchanged ones are reused; a template change triggers a complete rebuild.',
+        zh: '仅重建有变化的文献页面与分享图；模板变更时自动完整重建。',
+        fr: 'Seuls les articles et visuels modifiés sont reconstruits ; un changement de modèle déclenche une reconstruction complète.',
+      }, {
+        en: 'The research catalogue is delivered in smaller files, and footer dates come from the current release.',
+        zh: '文献目录拆分为较小文件，页脚日期读取当前发布信息。',
+        fr: 'Le catalogue est réparti en fichiers plus petits et les dates du pied de page proviennent de la version actuelle.',
+      }, {
+        en: 'Literature-only releases leave existing GitHub data downloads in place and skip unrelated archive uploads.',
+        zh: '仅文献更新时沿用现有 GitHub 数据下载文件，并跳过无关的归档上传。',
+        fr: 'Les publications limitées à la recherche conservent les téléchargements GitHub existants et évitent les téléversements d’archives sans rapport.',
+      }],
+    }],
+  },
+  {
     version: '0.10.5',
     date: '2026-10-12',
     titleEn: 'Compact surveillance data tables',

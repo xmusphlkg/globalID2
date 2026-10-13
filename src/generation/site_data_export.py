@@ -872,6 +872,7 @@ def write_site_export_artifacts(
     situation_weekly = context.get("situation_weekly") or []
 
     prepare_site_output_dirs(output_dir, public_site_data_dir)
+    write_compact_json(public_site_data_dir / "site-status.json", {"generated_at": generated_at})
 
     # Write disease index
     write_pretty_json(output_dir / "diseases" / "index.json", diseases)
@@ -1110,6 +1111,7 @@ def write_incremental_site_export_artifacts(
     """Write changed full snapshots and refresh every compact browser projection."""
 
     prepare_site_output_dirs(output_dir, public_site_data_dir)
+    write_compact_json(public_site_data_dir / "site-status.json", {"generated_at": context["generated_at"]})
     changed_countries = set(context.get("incremental_country_codes") or ())
     changed_diseases = set(context.get("changed_disease_ids") or ())
     countries_by_code = {

@@ -113,6 +113,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
 </ReportLayout>
 
 <script>
+  import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
   import { answerResearchQuestion } from '../../lib/research-ask';
 
   const form = document.querySelector<HTMLFormElement>('#research-question-form');
@@ -131,7 +132,6 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
   const signalsCard = document.querySelector<HTMLElement>('#answer-signals-card');
   const signals = document.querySelector<HTMLElement>('#answer-signals');
   const evidence = document.querySelector<HTMLElement>('#answer-evidence');
-  let cataloguePromise: Promise<any[]> | null = null;
   const isZh = () => form?.dataset.researchLocale === 'zh';
   const isFr = () => form?.dataset.researchLocale === 'fr';
   const routePrefix = isZh() ? '/zh' : isFr() ? '/fr' : '';
@@ -181,15 +181,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
     status.dataset.kind = kind;
     status.textContent = message;
   };
-  const loadCatalogue = () => {
-    cataloguePromise ??= fetch('/research/catalogue.json', { headers: { accept: 'application/json' } })
-      .then((response) => {
-        if (!response.ok) throw new Error(`catalogue_${response.status}`);
-        return response.json();
-      })
-      .then((payload) => Array.isArray(payload?.articles) ? payload.articles : []);
-    return cataloguePromise;
-  };
+  const loadCatalogue = loadResearchCatalogue;
 
   const normalizedFacet = (value: unknown) => String(value ?? '')
     .normalize('NFKD')
