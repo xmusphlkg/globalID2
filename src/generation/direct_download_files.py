@@ -19,6 +19,7 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 from openpyxl import Workbook
 
 from src.services.disease_series_policy import is_case_count_series
+from src.services import disease_series_policy
 
 
 DOWNLOAD_FIELDS = [
@@ -172,6 +173,51 @@ def _default_export_workers(cpu_count: int | None, memory_limit_bytes: int | Non
 
 
 DEFAULT_EXPORT_WORKERS = _default_export_workers(os.cpu_count(), _read_cgroup_memory_limit_bytes())
+
+
+def _projection_code_sha256() -> str:
+    """Invalidate dataset reuse whenever download projection rules change."""
+    digest = hashlib.sha256()
+    for source in (Path(__file__), Path(disease_series_policy.__file__)):
+        digest.update(source.read_bytes())
+    return digest.hexdigest()
+
+
+def _input_sha256(value: dict, *, projection_code: str, max_file_bytes: int) -> str:
+    stable = dict(value)
+    stable.pop("generated_at", None)
+    for key in ("country_data", "disease_data"):
+        if isinstance(stable.get(key), dict):
+            snapshot = dict(stable[key])
+            snapshot.pop("generated_at", None)
+            stable[key] = snapshot
+    digest = hashlib.sha256()
+    digest.update(projection_code.encode("ascii"))
+    digest.update(str(max_file_bytes).encode("ascii"))
+    digest.update(json.dumps(stable, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8"))
+    return digest.hexdigest()
+
+
+def _entry_files_available(entry: dict, output_dir: Path, directory: str, path_id: str) -> bool:
+    """Require every reused part to exist at its declared path and size."""
+    parts = entry.get("parts") or []
+    if not parts:
+        return False
+    prefix = f"{directory}/{path_id}/"
+    for part in parts:
+        files = part.get("files") or {}
+        if set(files) != set(PUBLIC_FORMATS):
+            return False
+        for file_meta in files.values():
+            relative = str(file_meta.get("relative_path") or "")
+            if not relative.startswith(prefix) or ".." in Path(relative).parts:
+                return False
+            path = output_dir / relative
+            if not path.is_file() or path.stat().st_size != file_meta.get("bytes"):
+                return False
+            if _file_sha256(path) != file_meta.get("sha256"):
+                return False
+    return True
 
 
 def _process_pool_context() -> multiprocessing.context.BaseContext:
@@ -974,16 +1020,50 @@ def build_direct_download_files(
     }
     country_exports = context["country_exports"]
     disease_exports = context["disease_exports"]
-    selected_country_codes = (
-        {str(code).strip().upper() for code in changed_country_codes}
-        if changed_country_codes is not None
-        else {str(item["code"]).upper() for item in country_exports}
-    )
-    selected_disease_ids = (
-        {str(disease_id).strip() for disease_id in changed_disease_ids}
-        if changed_disease_ids is not None
-        else {str(item["disease_id"]) for item in disease_exports}
-    )
+    existing_country_entries = {
+        str(entry.get("id")): entry for entry in existing_manifest.get("countries") or []
+    }
+    existing_disease_entries = {
+        str(entry.get("disease_id")): entry for entry in existing_manifest.get("diseases") or []
+    }
+    projection_code = _projection_code_sha256()
+    country_fingerprints: dict[str, str] = {}
+    disease_fingerprints: dict[str, str] = {}
+    selected_country_codes = {str(code).strip().upper() for code in changed_country_codes or ()}
+    selected_disease_ids = {str(disease_id).strip() for disease_id in changed_disease_ids or ()}
+    for item in country_exports:
+        code = str(item["code"]).upper()
+        path_id = code.lower()
+        existing = existing_country_entries.get(path_id) or {}
+        available = _entry_files_available(existing, output_dir, "countries", path_id)
+        if changed_country_codes is None or not available:
+            fingerprint = _input_sha256(
+                {"country_data": item["country_data"], "source_info": item["source_info"]},
+                projection_code=projection_code,
+                max_file_bytes=max_file_bytes,
+            )
+            country_fingerprints[path_id] = fingerprint
+            if fingerprint != existing.get("input_sha256") or not available:
+                selected_country_codes.add(code)
+    for item in disease_exports:
+        disease_id = str(item["disease_id"])
+        path_id = disease_id.lower()
+        existing = existing_disease_entries.get(disease_id) or {}
+        available = _entry_files_available(existing, output_dir, "diseases", path_id)
+        if changed_disease_ids is None or not available:
+            country_codes = (item["disease_data"].get("country_series") or {}).keys()
+            fingerprint = _input_sha256(
+                {
+                    "disease_data": item["disease_data"],
+                    "country_sources": {code: context["country_sources_by_code"].get(code) for code in country_codes},
+                    "country_names": {code: country_names.get(code) for code in country_codes},
+                },
+                projection_code=projection_code,
+                max_file_bytes=max_file_bytes,
+            )
+            disease_fingerprints[disease_id] = fingerprint
+            if fingerprint != existing.get("input_sha256") or not available:
+                selected_disease_ids.add(disease_id)
     selected_country_exports = [
         item for item in country_exports if item["code"].upper() in selected_country_codes
     ]
@@ -1040,13 +1120,31 @@ def build_direct_download_files(
             while next_index < task_count and len(pending) < max_pending:
                 submit_next()
 
+            completed_count = 0
             while pending:
-                done, _ = wait(pending, return_when=FIRST_COMPLETED)
+                done, _ = wait(pending, timeout=60, return_when=FIRST_COMPLETED)
+                if not done:
+                    active = [
+                        f"{tasks[index][0]}:{tasks[index][1].get('code') or tasks[index][1].get('disease_id')}"
+                        for index in pending.values()
+                    ]
+                    print(
+                        f"  Download partitions: {completed_count}/{task_count} datasets complete; "
+                        f"waiting for {', '.join(active)}",
+                        flush=True,
+                    )
+                    continue
                 for future in done:
                     index = pending.pop(future)
                     results_by_index[index] = future.result()
+                    completed_count += 1
                     if next_index < task_count:
                         submit_next()
+                if completed_count % 25 < len(done) or completed_count == task_count:
+                    print(
+                        f"  Download partitions: {completed_count}/{task_count} datasets complete",
+                        flush=True,
+                    )
 
     processed_country_results: dict[str, dict] = {}
     processed_disease_results: dict[str, dict] = {}
@@ -1096,6 +1194,11 @@ def build_direct_download_files(
         entry = dict(country_entries_by_id[dataset["path_id"]])
         entry.update(
             {
+                "input_sha256": country_fingerprints.get(dataset["path_id"]) or _input_sha256(
+                    {"country_data": country_export["country_data"], "source_info": country_export["source_info"]},
+                    projection_code=projection_code,
+                    max_file_bytes=max_file_bytes,
+                ),
                 "record_count": result["row_count"],
                 **result["provenance_counts"],
                 "includes_series_provenance": True,
@@ -1128,6 +1231,15 @@ def build_direct_download_files(
         entry = dict(disease_entries_by_id[dataset["dataset_id"]])
         entry.update(
             {
+                "input_sha256": disease_fingerprints.get(disease_id) or _input_sha256(
+                    {
+                        "disease_data": disease_export["disease_data"],
+                        "country_sources": {code: context["country_sources_by_code"].get(code) for code in result["country_codes"]},
+                        "country_names": {code: country_names.get(code) for code in result["country_codes"]},
+                    },
+                    projection_code=projection_code,
+                    max_file_bytes=max_file_bytes,
+                ),
                 "record_count": result["row_count"],
                 **result["provenance_counts"],
                 "includes_series_provenance": True,

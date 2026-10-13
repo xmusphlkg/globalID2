@@ -449,6 +449,46 @@ def test_literature_artifacts_write_preprints_outside_the_main_catalogue(tmp_pat
     assert (tmp_path / "research/articles/published-preprint.json").exists()
 
 
+def test_literature_collection_files_keep_card_fields_without_repeating_summaries(tmp_path):
+    article = {
+        "article_id": "published-1",
+        "slug": "published-article",
+        "title": "Published article",
+        "doi": "10.1000/example",
+        "open_access_status": "open",
+        "source_urls": {"publisher": "https://example.org/article", "doi": "https://doi.org/10.1000/example"},
+        "diseases": [{"disease_id": "D001", "name_en": "Disease"}],
+        "countries": [{"code": "US", "name_en": "United States"}],
+        "topics": [{"name": "Surveillance"}],
+        "summary": {"fr": {"public_health_relevance": "Pertinence publique", "main_findings": "Long detail"}},
+    }
+    payload = {
+        **empty_literature_export(),
+        "articles": [article],
+        "disease_articles": {"d001": [article]},
+        "country_articles": {"us": [article]},
+        "topic_articles": {"surveillance": [article]},
+    }
+
+    write_literature_artifacts(payload, tmp_path)
+
+    for path in (
+        "research/diseases/d001.json",
+        "research/countries/us.json",
+        "research/topics/surveillance.json",
+    ):
+        card = json.loads((tmp_path / path).read_text(encoding="utf-8"))["articles"][0]
+        assert card["slug"] == article["slug"]
+        assert card["diseases"] == article["diseases"]
+        assert card["source_urls"] == {"publisher": "https://example.org/article"}
+        assert card["why_it_matters_fr"] == "Pertinence publique"
+        assert "summary" not in card
+    detail = json.loads((tmp_path / "research/articles/published-article.json").read_text(encoding="utf-8"))
+    assert detail["summary"]["fr"]["main_findings"] == "Long detail"
+    routes = json.loads((tmp_path / "research/routes.json").read_text(encoding="utf-8"))
+    assert routes["articles"] == [{"slug": "published-article", "indexable": True}]
+
+
 def test_integrity_alert_projection_is_publication_gated_and_metadata_only():
     articles = [
         SimpleNamespace(

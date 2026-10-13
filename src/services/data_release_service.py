@@ -106,7 +106,9 @@ SUBSCRIPTION_SYNC_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 SUBSCRIPTION_SYNC_STRICT_VALUES = {"1", "true", "yes", "on", "required", "strict", "force"}
 LOGGED_COMMAND_CANCEL_POLL_SECONDS = 1.0
 DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS = 15 * 60
-GENERATE_SITE_DATA_TIMEOUT_SECONDS = 30 * 60
+# A complete export can revalidate several gigabytes of partitioned downloads.
+# Keep a finite guard while allowing more time than the previous 30-minute cap.
+GENERATE_SITE_DATA_TIMEOUT_SECONDS = 60 * 60
 # The multilingual static site now renders thousands of country/disease pages.
 # Keep the build guard finite, but allow a full production render to finish on
 # memory-constrained release workers instead of aborting at the legacy 15 min.
@@ -818,12 +820,19 @@ class DataReleaseService:
         download_url_base = self._download_repo_raw_base(job)
         raw_archive = self._raw_archive_runtime()
         incremental_country_codes: list[str] = []
+        incremental_site = False
         async with get_database() as db:
             if trigger_task_uuid:
                 trigger_task = await db.execute(
                     select(Task).where(Task.task_uuid == trigger_task_uuid)
                 )
                 trigger_task = trigger_task.scalar_one_or_none()
+                incremental_site = bool(
+                    trigger_task
+                    and trigger_task.task_type in LITERATURE_RELEASE_TASK_TYPES
+                    and (ASTRO_DIR / "src" / "data" / "meta.json").is_file()
+                    and (DIRECT_DOWNLOAD_DIR / "manifest.json").is_file()
+                )
                 trigger_input = dict(
                     (trigger_task.input_data if trigger_task else None) or {}
                 )
@@ -906,6 +915,7 @@ class DataReleaseService:
             "trigger": trigger,
             "manual_trigger": manual,
             "incremental_country_codes": incremental_country_codes,
+            "incremental_site": incremental_site,
             "trigger_task_uuid": trigger_task_uuid,
             "generated_paths": list(GENERATED_DATA_PATHS),
             "raw_archive_enabled": raw_archive.enabled,
@@ -1412,11 +1422,13 @@ class DataReleaseService:
         python_path: Path,
         download_url_base: str,
         incremental_country_codes: list[str] | tuple[str, ...] | None = None,
+        incremental_site: bool = False,
     ) -> list[str]:
         return build_generate_site_data_command(
             python_path=python_path,
             download_url_base=download_url_base,
             incremental_country_codes=incremental_country_codes,
+            incremental_site=incremental_site,
         )
 
     def _update_situation_room_command(self, *, python_path: Path) -> list[str]:

@@ -342,6 +342,7 @@ async def collect_site_export_context(
     *,
     public_site_data_dir: Path = DEFAULT_PUBLIC_SITE_DATA_OUTPUT,
     recorded_at_as_of=None,
+    incremental_site: bool = False,
 ) -> dict:
     """Read and project all database-backed data without writing artifacts."""
     await ensure_site_export_database_ready()
@@ -350,7 +351,7 @@ async def collect_site_export_context(
         for code in incremental_country_codes or ()
         if str(code).strip()
     }
-    incremental = bool(incremental_codes)
+    incremental = bool(incremental_codes) or incremental_site
     if incremental and recorded_at_as_of is not None:
         raise ValueError(
             "Historical site exports must be complete builds, not incremental merges."
@@ -775,17 +776,17 @@ async def collect_site_export_context(
                 if detail:
                     report_details[rep["id"]] = detail
 
-            literature_export = await collect_literature_export(
-                session,
-                diseases_by_id=diseases_by_id,
-                surveillance_coverage={
-                    item["disease_id"]: set(
-                        (item["disease_data"].get("country_series") or {}).keys()
-                    )
-                    for item in disease_exports
-                },
-                limit=get_config().literature.public_article_limit,
-            )
+        literature_export = await collect_literature_export(
+            session,
+            diseases_by_id=diseases_by_id,
+            surveillance_coverage={
+                item["disease_id"]: set(
+                    (item["disease_data"].get("country_series") or {}).keys()
+                )
+                for item in disease_exports
+            },
+            limit=get_config().literature.public_article_limit,
+        )
 
     if incremental:
         # The Situation Room refresh runs immediately before an incremental
@@ -801,11 +802,11 @@ async def collect_site_export_context(
         situation_latest = await latest_report_v3()
         situation_weekly = await reports_v3("weekly")
         situation_monthly = await reports_v3("monthly")
-        literature_export = attach_surveillance_evidence(
-            literature_export,
-            situation_latest,
-            diseases_by_id=diseases_by_id,
-        )
+    literature_export = attach_surveillance_evidence(
+        literature_export,
+        situation_latest,
+        diseases_by_id=diseases_by_id,
+    )
 
     return {
         "all_records_by_country": all_records_by_country,
@@ -1128,17 +1129,20 @@ def write_incremental_site_export_artifacts(
             country_data,
         )
 
-    # Compact browser artifacts are cheap projections of the saved snapshots.
-    # Rebuild them even for unchanged countries so an incremental release also
-    # applies fixes to the projection contract.
+    # Only refresh affected browser projections. Missing files are repaired so
+    # an older snapshot can still be used as the base for an incremental run.
     for code, country_export in countries_by_code.items():
+        site_path = public_site_data_dir / "countries" / f"{code.lower()}.json"
+        source_path = public_site_data_dir / "countries" / f"{code.lower()}-source-series.json"
+        if code not in changed_countries and site_path.is_file() and source_path.is_file():
+            continue
         country_data = country_export["country_data"]
         write_compact_json(
-            public_site_data_dir / "countries" / f"{code.lower()}.json",
+            site_path,
             country_export["site_data"],
         )
         write_compact_json(
-            public_site_data_dir / "countries" / f"{code.lower()}-source-series.json",
+            source_path,
             build_country_source_series_data(country_data),
         )
 
@@ -1160,8 +1164,11 @@ def write_incremental_site_export_artifacts(
         )
 
     for disease_id, disease_export in diseases_by_id.items():
+        site_path = public_site_data_dir / "diseases" / f"{disease_id.lower()}.json"
+        if disease_id not in changed_diseases and site_path.is_file():
+            continue
         write_compact_json(
-            public_site_data_dir / "diseases" / f"{disease_id.lower()}.json",
+            site_path,
             disease_export["site_data"],
         )
 
@@ -1208,6 +1215,8 @@ def write_incremental_site_export_artifacts(
     elif situation_latest:
         write_pretty_json(output_dir / "situation" / "v3" / "shadow-latest.json", situation_latest)
 
+    write_literature_artifacts(context["literature_export"], output_dir)
+
     print(
         "  ✓ incremental site artifacts "
         f"({len(changed_countries)} countries, {len(changed_diseases)} diseases)"
@@ -1226,15 +1235,31 @@ async def export(
     direct_download_workers: int | None = None,
     incremental_country_codes: list[str] | tuple[str, ...] | None = None,
     recorded_at_as_of=None,
+    incremental_site: bool = False,
 ) -> None:
     """Package and write one complete or scoped incremental export."""
-    context = await collect_site_export_context(
-        output_dir,
-        allow_empty_export,
-        incremental_country_codes,
-        public_site_data_dir=public_site_data_dir,
-        recorded_at_as_of=recorded_at_as_of,
-    )
+    try:
+        context = await collect_site_export_context(
+            output_dir,
+            allow_empty_export,
+            incremental_country_codes,
+            public_site_data_dir=public_site_data_dir,
+            recorded_at_as_of=recorded_at_as_of,
+            incremental_site=incremental_site,
+        )
+    except RuntimeError as exc:
+        if not (incremental_site or incremental_country_codes) or not str(exc).startswith(
+            ("Incremental site export requires", "Incremental site export is missing")
+        ):
+            raise
+        print(f"  Existing incremental snapshot unavailable ({exc}); rebuilding all site data", flush=True)
+        context = await collect_site_export_context(
+            output_dir,
+            allow_empty_export,
+            None,
+            public_site_data_dir=public_site_data_dir,
+            recorded_at_as_of=recorded_at_as_of,
+        )
     country_download_entries = context["country_download_entries"]
     disease_download_entries = context["disease_download_entries"]
 

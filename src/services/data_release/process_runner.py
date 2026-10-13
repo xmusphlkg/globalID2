@@ -222,13 +222,18 @@ async def run_logged_command(
             chunk_index += 1
 
     async def fail_on_timeout() -> None:
+        if pending_output_fragment:
+            record_output_text(pending_output_fragment)
         await terminate(proc)
         await flush_chunk(force=True)
         timeout_text = f"{timeout_seconds:g} seconds"
+        failure_tail = "\n".join(output_tail[-FAILURE_TAIL_LINES:])
         message = (
             f"{title} timed out after {timeout_text}; terminated process group "
             f"{proc.pid}. Command: {metadata['command']}"
         )
+        if failure_tail:
+            message += f"\nRecent output ({total_output_lines} lines total):\n{failure_tail}"
         try:
             await task_manager.add_workbook_entry(
                 task_uuid,

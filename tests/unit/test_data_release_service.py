@@ -79,7 +79,13 @@ async def test_run_logged_command_timeout_terminates_process_group_and_records_e
     terminated = []
 
     class BlockingStream:
+        def __init__(self):
+            self.reads = 0
+
         async def read(self, _size=-1):
+            self.reads += 1
+            if self.reads == 1:
+                return b"download partitions: 5/349 datasets complete\n"
             await asyncio.Event().wait()
 
     class FakeProcess:
@@ -138,6 +144,7 @@ async def test_run_logged_command_timeout_terminates_process_group_and_records_e
     assert entries[-1]["entry_type"] == "error"
     assert entries[-1]["title"] == "Test Command Timed Out"
     assert "terminated process group 9876" in entries[-1]["content"]
+    assert "download partitions: 5/349 datasets complete" in entries[-1]["content"]
     assert entries[-1]["metadata"]["event"] == "command_timeout"
 
 
@@ -526,6 +533,17 @@ def test_generate_site_data_command_carries_incremental_country_scope(tmp_path):
         "--incremental-country",
         "CA-ON",
     ]
+
+
+def test_generate_site_data_command_supports_literature_only_refresh(tmp_path):
+    command = DataReleaseService()._generate_site_data_command(
+        python_path=tmp_path / "python",
+        download_url_base="https://raw.example/data/main",
+        incremental_site=True,
+    )
+
+    assert command[-1] == "--incremental-site"
+    assert "--incremental-country" not in command
 
 
 @pytest.mark.asyncio

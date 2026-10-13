@@ -1,4 +1,5 @@
 import ast
+import asyncio
 import inspect
 import json
 from types import SimpleNamespace
@@ -58,7 +59,25 @@ def test_export_public_signature_remains_stable() -> None:
         "direct_download_workers",
         "incremental_country_codes",
         "recorded_at_as_of",
+        "incremental_site",
     ]
+
+
+def test_incremental_export_falls_back_when_snapshot_is_missing(tmp_path, monkeypatch) -> None:
+    attempts = []
+
+    async def collect(*args, **kwargs):
+        attempts.append((args[2], kwargs.get("incremental_site", False)))
+        if kwargs.get("incremental_site"):
+            raise RuntimeError("Incremental site export is missing the existing country snapshot for XX.")
+        return {"incremental": False, "country_download_entries": [], "disease_download_entries": []}
+
+    monkeypatch.setattr(site_data_export, "collect_site_export_context", collect)
+    monkeypatch.setattr(site_data_export, "write_site_export_artifacts", lambda *args: None)
+    monkeypatch.setattr(site_data_export, "build_direct_download_files", lambda *args, **kwargs: {})
+    asyncio.run(site_data_export.export(tmp_path / "data", tmp_path / "manifest.json", incremental_site=True))
+
+    assert attempts == [(None, True), (None, False)]
 
 
 def test_direct_download_default_workers_respect_tight_cgroup_memory() -> None:
@@ -227,7 +246,7 @@ def test_site_artifact_writer_reads_download_index_counts_from_context(
     assert tmp_path / "build" / "about.json" in writes
 
 
-def test_incremental_export_refreshes_unchanged_browser_projections(tmp_path) -> None:
+def test_incremental_export_reuses_unchanged_browser_projections(tmp_path) -> None:
     output = tmp_path / "build"
     public = tmp_path / "public"
     country_path = public / "countries" / "xx.json"
@@ -235,6 +254,7 @@ def test_incremental_export_refreshes_unchanged_browser_projections(tmp_path) ->
     country_path.parent.mkdir(parents=True)
     disease_path.parent.mkdir(parents=True)
     country_path.write_text('{"old":true}', encoding="utf-8")
+    (country_path.parent / "xx-source-series.json").write_text('{}', encoding="utf-8")
     disease_path.write_text('{"old":true}', encoding="utf-8")
 
     site_data_export.write_incremental_site_export_artifacts(
@@ -251,12 +271,14 @@ def test_incremental_export_refreshes_unchanged_browser_projections(tmp_path) ->
             "diseases": [],
             "reports": [],
             "generated_at": "2026-10-11T00:00:00Z",
+            "literature_export": {},
         },
         output,
         public,
     )
 
-    assert json.loads(country_path.read_text(encoding="utf-8")) == {"v": 1}
-    assert json.loads(disease_path.read_text(encoding="utf-8")) == {"v": 1, "series": []}
+    assert json.loads(country_path.read_text(encoding="utf-8")) == {"old": True}
+    assert json.loads(disease_path.read_text(encoding="utf-8")) == {"old": True}
+    assert (output / "research" / "index.json").is_file()
     assert not (output / "countries" / "xx.json").exists()
     assert not (output / "diseases" / "d_test.json").exists()

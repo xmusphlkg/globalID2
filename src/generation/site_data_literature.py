@@ -2160,6 +2160,31 @@ async def collect_literature_export(
     }
 
 
+_COLLECTION_CARD_FIELDS = (
+    "article_id", "slug", "title", "doi", "journal", "publisher", "authors",
+    "study_type", "published_at", "publication_date_label_en",
+    "publication_date_label_zh", "publication_date_label_fr", "open_access_status",
+    "open_access_url", "peer_review_status", "diseases", "countries", "topics",
+    "related_surveillance", "source_kind", "historical_baseline",
+    "why_it_matters_en", "why_it_matters_zh", "why_it_matters_fr",
+)
+
+
+def _collection_card_article(article: dict[str, Any]) -> dict[str, Any]:
+    """Keep only fields used by collection cards and their client filters."""
+    card = {key: article[key] for key in _COLLECTION_CARD_FIELDS if key in article}
+    publisher_url = (article.get("source_urls") or {}).get("publisher")
+    if publisher_url:
+        card["source_urls"] = {"publisher": publisher_url}
+    if not card.get("why_it_matters_fr"):
+        french_relevance = ((article.get("summary") or {}).get("fr") or {}).get(
+            "public_health_relevance"
+        )
+        if french_relevance:
+            card["why_it_matters_fr"] = french_relevance
+    return card
+
+
 def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> None:
     research_dir = output_dir / "research"
     article_dir = research_dir / "articles"
@@ -2198,6 +2223,24 @@ def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> Non
         *(payload.get("articles") or []),
         *(payload.get("preprints") or []),
     ]
+    route_diseases: dict[str, dict[str, Any]] = {}
+    for article in public_article_details:
+        for disease in article.get("diseases") or []:
+            if disease.get("name_en"):
+                route_diseases[disease["name_en"]] = {
+                    key: disease.get(key)
+                    for key in ("name_en", "name_fr", "slug", "disease_id")
+                }
+    write_compact_json(
+        research_dir / "routes.json",
+        {
+            "articles": [
+                {"slug": article["slug"], "indexable": article.get("indexable") is not False}
+                for article in public_article_details
+            ],
+            "diseases": list(route_diseases.values()),
+        },
+    )
     for article in public_article_details:
         write_pretty_json(
             article_dir / f"{article['slug']}.json",
@@ -2207,7 +2250,7 @@ def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> Non
         write_pretty_json(
             disease_dir / f"{disease_id}.json",
             {
-                "articles": articles,
+                "articles": [_collection_card_article(article) for article in articles],
                 "count": len(articles),
                 "publication_timeline": build_publication_timeline(articles),
                 "evidence_events": build_disease_evidence_events(articles),
@@ -2218,7 +2261,7 @@ def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> Non
         write_pretty_json(
             country_dir / f"{country_code}.json",
             {
-                "articles": articles,
+                "articles": [_collection_card_article(article) for article in articles],
                 "count": len(articles),
                 "publication_timeline": build_publication_timeline(articles),
                 "knowledge_graph": build_knowledge_graph(articles),
@@ -2228,7 +2271,7 @@ def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> Non
         write_pretty_json(
             topic_dir / f"{topic_slug}.json",
             {
-                "articles": articles,
+                "articles": [_collection_card_article(article) for article in articles],
                 "count": len(articles),
                 "publication_timeline": build_publication_timeline(articles),
                 "knowledge_graph": build_knowledge_graph(articles),

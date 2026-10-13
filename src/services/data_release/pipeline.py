@@ -166,13 +166,14 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         python_path=python_path,
         download_url_base=download_url_base,
         incremental_country_codes=input_data.get("incremental_country_codes") or [],
+        incremental_site=bool(input_data.get("incremental_site")),
     )
     await service._run_logged_command(
         task.task_uuid,
         title="Generate Site Data",
         cmd=generate_cmd,
         cwd=runtime.root_dir,
-        env=git_env,
+        env={**git_env, "PYTHONUNBUFFERED": "1"},
         metadata={"event": "generate_site_data", "release_job_id": job.job_id},
         timeout_seconds=runtime.generate_timeout_seconds,
     )

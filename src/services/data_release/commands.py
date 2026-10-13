@@ -39,6 +39,7 @@ def build_generate_site_data_command(
     python_path: Path,
     download_url_base: str,
     incremental_country_codes: list[str] | tuple[str, ...] | None = None,
+    incremental_site: bool = False,
 ) -> list[str]:
     """Generate site assets and partitioned CSV/JSON/XLSX downloads locally."""
 
@@ -52,6 +53,8 @@ def build_generate_site_data_command(
         normalized = str(country_code or "").strip().upper()
         if normalized:
             command.extend(["--incremental-country", normalized])
+    if incremental_site:
+        command.append("--incremental-site")
     return command
 
 
