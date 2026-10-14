@@ -128,6 +128,70 @@ async def test_revision_capture_seeds_existing_state_and_appends_only_changes() 
     assert [row["recorded_at"] for row in revisions] == [first_seen, changed_at]
 
 
+@pytest.mark.asyncio
+async def test_revision_capture_batches_large_source_refresh() -> None:
+    point_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    observations = [
+        {
+            "time": point_time,
+            "series_code": f"SER_ZZ_{index}",
+            "geography_key": "country:ZZ:national",
+            "dimension_key": "all",
+        }
+        for index in range(1001)
+    ]
+
+    class Result:
+        def __init__(self, rows=(), rowcount=0):
+            self.rows = rows
+            self.rowcount = rowcount
+
+        def mappings(self):
+            return self
+
+        def all(self):
+            return self.rows
+
+    class FakeDB:
+        def __init__(self):
+            self.lookup_sizes = []
+            self.insert_sizes = []
+
+        async def execute(self, statement):
+            if getattr(statement, "is_select", False):
+                keys = statement._where_criteria[0].right.value
+                self.lookup_sizes.append(len(keys))
+                if "disease_series_observation_revisions" in str(statement):
+                    return Result()
+                return Result([
+                    {
+                        **dict(zip(("time", "series_code", "geography_key", "dimension_key"), key)),
+                        "value": 1,
+                        "unit": "count",
+                        "suppressed": False,
+                        "suppression_reason": None,
+                        "quality_status": "validated",
+                        "dimensions": {},
+                        "raw_data": {},
+                        "metadata": {},
+                        "created_at": point_time,
+                        "updated_at": point_time,
+                    }
+                    for key in keys
+                ])
+            rows = statement._multi_values[0]
+            self.insert_sizes.append(len(rows))
+            assert len(statement.compile(dialect=postgresql.dialect()).params) < 32767
+            return Result(rowcount=len(rows))
+
+    db = FakeDB()
+    assert await _persist_observation_revisions(
+        db, observations, recorded_at=point_time, seed_current_state=True
+    ) == 1001
+    assert db.lookup_sizes == [500, 500, 500, 500, 1, 1]
+    assert db.insert_sizes == [500, 500, 1]
+
+
 def test_series_resolution_reuses_source_identity_across_months(monkeypatch) -> None:
     store = SeriesObservationStore()
     original = store.ontology.series_lookup

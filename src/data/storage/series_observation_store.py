@@ -84,6 +84,27 @@ async def _persist_observation_revisions(
     seed_current_state: bool,
 ) -> int:
     """Seed legacy current rows once, then append only changed accepted states."""
+    # Each identity expands to four bind parameters in both lookup queries,
+    # and each revision insert expands to all snapshot columns. Large source
+    # refreshes must keep both statements within PostgreSQL/asyncpg limits.
+    inserted = 0
+    for offset in range(0, len(observations), _WRITE_BATCH_SIZE):
+        inserted += await _persist_observation_revisions_batch(
+            db,
+            observations[offset : offset + _WRITE_BATCH_SIZE],
+            recorded_at=recorded_at,
+            seed_current_state=seed_current_state,
+        )
+    return inserted
+
+
+async def _persist_observation_revisions_batch(
+    db: AsyncSession,
+    observations: list[dict[str, Any]],
+    *,
+    recorded_at: datetime,
+    seed_current_state: bool,
+) -> int:
     if not observations:
         return 0
     keys = list(dict.fromkeys(_revision_identity(row) for row in observations))
