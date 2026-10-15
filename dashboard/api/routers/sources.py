@@ -78,6 +78,7 @@ _SERIES_SOURCE_SCOPE_OVERRIDES = {
     "SRC_JP_NIID": "jp_weekly",
     "SRC_KR_KDCA": "kdca_open_api",
     "SRC_NO_FHI_MSIS": "fhi_msis",
+    "SRC_NZ_PHS_DHB": "phf_dhb_annual",
     "SRC_SE_FOHM_SMINET": "fohm_sminet",
     "SRC_SG_CDA_WIDB": "cda_weekly_bulletin",
     "SRC_SG_DATA_GOV_WIDB": "cda_weekly_bulletin",
@@ -91,6 +92,12 @@ _OBSERVATION_GEOGRAPHY_SERIES_SOURCES = frozenset(
         "SRC_AU_NINDSS",
         "SRC_CN_PROV_DATACENTER",
         "SRC_CN_PROV_MONTHLY_REPORT",
+        "SRC_CH_FOPH_IDD",
+        "SRC_DE_RKI_SURVSTAT",
+        "SRC_JP_NIID",
+        "SRC_NZ_PHS_DHB",
+        "SRC_SE_FOHM_SMINET",
+        "SRC_US_NNDSS",
     }
 )
 

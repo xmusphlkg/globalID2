@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_database, get_logger
 from src.core.country_library import get_country_bootstrap_config
+from src.core.country_library import SUBDIVISION_REGISTRY
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
 from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
 from src.core.task_manager import task_manager
@@ -92,6 +93,17 @@ class CrawlService:
             _au_subdivision_code,
             _PipelineSpec("_execute_au_monthly", "AUMonthlyUpdater"),
         )
+    for _subdivision_code, _subdivision in SUBDIVISION_REGISTRY.items():
+        _parent_code = str(_subdivision.get("parent_country_code") or "").upper()
+        if _parent_code not in {"JP", "SE", "DE", "US", "CH", "NZ"}:
+            continue
+        _parent_pipeline = _PIPELINES.get(_parent_code)
+        if _parent_pipeline is not None:
+            _PIPELINES[_subdivision_code] = (
+                _PipelineSpec("_execute_nz_dhb_annual", "NZDHBAnnualUpdater")
+                if _parent_code == "NZ"
+                else _parent_pipeline
+            )
     _SERIES_SOURCE_IDS: Dict[str, str | Dict[str, str]] = {
         "US": {
             "US CDC NNDSS": "SRC_US_NNDSS",
@@ -168,6 +180,7 @@ class CrawlService:
             JPWeeklyUpdater,
             KRMonthlyUpdater,
             NOMonthlyUpdater,
+            NZDHBAnnualUpdater,
             NZMonthlyUpdater,
             SEMonthlyUpdater,
             DEWeeklyUpdater,
@@ -191,6 +204,7 @@ class CrawlService:
             "JPWeeklyUpdater": JPWeeklyUpdater,
             "KRMonthlyUpdater": KRMonthlyUpdater,
             "NOMonthlyUpdater": NOMonthlyUpdater,
+            "NZDHBAnnualUpdater": NZDHBAnnualUpdater,
             "NZMonthlyUpdater": NZMonthlyUpdater,
             "SEMonthlyUpdater": SEMonthlyUpdater,
             "DEWeeklyUpdater": DEWeeklyUpdater,
@@ -204,6 +218,13 @@ class CrawlService:
             return updater_type(country_code or "FR")
         if updater_name == "AUMonthlyUpdater" and country_code:
             return updater_type(country_code=country_code)
+        subdivision = SUBDIVISION_REGISTRY.get(str(country_code or "").upper())
+        if subdivision and updater_name in {
+            "JPWeeklyUpdater", "SEMonthlyUpdater", "DEWeeklyUpdater",
+            "USWeeklyUpdater", "CHMonthlyUpdater", "NZMonthlyUpdater",
+            "NZDHBAnnualUpdater",
+        }:
+            return updater_type(country_code=str(country_code).upper())
         return updater_type()
 
     @staticmethod
@@ -779,9 +800,14 @@ class CrawlService:
         """Delegate a monthly country pipeline while preserving service hooks."""
         from src.services.crawl_pipelines.monthly import CONFIGS, execute_monthly_pipeline
 
+        updater = kwargs.get("updater")
+        target_code = str(getattr(updater, "country_code", country_code) or country_code).upper()
+        pipeline_config = CONFIGS[country_code]
+        if target_code != pipeline_config.country_code:
+            pipeline_config = replace(pipeline_config, country_code=target_code)
         return await execute_monthly_pipeline(
             self,
-            config=CONFIGS[country_code],
+            config=pipeline_config,
             get_database=get_database,
             task_manager=task_manager,
             crawl_run_type=CrawlRun,
@@ -885,6 +911,36 @@ class CrawlService:
             save_raw=save_raw,
             fill_missing=fill_missing,
             updater=updater,
+        )
+
+    async def _execute_nz_dhb_annual(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        """Run PHF Science's annual DHB series for one registered NZ region."""
+        from src.services.crawl_pipelines.nz_dhb import execute_nz_dhb_pipeline
+
+        return await execute_nz_dhb_pipeline(
+            self,
+            task=task,
+            source=source,
+            force=force,
+            process=process,
+            save_raw=save_raw,
+            fill_missing=fill_missing,
+            updater=updater,
+            get_database=get_database,
+            task_manager=task_manager,
+            crawl_run_type=CrawlRun,
+            result_type=CrawlResult,
+            logger=logger,
         )
 
     async def _execute_tw_monthly(

@@ -411,6 +411,7 @@
     {"id": "SRC_HK_CHP", "country_code": "HK", "labels": {"en": "Hong Kong, China CHP"}, "legacy_data_sources": ["Hong Kong, China CHP Notifiable Infectious Diseases"]},
     {"id": "SRC_KR_KDCA", "country_code": "KR", "labels": {"en": "Korea KDCA"}, "legacy_data_sources": ["Korea KDCA EID Open API", "Korea KDCA EID Portal Download", "Korea KOSIS Download"]},
     {"id": "SRC_NZ_PHS", "country_code": "NZ", "labels": {"en": "New Zealand PHF Science"}, "legacy_data_sources": ["NZ PHF Science Monthly Notifiable Disease Surveillance", "NZ PHF Science Monthly Notifiable Disease Surveillance (PDF)"]},
+    {"id": "SRC_NZ_PHS_DHB", "country_code": "NZ", "labels": {"en": "New Zealand PHF Science Annual DHB Data"}, "legacy_data_sources": ["New Zealand PHF Science Annual DHB Total"]},
     {"id": "SRC_FI_THL_TTR", "country_code": "FI", "labels": {"en": "Finland THL Infectious Diseases Register", "fi": "THL Tartuntatautirekisteri"}, "legacy_data_sources": ["Finland THL Infectious Diseases Register"]},
     {"id": "SRC_NO_FHI_MSIS", "country_code": "NO", "labels": {"en": "Norway FHI MSIS Statistics Bank", "nb": "FHI MSIS statistikkbank"}, "legacy_data_sources": ["Norway FHI MSIS Statistics Bank"]},
     {"id": "SRC_SE_FOHM_SMINET", "country_code": "SE", "labels": {"en": "Sweden Public Health Agency SmiNet", "sv": "Folkhälsomyndigheten SmiNet"}, "legacy_data_sources": ["Sweden Public Health Agency SmiNet"]},

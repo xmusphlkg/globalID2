@@ -125,6 +125,10 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
         "en": "New Zealand PHF Science Monthly Notifiable Diseases",
         "zh": "新西兰 PHF Science 法定传染病月度监测",
     },
+    "phf_dhb_annual": {
+        "en": "New Zealand PHF Science Annual DHB Data",
+        "zh": "新西兰 PHF Science 卫生区年度数据",
+    },
     "thl_ttr": {
         "en": "Finland THL Infectious Diseases Register",
         "zh": "芬兰 THL 传染病登记",

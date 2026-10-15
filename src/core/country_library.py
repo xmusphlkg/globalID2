@@ -844,6 +844,75 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
 
 ROOT = Path(__file__).resolve().parents[2]
 COUNTRY_BOOTSTRAP_FILE = ROOT / "configs" / "country_bootstrap.json"
+SUBDIVISION_REGISTRY_FILE = ROOT / "configs" / "subdivision_registry.json"
+
+
+def _load_subdivision_registry() -> dict[str, dict]:
+    """Load the shared ISO/DHB registry used by country profiles and crawlers."""
+    try:
+        payload = json.loads(SUBDIVISION_REGISTRY_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    jurisdictions = payload.get("jurisdictions", {}) if isinstance(payload, dict) else {}
+    if not isinstance(jurisdictions, dict):
+        return {}
+    return {
+        str(code).strip().upper(): dict(value)
+        for code, value in jurisdictions.items()
+        if isinstance(value, dict) and str(code).strip()
+    }
+
+
+SUBDIVISION_REGISTRY = _load_subdivision_registry()
+
+# Subdivisions are registered from one declarative file so source adapters,
+# database seeding, task routing, and the public site use identical geography.
+for _subdivision_code, _subdivision in SUBDIVISION_REGISTRY.items():
+    _parent_code = str(_subdivision.get("parent_country_code") or "").upper()
+    _parent_profile = COUNTRY_OVERRIDES.get(_parent_code, {})
+    _name_en = str(_subdivision.get("name_en") or _subdivision_code)
+    _name_local = str(_subdivision.get("name_local") or _name_en)
+    COUNTRY_OVERRIDES[_subdivision_code] = {
+        "name": f"{_name_en}, {_parent_profile.get('name', _parent_code)}",
+        "name_en": f"{_name_en}, {_parent_profile.get('name_en', _parent_code)}",
+        "name_local": _name_local,
+        "language": _parent_profile.get("language", "en"),
+        "timezone": _subdivision.get("timezone") or _parent_profile.get("timezone", "UTC"),
+    }
+    if _subdivision.get("name_zh"):
+        COUNTRY_NAMES_ZH[_subdivision_code] = str(_subdivision["name_zh"])
+    elif _parent_code in COUNTRY_NAMES_ZH:
+        COUNTRY_NAMES_ZH[_subdivision_code] = (
+            f"{COUNTRY_NAMES_ZH[_parent_code]} · {_name_local}"
+        )
+    _parent_config = COUNTRY_BOOTSTRAP_CONFIGS.get(_parent_code, {})
+    _parent_crawler = _parent_config.get("crawler_config", {})
+    _source_scope = str(_subdivision.get("source_scope") or "")
+    _subdivision_crawler = {
+        key: value for key, value in _parent_crawler.items()
+        if key not in {"reporting_area", "geography_key", "parent_geography_key"}
+    }
+    if _source_scope:
+        _subdivision_crawler["sources"] = [_source_scope]
+    _subdivision_crawler.update({
+        "reporting_area": _subdivision.get("source_label") or _name_en,
+        "geocode": _subdivision_code,
+        "geography_key": f"country:{_subdivision_code}:national",
+        "parent_geography_key": f"country:{_parent_code}:national",
+    })
+    COUNTRY_BOOTSTRAP_CONFIGS[_subdivision_code] = {
+        "parent_country_code": _parent_code,
+        "location_type": "subdivision",
+        "iso_subdivision_code": _subdivision.get("iso_subdivision_code"),
+        "data_source_url": _subdivision.get("data_source_url") or _parent_config.get("data_source_url"),
+        "data_source_type": _subdivision.get("data_source_type") or _parent_config.get("data_source_type"),
+        "crawler_config": _subdivision_crawler,
+        "parser_config": _parent_config.get("parser_config", {}),
+        "disease_mapping_rules": _parent_config.get("disease_mapping_rules", {}),
+        "report_config": _parent_config.get("report_config", {}),
+        "public_release_enabled": bool(_subdivision.get("public_release_enabled", True)),
+        "notes": _subdivision.get("notes") or f"{_name_en} subdivision surveillance linked to {_parent_code}.",
+    }
 
 
 def _deep_merge_dict(base: dict, overlay: dict) -> dict:
@@ -1042,7 +1111,12 @@ def get_standard_country_codes() -> list[str]:
         for code in registry.keys()
         if code and code != "_DEFAULT"
     }
-    codes = set(COUNTRY_OVERRIDES.keys()) | set(COUNTRY_BOOTSTRAP_CONFIGS.keys()) | registry_codes
+    codes = (
+        set(COUNTRY_OVERRIDES.keys())
+        | set(COUNTRY_BOOTSTRAP_CONFIGS.keys())
+        | set(SUBDIVISION_REGISTRY.keys())
+        | registry_codes
+    )
     return sorted(codes)
 
 

@@ -16,6 +16,7 @@ Public interface
 from __future__ import annotations
 
 import io
+import csv
 import re
 import zipfile
 from dataclasses import dataclass
@@ -67,6 +68,21 @@ _FILENAME_PATTERN = re.compile(
 _FOOTNOTE_PATTERN = re.compile(r"[¹²³⁴⁵⁶⁷⁸⁹⁰]+$")
 
 _NON_NATIONAL_PDF_HINTS = ("rolling", "dhb", "district")
+
+DHB_TOTAL_CSV_URL = (
+    "https://raw.githubusercontent.com/ESR-NZ/Notifiable-Diseases-Annual-Dashboard-/main/data/DHB_Total.csv"
+)
+DHB_REPOSITORY_URL = "https://github.com/ESR-NZ/Notifiable-Diseases-Annual-Dashboard-"
+DHB_SOURCE_ID = "SRC_NZ_PHS_DHB"
+DHB_JURISDICTIONS = {
+    "Auckland": "NZ-AKL", "Bay of Plenty": "NZ-BOP", "Canterbury": "NZ-CAN",
+    "Capital, Coast and Hutt Valley": "NZ-CCH", "Counties Manukau": "NZ-CMN",
+    "Hawke's Bay": "NZ-HKB", "Lakes": "NZ-LKS", "MidCentral": "NZ-MDC",
+    "Nelson Marlborough": "NZ-NMB", "Northland": "NZ-NTH", "South Canterbury": "NZ-SCT",
+    "Southern": "NZ-SOU", "Tairawhiti": "NZ-TAI", "Taranaki": "NZ-TAR",
+    "Waikato": "NZ-WKO", "Wairarapa": "NZ-WAI", "Waitemata": "NZ-WMT",
+    "West Coast": "NZ-WCT", "Whanganui": "NZ-WHG",
+}
 
 
 @dataclass
@@ -126,6 +142,55 @@ class NewZealandPHFCrawler(BaseCrawler):
     """
 
     SOURCE_URL = _LIBRARY_BASE_URL
+
+    def fetch_dhb_annual_rows(self) -> Tuple[List[Dict[str, str]], str]:
+        """Fetch the PHF Science licensed annual DHB total dataset."""
+        response = self.get(DHB_TOTAL_CSV_URL)
+        rows = list(csv.DictReader(io.StringIO(response.text.lstrip("\ufeff"))))
+        required = {"Disease", "Report Year", "DHBName", "Case Count", "Case rate per 100,000"}
+        if not rows or not required.issubset(rows[0]):
+            raise RuntimeError("[NZ-DHB] PHF annual CSV is empty or has an unexpected schema")
+        known = set(DHB_JURISDICTIONS)
+        found = {str(row.get("DHBName", "")).strip() for row in rows}
+        if found != known:
+            raise RuntimeError(
+                "[NZ-DHB] Official DHB list changed: "
+                f"missing={sorted(known - found)}, unexpected={sorted(found - known)}"
+            )
+        normalized: List[Dict[str, str]] = []
+        for row in rows:
+            area = str(row.get("DHBName", "")).strip()
+            try:
+                year = int(row.get("Report Year", ""))
+                cases = int(row.get("Case Count", ""))
+            except (TypeError, ValueError):
+                continue
+            if year < 2006 or year > 2100 or cases < 0:
+                continue
+            rate = str(row.get("Case rate per 100,000", "")).strip()
+            normalized.append({
+                "Date": f"{year:04d}-01-01",
+                "Year": str(year),
+                "Frequency": "annual",
+                "Measure": "case_notifications",
+                "RawDiseaseLabel": str(row.get("Disease", "")).strip(),
+                "Disease": str(row.get("Disease", "")).strip(),
+                "Cases": str(cases),
+                "Rate": rate if rate.casefold() != "suppressed" else "",
+                "RateSuppressed": "true" if rate.casefold() == "suppressed" else "false",
+                "Source": "New Zealand PHF Science Annual DHB Total",
+                "SourceID": DHB_SOURCE_ID,
+                "ReportingArea": area,
+                "JurisdictionCode": DHB_JURISDICTIONS[area],
+                "ParentCountryCode": "NZ",
+                "LocationType": "subdivision",
+                "GeographyKey": f"country:{DHB_JURISDICTIONS[area]}:national",
+                "SourceURL": DHB_TOTAL_CSV_URL,
+                "License": "CC-BY-4.0",
+            })
+        if not normalized:
+            raise RuntimeError("[NZ-DHB] No valid annual observations were parsed")
+        return normalized, DHB_TOTAL_CSV_URL
 
     def __init__(
         self,

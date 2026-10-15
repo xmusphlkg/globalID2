@@ -32,6 +32,20 @@ DEFAULT_CREATE_URL = "https://survstat.rki.de/Content/Query/Create.aspx"
 DEFAULT_MAIN_URL = "https://survstat.rki.de/Content/Query/Main.aspx"
 HISTORY_START_YEAR = 2001
 NATIONAL_GEOGRAPHY_KEY = "country:DE:national"
+GERMAN_STATES = {
+    "DE-BW": "Baden-Württemberg", "DE-BY": "Bayern", "DE-BE": "Berlin",
+    "DE-BB": "Brandenburg", "DE-HB": "Bremen", "DE-HH": "Hamburg",
+    "DE-HE": "Hessen", "DE-MV": "Mecklenburg-Vorpommern",
+    "DE-NI": "Niedersachsen", "DE-NW": "Nordrhein-Westfalen",
+    "DE-RP": "Rheinland-Pfalz", "DE-SL": "Saarland", "DE-SN": "Sachsen",
+    "DE-ST": "Sachsen-Anhalt", "DE-SH": "Schleswig-Holstein", "DE-TH": "Thüringen",
+}
+GERMAN_RKI_STATE_KEYS = {
+    "DE-BW": "08", "DE-BY": "09", "DE-BE": "11", "DE-BB": "12",
+    "DE-HB": "04", "DE-HH": "02", "DE-HE": "06", "DE-MV": "13",
+    "DE-NI": "03", "DE-NW": "05", "DE-RP": "07", "DE-SL": "10",
+    "DE-SN": "14", "DE-ST": "15", "DE-SH": "01", "DE-TH": "16",
+}
 _YEAR_RE = re.compile(r"(?<!\d)(20\d{2})(?:\D+)([0-5]?\d)(?!\d)")
 
 
@@ -74,13 +88,15 @@ def _find_column(headers: Iterable[str], *aliases: str) -> Optional[str]:
     return next((header for header in headers if any(_key(alias) in _key(header) for alias in aliases)), None)
 
 
-def _normalized_row(*, label: str, year: int, week: int, cases: int, source_url: str, retrieved_at: datetime, raw_sha: str) -> Dict[str, str]:
+def _normalized_row(*, label: str, year: int, week: int, cases: int, source_url: str, retrieved_at: datetime, raw_sha: str, geography: str = "Deutschland", geography_key: str = NATIONAL_GEOGRAPHY_KEY) -> Dict[str, str]:
     report_date = _week_start(year, week)
     source_code = _slug(label)
     return {
         "Date": report_date.isoformat(), "Year": str(year), "Week": str(week),
         "RawDiseaseLabel": label, "SourceDiseaseCode": source_code, "DiseaseCode": "__source_native__", "Cases": str(cases),
-        "PeriodType": "weekly", "Geography": "Deutschland", "GeographyKey": NATIONAL_GEOGRAPHY_KEY,
+        "PeriodType": "weekly", "Geography": geography, "GeographyKey": geography_key,
+        "ReportingArea": geography, "Geocode": geography_key.removeprefix("country:").removesuffix(":national"),
+        "ParentCountryCode": "DE", "LocationType": "country" if geography_key == NATIONAL_GEOGRAPHY_KEY else "subdivision",
         "DatasetStatus": "closed_revisable", "IsProvisional": "false", "RevisionSemantics": "authoritative_revision", "AuthoritativeRevision": "true",
         "Dimensions": json.dumps({"source_disease_code": source_code, "source_disease_label": label, "reference_definition": "default"}, ensure_ascii=False, sort_keys=True),
         "Source": DEFAULT_SOURCE_NAME, "SourceURL": source_url, "RetrievedAt": retrieved_at.isoformat().replace("+00:00", "Z"), "RawSHA256": raw_sha,
@@ -88,7 +104,7 @@ def _normalized_row(*, label: str, year: int, week: int, cases: int, source_url:
     }
 
 
-def parse_survstat_csv(content: bytes, *, source_url: str, retrieved_at: datetime, export_year: Optional[int] = None) -> List[Dict[str, str]]:
+def parse_survstat_csv(content: bytes, *, source_url: str, retrieved_at: datetime, export_year: Optional[int] = None, geography: str = "Deutschland", geography_key: str = NATIONAL_GEOGRAPHY_KEY) -> List[Dict[str, str]]:
     """Normalize a SurvStat CSV while retaining all pathogen categories."""
     decoded = ""
     # UTF-8 normally decodes first; German historical exports may instead be
@@ -126,7 +142,7 @@ def parse_survstat_csv(content: bytes, *, source_url: str, retrieved_at: datetim
                         week, cases = int(week_value), int(value)
                     except ValueError as exc:
                         raise DESurvStatContractError(f"SurvStat pivot row {line} has invalid week/count") from exc
-                    row = _normalized_row(label=label, year=int(export_year), week=week, cases=cases, source_url=source_url, retrieved_at=retrieved_at, raw_sha=raw_sha)
+                    row = _normalized_row(label=label, year=int(export_year), week=week, cases=cases, source_url=source_url, retrieved_at=retrieved_at, raw_sha=raw_sha, geography=geography, geography_key=geography_key)
                     identity = (date.fromisoformat(row["Date"]), row["SourceDiseaseCode"])
                     if identity in seen:
                         raise DESurvStatContractError(f"SurvStat export has duplicate national disease/week {identity!r}")
@@ -162,19 +178,19 @@ def parse_survstat_csv(content: bytes, *, source_url: str, retrieved_at: datetim
         if identity in seen:
             raise DESurvStatContractError(f"SurvStat export has duplicate national disease/week {identity!r}")
         seen.add(identity)
-        rows.append(_normalized_row(label=label, year=year, week=week, cases=cases, source_url=source_url, retrieved_at=retrieved_at, raw_sha=raw_sha))
+        rows.append(_normalized_row(label=label, year=year, week=week, cases=cases, source_url=source_url, retrieved_at=retrieved_at, raw_sha=raw_sha, geography=geography, geography_key=geography_key))
     if not rows:
         raise DESurvStatContractError("SurvStat export has no usable weekly national records")
     return sorted(rows, key=lambda row: (row["Date"], row["SourceDiseaseCode"]))
 
 
-def parse_survstat_zip(content: bytes, *, source_url: str, retrieved_at: datetime, export_year: Optional[int] = None) -> List[Dict[str, str]]:
+def parse_survstat_zip(content: bytes, *, source_url: str, retrieved_at: datetime, export_year: Optional[int] = None, geography: str = "Deutschland", geography_key: str = NATIONAL_GEOGRAPHY_KEY) -> List[Dict[str, str]]:
     try:
         with zipfile.ZipFile(io.BytesIO(content)) as archive:
             names = [name for name in archive.namelist() if name.casefold().endswith(".csv")]
             if len(names) != 1:
                 raise DESurvStatContractError("SurvStat ZIP must contain exactly one CSV export")
-            return parse_survstat_csv(archive.read(names[0]), source_url=source_url, retrieved_at=retrieved_at, export_year=export_year)
+            return parse_survstat_csv(archive.read(names[0]), source_url=source_url, retrieved_at=retrieved_at, export_year=export_year, geography=geography, geography_key=geography_key)
     except zipfile.BadZipFile as exc:
         raise DESurvStatContractError("SurvStat download is not a ZIP export") from exc
 
@@ -212,9 +228,14 @@ class GermanySurvStatCrawler(BaseCrawler):
             payload[target] = value
         return self.post(self.create_url, data=payload)
 
-    def _download_year(self, year: int) -> tuple[bytes, str]:
+    def _download_year(self, year: int, region: Optional[str] = None) -> tuple[bytes, str]:
+        region_label = GERMAN_STATES.get(region or "")
+        if region is not None and region_label is None:
+            raise DESurvStatContractError(f"Unsupported RKI state code: {region!r}")
         if self.export_url_template:
-            url = self.export_url_template.format(year=year)
+            if region and "{region}" not in self.export_url_template:
+                raise DESurvStatContractError("Regional SurvStat export URL must include {region}")
+            url = self.export_url_template.format(year=year, region=region or "")
             response = self.get(url)
             return response.content, str(getattr(response, "url", url))
         # A completed export leaves server-side WebForms state behind.  Each
@@ -252,6 +273,62 @@ class GermanySurvStatCrawler(BaseCrawler):
             raise DESurvStatContractError(f"SurvStat did not expose a selectable member for year {year}")
         option = next(option for option in soup.select(f'select[name="{member}"] option') if str(year) in _text(option.get_text()))
         html = self._postback(html, target=member, value=str(option.get("value", ""))).text
+        if region_label:
+            soup = BeautifulSoup(html, "html.parser")
+            add_filter = next((str(button.get("name")) for button in soup.select('input[type="image"][name]') if "ImageButtonAddFilterRow" in str(button.get("name"))), None)
+            if not add_filter:
+                raise DESurvStatContractError("SurvStat did not expose an add-filter control for state selection")
+            payload = self._form_payload(html)
+            payload[f"{add_filter}.x"] = "1"; payload[f"{add_filter}.y"] = "1"
+            html = self.post(self.create_url, data=payload).text
+            soup = BeautifulSoup(html, "html.parser")
+            selectors = [str(item.get("name")) for item in soup.select('select[name]') if "DropDownListFilterHierarchy" in str(item.get("name"))]
+            hierarchy = next((name for name in reversed(selectors) if (select := soup.select_one(f'select[name="{name}"]')) and (selected := select.select_one('option[selected]')) and not str(selected.get("value", ""))), None)
+            if not hierarchy:
+                raise DESurvStatContractError("SurvStat did not expose a state filter row")
+            html = self._postback(html, target=hierarchy, value="[DeutschlandNodes].[Kreise71Web]").text
+            soup = BeautifulSoup(html, "html.parser")
+            # Each filter row has its own ListBoxFilterLevelMembers controls.
+            # The first matching control on the page is the reference-definition
+            # filter, so scope candidates to this geography filter's repeater row.
+            filter_prefix = hierarchy.split("DropDownListFilterHierarchy", 1)[0]
+            expected_member = f"[DeutschlandNodes].[Kreise71Web].[FedStateKey71].&[{GERMAN_RKI_STATE_KEYS[region]}]"
+            member_candidates = [
+                select
+                for select in soup.select('select[name]')
+                if filter_prefix in str(select.get("name"))
+                and "ListBoxFilterLevelMembers" in str(select.get("name"))
+            ]
+            selected_pair = next(
+                (
+                    (str(select.get("name")), option)
+                    for select in member_candidates
+                    for option in select.select("option")
+                    if str(option.get("value", "")) == expected_member
+                    and _text(option.get_text()).casefold() == region_label.casefold()
+                ),
+                None,
+            )
+            if selected_pair is None:
+                available = [
+                    (_text(option.get_text()), str(option.get("value", "")))
+                    for select in member_candidates
+                    for option in select.select("option")
+                    if "FedStateKey71" in str(option.get("value", ""))
+                ]
+                raise DESurvStatContractError(
+                    f"SurvStat has no exact state member {region_label!r} "
+                    f"with key {expected_member!r}; available={available!r}"
+                )
+            members, selected = selected_pair
+            payload = self._form_payload(html)
+            payload[members] = str(selected.get("value", ""))
+            download = next((name for name in payload if name.endswith("ButtonDownload")), "ctl00$ctl00$ContentPlaceHolderMain$ContentPlaceHolderAltGridFull$ButtonDownload")
+            payload[download] = "ZIP herunterladen"
+            response = self.post(self.create_url, data=payload)
+            if not response.content.startswith(b"PK"):
+                raise DESurvStatContractError(f"SurvStat state export for {region} did not return a ZIP")
+            return response.content, str(getattr(response, "url", self.create_url))
         payload = self._form_payload(html)
         download = next((name for name in payload if name.endswith("ButtonDownload")), "ctl00$ctl00$ContentPlaceHolderMain$ContentPlaceHolderAltGridFull$ButtonDownload")
         payload[download] = "ZIP herunterladen"
@@ -269,13 +346,19 @@ class GermanySurvStatCrawler(BaseCrawler):
         path.with_suffix(".json").write_text(json.dumps({"source_url": url, "year": year, "retrieved_at": datetime.now(timezone.utc).isoformat(), "sha256": digest}, indent=2) + "\n", encoding="utf-8")
 
     def crawl_weekly_national(self, output_csv: Path, *, years: Iterable[int]) -> DEFetchSummary:
+        return self._crawl_weekly(output_csv, years=years, region=None)
+
+    def crawl_weekly_subdivision(self, output_csv: Path, *, years: Iterable[int], region: str) -> DEFetchSummary:
+        return self._crawl_weekly(output_csv, years=years, region=region)
+
+    def _crawl_weekly(self, output_csv: Path, *, years: Iterable[int], region: Optional[str]) -> DEFetchSummary:
         rows: List[Dict[str, str]] = []
         used_years = sorted(set(int(year) for year in years))
         for year in used_years:
             last_error: Optional[Exception] = None
             for _attempt in range(3):
                 try:
-                    payload, url = self._download_year(year)
+                    payload, url = self._download_year(year, region)
                     break
                 except DESurvStatContractError as exc:
                     last_error = exc
@@ -284,20 +367,22 @@ class GermanySurvStatCrawler(BaseCrawler):
                     f"SurvStat year {year} failed after three fresh sessions: {last_error}"
                 ) from last_error
             self._archive(year, payload, url)
-            rows.extend(parse_survstat_zip(payload, source_url=url, retrieved_at=datetime.now(timezone.utc), export_year=year))
+            label = GERMAN_STATES[region] if region else "Deutschland"
+            geography_key = f"country:{region}:national" if region else NATIONAL_GEOGRAPHY_KEY
+            rows.extend(parse_survstat_zip(payload, source_url=url, retrieved_at=datetime.now(timezone.utc), export_year=year, geography=label, geography_key=geography_key))
         # A normal run exports only one or two years for the revision window;
         # retain previous historical years and replace the refreshed weekly
         # disease facts idempotently.
-        merged: Dict[tuple[str, str], Dict[str, str]] = {}
+        merged: Dict[tuple[str, str, str], Dict[str, str]] = {}
         if output_csv.exists():
             with output_csv.open("r", encoding="utf-8-sig", newline="") as handle:
                 for cached in csv.DictReader(handle):
-                    key = (_text(cached.get("Date")), _text(cached.get("SourceDiseaseCode")))
+                    key = (_text(cached.get("Date")), _text(cached.get("SourceDiseaseCode")), _text(cached.get("GeographyKey")) or NATIONAL_GEOGRAPHY_KEY)
                     if all(key):
                         merged[key] = {name: _text(value) for name, value in cached.items()}
         for row in rows:
-            merged[(row["Date"], row["SourceDiseaseCode"])] = row
-        rows = sorted(merged.values(), key=lambda row: (row["Date"], row["SourceDiseaseCode"]))
+            merged[(row["Date"], row["SourceDiseaseCode"], row["GeographyKey"])] = row
+        rows = sorted(merged.values(), key=lambda row: (row["Date"], row["SourceDiseaseCode"], row["GeographyKey"]))
         fields = sorted({key for row in rows for key in row}); output_csv.parent.mkdir(parents=True, exist_ok=True)
         temporary = output_csv.with_suffix(output_csv.suffix + ".tmp")
         with temporary.open("w", encoding="utf-8", newline="") as handle:

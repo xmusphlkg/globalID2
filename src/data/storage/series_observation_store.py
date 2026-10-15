@@ -183,12 +183,12 @@ async def _persist_observation_revisions_batch(
 
     if not inserts:
         return 0
-    statement = pg_insert(DiseaseSeriesObservationRevision.__table__).values(inserts)
+    statement = pg_insert(DiseaseSeriesObservationRevision.__table__)
     statement = statement.on_conflict_do_nothing(
         constraint="uq_disease_series_observation_revision"
-    )
-    result = await db.execute(statement)
-    return max(0, int(getattr(result, "rowcount", len(inserts)) or 0))
+    ).returning(DiseaseSeriesObservationRevision.time)
+    result = await db.execute(statement, inserts)
+    return len(result.scalars().all())
 
 
 @dataclass(frozen=True)
@@ -490,6 +490,10 @@ class SeriesObservationStore:
         skipped_unregistered = 0
         skipped_missing = 0
         for row in rows:
+            source_missing = (
+                str(row.get("MissingValueStatus") or "").strip().lower()
+                == "source_missing"
+            )
             label = _first_text(
                 row,
                 "RawDiseaseLabel",
@@ -520,8 +524,9 @@ class SeriesObservationStore:
                 continue
             raw_value = row.get(value_field)
             if raw_value is None or not str(raw_value).strip():
-                skipped_missing += 1
-                continue
+                if not source_missing:
+                    skipped_missing += 1
+                    continue
             selected.append(row)
         return RegistryRowSelection(
             rows=selected,
@@ -548,7 +553,13 @@ class SeriesObservationStore:
         for row in rows:
             report_time = _parse_report_time(row)
             value, suppressed = _parse_value(row.get(value_field))
-            if report_time is None or (value is None and not suppressed):
+            source_missing = (
+                str(row.get("MissingValueStatus") or "").strip().lower()
+                == "source_missing"
+            )
+            if report_time is None or (
+                value is None and not suppressed and not source_missing
+            ):
                 skipped_invalid += 1
                 continue
 
@@ -631,6 +642,9 @@ class SeriesObservationStore:
                         row, "PopulationScope", "population_scope"
                     ),
                     "authoritative_revision": _allows_authoritative_revision(row),
+                    "missing_value_status": (
+                        "source_missing" if source_missing else None
+                    ),
                     "allow_equal_quality_overwrite": (
                         _allows_equal_quality_overwrite(row)
                     ),
@@ -791,7 +805,7 @@ class SeriesObservationStore:
             # Build the insert against the underlying table.  Passing the ORM
             # class here makes SQLAlchemy interpret the physical ``metadata``
             # column as DeclarativeBase.metadata, which breaks bulk inserts.
-            statement = pg_insert(DiseaseSeriesObservation.__table__).values(batch)
+            statement = pg_insert(DiseaseSeriesObservation.__table__)
             existing_quality_rank = case(
                 (DiseaseSeriesObservation.quality_status == "final", 4),
                 (DiseaseSeriesObservation.quality_status == "revised", 3),
@@ -840,7 +854,7 @@ class SeriesObservationStore:
                     == "true",
                 ),
             ).returning(DiseaseSeriesObservation.series_code)
-            write_result = await db.execute(statement)
+            write_result = await db.execute(statement, batch)
             affected_rows += len(write_result.scalars().all())
 
         await _persist_observation_revisions(
@@ -914,7 +928,15 @@ class SeriesObservationStore:
 
             report_time = _parse_report_time(row)
             value, suppressed = _parse_value(row.get(value_field))
-            if report_time is None or (value is None and not suppressed) or not resolved_source:
+            source_missing = (
+                str(row.get("MissingValueStatus") or "").strip().lower()
+                == "source_missing"
+            )
+            if (
+                report_time is None
+                or (value is None and not suppressed and not source_missing)
+                or not resolved_source
+            ):
                 continue
 
             source_code = local_code or (
@@ -1030,6 +1052,9 @@ class SeriesObservationStore:
                     ),
                     "authoritative_revision": _allows_authoritative_revision(row),
                     "allow_equal_quality_overwrite": _allows_equal_quality_overwrite(row),
+                    "missing_value_status": (
+                        "source_missing" if source_missing else None
+                    ),
                 },
             }
             identity = (
@@ -2014,10 +2039,20 @@ def _geography_key(
         }:
             expected = "country:US:national"
         else:
-            raise ValueError(
-                "Unsupported SRC_US_NNDSS ReportingArea; expected TOTAL or "
-                f"US RESIDENTS, received {reporting_area!r}"
-            )
+            jurisdiction = (
+                _first_text(row, "JurisdictionCode", "jurisdiction_code") or ""
+            ).upper()
+            expected = f"country:{jurisdiction}:national"
+            if (
+                not re.fullmatch(r"US-[A-Z]{2}", jurisdiction)
+                or not reporting_area
+                or explicit != expected
+            ):
+                raise ValueError(
+                    "Unsupported SRC_US_NNDSS ReportingArea; expected TOTAL, "
+                    "US RESIDENTS, or a state/territory row with an explicit "
+                    f"jurisdiction GeographyKey, received {reporting_area!r}"
+                )
         if explicit and explicit != expected:
             raise ValueError(
                 "Explicit geography_key conflicts with SRC_US_NNDSS "

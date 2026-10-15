@@ -25,7 +25,9 @@ async def execute_us_pipeline(
 ):
     """Execute the US CDC source refresh and dual-write pipeline."""
     run_started = perf_counter()
-    raw_dir = Path("data/raw") / "us"
+    updater_country = str(getattr(updater, "country_code", "US") or "US").upper()
+    is_subdivision = updater_country != "US"
+    raw_dir = Path("data/raw") / updater_country.lower()
     run_id: Optional[int] = None
 
     await task_manager.add_workbook_entry(
@@ -33,7 +35,7 @@ async def execute_us_pipeline(
         entry_type="info",
         title="Crawl Configuration",
         content=(
-            "Country: US\n"
+            f"Country: {updater_country}\n"
             f"Source: {source}\n"
             f"Force: {'Yes' if force else 'No'}\n"
             f"Process: {'Yes' if process else 'No'}\n"
@@ -49,7 +51,7 @@ async def execute_us_pipeline(
     try:
         async with get_database() as db:
             run = crawl_run_type(
-                country_code="US",
+                country_code=updater_country,
                 source=source,
                 status="running",
                 started_at=datetime.now(timezone.utc),
@@ -67,8 +69,12 @@ async def execute_us_pipeline(
         entry_type="info",
         title="Phase 1/3: Fetching Data List",
         content=(
-            f"Fetching US CDC source '{source}' "
-            "(NNDSS weekly and/or NHSS annual HIV data)..."
+            f"Fetching US CDC source for {updater_country} '{source}' "
+            + (
+                "(NNDSS weekly jurisdiction data)..."
+                if is_subdivision
+                else "(NNDSS weekly and/or NHSS annual HIV data)..."
+            )
         ),
         content_type="text",
     )
@@ -82,7 +88,7 @@ async def execute_us_pipeline(
         f"{name}: {latest.isoformat() if latest else 'none'}"
         for name, latest in fetched.latest_by_source.items()
     ) or "none"
-    source_rows = len(fetched.rows)
+    source_rows = len(fetched.series_rows if is_subdivision else fetched.rows)
 
     await task_manager.update_task_progress(task.task_uuid, 30)
     await task_manager.add_workbook_entry(
@@ -104,8 +110,13 @@ async def execute_us_pipeline(
         entry_type="info",
         title="Phase 2/3: Checking Incremental Updates",
         content=(
-            "Checking each source independently; NNDSS recent weeks and all "
-            "NHSS annual revisions remain eligible for upsert..."
+            (
+                f"Checking NNDSS revisions for {updater_country}; facts will be stored "
+                "at the jurisdiction geography..."
+                if is_subdivision
+                else "Checking each source independently; NNDSS recent weeks and all "
+                "NHSS annual revisions remain eligible for upsert..."
+            )
         ),
         content_type="text",
     )
@@ -155,18 +166,18 @@ async def execute_us_pipeline(
         task.task_uuid,
         entry_type="info",
         title="Phase 3/3: Finalizing",
-        content="Finalizing US surveillance update and crawl run summary...",
+        content=f"Finalizing {updater_country} surveillance update and crawl run summary...",
         content_type="text",
     )
 
     if not process:
         summary_message = "Process disabled, fetched source rows only."
     elif imported_new_data:
-        summary_message = "US surveillance data imported or revised successfully."
+        summary_message = f"{updater_country} surveillance data imported or revised successfully."
     elif force:
         summary_message = "Force mode completed; no rows were upserted after mapping."
     else:
-        summary_message = "No eligible US source rows were detected, import skipped."
+        summary_message = f"No eligible {updater_country} source rows were detected, import skipped."
 
     await service._finish_crawl_run(
         run_id,

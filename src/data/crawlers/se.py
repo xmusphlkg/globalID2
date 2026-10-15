@@ -32,6 +32,7 @@ import httpx
 from bs4 import BeautifulSoup, Tag
 
 from src.core import get_logger
+from .subdivision_registry import geography_key as resolve_geography_key
 
 from .base import BaseCrawler, CrawlerResult
 
@@ -148,7 +149,7 @@ def _decode_csv_bytes(content: bytes) -> str:
     return content.decode("utf-8", errors="replace")
 
 
-def _parse_csv_with_delimiter(csv_text: str, delimiter: str) -> dict[int, int]:
+def _parse_csv_geographies_with_delimiter(csv_text: str, delimiter: str) -> dict[str, dict[int, int]]:
     rows = [list(row) for row in csv.reader(io.StringIO(csv_text), delimiter=delimiter)]
     header_index: Optional[int] = None
     month_columns: dict[int, int] = {}
@@ -166,20 +167,42 @@ def _parse_csv_with_delimiter(csv_text: str, delimiter: str) -> dict[int, int]:
     if header_index is None:
         return {}
 
+    geographies: dict[str, dict[int, int]] = {}
     for row in rows[header_index + 1 :]:
         if not row:
             continue
-        row_label = _norm_text(row[0]).casefold()
-        if row_label != "totalt":
+        row_label = _norm_text(row[0])
+        if not row_label:
             continue
-        totals: dict[int, int] = {}
+        values: dict[int, int] = {}
         for month, column in month_columns.items():
             if column >= len(row):
                 continue
             cases = _parse_cases(row[column])
             if cases is not None:
-                totals[month] = cases
-        return totals
+                values[month] = cases
+        if values:
+            geographies[row_label] = values
+    return geographies
+
+
+def _parse_csv_with_delimiter(csv_text: str, delimiter: str) -> dict[int, int]:
+    geographies = _parse_csv_geographies_with_delimiter(csv_text, delimiter)
+    return next(
+        (values for label, values in geographies.items() if label.casefold() == "totalt"),
+        {},
+    )
+
+
+def parse_monthly_csv_geographies(content: bytes | str) -> dict[str, dict[int, int]]:
+    """Return monthly counts for every geography in an FHM CSV export."""
+
+    csv_text = _decode_csv_bytes(content) if isinstance(content, bytes) else content
+    delimiters = ["\t", ";", ","] if "\t" in csv_text else ([";", ",", "\t"] if ";" in csv_text else [",", "\t", ";"])
+    for delimiter in delimiters:
+        geographies = _parse_csv_geographies_with_delimiter(csv_text, delimiter)
+        if geographies:
+            return geographies
     return {}
 
 
@@ -210,6 +233,18 @@ def _monthly_article(soup: BeautifulSoup, year: int) -> Optional[Tag]:
     if "månadsstatistik" not in headings or str(year) not in headings:
         return None
     return article
+
+
+def available_monthly_years(html: str) -> set[int]:
+    """Read years offered by the FHM page's own year selector."""
+
+    soup = BeautifulSoup(html, "html.parser")
+    years: set[int] = set()
+    for option in soup.select("select option[value]"):
+        value = _norm_text(option.get("value"))
+        if re.fullmatch(r"20\d{2}|19\d{2}", value):
+            years.add(int(value))
+    return years
 
 
 def parse_monthly_html(html: str, year: int) -> dict[int, int]:
@@ -255,6 +290,46 @@ def parse_monthly_html(html: str, year: int) -> dict[int, int]:
                 if cases is not None:
                     totals[month] = cases
             return totals
+    return {}
+
+
+def parse_monthly_html_geographies(html: str, year: int) -> dict[str, dict[int, int]]:
+    """Parse monthly counts by county from the official FHM HTML table."""
+
+    soup = BeautifulSoup(html, "html.parser")
+    article = _monthly_article(soup, year)
+    if article is None:
+        return {}
+    for table in article.select("table"):
+        header_cells = table.select("thead tr th")
+        if not header_cells:
+            first_row = table.select_one("tr")
+            header_cells = first_row.find_all(["th", "td"], recursive=False) if first_row else []
+        month_columns = {
+            SWEDISH_MONTHS[normalized]: column
+            for column, cell in enumerate(header_cells)
+            if (normalized := _normalize_month_header(cell.get_text(" ", strip=True))) in SWEDISH_MONTHS
+        }
+        if len(month_columns) < 3:
+            continue
+        result: dict[str, dict[int, int]] = {}
+        for row in table.select("tbody tr") or table.select("tr")[1:]:
+            cells = row.find_all(["th", "td"], recursive=False)
+            if not cells:
+                continue
+            geography = _norm_text(cells[0].get_text(" ", strip=True))
+            values: dict[int, int] = {}
+            for month, column in month_columns.items():
+                if column >= len(cells):
+                    continue
+                total = cells[column].select_one("strong.total")
+                cases = _parse_cases(total.get_text(" ", strip=True) if total else cells[column].get_text(" ", strip=True))
+                if cases is not None:
+                    values[month] = cases
+            if geography and values:
+                result[geography] = values
+        if result:
+            return result
     return {}
 
 
@@ -476,6 +551,7 @@ class SwedenSmiNetCrawler(BaseCrawler):
         disease_label: str,
         year: int,
         totals: dict[int, int],
+        geography: str,
         requested_months: set[tuple[int, int]],
         provisional_months: set[tuple[int, int]],
         page_url: str,
@@ -498,8 +574,12 @@ class SwedenSmiNetCrawler(BaseCrawler):
                     "Year": str(year),
                     "Month": str(month),
                     "Cases": str(cases),
-                    "Geography": "SE:national",
-                    "GeographyKey": NATIONAL_GEOGRAPHY_KEY,
+                    "Geography": geography,
+                    "GeographyKey": (
+                        NATIONAL_GEOGRAPHY_KEY
+                        if geography == "SE:national"
+                        else resolve_geography_key("SE", geography.removeprefix("SE:county:"))
+                    ),
                     "Scope": "all",
                     "Granularity": "monthly",
                     "DatasetStatus": (
@@ -596,7 +676,10 @@ class SwedenSmiNetCrawler(BaseCrawler):
         ordered_years = [probe_year, *(year for year in years if year != probe_year)]
         for page in pages:
             recognized_sminet_page = False
+            available_years: Optional[set[int]] = None
             for year in ordered_years:
+                if available_years is not None and year not in available_years:
+                    continue
                 if year != probe_year and not recognized_sminet_page:
                     continue
                 pages_inspected += 1
@@ -614,22 +697,33 @@ class SwedenSmiNetCrawler(BaseCrawler):
                     year=year,
                     page_url=page_url,
                 )
-                html_totals = parse_monthly_html(html, year)
+                if year == probe_year:
+                    source_year_options = available_monthly_years(html)
+                    if source_year_options:
+                        available_years = source_year_options
+                        omitted_years = sorted(set(years) - available_years)
+                        logger.info(
+                            f"[SE-FHM] Source year availability | code={page.code} "
+                            f"available={min(available_years)}-{max(available_years)} "
+                            f"requested={len(years)} omitted={len(omitted_years)}"
+                        )
+                html_geographies = parse_monthly_html_geographies(html, year)
+                html_totals = html_geographies.get("Totalt") or parse_monthly_html(html, year)
                 if not html_totals:
                     # The index also contains non-infectious statistics pages.
                     continue
                 recognized_sminet_page = True
 
                 csv_content: Optional[bytes] = None
-                totals: dict[int, int] = {}
+                geography_totals: dict[str, dict[int, int]] = {}
                 retrieval_method = "html_fallback"
                 if csv_url:
                     csv_host = (urlparse(csv_url).hostname or "").casefold()
                     if csv_host not in self._csv_unavailable_hosts:
                         try:
                             csv_content = self._fetch_csv_bytes(csv_url)
-                            totals = parse_monthly_csv(csv_content)
-                            if totals:
+                            geography_totals = parse_monthly_csv_geographies(csv_content)
+                            if geography_totals:
                                 retrieval_method = "machine_csv"
                                 csv_pages += 1
                         except Exception as exc:
@@ -638,8 +732,8 @@ class SwedenSmiNetCrawler(BaseCrawler):
                                 f"code={page.code} year={year} error={exc}"
                             )
 
-                if not totals:
-                    totals = html_totals
+                if not geography_totals:
+                    geography_totals = html_geographies or {"Totalt": html_totals}
                     html_fallback_pages += 1
 
                 self._save_raw_artifact(
@@ -648,19 +742,27 @@ class SwedenSmiNetCrawler(BaseCrawler):
                     html=html,
                     csv_content=csv_content,
                 )
-                rows = self._normalized_rows(
-                    page=page,
-                    disease_label=disease_label,
-                    year=year,
-                    totals=totals,
-                    requested_months=requested_set,
-                    provisional_months=provisional_months,
-                    page_url=page_url,
-                    csv_url=csv_url,
-                    source_updated_at=source_updated_at,
-                    retrieved_at=retrieved_at,
-                    retrieval_method=retrieval_method,
-                )
+                rows = []
+                for geography, totals in geography_totals.items():
+                    normalized_geography = (
+                        "SE:national"
+                        if geography.casefold() == "totalt"
+                        else f"SE:county:{geography}"
+                    )
+                    rows.extend(self._normalized_rows(
+                        page=page,
+                        disease_label=disease_label,
+                        year=year,
+                        totals=totals,
+                        geography=normalized_geography,
+                        requested_months=requested_set,
+                        provisional_months=provisional_months,
+                        page_url=page_url,
+                        csv_url=csv_url,
+                        source_updated_at=source_updated_at,
+                        retrieved_at=retrieved_at,
+                        retrieval_method=retrieval_method,
+                    ))
                 if rows:
                     all_rows.extend(rows)
                     diseases_with_rows.add(page.code)
@@ -782,6 +884,9 @@ __all__ = [
     "SOURCE_SCOPE",
     "SwedenSmiNetCrawler",
     "closed_months",
+    "available_monthly_years",
     "parse_monthly_csv",
+    "parse_monthly_csv_geographies",
     "parse_monthly_html",
+    "parse_monthly_html_geographies",
 ]

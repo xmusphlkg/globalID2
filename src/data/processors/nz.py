@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import csv
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -26,7 +26,11 @@ from src.data.processors.mapping_lookup import (
     load_country_mapping_dict,
     normalize_mapping_key,
 )
-from src.data.crawlers.nz import NewZealandPHFCrawler
+from src.data.crawlers.nz import (
+    DHB_JURISDICTIONS,
+    DHB_SOURCE_ID,
+    NewZealandPHFCrawler,
+)
 from src.ontology import load_disease_ontology
 
 logger = get_logger(__name__)
@@ -44,6 +48,7 @@ class NZUpdateFetchResult:
     source_latest_date: Optional[date]
     source_csv: Path
     script_logs: List[str]
+    series_rows: List[Dict[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -103,6 +108,9 @@ class NZMonthlyUpdater:
     """Read NZ national monthly rows from PHF Science crawler output and import."""
 
     series_registered_rows_only = True
+    series_country_code = "NZ"
+    series_geography_from_rows = True
+    series_registry_coverage = "required"
 
     def __init__(
         self,
@@ -215,6 +223,7 @@ class NZMonthlyUpdater:
             source_latest_date=latest,
             source_csv=self.output_csv,
             script_logs=logs,
+            series_rows=rows,
         )
 
     def _load_rows(self, csv_path: Path) -> List[Dict[str, str]]:
@@ -426,4 +435,79 @@ class NZMonthlyUpdater:
             db_latest_date=db_latest_date,
             source_latest_date=source_latest_date,
             imported_new_data=imported > 0,
+        )
+
+
+class NZDHBAnnualUpdater(NZMonthlyUpdater):
+    """Fetch PHF Science annual disease counts for one historical DHB."""
+
+    ontology_source_id = DHB_SOURCE_ID
+    series_country_code = "NZ"
+    series_geography_from_rows = True
+    series_registered_rows_only = True
+    series_registry_coverage = "required"
+    frequency = "annual"
+
+    def __init__(
+        self,
+        *,
+        country_code: str,
+        source_name: str = "New Zealand PHF Science Annual DHB Total",
+        output_csv: Optional[Path] = None,
+    ) -> None:
+        code = str(country_code or "").upper()
+        if code not in DHB_JURISDICTIONS.values():
+            raise ValueError(f"Unsupported NZ DHB jurisdiction: {code!r}")
+        super().__init__(
+            country_code=code,
+            source_name=source_name,
+            output_csv=output_csv or (
+                ROOT / "data/current/nz/subdivisions" / f"{code.lower()}_dhb_annual.csv"
+            ),
+        )
+        self.subdivision_code = code
+        self.ontology_source_id = DHB_SOURCE_ID
+        self.series_geography_key = f"country:{code}:national"
+
+    def refresh_source(
+        self,
+        *,
+        source: str = "phf_dhb_annual",
+        run_external: bool = False,
+        force: bool = False,
+        months: Optional[List[Tuple[int, int]]] = None,
+        save_raw: bool = False,
+        raw_dir: Optional[Path] = None,
+    ) -> NZUpdateFetchResult:
+        """Refresh the official annual DHB CSV, independently of NZ monthly data."""
+        del run_external, force, months
+        if source.casefold() not in {"all", "phf_dhb_annual", "dhb", "nz_dhb"}:
+            raise ValueError(f"Unsupported NZ DHB source: {source}")
+        area_by_code = {code: area for area, code in DHB_JURISDICTIONS.items()}
+        target_area = area_by_code[self.subdivision_code]
+        crawler = NewZealandPHFCrawler(
+            save_raw=save_raw,
+            raw_dir=raw_dir or ROOT / "data/raw/nz/dhb_annual",
+        )
+        all_rows, source_url = crawler.fetch_dhb_annual_rows()
+        series_rows = [row for row in all_rows if row["JurisdictionCode"] == self.subdivision_code]
+        if not series_rows:
+            raise RuntimeError(f"[NZ-DHB] No PHF annual observations for {target_area}")
+        self.output_csv.parent.mkdir(parents=True, exist_ok=True)
+        with self.output_csv.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(series_rows[0]))
+            writer.writeheader()
+            writer.writerows(series_rows)
+        latest = max(date.fromisoformat(row["Date"]) for row in series_rows)
+        logs = [
+            f"[crawler] PHF DHB annual rows={len(series_rows)} area={target_area} "
+            f"period={min(row['Year'] for row in series_rows)}-{max(row['Year'] for row in series_rows)}",
+            f"[crawler] source={source_url}; license=CC-BY-4.0",
+        ]
+        return NZUpdateFetchResult(
+            rows=[],
+            source_latest_date=latest,
+            source_csv=self.output_csv,
+            script_logs=logs,
+            series_rows=series_rows,
         )

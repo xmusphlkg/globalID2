@@ -11,7 +11,7 @@ from .cn import DataProcessor
 from .jp import JPWeeklyUpdater
 from .us import USWeeklyUpdater
 from .au import AUMonthlyUpdater, AUWeeklyUpdater
-from .nz import NZMonthlyUpdater
+from .nz import NZDHBAnnualUpdater, NZMonthlyUpdater
 from .tw import TWMonthlyUpdater
 from .br import BRMonthlyUpdater
 from .kr import KRMonthlyUpdater
@@ -42,6 +42,7 @@ __all__ = [
     "AUMonthlyUpdater",
     "AUWeeklyUpdater",
     "NZMonthlyUpdater",
+    "NZDHBAnnualUpdater",
     "TWMonthlyUpdater",
     "BRMonthlyUpdater",
     "KRMonthlyUpdater",

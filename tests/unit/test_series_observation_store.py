@@ -78,11 +78,14 @@ async def test_revision_capture_seeds_existing_state_and_appends_only_changes() 
         def mappings(self):
             return self
 
+        def scalars(self):
+            return self
+
         def all(self):
             return self.rows
 
     class FakeDB:
-        async def execute(self, statement):
+        async def execute(self, statement, *params):
             sql = str(statement)
             if getattr(statement, "is_select", False):
                 rows = (
@@ -92,7 +95,7 @@ async def test_revision_capture_seeds_existing_state_and_appends_only_changes() 
                 )
                 return Result(rows)
             statement.compile(dialect=postgresql.dialect())
-            batch = statement._multi_values[0]
+            batch = params[0] if params else statement._multi_values[0]
             inserted = []
             for row in batch:
                 key = tuple(row[column] for column in ("time", "series_code", "geography_key", "dimension_key", "recorded_at"))
@@ -102,7 +105,7 @@ async def test_revision_capture_seeds_existing_state_and_appends_only_changes() 
                 ):
                     revisions.append(dict(row))
                     inserted.append(row)
-            return Result(rowcount=len(inserted))
+            return Result([row["time"] for row in inserted], rowcount=len(inserted))
 
     observation = {
         key: current[key]
@@ -149,6 +152,9 @@ async def test_revision_capture_batches_large_source_refresh() -> None:
         def mappings(self):
             return self
 
+        def scalars(self):
+            return self
+
         def all(self):
             return self.rows
 
@@ -157,7 +163,7 @@ async def test_revision_capture_batches_large_source_refresh() -> None:
             self.lookup_sizes = []
             self.insert_sizes = []
 
-        async def execute(self, statement):
+        async def execute(self, statement, *params):
             if getattr(statement, "is_select", False):
                 keys = statement._where_criteria[0].right.value
                 self.lookup_sizes.append(len(keys))
@@ -179,10 +185,10 @@ async def test_revision_capture_batches_large_source_refresh() -> None:
                     }
                     for key in keys
                 ])
-            rows = statement._multi_values[0]
+            rows = params[0] if params else statement._multi_values[0]
             self.insert_sizes.append(len(rows))
             assert len(statement.compile(dialect=postgresql.dialect()).params) < 32767
-            return Result(rowcount=len(rows))
+            return Result([row["time"] for row in rows], rowcount=len(rows))
 
     db = FakeDB()
     assert await _persist_observation_revisions(
@@ -323,7 +329,7 @@ async def test_unknown_category_builds_nonprojectable_holding_observation() -> N
             self.results = iter((category, None))
             self.added = []
 
-        async def execute(self, _statement):
+        async def execute(self, _statement, *params):
             return ScalarResult(next(self.results))
 
         def add(self, value):
@@ -1129,7 +1135,7 @@ async def test_save_rows_builds_metadata_safe_postgresql_upsert(
         def __init__(self) -> None:
             self.upserts = []
 
-        async def execute(self, statement):
+        async def execute(self, statement, *params):
             if getattr(statement, "is_select", False):
                 return ScalarResult()
             # Compilation catches the DeclarativeBase.metadata collision that
@@ -1203,7 +1209,7 @@ async def test_save_rows_reports_only_rows_postgres_actually_affected() -> None:
             return Result([])
 
     class FakeDB:
-        async def execute(self, statement):
+        async def execute(self, statement, *params):
             if getattr(statement, "is_select", False):
                 return Result(["SER_US_NHSS_HIV_ANNUAL"])
             # Simulate ON CONFLICT ... DO UPDATE WHERE rejecting a lower-quality

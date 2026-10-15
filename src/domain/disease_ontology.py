@@ -585,7 +585,8 @@ class DiseaseSeriesObservation(BaseModel):
             name="ck_disease_series_observation_unit",
         ),
         CheckConstraint(
-            "suppressed OR value IS NOT NULL",
+            "suppressed OR value IS NOT NULL OR "
+            "metadata->>'missing_value_status' = 'source_missing'",
             name="ck_disease_series_observation_value_or_suppressed",
         ),
         CheckConstraint(

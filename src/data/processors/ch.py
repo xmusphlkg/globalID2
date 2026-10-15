@@ -87,6 +87,8 @@ class CHMonthlyUpdater:
     """Read Switzerland FOPH IDD national rows and import them."""
 
     series_registered_rows_only = True
+    series_geography_from_rows = True
+    series_country_code = "CH"
 
     def __init__(
         self,
@@ -96,9 +98,15 @@ class CHMonthlyUpdater:
         output_csv: Path = DEFAULT_OUTPUT_CSV,
     ) -> None:
         self.country_code = country_code.upper()
+        if self.country_code != "CH" and not self.country_code.startswith("CH-"):
+            raise ValueError(f"Unsupported Switzerland subdivision code: {self.country_code}")
         self.source_name = source_name
-        self.output_csv = output_csv
-        cfg = get_country_bootstrap_config(self.country_code)
+        self.is_subdivision = self.country_code.startswith("CH-")
+        self.canton_code = self.country_code.split("-", 1)[1] if self.is_subdivision else None
+        self.output_csv = Path(output_csv) if not self.is_subdivision else (
+            Path(output_csv).parent / "subdivisions" / f"{self.country_code.lower()}_idd_annual.csv"
+        )
+        cfg = get_country_bootstrap_config("CH")
         crawler_cfg = cfg.get("crawler_config", {}) if isinstance(cfg, dict) else {}
         self.full_history_start_year = int(
             crawler_cfg.get("full_history_start_year") or DEFAULT_HISTORY_START_YEAR
@@ -133,6 +141,12 @@ class CHMonthlyUpdater:
             and (parsed.year, parsed.month) in requested
         ]
 
+    @staticmethod
+    def _filter_rows_for_years(
+        rows: List[Dict[str, str]], years: Set[int]
+    ) -> List[Dict[str, str]]:
+        return [row for row in rows if (parsed := _parse_date(row)) is not None and parsed.year in years]
+
     def refresh_source(
         self,
         *,
@@ -164,12 +178,25 @@ class CHMonthlyUpdater:
         live_error: Optional[Exception] = None
         version: Optional[str] = None
         try:
-            fetch_summary: CHFetchSummary = crawler.crawl_national(
-                self.output_csv,
-                history=history or force,
-                months=months,
-                start_year=start_year,
-            )
+            if self.is_subdivision:
+                requested_years = {year for year, _month in (months or [])}
+                if not requested_years and not (history or force):
+                    current_year = datetime.now(timezone.utc).year
+                    requested_years = {current_year - 1, current_year}
+                fetch_summary = crawler.crawl_canton(
+                    self.output_csv,
+                    canton_code=self.canton_code or "",
+                    history=history or force,
+                    years=None if history or force or not requested_years else requested_years,
+                    start_year=start_year or self.full_history_start_year,
+                )
+            else:
+                fetch_summary = crawler.crawl_national(
+                    self.output_csv,
+                    history=history or force,
+                    months=months,
+                    start_year=start_year,
+                )
             version = fetch_summary.version
             logs.append(
                 f"[crawler] prepared {fetch_summary.row_count} rows; "
@@ -179,22 +206,24 @@ class CHMonthlyUpdater:
             if save_raw:
                 logs.append(f"[crawler] raw JSON archived under {actual_raw_dir}")
             loaded_live_rows = self._load_rows(self.output_csv)
-            live_rows = (
-                self._filter_rows_for_months(loaded_live_rows, months)
-                if months is not None
-                else loaded_live_rows
-            )
+            if months is not None and self.is_subdivision:
+                live_rows = self._filter_rows_for_years(loaded_live_rows, {year for year, _ in months})
+            elif months is not None:
+                live_rows = self._filter_rows_for_months(loaded_live_rows, months)
+            else:
+                live_rows = loaded_live_rows
         except Exception as exc:
             live_error = exc
             logs.append(f"[crawler] live fetch failed: {type(exc).__name__}: {exc}")
 
         prior_candidate: List[Dict[str, str]] = []
         if prior_rows:
-            prior_candidate = (
-                self._filter_rows_for_months(prior_rows, months)
-                if months is not None
-                else prior_rows
-            )
+            if months is not None and self.is_subdivision:
+                prior_candidate = self._filter_rows_for_years(prior_rows, {year for year, _ in months})
+            elif months is not None:
+                prior_candidate = self._filter_rows_for_months(prior_rows, months)
+            else:
+                prior_candidate = prior_rows
 
         candidates: List[Tuple[str, List[Dict[str, str]], int]] = []
         if live_rows:
@@ -259,6 +288,11 @@ class CHMonthlyUpdater:
                         "PeriodValue": _norm_text(row.get("PeriodValue")),
                         "Cases": str(max(0, cases)),
                         "Geography": _norm_text(row.get("Geography")),
+                        "GeographyKey": _norm_text(row.get("GeographyKey")) or "country:CH:national",
+                        "Geocode": _norm_text(row.get("Geocode")),
+                        "ReportingArea": _norm_text(row.get("ReportingArea")),
+                        "ParentCountryCode": _norm_text(row.get("ParentCountryCode")) or "CH",
+                        "LocationType": _norm_text(row.get("LocationType")) or "country",
                         "Group": _norm_text(row.get("Group")),
                         "DataComplete": data_complete,
                         "Trend": _norm_text(row.get("Trend")),
@@ -343,6 +377,11 @@ class CHMonthlyUpdater:
         force: bool = False,
     ) -> CHUpdateImportResult:
         """Upsert Switzerland FOPH IDD rows into ``disease_records``."""
+        if self.is_subdivision:
+            # Subnational rows are persisted by CrawlService's source-series
+            # store with their ISO geography key; they do not map to the
+            # national legacy disease_records table.
+            return CHUpdateImportResult(0, 0, db_latest_date, source_latest_date, False)
         if not rows:
             return CHUpdateImportResult(0, 0, db_latest_date, source_latest_date, False)
 

@@ -7,7 +7,9 @@ and parses the current National HIV Surveillance System (NHSS) workbook.
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
+import json
 import re
 from typing import Dict, List, Tuple
 from urllib.parse import urljoin, urlparse
@@ -19,14 +21,32 @@ from .base import BaseCrawler, CrawlerResult
 
 logger = get_logger(__name__)
 
+NNDSS_REPORTING_AREAS = {
+    "ALABAMA", "ALASKA", "ARIZONA", "ARKANSAS", "CALIFORNIA", "COLORADO",
+    "CONNECTICUT", "DELAWARE", "DISTRICT OF COLUMBIA", "FLORIDA", "GEORGIA",
+    "HAWAII", "IDAHO", "ILLINOIS", "INDIANA", "IOWA", "KANSAS", "KENTUCKY",
+    "LOUISIANA", "MAINE", "MARYLAND", "MASSACHUSETTS", "MICHIGAN", "MINNESOTA",
+    "MISSISSIPPI", "MISSOURI", "MONTANA", "NEBRASKA", "NEVADA", "NEW HAMPSHIRE",
+    "NEW JERSEY", "NEW MEXICO", "NEW YORK", "NORTH CAROLINA", "NORTH DAKOTA",
+    "OHIO", "OKLAHOMA", "OREGON", "PENNSYLVANIA", "RHODE ISLAND",
+    "SOUTH CAROLINA", "SOUTH DAKOTA", "TENNESSEE", "TEXAS", "UTAH", "VERMONT",
+    "VIRGINIA", "WASHINGTON", "WEST VIRGINIA", "WISCONSIN", "WYOMING",
+    "AMERICAN SAMOA", "COMMONWEALTH OF NORTHERN MARIANA ISLANDS", "NORTHERN MARIANA ISLANDS", "GUAM",
+    "PUERTO RICO", "U.S. VIRGIN ISLANDS", "US VIRGIN ISLANDS",
+    "U.S. RESIDENTS", "US RESIDENTS", "TOTAL",
+}
+_REPORTING_AREA_SQL = ",".join("'" + value.replace("'", "''") + "'" for value in sorted(NNDSS_REPORTING_AREAS))
+
 DEFAULT_CSV_API_URL = (
     "https://data.cdc.gov/resource/x9gk-5huc.csv"
     "?$select=states,year,week,label,m1,m1_flag,m2,m2_flag,m3,m3_flag,m4,m4_flag,"
     "location1,location2,sort_order,geocode"
-    "&$where=upper(states) in ('TOTAL','US RESIDENTS','U.S. RESIDENTS')"
+    f"&$where=upper(states) in ({_REPORTING_AREA_SQL})"
     "&$order=sort_order,states"
 )
 SOCRATA_PAGE_SIZE = 50_000
+SOCRATA_CATALOG_URL = "https://api.us.socrata.com/api/catalog/v1"
+NNDSS_ARCHIVE_YEARS = tuple(range(2014, 2022))
 
 NHSS_RELEASE_PAGE_URL = (
     "https://www.cdc.gov/hiv-data/nhss/hiv-diagnoses-deaths-prevalence.html"
@@ -113,11 +133,118 @@ class USNNDSSCrawler(BaseCrawler):
                 break
             offset += SOCRATA_PAGE_SIZE
 
+        archive_refs: List[str] = []
+        for archive_year in NNDSS_ARCHIVE_YEARS:
+            archive_rows, archive_ref = self._fetch_archive_year(archive_year)
+            all_rows.extend(archive_rows)
+            archive_refs.append(archive_ref)
+
         if not all_rows:
             raise RuntimeError("[US-NNDSS] Socrata API returned no rows")
 
-        logger.info(f"[US-NNDSS] Fetch complete | rows={len(all_rows)} source={DEFAULT_CSV_API_URL}")
-        return all_rows, DEFAULT_CSV_API_URL
+        source_ref = " | ".join([DEFAULT_CSV_API_URL, *archive_refs])
+        logger.info(f"[US-NNDSS] Fetch complete | rows={len(all_rows)} source=current+archive")
+        return all_rows, source_ref
+
+    def _fetch_archive_year(self, year: int) -> Tuple[List[Dict[str, object]], str]:
+        """Fetch the CDC's archived MMWR tables for one historical year.
+
+        CDC published the weekly NNDSS tables as separate Socrata datasets
+        through 2021. The catalog is the discovery source; table columns carry
+        disease names and the `Current week` suffix.
+        """
+        catalog = self.get(
+            SOCRATA_CATALOG_URL,
+            params={
+                "q": f"NNDSS - {year}",
+                "domains": "data.cdc.gov",
+                "limit": 1000,
+            },
+        ).json()
+        matches: Dict[str, Dict[str, object]] = {}
+        title_re = re.compile(r"^NNDSS\s*-\s*(Table\s+[^\r\n]+?)\s*-\s*" + str(year) + r"\.", re.I)
+        for result in catalog.get("results", []):
+            resource = result.get("resource", {})
+            description = str(resource.get("description") or "")
+            match = title_re.search(description)
+            if not match:
+                continue
+            table_title = " ".join(match.group(1).split()).casefold()
+            existing = matches.get(table_title)
+            stamp = str(resource.get("updatedAt") or "")
+            if existing is None or stamp > str(existing.get("updatedAt") or ""):
+                matches[table_title] = resource
+
+        if not matches:
+            raise RuntimeError(f"[US-NNDSS] CDC archive catalog has no tables for {year}")
+
+        archive_rows: List[Dict[str, object]] = []
+        refs: List[str] = []
+        for resource in matches.values():
+            view_id = str(resource.get("id") or "")
+            if not view_id:
+                continue
+            columns = list(resource.get("columns_name") or [])
+            field_names = list(resource.get("columns_field_name") or [])
+            pairs = list(zip(columns, field_names))
+            disease_fields = []
+            for label, field_name in pairs:
+                normalized = str(label).strip()
+                if re.search(r",?\s*Current week\s*$", normalized, re.I) and not re.search(r"flag\s*$", normalized, re.I):
+                    disease = re.sub(r",?\s*Current week\s*$", "", normalized, flags=re.I).strip(" ,")
+                    disease_fields.append((disease, field_name, normalized))
+            if not disease_fields:
+                continue
+            offset = 0
+            table_rows: List[Dict[str, object]] = []
+            while True:
+                response = self.get(
+                    f"https://data.cdc.gov/resource/{view_id}.json",
+                    params={"$limit": SOCRATA_PAGE_SIZE, "$offset": offset},
+                )
+                page = response.json()
+                if not page:
+                    break
+                table_rows.extend(page)
+                if len(page) < SOCRATA_PAGE_SIZE:
+                    break
+                offset += SOCRATA_PAGE_SIZE
+            for source_row in table_rows:
+                area = _normalize_text(source_row.get("reporting_area") or source_row.get(" Reporting Area"))
+                if area.upper() not in NNDSS_REPORTING_AREAS - {"U.S. RESIDENTS", "US RESIDENTS", "TOTAL"}:
+                    # Archive tables also contain national/region aggregates
+                    # and New York City. The current ingestion contract only
+                    # admits state and territory subdivisions from this feed.
+                    continue
+                year_value = source_row.get("mmwr_year") or source_row.get("mmwr_year_1") or year
+                week_value = source_row.get("mmwr_week")
+                if not area or not week_value:
+                    continue
+                for disease, field_name, display_name in disease_fields:
+                    if field_name not in source_row:
+                        continue
+                    row: Dict[str, object] = {
+                        "Reporting Area": area,
+                        "Current MMWR Year": year_value,
+                        "MMWR WEEK": week_value,
+                        "Label": disease,
+                        "Current week": source_row.get(field_name),
+                        "ArchiveTableID": view_id,
+                        "ArchiveTableTitle": str(resource.get("name") or ""),
+                        "ArchiveRowSignature": hashlib.sha256(
+                            json.dumps(source_row, sort_keys=True, ensure_ascii=False).encode("utf-8")
+                        ).hexdigest()[:20],
+                    }
+                    flag_field = next((field for label, field in pairs if label.strip().casefold() == (display_name + ", flag").casefold()), None)
+                    if flag_field:
+                        row["Current week, flag"] = source_row.get(flag_field)
+                    archive_rows.append(row)
+            refs.append(f"https://data.cdc.gov/d/{view_id}")
+
+        if not archive_rows:
+            raise RuntimeError(f"[US-NNDSS] CDC archive tables for {year} contained no usable rows")
+        logger.info(f"[US-NNDSS] Archive year fetched | year={year} rows={len(archive_rows)} tables={len(refs)}")
+        return archive_rows, " | ".join(refs)
 
     # ── BaseCrawler abstract method stubs ─────────────────────────────────────
     # US data flows through fetch_raw_pages() → processors/us.py, not the

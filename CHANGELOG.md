@@ -2,6 +2,30 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.11.0] - 2026-10-16
+
+### Added
+
+- Added source-aware subnational surveillance ingestion for Japan (47 prefectures), Sweden (21 counties), Germany (16 states), Switzerland (26 cantons), the United States (56 states, districts, and territories), and New Zealand (19 district health boards).
+- Imported historical regional observations across all six countries, including Japan's prefecture series back to 2015, Germany's state series back to 2001, Switzerland's canton series back to 2013, and New Zealand's annual DHB series for 2006–2025.
+- Added CDC NNDSS state and territory data from the current Socrata feed and archived CDC weekly tables from 2014–2021. Explicitly blank current-week cells are retained as unknown (`NULL`) observations with source flags and provenance; reported zeroes remain zero.
+- Added a shared subdivision registry that supplies stable jurisdiction codes, parent-country relationships, source labels, geographic identities, and country profiles to ingestion and public data queries.
+- Enabled incremental crawl routing for registered subdivisions through the existing country pipelines. The six parent-country schedules remain enabled, so new regional observations flow through the normal crawl, database, and release workflow.
+- Added an annual New Zealand DHB pipeline and the database migration that permits explicitly marked source-missing observations while continuing to reject unclassified null values.
+
+### Changed
+
+- Expanded Japan, Sweden, Germany, Switzerland, United States, and New Zealand source adapters and processors to retain jurisdiction-specific geography and source provenance without overwriting national series.
+- Batched PostgreSQL observation and revision upserts with executemany to keep large historical imports within practical query and memory limits.
+- Preserved unmapped source categories in holding series so source facts remain available for later disease-mapping review rather than being dropped.
+
+### Validation
+
+- Imported 2.85 million Japanese prefecture observations, 893,139 German state observations, 147,576 Swedish county observations, 2,574 Swiss canton observations, and 17,100 New Zealand DHB observations.
+- Completed the US NNDSS source-missing backfill with 1,523,825 distinct missing observations across 58 reporting scopes; source-label aliases that resolve to an already represented canonical observation are deduplicated, and no non-null count was overwritten by a source blank.
+- Confirmed enabled scheduled crawl jobs for all six parent countries and successful read/write access checks for the data repositories and Cloudflare Pages integration.
+- Passed 52 targeted subdivision and series-storage tests plus 19 US NNDSS crawler tests; three environment-dependent crawler tests were skipped.
+
 ## [0.10.6] - 2026-10-13
 
 ### Changed
