@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS = 30 * 60
+
 
 class ReleasePreflightError(RuntimeError):
     """A release preflight failure retaining integration diagnostics."""
@@ -162,7 +164,10 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         cwd=runtime.root_dir,
         env=git_env,
         metadata={"event": "refresh_situation_room", "release_job_id": job.job_id},
-        timeout_seconds=min(runtime.generate_timeout_seconds, 10 * 60),
+        timeout_seconds=min(
+            runtime.generate_timeout_seconds,
+            SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS,
+        ),
     )
     await runtime.task_manager.update_task_progress(task.task_uuid, 22)
 
