@@ -17,6 +17,7 @@ This file records release-level changes to the GIDS application and its data ope
 
 - Expanded Japan, Sweden, Germany, Switzerland, United States, and New Zealand source adapters and processors to retain jurisdiction-specific geography and source provenance without overwriting national series.
 - Batched PostgreSQL observation and revision upserts with executemany to keep large historical imports within practical query and memory limits.
+- Batched Situation Room source-history queries so releases remain below PostgreSQL's bind-parameter limit as regional series counts grow.
 - Preserved unmapped source categories in holding series so source facts remain available for later disease-mapping review rather than being dropped.
 
 ### Validation
@@ -25,6 +26,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Completed the US NNDSS source-missing backfill with 1,523,825 distinct missing observations across 58 reporting scopes; source-label aliases that resolve to an already represented canonical observation are deduplicated, and no non-null count was overwritten by a source blank.
 - Confirmed enabled scheduled crawl jobs for all six parent countries and successful read/write access checks for the data repositories and Cloudflare Pages integration.
 - Passed 52 targeted subdivision and series-storage tests plus 19 US NNDSS crawler tests; three environment-dependent crawler tests were skipped.
+- Refreshed the Situation Room against the expanded database after splitting qualified source histories into bounded queries.
 
 ## [0.10.6] - 2026-10-13
 

@@ -18,6 +18,13 @@ from sqlalchemy import text
 
 from src.core.database import get_db
 
+_QUALIFIED_QUERY_BATCH_SIZE = 2_000
+
+
+def _qualified_query_batches(rows: list[dict[str, Any]]):
+    for offset in range(0, len(rows), _QUALIFIED_QUERY_BATCH_SIZE):
+        yield rows[offset : offset + _QUALIFIED_QUERY_BATCH_SIZE]
+
 
 def _slug(value: Any) -> str:
     return re.sub(r"[^a-z0-9]+", "-", str(value or "").lower()).strip("-")
@@ -239,74 +246,75 @@ async def fetch_series_inputs_v3(
 
         rows: list[dict[str, Any]] = []
         if qualified:
-            value_rows = []
-            data_params = dict(params)
-            for index, row in enumerate(qualified):
-                value_rows.append(
-                    "(" + ", ".join(
-                        [
-                            f"CAST(:q_series_{index} AS VARCHAR)",
-                            f"CAST(:q_geo_{index} AS VARCHAR)",
-                            f"CAST(:q_dimension_{index} AS VARCHAR)",
-                            f"CAST(:q_latest_{index} AS TIMESTAMPTZ)",
-                            f"CAST(:q_watermark_{index} AS TIMESTAMPTZ)",
-                            f"CAST(:q_cutoff_{index} AS TIMESTAMPTZ)",
-                            f"CAST(:q_coverage_{index} AS DOUBLE PRECISION)",
-                            f"CAST(:q_active_{index} AS INTEGER)",
-                            f"CAST(:q_total_{index} AS INTEGER)",
-                            f"CAST(:q_lag_{index} AS INTEGER)",
-                        ]
-                    ) + ")"
+            for batch in _qualified_query_batches(qualified):
+                value_rows = []
+                data_params = dict(params)
+                for index, row in enumerate(batch):
+                    value_rows.append(
+                        "(" + ", ".join(
+                            [
+                                f"CAST(:q_series_{index} AS VARCHAR)",
+                                f"CAST(:q_geo_{index} AS VARCHAR)",
+                                f"CAST(:q_dimension_{index} AS VARCHAR)",
+                                f"CAST(:q_latest_{index} AS TIMESTAMPTZ)",
+                                f"CAST(:q_watermark_{index} AS TIMESTAMPTZ)",
+                                f"CAST(:q_cutoff_{index} AS TIMESTAMPTZ)",
+                                f"CAST(:q_coverage_{index} AS DOUBLE PRECISION)",
+                                f"CAST(:q_active_{index} AS INTEGER)",
+                                f"CAST(:q_total_{index} AS INTEGER)",
+                                f"CAST(:q_lag_{index} AS INTEGER)",
+                            ]
+                        ) + ")"
+                    )
+                    for name, value in (
+                        ("series", row["series_code"]),
+                        ("geo", row["canonical_geography_key"]),
+                        ("dimension", row["dimension_key"]),
+                        ("latest", row["latest_available_time"]),
+                        ("watermark", row["source_watermark"]),
+                        ("cutoff", row["analysis_cutoff"]),
+                        ("coverage", row["source_period_coverage"]),
+                        ("active", row["source_active_identities"]),
+                        ("total", row["source_total_identities"]),
+                        ("lag", row["reporting_lag_days"]),
+                    ):
+                        data_params[f"q_{name}_{index}"] = value
+                data_query = text(
+                    _eligible_cte(literals, include_grouped=False)
+                    + ", qualified (series_code, canonical_geography_key, dimension_key, "
+                    "latest_available_time, source_watermark, analysis_cutoff, "
+                    "source_period_coverage, source_active_identities, "
+                    "source_total_identities, reporting_lag_days) AS (VALUES "
+                    + ", ".join(value_rows)
+                    + """
+                    )
+                    SELECT n.id, n.updated_at, n.time, n.value, n.quality_status, n.geography_key,
+                           n.canonical_geography_key, n.dimension_key, n.dimensions,
+                           n.numerator, n.denominator, n.series_code, n.disease_id,
+                           n.country_code, n.source_system, n.source_label,
+                           n.metric_type, n.reporting_basis, n.temporal_granularity,
+                           n.unit, n.aggregation_policy, n.missing_value_policy,
+                           n.series_metadata, n.source_url, n.disease_name, n.country_name,
+                           q.latest_available_time, q.source_watermark,
+                           q.analysis_cutoff, q.source_period_coverage,
+                           q.source_active_identities, q.source_total_identities,
+                           q.reporting_lag_days
+                      FROM normalized n
+                      JOIN qualified q
+                        ON q.series_code = n.series_code
+                       AND q.canonical_geography_key = n.canonical_geography_key
+                       AND q.dimension_key IS NOT DISTINCT FROM n.dimension_key
+                     WHERE n.time >= q.latest_available_time -
+                           make_interval(years => CAST(:history_years AS INTEGER))
+                       AND n.time <= q.analysis_cutoff
+                     ORDER BY n.series_code, n.canonical_geography_key,
+                              n.dimension_key, n.time, n.updated_at, n.id
+                    """
                 )
-                for name, value in (
-                    ("series", row["series_code"]),
-                    ("geo", row["canonical_geography_key"]),
-                    ("dimension", row["dimension_key"]),
-                    ("latest", row["latest_available_time"]),
-                    ("watermark", row["source_watermark"]),
-                    ("cutoff", row["analysis_cutoff"]),
-                    ("coverage", row["source_period_coverage"]),
-                    ("active", row["source_active_identities"]),
-                    ("total", row["source_total_identities"]),
-                    ("lag", row["reporting_lag_days"]),
-                ):
-                    data_params[f"q_{name}_{index}"] = value
-            data_query = text(
-                _eligible_cte(literals, include_grouped=False)
-                + ", qualified (series_code, canonical_geography_key, dimension_key, "
-                "latest_available_time, source_watermark, analysis_cutoff, "
-                "source_period_coverage, source_active_identities, "
-                "source_total_identities, reporting_lag_days) AS (VALUES "
-                + ", ".join(value_rows)
-                + """
+                rows.extend(
+                    dict(row)
+                    for row in (await db.execute(data_query, data_params)).mappings()
                 )
-                SELECT n.id, n.updated_at, n.time, n.value, n.quality_status, n.geography_key,
-                       n.canonical_geography_key, n.dimension_key, n.dimensions,
-                       n.numerator, n.denominator, n.series_code, n.disease_id,
-                       n.country_code, n.source_system, n.source_label,
-                       n.metric_type, n.reporting_basis, n.temporal_granularity,
-                       n.unit, n.aggregation_policy, n.missing_value_policy,
-                       n.series_metadata, n.source_url, n.disease_name, n.country_name,
-                       q.latest_available_time, q.source_watermark,
-                       q.analysis_cutoff, q.source_period_coverage,
-                       q.source_active_identities, q.source_total_identities,
-                       q.reporting_lag_days
-                  FROM normalized n
-                  JOIN qualified q
-                    ON q.series_code = n.series_code
-                   AND q.canonical_geography_key = n.canonical_geography_key
-                   AND q.dimension_key IS NOT DISTINCT FROM n.dimension_key
-                 WHERE n.time >= q.latest_available_time -
-                       make_interval(years => CAST(:history_years AS INTEGER))
-                   AND n.time <= q.analysis_cutoff
-                 ORDER BY n.series_code, n.canonical_geography_key,
-                          n.dimension_key, n.time, n.updated_at, n.id
-                """
-            )
-            rows = [
-                dict(row)
-                for row in (await db.execute(data_query, data_params)).mappings()
-            ]
     ledger: list[dict[str, Any]] = []
     for row in stats:
         minimum = int(row.pop("required_observations"))

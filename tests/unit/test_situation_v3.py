@@ -415,6 +415,13 @@ def test_configured_source_url_fills_missing_row_evidence_only() -> None:
     ) is None
 
 
+def test_qualified_source_queries_are_chunked_below_postgres_parameter_limit() -> None:
+    qualified = [{"index": index} for index in range(4_501)]
+    batches = list(source_adapters._qualified_query_batches(qualified))
+    assert [len(batch) for batch in batches] == [2_000, 2_000, 501]
+    assert [row["index"] for batch in batches for row in batch] == list(range(4_501))
+
+
 def test_public_signal_without_evidence_fails_daily_publication_gate() -> None:
     frame = _weekly_frame()
     signals, _, _ = evaluate_frame_v3(
