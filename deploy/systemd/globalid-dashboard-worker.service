@@ -22,8 +22,8 @@ RestartPreventExitStatus=75
 # Contain an accidental unbounded ORM/JSON allocation inside the worker
 # cgroup. Normal concurrent crawler + literature load stays well below the
 # soft limit; a hard-limit restart is recovered through persisted task leases.
-MemoryHigh=4G
-MemoryMax=6G
+MemoryHigh=8G
+MemoryMax=12G
 # Long-running crawlers and literature syncs finish cooperatively after SIGTERM.
 # Keep this above the normal upper bound so a maintenance restart does not turn
 # a healthy idempotent task into a forced recovery.

@@ -107,8 +107,8 @@ SUBSCRIPTION_SYNC_STRICT_VALUES = {"1", "true", "yes", "on", "required", "strict
 LOGGED_COMMAND_CANCEL_POLL_SECONDS = 1.0
 DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS = 15 * 60
 # A complete export can revalidate several gigabytes of partitioned downloads.
-# Keep a finite guard while allowing more time than the previous 30-minute cap.
-GENERATE_SITE_DATA_TIMEOUT_SECONDS = 60 * 60
+# Allow the full catalogue to finish under the worker's bounded memory budget.
+GENERATE_SITE_DATA_TIMEOUT_SECONDS = 2 * 60 * 60
 # The multilingual static site now renders thousands of country/disease pages.
 # Keep the build guard finite, but allow a full production render to finish on
 # memory-constrained release workers instead of aborting at the legacy 15 min.
