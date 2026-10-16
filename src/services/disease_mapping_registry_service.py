@@ -388,10 +388,20 @@ class DiseaseMappingRegistryService:
             .on_conflict_do_nothing(index_elements=[MappingNotificationOutbox.event_key])
         )
 
-    async def bootstrap_all_sources(self, db: AsyncSession) -> dict[str, Any]:
-        """Import the complete current ontology and observed category inventory."""
+    async def bootstrap_all_sources(
+        self,
+        db: AsyncSession,
+        *,
+        country_codes: Optional[set[str]] = None,
+    ) -> dict[str, Any]:
+        """Import ontology and observed categories, optionally in a country scope."""
 
         await self.ensure_schema(db)
+        scope = (
+            {str(code).strip().upper() for code in country_codes if str(code).strip()}
+            if country_codes is not None
+            else None
+        )
         ontology_registry = load_disease_ontology()
         ontology = ontology_registry.to_dict()
         sources = {item["id"]: item for item in ontology["sources"]}
@@ -409,7 +419,7 @@ class DiseaseMappingRegistryService:
         for series in ontology["source_series"]:
             source = sources.get(series["source_id"], {})
             country = str(source.get("country_code") or "").upper()
-            if not country:
+            if not country or (scope is not None and country not in scope):
                 continue
             codes = list(series.get("local_codes") or []) or [series["id"]]
             labels = list(series.get("local_labels") or []) or codes
@@ -468,24 +478,27 @@ class DiseaseMappingRegistryService:
                     if assertion:
                         imported_assertions += 1
 
+        observed_query = """
+            SELECT DISTINCT
+                s.country_code,
+                s.source_system,
+                COALESCE(NULLIF(o.dimensions->>'source_disease_code',''),
+                         NULLIF(o.metadata->>'local_code',''),
+                         s.source_series_code) AS source_code,
+                COALESCE(NULLIF(o.dimensions->>'source_disease_label',''),
+                         NULLIF(o.metadata->>'local_label',''),
+                         s.source_label) AS source_label,
+                s.definition_version
+            FROM disease_series_observations o
+            JOIN disease_surveillance_series s ON s.series_code=o.series_code
+        """
+        observed_params: dict[str, Any] = {}
+        if scope is not None:
+            observed_query += " WHERE s.country_code = ANY(:country_codes)"
+            observed_params["country_codes"] = sorted(scope)
         observed_rows = (
             await db.execute(
-                text(
-                    """
-                    SELECT DISTINCT
-                        s.country_code,
-                        s.source_system,
-                        COALESCE(NULLIF(o.dimensions->>'source_disease_code',''),
-                                 NULLIF(o.metadata->>'local_code',''),
-                                 s.source_series_code) AS source_code,
-                        COALESCE(NULLIF(o.dimensions->>'source_disease_label',''),
-                                 NULLIF(o.metadata->>'local_label',''),
-                                 s.source_label) AS source_label,
-                        s.definition_version
-                    FROM disease_series_observations o
-                    JOIN disease_surveillance_series s ON s.series_code=o.series_code
-                    """
-                )
+                text(observed_query), observed_params
             )
         ).mappings().all()
         observed_new = 0
@@ -504,14 +517,26 @@ class DiseaseMappingRegistryService:
             )
             observed_new += result["new_category_count"]
 
-        reviewed_mapping_config = await self._import_reviewed_source_category_mappings(db)
-        retired_synthetic_categories = await self._retire_synthetic_label_categories(
-            db,
-            ontology_registry=ontology_registry,
-            country_code="NZ",
+        reviewed_mapping_config = await self._import_reviewed_source_category_mappings(
+            db, country_codes=scope
         )
-        inherited_assertions, inheritance_conflicts = await self._inherit_unambiguous_series_mappings(db)
-        outdated_ai_requeued = await self._requeue_outdated_ai_candidates(db)
+        retired_synthetic_categories = (
+            await self._retire_synthetic_label_categories(
+                db,
+                ontology_registry=ontology_registry,
+                country_code="NZ",
+            )
+            if scope is None or "NZ" in scope
+            else 0
+        )
+        inherited_assertions, inheritance_conflicts = (
+            await self._inherit_unambiguous_series_mappings(db, country_codes=scope)
+        )
+        outdated_ai_requeued = (
+            await self._requeue_outdated_ai_candidates(db, country_codes=scope)
+            if scope is None
+            else 0
+        )
 
         return {
             "ontology_categories_created": imported_categories,
@@ -586,7 +611,7 @@ class DiseaseMappingRegistryService:
         return retired
 
     async def _import_reviewed_source_category_mappings(
-        self, db: AsyncSession
+        self, db: AsyncSession, *, country_codes: Optional[set[str]] = None
     ) -> dict[str, Any]:
         """Apply reviewed country manifests to matching discovered categories.
 
@@ -601,6 +626,8 @@ class DiseaseMappingRegistryService:
         conflicts: list[dict[str, Any]] = []
 
         for mapping in configured:
+            if country_codes is not None and mapping.country_code not in country_codes:
+                continue
             query = select(SourceDiseaseCategory).where(
                 SourceDiseaseCategory.country_code == mapping.country_code,
                 SourceDiseaseCategory.source_id == mapping.source_id,
@@ -720,7 +747,9 @@ class DiseaseMappingRegistryService:
             "conflicts": conflicts,
         }
 
-    async def _requeue_outdated_ai_candidates(self, db: AsyncSession) -> int:
+    async def _requeue_outdated_ai_candidates(
+        self, db: AsyncSession, *, country_codes: Optional[set[str]] = None
+    ) -> int:
         category_ids = list(
             (
                 await db.execute(
@@ -733,6 +762,11 @@ class DiseaseMappingRegistryService:
                         SourceDiseaseCategory.ai_status == "completed",
                         DiseaseMappingCandidate.status == "proposed",
                         DiseaseMappingCandidate.prompt_version != PROMPT_VERSION,
+                        *(
+                            [SourceDiseaseCategory.country_code.in_(country_codes)]
+                            if country_codes is not None
+                            else []
+                        ),
                     )
                     .distinct()
                 )
@@ -762,7 +796,7 @@ class DiseaseMappingRegistryService:
         return len(category_ids)
 
     async def _inherit_unambiguous_series_mappings(
-        self, db: AsyncSession
+        self, db: AsyncSession, *, country_codes: Optional[set[str]] = None
     ) -> tuple[int, list[dict[str, Any]]]:
         """Bridge reviewed series mappings to their observed source categories.
 
@@ -773,10 +807,7 @@ class DiseaseMappingRegistryService:
         mapping and all of them point to one identical disease concept.
         """
 
-        rows = (
-            await db.execute(
-                text(
-                    """
+        inheritance_query = """
                     SELECT
                         c.id AS category_id,
                         MIN(s.disease_id) AS target_code,
@@ -795,12 +826,20 @@ class DiseaseMappingRegistryService:
                            s.source_series_code
                          )
                     WHERE s.disease_id IS NOT NULL
+                    """
+        inheritance_params = {}
+        if country_codes is not None:
+            inheritance_query += " AND s.country_code = ANY(:country_codes)"
+            inheritance_params["country_codes"] = sorted(country_codes)
+        inheritance_query += """
                     GROUP BY c.id
                     HAVING COUNT(DISTINCT s.disease_id)=1
                        AND BOOL_AND(s.mapping_relation='exact')
                     ORDER BY c.id
                     """
-                )
+        rows = (
+            await db.execute(
+                text(inheritance_query), inheritance_params
             )
         ).mappings().all()
         inherited = 0
@@ -1102,16 +1141,86 @@ class DiseaseMappingRegistryService:
         return assertion, release
 
     async def create_release(
-        self, db: AsyncSession, *, release_code: str, created_by: str, description: str = ""
+        self,
+        db: AsyncSession,
+        *,
+        release_code: str,
+        created_by: str,
+        description: str = "",
+        country_codes: Optional[set[str]] = None,
     ) -> DiseaseMappingRelease:
         await self.ensure_schema(db)
-        assertions = (
-            await db.execute(
-                select(DiseaseMappingAssertion)
-                .where(DiseaseMappingAssertion.assertion_status == "approved")
-                .order_by(DiseaseMappingAssertion.assertion_key)
+        if country_codes is None:
+            assertions = (
+                await db.execute(
+                    select(DiseaseMappingAssertion)
+                    .where(DiseaseMappingAssertion.assertion_status == "approved")
+                    .order_by(DiseaseMappingAssertion.assertion_key)
+                )
+            ).scalars().all()
+        else:
+            scope = {str(code).strip().upper() for code in country_codes}
+            active_release_id = (
+                await db.execute(
+                    select(DiseaseMappingRelease.id).where(
+                        DiseaseMappingRelease.status == "active"
+                    )
+                )
+            ).scalar_one_or_none()
+            retained_ids: set[int] = set()
+            if active_release_id is not None:
+                retained_ids = set(
+                    (
+                        await db.execute(
+                            select(DiseaseMappingReleaseItem.assertion_id)
+                            .join(
+                                DiseaseMappingAssertion,
+                                DiseaseMappingAssertion.id == DiseaseMappingReleaseItem.assertion_id,
+                            )
+                            .join(
+                                SourceDiseaseCategory,
+                                SourceDiseaseCategory.id == DiseaseMappingAssertion.category_id,
+                            )
+                            .where(
+                                DiseaseMappingReleaseItem.release_id == active_release_id,
+                                SourceDiseaseCategory.country_code.not_in(scope),
+                            )
+                        )
+                    ).scalars().all()
+                )
+            target_assertions = list(
+                (
+                    await db.execute(
+                        select(DiseaseMappingAssertion)
+                        .join(
+                            SourceDiseaseCategory,
+                            SourceDiseaseCategory.id == DiseaseMappingAssertion.category_id,
+                        )
+                        .where(
+                            DiseaseMappingAssertion.assertion_status == "approved",
+                            SourceDiseaseCategory.country_code.in_(scope),
+                        )
+                        .order_by(DiseaseMappingAssertion.assertion_key)
+                    )
+                ).scalars().all()
             )
-        ).scalars().all()
+            retained = (
+                list(
+                    (
+                        await db.execute(
+                            select(DiseaseMappingAssertion)
+                            .where(DiseaseMappingAssertion.id.in_(retained_ids))
+                            .order_by(DiseaseMappingAssertion.assertion_key)
+                        )
+                    ).scalars().all()
+                )
+                if retained_ids
+                else []
+            )
+            assertions = sorted(
+                [*retained, *(item for item in target_assertions if item.id not in retained_ids)],
+                key=lambda item: item.assertion_key,
+            )
         payload = [
             {
                 "key": item.assertion_key,

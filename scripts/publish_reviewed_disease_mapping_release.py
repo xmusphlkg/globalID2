@@ -15,12 +15,46 @@ from src.services.disease_mapping_registry_service import disease_mapping_regist
 
 
 async def run(*, apply: bool) -> dict:
+    # Runtime schema initialization includes ALTER TABLE and view DDL. Verify
+    # the already deployed v3 schema instead of taking table locks while a
+    # mapping review is in progress.
+    async with get_database() as schema_db:
+        ready = bool(
+            (
+                await schema_db.execute(
+                    text("""
+                        SELECT
+                          to_regclass('public.source_disease_categories') IS NOT NULL
+                          AND to_regclass('public.disease_mapping_assertions_v3') IS NOT NULL
+                          AND to_regclass('public.disease_mapping_releases_v3') IS NOT NULL
+                          AND to_regclass('public.disease_mapping_release_items_v3') IS NOT NULL
+                          AND to_regclass('public.effective_disease_series_observations_v3') IS NOT NULL
+                          AND EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_schema='public'
+                              AND table_name='source_disease_categories'
+                              AND column_name='ai_next_attempt_at'
+                          )
+                    """)
+                )
+            ).scalar_one()
+        )
+        await schema_db.rollback()
+    if not ready:
+        raise RuntimeError(
+            "Disease Mapping Registry v3 schema is incomplete; run the approved database migration first."
+        )
+    disease_mapping_registry_service._schema_ready = True
+
     async with get_database() as db:
         await db.execute(
             text("SELECT pg_advisory_xact_lock(hashtext(:key))"),
             {"key": "globalid:disease_mapping_release:v1"},
         )
-        imported = await disease_mapping_registry_service.bootstrap_all_sources(db)
+        scope = {"JP", "SE", "DE", "CH", "US", "NZ"}
+        imported = await disease_mapping_registry_service.bootstrap_all_sources(
+            db, country_codes=scope
+        )
         reviewed = imported["reviewed_mapping_config"]
         if reviewed["conflicts"]:
             await db.rollback()
@@ -35,6 +69,7 @@ async def run(*, apply: bool) -> dict:
             release_code=f"DMR-REVIEWED-{timestamp}",
             created_by="reviewed_source_mapping_release",
             description="Publish reviewed source-category mappings after six-country historical backfill.",
+            country_codes=scope,
         )
         await disease_mapping_registry_service.activate_release(db, release.id)
         result = {

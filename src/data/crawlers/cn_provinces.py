@@ -119,17 +119,23 @@ def _is_report_total_label(value: object) -> bool:
         return False
     if normalized == "total" or "合计" in normalized or "总计" in normalized:
         return True
-    return normalized in {"甲类", "乙类", "丙类", "甲乙类", "甲乙丙类", "丙类类计"}
+    return (
+        normalized in {"甲类", "乙类", "丙类", "甲乙类", "甲乙丙类", "丙类类计"}
+        or "非法定传染病" in normalized
+    )
 
 
 def _has_report_header(values: Sequence[str]) -> bool:
     disease_columns = {
         index
         for index, value in enumerate(values)
-        if any(key in value for key in ("病种", "病名", "疾病", "传染病"))
+        if len(value) <= 24
+        and any(key in value for key in ("病种", "病名", "疾病", "传染病"))
     }
     cases_columns = {
-        index for index, value in enumerate(values) if _is_cases_header(value)
+        index
+        for index, value in enumerate(values)
+        if len(value) <= 20 and _is_cases_header(value)
     }
     return any(disease != cases for disease in disease_columns for cases in cases_columns)
 
@@ -687,19 +693,21 @@ class ProvinceMonthlyReportCrawler:
         config = province_configs(self.config_path)[jurisdiction_code]
         if not config.index_url:
             return []
-        response = self._get(config.index_url)
-        soup = BeautifulSoup(response.content, "lxml")
         links: dict[tuple[date, str], MonthlyReportLink] = {}
-        for anchor in soup.find_all("a", href=True):
-            title = " ".join(anchor.get_text(" ", strip=True).split())
-            match = MONTH_PATTERN.search(title)
-            if not match or "传染病" not in title:
-                continue
-            report_date = date(int(match["year"]), int(match["month"]), 1)
-            url = urljoin(response.url, str(anchor["href"]))
-            links[(report_date, url)] = MonthlyReportLink(
-                jurisdiction_code, report_date, title, url
-            )
+        index_urls = (config.index_url, *config.archive_index_urls)
+        for index_url in index_urls:
+            response = self._get(index_url)
+            soup = BeautifulSoup(response.content, "lxml")
+            for anchor in soup.find_all("a", href=True):
+                title = " ".join(anchor.get_text(" ", strip=True).split())
+                match = MONTH_PATTERN.search(title)
+                if not match or "传染病" not in title:
+                    continue
+                report_date = date(int(match["year"]), int(match["month"]), 1)
+                url = urljoin(response.url, str(anchor["href"]))
+                links[(report_date, url)] = MonthlyReportLink(
+                    jurisdiction_code, report_date, title, url
+                )
         return sorted(links.values(), key=lambda item: (item.report_date, item.url))
 
     def fetch(self, link: MonthlyReportLink) -> ParsedMonthlyReport:
@@ -717,27 +725,10 @@ class ProvinceMonthlyReportCrawler:
         retrieved_at = datetime.now(timezone.utc).isoformat()
         page_hash = hashlib.sha256(response.content).hexdigest()
         parser = config.parser
-        if parser in {"narrative_only", "discovery_pending"}:
+        if parser == "discovery_pending":
             raise ValueError(
-                f"{link.jurisdiction_code} source is {parser}; no detailed table is inferred"
+                f"{link.jurisdiction_code} source is {parser}; no source is configured"
             )
-        if parser == "html_table":
-            try:
-                tables = pd.read_html(io.StringIO(response.text), flavor="lxml")
-                rows = self._normalize_tables(
-                    tables,
-                    link=link,
-                    source_url=response.url,
-                    artifact_sha256=page_hash,
-                )
-            except ValueError:
-                pass
-            else:
-                return ParsedMonthlyReport(
-                    rows, response.url, page_hash,
-                    response.headers.get("Content-Type", "text/html"), retrieved_at,
-                )
-
         soup = BeautifulSoup(response.content, "lxml")
         candidates: list[tuple[str, str]] = []
         for anchor in soup.find_all("a", href=True):
@@ -747,41 +738,88 @@ class ProvinceMonthlyReportCrawler:
             )
             if suffix is not None:
                 candidates.append((urljoin(response.url, href), suffix))
-        if not candidates:
-            # Some publishers alternate between attachments and an inline
-            # table without changing the section or report naming scheme.
+        # Prefer complete HTML disease tables when present, even for an
+        # adapter previously classified as narrative-only. Some publishers
+        # alternate formats or add detail tables without changing the index.
+        try:
+            tables = pd.read_html(io.StringIO(response.text), flavor="lxml")
+        except ValueError:
+            tables = []
+        if tables:
             try:
-                tables = pd.read_html(io.StringIO(response.text), flavor="lxml")
-            except ValueError:
-                tables = []
-            rows = self._normalize_tables(
-                tables,
-                link=link,
-                source_url=response.url,
-                artifact_sha256=page_hash,
+                rows = self._normalize_tables(
+                    tables, link=link, source_url=response.url,
+                    artifact_sha256=page_hash,
+                )
+            except ValueError as exc:
+                if "No registered disease rows parsed" not in str(exc):
+                    raise
+            else:
+                return ParsedMonthlyReport(
+                    rows, response.url, page_hash,
+                    response.headers.get("Content-Type", "text/html"), retrieved_at,
+                )
+
+        narrative_text = " ".join(soup.stripped_strings)
+        artifact_url = response.url
+        artifact_hash = page_hash
+        content_type = response.headers.get("Content-Type", "text/html")
+        for attachment_url, suffix_hint in candidates:
+            attachment = self._get(
+                attachment_url, headers={"Referer": response.url}
             )
-            return ParsedMonthlyReport(
-                rows,
-                response.url,
-                page_hash,
-                response.headers.get("Content-Type", "text/html"),
-                retrieved_at,
+            candidate_hash = hashlib.sha256(attachment.content).hexdigest()
+            content_type = attachment.headers.get(
+                "Content-Type", "application/octet-stream"
             )
-        attachment_url, suffix_hint = candidates[0]
-        attachment = self._get(attachment_url, headers={"Referer": response.url})
-        artifact_hash = hashlib.sha256(attachment.content).hexdigest()
-        tables = parse_attachment_tables(
-            attachment.content,
-            attachment_url,
-            suffix_hint=suffix_hint,
+            try:
+                attachment_tables = parse_attachment_tables(
+                    attachment.content,
+                    attachment_url,
+                    suffix_hint=suffix_hint,
+                )
+            except Exception:
+                # Keep the article text as evidence when a PDF has no
+                # machine-readable table; unsupported/invalid tables still
+                # fail closed below if disease rows were actually found.
+                attachment_tables = []
+            if suffix_hint == ".pdf" and not attachment_tables:
+                try:
+                    import pdfplumber
+
+                    with pdfplumber.open(io.BytesIO(attachment.content)) as pdf:
+                        narrative_text += " " + " ".join(
+                            page.extract_text() or "" for page in pdf.pages
+                        )
+                except Exception:
+                    pass
+            if attachment_tables:
+                try:
+                    rows = self._normalize_tables(
+                        attachment_tables, link=link, source_url=attachment_url,
+                        artifact_sha256=candidate_hash,
+                    )
+                except ValueError as exc:
+                    if "No registered disease rows parsed" not in str(exc):
+                        raise
+                else:
+                    return ParsedMonthlyReport(
+                        rows, attachment_url, candidate_hash, content_type,
+                        retrieved_at,
+                    )
+            artifact_url, artifact_hash = attachment_url, candidate_hash
+
+        rows = _normalize_narrative_report(
+            narrative_text,
+            link=link,
+            source_url=artifact_url,
+            artifact_sha256=artifact_hash,
+            config_path=self.config_path,
         )
-        rows = self._normalize_tables(
-            tables, link=link, source_url=attachment_url, artifact_sha256=artifact_hash
-        )
+        if not rows:
+            raise ValueError(f"No explicit disease values found in {artifact_url}")
         return ParsedMonthlyReport(
-            rows, attachment_url, artifact_hash,
-            attachment.headers.get("Content-Type", "application/octet-stream"),
-            retrieved_at,
+            rows, artifact_url, artifact_hash, content_type, retrieved_at
         )
 
     def _normalize_tables(
@@ -837,14 +875,27 @@ def _normalize_report_table(table: pd.DataFrame) -> list[dict[str, object]]:
         else _norm(column)
         for column in frame.columns
     ]
-    has_existing_header = _has_report_header(existing_columns)
-    if not has_existing_header:
+    # Excel exports from provincial sites often put the report title in the
+    # worksheet's first row (which pandas promotes to column names), followed
+    # by the real 病种/发病数 header as the first data row. A long title can
+    # itself contain both words and fool _has_report_header(existing_columns),
+    # so prefer a concrete header row whenever one is present.
+    header_row = None
+    header_position = None
+    # Trust a compact concrete header. Later repeated headers can be revision
+    # artifacts, so only scan the body when pandas did not expose a real header.
+    if not _has_report_header(existing_columns):
         for position, values in enumerate(frame.head(10).itertuples(index=False, name=None)):
             normalized_values = [_norm(value) for value in values]
             if _has_report_header(normalized_values):
-                frame = frame.iloc[position + 1 :].copy()
-                frame.columns = normalized_values
+                header_row = normalized_values
+                header_position = position
                 break
+    if header_row is not None and header_position is not None:
+        frame = frame.iloc[header_position + 1 :].copy()
+        frame.columns = header_row
+    elif not _has_report_header(existing_columns):
+        return []
     if isinstance(frame.columns, pd.MultiIndex):
         frame.columns = ["".join(_norm(piece) for piece in column) for column in frame.columns]
     else:
@@ -880,6 +931,118 @@ def _normalize_report_table(table: pd.DataFrame) -> list[dict[str, object]]:
         if label and cases is not None:
             result.append({"label": label, "cases": cases, "source_row": raw})
     return result
+
+
+def _normalize_narrative_report(
+    text: str,
+    *,
+    link: MonthlyReportLink,
+    source_url: str,
+    artifact_sha256: str,
+    config_path: str | Path = DEFAULT_CONFIG,
+) -> list[dict[str, object]]:
+    """Extract only disease counts stated explicitly in report prose.
+
+    This deliberately records a sparse set: named diseases with an explicit
+    numeric case count, or named diseases in an explicit no-case statement.
+    Rankings, percentages, category totals, and unmentioned diseases are not
+    converted to disease observations.
+    """
+
+    compact = _norm(text)
+    aliases: dict[str, dict] = {}
+    for item in load_config(config_path)["diseases"]:
+        for label in item["labels"]:
+            key = _norm(label).casefold()
+            if key:
+                aliases[key] = item
+    ordered_aliases = sorted(aliases, key=len, reverse=True)
+
+    explicit: dict[str, tuple[str, int, str]] = {}
+
+    def add(label: str, disease: dict, cases: int, evidence: str) -> None:
+        code = str(disease["code"])
+        previous = explicit.get(code)
+        if previous is not None and previous[1] != cases:
+            raise ValueError(
+                f"Conflicting explicit narrative values for {code}: "
+                f"{previous[1]} vs {cases} ({source_url})"
+            )
+        explicit[code] = (label, cases, evidence)
+
+    # Match a named disease immediately followed by a parenthetical case
+    # count, as in 流行性感冒（2393例）. This does not parse death counts.
+    for count_match in re.finditer(r"[（(]([\d,]+)例[）)]", compact):
+        prefix = compact[: count_match.start()].casefold()
+        context_start = max(
+            prefix.rfind("。"), prefix.rfind("；"), prefix.rfind(";"),
+        )
+        context = prefix[context_start + 1 :]
+        case_count_cues = (
+            "病例数居", "发病数居", "报告病例数", "报告发病数",
+            "发病病例数", "病例数为", "发病数为",
+        )
+        if not any(cue in context for cue in case_count_cues):
+            continue
+        if "死亡" in context and not any(
+            cue in context[context.rfind("死亡") + len("死亡") :]
+            for cue in case_count_cues
+        ):
+            continue
+        for alias in ordered_aliases:
+            if prefix.endswith(alias):
+                disease = aliases[alias]
+                add(
+                    str(disease["labels"][0]),
+                    disease,
+                    int(count_match.group(1).replace(",", "")),
+                    count_match.group(0),
+                )
+                break
+
+    # Two official phrasings are common: ``病种甲、病种乙无发病报告`` and
+    # ``无病种甲、病种乙等 N 种乙类传染病报告``. Use only the disease names
+    # in those explicit clauses; never turn the remaining case total into
+    # values for unlisted diseases.
+    no_case_patterns = (
+        re.compile(r"(?P<names>[^，。；;]{1,500})无(?:发病|病例)(?:、死亡)?(?:病例)?报告"),
+        re.compile(r"无(?P<names>[^，。；;]{1,500}?)(?:\d+种)?(?:甲|乙|丙)类传染病报告"),
+    )
+    for pattern in no_case_patterns:
+        for no_case_match in pattern.finditer(compact):
+            names = no_case_match.group("names").casefold()
+            for alias in ordered_aliases:
+                if alias in names:
+                    disease = aliases[alias]
+                    add(
+                        str(disease["labels"][0]),
+                        disease,
+                        0,
+                        no_case_match.group(0),
+                    )
+
+    rows: list[dict[str, object]] = []
+    for code, (label, cases, evidence) in sorted(explicit.items()):
+        disease = next(item for item in load_config(config_path)["diseases"] if item["code"] == code)
+        rows.append(
+            _source_row(
+                report_date=link.report_date,
+                province_code=link.jurisdiction_code,
+                disease=disease,
+                raw_label=label,
+                cases=cases,
+                source_id=MONTHLY_REPORT_SOURCE_ID,
+                source_url=source_url,
+                source_name="Chinese provincial statutory infectious disease monthly report",
+                quality_status="raw",
+                raw={
+                    "explicit_narrative_value": evidence,
+                    "artifact_sha256": artifact_sha256,
+                    "title": link.title,
+                },
+            )
+        )
+    return rows
 
 
 def parse_attachment_tables(

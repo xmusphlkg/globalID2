@@ -52,8 +52,8 @@ def test_each_province_has_an_independent_adapter_module() -> None:
 def test_province_registry_covers_phsm_categories_and_reviewed_monthly_additions() -> None:
     diseases = load_config()["diseases"]
 
-    assert len(diseases) == 59
-    assert len({item["code"] for item in diseases}) == 59
+    assert len(diseases) == 60
+    assert len({item["code"] for item in diseases}) == 60
     assert {item["code"] for item in diseases} >= {
         "viral_hepatitis",
         "hepatitis_d",
@@ -365,7 +365,7 @@ def test_province_source_series_include_49_phsm_categories_and_monthly_additions
     report = ontology.series_lookup(source_id=MONTHLY_REPORT_SOURCE_ID)
 
     assert len(center) == 49
-    assert len(report) == 59
+    assert len(report) == 60
     center_codes = {item["local_codes"][0] for item in center}
     report_codes = {item["local_codes"][0] for item in report}
     assert center_codes <= report_codes

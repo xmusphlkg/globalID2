@@ -183,7 +183,10 @@ def load_reviewed_source_category_mappings(
                 if target_kind == "group" and projection != "no_projection":
                     raise _error(path, row_number, "group targets must use no_projection")
 
-                identity = (source_id, source_code.casefold(), definition_version)
+                # Source category codes are opaque source identities. The
+                # registry's unique constraint is case-sensitive, so keep
+                # CDC's historical capitalization variants distinct here too.
+                identity = (source_id, source_code, definition_version)
                 if identity in identities:
                     previous_path, previous_row = identities[identity]
                     raise _error(

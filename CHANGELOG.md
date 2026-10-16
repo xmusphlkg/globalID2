@@ -12,6 +12,8 @@ This file records release-level changes to the GIDS application and its data ope
 - Added a shared subdivision registry that supplies stable jurisdiction codes, parent-country relationships, source labels, geographic identities, and country profiles to ingestion and public data queries.
 - Enabled incremental crawl routing for registered subdivisions through the existing country pipelines. The six parent-country schedules remain enabled, so new regional observations flow through the normal crawl, database, and release workflow.
 - Added an annual New Zealand DHB pipeline and the database migration that permits explicitly marked source-missing observations while continuing to reject unclassified null values.
+- Added 12 Japanese disease concepts for JIHS categories that previously had no exact ontology target, including sentinel-only infections and syndrome-specific hantavirus surveillance.
+- Reviewed 168 additional current and historical US NNDSS categories. Each now has an approved disease target or an explicit source-only disposition when the metric or disease identity cannot safely project to a canonical curve.
 
 ### Changed
 
@@ -19,12 +21,19 @@ This file records release-level changes to the GIDS application and its data ope
 - Batched PostgreSQL observation and revision upserts with executemany to keep large historical imports within practical query and memory limits.
 - Batched Situation Room source-history queries so releases remain below PostgreSQL's bind-parameter limit as regional series counts grow.
 - Preserved unmapped source categories in holding series so source facts remain available for later disease-mapping review rather than being dropped.
+- Published versioned source-category mappings in the site export, preserving sentinel versus all-case reporting and keeping non-comparable source categories outside canonical curves.
+- Corrected Swiss FOPH CHFL observations and revision identities so Switzerland-and-Liechtenstein aggregates are no longer assigned to Switzerland-only geography; retained the Swiss-only legacy records.
+- Expanded Chinese provincial monthly-report retrieval for Guangxi, Heilongjiang, Jiangxi, and Qinghai, including explicit disease counts in article text and embedded or attached tables; added province-level HIV infection as a distinct category from AIDS.
 
 ### Validation
 
 - Imported 2.85 million Japanese prefecture observations, 893,139 German state observations, 147,576 Swedish county observations, 2,574 Swiss canton observations, and 17,100 New Zealand DHB observations.
 - Completed the US NNDSS source-missing backfill with 1,523,825 distinct missing observations across 58 reporting scopes; source-label aliases that resolve to an already represented canonical observation are deduplicated, and no non-null count was overwritten by a source blank.
 - Confirmed enabled scheduled crawl jobs for all six parent countries and successful read/write access checks for the data repositories and Cloudflare Pages integration.
+- Activated a reviewed mapping release with 2,573 assertions; all 5,809,371 stored observations across the six countries now have an explicit mapping disposition, including 5,483,077 canonical projections and 326,294 source-only/no-projection observations.
+- Verified the CHFL repair moved 419 observation identities and 213 revision identities with no key collisions and no changes to reported values; the migration audit supports exact restoration.
+- Configured and verified 19 staggered New Zealand DHB refresh jobs in `Pacific/Auckland`.
+- Imported 124 explicit September 2026 reports from Guangxi (55), Heilongjiang (48), and Qinghai (21); Jiangxi had no matching September report and no zeroes were synthesized.
 - Passed 52 targeted subdivision and series-storage tests plus 19 US NNDSS crawler tests; three environment-dependent crawler tests were skipped.
 - Refreshed the Situation Room against the expanded database after splitting qualified source histories into bounded queries.
 

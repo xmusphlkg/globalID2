@@ -26,6 +26,70 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.11.0',
+    date: '2026-10-16',
+    titleEn: 'Subnational disease data across six countries',
+    titleZh: '六国州省级疾病数据接入',
+    titleFr: 'Données infranationales dans six pays',
+    summaryEn:
+      'Explore historical and regularly refreshed disease surveillance for prefectures, states, counties, cantons, and district health boards across Japan, Germany, Sweden, Switzerland, the United States, and New Zealand.',
+    summaryZh:
+      '新增日本、德国、瑞典、瑞士、美国和新西兰的州、省、县、市及卫生区疾病监测数据，覆盖历史记录并接入定期更新。',
+    summaryFr:
+      'Consultez les historiques et actualisations régulières par préfecture, État, comté, canton et district sanitaire au Japon, en Allemagne, en Suède, en Suisse, aux États-Unis et en Nouvelle-Zélande.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveau',
+        items: [
+          {
+            en: 'Compare disease surveillance across 47 Japanese prefectures, 16 German states, 21 Swedish counties, 26 Swiss cantons, 56 US states and territories, and 19 New Zealand district health boards.',
+            zh: '可比较日本 47 个都道府县、德国 16 个州、瑞典 21 个省、瑞士 26 个州、美国 56 个州及领地，以及新西兰 19 个卫生区的疾病监测数据。',
+            fr: 'Comparez la surveillance dans 47 préfectures japonaises, 16 Länder allemands, 21 comtés suédois, 26 cantons suisses, 56 États et territoires américains et 19 districts sanitaires néo-zélandais.',
+          },
+          {
+            en: 'Historical regional records are available alongside national series, with direct source links and jurisdiction-specific geography.',
+            zh: '各地区历史记录与国家级序列并列展示，并保留来源链接和地区级地理标识。',
+            fr: 'Les historiques régionaux complètent les séries nationales, avec des liens directs vers les sources et une géographie propre à chaque juridiction.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Source case definitions and reporting scopes are reviewed before a series enters a canonical disease curve; sentinel counts, source blanks, and non-comparable categories retain their original meaning.',
+            zh: '来源病例定义和报告范围经审核后才纳入标准疾病曲线；哨点病例数、来源空值和不可比类别均保留原有含义。',
+            fr: 'Les définitions de cas et périmètres de déclaration sont vérifiés avant toute intégration à une courbe canonique ; les comptes sentinelles, cellules vides et catégories non comparables conservent leur sens d’origine.',
+          },
+          {
+            en: 'Regional series refresh through existing country pipelines; New Zealand’s 19 annual DHB sources now have staggered daily availability checks.',
+            zh: '地区序列通过现有国家级管线更新；新西兰 19 个年度卫生区数据源现已配置错峰每日检查。',
+            fr: 'Les séries régionales sont actualisées par les pipelines nationaux ; les 19 sources annuelles des districts sanitaires néo-zélandais font désormais l’objet de vérifications quotidiennes échelonnées.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'Swiss FOPH data covering Switzerland and Liechtenstein are no longer labelled as Switzerland-only national totals.',
+            zh: '瑞士联邦卫生局覆盖瑞士和列支敦士登的数据不再标记为仅瑞士全国总量。',
+            fr: 'Les données de l’OFSP couvrant la Suisse et le Liechtenstein ne sont plus étiquetées comme des totaux nationaux suisses uniquement.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.10.6',
     date: '2026-10-13',
     titleEn: 'Faster research publishing',

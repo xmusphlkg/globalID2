@@ -46,10 +46,10 @@ def test_at_de_reviewed_manifests_cover_full_source_inventory() -> None:
         "CN": 1,
         "DE": 142,
         "IE": 111,
-        "JP": 60,
+        "JP": 72,
         "NZ": 81,
         "SG": 76,
-        "US": 66,
+        "US": 251,
     })
     assert Counter(item.country_code for item in mappings) == expected_counts
     assert all(
@@ -195,8 +195,8 @@ def test_us_reviewed_manifest_distinguishes_cases_from_other_metrics() -> None:
     ]
     indexed = {item.local_name: item for item in rows}
 
-    assert len(indexed) == 66
-    assert sum(item.projection_policy == "canonical" for item in rows) == 62
+    assert len(rows) == 234
+    assert sum(item.projection_policy == "canonical" for item in rows) == 212
     assert indexed["Invasive pneumococcal disease, all ages, Confirmed"].mapping_relation == "narrower"
     assert indexed["Syphilis, Primary and secondary"].mapping_relation == "narrower"
     assert indexed["Salmonellosis (excluding Salmonella Typhi infection and Salmonella Paratyphi infection)"].target_code == "D114"
@@ -204,10 +204,28 @@ def test_us_reviewed_manifest_distinguishes_cases_from_other_metrics() -> None:
     assert {
         item.local_name for item in rows if item.projection_policy == "no_projection"
     } == {
+        "Arboviral diseases, Jamestown Canyon virus disease",
+        "Arboviral diseases, La Crosse virus disease",
+        "Arboviral diseases, neuroinvasive and non-neuroinvasive, La Crosse virus disease",
+        "Arboviral diseases, St. Louis encephalitis virus disease",
         "Candida auris, clinical",
         "Candida auris, screening",
-        "Rabies, animal",
+        "Chancroid",
+        "COVID-19-associated pediatric mortality",
+        "Cronobacter invasive infection, infants, Confirmed",
+        "Cronobacter invasive infection, infants, Probable",
+        "Influenza-associated pediatric mortality§",
         "Influenza-associated pediatric mortality",
+        "Oropouche, non-congenital",
+        "Rabies, animal",
+        "Toxic shock snydrome (other than streptococcal)",
+        "Toxic shock syndrome (other than Streptococcal)",
+        "Viral hemorrhagic fevers, Chapare virus",
+        "Viral hemorrhagic fevers, Guanarito virus",
+        "Viral hemorrhagic fevers, Junin virus",
+        "Viral hemorrhagic fevers, Lujo virus",
+        "Viral hemorrhagic fevers, Machupo virus",
+        "Viral hemorrhagic fevers, Sabia virus",
     }
 
 
@@ -226,6 +244,28 @@ def test_reviewed_manifest_rejects_duplicate_source_identity(tmp_path: Path) -> 
 
     with pytest.raises(DiseaseMappingConfigError, match="duplicate reviewed source identity"):
         load_reviewed_source_category_mappings(tmp_path)
+
+
+def test_reviewed_manifest_keeps_case_sensitive_source_codes_distinct(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "at.csv"
+    header = (
+        "disease_id,local_name,local_code,source_id,mapping_scope,target_kind,"
+        "target_code,mapping_relation,comparability,projection_policy,"
+        "aggregation_policy,definition_version\n"
+    )
+    rows = (
+        "D124,Typhus,Typhus,SRC_AT_AGES_RADAR,source_category_dimension,"
+        "concept,D124,exact,conditional,canonical,direct_only,*\n"
+        "D124,Typhus,typhus,SRC_AT_AGES_RADAR,source_category_dimension,"
+        "concept,D124,exact,conditional,canonical,direct_only,*\n"
+    )
+    path.write_text(header + rows, encoding="utf-8")
+
+    mappings = load_reviewed_source_category_mappings(tmp_path)
+
+    assert {item.source_code for item in mappings} == {"Typhus", "typhus"}
 
 
 def test_legacy_mapper_skips_reviewed_no_projection_rows(tmp_path: Path) -> None:

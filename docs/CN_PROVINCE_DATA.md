@@ -107,8 +107,8 @@ venv/bin/python scripts/update_cn_provinces.py monthly --all-provinces --apply
 - `docx_attachment` / `doc_attachment` / `pdf_attachment`：广东、江苏、湖南、
   安徽等；先归档附件，再按确定格式解析；同栏目临时改为正文表格也能兼容。
 - `attachment_auto`：新疆；从详情页选择受支持附件。
-- `narrative_only`：官网只明确发布总数或文字摘要时，只发现并监测页面，不推导
-  疾病明细。
+- `narrative_only`：官网没有完整病种表时，只收录文字中明确列出的疾病病例数，
+  以及明确写出的无病例病种作为零；不按排名、占比、病种总数或上下文推导其他数值。
 - `discovery_pending`：尚未确认稳定现行栏目或格式的省份，失败关闭，不使用搜索
   摘要或 OCR 猜值。
 

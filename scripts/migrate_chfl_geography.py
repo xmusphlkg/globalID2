@@ -135,20 +135,21 @@ async def apply(db) -> dict:
                 identity_key, identity, before_data, after_data, reason
             )
             SELECT :run_id, :migration_key, :table_name, 'geography_identity_repair',
-                   :table_name || ':' || o.id::text,
+                   :identity_prefix || ':' || o.id::text,
                    jsonb_build_object('id',o.id,'time',o.time,'series_code',o.series_code,
                                       'dimension_key',o.dimension_key)
                    {"|| jsonb_build_object('recorded_at',o.recorded_at)" if table == TABLES[1] else ''},
-                   jsonb_build_object('geography_key',:old_key),
-                   jsonb_build_object('geography_key',:new_key),
+                   jsonb_build_object('geography_key',CAST(:old_key_json AS text)),
+                   jsonb_build_object('geography_key',CAST(:new_key_json AS text)),
                    'FOPH CHFL means Switzerland plus Liechtenstein; source values are unchanged'
             FROM {table} o
             JOIN disease_surveillance_series s ON s.series_code=o.series_code
             WHERE s.source_system=:source_id AND s.country_code='CH'
               AND o.geography_key=:old_key AND o.raw_data->>'Geography'='CHFL'
         """), {"run_id": run_id, "migration_key": MIGRATION_KEY,
-               "table_name": table, "source_id": SOURCE_ID,
-               "old_key": OLD_KEY, "new_key": NEW_KEY})
+               "table_name": table, "identity_prefix": table, "source_id": SOURCE_ID,
+               "old_key": OLD_KEY, "new_key": NEW_KEY,
+               "old_key_json": OLD_KEY, "new_key_json": NEW_KEY})
         result = await db.execute(text(f"""
             UPDATE {table} o SET geography_key=:new_key
             FROM disease_surveillance_series s
