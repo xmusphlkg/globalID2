@@ -203,6 +203,10 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         cmd=["npm", "run", "build"],
         cwd=runtime.astro_dir,
         env={
+            # The full static catalogue can exceed Node's default ~4 GiB old
+            # space on the production worker. Keep the build within its
+            # 14 GiB cgroup while giving Astro enough room to finish.
+            "NODE_OPTIONS": "--max-old-space-size=6144",
             "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
             "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
             "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],

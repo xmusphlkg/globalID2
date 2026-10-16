@@ -71,6 +71,7 @@ async def test_repository_publisher_failures_are_aggregated_after_all_finish():
 async def test_pipeline_local_only_success_preserves_stage_order():
     commands = []
     timeouts = []
+    command_envs = {}
     progress = []
     stored_task = SimpleNamespace(output_data=None)
 
@@ -171,6 +172,7 @@ async def test_pipeline_local_only_success_preserves_stage_order():
         async def _run_logged_command(self, _task_uuid, *, title, **_kwargs):
             commands.append(title)
             timeouts.append(_kwargs.get("timeout_seconds"))
+            command_envs[title] = _kwargs.get("env")
 
         def _write_site_release_manifest(self, identity):
             return identity
@@ -204,6 +206,7 @@ async def test_pipeline_local_only_success_preserves_stage_order():
         "Validate Situation Release Gate",
     ]
     assert timeouts[0] == pipeline.SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS
+    assert command_envs["Build Astro Site"]["NODE_OPTIONS"] == "--max-old-space-size=6144"
     assert progress == [5, 15, 22, 35, 45, 60, 88, 100]
     assert output["direct_downloads_published"] is False
     assert output["raw_archive_published"] is False
