@@ -961,6 +961,9 @@ def _normalize_narrative_report(
     explicit: dict[str, tuple[str, int, str]] = {}
 
     def add(label: str, disease: dict, cases: int, evidence: str) -> None:
+        valid_from = disease.get("valid_from")
+        if valid_from and link.report_date < date.fromisoformat(str(valid_from)):
+            return
         code = str(disease["code"])
         previous = explicit.get(code)
         if previous is not None and previous[1] != cases:

@@ -11,9 +11,11 @@ from src.data.crawlers.cn_province_adapters.registry import ADAPTERS
 from src.data.crawlers.cn_provinces import (
     DATACENTER_SOURCE_ID,
     MONTHLY_REPORT_SOURCE_ID,
+    MonthlyReportLink,
     ProvinceDataCenterCrawler,
     _antiword_tables,
     _attachment_suffix,
+    _normalize_narrative_report,
     _normalize_report_table,
     _resolve_report_disease,
     load_config,
@@ -386,6 +388,35 @@ def test_province_source_series_include_49_phsm_categories_and_monthly_additions
     )
     assert viral_hepatitis["aggregation_policy"] == "reported_aggregate"
     assert viral_hepatitis["rollup_policy"] == "no_auto_rollup"
+
+
+def test_narrative_monthly_disease_values_respect_valid_from_date() -> None:
+    before_source_start = _normalize_narrative_report(
+        "发热伴血小板减少综合征病例数为发热伴血小板减少综合征（10例）",
+        link=MonthlyReportLink(
+            jurisdiction_code="CN-BJ",
+            report_date=date(2026, 3, 1),
+            title="2026年3月传染病报告",
+            url="https://example.cn/report",
+        ),
+        source_url="https://example.cn/report",
+        artifact_sha256="test",
+    )
+    after_source_start = _normalize_narrative_report(
+        "发热伴血小板减少综合征病例数为发热伴血小板减少综合征（10例）",
+        link=MonthlyReportLink(
+            jurisdiction_code="CN-BJ",
+            report_date=date(2026, 4, 1),
+            title="2026年4月传染病报告",
+            url="https://example.cn/report",
+        ),
+        source_url="https://example.cn/report",
+        artifact_sha256="test",
+    )
+
+    assert before_source_start == []
+    assert len(after_source_start) == 1
+    assert after_source_start[0]["SourceDiseaseCode"] == "sfts"
 
 
 @pytest.mark.asyncio
