@@ -404,6 +404,13 @@ async def fetch_disease_series_records(
     mapping_relation_expr = "mapping.mapping_relation" if use_reviewed_mapping else "dss.mapping_relation"
     comparability_expr = "mapping.comparability" if use_reviewed_mapping else "dss.comparability"
     aggregation_policy_expr = "mapping.aggregation_policy" if use_reviewed_mapping else "dss.aggregation_policy"
+    jp_sentinel_series_condition = (
+        "dss.country_code = 'JP' AND "
+        + disease_id_expr
+        + " IN ("
+        + ", ".join(f"'{disease_id}'" for disease_id in _JP_SENTINEL_DISEASE_IDS)
+        + ")"
+    )
     projection_policy_expr = (
         "mapping.projection_policy" if use_reviewed_mapping
         else "NULLIF(dss.metadata::jsonb ->> 'projection_policy', '')"
@@ -607,10 +614,16 @@ async def fetch_disease_series_records(
                 dss.definition_version,
                 dss.case_definition,
                 dss.case_definition_uri,
-                dss.metric_type,
-                dss.reporting_basis,
+                CASE WHEN {jp_sentinel_series_condition}
+                     THEN 'sentinel_case_notifications'
+                     ELSE dss.metric_type END AS metric_type,
+                CASE WHEN {jp_sentinel_series_condition}
+                     THEN 'sentinel_surveillance'
+                     ELSE dss.reporting_basis END AS reporting_basis,
                 NULLIF(dss.metadata::jsonb ->> 'time_basis', '') AS time_basis,
-                dss.temporal_granularity,
+                CASE WHEN {jp_sentinel_series_condition}
+                     THEN 'weekly'
+                     ELSE dss.temporal_granularity END AS temporal_granularity,
                 dss.unit AS series_unit,
                 dso.unit AS observation_unit,
                 {mapping_relation_expr} AS mapping_relation,

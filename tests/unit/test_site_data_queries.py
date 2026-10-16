@@ -258,6 +258,19 @@ async def test_japanese_legacy_sentinel_history_keeps_its_reporting_basis() -> N
 
 
 @pytest.mark.asyncio
+async def test_japanese_reviewed_sentinel_series_uses_legacy_semantics() -> None:
+    session = FakeSession(FakeRows([]))
+
+    await site_data_queries.fetch_disease_series_records(session, "JP", False)
+
+    sql, _params = session.calls[0]
+    assert "dss.country_code = 'JP' AND mapping.target_code IN ('D136', 'D138', 'D139', 'D141', 'D143')" in sql
+    assert "THEN 'sentinel_case_notifications'" in sql
+    assert "THEN 'sentinel_surveillance'" in sql
+    assert "THEN 'weekly'" in sql
+
+
+@pytest.mark.asyncio
 async def test_series_query_exports_inactive_history_with_active_selection_flag() -> None:
     session = FakeSession(
         FakeRows(

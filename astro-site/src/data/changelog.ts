@@ -26,6 +26,52 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.12.0',
+    date: '2026-10-17',
+    titleEn: 'Complete surveillance data refresh',
+    titleZh: '监测数据全量更新与历史回填',
+    titleFr: 'Actualisation complète des données de surveillance',
+    summaryEn:
+      'Refreshed the published national and regional surveillance datasets and restored compatible historical observations while preserving their reporting definitions.',
+    summaryZh:
+      '更新已发布的国家及地区监测数据，并在保留报告口径的前提下补回兼容的历史记录。',
+    summaryFr:
+      'Les jeux de données nationaux et régionaux ont été actualisés et les observations historiques compatibles réintégrées, tout en préservant leurs définitions de déclaration.',
+    sections: [
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'The download catalogue now covers 295 country and jurisdiction datasets and 239 disease datasets, with CSV, JSON, and XLSX partitions.',
+            zh: '下载目录现覆盖 295 个国家及地区数据集和 239 个疾病数据集，并提供 CSV、JSON 和 XLSX 分区文件。',
+            fr: 'Le catalogue couvre désormais 295 jeux de données par pays ou juridiction et 239 jeux par maladie, en partitions CSV, JSON et XLSX.',
+          },
+          {
+            en: 'Published files are checked against their manifest before release, and calendar partitions keep large downloads manageable.',
+            zh: '发布前会逐项核对文件与清单，按日历区间拆分以便下载较大数据集。',
+            fr: 'Les fichiers publiés sont vérifiés par rapport au manifeste avant leur diffusion, et les partitions calendaires facilitent le téléchargement des grands jeux de données.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'Restored 120 weekly observations from 2012–2014 for each of five Japanese sentinel diseases. Their sentinel reporting basis is kept distinct from all-case notifications.',
+            zh: '为日本五种哨点监测疾病补回 2012–2014 年每种 120 条周度记录，并继续与全病例报告保持不同口径。',
+            fr: 'Rétablissement de 120 observations hebdomadaires de 2012 à 2014 pour chacune des cinq maladies japonaises suivies par surveillance sentinelle, avec distinction maintenue des notifications exhaustives.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.11.0',
     date: '2026-10-16',
     titleEn: 'Subnational disease data across six countries',
