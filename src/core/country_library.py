@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Iterable
 from functools import lru_cache
 import json
 from pathlib import Path
@@ -865,16 +866,41 @@ def _load_subdivision_registry() -> dict[str, dict]:
 
 SUBDIVISION_REGISTRY = _load_subdivision_registry()
 
+
+def expand_country_scopes(
+    country_codes: Iterable[str], *, available_codes: Iterable[str] = (),
+) -> list[str]:
+    """Include known subdivisions when refreshing a parent country."""
+    requested = {str(code).strip().upper() for code in country_codes if str(code).strip()}
+    expanded = set(requested)
+    for code in set(get_standard_country_codes()) | {
+        str(code).strip().upper() for code in available_codes
+    }:
+        if "-" in code and code.split("-", 1)[0] in requested:
+            expanded.add(code)
+    return sorted(expanded)
+
 # Subdivisions are registered from one declarative file so source adapters,
 # database seeding, task routing, and the public site use identical geography.
 for _subdivision_code, _subdivision in SUBDIVISION_REGISTRY.items():
     _parent_code = str(_subdivision.get("parent_country_code") or "").upper()
     _parent_profile = COUNTRY_OVERRIDES.get(_parent_code, {})
+    _parent_country = (
+        pycountry.countries.get(alpha_2=_parent_code)
+        if pycountry is not None and _parent_code
+        else None
+    )
+    _parent_name_en = (
+        _parent_profile.get("name_en")
+        or _parent_profile.get("name")
+        or getattr(_parent_country, "name", None)
+        or _parent_code
+    )
     _name_en = str(_subdivision.get("name_en") or _subdivision_code)
     _name_local = str(_subdivision.get("name_local") or _name_en)
     COUNTRY_OVERRIDES[_subdivision_code] = {
-        "name": f"{_name_en}, {_parent_profile.get('name', _parent_code)}",
-        "name_en": f"{_name_en}, {_parent_profile.get('name_en', _parent_code)}",
+        "name": f"{_name_en}, {_parent_name_en}",
+        "name_en": f"{_name_en}, {_parent_name_en}",
         "name_local": _name_local,
         "language": _parent_profile.get("language", "en"),
         "timezone": _subdivision.get("timezone") or _parent_profile.get("timezone", "UTC"),

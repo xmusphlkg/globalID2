@@ -148,23 +148,32 @@ export function writePending(plan) {
   writeFileSync(pendingPath, JSON.stringify(plan.snapshot));
 }
 
-export function finalizeResearchBuild() {
-  const pending = readJson(pendingPath);
-  const current = sourceSnapshot();
-  if (JSON.stringify(pending) !== JSON.stringify(current)) {
-    throw new Error('Research data or templates changed after the site build');
+export function finalizeResearchSnapshot(snapshot, {
+  outputRoot = distRoot,
+  targetManifest = manifestPath,
+  sourcePending = pendingPath,
+} = {}) {
+  if (snapshot?.schema !== 1 || !snapshot.articles || typeof snapshot.articles !== 'object') {
+    throw new Error('Invalid research build snapshot');
   }
-  for (const article of Object.values(current.articles)) {
+  // build-site.mjs writes this snapshot only after verifying inputs stayed
+  // unchanged for the whole render. Sources may advance after its lock is
+  // released, so record the exact snapshot represented by the built pages.
+  for (const article of Object.values(snapshot.articles)) {
     article.files = {};
     for (const path of article.paths) {
-      const output = resolve(distRoot, path);
+      const output = resolve(outputRoot, path);
       if (!existsSync(output) || !statSync(output).isFile()) throw new Error(`Missing research output: ${path}`);
       article.files[path] = fileHash(output);
     }
   }
-  const temporary = `${manifestPath}.${process.pid}.tmp`;
-  writeFileSync(temporary, JSON.stringify(current));
-  renameSync(temporary, manifestPath);
-  rmSync(pendingPath, { force: true });
-  process.stdout.write(`[research-cache] recorded ${Object.keys(current.articles).length} complete article bundles\n`);
+  const temporary = `${targetManifest}.${process.pid}.tmp`;
+  writeFileSync(temporary, JSON.stringify(snapshot));
+  renameSync(temporary, targetManifest);
+  rmSync(sourcePending, { force: true });
+  process.stdout.write(`[research-cache] recorded ${Object.keys(snapshot.articles).length} complete article bundles\n`);
+}
+
+export function finalizeResearchBuild() {
+  finalizeResearchSnapshot(readJson(pendingPath));
 }

@@ -6,6 +6,7 @@ import {
   formatLocaleDate,
   formatLocaleNumber,
   localeTag,
+  localizedRegionName,
   LOCALES,
   LOCALE_VARIANTS,
   normalizeLocalePreference,
@@ -38,4 +39,9 @@ test('regional French preference reuses the reviewed French route without losing
   assert.equal(canada.contentLanguage, 'fr');
   assert.equal(contentLanguageForPreference('fr-CA'), 'fr');
   assert.equal(normalizeLocalePreference('fr_ca'), 'fr-CA');
+});
+
+test('French region labels fall back to the translated parent country', () => {
+  assert.equal(localizedRegionName('fr', 'JP-23', { en: 'Aichi, Japan' }), 'Aichi, Japon');
+  assert.equal(localizedRegionName('fr', 'US-CA', { en: 'California, United States' }), 'California, États-Unis');
 });

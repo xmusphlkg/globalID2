@@ -42,13 +42,14 @@ def test_at_de_reviewed_manifests_cover_full_source_inventory() -> None:
     expected_counts.update({
         "AT": 118,
         "CA": 70,
+        "CH": 40,
         "CN": 1,
         "DE": 142,
         "IE": 111,
-        "JP": 56,
-        "NZ": 36,
+        "JP": 60,
+        "NZ": 81,
         "SG": 76,
-        "US": 21,
+        "US": 66,
     })
     assert Counter(item.country_code for item in mappings) == expected_counts
     assert all(
@@ -112,6 +113,19 @@ def test_at_de_high_risk_semantics_and_no_projection_boundaries() -> None:
     )
 
 
+def test_ch_idd_manifest_preserves_lyme_metric_uncertainty() -> None:
+    swiss = {
+        item.source_code: item
+        for item in load_reviewed_source_category_mappings()
+        if item.country_code == "CH"
+    }
+    assert len(swiss) == 40
+    assert swiss["campylobacteriosis"].target_code == "D092"
+    assert swiss["campylobacteriosis"].projection_policy == "canonical"
+    assert swiss["lyme_borreliosis"].target_kind == "group"
+    assert swiss["lyme_borreliosis"].projection_policy == "no_projection"
+
+
 def test_cn_reviewed_manifest_maps_native_viral_hepatitis_identity() -> None:
     mappings = load_reviewed_source_category_mappings()
     mapping = next(
@@ -129,7 +143,10 @@ def test_cn_reviewed_manifest_maps_native_viral_hepatitis_identity() -> None:
 
 def test_nz_reviewed_manifest_covers_every_registered_source_series() -> None:
     mappings = load_reviewed_source_category_mappings()
-    nz = [item for item in mappings if item.country_code == "NZ"]
+    nz = [
+        item for item in mappings
+        if item.country_code == "NZ" and item.source_id == "SRC_NZ_PHS"
+    ]
     indexed = {item.source_code: item for item in nz}
 
     assert len(nz) == 36
@@ -142,6 +159,56 @@ def test_nz_reviewed_manifest_covers_every_registered_source_series() -> None:
     ].mapping_relation == "narrower"
     assert all(item.source_id == "SRC_NZ_PHS" for item in nz)
     assert all(item.projection_policy == "canonical" for item in nz)
+
+
+def test_nz_annual_dhb_manifest_preserves_source_semantics() -> None:
+    rows = [
+        item for item in load_reviewed_source_category_mappings()
+        if item.country_code == "NZ" and item.source_id == "SRC_NZ_PHS_DHB"
+    ]
+    indexed = {item.local_name: item for item in rows}
+
+    assert len(indexed) == 45
+    assert sum(item.projection_policy == "canonical" for item in rows) == 40
+    assert indexed["Haemophilus influenzae type b"].mapping_relation == "narrower"
+    assert indexed["Hydatid disease"].target_code == "D045"
+    assert indexed["Trichinosis"].target_code == "D122"
+    assert indexed["Paratyphoid fever"].target_code == "D234"
+    assert indexed["Typhoid fever"].target_code == "D124"
+    assert {
+        item.local_name for item in rows if item.projection_policy == "no_projection"
+    } == {
+        "Hepatitis NOS",
+        "Meningoencephalitis - primary amoebic",
+        "Rabies and other lyssaviruses",
+        "Taeniasis",
+        "Toxic shellfish poisoning",
+    }
+
+
+def test_us_reviewed_manifest_distinguishes_cases_from_other_metrics() -> None:
+    rows = [
+        item for item in load_reviewed_source_category_mappings()
+        if item.country_code == "US"
+        and item.source_id == "SRC_US_NNDSS"
+        and item.definition_version == "source-current"
+    ]
+    indexed = {item.local_name: item for item in rows}
+
+    assert len(indexed) == 66
+    assert sum(item.projection_policy == "canonical" for item in rows) == 62
+    assert indexed["Invasive pneumococcal disease, all ages, Confirmed"].mapping_relation == "narrower"
+    assert indexed["Syphilis, Primary and secondary"].mapping_relation == "narrower"
+    assert indexed["Salmonellosis (excluding Salmonella Typhi infection and Salmonella Paratyphi infection)"].target_code == "D114"
+    assert indexed["Salmonella Typhi infection"].target_code == "D124"
+    assert {
+        item.local_name for item in rows if item.projection_policy == "no_projection"
+    } == {
+        "Candida auris, clinical",
+        "Candida auris, screening",
+        "Rabies, animal",
+        "Influenza-associated pediatric mortality",
+    }
 
 
 def test_reviewed_manifest_rejects_duplicate_source_identity(tmp_path: Path) -> None:

@@ -44,6 +44,11 @@ def iso_or_none(value) -> str | None:
     return value.isoformat() if hasattr(value, "isoformat") else value
 
 
+# These NESID diagnoses are reported through Japan's sentinel surveillance,
+# including legacy national rows that predate the registered source series.
+_JP_SENTINEL_DISEASE_IDS = ("D136", "D138", "D139", "D141", "D143")
+
+
 def compact_report_metadata(
     metadata: dict | None, *, include_figures: bool = False
 ) -> dict:
@@ -261,6 +266,22 @@ async def fetch_disease_records_direct(
     session, country_code: str, use_population_table: bool
 ) -> list[dict]:
     """Query legacy disease records using the standard disease code."""
+    # Swiss IDD CHFL is a published Switzerland+Liechtenstein aggregate. The
+    # legacy table stored it against the CH country ID, so it must not fill a
+    # CH-only public curve when a source-series period is absent.
+    geography_filter = ""
+    if country_code.upper() == "CH":
+        geography_filter = """
+              AND COALESCE(
+                    dr.raw_data::jsonb->0->>'Geography',
+                    dr.raw_data::jsonb->>'Geography'
+                  ) = 'CH'
+        """
+    jp_sentinel_condition = (
+        "c.code = 'JP' AND d.name IN ("
+        + ", ".join(f"'{disease_id}'" for disease_id in _JP_SENTINEL_DISEASE_IDS)
+        + ")"
+    )
     incidence_expr = "dr.incidence_rate"
     incidence_source_expr = "CASE WHEN dr.incidence_rate IS NOT NULL THEN 'original_db' ELSE 'missing_population' END"
     population_join = ""
@@ -299,12 +320,12 @@ async def fetch_disease_records_direct(
                 {incidence_source_expr} AS incidence_rate_source,
                 dr.mortality_rate AS mortality_rate,
                 dr.data_quality AS data_quality,
-                COALESCE(
+                CASE WHEN {jp_sentinel_condition} THEN 'weekly' ELSE COALESCE(
                     NULLIF(dr.metadata::jsonb ->> 'frequency', ''),
                     NULLIF(dr.metadata::jsonb ->> 'temporal_granularity', ''),
                     NULLIF(dr.raw_data::jsonb ->> 'Frequency', '')
-                ) AS temporal_granularity,
-                COALESCE(
+                ) END AS temporal_granularity,
+                CASE WHEN {jp_sentinel_condition} THEN 'sentinel_case_notifications' ELSE COALESCE(
                     NULLIF(dr.metadata::jsonb ->> 'measure', ''),
                     NULLIF(dr.metadata::jsonb ->> 'metric_type', ''),
                     NULLIF(dr.raw_data::jsonb ->> 'Measure', ''),
@@ -313,8 +334,8 @@ async def fetch_disease_records_direct(
                             IN ('registry_annual', 'registry_disease_monthly')
                         THEN 'case_notifications'
                     END
-                ) AS metric_type,
-                COALESCE(
+                ) END AS metric_type,
+                CASE WHEN {jp_sentinel_condition} THEN 'sentinel_surveillance' ELSE COALESCE(
                     NULLIF(dr.metadata::jsonb ->> 'reporting_basis', ''),
                     NULLIF(dr.raw_data::jsonb ->> 'ReportingBasis', ''),
                     CASE
@@ -322,7 +343,7 @@ async def fetch_disease_records_direct(
                             IN ('registry_annual', 'registry_disease_monthly')
                         THEN 'national_registry_notifications'
                     END
-                ) AS reporting_basis,
+                ) END AS reporting_basis,
                 COALESCE(
                     NULLIF(dr.metadata::jsonb ->> 'time_basis', ''),
                     NULLIF(dr.raw_data::jsonb ->> 'TimeBasis', '')
@@ -338,6 +359,7 @@ async def fetch_disease_records_direct(
             JOIN diseases d ON d.id = dr.disease_id
             {population_join}
             WHERE c.code = :code
+            {geography_filter}
             ORDER BY timezone('UTC', dr.time)::date ASC, d.name
             """),
         {"code": country_code},
@@ -370,9 +392,47 @@ async def fetch_disease_series_records(
     The as-of boundary is when this application recorded an observation state;
     upstream publication dates are not inferred from it.
     """
-    # CN/AU/BR subdivisions share the parent source registry, while geography
-    # and population keys always stay local to the selected subdivision.
-    series_country_code = country_code.split("-", 1)[0] if country_code.startswith(("CN-", "AU-", "BR-")) else country_code
+    # Subdivision observations use a local geography key, while their source
+    # series belongs to the parent country's registry.
+    series_country_code = country_code.split("-", 1)[0]
+    # These sources retain unmapped facts in holding series. Their legacy
+    # series.disease_id is neither complete nor an authoritative review
+    # decision; the active v3 release decides which observations may appear
+    # on a standard disease page.
+    use_reviewed_mapping = series_country_code in {"JP", "SE", "DE", "CH", "US", "NZ"}
+    disease_id_expr = "mapping.target_code" if use_reviewed_mapping else "dss.disease_id"
+    mapping_relation_expr = "mapping.mapping_relation" if use_reviewed_mapping else "dss.mapping_relation"
+    comparability_expr = "mapping.comparability" if use_reviewed_mapping else "dss.comparability"
+    aggregation_policy_expr = "mapping.aggregation_policy" if use_reviewed_mapping else "dss.aggregation_policy"
+    projection_policy_expr = (
+        "mapping.projection_policy" if use_reviewed_mapping
+        else "NULLIF(dss.metadata::jsonb ->> 'projection_policy', '')"
+    )
+    reviewed_mapping_join = ""
+    if use_reviewed_mapping:
+        reviewed_mapping_join = """
+            JOIN source_disease_categories category
+              ON category.source_id = dss.source_system
+             AND category.definition_version = dss.definition_version
+             AND category.source_code = COALESCE(
+                   NULLIF(dso.dimensions->>'source_disease_code', ''),
+                   NULLIF(dso.metadata->>'local_code', ''),
+                   dss.source_series_code
+                 )
+             AND category.is_active IS TRUE
+            JOIN disease_mapping_assertions_v3 mapping
+              ON mapping.category_id = category.id
+             AND mapping.assertion_status = 'approved'
+             AND mapping.target_kind = 'concept'
+             AND mapping.projection_policy = 'canonical'
+             AND (mapping.valid_from IS NULL OR dso.time::date >= mapping.valid_from)
+             AND (mapping.valid_to IS NULL OR dso.time::date <= mapping.valid_to)
+            JOIN disease_mapping_release_items_v3 release_item
+              ON release_item.assertion_id = mapping.id
+            JOIN disease_mapping_releases_v3 mapping_release
+              ON mapping_release.id = release_item.release_id
+             AND mapping_release.status = 'active'
+        """
     incidence_expr = "NULL::double precision"
     incidence_source_expr = "'missing_population'"
     population_join = ""
@@ -498,7 +558,7 @@ async def fetch_disease_series_records(
             SELECT
                 timezone('UTC', dso.time)::date AS "date",
                 to_char(timezone('UTC', dso.time), 'YYYY-MM') AS year_month,
-                dss.disease_id,
+                {disease_id_expr} AS disease_id,
                 dso.value::double precision AS cases,
                 NULL::bigint AS deaths,
                 NULL::bigint AS recoveries,
@@ -524,9 +584,9 @@ async def fetch_disease_series_records(
                 dss.temporal_granularity,
                 dss.unit AS series_unit,
                 dso.unit AS observation_unit,
-                dss.mapping_relation,
-                dss.comparability,
-                dss.aggregation_policy,
+                {mapping_relation_expr} AS mapping_relation,
+                {comparability_expr} AS comparability,
+                {aggregation_policy_expr} AS aggregation_policy,
                 dss.availability_status,
                 dss.missing_value_policy,
                 dss.valid_from,
@@ -540,8 +600,7 @@ async def fetch_disease_series_records(
                 dss.metadata::jsonb -> 'comparability_break' AS comparability_break,
                 NULLIF(dss.metadata::jsonb ->> 'comparability_set', '')
                     AS comparability_set,
-                NULLIF(dss.metadata::jsonb ->> 'projection_policy', '')
-                    AS projection_policy,
+                {projection_policy_expr} AS projection_policy,
                 NULLIF(dss.metadata::jsonb ->> 'projection_priority', '')::integer
                     AS projection_priority,
                 dss.is_active AS series_is_active,
@@ -554,9 +613,10 @@ async def fetch_disease_series_records(
             FROM {observation_relation}
             JOIN disease_surveillance_series dss
               ON dss.series_code = dso.series_code
+            {reviewed_mapping_join}
             {population_join}
             WHERE dss.country_code = :code
-              AND dss.disease_id IS NOT NULL
+              AND {disease_id_expr} IS NOT NULL
               AND dso.geography_key = :geography_key
               AND dso.suppressed IS FALSE
               AND dso.value IS NOT NULL
@@ -610,7 +670,7 @@ async def fetch_disease_series_records(
 
 async def fetch_country_frequency_meta(session, country_code: str) -> dict:
     """Describe source periods without converting period totals into weekly rates."""
-    series_country_code = country_code.split("-", 1)[0] if country_code.startswith(("CN-", "AU-", "BR-")) else country_code
+    series_country_code = country_code.split("-", 1)[0]
     source_frequencies: list[str] = []
     registry_tables_exist = await has_table(
         session, "disease_surveillance_series"

@@ -28,6 +28,7 @@ from src.data.crawlers.ch import (
     DEFAULT_SOURCE_NAME,
     CHFetchSummary,
     SwitzerlandIDDCrawler,
+    idd_geography_key,
     parse_idd_period,
 )
 
@@ -288,11 +289,20 @@ class CHMonthlyUpdater:
                         "PeriodValue": _norm_text(row.get("PeriodValue")),
                         "Cases": str(max(0, cases)),
                         "Geography": _norm_text(row.get("Geography")),
-                        "GeographyKey": _norm_text(row.get("GeographyKey")) or "country:CH:national",
+                        "GeographyKey": idd_geography_key(
+                            _norm_text(row.get("Geography")),
+                            explicit=_norm_text(row.get("GeographyKey")),
+                        ),
                         "Geocode": _norm_text(row.get("Geocode")),
                         "ReportingArea": _norm_text(row.get("ReportingArea")),
-                        "ParentCountryCode": _norm_text(row.get("ParentCountryCode")) or "CH",
-                        "LocationType": _norm_text(row.get("LocationType")) or "country",
+                        "ParentCountryCode": (
+                            "" if _norm_text(row.get("Geography")).upper() == "CHFL"
+                            else _norm_text(row.get("ParentCountryCode")) or "CH"
+                        ),
+                        "LocationType": (
+                            "country_group" if _norm_text(row.get("Geography")).upper() == "CHFL"
+                            else _norm_text(row.get("LocationType")) or "country"
+                        ),
                         "Group": _norm_text(row.get("Group")),
                         "DataComplete": data_complete,
                         "Trend": _norm_text(row.get("Trend")),
@@ -382,6 +392,9 @@ class CHMonthlyUpdater:
             # store with their ISO geography key; they do not map to the
             # national legacy disease_records table.
             return CHUpdateImportResult(0, 0, db_latest_date, source_latest_date, False)
+        # The legacy table has only a CH country foreign key. Combined CHFL
+        # rows must remain in the source-series store at their own geography.
+        rows = [row for row in rows if _norm_text(row.get("Geography")).upper() == "CH"]
         if not rows:
             return CHUpdateImportResult(0, 0, db_latest_date, source_latest_date, False)
 

@@ -12,7 +12,12 @@ from src.core.source_scopes import (
     scope_display_label,
     scope_from_data_source,
 )
-from src.data.crawlers.ch import choose_national_series_config, parse_idd_period
+from src.data.crawlers.ch import (
+    CHFL_GEOGRAPHY_KEY,
+    choose_national_series_config,
+    idd_geography_key,
+    parse_idd_period,
+)
 from src.data.processors.ch import CHMonthlyUpdater
 from src.services.crawl_service import CrawlService
 
@@ -71,6 +76,15 @@ def test_idd_choose_national_config_rejects_age_specific_series():
 
     assert geography == "CHFL"
     assert config["agegroup_sti"] == "all"
+
+
+def test_idd_geography_key_keeps_chfl_distinct_from_switzerland():
+    assert idd_geography_key("CHFL") == CHFL_GEOGRAPHY_KEY
+    assert idd_geography_key("CH") == "country:CH:national"
+    assert idd_geography_key("AG") == "country:CH-AG:national"
+    assert idd_geography_key("CHFL", explicit="country:CH:national") == CHFL_GEOGRAPHY_KEY
+    with pytest.raises(ValueError, match="no recognized geography"):
+        idd_geography_key("")
 
 
 def test_ch_idd_source_scope_aliases():
@@ -145,6 +159,11 @@ def test_ch_monthly_updater_loads_idd_csv_shape(tmp_path):
             "PeriodValue": "202603",
             "Cases": "810",
             "Geography": "CHFL",
+            "GeographyKey": CHFL_GEOGRAPHY_KEY,
+            "Geocode": "",
+            "ReportingArea": "",
+            "ParentCountryCode": "",
+            "LocationType": "country_group",
             "Group": "",
             "DataComplete": "TRUE",
             "Trend": "rising",
@@ -156,3 +175,15 @@ def test_ch_monthly_updater_loads_idd_csv_shape(tmp_path):
             "IsProvisional": "false",
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_ch_legacy_import_skips_combined_chfl_without_database_access():
+    result = await CHMonthlyUpdater().import_rows(
+        None,
+        [{"Geography": "CHFL", "Date": "2025-01-01", "Cases": "12"}],
+        db_latest_date=None,
+        source_latest_date=date(2025, 1, 1),
+    )
+    assert result.inserted_or_updated == 0
+    assert result.imported_new_data is False

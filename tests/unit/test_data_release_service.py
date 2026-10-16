@@ -8,7 +8,19 @@ import pytest
 
 from src.domain import TaskStatus
 from src.services import data_release_service as release_module
+from src.core.country_library import expand_country_scopes
 from src.services.data_release_service import DataReleaseService
+
+
+def test_release_expands_parent_to_registered_subdivisions():
+    scopes = expand_country_scopes(
+        ["jp", "SE", "US-CA", "CN"], available_codes=["CN-BJ", "CN-GD"]
+    )
+    assert "JP" in scopes and "JP-01" in scopes and "JP-47" in scopes
+    assert "SE" in scopes and "SE-AB" in scopes
+    assert "CN" in scopes and "CN-BJ" in scopes
+    assert "US-CA" in scopes and "US-NY" not in scopes
+    assert len(scopes) == len(set(scopes))
 
 
 @pytest.mark.asyncio

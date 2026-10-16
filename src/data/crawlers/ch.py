@@ -48,6 +48,25 @@ CH_CANTONS = {
     "TI": "Ticino", "UR": "Uri", "VD": "Vaud", "VS": "Valais", "ZG": "Zug", "ZH": "Zürich",
 }
 
+# The IDD API publishes some national charts for Switzerland and
+# Liechtenstein together.  That population is not the CH national population
+# and must never share its observation identity with a CH-only row.
+CHFL_GEOGRAPHY_KEY = "country-group:CH-FL:national"
+
+
+def idd_geography_key(geography: str, *, explicit: str = "") -> str:
+    """Preserve the exact territory represented by an IDD series."""
+    code = _norm_text(geography).upper()
+    if code == "CHFL":
+        return CHFL_GEOGRAPHY_KEY
+    if code == "CH":
+        return "country:CH:national"
+    if code in CH_CANTONS:
+        return f"country:CH-{code}:national"
+    if key := _norm_text(explicit):
+        return key
+    raise ValueError(f"IDD row has no recognized geography: {geography!r}")
+
 DISEASE_DISPLAY_NAMES: dict[str, str] = {
     "aids": "AIDS",
     "botulism": "Botulism",
@@ -398,10 +417,10 @@ class SwitzerlandIDDCrawler(BaseCrawler):
                     "PeriodValue": _period_value_text(item.get("x")),
                     "Cases": str(max(0, cases)),
                     "Geography": series.geography,
-                    "GeographyKey": "country:CH:national",
-                    "Geocode": "CH",
-                    "LocationType": "country",
-                    "ParentCountryCode": "CH",
+                    "GeographyKey": idd_geography_key(series.geography),
+                    "Geocode": series.geography,
+                    "LocationType": "country_group" if series.geography == "CHFL" else "country",
+                    "ParentCountryCode": "" if series.geography == "CHFL" else "CH",
                     "Group": group or "",
                     "DataComplete": _norm_text(properties.get("dataComplete")),
                     "Trend": _norm_text(properties.get("trend")),

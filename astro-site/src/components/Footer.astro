@@ -145,7 +145,8 @@ const maintainer = copy({
 </footer>
 
 <script>
-  const language = document.documentElement.lang === 'zh' ? 'zh-CN' : document.documentElement.lang === 'fr' ? 'fr-FR' : 'en-US';
+  const pageLanguage = document.documentElement.lang.toLowerCase();
+  const language = pageLanguage.startsWith('zh') ? 'zh-CN' : pageLanguage.startsWith('fr') ? 'fr-FR' : 'en-US';
   const fallback = language === 'zh-CN' ? '未知' : language === 'fr-FR' ? 'Inconnu' : 'Unknown';
   const showDate = (selector: string, value: unknown) => {
     const target = document.querySelector<HTMLElement>(selector);
@@ -155,13 +156,19 @@ const maintainer = copy({
       ? new Intl.DateTimeFormat(language, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(date)
       : fallback;
   };
-  void Promise.allSettled([
-    fetch('/release.json', { cache: 'no-store' }).then(response => response.ok ? response.json() : null).then(data => showDate('[data-site-updated]', data?.built_at)),
-    fetch('/site-data/site-status.json').then(response => response.ok ? response.json() : null).then(data => showDate('[data-database-updated]', data?.generated_at)),
-  ]).then(results => {
-    if (results[0].status === 'rejected') showDate('[data-site-updated]', null);
-    if (results[1].status === 'rejected') showDate('[data-database-updated]', null);
-  });
+  if (import.meta.env.DEV) {
+    const target = document.querySelector<HTMLElement>('[data-site-updated]');
+    if (target) target.textContent = language === 'zh-CN' ? '本地预览' : language === 'fr-FR' ? 'Aperçu local' : 'Local preview';
+  } else {
+    void fetch('/release.json', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => showDate('[data-site-updated]', data?.built_at))
+      .catch(() => showDate('[data-site-updated]', null));
+  }
+  void fetch('/site-data/site-status.json')
+    .then(response => response.ok ? response.json() : null)
+    .then(data => showDate('[data-database-updated]', data?.generated_at))
+    .catch(() => showDate('[data-database-updated]', null));
 </script>
 
 <style>

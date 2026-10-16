@@ -6,6 +6,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from src.core.config import get_config
+from src.core.country_library import expand_country_scopes
 from src.core.data_share import (
     derive_github_raw_base_url,
     get_data_share_repo_branch,
@@ -346,11 +347,7 @@ async def collect_site_export_context(
 ) -> dict:
     """Read and project all database-backed data without writing artifacts."""
     await ensure_site_export_database_ready()
-    incremental_codes = {
-        str(code).strip().upper()
-        for code in incremental_country_codes or ()
-        if str(code).strip()
-    }
+    incremental_codes = set(expand_country_scopes(incremental_country_codes or ()))
     incremental = bool(incremental_codes) or incremental_site
     if incremental and recorded_at_as_of is not None:
         raise ValueError(
@@ -442,6 +439,9 @@ async def collect_site_export_context(
         country_name_zh_by_code = {c["code"]: c["name_zh"] for c in countries_simple}
         country_download_entries: list[dict] = []
         disease_download_entries: list[dict] = []
+        incremental_codes = set(expand_country_scopes(
+            incremental_codes, available_codes=(country["code"] for country in countries)
+        ))
         countries_to_refresh = (
             [country for country in countries if country["code"] in incremental_codes]
             if incremental

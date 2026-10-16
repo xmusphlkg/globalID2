@@ -371,6 +371,91 @@ async def test_unknown_category_builds_nonprojectable_holding_observation() -> N
     assert holding_series.comparability == "not_comparable"
 
 
+@pytest.mark.asyncio
+async def test_japan_sentinel_holding_series_preserves_reporting_basis() -> None:
+    now = datetime.now(timezone.utc)
+    category = SourceDiseaseCategory(
+        id=42,
+        category_key="CAT_SRC_JP_NIID_PHARYNGOCONJUNCTIVAL",
+        country_code="JP",
+        source_id="SRC_JP_NIID",
+        source_code="label:test-pharyngoconjunctival",
+        canonical_source_label="Pharyngoconjunctival fever",
+        normalized_label="pharyngoconjunctival fever",
+        definition_version="source-current",
+        status="discovered",
+        first_seen_at=now,
+        last_seen_at=now,
+        occurrence_count=1,
+        ai_status="pending",
+        metadata_={},
+        is_active=True,
+    )
+    existing = DiseaseSurveillanceSeries(
+        series_code="HOLD_JP_PHARYNGOCONJUNCTIVAL",
+        disease_id=None,
+        target_group_code="G_UNMAPPED_SOURCE_CATEGORIES",
+        country_code="JP",
+        source_system="SRC_JP_NIID",
+        source_series_code=category.source_code,
+        source_label=category.canonical_source_label,
+        definition_version="source-current",
+        metric_type="case_notifications",
+        reporting_basis="notification",
+        temporal_granularity="unknown",
+        unit="count",
+        mapping_relation="unmapped",
+        comparability="not_comparable",
+        aggregation_policy="non_additive",
+        availability_status="active",
+        missing_value_policy="missing_is_unknown",
+        is_active=True,
+        metadata_={"dynamic_holding": True},
+    )
+
+    class ScalarResult:
+        def __init__(self, value):
+            self.value = value
+
+        def scalar_one_or_none(self):
+            return self.value
+
+    class FakeDB:
+        def __init__(self):
+            self.results = iter((category, existing))
+
+        async def execute(self, _statement, *params):
+            return ScalarResult(next(self.results))
+
+        async def flush(self):
+            return None
+
+    observations, handled = await SeriesObservationStore()._build_holding_observations(
+        FakeDB(),
+        [{
+            "MMWRYear": "2026",
+            "MMWRWeek": "40",
+            "RawDiseaseLabel": category.canonical_source_label,
+            "SourceDiseaseCode": category.source_code,
+            "SurveillanceType": "sentinel",
+            "Cases": "12",
+            "GeographyKey": "country:JP-01:national",
+        }],
+        "JP",
+        source_id="SRC_JP_NIID",
+        value_field="Cases",
+        geography_key=None,
+    )
+
+    assert handled == 1
+    assert existing.metric_type == "sentinel_case_notifications"
+    assert existing.reporting_basis == "sentinel_surveillance"
+    assert existing.temporal_granularity == "weekly"
+    assert existing.metadata_["surveillance_type"] == "sentinel"
+    assert observations[0]["metadata"]["measure"] == "sentinel_case_notifications"
+    assert observations[0]["metadata"]["frequency"] == "weekly"
+
+
 def test_quality_guard_keeps_an_isolated_reported_zero() -> None:
     report = SeriesObservationStore.assess_quality(
         [_quality_observation("SER_ONE", "2026-01-01", 0)],

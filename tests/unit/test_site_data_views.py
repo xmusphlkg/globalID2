@@ -105,6 +105,12 @@ def test_subdivision_display_name_prefers_chinese_database_name_over_code_fallba
     ) == ("Shanghai, China", "上海市")
 
 
+def test_subdivision_english_name_uses_parent_country_name_not_iso_code() -> None:
+    assert views.resolve_country_display_names(
+        "JP-01", {"name": "Hokkaido, JP", "name_zh": "日本北海道"}
+    ) == ("Hokkaido, Japan", "日本北海道")
+
+
 def test_disease_compact_data_keeps_source_only_country() -> None:
     disease = {
         "disease_id": "D_TEST",

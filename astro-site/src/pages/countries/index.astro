@@ -45,11 +45,23 @@ const subdivisionCountries = supportedJurisdictions.filter(country => (
 const supportedCountries = supportedJurisdictions.filter(country => (
   country.location_type !== 'subdivision' && !country.parent_code
 ));
-const chinaSubdivisionCount = subdivisionCountries.filter(country => country.parent_code === 'CN').length;
-
 const metaByCode = Object.fromEntries(
   metaCountries.map(c => [c.code.toUpperCase(), c])
 ) as Record<string, typeof metaCountries[0]>;
+
+const subdivisionParents = [...new Set(subdivisionCountries.map(country => country.parent_code?.toUpperCase()).filter(Boolean))]
+  .map(code => ({
+    code: code!,
+    country: metaByCode[code!],
+    count: subdivisionCountries.filter(country => country.parent_code?.toUpperCase() === code).length,
+  }))
+  .filter(parent => parent.country)
+  .sort((a, b) => (a.country.name_en ?? a.country.name).localeCompare(b.country.name_en ?? b.country.name));
+const subdivisionParentName = (parent: (typeof subdivisionParents)[number]) => zh
+  ? parent.country.name_zh ?? parent.country.name
+  : fr
+    ? parent.country.name_fr ?? localizedRegionName('fr', parent.code, { en: parent.country.name_en ?? parent.country.name })
+    : parent.country.name_en ?? parent.country.name;
 
 const coverageByCode = Object.fromEntries(
   COUNTRY_COVERAGE.map(c => [c.code.toUpperCase(), c])
@@ -180,12 +192,12 @@ const frenchCountryName = (entry: { code: string; name_en: string; name_fr?: str
         <div class="coverage-map-title-block">
           <p class="coverage-map-eyebrow">{pick('Live geography layer', '实时地理覆盖层')}</p>
           <h2 class="coverage-section-title">{pick('Data coverage map', '数据覆盖地图')}</h2>
-          <p class="coverage-map-description">{pick('See where GIDS has a country-level feed, a province-level feed, or a planned source.', '查看 GIDS 已接入国家级、省级数据，及计划接入的数据来源。')}</p>
+          <p class="coverage-map-description">{pick('See where GIDS has country-level data, regional data, or a planned source.', '查看 GIDS 已接入国家级、地区级数据，及计划接入的数据来源。', 'Consultez les données nationales, régionales et les sources prévues.')}</p>
         </div>
         <div class="coverage-map-readout" aria-label={pick('Map status summary', '地图状态摘要')}>
           <strong>{activeCount}</strong>
           <span>{pick('countries live', '个国家已上线')}</span>
-          <small>{pick(`${chinaSubdivisionCount + subdivisionCountries.filter(c => c.parent_code !== 'CN').length} regional feeds`, `${chinaSubdivisionCount + subdivisionCountries.filter(c => c.parent_code !== 'CN').length} 个省级/地区数据源`, `${chinaSubdivisionCount + subdivisionCountries.filter(c => c.parent_code !== 'CN').length} flux régionaux`)}</small>
+          <small>{pick(`${subdivisionCountries.length} regional feeds`, `${subdivisionCountries.length} 个省级/地区数据源`, `${subdivisionCountries.length} flux régionaux`)}</small>
         </div>
       </div>
 
@@ -239,27 +251,31 @@ const frenchCountryName = (entry: { code: string; name_en: string; name_fr?: str
         </span>
       </div>
 
-      {chinaSubdivisionCount > 0 && (
-        <a
-          class="mb-6 flex flex-col gap-2 border border-[rgb(var(--border))] bg-[rgb(var(--surface-muted))] p-4 transition-colors hover:border-[rgb(var(--color-teal))] sm:flex-row sm:items-center sm:justify-between"
-          href={`${prefix}/countries/cn/#subnational-data`}
-        >
-          <span>
-            <strong class="block text-[rgb(var(--text-strong))]">
-              {pick('China province-level datasets', '中国分省数据')}
-            </strong>
-            <span class="mt-1 block text-sm leading-6 text-[rgb(var(--text-muted))]">
-              {pick(
-                `${chinaSubdivisionCount} province-level datasets are grouped under China and excluded from country-level totals.`,
-                `${chinaSubdivisionCount} 个分省数据集统一归入中国，不计入国家级汇总。`,
-                `${chinaSubdivisionCount} jeux de données provinciales sont regroupés sous la Chine et exclus des totaux nationaux.`,
-              )}
-            </span>
-          </span>
-          <span class="shrink-0 text-sm font-semibold text-[rgb(var(--color-teal))]">
-            {pick('Browse provinces →', '浏览分省数据 →')}
-          </span>
-        </a>
+      {subdivisionParents.length > 0 && (
+        <div class="mb-6 border border-[rgb(var(--border))] bg-[rgb(var(--surface-muted))] p-4">
+          <strong class="block text-[rgb(var(--text-strong))]">
+            {pick('Regional datasets grouped by parent country', '分省/地区数据按所属国家归档', 'Les données régionales sont regroupées par pays')}
+          </strong>
+          <p class="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))]">
+            {pick(
+              `${subdivisionCountries.length} regional datasets across ${subdivisionParents.length} countries. They remain separate from country-level totals.`,
+              `${subdivisionParents.length} 个国家/地区共提供 ${subdivisionCountries.length} 个省级数据集；省级数据与国家级总量分开统计。`,
+              `${subdivisionCountries.length} jeux régionaux dans ${subdivisionParents.length} pays, présentés séparément des totaux nationaux.`,
+            )}
+          </p>
+          <ul class="mt-3 flex flex-wrap gap-2">
+            {subdivisionParents.map(parent => (
+              <li>
+                <a
+                  class="inline-flex min-h-10 items-center gap-2 border border-[rgb(var(--border))] bg-[rgb(var(--surface))] px-3 py-2 text-sm font-medium text-[rgb(var(--text-strong))] transition-colors hover:border-[rgb(var(--color-teal))]"
+                  href={`${prefix}/countries/${parent.code.toLowerCase()}/#subnational-data`}
+                >
+                  {subdivisionParentName(parent)} <span class="text-[rgb(var(--text-muted))]">{parent.count}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div class="coverage-filters" aria-label={pick('Filter countries and regions', '筛选国家和地区')}>

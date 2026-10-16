@@ -446,7 +446,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
             initialLanguage={locale}
           />
         ) : (
-          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">{zh ? '此视图暂无可展示的趋势数据。' : fr ? 'Aucune donnée de tendance n’est disponible pour cette vue.' : 'No trend data is available for this view.'}</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">{zh ? '此视图暂无已映射到疾病的趋势数据。' : fr ? 'Aucune tendance associée à une maladie n’est disponible pour cette vue.' : 'No disease-mapped trend data is available for this view.'}</div>
         )}
       </div>
     </section>
@@ -484,7 +484,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
             initialLanguage={locale}
           />
         ) : (
-          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">{zh ? '此视图暂无可展示的疾病数据。' : fr ? 'Aucune donnée de maladie n’est disponible pour cette vue.' : 'No disease data is available for this view.'}</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">{zh ? '此视图暂无已映射到疾病的数据。' : fr ? 'Aucune donnée associée à une maladie n’est disponible pour cette vue.' : 'No disease-mapped data is available for this view.'}</div>
         )}
       </div>
     </section>

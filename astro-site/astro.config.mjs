@@ -15,6 +15,31 @@ export default defineConfig({
     inlineStylesheets: 'auto',
   },
   vite: {
+    plugins: [{
+      name: 'local-subscription-options',
+      apply: 'serve',
+      configureServer(server) {
+        server.middlewares.use('/__dev/subscription-options', async (request, response) => {
+          response.setHeader('content-type', 'application/json; charset=utf-8');
+          response.setHeader('cache-control', 'no-store');
+          if (request.method !== 'GET') {
+            response.statusCode = 405;
+            response.end(JSON.stringify({ error: 'method_not_allowed' }));
+            return;
+          }
+          try {
+            const upstream = await fetch('https://subscriptions.globalinfectiousdisease.com/api/subscriptions/options', {
+              signal: AbortSignal.timeout(10_000),
+            });
+            response.statusCode = upstream.status;
+            response.end(await upstream.text());
+          } catch {
+            response.statusCode = 502;
+            response.end(JSON.stringify({ error: 'options_unavailable' }));
+          }
+        });
+      },
+    }],
     optimizeDeps: {
       rolldownOptions: {
         // Vite's dependency optimizer can evaluate React's CommonJS runtime

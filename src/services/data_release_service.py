@@ -22,8 +22,9 @@ from src.core.data_share import (
     get_data_share_repo_branch,
     get_data_share_repo_url,
 )
+from src.core.country_library import expand_country_scopes
 from src.core.task_manager import task_manager
-from src.domain import DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
+from src.domain import Country, DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
 from src.services.data_release import checks as release_checks
 from src.services.data_release import pipeline as release_pipeline
 from src.services.data_release.commands import (
@@ -53,6 +54,7 @@ except ImportError:  # pragma: no cover - python-dotenv is part of project requi
     dotenv_values = None
 
 logger = get_logger(__name__)
+
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 ASTRO_DIR = ROOT_DIR / "astro-site"
@@ -820,6 +822,7 @@ class DataReleaseService:
         download_url_base = self._download_repo_raw_base(job)
         raw_archive = self._raw_archive_runtime()
         incremental_country_codes: list[str] = []
+        available_country_codes: list[str] = []
         incremental_site = False
         async with get_database() as db:
             if trigger_task_uuid:
@@ -870,7 +873,7 @@ class DataReleaseService:
                     )
                 crawl_tasks = (
                     await db.execute(
-                        crawl_query.order_by(Task.completed_at.asc()).limit(100)
+                        crawl_query.order_by(Task.completed_at.asc())
                     )
                 ).scalars().all()
                 for crawl_task in crawl_tasks:
@@ -882,6 +885,13 @@ class DataReleaseService:
                     ).strip().upper()
                     if country and country not in incremental_country_codes:
                         incremental_country_codes.append(country)
+            if incremental_country_codes:
+                available_country_codes = list(
+                    (await db.execute(select(Country.code))).scalars().all()
+                )
+        incremental_country_codes = expand_country_scopes(
+            incremental_country_codes, available_codes=available_country_codes
+        )
         description_parts = [
             f"Refresh and generate site data, then build Astro site for release job {job.job_id}.",
             (

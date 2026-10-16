@@ -25,12 +25,15 @@ def resolve_country_display_names(
     """Resolve stable English and Chinese country names for public exports."""
     normalized = (code or "").strip().upper()
     row = row or {}
+    profile_name_en = get_country_display_name(normalized, "en")
+    # Subdivision labels in stored metadata can end in an ISO code (for
+    # example, "Hokkaido, JP"). The registry has the canonical parent name.
     name_en = (
-        row.get("name_en")
-        or row.get("name")
-        or get_country_display_name(normalized, "en")
-        or normalized
-    )
+        (profile_name_en if profile_name_en != normalized else None)
+        if "-" in normalized
+        else None
+    ) or row.get("name_en") or row.get("name") or profile_name_en
+    name_en = name_en or normalized
     local_name = str(row.get("name_local") or "").strip()
     chinese_local_name = (
         local_name

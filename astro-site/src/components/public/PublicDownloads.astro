@@ -27,9 +27,9 @@ const downloadableCountries = (downloads.countries ?? [])
         Object.values(part.files ?? {}).some((file: any) => Boolean((file as any)?.url)),
       ),
   );
-const chinaSubdivisionCount = downloadableCountries.filter((entry: any) => {
+const subdivisionCount = downloadableCountries.filter((entry: any) => {
   const metadata = countryMetaByCode.get(String(entry.code).toUpperCase()) as any;
-  return metadata?.parent_code === 'CN';
+  return metadata?.location_type === 'subdivision' || Boolean(metadata?.parent_code);
 }).length;
 const countries = downloadableCountries
   .filter((entry: any) => {
@@ -120,8 +120,8 @@ const copy = zh
       choose: '选择数据集',
       intro: '列表默认显示最新时间范围；详情页提供历史周期和来源说明。',
       subdivisionTitle: '分省数据按国家归档',
-      subdivisionNote: `${chinaSubdivisionCount} 个中国省级数据集已接入，但不混入国家数据目录和汇总统计。`,
-      subdivisionLink: '从中国页面浏览分省下载 →',
+      subdivisionNote: `${subdivisionCount} 个分省/州级数据集已接入，可从所属国家页面下载。`,
+      subdivisionLink: '浏览国家与地区目录 →',
       search: '搜索数据集',
       placeholder: '国家、疾病或代码',
       type: '数据集类型',
@@ -162,8 +162,8 @@ const copy = zh
       intro:
         'The table links the latest range. Detail pages include historical periods and source notes.',
       subdivisionTitle: 'Subnational data is grouped by country',
-      subdivisionNote: `${chinaSubdivisionCount} China province-level datasets are available but excluded from the country catalogue and summary totals.`,
-      subdivisionLink: 'Browse province downloads from China →',
+      subdivisionNote: `${subdivisionCount} regional datasets are available from their parent country pages.`,
+      subdivisionLink: 'Browse countries and regions →',
       search: 'Search datasets',
       placeholder: 'Country, disease, or code',
       type: 'Dataset type',
@@ -197,7 +197,7 @@ if (fr) Object.assign(copy, {
   lead: 'Trouvez les jeux de données par pays et par maladie. Téléchargez les derniers fichiers CSV, JSON ou XLSX.',
   countrySets: 'Jeux de données par pays', diseaseSets: 'Jeux de données par maladie', records: 'Enregistrements publiés', date: 'Date de l’instantané',
   catalogue: 'Catalogue des données', choose: 'Choisir un jeu de données', intro: 'Le tableau renvoie vers la période la plus récente. Les pages de détail présentent les périodes historiques et les sources.',
-  subdivisionTitle: 'Les données infranationales sont regroupées par pays', subdivisionNote: `${chinaSubdivisionCount} jeux de données provinciaux chinois sont disponibles mais exclus du catalogue et des totaux nationaux.`, subdivisionLink: 'Parcourir les téléchargements provinciaux de Chine →',
+  subdivisionTitle: 'Les données infranationales sont regroupées par pays', subdivisionNote: `${subdivisionCount} jeux de données régionaux sont disponibles depuis la page de leur pays.`, subdivisionLink: 'Parcourir les pays et régions →',
   search: 'Rechercher des jeux de données', placeholder: 'Pays, maladie ou code', type: 'Type de jeu de données', all: 'Tous', countries: 'Pays', diseases: 'Maladies', sort: 'Trier', featured: 'Ordre recommandé', nameAsc: 'Nom A-Z', recordsDesc: 'Plus d’enregistrements', kindSort: 'Type et nom', showing: 'Affichage', of: 'sur', dataset: 'jeux de données', range: 'Période actuelle', formats: 'Formats', details: 'Toutes les périodes et sources', empty: 'Aucun jeu de données ne correspond à cette recherche.', more: 'Afficher davantage', before: 'Avant d’utiliser les données', context: 'Conserver le contexte de la source', guidance: 'Avant de comparer des lieux ou de combiner des séries temporelles, conservez la source, la définition et le contexte de révision de chaque jeu de données.', methods: 'Lire les méthodes et limites', terms: 'Lire les règles d’utilisation des données', download: 'Télécharger',
 });
 ---
@@ -240,10 +240,10 @@ if (fr) Object.assign(copy, {
       <p>{copy.intro}</p>
     </header>
 
-    {chinaSubdivisionCount > 0 && (
+    {subdivisionCount > 0 && (
       <a
         class="mb-6 flex flex-col gap-2 border border-[rgb(var(--border))] bg-[rgb(var(--surface-muted))] p-4 transition-colors hover:border-[rgb(var(--color-teal))] sm:flex-row sm:items-center sm:justify-between"
-        href={`${prefix}/countries/cn/#subnational-data`}
+        href={`${prefix}/countries/`}
       >
         <span>
           <strong class="block text-[rgb(var(--text-strong))]">{copy.subdivisionTitle}</strong>

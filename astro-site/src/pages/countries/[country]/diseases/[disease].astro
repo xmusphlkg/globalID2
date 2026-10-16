@@ -55,6 +55,7 @@ const diseaseName = zh ? diseaseNameZh : locale === 'fr' ? diseaseNameFr : disea
 const copy = (en: string, zhValue: string, frValue: string) => zh ? zhValue : locale === 'fr' ? frValue : en;
 const dates = Array.isArray(series.dates) ? series.dates : [];
 const cases = Array.isArray(series.cases) ? series.cases : [];
+const granularity = String(series.period_granularity ?? '').toLowerCase();
 const coverage = formatYearRange(dates[0], dates.at(-1));
 const latestObservationIndex = cases.reduce((latest: number, value: unknown, index: number) => (
   value !== null && Number.isFinite(Number(value)) ? index : latest
@@ -69,7 +70,13 @@ const latestPeriodEnd = latestPeriodEndExclusive
   : null;
 if (latestPeriodEnd && Number.isFinite(latestPeriodEnd.getTime())) latestPeriodEnd.setUTCDate(latestPeriodEnd.getUTCDate() - 1);
 const latestPeriod = latestPeriodStart
-  ? `${latestPeriodStart}${latestPeriodEnd && Number.isFinite(latestPeriodEnd.getTime()) && latestPeriodEnd.toISOString().slice(0, 10) !== latestPeriodStart ? ` – ${latestPeriodEnd.toISOString().slice(0, 10)}` : ''}`
+  ? latestPeriodEnd && Number.isFinite(latestPeriodEnd.getTime()) && latestPeriodEnd.toISOString().slice(0, 10) !== latestPeriodStart
+    ? `${latestPeriodStart} – ${latestPeriodEnd.toISOString().slice(0, 10)}`
+    : granularity === 'annual' || granularity === 'yearly'
+      ? latestPeriodStart.slice(0, 4)
+      : granularity === 'monthly'
+        ? latestPeriodStart.slice(0, 7)
+        : latestPeriodStart
   : copy('Not available', '暂无', 'Non disponible');
 const granularityLabels: Record<string, string> = {
   daily: copy('Daily', '每日', 'Quotidienne'),
@@ -79,7 +86,6 @@ const granularityLabels: Record<string, string> = {
   annual: copy('Annual', '每年', 'Annuelle'),
   yearly: copy('Annual', '每年', 'Annuelle'),
 };
-const granularity = String(series.period_granularity ?? '').toLowerCase();
 const sourceInfo = country.source_info ?? {};
 const diseaseId = String(series.disease_id ?? '');
 const countryDataUrl = `/site-data/countries/${String(code).toLowerCase()}.json`;

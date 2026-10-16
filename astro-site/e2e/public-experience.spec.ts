@@ -27,6 +27,83 @@ const canonicalRoutes = [
   '/zh/terms/',
 ];
 
+test('subscription links preselect filters and keep diseases selected across searches', async ({ page }) => {
+  const apiOrigin = 'https://subscriptions.globalinfectiousdisease.com';
+  let submittedDiseases: string[] = [];
+  await page.route(/(\/__dev\/subscription-options|\/api\/subscriptions\/options)$/, route => route.fulfill({
+    json: {
+      ok: true,
+      locales: [{ value: 'en', label_en: 'English' }],
+      frequencies: [{ value: 'weekly', label_en: 'Weekly' }],
+      lists: [{ code: 'reports', name_en: 'Report updates' }],
+      filters: {
+        country: [{ value: 'CA', label_en: 'Canada' }, { value: 'CN', label_en: 'China' }],
+        disease: [
+          { value: 'measles', label_en: 'Measles' },
+          { value: 'dengue', label_en: 'Dengue' },
+        ],
+      },
+    },
+    headers: { 'access-control-allow-origin': '*' },
+  }));
+  await page.route(`${apiOrigin}/api/subscriptions`, route => {
+    if (route.request().method() === 'OPTIONS') {
+      return route.fulfill({ status: 204, headers: {
+        'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'POST, OPTIONS',
+        'access-control-allow-headers': 'content-type',
+      } });
+    }
+    submittedDiseases = route.request().postDataJSON().diseases;
+    return route.fulfill({ json: { ok: true }, headers: { 'access-control-allow-origin': '*' } });
+  });
+
+  await page.goto('/diseases/measles/');
+  await expect(page.getByRole('link', { name: 'Follow this disease' })).toHaveAttribute('href', '/subscribe/?disease=measles');
+  await page.goto('/subscribe/?country=CN-BJ');
+  await expect(page.locator('input[name="countries"][value="CN"]')).toBeChecked();
+  await expect(page.locator('#subscription-status')).toContainText('parent country');
+  await page.goto('/subscribe/?country=CA&disease=measles');
+  await expect(page.locator('input[name="countries"][value="CA"]')).toBeChecked();
+  await expect(page.locator('input[name="diseases"][value="measles"]')).toBeChecked();
+  await page.locator('#disease-search').fill('dengue');
+  await page.locator('input[name="diseases"][value="dengue"]').check();
+  await page.locator('#disease-search').fill('measles');
+  await expect(page.locator('input[name="diseases"][value="measles"]')).toBeChecked();
+  await page.locator('#disease-search').fill('dengue');
+  await expect(page.locator('input[name="diseases"][value="dengue"]')).toBeChecked();
+  await page.locator('#subscriber-email').fill('reader@');
+  await page.locator('input[name="consent"]').check();
+  await page.locator('#subscription-submit').click();
+  await expect(page.locator('#subscription-status')).toContainText('Enter a valid email address.');
+  expect(submittedDiseases).toEqual([]);
+  await page.locator('#subscriber-email').fill('reader@example.org');
+  await page.locator('#subscription-submit').click();
+  await expect.poll(() => submittedDiseases.sort()).toEqual(['dengue', 'measles']);
+});
+
+test('annual country disease observations show their reporting year', async ({ page }) => {
+  await page.goto('/countries/ca/diseases/measles/');
+  const period = page.locator('.academic-meta-item').filter({ hasText: 'Latest reporting period' });
+  await expect(period.locator('dd')).toHaveText('2023');
+});
+
+test('subnational titles use the full parent country name in each locale', async ({ page }) => {
+  await page.goto('/countries/jp-01/');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hokkaido, Japan');
+  await expect(page).toHaveTitle(/Hokkaido, Japan/);
+  await page.goto('/fr/countries/jp-01/');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hokkaido, Japon');
+});
+
+test('country directory links every parent with published regional datasets', async ({ page }) => {
+  await page.goto('/countries/');
+  await expect(page.getByText(/\d+ regional datasets across \d+ countries/)).toBeVisible();
+  for (const code of ['au', 'br', 'ca', 'cn', 'jp', 'se', 'us']) {
+    await expect(page.locator(`a[href="/countries/${code}/#subnational-data"]`)).toBeVisible();
+  }
+});
+
 test('canonical public routes render without horizontal overflow', async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   const routes = testInfo.project.name.endsWith('-390') || testInfo.project.name.endsWith('-1280')

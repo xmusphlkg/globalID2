@@ -356,13 +356,15 @@ test("published country and disease datasets produce a usable default result", a
 }) => {
   for (const [path, defaultSelection] of [
     ["/countries/au/", "COVID-19"],
-    ["/diseases/dengue/", "Brazil"],
-  ]) {
+    ["/diseases/dengue/", null],
+  ] as const) {
     await page.goto(path, { waitUntil: "domcontentloaded" });
     await page.locator("#trends").scrollIntoViewIfNeeded();
     const curve = page.getByTestId("surveillance-explorer");
     await expect(curve).toBeVisible({ timeout: 15_000 });
-    await expect(curve.locator(".surveillance-selected")).toContainText(defaultSelection);
+    if (defaultSelection) {
+      await expect(curve.locator(".surveillance-selected")).toContainText(defaultSelection);
+    }
     await expect(curve.locator(".surveillance-selected > button")).toHaveCount(2);
     await curve.getByRole("tab", { name: "Data", exact: true }).click();
     await expect

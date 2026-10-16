@@ -30,6 +30,25 @@ _QUALITY_MODES = {"off", "report", "quarantine", "fail_closed"}
 _REGISTRY_COVERAGE_MODES = {"auto", "required", "legacy_only"}
 _SEVERITY_RANK = {"info": 0, "warning": 1, "error": 2, "critical": 3}
 _UNMAPPED_GROUP_CODE = "G_UNMAPPED_SOURCE_CATEGORIES"
+
+
+def _holding_series_measure_profile(
+    row: Mapping[str, Any], *, country_code: str, source_id: str
+) -> tuple[str, str, str]:
+    """Preserve Japan IDWR all-case versus sentinel reporting in holding series."""
+
+    measure = _first_text(row, "Measure", "measure") or "case_notifications"
+    basis = _first_text(row, "ReportingBasis", "reporting_basis") or "notification"
+    frequency = _first_text(row, "Frequency", "frequency") or "unknown"
+    if country_code.upper() == "JP" and source_id == "SRC_JP_NIID":
+        surveillance_type = (_first_text(row, "SurveillanceType") or "").casefold()
+        if surveillance_type == "sentinel":
+            measure, basis = "sentinel_case_notifications", "sentinel_surveillance"
+        elif surveillance_type == "all_case":
+            measure, basis = "case_notifications", "notification"
+        if _first_text(row, "MMWRYear") and _first_text(row, "MMWRWeek"):
+            frequency = "weekly"
+    return measure, basis, frequency
 _REVISION_KEY_COLUMNS = ("time", "series_code", "geography_key", "dimension_key")
 _REVISION_STATE_COLUMNS = (
     "value",
@@ -963,6 +982,10 @@ class SeriesObservationStore:
             if category is None:
                 continue
 
+            measure, reporting_basis, frequency = _holding_series_measure_profile(
+                row, country_code=country_code, source_id=resolved_source
+            )
+            surveillance_type = (_first_text(row, "SurveillanceType") or "").casefold()
             series = series_by_category.get(category.id)
             if series is None:
                 digest = hashlib.sha256(category.category_key.encode()).hexdigest()[:28]
@@ -993,16 +1016,9 @@ class SeriesObservationStore:
                         definition_version=category.definition_version,
                         case_definition=category.source_definition,
                         case_definition_uri=category.source_definition_uri,
-                        metric_type=_first_text(row, "Measure", "measure")
-                        or "case_notifications",
-                        reporting_basis=_first_text(
-                            row, "ReportingBasis", "reporting_basis"
-                        )
-                        or "notification",
-                        temporal_granularity=_first_text(
-                            row, "Frequency", "frequency"
-                        )
-                        or "unknown",
+                        metric_type=measure,
+                        reporting_basis=reporting_basis,
+                        temporal_granularity=frequency,
                         unit=_first_text(row, "Unit", "unit") or "count",
                         mapping_relation="unmapped",
                         comparability="not_comparable",
@@ -1014,11 +1030,39 @@ class SeriesObservationStore:
                             "dynamic_holding": True,
                             "source_category_id": category.id,
                             "category_key": category.category_key,
+                            **(
+                                {"surveillance_type": surveillance_type}
+                                if surveillance_type else {}
+                            ),
                         },
                     )
                     db.add(series)
                     await db.flush()
                 series_by_category[category.id] = series
+
+            if (
+                country_code.upper() == "JP"
+                and resolved_source == "SRC_JP_NIID"
+                and surveillance_type in {"all_case", "sentinel"}
+                and (series.metadata_ or {}).get("dynamic_holding") is True
+            ):
+                prior_type = str(
+                    (series.metadata_ or {}).get("surveillance_type") or ""
+                ).casefold()
+                if prior_type and prior_type != surveillance_type:
+                    raise ValueError(
+                        "Japan IDWR surveillance type changed within one holding "
+                        f"series: {series.series_code} ({prior_type} -> {surveillance_type})"
+                    )
+                # Existing HOLD rows were created before the source's
+                # SurveillanceType field was reflected in series metadata.
+                series.metric_type = measure
+                series.reporting_basis = reporting_basis
+                series.temporal_granularity = frequency
+                series.metadata_ = {
+                    **(series.metadata_ or {}),
+                    "surveillance_type": surveillance_type,
+                }
 
             dimensions = _parse_dimensions(row.get("Dimensions") or row.get("dimensions"))
             if dimensions is None:
