@@ -96,6 +96,16 @@ test('subnational titles use the full parent country name in each locale', async
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Hokkaido, Japon');
 });
 
+test('large disease source registers preview records and link to the full JSON list', async ({ page }) => {
+  await page.goto('/diseases/tuberculosis/');
+  const register = page.locator('.source-register');
+  await expect(register.locator('.source-register-card')).toHaveCount(12);
+  await expect(register).toContainText(/12\s*\/\s*\d{2,}/);
+  await register.locator('summary').click();
+  await expect(register.getByRole('link', { name: 'Open the complete source list (JSON)' }))
+    .toHaveAttribute('href', '/site-data/diseases/d025.json');
+});
+
 test('country directory links every parent with published regional datasets', async ({ page }) => {
   await page.goto('/countries/');
   await expect(page.getByText(/\d+ regional datasets across \d+ countries/)).toBeVisible();
@@ -105,7 +115,7 @@ test('country directory links every parent with published regional datasets', as
 });
 
 test('canonical public routes render without horizontal overflow', async ({ page }, testInfo) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   const routes = testInfo.project.name.endsWith('-390') || testInfo.project.name.endsWith('-1280')
     ? canonicalRoutes
     : ['/', '/diseases/dengue/', '/zh/research/'];

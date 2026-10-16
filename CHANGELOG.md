@@ -2,6 +2,25 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.12.0] - 2026-10-16
+
+### Added
+
+- Added 26 disease and surveillance concepts required to preserve source-specific mappings across Australia, Brazil, China, Hong Kong, South Korea, Taiwan, and Ontario; added separate concepts for community-associated MRSA infection, enterovirus 71 infection, and food-poisoning outbreaks.
+- Added reviewed source-category decisions for 256 previously unresolved categories, including explicit no-projection dispositions for aggregate totals, residual or mixed categories, and Candida auris colonization/unspecified reports.
+
+### Changed
+
+- Completed the active source-category mapping review: all 4,802 active registry categories now have an approved mapping assertion. Canonical concepts project only where the source semantics support comparison; reviewed groups remain source-only and do not appear as canonical disease curves.
+- Reduced disease-page HTML by previewing up to 12 official source records and linking to the full source register in the dataset JSON; full source provenance remains available for download.
+- Expanded the ontology release to `2026.10.16.2` and published full mapping snapshot `DMR-COVERAGE-20261016T154733073582Z`.
+
+### Validation
+
+- The mapping release contains 4,802 approved assertions and has checksum `e84c48bbadd23be48590b1b400613d7dc2a4045edb2fe5ce10a5fb994926819c`.
+- Rehearsed the final import with 195 new assertions, 0 unmatched categories, and 0 conflicts; the separate 61-row import also had 0 unmatched categories and 0 conflicts.
+- Preserved 30 retired New Zealand synthetic categories outside the active mapping set; all active categories have a reviewed disposition.
+
 ## [0.11.0] - 2026-10-16
 
 ### Added
@@ -23,6 +42,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Preserved unmapped source categories in holding series so source facts remain available for later disease-mapping review rather than being dropped.
 - Published versioned source-category mappings in the site export, preserving sentinel versus all-case reporting and keeping non-comparable source categories outside canonical curves.
 - Corrected Swiss FOPH CHFL observations and revision identities so Switzerland-and-Liechtenstein aggregates are no longer assigned to Switzerland-only geography; retained the Swiss-only legacy records.
+- Inherited mappings for label-only source categories only when same-source, same-label source-series definitions agree on one exact disease target; release-pinned and site-export queries now resolve those categories with exact-code priority, and source-current placeholder reconciliation runs during mapping bootstrap under the release lock.
 - Expanded Chinese provincial monthly-report retrieval for Guangxi, Heilongjiang, Jiangxi, and Qinghai, including explicit disease counts in article text and embedded or attached tables; added province-level HIV infection as a distinct category from AIDS.
 
 ### Validation
@@ -31,6 +51,7 @@ This file records release-level changes to the GIDS application and its data ope
 - Completed the US NNDSS source-missing backfill with 1,523,825 distinct missing observations across 58 reporting scopes; source-label aliases that resolve to an already represented canonical observation are deduplicated, and no non-null count was overwritten by a source blank.
 - Confirmed enabled scheduled crawl jobs for all six parent countries and successful read/write access checks for the data repositories and Cloudflare Pages integration.
 - Activated a reviewed mapping release with 2,573 assertions; all 5,809,371 stored observations across the six countries now have an explicit mapping disposition, including 5,483,077 canonical projections and 326,294 source-only/no-projection observations.
+- Added 70 unambiguous reviewed source-series and source-identity assertions in mapping release `DMR-SOURCE-COVERAGE-20261016T152842267458Z`; preserved the one conflicting US NHSS HIV category for manual review.
 - Verified the CHFL repair moved 419 observation identities and 213 revision identities with no key collisions and no changes to reported values; the migration audit supports exact restoration.
 - Configured and verified 19 staggered New Zealand DHB refresh jobs in `Pacific/Auckland`.
 - Imported 124 explicit September 2026 reports from Guangxi (55), Heilongjiang (48), and Qinghai (21); Jiangxi had no matching September report and no zeroes were synthesized.

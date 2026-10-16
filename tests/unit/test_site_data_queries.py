@@ -308,7 +308,10 @@ async def test_new_subnational_sources_use_active_reviewed_mapping(code):
 
     sql, _params = session.calls[0]
     assert "mapping.target_code AS disease_id" in sql
-    assert "category.source_code = COALESCE(" in sql
+    assert "JOIN LATERAL" in sql
+    assert "source_category.source_code = COALESCE(" in sql
+    assert "source_category.definition_version = 'source-current'" in sql
+    assert "source_category.canonical_source_label" in sql
     assert "dso.dimensions->>'source_disease_code'" in sql
     assert "mapping.projection_policy = 'canonical'" in sql
     assert "mapping_release.status = 'active'" in sql

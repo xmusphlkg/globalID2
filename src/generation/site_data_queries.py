@@ -411,15 +411,44 @@ async def fetch_disease_series_records(
     reviewed_mapping_join = ""
     if use_reviewed_mapping:
         reviewed_mapping_join = """
-            JOIN source_disease_categories category
-              ON category.source_id = dss.source_system
-             AND category.definition_version = dss.definition_version
-             AND category.source_code = COALESCE(
-                   NULLIF(dso.dimensions->>'source_disease_code', ''),
-                   NULLIF(dso.metadata->>'local_code', ''),
-                   dss.source_series_code
-                 )
-             AND category.is_active IS TRUE
+            JOIN LATERAL (
+                SELECT source_category.*
+                FROM source_disease_categories source_category
+                WHERE source_category.source_id = dss.source_system
+                  AND source_category.is_active IS TRUE
+                  AND (
+                        (
+                            source_category.definition_version = dss.definition_version
+                            AND source_category.source_code = COALESCE(
+                                  NULLIF(dso.dimensions->>'source_disease_code', ''),
+                                  NULLIF(dso.metadata->>'local_code', ''),
+                                  dss.source_series_code
+                                )
+                        )
+                        OR (
+                            source_category.definition_version = 'source-current'
+                            AND source_category.source_code LIKE 'label:%'
+                            AND lower(btrim(source_category.canonical_source_label)) = lower(btrim(
+                                  COALESCE(
+                                      NULLIF(dso.dimensions->>'source_disease_label', ''),
+                                      NULLIF(dso.metadata->>'local_label', ''),
+                                      dss.source_label
+                                  )
+                                ))
+                        )
+                      )
+                ORDER BY CASE
+                    WHEN source_category.definition_version = dss.definition_version
+                     AND source_category.source_code = COALESCE(
+                           NULLIF(dso.dimensions->>'source_disease_code', ''),
+                           NULLIF(dso.metadata->>'local_code', ''),
+                           dss.source_series_code
+                         ) THEN 0
+                    ELSE 1
+                END,
+                source_category.id DESC
+                LIMIT 1
+            ) category ON TRUE
             JOIN disease_mapping_assertions_v3 mapping
               ON mapping.category_id = category.id
              AND mapping.assertion_status = 'approved'

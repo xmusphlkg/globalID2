@@ -41,15 +41,21 @@ def test_at_de_reviewed_manifests_cover_full_source_inventory() -> None:
     expected_counts = {code: 55 for code in ECDC_BASELINE_COUNTRY_CODES}
     expected_counts.update({
         "AT": 118,
+        "AU": 60,
+        "BR": 44,
+        "CA-ON": 2,
         "CA": 70,
         "CH": 40,
-        "CN": 1,
+        "CN": 3,
         "DE": 142,
+        "HK": 62,
+        "KR": 60,
         "IE": 111,
-        "JP": 72,
+        "JP": 73,
         "NZ": 81,
         "SG": 76,
-        "US": 251,
+        "US": 252,
+        "TW": 24,
     })
     assert Counter(item.country_code for item in mappings) == expected_counts
     assert all(

@@ -43,6 +43,7 @@ interface DownloadPart {
 }
 
 interface DownloadEntry {
+  site_json_path?: string;
   parts?: DownloadPart[];
   generated_at?: string;
   record_count?: number;
@@ -171,6 +172,10 @@ const sourceEntries = sourceGroups.flatMap((group) => {
       }))
     : [group as SourceSummary];
 });
+const sourcePreviewEntries = sourceEntries.slice(0, 12);
+const fullSourceDataUrl = entry?.site_json_path?.startsWith('/site-data/')
+  ? entry.site_json_path
+  : null;
 
 const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
   ? `${entry?.date_range?.start ?? '—'} → ${entry?.date_range?.end ?? '—'}`
@@ -242,10 +247,10 @@ const formatCards = [
       <details class="source-register">
         <summary>
           <span><strong>{pick('Official sources', '官方数据来源', 'Sources officielles')}</strong><small>{pick('Authority, cadence, notes', '机构、频率与说明', 'Autorité, fréquence et notes')}</small></span>
-          <b>{sourceEntries.length}</b>
+          <b>{Math.min(sourceEntries.length, sourcePreviewEntries.length)} / {sourceEntries.length}</b>
         </summary>
         <div class="source-register-grid">
-          {sourceEntries.map((source) => (
+          {sourcePreviewEntries.map((source) => (
             <article class="source-register-card">
               <div class="source-register-card__header">
                 <div class="source-register-card__identity">
@@ -279,6 +284,19 @@ const formatCards = [
             </article>
           ))}
         </div>
+        {sourceEntries.length > sourcePreviewEntries.length && fullSourceDataUrl && (
+          <p class="source-register-more">
+            {pick(
+              `Previewing 12 of ${sourceEntries.length} official source records.`,
+              `当前预览 ${sourceEntries.length} 条官方来源记录中的 12 条。`,
+              `Aperçu de 12 sources officielles sur ${sourceEntries.length}.`,
+            )}
+            {' '}
+            <a href={fullSourceDataUrl}>
+              {pick('Open the complete source list (JSON)', '打开完整来源清单（JSON）', 'Ouvrir la liste complète des sources (JSON)')}
+            </a>
+          </p>
+        )}
       </details>
     )}
 
@@ -456,6 +474,8 @@ const formatCards = [
   .source-register-cadence,.source-register-type { padding: .12rem .3rem; color: rgb(var(--text-muted)); background: rgb(var(--bg-soft)); font-size: .55rem; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
   .source-register-country { margin-top: .08rem; color: rgb(var(--text-faint)); font-size: .58rem; text-transform: uppercase; }
   .source-register-description { display: -webkit-box; overflow: hidden; color: rgb(var(--text-muted)); font-size: .66rem; line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .source-register-more { padding: .4rem 0 .25rem; color: rgb(var(--text-muted)); font-size: .72rem; line-height: 1.5; }
+  .source-register-more a { color: rgb(var(--color-teal)); font-weight: 700; text-decoration: underline; text-underline-offset: .15em; }
   .source-register-link { display: inline-flex; min-height: 1.65rem; flex: 0 0 auto; align-items: center; gap: .22rem; padding: .2rem .35rem; color: rgb(var(--color-teal)); border: 1px solid rgb(var(--border)); font-size: .58rem; font-weight: 700; text-decoration: none; }
   .source-register-link svg { width: .7rem; height: .7rem; }
   .source-register-link:hover { background: rgb(var(--bg-soft)); border-color: rgb(var(--color-teal)); }

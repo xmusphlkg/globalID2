@@ -6,6 +6,7 @@ const siteUrl = process.env.GLOBALID_SITE_URL || process.env.SITE_URL || 'https:
 export default defineConfig({
   site: siteUrl,
   output: 'static',
+  compressHTML: true,
   integrations: [
     react(),
   ],

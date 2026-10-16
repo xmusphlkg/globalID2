@@ -207,13 +207,38 @@ class DiseaseMappingRegistryService:
                     SELECT category.*
                     FROM source_disease_categories category
                     WHERE category.source_id = s.source_system
-                      AND category.definition_version = s.definition_version
-                      AND category.source_code = COALESCE(
-                            NULLIF(o.dimensions->>'source_disease_code', ''),
-                            NULLIF(o.metadata->>'local_code', ''),
-                            s.source_series_code
-                          )
                       AND category.is_active = true
+                      AND (
+                            (
+                                category.definition_version = s.definition_version
+                                AND category.source_code = COALESCE(
+                                      NULLIF(o.dimensions->>'source_disease_code', ''),
+                                      NULLIF(o.metadata->>'local_code', ''),
+                                      s.source_series_code
+                                    )
+                            )
+                            OR (
+                                category.definition_version = 'source-current'
+                                AND category.source_code LIKE 'label:%'
+                                AND lower(btrim(category.canonical_source_label)) = lower(btrim(
+                                      COALESCE(
+                                          NULLIF(o.dimensions->>'source_disease_label', ''),
+                                          NULLIF(o.metadata->>'local_label', ''),
+                                          s.source_label
+                                      )
+                                    ))
+                            )
+                          )
+                    ORDER BY CASE
+                        WHEN category.definition_version = s.definition_version
+                         AND category.source_code = COALESCE(
+                               NULLIF(o.dimensions->>'source_disease_code', ''),
+                               NULLIF(o.metadata->>'local_code', ''),
+                               s.source_series_code
+                             ) THEN 0
+                        ELSE 1
+                    END,
+                    category.id DESC
                     LIMIT 1
                 ) c ON true
                 JOIN disease_mapping_releases_v3 r ON r.status = 'active'
@@ -532,6 +557,9 @@ class DiseaseMappingRegistryService:
         inherited_assertions, inheritance_conflicts = (
             await self._inherit_unambiguous_series_mappings(db, country_codes=scope)
         )
+        source_current_reconciliation = (
+            await self.reconcile_placeholder_source_identities(db)
+        )
         outdated_ai_requeued = (
             await self._requeue_outdated_ai_candidates(db, country_codes=scope)
             if scope is None
@@ -544,6 +572,7 @@ class DiseaseMappingRegistryService:
             "approved_assertions_imported": imported_assertions,
             "series_assertions_inherited": inherited_assertions,
             "series_inheritance_conflicts": inheritance_conflicts,
+            "source_current_reconciliation": source_current_reconciliation,
             "reviewed_mapping_config": reviewed_mapping_config,
             "retired_synthetic_categories": retired_synthetic_categories,
             "outdated_ai_requeued": outdated_ai_requeued,
@@ -819,11 +848,26 @@ class DiseaseMappingRegistryService:
                     JOIN disease_surveillance_series s ON s.series_code=o.series_code
                     JOIN source_disease_categories c
                       ON c.source_id=s.source_system
-                     AND c.definition_version=s.definition_version
-                     AND c.source_code=COALESCE(
-                           NULLIF(o.dimensions->>'source_disease_code',''),
-                           NULLIF(o.metadata->>'local_code',''),
-                           s.source_series_code
+                     AND (
+                           (
+                               c.definition_version=s.definition_version
+                               AND c.source_code=COALESCE(
+                                   NULLIF(o.dimensions->>'source_disease_code',''),
+                                   NULLIF(o.metadata->>'local_code',''),
+                                   s.source_series_code
+                               )
+                           )
+                           OR (
+                               c.definition_version='source-current'
+                               AND c.source_code LIKE 'label:%'
+                               AND lower(btrim(c.canonical_source_label)) = lower(btrim(
+                                   COALESCE(
+                                       NULLIF(o.dimensions->>'source_disease_label',''),
+                                       NULLIF(o.metadata->>'local_label',''),
+                                       s.source_label
+                                   )
+                               ))
+                           )
                          )
                     WHERE s.disease_id IS NOT NULL
                     """
@@ -1261,6 +1305,10 @@ class DiseaseMappingRegistryService:
         semantics.
         """
 
+        await db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
+            {"lock_key": "globalid:disease_mapping_release:v1"},
+        )
         await self.ensure_schema(db)
         placeholder = aliased(SourceDiseaseCategory)
         reviewed = aliased(SourceDiseaseCategory)
