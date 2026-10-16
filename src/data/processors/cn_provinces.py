@@ -66,13 +66,24 @@ class CNProvinceUpdater:
         upserted = 0
         skipped = 0
         for source_id, source_rows in sorted(by_source.items()):
+            # Narrative reports contain only explicitly stated disease counts
+            # and explicit no-case statements. Their sparse disease coverage
+            # can trigger the fail-closed all-zero tail heuristic even when
+            # the source text has been verified. Keep critical mapping and
+            # registry failures blocked, while allowing report-only anomalies
+            # for this explicitly marked sparse extraction path.
+            narrative_only = bool(source_rows) and all(
+                isinstance(row.get("Raw"), dict)
+                and "explicit_narrative_value" in row["Raw"]
+                for row in source_rows
+            )
             result = await self.store.save_rows(
                 db,
                 source_rows,
                 "CN",
                 source_id=source_id,
                 quality_policy=SeriesObservationQualityPolicy(
-                    mode="fail_closed",
+                    mode="quarantine" if narrative_only else "fail_closed",
                     registry_coverage="required",
                 ),
             )
