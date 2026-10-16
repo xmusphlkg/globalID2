@@ -371,6 +371,7 @@ const itemList = {
 
   <script>
   import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
+    import { readResearchFilterValues, writeResearchFilterValues, type ResearchFilterValues } from '../../lib/research-filter-url';
     const search = document.querySelector<HTMLInputElement>('#research-search');
     const disease = document.querySelector<HTMLSelectElement>('#research-disease');
     const country = document.querySelector<HTMLSelectElement>('#research-country');
@@ -399,8 +400,24 @@ const itemList = {
     const studyTypeMap = parseMap(list?.dataset.studyTypeMap);
     const topicNameMap = parseMap(list?.dataset.topicNameMap);
     let visibleLimit = initialVisible;
-    const preset = new URLSearchParams(location.search).get('disease')?.toLowerCase();
-    if (preset && disease && [...disease.options].some(option => option.value === preset)) disease.value = preset;
+    const query = new URLSearchParams(location.search);
+    const restoredFilters = readResearchFilterValues(query);
+    const restoreSelect = (control: HTMLSelectElement | null, value: string | boolean | undefined) => {
+      if (!control || typeof value !== 'string') return;
+      const normalized = value.toLowerCase();
+      if ([...control.options].some(option => option.value === normalized)) control.value = normalized;
+    };
+    restoreSelect(disease, restoredFilters.disease);
+    restoreSelect(country, restoredFilters.country);
+    restoreSelect(study, restoredFilters.study);
+    restoreSelect(topic, restoredFilters.topic);
+    restoreSelect(pathogenType, restoredFilters.pathogenType);
+    restoreSelect(population, restoredFilters.population);
+    restoreSelect(journalFilter, restoredFilters.journal);
+    restoreSelect(publisherFilter, restoredFilters.publisher);
+    if (publishedFrom && typeof restoredFilters.publishedFrom === 'string') publishedFrom.value = restoredFilters.publishedFrom;
+    if (publishedTo && typeof restoredFilters.publishedTo === 'string') publishedTo.value = restoredFilters.publishedTo;
+    if (oa) oa.checked = restoredFilters.openAccess === true;
     const hasToken = (value: string | undefined, token: string) => (value ?? '').split(/\s+/).includes(token);
     const slugifyTopic = (value: string | undefined) => (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const currentLang = () => form?.dataset.researchLocale === 'zh' ? 'zh' : form?.dataset.researchLocale === 'fr' ? 'fr' : 'en';
@@ -608,6 +625,24 @@ const itemList = {
       || publishedTo?.value
       || oa?.checked
     );
+    const updateShareableUrl = () => {
+      const values: ResearchFilterValues = {
+        disease: disease?.value ?? '',
+        country: country?.value ?? '',
+        study: study?.value ?? '',
+        topic: topic?.value ?? '',
+        pathogenType: pathogenType?.value ?? '',
+        population: population?.value ?? '',
+        journal: journalFilter?.value ?? '',
+        publisher: publisherFilter?.value ?? '',
+        publishedFrom: publishedFrom?.value ?? '',
+        publishedTo: publishedTo?.value ?? '',
+        openAccess: oa?.checked ?? false,
+      };
+      const params = writeResearchFilterValues(values);
+      const search = params.toString();
+      history.replaceState(history.state, '', `${location.pathname}${search ? `?${search}` : ''}${location.hash}`);
+    };
     const matchesFilters = (article: any) => {
       const query = search?.value.trim().toLowerCase() ?? '';
       const tokens = articleTokens(article);
@@ -663,6 +698,7 @@ const itemList = {
     });
     [search, disease, country, study, topic, pathogenType, population, journalFilter, publisherFilter, publishedFrom, publishedTo, oa].forEach(control => control?.addEventListener(control instanceof HTMLInputElement && control.type === 'search' ? 'input' : 'change', () => {
       visibleLimit = initialVisible;
+      updateShareableUrl();
       void applyFilters(true);
     }));
     loadMore?.addEventListener('click', () => {

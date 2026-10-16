@@ -1,6 +1,9 @@
 ---
 import ReportLayout from '../../../../layouts/ReportLayout.astro';
 import CountryFlag from '../../../../components/CountryFlag.astro';
+import EpidemicCurve from '../../../../components/charts/EpidemicCurve';
+import DiseaseResearchPanel from '../../../../components/research/DiseaseResearchPanel.astro';
+import { buildChartSourceMeta } from '../../../../utils/chartMeta';
 import { countryDiseaseCandidates } from '../../../../lib/seo-page-data';
 import {
   buildAlternatePaths,
@@ -53,8 +56,42 @@ const copy = (en: string, zhValue: string, frValue: string) => zh ? zhValue : lo
 const dates = Array.isArray(series.dates) ? series.dates : [];
 const cases = Array.isArray(series.cases) ? series.cases : [];
 const coverage = formatYearRange(dates[0], dates.at(-1));
-const latestCases = Number(cases.at(-1));
+const latestObservationIndex = cases.reduce((latest: number, value: unknown, index: number) => (
+  value !== null && Number.isFinite(Number(value)) ? index : latest
+), -1);
+const latestCases = latestObservationIndex >= 0 ? Number(cases[latestObservationIndex]) : Number.NaN;
+const latestPeriodStart = latestObservationIndex >= 0
+  ? series.period_starts?.[latestObservationIndex] ?? dates[latestObservationIndex]
+  : null;
+const latestPeriodEndExclusive = latestObservationIndex >= 0 ? series.period_ends_exclusive?.[latestObservationIndex] : null;
+const latestPeriodEnd = latestPeriodEndExclusive
+  ? new Date(`${latestPeriodEndExclusive}T00:00:00Z`)
+  : null;
+if (latestPeriodEnd && Number.isFinite(latestPeriodEnd.getTime())) latestPeriodEnd.setUTCDate(latestPeriodEnd.getUTCDate() - 1);
+const latestPeriod = latestPeriodStart
+  ? `${latestPeriodStart}${latestPeriodEnd && Number.isFinite(latestPeriodEnd.getTime()) && latestPeriodEnd.toISOString().slice(0, 10) !== latestPeriodStart ? ` – ${latestPeriodEnd.toISOString().slice(0, 10)}` : ''}`
+  : copy('Not available', '暂无', 'Non disponible');
+const granularityLabels: Record<string, string> = {
+  daily: copy('Daily', '每日', 'Quotidienne'),
+  weekly: copy('Weekly', '每周', 'Hebdomadaire'),
+  monthly: copy('Monthly', '每月', 'Mensuelle'),
+  quarterly: copy('Quarterly', '每季度', 'Trimestrielle'),
+  annual: copy('Annual', '每年', 'Annuelle'),
+  yearly: copy('Annual', '每年', 'Annuelle'),
+};
+const granularity = String(series.period_granularity ?? '').toLowerCase();
 const sourceInfo = country.source_info ?? {};
+const diseaseId = String(series.disease_id ?? '');
+const countryDataUrl = `/site-data/countries/${String(code).toLowerCase()}.json`;
+const chartSourceMeta = buildChartSourceMeta(
+  {
+    generated_at: country.generated_at,
+    record_count: country.record_count,
+    date_range: country.date_range,
+    source_info: sourceInfo,
+  },
+  `${countryNameEn} surveillance dataset`,
+);
 const sourceUrls = [sourceInfo.primary_url, ...(sourceInfo.sources ?? []).map((source: any) => source?.url)]
   .filter((url): url is string => typeof url === 'string' && url.length > 0);
 const canonicalPath = localeHref(`/countries/${code}/diseases/${slug}/`);
@@ -99,8 +136,9 @@ const seo = {
       <p class="academic-lead">{copy('Official-source observations, coverage details, trend context, and a direct route to the underlying country dataset.', '汇总官方来源观测、覆盖范围、趋势解释以及底层国家数据入口。', 'Observations officielles, couverture, contexte des tendances et accès direct au jeu de données national sous-jacent.')}</p>
       <dl class="academic-meta-grid mt-6">
         <div class="academic-meta-item"><dt class="academic-meta-label">{copy('Coverage', '覆盖区间', 'Période couverte')}</dt><dd class="academic-meta-value text-sm">{coverage}</dd></div>
-        <div class="academic-meta-item"><dt class="academic-meta-label">{copy('Reporting granularity', '报告粒度', 'Granularité des rapports')}</dt><dd class="academic-meta-value text-sm">{series.period_granularity ?? copy('Not specified', '未说明', 'Non précisée')}</dd></div>
+        <div class="academic-meta-item"><dt class="academic-meta-label">{copy('Reporting granularity', '报告粒度', 'Granularité des rapports')}</dt><dd class="academic-meta-value text-sm">{granularityLabels[granularity] ?? series.period_granularity ?? copy('Not specified', '未说明', 'Non précisée')}</dd></div>
         <div class="academic-meta-item"><dt class="academic-meta-label">{copy('Latest reported value', '最新报告值', 'Dernière valeur publiée')}</dt><dd class="academic-meta-value">{Number.isFinite(latestCases) ? latestCases.toLocaleString(locale === 'fr' ? 'fr-FR' : undefined) : copy('Not available', '暂无', 'Non disponible')}</dd></div>
+        <div class="academic-meta-item"><dt class="academic-meta-label">{copy('Latest reporting period', '最新报告期', 'Dernière période déclarée')}</dt><dd class="academic-meta-value text-sm">{latestPeriod}</dd></div>
       </dl>
     </header>
     <section class="mt-6 grid gap-6 lg:grid-cols-2">
@@ -117,5 +155,21 @@ const seo = {
         <a class="mt-4 inline-flex font-semibold text-brand-500 hover:underline" href={localeHref(`/diseases/${slug}/`)}>{copy(`View global ${diseaseName} profile →`, `查看全球${diseaseName}画像 →`, `Voir le profil mondial de ${diseaseName} →`)}</a>
       </div>
     </section>
+    <section id="trends" class="figure-panel mt-6 scroll-mt-24">
+      <h2 class="figure-title">{copy('Surveillance trend', '监测趋势', 'Tendance de surveillance')}</h2>
+      <p class="figure-caption mt-2">{copy('This chart opens with this disease selected for this country. Reporting periods and source differences remain visible in the chart controls.', '图表已预选此国家和疾病；报告周期与来源差异会在图表中保留。', 'Le graphique est préconfiguré pour cette maladie et ce pays. Les périodes et différences de source restent indiquées.')}</p>
+      <div class="mt-5">
+        <EpidemicCurve
+          client:visible
+          dataUrl={countryDataUrl}
+          sourceSeriesUrl={`/site-data/countries/${String(code).toLowerCase()}-source-series.json`}
+          entityIds={diseaseId ? [diseaseId] : undefined}
+          initialSelectionIds={diseaseId ? [`${encodeURIComponent(diseaseId)}::published`] : undefined}
+          sourceMeta={chartSourceMeta}
+          initialLanguage={locale}
+        />
+      </div>
+    </section>
+    <div class="mt-6" id="research"><DiseaseResearchPanel diseaseId={diseaseId || slug} locale={locale} /></div>
   </article>
 </ReportLayout>

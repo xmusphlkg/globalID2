@@ -222,6 +222,8 @@ const subscriptionsApiBase = (
       const researchTopicOptions = document.getElementById('research-topic-options');
       const studyTypeOptions = document.getElementById('study-type-options');
       const peerReviewStatusOptions = document.getElementById('peer-review-status-options');
+      const requestedCountry = new URLSearchParams(window.location.search).get('country')?.trim().toUpperCase().slice(0, 12) || '';
+      const requestedDisease = new URLSearchParams(window.location.search).get('disease')?.trim().toLowerCase().slice(0, 80) || '';
       const optionState = {
         locales: [],
         frequencies: [],
@@ -417,7 +419,7 @@ const subscriptionsApiBase = (
         const query = String(diseaseSearch?.value || '').trim().toLowerCase();
         const visible = query
           ? optionState.diseases.filter((item) => {
-              const haystack = `${item.value} ${item.label_en || ''} ${item.label_zh || ''}`.toLowerCase();
+              const haystack = `${item.value} ${item.code || ''} ${item.slug || ''} ${item.disease_id || ''} ${item.label_en || ''} ${item.label_zh || ''} ${item.label_fr || ''}`.toLowerCase();
               return haystack.includes(query);
             })
           : optionState.diseases.slice(0, 24);
@@ -436,6 +438,23 @@ const subscriptionsApiBase = (
         renderChipOptions(researchTopicOptions, 'research_topics', optionState.researchTopics);
         renderChipOptions(studyTypeOptions, 'study_types', optionState.studyTypes);
         renderChipOptions(peerReviewStatusOptions, 'peer_review_statuses', optionState.peerReviewStatuses);
+      }
+
+      function applyRequestedTopic() {
+        const country = optionState.countries.find((item) => [item.value, item.code].some((value) => String(value || '').toUpperCase() === requestedCountry));
+        const disease = optionState.diseases.find((item) => [item.value, item.code, item.slug, item.disease_id].some((value) => String(value || '').toLowerCase() === requestedDisease));
+        if (country && allCountries) {
+          allCountries.checked = false;
+          renderChipOptions(countryOptions, 'countries', optionState.countries, false);
+          const input = Array.from(form.querySelectorAll('input[name="countries"]')).find((node) => node.value === country.value);
+          if (input) input.checked = true;
+        }
+        if (disease) {
+          if (diseaseSearch) diseaseSearch.value = labelFor(disease).toLowerCase();
+          renderDiseaseOptions();
+          const input = Array.from(form.querySelectorAll('input[name="diseases"]')).find((node) => node.value === disease.value);
+          if (input) input.checked = true;
+        }
       }
 
       async function loadOptions() {
@@ -459,6 +478,7 @@ const subscriptionsApiBase = (
           optionState.studyTypes = Array.isArray(result.filters?.study_type) ? result.filters.study_type : [];
           optionState.peerReviewStatuses = Array.isArray(result.filters?.peer_review_status) ? result.filters.peer_review_status : [];
           renderAllOptions();
+          applyRequestedTopic();
           if (statusEl && statusEl.dataset.type === 'pending') statusEl.hidden = true;
           setSubmitting(false);
         } catch (error) {

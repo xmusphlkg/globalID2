@@ -27,6 +27,9 @@ const guardedAutoMode = publication.mode === 'guarded_auto'
   && publication.auto_verification?.calibration_decision === 'supported';
 const exceptionReviewMode = publication.mode === 'exception_review';
 const assessedRisks = snapshot.signals.filter(signal => signal.assessment.public_health_risk?.status === 'assessed').length;
+const modeled = snapshot.coverage.modeled_series_count;
+const evaluated = snapshot.coverage.evaluated_series_count;
+const unmodeled = Math.max(0, evaluated - modeled);
 const narrative = localizedDynamicText(locale, {
   en: snapshot.narrative.en,
   zh: snapshot.narrative.zh,
@@ -95,7 +98,10 @@ const metricCards = snapshot.report.kind === 'daily'
       ))}
     </ol>
   ) : (
-    <p class="empty">{pick("No alert-level numerical signal passed this report's quality and effect gates.", '本报告没有数值信号同时通过异常、效应和质量门。', 'Aucun signal numérique de niveau alerte n’a franchi les contrôles de qualité et d’effet de ce rapport.')}</p>
+    <div class="empty" role="status">
+      <p>{pick("No alert-level numerical signal passed this report's quality and effect gates.", '本报告没有数值信号同时通过异常、效应和质量门。', 'Aucun signal numérique de niveau alerte n’a franchi les contrôles de qualité et d’effet de ce rapport.')}</p>
+      <p>{pick(`This does not mean that no disease activity occurred. The review modeled ${formatNumber(modeled, 0, locale)} of ${formatNumber(evaluated, 0, locale)} evaluated series; the remaining ${formatNumber(unmodeled, 0, locale)} were not modeled in this report.`, `这不代表没有疾病活动：本次对 ${formatNumber(evaluated, 0, locale)} 条已评估序列中的 ${formatNumber(modeled, 0, locale)} 条进行了建模，其余 ${formatNumber(unmodeled, 0, locale)} 条未纳入本期分析。`, `Cela ne signifie pas qu’aucune activité n’a eu lieu : ${formatNumber(modeled, 0, locale)} séries sur ${formatNumber(evaluated, 0, locale)} évaluées ont été modélisées ; les ${formatNumber(unmodeled, 0, locale)} autres n’ont pas été modélisées dans ce rapport.`)}</p>
+    </div>
   )}
   {compact && <a class="open-report" href={`${prefix}/situation/`}>{pick('Open full analysis →', '打开完整分析 →')}</a>}
 </section>

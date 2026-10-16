@@ -63,11 +63,11 @@
     },
     {
       "week": "2026-W39",
-      "brief_fingerprint": "acd067b54e2d4ab778d5386639a5e2bb562e1338b6c4cf119be477c0d7a830db",
+      "brief_fingerprint": "7039fada6330b63fa2a6b52c2e2388238d948b442e37c8d8a3c76f2f952fc298",
       "review": {
         "verdict": "pass",
         "issue_codes": [],
-        "reviewed_at": "2026-10-05T06:16:52+00:00",
+        "reviewed_at": "2026-10-06T13:33:14+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center"
@@ -75,11 +75,35 @@
     },
     {
       "week": "2026-W40",
-      "brief_fingerprint": "9b79016b4a8c9437edeebe16dbc636c3fcbc1fe0a5012f3ff485494b421842a9",
+      "brief_fingerprint": "aa60e8dce5a4fe7b9b448ed171e35d3d699dab14b6a8270c6573485fa04c7e75",
       "review": {
         "verdict": "pass",
         "issue_codes": [],
-        "reviewed_at": "2026-10-05T09:22:15+00:00",
+        "reviewed_at": "2026-10-08T10:29:09+00:00",
+        "protocol_version": "research-weekly-ai-review.v1",
+        "model": "configured-review-model",
+        "provider": "model-center"
+      }
+    },
+    {
+      "week": "2026-W41",
+      "brief_fingerprint": "b9d030788d4d77035997e55ad348365c140bc106f9c8222a5d9fe904e3430123",
+      "review": {
+        "verdict": "pass",
+        "issue_codes": [],
+        "reviewed_at": "2026-10-13T19:03:46+00:00",
+        "protocol_version": "research-weekly-ai-review.v1",
+        "model": "configured-review-model",
+        "provider": "model-center"
+      }
+    },
+    {
+      "week": "2026-W42",
+      "brief_fingerprint": "850a8b27c41b0fb83d4bb5ddb9ea8a45ea12e0eba691e0bb5a30872a9f989b73",
+      "review": {
+        "verdict": "pass",
+        "issue_codes": [],
+        "reviewed_at": "2026-10-14T12:21:02+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center"

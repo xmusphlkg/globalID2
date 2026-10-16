@@ -8,11 +8,12 @@ interface Props {
   initialVisible?: number;
   locale?: 'en' | 'zh' | 'fr';
   searchable?: boolean;
+  focusDiseaseId?: string;
 }
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedDynamicText, localizedRegionName, localizedResearchTopic, localizedStudyType } from '../../utils/i18n';
 
-const { article, compact = false, featured = false, stream = false, index, initialVisible, locale = 'en', searchable = true } = Astro.props;
+const { article, compact = false, featured = false, stream = false, index, initialVisible, locale = 'en', searchable = true, focusDiseaseId } = Astro.props;
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
@@ -36,6 +37,14 @@ const diseaseIds = (article.diseases ?? []).map((item: any) => String(item.disea
 const countryCodes = (article.countries ?? []).map((item: any) => String(item.code ?? '').toLowerCase()).filter(Boolean);
 const topicSlugs = (article.topics ?? []).map((item: any) => String(item.name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')).filter(Boolean);
 const visibleTopics = (article.topics ?? []).slice(0, compact ? 1 : 3);
+const focusMatch = focusDiseaseId
+  ? (article.diseases ?? []).find((item: any) => String(item.disease_id ?? '').toLowerCase() === String(focusDiseaseId).toLowerCase())
+  : null;
+const focusedDiseaseConfidence = Number(focusMatch?.confidence ?? 0);
+const focusedDiseaseIsDirect = Boolean(focusMatch && focusedDiseaseConfidence >= 0.78);
+const visibleDiseases = [...(article.diseases ?? [])]
+  .sort((left: any, right: any) => Number(String(right.disease_id ?? '').toLowerCase() === String(focusDiseaseId ?? '').toLowerCase()) - Number(String(left.disease_id ?? '').toLowerCase() === String(focusDiseaseId ?? '').toLowerCase()))
+  .slice(0, compact ? 1 : 2);
 const authorNames = (article.authors ?? []).filter(Boolean);
 const authorPreview = authorNames.slice(0, 3);
 const authorLineEn = authorNames.length > 3
@@ -99,7 +108,10 @@ const whyItMattersFr = localizedDynamicText('fr', {
       </span>
       {isHistoricalBaseline && <span class="research-badge research-badge-history">{zh ? '历史基线' : fr ? 'Référence historique' : 'Historical baseline'}</span>}
       {article.open_access_status === 'open' && <span class="research-badge research-badge-oa">{zh ? '开放获取' : fr ? 'Accès ouvert' : 'Open access'}</span>}
-      {(article.diseases ?? []).slice(0, compact ? 1 : 2).map((disease: any) => (
+      {focusMatch && <span class="research-badge" title={zh ? `疾病分类器关联置信度 ${focusedDiseaseConfidence.toFixed(2)}；这不是研究质量评分。` : fr ? `Confiance du classement de l’association à la maladie : ${focusedDiseaseConfidence.toFixed(2)} ; ce n’est pas une évaluation de la qualité de l’étude.` : `Disease-classifier match confidence: ${focusedDiseaseConfidence.toFixed(2)}; this is not a study-quality score.`}>
+        {focusedDiseaseIsDirect ? (zh ? '疾病关联较强' : fr ? 'Association forte à la maladie' : 'Strong disease match') : (zh ? '疾病关联待核对' : fr ? 'Association à vérifier' : 'Possible disease match')}
+      </span>}
+      {visibleDiseases.map((disease: any) => (
         <span class="research-badge">{localizedDiseaseName(disease, locale)}</span>
       ))}
       {visibleTopics.map((topic: any) => (

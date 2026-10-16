@@ -33,15 +33,15 @@ const t = zh ? {
   countries: '浏览国家与地区',
   downloads: '下载数据',
   release: '本次公开发布',
-  updated: '已更新',
+  updated: '快照已生成',
   observations: '监测记录',
   reportedCases: '报告病例',
   jurisdictions: '国家与地区',
   diseases: '收录疾病',
   sources: '官方来源',
   through: '数据截至',
-  recentBoard: '近期来源更新',
-  cadence: '频率',
+  recentBoard: '最新报告期',
+  cadence: '报告频率',
   sourceNote: '覆盖、指标定义和发布时间因来源而异；缺失值不应自动解释为零。',
   methods: '来源与方法',
   review: '态势复核',
@@ -53,7 +53,7 @@ const t = zh ? {
   fullReview: '查看完整态势复核',
   explore: '开始探索',
   exploreTitle: '像使用数据目录一样进入公共卫生证据',
-  exploreText: '首页优先提供搜索、按主题浏览、下载与方法说明，而不是只展示项目介绍。',
+  exploreText: '从国家、疾病或研究进入数据，沿着来源、趋势与下载继续查证。',
   countryPath: '按地区看',
   countryPathText: '查看国家和地区的监测范围、来源、疾病列表与时间跨度。',
   diseasePath: '按疾病看',
@@ -85,15 +85,15 @@ const t = zh ? {
   countries: 'Browse countries',
   downloads: 'Download data',
   release: 'Current public release',
-  updated: 'Updated',
+  updated: 'Snapshot generated',
   observations: 'Surveillance records',
   reportedCases: 'Reported cases',
   jurisdictions: 'Countries and regions',
   diseases: 'Diseases tracked',
   sources: 'Official sources',
   through: 'Data through',
-  recentBoard: 'Recent source updates',
-  cadence: 'Cadence',
+  recentBoard: 'Latest available reporting periods',
+  cadence: 'Reporting frequency',
   sourceNote: 'Coverage, definitions, and release schedules vary by source; missing values should not be read as zero.',
   methods: 'Sources and methods',
   review: 'Situation review',
@@ -105,7 +105,7 @@ const t = zh ? {
   fullReview: 'Open the full situation review',
   explore: 'Start exploring',
   exploreTitle: 'Enter public health evidence like a data catalog',
-  exploreText: 'The homepage now privileges search, topic browsing, downloads, and methodology instead of only explaining the project.',
+  exploreText: 'Start with a country, disease, or study, then follow the source, trend, and download links to check the evidence.',
   countryPath: 'Explore by place',
   countryPathText: 'Review each country or region by surveillance scope, source, disease list, and time span.',
   diseasePath: 'Explore by disease',
@@ -134,11 +134,11 @@ if (fr) Object.assign(t, {
   sloganPrefix: 'Puis', sloganWords: ['comparer les tendances', 'réutiliser les données', 'vérifier les preuves', 'agir plus vite'],
   summary: 'Recherchez les données officielles, les synthèses de situation, le contexte scientifique et les jeux de données téléchargeables depuis un même espace public.',
   searchLabel: 'Rechercher dans GIDS', searchPlaceholder: 'Rechercher un pays, une maladie, un rapport ou une étude', search: 'Rechercher',
-  situation: 'Voir la situation actuelle', countries: 'Parcourir les pays', downloads: 'Télécharger les données', release: 'Publication publique actuelle', updated: 'Mis à jour',
+  situation: 'Voir la situation actuelle', countries: 'Parcourir les pays', downloads: 'Télécharger les données', release: 'Publication publique actuelle',
   observations: 'Séries de surveillance', reportedCases: 'Cas déclarés', jurisdictions: 'Pays et régions', diseases: 'Maladies suivies', sources: 'Sources officielles', through: 'Données jusqu’au',
-  recentBoard: 'Mises à jour récentes', cadence: 'Fréquence', sourceNote: 'La couverture, les définitions et les calendriers varient selon la source; une valeur manquante ne doit pas être interprétée comme zéro.',
+  updated: 'Instantané généré', recentBoard: 'Périodes de déclaration les plus récentes', cadence: 'Fréquence de déclaration', sourceNote: 'La couverture, les définitions et les calendriers varient selon la source; une valeur manquante ne doit pas être interprétée comme zéro.',
   methods: 'Sources et méthodes', review: 'Synthèse de situation', attention: 'Points d’attention', events: 'Événements officiels', signals: 'Signaux publiés', reviewed: 'Juridictions examinées', fullReview: 'Ouvrir la synthèse complète',
-  explore: 'Commencer l’exploration', exploreTitle: 'Accéder aux preuves de santé publique comme à un catalogue de données', exploreText: 'La page d’accueil privilégie la recherche, la navigation thématique, les téléchargements et la méthodologie.',
+  explore: 'Commencer l’exploration', exploreTitle: 'Accéder aux preuves de santé publique comme à un catalogue de données', exploreText: 'Choisissez un pays, une maladie ou une étude, puis suivez les liens vers les sources, les tendances et les téléchargements.',
   countryPath: 'Explorer par lieu', countryPathText: 'Consultez la couverture, les sources, les maladies et la période de chaque pays ou région.', diseasePath: 'Explorer par maladie', diseasePathText: 'Comparez la couverture d’une même maladie entre les différentes sources.', downloadPath: 'Réutiliser directement', downloadPathText: 'Téléchargez les jeux de données publics et vérifiez les champs et limites avant citation.', researchPath: 'Relier la recherche', researchPathText: 'Interprétez les signaux de surveillance à la lumière des données publiées.', countryList: 'Pays les mieux couverts', common: 'Maladies courantes', viewAll: 'Tout voir', analysis: 'Analyses publiées', latest: 'Derniers rapports de surveillance', research: 'Parcourir les preuves', openReport: 'Ouvrir le rapport', unavailable: 'Indisponible', empty: 'Aucun rapport public disponible.', curveLabel: 'Grippe au Japon · grippe en Chine',
 });
 const jurisdictions = (meta.countries ?? []).filter(hasCountryDataSnapshot);
@@ -171,6 +171,21 @@ const situation: SituationReportV3 | null = isSituationReportV3(rawSituation) ? 
 const totalCases = countries.reduce((sum: number, country: any) => sum + Number(country.total_cases ?? 0), 0);
 const totalRecords = countries.reduce((sum: number, country: any) => sum + Number(country.record_count ?? 0), 0);
 const dataThrough = situation?.data_currency.latest_data_through ?? meta.generated_at;
+const formatCadence = (value?: string) => {
+  const key = String(value ?? '').trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
+  const labels: Record<string, [string, string, string]> = {
+    daily: ['Daily', '每日', 'Quotidienne'],
+    weekly: ['Weekly', '每周', 'Hebdomadaire'],
+    monthly: ['Monthly', '每月', 'Mensuelle'],
+    quarterly: ['Quarterly', '每季度', 'Trimestrielle'],
+    annual: ['Annual', '每年', 'Annuelle'],
+    yearly: ['Annual', '每年', 'Annuelle'],
+    mixed_weekly_annual: ['Weekly and annual', '周报与年报', 'Hebdomadaire et annuelle'],
+    weekly_and_annual: ['Weekly and annual', '周报与年报', 'Hebdomadaire et annuelle'],
+  };
+  if (!value) return t.unavailable;
+  return labels[key]?.[zh ? 1 : fr ? 2 : 0] ?? value;
+};
 const formatDate = (value?: string) => {
   if (!value) return t.unavailable;
   const date = new Date(value);
@@ -308,7 +323,7 @@ const explorePaths = [
             return (
               <a href={href(`/countries/${String(country.code).toLowerCase()}/`)}>
                 <CountryFlag code={country.code} name={name} sizeClass="w-8 h-6" />
-                <span><strong>{name}</strong><small>{source?.cadence ? `${t.cadence}: ${source.cadence}` : source?.type ?? t.unavailable}</small></span>
+                <span><strong>{name}</strong><small>{source?.cadence ? `${t.cadence}: ${formatCadence(source.cadence)}` : source?.type ?? t.unavailable}</small></span>
                 <time datetime={country.date_range?.end ?? ''}>{formatDate(country.date_range?.end)}</time>
               </a>
             );

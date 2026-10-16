@@ -68,6 +68,36 @@ function fmtNum(n: number | null | undefined) {
   return n == null || !Number.isFinite(n) ? '—' : n.toLocaleString('en-US');
 }
 
+function latestReportingContext(entry: CountryDatasetSeriesEntry | undefined) {
+  if (!entry) return null;
+  const index = entry.cases.reduce<number>((latest, value, i) => value != null && Number.isFinite(value) ? i : latest, -1);
+  if (index === -1) return null;
+  const start = entry.period_starts?.[index] ?? entry.dates[index];
+  const endExclusive = entry.period_ends_exclusive?.[index];
+  let period = start ?? '';
+  if (start && endExclusive && endExclusive !== start) {
+    const endDate = new Date(`${endExclusive}T00:00:00Z`);
+    if (Number.isFinite(endDate.getTime())) {
+      endDate.setUTCDate(endDate.getUTCDate() - 1);
+      period = `${start} – ${endDate.toISOString().slice(0, 10)}`;
+    }
+  }
+  return { period, granularity: entry.point_granularities?.[index] ?? entry.period_granularity ?? null };
+}
+
+function granularityLabel(value: string | null, lang: 'en' | 'zh' | 'fr') {
+  if (!value) return '';
+  const labels: Record<string, [string, string, string]> = {
+    daily: ['daily', '日', 'quotidien'], day: ['daily', '日', 'quotidien'],
+    weekly: ['weekly', '周', 'hebdomadaire'], week: ['weekly', '周', 'hebdomadaire'],
+    monthly: ['monthly', '月', 'mensuel'], month: ['monthly', '月', 'mensuel'],
+    quarterly: ['quarterly', '季度', 'trimestriel'], quarter: ['quarterly', '季度', 'trimestriel'],
+    annual: ['annual', '年', 'annuel'], yearly: ['annual', '年', 'annuel'], year: ['annual', '年', 'annuel'],
+  };
+  const label = labels[value.toLowerCase()];
+  return label ? label[{ en: 0, zh: 1, fr: 2 }[lang]] : value;
+}
+
 function Sparkline({
   diseaseId,
   diseaseName,
@@ -219,6 +249,9 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
     });
   }, [rows, sortKey, sortDir, catFilter, search]);
   const visibleRows = displayed.slice(0, visibleRowCount);
+  const reportingContexts = displayed.map((row) => latestReportingContext(series?.[row.disease_id])).filter(Boolean);
+  const reportingPeriodsDiffer = new Set(reportingContexts.map((context) => context?.period).filter(Boolean)).size > 1;
+  const reportingFrequenciesDiffer = new Set(reportingContexts.map((context) => context?.granularity).filter(Boolean)).size > 1;
 
   const categories = ['All', ...CATEGORY_ORDER];
   const columnCount = 5 + (showDeaths ? 1 : 0) + (showCfr ? 1 : 0);
@@ -321,6 +354,15 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
           </button>
         </div>
       )}
+      {reportingContexts.length > 0 && (
+        <p className="comparison-cell-secondary px-4 py-2 text-xs" role="note">
+          {lang === 'zh'
+            ? `最新病例下方标注各疾病的报告期${reportingPeriodsDiffer ? '；报告期不同，数值不可直接按同一时间段比较' : ''}${reportingFrequenciesDiffer ? '；报告频率也不同' : ''}。合计为各疾病最近报告值之和。`
+            : lang === 'fr'
+              ? `La période de rapport de chaque maladie figure sous les cas${reportingPeriodsDiffer ? ' ; les périodes diffèrent, les valeurs ne portent donc pas toutes sur le même intervalle' : ''}${reportingFrequenciesDiffer ? ' ; les fréquences diffèrent également' : ''}. Le total additionne les dernières valeurs disponibles.`
+              : `Each disease’s reporting period appears below its latest cases${reportingPeriodsDiffer ? '; periods differ, so values do not all cover the same interval' : ''}${reportingFrequenciesDiffer ? '; reporting frequencies also differ' : ''}. The total adds each disease’s latest available value.`}
+        </p>
+      )}
 
       {/* Table */}
       <div className="comparison-table-wrap">
@@ -352,7 +394,7 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
                 className="site-table-head-cell px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-[rgb(var(--text))] text-right"
                 onClick={() => handleSort('latest_cases')}
               >
-                {lang === 'zh' ? '最新病例' : 'Latest Cases'} <SortIcon col="latest_cases" />
+                {lang === 'zh' ? '最新病例' : lang === 'fr' ? 'Cas les plus récents' : 'Latest Cases'} <SortIcon col="latest_cases" />
               </th>
               {showDeaths && (
                 <th
@@ -400,9 +442,17 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
                     {fmtNum(row.total_cases)}
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">
-                    <span className={row.latest_cases > 0 ? 'comparison-cell-accent' : 'comparison-empty'}>
-                      {fmtNum(row.latest_cases)}
-                    </span>
+                    {(() => {
+                      const context = latestReportingContext(series?.[row.disease_id]);
+                      const frequency = granularityLabel(context?.granularity ?? null, lang);
+                      const detail = [context?.period, frequency].filter(Boolean).join(' · ');
+                      return (
+                        <span className="block">
+                          <span className={row.latest_cases > 0 ? 'comparison-cell-accent' : 'comparison-empty'}>{fmtNum(row.latest_cases)}</span>
+                          {detail && <span className="comparison-cell-secondary mt-0.5 block whitespace-nowrap text-[10px]" aria-label={lang === 'zh' ? `报告期 ${detail}` : lang === 'fr' ? `Période de rapport : ${detail}` : `Reporting period: ${detail}`}>{detail}</span>}
+                        </span>
+                      );
+                    })()}
                   </td>
                   {showDeaths && (
                     <td className="comparison-cell-number px-4 py-3 text-right tabular-nums">

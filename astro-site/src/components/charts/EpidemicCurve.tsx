@@ -9,6 +9,7 @@ interface Props {
   sourceSeriesUrl?: string;
   title?: string;
   entityIds?: string[];
+  initialSelectionIds?: string[];
   sourceMeta?: ChartSourceMeta | null;
   initialLanguage?: "en" | "zh" | "fr";
 }
@@ -20,6 +21,7 @@ export default function EpidemicCurve({
   sourceSeriesUrl,
   title,
   entityIds,
+  initialSelectionIds,
   initialLanguage = "en",
   sourceMeta,
 }: Props) {
@@ -45,6 +47,7 @@ export default function EpidemicCurve({
       title={title}
       language={initialLanguage}
       sourceMeta={sourceMeta}
+      initialSelectionIds={initialSelectionIds}
     />
   );
 }

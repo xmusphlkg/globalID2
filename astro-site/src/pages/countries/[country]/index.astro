@@ -12,6 +12,7 @@ import DiseaseHeatmap from '../../../components/charts/DiseaseHeatmap';
 import ComparisonTable from '../../../components/charts/ComparisonTable';
 import { buildChartSourceMeta } from '../../../utils/chartMeta';
 import { hasCountryDataSnapshot } from '../../../lib/country-coverage';
+import { countryDiseaseCandidates } from '../../../lib/seo-page-data';
 import {
   buildCountryMetaDescription,
   buildDatasetDistributions,
@@ -44,6 +45,9 @@ const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (path: string) => `${prefix}${path}`;
 const fallbackCountryCode = String(country ?? '').toUpperCase();
+const countryDiseaseRoutes = new Set(
+  countryDiseaseCandidates().map(candidate => `${candidate.code}:${candidate.slug}`),
+);
 const childJurisdictions = ((metaRaw as any).countries ?? [])
   .filter((entry: any) => (
     entry.parent_code === fallbackCountryCode && hasCountryDataSnapshot(entry)
@@ -262,6 +266,12 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
           <p class="academic-lead">
             {zh ? countryBriefZh : fr ? countryBriefFr : countryBriefEn}
           </p>
+          <a
+            href={localeHref(`/subscribe/?country=${encodeURIComponent(String(countryData?.country_code ?? fallbackCountryCode).toUpperCase())}`)}
+            class="site-action-secondary inline-flex items-center px-4 py-2 rounded-none border text-sm font-semibold transition-all"
+          >
+            {zh ? '关注此国家/地区' : fr ? 'Suivre ce pays ou cette région' : 'Follow this country or region'}
+          </a>
         </div>
 
         <div class="space-y-4 xl:max-w-sm">
@@ -408,7 +418,9 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
             .slice(0, 16)
             .map((row) => (
               <li>
-                <a href={localeHref(`/diseases/${toSeoSlug(row.slug)}/`)} class="site-action-secondary inline-flex px-3 py-1.5 text-sm rounded-none border">
+                <a href={localeHref(countryDiseaseRoutes.has(`${fallbackCountryCode.toLowerCase()}:${toSeoSlug(row.slug)}`)
+                  ? `/countries/${fallbackCountryCode.toLowerCase()}/diseases/${toSeoSlug(row.slug)}/`
+                  : `/diseases/${toSeoSlug(row.slug)}/`)} class="site-action-secondary inline-flex px-3 py-1.5 text-sm rounded-none border">
                   <span>{zh ? row.name_zh : fr ? localizedDiseaseName(row, 'fr') : row.name_en}</span>
                 </a>
               </li>
