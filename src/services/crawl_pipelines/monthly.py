@@ -29,7 +29,7 @@ class MonthlyPipelineConfig:
     no_rows_summary: str
     force_fetches_history: bool = False
     supports_fill_missing: bool = True
-    refresh_in_thread: bool = False
+    refresh_in_thread: bool = True
 
 
 CONFIGS = {

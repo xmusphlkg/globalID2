@@ -13,7 +13,6 @@ from sqlalchemy import text
 
 from src.core.country_library import get_country_bootstrap_config, get_country_profile
 
-
 _CURRENT_SCOPES = {
     "all",
     "annual",
@@ -143,7 +142,7 @@ async def _execute_is_history_pipeline(
 ):
     """Fetch and import one reviewed family of official historical workbooks."""
 
-    from src.data.crawlers.is_history import IcelandHistoryCrawler, OFFICIAL_WORKBOOKS
+    from src.data.crawlers.is_history import OFFICIAL_WORKBOOKS, IcelandHistoryCrawler
     from src.data.processors.is_history import IcelandHistoryProcessor
 
     started = perf_counter()
@@ -449,7 +448,8 @@ async def execute_is_pipeline(
     )
     await task_manager.update_task_progress(task.task_uuid, 10)
 
-    fetched = updater.refresh_source(
+    fetched = await asyncio.to_thread(
+        updater.refresh_source,
         source=normalized_source,
         run_external=False,
         force=force,

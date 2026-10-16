@@ -165,6 +165,11 @@
       "reason": "US strict history loader directly writes the legacy national projection and is superseded by source-series backfill.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 2}
     },
+    "scripts/migrate_chfl_geography.py": {
+      "classification": "migration",
+      "reason": "Audited CHFL geography migration inspects the legacy projection to report impact while only moving source-series facts and their revision snapshots.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
     "scripts/restore_disease_migration.py": {
       "classification": "migration",
       "reason": "Run-scoped audited restore must reconstruct legacy before-images until all corresponding migrations expire.",

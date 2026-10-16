@@ -10,15 +10,15 @@ import pytest
 import yaml
 
 from scripts.automation.check_contract_drift import CONTRACT_PATHS, changed_contracts
+from scripts.automation.prepare_site_build_fixture import (
+    FixturePreparationError,
+    prepare_fixture,
+)
 from scripts.automation.run_situation_release import (
     PipelineStep,
     _run_step,
     build_steps,
     dist_inventory,
-)
-from scripts.automation.prepare_site_build_fixture import (
-    FixturePreparationError,
-    prepare_fixture,
 )
 from scripts.automation.smoke_migrations import (
     MigrationSmokeError,
@@ -33,7 +33,6 @@ from scripts.automation.verify_situation_deployment import (
     DeploymentVerificationError,
     verify_deployment,
 )
-
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "situation-room-release.yml"
@@ -306,9 +305,9 @@ def test_deployment_probe_does_not_retry_auth_or_configuration_failure(tmp_path:
 
 def test_migration_graph_is_linear_and_database_guard_requires_disposable_opt_in() -> None:
     graph = validate_revision_graph()
-    assert graph["head"] == "0013_literature_incremental"
+    assert graph["head"] == "0014_source_missing_observations"
     assert graph["base"] == "0001_control_plane_baseline"
-    assert graph["revision_count"] == 13
+    assert graph["revision_count"] == 14
 
     url = "postgresql://user:pass@localhost/globalid_migration_smoke"
     with pytest.raises(MigrationSmokeError, match="opt_in"):

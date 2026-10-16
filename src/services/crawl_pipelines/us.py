@@ -1,6 +1,7 @@
 """United States CDC weekly/annual crawl orchestration."""
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -81,7 +82,10 @@ async def execute_us_pipeline(
     await task_manager.update_task_progress(task.task_uuid, 10)
 
     phase1_started = perf_counter()
-    fetched = updater.fetch_latest(source=source)
+    # The CDC client performs synchronous HTTP pagination. Running it on the
+    # worker event loop can block task heartbeats and every other coroutine for
+    # tens of minutes when the full NNDSS state feed is slow to respond.
+    fetched = await asyncio.to_thread(updater.fetch_latest, source=source)
     phase1_elapsed = perf_counter() - phase1_started
     source_latest = fetched.latest_date.isoformat() if fetched.latest_date else "none"
     source_latest_detail = ", ".join(

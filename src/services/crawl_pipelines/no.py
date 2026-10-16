@@ -8,6 +8,7 @@ runs alike.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -159,7 +160,8 @@ async def execute_no_pipeline(
         get_database=get_database,
     )
     phase1_started = perf_counter()
-    fetched = updater.refresh_source(
+    fetched = await asyncio.to_thread(
+        updater.refresh_source,
         source=source,
         run_external=False,
         force=force,

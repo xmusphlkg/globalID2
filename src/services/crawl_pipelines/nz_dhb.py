@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -69,7 +70,8 @@ async def execute_nz_dhb_pipeline(
         await db.commit()
 
     await task_manager.update_task_progress(task.task_uuid, 15)
-    fetched = updater.refresh_source(
+    fetched = await asyncio.to_thread(
+        updater.refresh_source,
         source=source,
         force=force,
         save_raw=save_raw,
