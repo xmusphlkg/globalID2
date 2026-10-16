@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import json
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
-import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -11,18 +11,21 @@ import pandas as pd
 import pytest
 from pydantic import ValidationError
 
-from src.services.situation_v3.contracts import PublicHealthRisk, SituationReportV3
-from src.services.situation_v3.backtest import simulate_weekly_batch
 from src.services.situation_v3 import model as situation_model
-from src.services.situation_v3.model import benjamini_hochberg, evaluate_frame_v3
+from src.services.situation_v3 import persistence, source_adapters
+from src.services.situation_v3 import pipeline as situation_pipeline
+from src.services.situation_v3.backtest import simulate_weekly_batch
+from src.services.situation_v3.contracts import PublicHealthRisk, SituationReportV3
+from src.services.situation_v3.model import (
+    benjamini_hochberg,
+    evaluate_frame_v3,
+    prepare_frame_v3,
+)
 from src.services.situation_v3.reporting import (
     build_daily_report_v3,
     build_period_report_v3,
     cluster_official_events,
 )
-from src.services.situation_v3 import persistence
-from src.services.situation_v3 import pipeline as situation_pipeline
-from src.services.situation_v3 import source_adapters
 
 
 def _config() -> dict:
@@ -400,6 +403,17 @@ def test_nan_source_url_is_not_published_as_evidence() -> None:
     assert rejected == {}
     assert signals[0].evidence_links == []
     assert "source_evidence_url_missing" in signals[0].assessment.evidence_gaps
+
+
+def test_ordered_database_frame_skips_full_frame_copy_and_recanonicalization() -> None:
+    frame = _weekly_frame()
+    frame["canonical_geography_key"] = "country:US:national"
+    frame.attrs["situation_v3_ordered"] = True
+
+    prepared = prepare_frame_v3(frame)
+
+    assert prepared is frame
+    assert prepared["canonical_geography_key"].eq("country:US:national").all()
 
 
 def test_configured_source_url_fills_missing_row_evidence_only() -> None:

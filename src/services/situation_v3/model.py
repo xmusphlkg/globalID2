@@ -33,7 +33,6 @@ from .contracts import (
     SituationSignalV3,
 )
 
-
 CADENCE_DEFAULTS: dict[str, dict[str, Any]] = {
     "daily": {
         "window_periods": 28,
@@ -149,6 +148,18 @@ def canonical_geography_key(row: pd.Series | dict[str, Any]) -> str:
 def prepare_frame_v3(frame: pd.DataFrame) -> pd.DataFrame:
     if frame.empty:
         return frame.copy()
+    if frame.attrs.get("situation_v3_ordered"):
+        # The database adapter has already canonicalized geography, coerced
+        # SQL values to numeric types, and sorted each identity by period.
+        # Avoid a second full-frame copy, row-wise apply, and global sort.
+        work = frame
+        if not isinstance(work["time"].dtype, pd.DatetimeTZDtype):
+            work["time"] = pd.to_datetime(work["time"], errors="coerce", utc=True)
+        work["value"] = pd.to_numeric(work["value"], errors="coerce")
+        valid = work["time"].notna() & work["value"].notna()
+        if not valid.all():
+            work = work.loc[valid].copy()
+        return work
     work = frame.copy()
     work["time"] = pd.to_datetime(work["time"], errors="coerce", utc=True)
     work["value"] = pd.to_numeric(work["value"], errors="coerce")
@@ -1491,13 +1502,23 @@ def evaluate_frame_v3(
     if work.empty:
         return [], {"empty": 1}, []
     group_columns = ["series_code", "canonical_geography_key", "dimension_key"]
-    groups = [group for _, group in work.groupby(group_columns, dropna=False, sort=True)]
+    ordered_input = bool(work.attrs.get("situation_v3_ordered"))
+    grouped = work.groupby(group_columns, dropna=False, sort=not ordered_input)
+    groups = None if ordered_input else [group for _, group in grouped]
     requested_workers = max(
         1,
         min(4, int(config.get("v3", {}).get("maximum_analysis_workers", 1))),
     )
     evaluations: list[SeriesV3Evaluation]
-    if requested_workers > 1 and len(groups) >= 16:
+    if ordered_input:
+        # Database input is ordered by identity, so evaluate one cohort at a
+        # time. Materializing every group (and serializing those copies into a
+        # process pool) multiplied peak memory for no statistical benefit.
+        evaluations = [
+            evaluate_series_v3(group, config, as_of=as_of)
+            for _, group in grouped
+        ]
+    elif requested_workers > 1 and groups is not None and len(groups) >= 16:
         worker_count = min(requested_workers, len(groups))
         chunk_size = math.ceil(len(groups) / worker_count)
         chunks = [groups[offset : offset + chunk_size] for offset in range(0, len(groups), chunk_size)]

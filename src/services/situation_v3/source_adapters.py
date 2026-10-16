@@ -7,8 +7,8 @@ immutable analysis ledger without transferring every observation.
 
 from __future__ import annotations
 
-import re
 import math
+import re
 from collections import defaultdict
 from datetime import date
 from typing import Any
@@ -19,6 +19,37 @@ from sqlalchemy import text
 from src.core.database import get_db
 
 _QUALIFIED_QUERY_BATCH_SIZE = 2_000
+
+# Keep this projection aligned with the fields consumed by model.evaluate_series_v3.
+# The previous SELECT also copied five registry JSON/policy columns and three
+# row-identifiers into a Python dict for every observation.
+_INPUT_COLUMNS = (
+    "time",
+    "value",
+    "geography_key",
+    "canonical_geography_key",
+    "dimension_key",
+    "dimensions",
+    "numerator",
+    "denominator",
+    "series_code",
+    "disease_id",
+    "country_code",
+    "source_system",
+    "source_label",
+    "metric_type",
+    "temporal_granularity",
+    "unit",
+    "source_url",
+    "disease_name",
+    "country_name",
+    "latest_available_time",
+    "analysis_cutoff",
+    "source_period_coverage",
+    "source_active_identities",
+    "source_total_identities",
+    "reporting_lag_days",
+)
 
 
 def _qualified_query_batches(rows: list[dict[str, Any]]):
@@ -244,8 +275,15 @@ async def fetch_series_inputs_v3(
                     }
                 )
 
-        rows: list[dict[str, Any]] = []
+        rows: list[tuple[Any, ...]] = []
         if qualified:
+            qualified.sort(
+                key=lambda row: (
+                    str(row["series_code"]),
+                    str(row["canonical_geography_key"]),
+                    str(row["dimension_key"] or ""),
+                )
+            )
             for batch in _qualified_query_batches(qualified):
                 value_rows = []
                 data_params = dict(params)
@@ -288,15 +326,13 @@ async def fetch_series_inputs_v3(
                     + ", ".join(value_rows)
                     + """
                     )
-                    SELECT n.id, n.updated_at, n.time, n.value, n.quality_status, n.geography_key,
+                    SELECT n.time, n.value, n.geography_key,
                            n.canonical_geography_key, n.dimension_key, n.dimensions,
                            n.numerator, n.denominator, n.series_code, n.disease_id,
                            n.country_code, n.source_system, n.source_label,
-                           n.metric_type, n.reporting_basis, n.temporal_granularity,
-                           n.unit, n.aggregation_policy, n.missing_value_policy,
-                           n.series_metadata, n.source_url, n.disease_name, n.country_name,
-                           q.latest_available_time, q.source_watermark,
-                           q.analysis_cutoff, q.source_period_coverage,
+                           n.metric_type, n.temporal_granularity, n.unit,
+                           n.source_url, n.disease_name, n.country_name,
+                           q.latest_available_time, q.analysis_cutoff, q.source_period_coverage,
                            q.source_active_identities, q.source_total_identities,
                            q.reporting_lag_days
                       FROM normalized n
@@ -311,10 +347,10 @@ async def fetch_series_inputs_v3(
                               n.dimension_key, n.time, n.updated_at, n.id
                     """
                 )
-                rows.extend(
-                    dict(row)
-                    for row in (await db.execute(data_query, data_params)).mappings()
-                )
+                result = await db.stream(data_query, data_params)
+                async for row in result:
+                    rows.append(tuple(row))
+                await result.close()
     ledger: list[dict[str, Any]] = []
     for row in stats:
         minimum = int(row.pop("required_observations"))
@@ -349,7 +385,8 @@ async def fetch_series_inputs_v3(
                     "rejection_reason": reason,
                 }
             )
-    frame = pd.DataFrame(rows)
+    frame = pd.DataFrame.from_records(rows, columns=_INPUT_COLUMNS)
+    del rows
     if not frame.empty:
         frame["numerator"] = pd.to_numeric(frame["numerator"], errors="coerce")
         frame["denominator"] = pd.to_numeric(frame["denominator"], errors="coerce")
@@ -363,6 +400,9 @@ async def fetch_series_inputs_v3(
                 strict=True,
             )
         ]
+        # The SQL ORDER BY already guarantees identity/time/update ordering;
+        # the model can skip its full-frame canonicalization and global sort.
+        frame.attrs["situation_v3_ordered"] = True
     registered = len({str(row["series_code"]) for row in stats})
     return frame, ledger, registered
 
