@@ -87,6 +87,65 @@ def _candidate_key(candidate: ArticleCandidate) -> str:
     return f"article:{candidate.article_id}"
 
 
+def _classify_candidate_batch(
+    candidates: list[ArticleCandidate],
+    *,
+    diseases: list[StandardDisease],
+    countries: list[Country],
+    taxonomy: dict[str, Any],
+    now: datetime,
+    auto_publish_min_score: float,
+) -> list[tuple[ArticleCandidate, Classification]]:
+    """Run CPU-bound article classification outside the worker event loop."""
+    return [
+        (
+            candidate,
+            classify_candidate(
+                candidate,
+                diseases=diseases,
+                countries=countries,
+                taxonomy=taxonomy,
+                now=now,
+                auto_publish_min_score=auto_publish_min_score,
+            ),
+        )
+        for candidate in candidates
+    ]
+
+
+async def _classify_candidates_in_batches(
+    candidates: list[ArticleCandidate],
+    *,
+    diseases: list[StandardDisease],
+    countries: list[Country],
+    taxonomy: dict[str, Any],
+    now: datetime,
+    auto_publish_min_score: float,
+    batch_size: int,
+    after_batch: Callable[[int, int], Awaitable[None]] | None = None,
+) -> list[tuple[ArticleCandidate, Classification]]:
+    """Classify in stable order while yielding between bounded CPU batches."""
+    ordered = await asyncio.to_thread(sorted, candidates, key=_candidate_key)
+    results: list[tuple[ArticleCandidate, Classification]] = []
+    size = max(1, batch_size)
+    for offset in range(0, len(ordered), size):
+        batch = ordered[offset : offset + size]
+        results.extend(
+            await asyncio.to_thread(
+                _classify_candidate_batch,
+                batch,
+                diseases=diseases,
+                countries=countries,
+                taxonomy=taxonomy,
+                now=now,
+                auto_publish_min_score=auto_publish_min_score,
+            )
+        )
+        if after_batch is not None:
+            await after_batch(len(results), len(ordered))
+    return results
+
+
 def _is_postgres_deadlock(exc: BaseException) -> bool:
     """Recognize PostgreSQL deadlocks through wrapped asyncpg/SQLAlchemy errors."""
     pending: list[BaseException] = [exc]
@@ -622,15 +681,31 @@ class LiteraturePipeline:
             classified_candidates: list[tuple[ArticleCandidate, Classification]] = []
             # Classify before opening a transaction, then persist in a stable
             # article order so concurrent syncs acquire row locks consistently.
-            for candidate in sorted(candidates, key=_candidate_key):
-                classification = classify_candidate(
-                    candidate,
-                    diseases=diseases,
-                    countries=countries,
-                    taxonomy=taxonomy,
-                    now=now,
-                    auto_publish_min_score=self.config.auto_publish_min_score,
-                )
+            async def after_classification_batch(completed: int, total: int) -> None:
+                del completed, total
+                if task:
+                    # Keep both task progress and the worker lease alive during
+                    # large CPU-bound classification runs, and let operators
+                    # cancel safely between bounded batches.
+                    await task_manager.update_task_progress(task.task_uuid, 55)
+                    if await task_manager.is_cancel_requested(task.task_uuid):
+                        raise RuntimeError("Literature synchronization cancelled")
+
+            classification_batch_size = max(
+                1,
+                int(getattr(self.config, "classification_batch_size", 100)),
+            )
+            classified = await _classify_candidates_in_batches(
+                candidates,
+                diseases=diseases,
+                countries=countries,
+                taxonomy=taxonomy,
+                now=now,
+                auto_publish_min_score=self.config.auto_publish_min_score,
+                batch_size=classification_batch_size,
+                after_batch=after_classification_batch,
+            )
+            for candidate, classification in classified:
                 if _hold_degraded_enrichment_for_review(
                     classification,
                     enrichment_degraded=enrichment_degraded,
