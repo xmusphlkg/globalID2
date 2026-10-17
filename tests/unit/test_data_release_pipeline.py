@@ -536,6 +536,11 @@ async def test_retry_reuses_completed_cloudflare_deploy_and_only_verifies():
     assert "Dispatch Reviewed Situation Alerts" in commands
     assert output["pages_deployed"] is True
     assert output["situation_alert_dispatch_attempted"] is True
+    completion = next(
+        entry for entry in entries if entry["title"] == "Data Release Completed"
+    )
+    assert "Reviewed Situation alert dispatch attempted: yes" in completion["content"]
+    assert "Reviewed Situation alerts dispatched:" not in completion["content"]
     assert any(entry["title"] == "Cloudflare Deploy Reused" for entry in entries)
 
 

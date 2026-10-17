@@ -489,7 +489,8 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             f"Site release: {release_identity['release_id']}\n"
             f"Production URL: {cloudflare_deployment.get('production_url') if cloudflare_deployment else '-'}\n"
             f"Subscription options synced: {'yes' if subscription_options_synced else 'no'}\n"
-            f"Reviewed Situation alerts dispatched: {'yes' if situation_alert_dispatch_attempted else 'no'}\n"
+            "Reviewed Situation alert dispatch attempted: "
+            f"{'yes' if situation_alert_dispatch_attempted else 'no'}\n"
             f"Download repo: {download_repo_url or '-'}"
         ),
         content_type="text",
