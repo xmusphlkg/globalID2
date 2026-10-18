@@ -124,6 +124,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/models/call-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Ai Model Call Logs */
+        get: operations["list_ai_model_call_logs_api_v1_ai_models_call_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/models/check-all": {
         parameters: {
             query?: never;
@@ -2883,6 +2900,31 @@ export interface components {
             total_interactions: number;
             /** Total Tokens */
             total_tokens: number;
+        };
+        /** AIModelCallLogOut */
+        AIModelCallLogOut: {
+            /** Agent Name */
+            agent_name: string;
+            /** Created At */
+            created_at: string;
+            /** Error Message */
+            error_message?: string | null;
+            /** Error Type */
+            error_type?: string | null;
+            /** Id */
+            id: number;
+            /** Latency Ms */
+            latency_ms: number;
+            /** Model Key */
+            model_key: string;
+            /** Model Name */
+            model_name: string;
+            /** Provider Key */
+            provider_key: string;
+            /** Request Id */
+            request_id: string;
+            /** Status */
+            status: string;
         };
         /**
          * AIStartRequest
@@ -8109,6 +8151,90 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["ModelOut"];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    list_ai_model_call_logs_api_v1_ai_models_call_logs_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                provider_key?: string | null;
+                model_key?: string | null;
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Response List Ai Model Call Logs Api V1 Ai Models Call Logs Get */
+                        data: components["schemas"]["AIModelCallLogOut"][];
                         meta: components["schemas"]["ResponseMeta"];
                     };
                 };

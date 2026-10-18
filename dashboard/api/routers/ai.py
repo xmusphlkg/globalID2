@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -30,7 +30,7 @@ from src.ai.model_center import (
 from src.control_plane.runtime import runtime_registry
 from src.core.db_schema import ensure_task_type_enum_schema
 from src.core.task_manager import task_manager
-from src.domain.ai_model_center import AIModelConfig, AIProviderConfig
+from src.domain.ai_model_center import AIModelCallLog, AIModelConfig, AIProviderConfig
 from src.domain.country import Country
 from src.domain.report import Report, ReportType
 from src.domain.task import Task, TaskPriority, TaskStatus, TaskType
@@ -729,6 +729,20 @@ class RuntimeRouteOut(BaseModel):
     runtime_model_inflight: int = 0
 
 
+class AIModelCallLogOut(BaseModel):
+    id: int
+    request_id: str
+    model_key: str
+    model_name: str
+    provider_key: str
+    agent_name: str
+    status: str
+    latency_ms: float
+    error_type: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: str
+
+
 @router.post("/reports/runs", response_model=TaskOut, status_code=202)
 async def start_ai_task(
     body: AIStartRequest,
@@ -1159,6 +1173,50 @@ async def test_model(
 async def test_all_models(structured: bool = True):
     await bootstrap_model_center_from_env(force=False)
     return await check_all_models(structured=structured)
+
+
+@router.get("/ai/models/call-logs", response_model=List[AIModelCallLogOut])
+async def list_ai_model_call_logs(
+    response: Response,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
+    provider_key: Optional[str] = None,
+    model_key: Optional[str] = None,
+    status: Optional[str] = Query(None, pattern="^(success|failed)$"),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(AIModelCallLog)
+    if provider_key:
+        query = query.where(AIModelCallLog.provider_key == provider_key)
+    if model_key:
+        query = query.where(AIModelCallLog.model_key == model_key)
+    if status:
+        query = query.where(AIModelCallLog.status == status)
+    rows = (
+        await db.execute(
+            query.order_by(desc(AIModelCallLog.created_at), desc(AIModelCallLog.id))
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    ).scalars().all()
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str((page - 1) * page_size)
+    return [
+        AIModelCallLogOut(
+            id=row.id,
+            request_id=row.request_id,
+            model_key=row.model_key,
+            model_name=row.model_name,
+            provider_key=row.provider_key,
+            agent_name=row.agent_name,
+            status=row.status,
+            latency_ms=row.latency_ms,
+            error_type=row.error_type,
+            error_message=row.error_message,
+            created_at=row.created_at.isoformat(),
+        )
+        for row in rows
+    ]
 
 
 @router.get("/ai/models/runtime", response_model=List[RuntimeRouteOut])

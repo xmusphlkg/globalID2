@@ -2,6 +2,23 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.13.0] - 2026-10-18
+
+### Added
+
+- Added request-level AI model call telemetry for production attempts and model health checks, including provider/model identity, agent, outcome, latency, and sanitized error details; prompts and generated responses are not retained.
+- Added a paginated and filterable AI model call-log API and a live-updating call-log panel in the AI Model Center.
+- Added the `ai_model_call_logs` schema migration and subdivision geography fields for location type and parent jurisdiction.
+
+### Changed
+
+- Improved Chinese provincial report parsing to recognize subtotal labels and additional no-case narrative forms; expanded Hunan archive-index coverage and matching aliases for provincial disease labels.
+- Refreshed the 2026-W42 weekly AI review fingerprint and review timestamp to match the reviewed brief.
+
+### Validation
+
+- Added unit coverage for metadata-only AI call logging and secret redaction.
+
 ## [0.12.1] - 2026-10-18
 
 ### Fixed

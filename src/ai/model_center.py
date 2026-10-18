@@ -9,6 +9,7 @@ import time
 import weakref
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+from uuid import UUID, uuid4
 
 from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
@@ -16,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from src.core import get_config, get_db, get_engine, get_logger
-from src.domain import AIModelConfig, AIProviderConfig
+from src.domain import AIModelCallLog, AIModelConfig, AIProviderConfig
 
 logger = get_logger(__name__)
 
@@ -68,6 +69,58 @@ _recovery_probe_attempted_at: Dict[int, float] = {}
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+_SECRET_VALUE_RE = re.compile(
+    r"(?i)(authorization\s*[:=]\s*(?:bearer\s+)?|api[_-]?key\s*[:=]\s*|"
+    r"access[_-]?token\s*[:=]\s*|sk-[a-z0-9_-]{8,})[^\s,;]+"
+)
+
+
+async def record_model_call_log(
+    *,
+    request_id: UUID,
+    route: Optional[Dict[str, Any]],
+    model_name: str,
+    provider_key: str,
+    agent_name: str,
+    status: str,
+    latency_ms: float,
+    error: Optional[BaseException] = None,
+) -> None:
+    """Persist a metadata-only record for one real provider attempt.
+
+    Logging is best effort: a telemetry storage issue must never turn a valid
+    model response into an application failure.
+    """
+    route = route or {}
+    error_message = _SECRET_VALUE_RE.sub(r"\1[REDACTED]", str(error))[:1000] if error else None
+    try:
+        async with get_db() as db:
+            db.add(
+                AIModelCallLog(
+                    request_id=str(request_id),
+                    model_id=_safe_int(route.get("model_id")),
+                    provider_id=_safe_int(route.get("provider_id")),
+                    model_key=str(route.get("model_key") or f"{provider_key}:{model_name}")[:200],
+                    model_name=str(model_name)[:120],
+                    provider_key=str(route.get("provider_key") or provider_key or "unknown")[:120],
+                    agent_name=str(agent_name)[:160],
+                    status="success" if status == "success" else "failed",
+                    latency_ms=round(max(0.0, float(latency_ms)), 1),
+                    error_type=type(error).__name__[:160] if error else None,
+                    error_message=error_message,
+                )
+            )
+    except Exception as exc:
+        logger.warning("Failed to persist AI model call log: {}", exc)
+
+
+def _safe_int(value: Any) -> Optional[int]:
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _parse_datetime(value: Any) -> Optional[datetime]:
@@ -2314,7 +2367,21 @@ async def check_model_by_id(model_id: int, *, structured: bool = True) -> Dict[s
             "max_tokens": model.max_tokens,
         }
 
+    check_started_at = time.perf_counter()
     result = await test_route_connection(route, structured=structured)
+    check_error = None if result.get("success") else RuntimeError(
+        str(result.get("message") or "Model-center health check failed")
+    )
+    await record_model_call_log(
+        request_id=uuid4(),
+        route=route,
+        model_name=str(route["model_name"]),
+        provider_key=str(route["provider_key"]),
+        agent_name="model_center_health_check",
+        status="success" if result.get("success") else "failed",
+        latency_ms=(time.perf_counter() - check_started_at) * 1000,
+        error=check_error,
+    )
     await update_model_check_result(model_id, result["status"], result["message"])
     if result.get("success"):
         await update_provider_check_result(route["provider_id"], result["status"], result["message"])

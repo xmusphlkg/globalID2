@@ -119,6 +119,8 @@ def _is_report_total_label(value: object) -> bool:
         return False
     if normalized == "total" or "合计" in normalized or "总计" in normalized:
         return True
+    if "小计" in normalized:
+        return True
     return (
         normalized in {"甲类", "乙类", "丙类", "甲乙类", "甲乙丙类", "丙类类计"}
         or "非法定传染病" in normalized
@@ -1009,6 +1011,7 @@ def _normalize_narrative_report(
     # values for unlisted diseases.
     no_case_patterns = (
         re.compile(r"(?P<names>[^，。；;]{1,500})无(?:发病|病例)(?:、死亡)?(?:病例)?报告"),
+        re.compile(r"无(?P<names>[^，。；;]{1,500}?)(?:病例|发病)报告"),
         re.compile(r"无(?P<names>[^，。；;]{1,500}?)(?:\d+种)?(?:甲|乙|丙)类传染病报告"),
     )
     for pattern in no_case_patterns:

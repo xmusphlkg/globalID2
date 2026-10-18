@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Cpu,
   GitBranch,
+  History,
   KeyRound,
   ListTodo,
   MessageSquareText,
@@ -31,6 +32,7 @@ import {
   type AIRuntimeRoute,
   type ProviderModelDiscoveryResult,
   useAIModels,
+  useAIModelCallLogs,
   useAIProviders,
   useAIRuntimeRoutes,
   useCheckAllAIModels,
@@ -56,7 +58,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 type HealthFilter = "all" | "healthy" | "attention" | "checking";
 type DrawerMode = "create" | "edit" | null;
 type DiscoveryImportResult = { status: string; message: string };
-type WorkspaceView = "providers" | "models" | "runtime";
+type WorkspaceView = "providers" | "models" | "runtime" | "logs";
 
 const inputClass =
   "h-10 w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted disabled:bg-tremor-background-subtle disabled:text-tremor-content-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong";
@@ -313,6 +315,7 @@ export default function AIModelsPage() {
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
   const [activeView, setActiveView] = useState<WorkspaceView>("providers");
+  const { data: callLogs, isLoading: loadingCallLogs, error: callLogsError } = useAIModelCallLogs(activeView === "logs");
   const [deletingProviderId, setDeletingProviderId] = useState<string | null>(null);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
   const [discoveryResult, setDiscoveryResult] = useState<{ provider: AIProviderItem; result: ProviderModelDiscoveryResult } | null>(null);
@@ -361,6 +364,16 @@ export default function AIModelsPage() {
         keys: "已配密钥",
         routes: "运行路由",
         runtime: "运行时",
+        callLogs: "调用日志",
+        noCallLogs: "还没有模型调用记录。新的生产请求会显示在这里。",
+        callTime: "时间",
+        callStatus: "结果",
+        callProvider: "提供商",
+        callModel: "模型",
+        callAgent: "调用方",
+        callLatency: "耗时",
+        callError: "错误",
+        callLogPrivacy: "为保护隐私，不保存提示词或模型回复。最多显示最近 100 条调用尝试。",
         defaults: "默认模型",
         searchPlaceholder: "搜索 provider、model、base url 或 route key",
         all: "全部",
@@ -433,6 +446,16 @@ export default function AIModelsPage() {
         keys: "Configured Keys",
         routes: "Runtime Routes",
         runtime: "Runtime",
+        callLogs: "Call Logs",
+        noCallLogs: "No model call records yet. New production requests will appear here.",
+        callTime: "Time",
+        callStatus: "Result",
+        callProvider: "Provider",
+        callModel: "Model",
+        callAgent: "Caller",
+        callLatency: "Latency",
+        callError: "Error",
+        callLogPrivacy: "Prompts and model responses are not stored. Showing up to the latest 100 attempts.",
         defaults: "Default Models",
         searchPlaceholder: "Search provider, model, base url, or route key",
         all: "All",
@@ -1228,6 +1251,7 @@ export default function AIModelsPage() {
             { id: "providers" as const, label: copy.providers, count: filteredProviders.length, icon: <ShieldCheck className="h-4 w-4" /> },
             { id: "models" as const, label: copy.models, count: filteredModels.length, icon: <Cpu className="h-4 w-4" /> },
             { id: "runtime" as const, label: copy.runtime, count: filteredRuntimeRoutes.length, icon: <GitBranch className="h-4 w-4" /> },
+            { id: "logs" as const, label: copy.callLogs, count: callLogs?.length ?? 0, icon: <History className="h-4 w-4" /> },
           ].map((view) => {
             const selected = activeView === view.id;
             return (
@@ -1404,6 +1428,48 @@ export default function AIModelsPage() {
                   />
                 </div>
               </>
+            )}
+          </div>
+        ) : null}
+
+        {activeView === "logs" ? (
+          <div id="model-center-logs-panel" role="tabpanel" className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.callLogs}</h2>
+              <StatusBadge tone="neutral">{callLogs?.length ?? 0}</StatusBadge>
+            </div>
+            <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy.callLogPrivacy}</p>
+            {loadingCallLogs ? (
+              <SkeletonRows />
+            ) : callLogsError ? (
+              <AlertBox tone="danger">{queryErrorText(callLogsError, lang)}</AlertBox>
+            ) : callLogs?.length ? (
+              <div className="overflow-x-auto rounded-tremor-default border border-tremor-border dark:border-dark-tremor-border">
+                <table className="min-w-full divide-y divide-tremor-border text-left text-sm dark:divide-dark-tremor-border">
+                  <thead className="bg-tremor-background-subtle text-xs uppercase text-tremor-content-subtle dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-subtle">
+                    <tr>
+                      {[copy.callTime, copy.callStatus, copy.callProvider, copy.callModel, copy.callAgent, copy.callLatency, copy.callError].map((label) => (
+                        <th key={label} className="px-3 py-2 font-medium">{label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-tremor-border dark:divide-dark-tremor-border">
+                    {callLogs.map((entry) => (
+                      <tr key={entry.id} className="align-top text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                        <td className="whitespace-nowrap px-3 py-2 text-xs">{formatDateTime(entry.created_at)}</td>
+                        <td className="px-3 py-2"><StatusBadge tone={entry.status === "success" ? "success" : "danger"}>{entry.status}</StatusBadge></td>
+                        <td className="px-3 py-2 font-mono text-xs">{entry.provider_key}</td>
+                        <td className="px-3 py-2"><span className="font-medium">{entry.model_name}</span><span className="ml-1 block font-mono text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{entry.model_key}</span></td>
+                        <td className="px-3 py-2">{entry.agent_name}</td>
+                        <td className="whitespace-nowrap px-3 py-2 tabular-nums">{Math.round(entry.latency_ms)} ms</td>
+                        <td className="max-w-sm px-3 py-2 text-xs text-rose-700 dark:text-rose-300">{entry.error_message ? `${entry.error_type}: ${entry.error_message}` : "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState icon={<History className="h-10 w-10" />} title={copy.noCallLogs} />
             )}
           </div>
         ) : null}

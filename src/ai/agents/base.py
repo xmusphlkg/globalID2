@@ -9,6 +9,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
+from uuid import uuid4
 
 from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
@@ -28,6 +29,7 @@ from src.ai.model_center import (
     mark_provider_authentication_failed,
     record_route_runtime_failure,
     record_route_runtime_success,
+    record_model_call_log,
     mark_route_rate_limited,
     mark_route_unavailable,
     runtime_route_admission_score,
@@ -810,6 +812,7 @@ class BaseAgent(ABC):
         attempted_models: List[str] = []
         authentication_failed_providers: set[str] = set()
         original_model = self.model
+        request_id = uuid4()
 
         for candidate in candidates:
             model_name = candidate["model_name"]
@@ -836,6 +839,9 @@ class BaseAgent(ABC):
                 # Admission waits are not provider latency or provider errors.
                 await self.rate_limiter.acquire()
                 attempt_started_at = time.perf_counter()
+                provider = str(
+                    route.get("provider_key") or route.get("provider_name") or "runtime"
+                ) if route else self.get_provider_for_model(model_name)
                 try:
                     if model_name not in attempted_models:
                         attempted_models.append(model_name)
@@ -867,6 +873,15 @@ class BaseAgent(ABC):
                     if not isinstance(response_text, str) or not response_text.strip():
                         raise RuntimeError("Model returned an empty completion response")
                     attempt_duration_seconds = time.perf_counter() - attempt_started_at
+                    await record_model_call_log(
+                        request_id=request_id,
+                        route=route,
+                        model_name=model_name,
+                        provider_key=provider,
+                        agent_name=self.name,
+                        status="success",
+                        latency_ms=attempt_duration_seconds * 1000,
+                    )
                     if route:
                         try:
                             await record_route_runtime_success(
@@ -945,6 +960,16 @@ class BaseAgent(ABC):
                 except Exception as e:
                     last_error = e
                     retry_count += 1
+                    await record_model_call_log(
+                        request_id=request_id,
+                        route=route,
+                        model_name=model_name,
+                        provider_key=provider,
+                        agent_name=self.name,
+                        status="failed",
+                        latency_ms=(time.perf_counter() - attempt_started_at) * 1000,
+                        error=e,
+                    )
                     authentication_related = is_provider_authentication_error(e)
 
                     if route and not authentication_related:

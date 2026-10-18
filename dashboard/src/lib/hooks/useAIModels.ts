@@ -122,6 +122,20 @@ export interface AIRuntimeRoute {
   runtime_model_inflight: number;
 }
 
+export interface AIModelCallLogItem {
+  id: number;
+  request_id: string;
+  model_key: string;
+  model_name: string;
+  provider_key: string;
+  agent_name: string;
+  status: "success" | "failed";
+  latency_ms: number;
+  error_type: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
 export interface ProviderPayload {
   provider_key: string;
   provider_name: string;
@@ -215,6 +229,16 @@ export function useAIRuntimeRoutes() {
     queryKey: ["ai-runtime-routes"],
     queryFn: () => apiFetch("/ai/models/runtime"),
     staleTime: 10 * 1000,
+  });
+}
+
+export function useAIModelCallLogs(enabled = true) {
+  return useQuery<AIModelCallLogItem[]>({
+    queryKey: ["ai-model-call-logs"],
+    queryFn: () => apiFetch("/ai/models/call-logs?page=1&page_size=100"),
+    enabled,
+    staleTime: 5 * 1000,
+    refetchInterval: enabled ? 15 * 1000 : false,
   });
 }
 

@@ -40,7 +40,7 @@ from .disease_mapping_registry import (
 )
 from .country_scope import CountryScope
 from .population_record import PopulationRecord
-from .ai_model_center import AIProviderConfig, AIModelConfig
+from .ai_model_center import AIProviderConfig, AIModelConfig, AIModelCallLog
 from .automation_job import AutomationJob
 from .data_release_job import DataReleaseJob
 from .scheduled_job_state import ScheduledJobState
@@ -126,6 +126,7 @@ __all__ = [
     "PopulationRecord",
     "AIProviderConfig",
     "AIModelConfig",
+    "AIModelCallLog",
     "AutomationJob",
     "DataReleaseJob",
     "ScheduledJobState",
