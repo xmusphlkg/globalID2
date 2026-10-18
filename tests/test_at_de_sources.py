@@ -46,7 +46,9 @@ def test_survstat_zip_parser_retains_week_and_source_category() -> None:
         archive.writestr("export.csv", "Krankheit;Meldejahr;Meldewoche;Anzahl Fälle\nCampylobacteriose;2026;31;12\n")
     rows = parse_survstat_zip(stream.getvalue(), source_url="https://example.test/export", retrieved_at=datetime(2026, 8, 10, tzinfo=timezone.utc))
     assert [(row["Date"], row["Cases"], row["DiseaseCode"]) for row in rows] == [("2026-07-27", "12", "__source_native__")]
-    assert json.loads(rows[0]["Dimensions"])["source_disease_label"] == "Campylobacteriose"
+    assert rows[0]["SourceDiseaseCode"] == "campylobacteriose"
+    assert rows[0]["RawDiseaseLabel"] == "Campylobacteriose"
+    assert json.loads(rows[0]["Dimensions"]) == {}
 
 
 def test_survstat_zip_parser_accepts_live_utf16_pivot_export() -> None:

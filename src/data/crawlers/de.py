@@ -98,7 +98,10 @@ def _normalized_row(*, label: str, year: int, week: int, cases: int, source_url:
         "ReportingArea": geography, "Geocode": geography_key.removeprefix("country:").removesuffix(":national"),
         "ParentCountryCode": "DE", "LocationType": "country" if geography_key == NATIONAL_GEOGRAPHY_KEY else "subdivision",
         "DatasetStatus": "closed_revisable", "IsProvisional": "false", "RevisionSemantics": "authoritative_revision", "AuthoritativeRevision": "true",
-        "Dimensions": json.dumps({"source_disease_code": source_code, "source_disease_label": label, "reference_definition": "default"}, ensure_ascii=False, sort_keys=True),
+        # Disease category is already the source-series identity. Keep it out
+        # of analytical dimensions so the canonical case-count projector can
+        # treat each mapped pathogen series as the full disease observation.
+        "Dimensions": "{}",
         "Source": DEFAULT_SOURCE_NAME, "SourceURL": source_url, "RetrievedAt": retrieved_at.isoformat().replace("+00:00", "Z"), "RawSHA256": raw_sha,
         "License": "RKI_data_usage_terms", "PublicReleaseEnabled": "true", "LicenseReviewStatus": "reviewed_source_attribution_required",
     }
@@ -321,8 +324,48 @@ class GermanySurvStatCrawler(BaseCrawler):
                     f"with key {expected_member!r}; available={available!r}"
                 )
             members, selected = selected_pair
+            # The regional filter is hierarchical (state -> NUTS2 -> county).
+            # Post the selected state control as a WebForms event before
+            # downloading so SurvStat refreshes/clears the descendant controls.
+            # Merely placing the state member in the final download payload
+            # leaves stale child selections from the initial form and can
+            # silently return the unfiltered national result.
+            html = self._postback(
+                html,
+                target=members,
+                value=str(selected.get("value", "")),
+            ).text
+            refreshed_soup = BeautifulSoup(html, "html.parser")
+            refreshed_member_selects = [
+                select
+                for select in refreshed_soup.select("select[name]")
+                if filter_prefix in str(select.get("name"))
+                and "ListBoxFilterLevelMembers" in str(select.get("name"))
+            ]
+            selected_values = [
+                str(option.get("value", ""))
+                for select in refreshed_member_selects
+                for option in select.select("option[selected]")
+            ]
+            if expected_member not in selected_values:
+                raise DESurvStatContractError(
+                    f"SurvStat did not retain the selected state {region_label!r} "
+                    "after applying its geography filter"
+                )
+            for select in refreshed_member_selects[1:]:
+                unrelated = [
+                    str(option.get("value", ""))
+                    for option in select.select("option[selected]")
+                    if not str(option.get("value", "")).startswith(
+                        f"{expected_member}.&["
+                    )
+                ]
+                if unrelated:
+                    raise DESurvStatContractError(
+                        f"SurvStat retained descendant geography selections "
+                        f"outside {region_label!r}: {unrelated!r}"
+                    )
             payload = self._form_payload(html)
-            payload[members] = str(selected.get("value", ""))
             download = next((name for name in payload if name.endswith("ButtonDownload")), "ctl00$ctl00$ContentPlaceHolderMain$ContentPlaceHolderAltGridFull$ButtonDownload")
             payload[download] = "ZIP herunterladen"
             response = self.post(self.create_url, data=payload)
@@ -337,13 +380,35 @@ class GermanySurvStatCrawler(BaseCrawler):
             raise DESurvStatContractError("SurvStat did not return a ZIP; interactive query contract likely changed")
         return response.content, str(getattr(response, "url", self.create_url))
 
-    def _archive(self, year: int, payload: bytes, url: str) -> None:
+    def _archive(
+        self,
+        year: int,
+        payload: bytes,
+        url: str,
+        *,
+        region: str | None,
+    ) -> None:
         if not self.save_raw:
             return
         folder = self.raw_dir / f"weekly/{year}"; folder.mkdir(parents=True, exist_ok=True)
         digest = hashlib.sha256(payload).hexdigest(); path = folder / f"survstat_{year}_{digest[:12]}.zip"
         path.write_bytes(payload)
-        path.with_suffix(".json").write_text(json.dumps({"source_url": url, "year": year, "retrieved_at": datetime.now(timezone.utc).isoformat(), "sha256": digest}, indent=2) + "\n", encoding="utf-8")
+        geography_key = f"country:{region}:national" if region else NATIONAL_GEOGRAPHY_KEY
+        metadata = {
+            "source_url": url,
+            "year": year,
+            "region": region,
+            "geography_key": geography_key,
+            "row_dimension": "[PathogenOut].[KategorieNz]",
+            "column_dimension": "[ReportingDate].[Week]",
+            "reference_definition": "default",
+            "sha256": digest,
+            "retrieved_at": datetime.now(timezone.utc).isoformat(),
+        }
+        path.with_suffix(".json").write_text(
+            json.dumps(metadata, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
     def crawl_weekly_national(self, output_csv: Path, *, years: Iterable[int]) -> DEFetchSummary:
         return self._crawl_weekly(output_csv, years=years, region=None)
@@ -366,7 +431,7 @@ class GermanySurvStatCrawler(BaseCrawler):
                 raise DESurvStatContractError(
                     f"SurvStat year {year} failed after three fresh sessions: {last_error}"
                 ) from last_error
-            self._archive(year, payload, url)
+            self._archive(year, payload, url, region=region)
             label = GERMAN_STATES[region] if region else "Deutschland"
             geography_key = f"country:{region}:national" if region else NATIONAL_GEOGRAPHY_KEY
             rows.extend(parse_survstat_zip(payload, source_url=url, retrieved_at=datetime.now(timezone.utc), export_year=year, geography=label, geography_key=geography_key))

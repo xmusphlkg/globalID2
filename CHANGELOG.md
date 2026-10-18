@@ -2,6 +2,18 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.12.1] - 2026-10-18
+
+### Fixed
+
+- Corrected Germany SurvStat state exports to apply the hierarchical state geography filter before downloading, preventing state requests from silently returning national observations.
+- Added geography, dimension, reference, and checksum metadata to archived German state exports so each raw payload can be traced and validated.
+- Kept German pathogen category identifiers in source-series identity rather than analytical dimensions, allowing reviewed case-count mappings to reach standard disease projections.
+
+### Data
+
+- Refreshed and normalized the 16 German state series from official SurvStat exports, restoring their standard disease projections for state detail pages and trend charts.
+
 ## [0.12.0] - 2026-10-16
 
 ### Added
