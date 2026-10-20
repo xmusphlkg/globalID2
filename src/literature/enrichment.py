@@ -16,7 +16,7 @@ import json
 import re
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 
 from src.ai.agents.base import BaseAgent
 from src.ai.model_center import get_active_model_routes, is_provider_authentication_error
@@ -795,9 +795,31 @@ class LiteratureEnrichmentPipeline:
                     LiteratureArticle.publication_status.in_(("review", "published")),
                     LiteratureArticle.integrity_status.notin_(("retracted", "expression_of_concern")),
                     LiteratureArticle.abstract_text.is_not(None),
+                    func.length(LiteratureArticle.abstract_text) >= self.config.ai_min_abstract_characters,
+                    or_(
+                        LiteratureArticle.open_access_status == "open",
+                        func.length(func.trim(func.coalesce(LiteratureArticle.open_access_url, ""))) > 0,
+                        func.length(func.trim(func.coalesce(LiteratureArticle.pmcid, ""))) > 0,
+                    ),
                 )
                 .order_by(LiteratureArticle.discovery_score.desc(), LiteratureArticle.indexed_at.desc())
             )
+            if not force:
+                domain = LiteratureArticle.metadata_["classification_evidence"]["research_domain"]["value"].as_string()
+                decision = LiteratureArticle.metadata_["autopilot"]["decision"].as_string()
+                base_query = base_query.where(
+                    func.coalesce(domain, "").not_in(NON_PUBLIC_RESEARCH_DOMAINS),
+                    func.coalesce(decision, "") != "defer",
+                )
+            study_type = func.lower(func.coalesce(LiteratureArticle.study_type, ""))
+            article_type = func.lower(func.coalesce(LiteratureArticle.article_type, ""))
+            for marker in (
+                "commentary", "editorial", "perspective", "opinion", "systematic review",
+                "meta-analysis", "meta analysis", "review",
+            ):
+                base_query = base_query.where(~study_type.contains(marker))
+            for marker in ("commentary", "editorial", "opinion", "review"):
+                base_query = base_query.where(~article_type.contains(marker))
             if self.config.ai_require_open_access:
                 base_query = base_query.where(LiteratureArticle.open_access_status == "open")
             if requested_ids:
