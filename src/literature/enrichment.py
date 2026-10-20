@@ -49,6 +49,14 @@ SUPPORTED_SUMMARY_LANGUAGES = ("en", "zh", "fr")
 TRANSLATION_LANGUAGES = ("zh", "fr")
 LANGUAGE_NAMES = {"en": "English", "zh": "Simplified Chinese", "fr": "French"}
 TRANSLATION_PROVENANCE_VERSION = "translation-provenance.v1"
+NON_PUBLIC_RESEARCH_DOMAINS = {"animal_only", "basic_research", "plant_only"}
+
+
+def _article_summary_deferred(article: LiteratureArticle) -> bool:
+    metadata = article.metadata_ or {}
+    domain = ((metadata.get("classification_evidence") or {}).get("research_domain") or {}).get("value")
+    decision = (metadata.get("autopilot") or {}).get("decision")
+    return domain in NON_PUBLIC_RESEARCH_DOMAINS or decision == "defer"
 
 
 class LiteratureEvidenceAgent(BaseAgent):
@@ -797,6 +805,8 @@ class LiteratureEnrichmentPipeline:
             summaries_by_key: dict[tuple[str, str], LiteratureSummary] = {}
 
             def needs_work(article: LiteratureArticle) -> bool:
+                if not force and _article_summary_deferred(article):
+                    return False
                 if detail_restrictions(article):
                     return False
                 if len(article.abstract_text or "") < self.config.ai_min_abstract_characters:
@@ -906,6 +916,8 @@ class LiteratureEnrichmentPipeline:
         return list(articles), context
 
     async def _should_skip(self, article: LiteratureArticle, *, language: str, force: bool) -> bool:
+        if not force and _article_summary_deferred(article):
+            return True
         if detail_restrictions(article):
             return True
         if len(article.abstract_text or "") < self.config.ai_min_abstract_characters:
