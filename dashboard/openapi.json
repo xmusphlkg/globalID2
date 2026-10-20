@@ -8167,6 +8167,19 @@
             "title": "Provider Key",
             "type": "string"
           },
+          "runtime_max_concurrency": {
+            "anyOf": [
+              {
+                "maximum": 64.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Max Concurrency"
+          },
           "temperature": {
             "anyOf": [
               {
@@ -8393,6 +8406,17 @@
             ],
             "title": "Runtime Latency Ewma Ms"
           },
+          "runtime_max_concurrency": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Max Concurrency"
+          },
           "runtime_timeout_count": {
             "default": 0,
             "title": "Runtime Timeout Count",
@@ -8517,6 +8541,19 @@
               }
             ],
             "title": "Priority"
+          },
+          "runtime_max_concurrency": {
+            "anyOf": [
+              {
+                "maximum": 64.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Max Concurrency"
           },
           "temperature": {
             "anyOf": [

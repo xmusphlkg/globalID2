@@ -625,6 +625,7 @@ class ModelCreateRequest(BaseModel):
     api_style: Optional[str] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
+    runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=64)
     extra_params: Dict[str, Any] = Field(default_factory=dict)
     is_enabled: bool = True
     is_default: bool = False
@@ -637,6 +638,7 @@ class ModelUpdateRequest(BaseModel):
     api_style: Optional[str] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
+    runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=64)
     extra_params: Optional[Dict[str, Any]] = None
     is_enabled: Optional[bool] = None
     is_default: Optional[bool] = None
@@ -655,6 +657,7 @@ class ModelOut(BaseModel):
     api_style: Optional[str] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
+    runtime_max_concurrency: Optional[int] = None
     extra_params: Dict[str, Any] = {}
     is_enabled: bool
     is_default: bool
@@ -1043,6 +1046,9 @@ async def create_model(body: ModelCreateRequest, db: AsyncSession = Depends(get_
         for old in (await db.execute(select(AIModelConfig).where(AIModelConfig.is_default.is_(True)))).scalars().all():
             old.is_default = False
 
+    extra_params = dict(body.extra_params)
+    if body.runtime_max_concurrency is not None:
+        extra_params["runtime_max_concurrency"] = body.runtime_max_concurrency
     model = AIModelConfig(
         provider_id=provider.id,
         model_key=model_key,
@@ -1052,7 +1058,7 @@ async def create_model(body: ModelCreateRequest, db: AsyncSession = Depends(get_
         api_style=body.api_style,
         temperature=body.temperature,
         max_tokens=body.max_tokens,
-        extra_params=body.extra_params,
+        extra_params=extra_params,
         is_enabled=body.is_enabled,
         is_default=body.is_default,
         priority=body.priority,
@@ -1080,6 +1086,7 @@ async def update_model(model_key: str, body: ModelUpdateRequest, db: AsyncSessio
             select(AIModelConfig)
             .options(selectinload(AIModelConfig.provider))
             .where(AIModelConfig.model_key == model_key)
+            .with_for_update(of=AIModelConfig)
         )
     ).scalar_one_or_none()
     if model is None:
@@ -1095,8 +1102,14 @@ async def update_model(model_key: str, body: ModelUpdateRequest, db: AsyncSessio
         model.temperature = body.temperature
     if body.max_tokens is not None:
         model.max_tokens = body.max_tokens
-    if body.extra_params is not None:
-        model.extra_params = body.extra_params
+    if body.extra_params is not None or "runtime_max_concurrency" in body.model_fields_set:
+        extra_params = dict(body.extra_params if body.extra_params is not None else (model.extra_params or {}))
+        if "runtime_max_concurrency" in body.model_fields_set:
+            if body.runtime_max_concurrency is None:
+                extra_params.pop("runtime_max_concurrency", None)
+            else:
+                extra_params["runtime_max_concurrency"] = body.runtime_max_concurrency
+        model.extra_params = extra_params
     if body.is_enabled is not None:
         model.is_enabled = body.is_enabled
     if body.priority is not None:
@@ -1497,6 +1510,7 @@ def _model_to_out(model: AIModelConfig) -> ModelOut:
         api_style=model.api_style,
         temperature=model.temperature,
         max_tokens=model.max_tokens,
+        runtime_max_concurrency=(model.extra_params or {}).get("runtime_max_concurrency"),
         extra_params=model.extra_params or {},
         is_enabled=model.is_enabled,
         is_default=model.is_default,

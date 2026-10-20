@@ -30,9 +30,12 @@ from src.ai.model_center import (
     record_route_runtime_failure,
     record_route_runtime_success,
     record_model_call_log,
+    route_completion_extra_body,
     mark_route_rate_limited,
     mark_route_unavailable,
     runtime_route_admission_score,
+    runtime_route_completion_max_tokens,
+    runtime_route_request_timeout_seconds,
 )
 
 logger = get_logger(__name__)
@@ -181,14 +184,9 @@ class BaseAgent(ABC):
         if runtime_routes:
             for route in runtime_routes:
                 route_key = str(route.get("model_key") or route.get("model_name") or "")
-                model_name = str(route.get("model_name") or "")
-
                 route_wait = cls._cooldown_remaining_seconds(cls.ROUTE_COOLDOWNS.get(route_key))
-                model_wait = cls._cooldown_remaining_seconds(cls.MODEL_COOLDOWNS.get(model_name))
                 if route_wait > 0:
                     waits.append(route_wait)
-                if model_wait > 0:
-                    waits.append(model_wait)
 
                 try:
                     db_wait = int(route.get("rate_limit_remaining_seconds") or 0)
@@ -204,10 +202,11 @@ class BaseAgent(ABC):
                 if runtime_wait > 0:
                     waits.append(runtime_wait)
 
-        for model_name in chain or []:
-            model_wait = cls._cooldown_remaining_seconds(cls.MODEL_COOLDOWNS.get(model_name))
-            if model_wait > 0:
-                waits.append(model_wait)
+        if runtime_routes is None:
+            for model_name in chain or []:
+                model_wait = cls._cooldown_remaining_seconds(cls.MODEL_COOLDOWNS.get(model_name))
+                if model_wait > 0:
+                    waits.append(model_wait)
 
         if not waits:
             return 1
@@ -249,8 +248,6 @@ class BaseAgent(ABC):
                 ):
                     continue
                 if not ignore_local_cooldowns and BaseAgent._is_route_cooling_down(route_key):
-                    continue
-                if not ignore_local_cooldowns and BaseAgent._is_model_cooling_down(model_name):
                     continue
                 candidates.append(
                     {
@@ -535,6 +532,70 @@ class BaseAgent(ABC):
             return "\n".join(part for part in parts if part)
         return str(content)
 
+    @staticmethod
+    def _empty_completion_error(response: Any) -> RuntimeError:
+        """Describe an empty upstream response without logging its prompt/body."""
+        choices = response.get("choices") if isinstance(response, dict) else getattr(response, "choices", None)
+        first = choices[0] if isinstance(choices, (list, tuple)) and choices else None
+        message = (
+            first.get("message")
+            if isinstance(first, dict)
+            else getattr(first, "message", None)
+        )
+        if message is None and isinstance(first, dict):
+            message = first
+        if isinstance(message, dict):
+            message_fields = sorted(str(key) for key in message.keys())[:12]
+            refusal = bool(message.get("refusal"))
+            tool_calls = message.get("tool_calls")
+            reasoning_content = message.get("reasoning_content")
+        else:
+            message_fields = sorted(
+                key for key in ("content", "refusal", "tool_calls", "reasoning_content")
+                if getattr(message, key, None) is not None
+            )
+            refusal = bool(getattr(message, "refusal", None))
+            tool_calls = getattr(message, "tool_calls", None)
+            reasoning_content = getattr(message, "reasoning_content", None)
+
+        usage = response.get("usage") if isinstance(response, dict) else getattr(response, "usage", None)
+        completion_tokens = (
+            usage.get("completion_tokens")
+            if isinstance(usage, dict)
+            else getattr(usage, "completion_tokens", None)
+        )
+        finish_reason = (
+            first.get("finish_reason")
+            if isinstance(first, dict)
+            else getattr(first, "finish_reason", None)
+        )
+        tool_call_count = len(tool_calls) if isinstance(tool_calls, (list, tuple)) else int(bool(tool_calls))
+        top_level_fields = (
+            sorted(str(key) for key in response.keys())[:12]
+            if isinstance(response, dict)
+            else []
+        )
+        explanation = (
+            "Model exhausted its completion token budget before producing an answer"
+            if finish_reason == "length" and reasoning_content
+            else "Model returned an empty completion response"
+        )
+        return RuntimeError(
+            f"{explanation} "
+            f"(finish_reason={finish_reason!r}, completion_tokens={completion_tokens!r}, "
+            f"reasoning_chars={len(str(reasoning_content or ''))}, "
+            f"message_fields={message_fields!r}, refusal_present={refusal}, "
+            f"tool_call_count={tool_call_count}, response_type={type(response).__name__}, "
+            f"response_fields={top_level_fields!r})"
+        )
+
+    @classmethod
+    def _normalize_response_content(cls, content: Any, response: Any) -> str:
+        text = cls._completion_content_to_text(content)
+        if not text.strip():
+            raise cls._empty_completion_error(response)
+        return text
+
     @classmethod
     def _extract_openai_compatible_response(cls, response: Any) -> Tuple[str, Dict[str, int]]:
         """Normalize OpenAI-compatible responses, including string-returning proxies."""
@@ -551,6 +612,8 @@ class BaseAgent(ABC):
             }
 
         if isinstance(response, str):
+            if not response.strip():
+                raise cls._empty_completion_error(response)
             return response, token_usage
 
         if isinstance(response, dict):
@@ -560,25 +623,25 @@ class BaseAgent(ABC):
                 if isinstance(first, dict):
                     message = first.get("message")
                     if isinstance(message, dict):
-                        return cls._completion_content_to_text(message.get("content")), token_usage
-                    return cls._completion_content_to_text(first.get("text") or first.get("content")), token_usage
+                        return cls._normalize_response_content(message.get("content"), response), token_usage
+                    return cls._normalize_response_content(first.get("text") or first.get("content"), response), token_usage
             output_text = response.get("output_text")
             if output_text is not None:
-                return cls._completion_content_to_text(output_text), token_usage
-            return cls._completion_content_to_text(response.get("content")), token_usage
+                return cls._normalize_response_content(output_text, response), token_usage
+            return cls._normalize_response_content(response.get("content"), response), token_usage
 
         choices = getattr(response, "choices", None)
         if choices:
             first = choices[0]
             message = getattr(first, "message", None)
             if message is not None:
-                return cls._completion_content_to_text(getattr(message, "content", None)), token_usage
-            return cls._completion_content_to_text(getattr(first, "text", None)), token_usage
+                return cls._normalize_response_content(getattr(message, "content", None), response), token_usage
+            return cls._normalize_response_content(getattr(first, "text", None), response), token_usage
 
         output_text = getattr(response, "output_text", None)
         if output_text is not None:
-            return cls._completion_content_to_text(output_text), token_usage
-        return cls._completion_content_to_text(getattr(response, "content", response)), token_usage
+            return cls._normalize_response_content(output_text, response), token_usage
+        return cls._normalize_response_content(getattr(response, "content", response), response), token_usage
 
     async def _safe_openai_completion_create(
         self,
@@ -911,7 +974,8 @@ class BaseAgent(ABC):
                             logger.warning(f"Failed to clear route cooldown for '{route_key}': {clear_exc}")
 
                     # Success means local cooldown markers should no longer block this model/route.
-                    BaseAgent.MODEL_COOLDOWNS.pop(model_name, None)
+                    if route is None:
+                        BaseAgent.MODEL_COOLDOWNS.pop(model_name, None)
                     BaseAgent.ROUTE_COOLDOWNS.pop(route_key, None)
 
                     # 记录对话历史
@@ -1022,10 +1086,11 @@ class BaseAgent(ABC):
 
                     if isinstance(e, TimeoutError):
                         if timeout_cooldown_seconds:
-                            BaseAgent._mark_model_cooling_down(
-                                self.model,
-                                timeout_cooldown_seconds,
-                            )
+                            if route is None:
+                                BaseAgent._mark_model_cooling_down(
+                                    self.model,
+                                    timeout_cooldown_seconds,
+                                )
                             BaseAgent._mark_route_cooling_down(
                                 route_key,
                                 timeout_cooldown_seconds,
@@ -1066,7 +1131,8 @@ class BaseAgent(ABC):
                             f"Detected quota/rate-limit issue for model '{self.model}', "
                             f"will cool down this route for {cooldown_seconds}s and switch to the next model if available."
                         )
-                        BaseAgent._mark_model_cooling_down(self.model, cooldown_seconds)
+                        if route is None:
+                            BaseAgent._mark_model_cooling_down(self.model, cooldown_seconds)
                         BaseAgent._mark_route_cooling_down(route_key, cooldown_seconds)
                         if route:
                             try:
@@ -1091,19 +1157,9 @@ class BaseAgent(ABC):
                             f"cooling down model/route for {channel_cooldown_seconds}s before probing alternatives.",
                             self.model,
                         )
-                        BaseAgent._mark_model_cooling_down(self.model, channel_cooldown_seconds)
+                        if route is None:
+                            BaseAgent._mark_model_cooling_down(self.model, channel_cooldown_seconds)
                         BaseAgent._mark_route_cooling_down(route_key, channel_cooldown_seconds)
-                        if route:
-                            try:
-                                await mark_route_rate_limited(
-                                    route,
-                                    str(e),
-                                    retry_after_seconds=cooldown_seconds,
-                                )
-                            except Exception as persist_exc:
-                                logger.warning(
-                                    f"Failed to persist channel-failure cooldown for '{route_key}': {persist_exc}"
-                                )
                         BaseAgent.AVAILABLE_MODEL_ROUTES = None
                         BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
                         break
@@ -1114,7 +1170,8 @@ class BaseAgent(ABC):
                             f"Detected unavailable model/permission issue for '{self.model}'. "
                             f"Will skip this model for now and continue with the next candidate."
                         )
-                        BaseAgent._mark_model_cooling_down(self.model, unavailable_cooldown)
+                        if route is None:
+                            BaseAgent._mark_model_cooling_down(self.model, unavailable_cooldown)
                         BaseAgent._mark_route_cooling_down(route_key, unavailable_cooldown)
                         if route:
                             try:
@@ -1214,10 +1271,13 @@ class BaseAgent(ABC):
                 system,
                 **kwargs,
             )
-            if request_timeout_seconds is not None:
+            route_timeout_seconds = runtime_route_request_timeout_seconds(
+                route, request_timeout_seconds
+            )
+            if route_timeout_seconds is not None:
                 response = await asyncio.wait_for(
                     request,
-                    timeout=max(0.01, float(request_timeout_seconds)),
+                    timeout=max(0.01, float(route_timeout_seconds)),
                 )
             else:
                 response = await request
@@ -1251,13 +1311,8 @@ class BaseAgent(ABC):
         style = str(route.get("api_style") or "openai_compatible").lower()
         model_name = str(route.get("model_name") or self.model)
         route_temperature = route.get("temperature")
-        route_max_tokens = route.get("max_tokens")
         temperature = self.temperature if route_temperature is None else float(route_temperature)
-        max_tokens = (
-            self.max_tokens
-            if route_max_tokens is None
-            else min(self.max_tokens, int(route_max_tokens))
-        )
+        max_tokens = runtime_route_completion_max_tokens(route, self.max_tokens)
         sanitized_kwargs = self._sanitize_completion_params(dict(kwargs))
 
         if style == "anthropic":
@@ -1296,6 +1351,10 @@ class BaseAgent(ABC):
             extra_params.pop(reserved, None)
         extra_params.update(sanitized_kwargs)
         extra_params = self._sanitize_completion_params(extra_params)
+        if "extra_body" not in extra_params:
+            extra_body = route_completion_extra_body(route)
+            if extra_body is not None:
+                extra_params["extra_body"] = extra_body
 
         request_payload = {
             "model": model_name,

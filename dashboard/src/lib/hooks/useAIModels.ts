@@ -48,6 +48,7 @@ export interface AIModelItem {
   api_style: string | null;
   temperature: number | null;
   max_tokens: number | null;
+  runtime_max_concurrency: number | null;
   extra_params: Record<string, unknown>;
   is_enabled: boolean;
   is_default: boolean;
@@ -172,6 +173,7 @@ export interface ModelPayload {
   api_style?: string | null;
   temperature?: number | null;
   max_tokens?: number | null;
+  runtime_max_concurrency?: number | null;
   extra_params?: Record<string, unknown>;
   is_enabled?: boolean;
   is_default?: boolean;
@@ -184,6 +186,7 @@ export interface ModelUpdatePayload {
   api_style?: string | null;
   temperature?: number | null;
   max_tokens?: number | null;
+  runtime_max_concurrency?: number | null;
   extra_params?: Record<string, unknown>;
   is_enabled?: boolean;
   is_default?: boolean;

@@ -131,6 +131,7 @@ function routeMatchesFilter(route: AIRuntimeRoute, filter: HealthFilter): boolea
 function statusTone(status: string): "neutral" | "info" | "success" | "warning" | "danger" | "primary" {
   const normalized = (status || "").toLowerCase();
   if (normalized === "available") return "success";
+  if (normalized === "probe_failed") return "info";
   if (normalized === "rate_limited" || normalized === "checking") return "warning";
   if (normalized === "unavailable" || normalized === "failed") return "danger";
   return "neutral";
@@ -344,6 +345,7 @@ export default function AIModelsPage() {
     api_style: "",
     temperature: "",
     max_tokens: "",
+    runtime_max_concurrency: "",
     priority: 100,
     is_enabled: true,
     is_default: false,
@@ -429,6 +431,8 @@ export default function AIModelsPage() {
         modelType: "模型类型",
         temperature: "温度",
         maxTokens: "最大 Token",
+        modelConcurrency: "单模型并发上限",
+        modelConcurrencyHint: "留空使用默认值 1；可设置 1–64，实际并发仍受提供商准入和 worker 总上限约束。",
         modelEnabled: "启用该模型",
         defaultModel: "默认模型",
       }
@@ -511,6 +515,8 @@ export default function AIModelsPage() {
         modelType: "Model Type",
         temperature: "Temperature",
         maxTokens: "Max Tokens",
+        modelConcurrency: "Model concurrency limit",
+        modelConcurrencyHint: "Leave blank for the default of 1; set 1–64. Provider admission and the worker total limit still apply.",
         modelEnabled: "Model is enabled",
         defaultModel: "Default model",
       };
@@ -634,6 +640,7 @@ export default function AIModelsPage() {
       api_style: "",
       temperature: "",
       max_tokens: "",
+      runtime_max_concurrency: "",
       priority: 100,
       is_enabled: true,
       is_default: false,
@@ -678,6 +685,7 @@ export default function AIModelsPage() {
       api_style: model.api_style || "",
       temperature: model.temperature == null ? "" : String(model.temperature),
       max_tokens: model.max_tokens == null ? "" : String(model.max_tokens),
+      runtime_max_concurrency: model.runtime_max_concurrency == null ? "" : String(model.runtime_max_concurrency),
       priority: model.priority,
       is_enabled: model.is_enabled,
       is_default: model.is_default,
@@ -733,6 +741,7 @@ export default function AIModelsPage() {
       api_style: modelForm.api_style.trim() || null,
       temperature: modelForm.temperature.trim() === "" ? null : Number(modelForm.temperature),
       max_tokens: modelForm.max_tokens.trim() === "" ? null : Number(modelForm.max_tokens),
+      runtime_max_concurrency: modelForm.runtime_max_concurrency.trim() === "" ? null : Number(modelForm.runtime_max_concurrency),
       priority: Number(modelForm.priority) || 100,
       is_enabled: modelForm.is_enabled,
       is_default: modelForm.is_default,
@@ -1012,6 +1021,9 @@ export default function AIModelsPage() {
             <p>{model.model_type || "chat"}</p>
             <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
               temp {model.temperature ?? "-"} / max {model.max_tokens ?? "-"}
+            </p>
+            <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              {copy.modelConcurrency}: {model.runtime_max_concurrency ?? 1}
             </p>
           </div>
         ),
@@ -1570,7 +1582,11 @@ export default function AIModelsPage() {
               <Field label={copy.maxTokens}>
                 <input type="number" className={inputClass} value={modelForm.max_tokens} onChange={(event) => setModelForm((prev) => ({ ...prev, max_tokens: event.target.value }))} />
               </Field>
+              <Field label={copy.modelConcurrency}>
+                <input type="number" min={1} max={64} step={1} className={inputClass} value={modelForm.runtime_max_concurrency} placeholder="1" onChange={(event) => setModelForm((prev) => ({ ...prev, runtime_max_concurrency: event.target.value }))} />
+              </Field>
             </div>
+            <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy.modelConcurrencyHint}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong">
                 <input type="checkbox" checked={modelForm.is_enabled} onChange={(event) => setModelForm((prev) => ({ ...prev, is_enabled: event.target.checked }))} />

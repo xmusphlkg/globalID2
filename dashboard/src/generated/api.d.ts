@@ -5540,6 +5540,8 @@ export interface components {
             priority: number;
             /** Provider Key */
             provider_key: string;
+            /** Runtime Max Concurrency */
+            runtime_max_concurrency?: number | null;
             /** Temperature */
             temperature?: number | null;
         };
@@ -5628,6 +5630,8 @@ export interface components {
             runtime_last_error?: string | null;
             /** Runtime Latency Ewma Ms */
             runtime_latency_ewma_ms?: number | null;
+            /** Runtime Max Concurrency */
+            runtime_max_concurrency?: number | null;
             /**
              * Runtime Timeout Count
              * @default 0
@@ -5656,6 +5660,8 @@ export interface components {
             model_type?: string | null;
             /** Priority */
             priority?: number | null;
+            /** Runtime Max Concurrency */
+            runtime_max_concurrency?: number | null;
             /** Temperature */
             temperature?: number | null;
         };

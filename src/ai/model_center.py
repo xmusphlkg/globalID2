@@ -9,6 +9,7 @@ import time
 import weakref
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 from anthropic import AsyncAnthropic
@@ -29,15 +30,14 @@ _bootstrap_locks: weakref.WeakKeyDictionary[
 ] = weakref.WeakKeyDictionary()
 _BOOTSTRAP_RECHECK_SECONDS = 60.0
 _ROUTING_STATE_KEY = "routing_state"
-_RUNTIME_FAILURE_KINDS = {"timeout", "connection", "upstream", "structured_output"}
-_RUNTIME_FAILURE_COOLDOWN_CAP_SECONDS = 600
-_PROVIDER_TIMEOUT_CIRCUIT_THRESHOLD = 2
-_STRUCTURED_OUTPUT_COOLDOWN_STREAK_THRESHOLD = 3
-_PROVIDER_FAILURE_RECENCY_WINDOW = timedelta(minutes=10)
+_RUNTIME_FAILURE_KINDS = {"timeout", "connection", "upstream"}
+_RUNTIME_FAILURE_COOLDOWN_CAP_SECONDS = 120
+_MODEL_TRANSPORT_CIRCUIT_THRESHOLD = 3
 _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD = 8
 _MODEL_FAILURE_STREAK_DECAY_INTERVAL = timedelta(minutes=30)
 _MODEL_RECOVERY_PROBE_INTERVAL_SECONDS = 300
 _DEFAULT_PROVIDER_ADMISSION_MAX_CONCURRENCY = 2
+_DEFAULT_PROVIDER_ADMISSION_MIN_CONCURRENCY = 2
 _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY = 1
 _DEFAULT_ADMISSION_SUCCESS_SCALE_UP = 2
 _DEFAULT_ADMISSION_ADJUST_SECONDS = 20
@@ -216,7 +216,22 @@ def _runtime_health_state(payload: Any, now: Optional[datetime] = None) -> Dict[
     now = now or _utcnow()
     state = _extract_routing_state(payload)
     cooldown_until = _parse_datetime(state.get("runtime_cooldown_until"))
-    active = bool(cooldown_until and cooldown_until > now)
+    last_failure_at = _parse_datetime(state.get("last_runtime_failure_at"))
+    if cooldown_until and last_failure_at:
+        # Apply the current upper bound to persisted cooldowns written by older
+        # versions as well; otherwise they can strand every route for 10 min.
+        cooldown_until = min(
+            cooldown_until,
+            last_failure_at + timedelta(seconds=_RUNTIME_FAILURE_COOLDOWN_CAP_SECONDS),
+        )
+    failure_kind = str(state.get("last_runtime_failure_kind") or "").strip() or None
+    # Older versions opened circuits for malformed/empty structured output.
+    # Those records are telemetry, not evidence of transport failure.
+    active = bool(
+        failure_kind in _RUNTIME_FAILURE_KINDS
+        and cooldown_until
+        and cooldown_until > now
+    )
 
     def _integer(name: str) -> int:
         try:
@@ -231,23 +246,22 @@ def _runtime_health_state(payload: Any, now: Optional[datetime] = None) -> Dict[
             return None
         return value if value >= 0 else None
 
-    last_failure_at = _parse_datetime(state.get("last_runtime_failure_at"))
     raw_failure_streak = _integer("runtime_failure_streak")
-    failure_streak = raw_failure_streak
+    failure_streak = raw_failure_streak if failure_kind in _RUNTIME_FAILURE_KINDS else 0
     if last_failure_at and now > last_failure_at:
         decay_seconds = max(1, int(_MODEL_FAILURE_STREAK_DECAY_INTERVAL.total_seconds()))
         elapsed_intervals = int((now - last_failure_at).total_seconds() // decay_seconds)
-        failure_streak = max(0, raw_failure_streak - elapsed_intervals)
+        failure_streak = max(0, failure_streak - elapsed_intervals)
 
     return {
         "runtime_failure_active": active,
-        "runtime_failure_cooldown_until": cooldown_until.isoformat() if cooldown_until else None,
+        "runtime_failure_cooldown_until": cooldown_until.isoformat() if active and cooldown_until else None,
         "runtime_failure_remaining_seconds": (
             max(0, int((cooldown_until - now).total_seconds()))
             if active and cooldown_until
             else 0
         ),
-        "runtime_failure_kind": str(state.get("last_runtime_failure_kind") or "").strip() or None,
+        "runtime_failure_kind": failure_kind,
         # The raw count remains durable for observability, while the effective
         # streak loses one strike per quiet interval. A route that recovered
         # upstream therefore cannot remain permanently excluded solely because
@@ -277,15 +291,6 @@ def _runtime_failure_kind(error: Any) -> Optional[str]:
         pass
 
     message = str(error or "").lower()
-    if any(
-        marker in message
-        for marker in (
-            "malformed structured response",
-            "invalid structured json",
-            "empty completion response",
-        )
-    ):
-        return "structured_output"
     if any(marker in message for marker in ("timeout", "timed out", "readtimeout", "connecttimeout")):
         return "timeout"
     if any(
@@ -327,9 +332,10 @@ def _write_runtime_failure(
     cooldown_seconds: int,
 ) -> Dict[str, Any]:
     state = _extract_routing_state(payload)
-    previous_streak = _runtime_health_state(payload, occurred_at)[
-        "runtime_failure_streak"
-    ]
+    current_health = _runtime_health_state(payload, occurred_at)
+    # In-flight requests can finish after a route circuit opens. They belong to
+    # the same outage and must not keep pushing the recovery time forward.
+    previous_streak = current_health["runtime_failure_streak"]
     try:
         previous_count = max(0, int(state.get("runtime_failure_count") or 0))
     except (TypeError, ValueError):
@@ -349,12 +355,13 @@ def _write_runtime_failure(
             "last_runtime_error": str(error or "")[:1000],
         }
     )
-    cooldown_threshold = (
-        _STRUCTURED_OUTPUT_COOLDOWN_STREAK_THRESHOLD
-        if kind == "structured_output"
-        else 1
-    )
-    if streak >= cooldown_threshold:
+    # One failed request is weak evidence: it may be a transient network hop,
+    # a caller deadline, or a provider-side interruption. Open a route circuit
+    # only after repeated transport failures. The raw failures remain visible
+    # in telemetry and a successful request resets the consecutive streak.
+    if current_health["runtime_failure_active"]:
+        pass
+    elif streak >= _MODEL_TRANSPORT_CIRCUIT_THRESHOLD:
         state["runtime_cooldown_until"] = (
             occurred_at
             + timedelta(
@@ -401,88 +408,22 @@ def _write_runtime_success(
     return _write_routing_state(payload, state)
 
 
-def _write_provider_runtime_failure(
-    payload: Any,
-    *,
-    kind: str,
-    error: str,
-    occurred_at: datetime,
-    duration_seconds: Optional[float],
-    cooldown_seconds: int,
-) -> tuple[Dict[str, Any], bool]:
-    """Record a provider failure without extending an already-open circuit.
-
-    Several in-flight calls can finish after a provider circuit opens. They
-    describe the same outage, not new evidence that merits exponentiating the
-    provider cooldown. Their model-level telemetry is still persisted by the
-    caller, while this shared recovery window remains stable.
-    """
-    provider_state = _runtime_health_state(payload, occurred_at)
-    if provider_state["runtime_failure_active"]:
-        existing = dict(payload or {}) if isinstance(payload, dict) else {}
-        return existing, True
-
-    last_provider_failure = provider_state["runtime_last_failure_at"]
-    recent = bool(
-        last_provider_failure
-        and occurred_at - last_provider_failure <= _PROVIDER_FAILURE_RECENCY_WINDOW
-    )
-    state = _extract_routing_state(payload)
-    if not recent:
-        state["runtime_failure_streak"] = 0
-    updated = _write_runtime_failure(
-        _write_routing_state(payload, state),
-        kind=kind,
-        error=error,
-        occurred_at=occurred_at,
-        duration_seconds=duration_seconds,
-        cooldown_seconds=cooldown_seconds,
-    )
-    updated_state = _runtime_health_state(updated, occurred_at)
-    circuit_open = (
-        updated_state["runtime_failure_streak"]
-        >= _PROVIDER_TIMEOUT_CIRCUIT_THRESHOLD
-    )
-    if not circuit_open:
-        state = _extract_routing_state(updated)
-        state.pop("runtime_cooldown_until", None)
-        updated = _write_routing_state(updated, state)
-    return updated, circuit_open
-
-
 def _combined_route_rate_limit_state(model: AIModelConfig, provider: AIProviderConfig) -> Dict[str, Any]:
     now = _utcnow()
     model_state = _rate_limit_state(model.extra_params, now)
     provider_state = _rate_limit_state(provider.extra_config, now)
-
-    active_states = []
-    if model_state["rate_limit_active"]:
-        active_states.append(("model", model_state))
-    if provider_state["rate_limit_active"]:
-        active_states.append(("provider", provider_state))
-
-    chosen_scope = None
-    chosen_state: Optional[Dict[str, Any]] = None
-    if active_states:
-        chosen_scope, chosen_state = max(
-            active_states,
-            key=lambda item: item[1]["rate_limit_remaining_seconds"],
-        )
-
     last_model_rate_limit_at = model_state["last_rate_limit_at_iso"] if model_state["rate_limit_count"] > 0 else None
     last_provider_rate_limit_at = provider_state["last_rate_limit_at_iso"] if provider_state["rate_limit_count"] > 0 else None
 
     return {
-        "rate_limit_active": bool(chosen_state),
-        "rate_limit_scope": chosen_scope,
-        "rate_limit_cooldown_until": chosen_state["cooldown_until_iso"] if chosen_state else None,
-        "rate_limit_remaining_seconds": chosen_state["rate_limit_remaining_seconds"] if chosen_state else 0,
-        "rate_limit_count": chosen_state["rate_limit_count"] if chosen_state else model_state["rate_limit_count"],
-        "last_rate_limit_at": (
-            chosen_state["last_rate_limit_at_iso"]
-            if chosen_state
-            else last_model_rate_limit_at
-        ),
+        # Ignore legacy provider cooldowns: a model-level 429 must not block
+        # healthy sibling routes that share the provider credential.
+        "rate_limit_active": model_state["rate_limit_active"],
+        "rate_limit_scope": "model" if model_state["rate_limit_active"] else None,
+        "rate_limit_cooldown_until": model_state["cooldown_until_iso"],
+        "rate_limit_remaining_seconds": model_state["rate_limit_remaining_seconds"],
+        "rate_limit_count": model_state["rate_limit_count"],
+        "last_rate_limit_at": last_model_rate_limit_at,
         "model_rate_limit_count": model_state["rate_limit_count"],
         "provider_rate_limit_count": provider_state["rate_limit_count"],
         "model_last_rate_limit_at": last_model_rate_limit_at,
@@ -494,32 +435,21 @@ def _combined_route_runtime_health_state(
     model: AIModelConfig,
     provider: AIProviderConfig,
 ) -> Dict[str, Any]:
-    """Combine model and provider production-call health into route metadata."""
+    """Apply production-call runtime health to this model route only.
+
+    A timeout or connection failure may be model-specific even when sibling
+    models share a provider. Provider-wide runtime circuits made one failing
+    route suppress otherwise healthy sibling routes, so legacy provider
+    runtime state is retained for diagnostics but ignored for admission.
+    """
     now = _utcnow()
     model_state = _runtime_health_state(model.extra_params, now)
-    provider_state = _runtime_health_state(provider.extra_config, now)
-    active_states = [
-        ("model", model_state),
-        ("provider", provider_state),
-    ]
-    active_states = [item for item in active_states if item[1]["runtime_failure_active"]]
-    scope: Optional[str] = None
-    active: Optional[Dict[str, Any]] = None
-    if active_states:
-        scope, active = max(
-            active_states,
-            key=lambda item: item[1]["runtime_failure_remaining_seconds"],
-        )
+    active = model_state if model_state["runtime_failure_active"] else None
+    scope: Optional[str] = "model" if active else None
 
     latency = model_state["runtime_latency_ewma_ms"]
-    failure_streak = max(
-        model_state["runtime_failure_streak"],
-        provider_state["runtime_failure_streak"],
-    )
-    failure_streak_raw = max(
-        model_state["runtime_failure_streak_raw"],
-        provider_state["runtime_failure_streak_raw"],
-    )
+    failure_streak = model_state["runtime_failure_streak"]
+    failure_streak_raw = model_state["runtime_failure_streak_raw"]
     degraded_scope: Optional[str] = None
     degraded_reason: Optional[str] = None
     if model_state["runtime_failure_streak"] >= _MODEL_CHRONIC_FAILURE_STREAK_THRESHOLD:
@@ -589,6 +519,40 @@ def _route_routing_status(
     return "routable", "The route passed admission checks and can receive production workloads."
 
 
+def _health_check_failure_status(error: BaseException) -> str:
+    """Map one probe result to a control-plane status without overclaiming.
+
+    Only explicit credential rejection and model-specific permanent errors may
+    mark configuration unavailable. Rate limits have their own cooldown; all
+    other probe failures are observations, not proof that a route is invalid.
+    """
+    if is_rate_limit_error(error):
+        return "rate_limited"
+    if "api key is not configured" in str(error or "").lower():
+        return "unavailable"
+    if is_provider_authentication_error(error) or is_model_unavailable_error(error):
+        return "unavailable"
+    return "probe_failed"
+
+
+def _legacy_transient_probe_unavailable(message: Any) -> bool:
+    """Recognize old probe failures that were incorrectly saved as unavailable."""
+    normalized = str(message or "").lower()
+    return any(
+        marker in normalized
+        for marker in (
+            "empty assistant response",
+            "empty completion response",
+            "timed out",
+            "timeout",
+            "connection error",
+            "connection reset",
+            "returned html",
+            "invalid structured json",
+        )
+    )
+
+
 def _route_sort_key(route: Dict[str, Any]) -> tuple[int, int, float, str]:
     """Keep user priority first, then prefer proven low-latency healthy routes."""
     try:
@@ -649,7 +613,10 @@ def _runtime_admission_settings(route: Dict[str, Any]) -> Dict[str, Any]:
     )
     provider_minimum = min(
         provider_maximum,
-        _positive_int(provider_config.get("runtime_min_concurrency"), 1),
+        _positive_int(
+            provider_config.get("runtime_min_concurrency"),
+            _DEFAULT_PROVIDER_ADMISSION_MIN_CONCURRENCY if configured_provider_maximum in (None, "") else 1,
+        ),
     )
     model_maximum = _positive_int(
         model_params.get("runtime_max_concurrency"),
@@ -685,21 +652,17 @@ def _runtime_admission_keys(route: Dict[str, Any]) -> tuple[str, str]:
 
 
 def _is_runtime_capacity_pressure(error: BaseException) -> bool:
-    """Return whether a failure is evidence that provider concurrency is too high."""
-    if isinstance(error, (asyncio.TimeoutError, TimeoutError)):
-        return True
-    try:
-        if is_rate_limit_error(error):
-            return True
-    except Exception:
-        pass
+    """Return whether a transport failure suggests shared provider saturation.
 
+    Quota/rate-limit responses are model scoped and must never reduce the
+    admission budget of sibling models sharing the credential.
+    """
     status_code = getattr(error, "status_code", None)
     if status_code is None:
         response = getattr(error, "response", None)
         status_code = getattr(response, "status_code", None)
     try:
-        if int(status_code) in {408, 429, 502, 503, 504}:
+        if int(status_code) == 503:
             return True
     except (TypeError, ValueError):
         pass
@@ -708,11 +671,6 @@ def _is_runtime_capacity_pressure(error: BaseException) -> bool:
     return any(
         token in message
         for token in (
-            "rate limit",
-            "too many requests",
-            "quota exceeded",
-            "request timeout",
-            "timed out",
             "overloaded",
             "server busy",
             "capacity exceeded",
@@ -932,7 +890,7 @@ class RuntimeRouteAdmissionController:
                         current,
                         current + 1,
                     )
-            elif error is None or _is_runtime_capacity_pressure(error):
+            elif error is not None and _is_runtime_capacity_pressure(error):
                 self._provider_success_streak[provider_key] = 0
                 reduced = max(settings["provider_minimum"], current // 2)
                 self._provider_capacity[provider_key] = reduced
@@ -978,16 +936,24 @@ async def acquire_runtime_route_admission(route: Dict[str, Any]) -> RuntimeRoute
 def get_provider_rate_limit_state(provider: AIProviderConfig) -> Dict[str, Any]:
     state = _rate_limit_state(provider.extra_config)
     return {
-        "rate_limit_active": state["rate_limit_active"],
-        "rate_limit_cooldown_until": state["cooldown_until_iso"],
-        "rate_limit_remaining_seconds": state["rate_limit_remaining_seconds"],
+        # Keep old counters visible, but do not surface legacy provider
+        # cooldowns as active because routing limits are model scoped.
+        "rate_limit_active": False,
+        "rate_limit_cooldown_until": None,
+        "rate_limit_remaining_seconds": 0,
         "rate_limit_count": state["rate_limit_count"],
         "last_rate_limit_at": state["last_rate_limit_at_iso"],
     }
 
 
 def get_provider_runtime_health_state(provider: AIProviderConfig) -> Dict[str, Any]:
-    return _runtime_health_state(provider.extra_config)
+    state = _runtime_health_state(provider.extra_config)
+    return {
+        **state,
+        "runtime_failure_active": False,
+        "runtime_failure_cooldown_until": None,
+        "runtime_failure_remaining_seconds": 0,
+    }
 
 
 def get_model_rate_limit_state(model: AIModelConfig, provider: Optional[AIProviderConfig] = None) -> Dict[str, Any]:
@@ -1749,6 +1715,67 @@ def _test_max_tokens(route: Dict[str, Any]) -> int:
     return max(64, min(value, 1600))
 
 
+def route_completion_extra_body(route: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Use the same provider-specific request options for probes and workloads."""
+    model_params = route.get("extra_params")
+    model_params = model_params if isinstance(model_params, dict) else {}
+    configured = model_params.get("extra_body")
+    if isinstance(configured, dict):
+        return dict(configured)
+
+    # Tencent Hy3 and Hy4 enable deep thinking by default. Reasoning and final
+    # content share max_tokens, so routine workloads can exhaust their budget
+    # before an answer appears. Explicit model settings override this default.
+    provider_key = str(route.get("provider_key") or "").lower()
+    base_url = str(route.get("base_url") or "").lower()
+    if (
+        provider_key in {"tencent", "tencent_plan"}
+        and str(route.get("model_name") or "").lower() in {"hy3", "hy4-preview"}
+        and (
+            "tokenhub.tencentmaas.com" in base_url
+            or "api.lkeap.cloud.tencent.com/plan/v3" in base_url
+        )
+    ):
+        return {"thinking": {"type": "disabled"}}
+    return None
+
+
+def runtime_route_request_timeout_seconds(
+    route: Dict[str, Any], default: Optional[float]
+) -> Optional[float]:
+    """Resolve the live API deadline independently for each model/provider."""
+    model_params = route.get("extra_params")
+    model_params = model_params if isinstance(model_params, dict) else {}
+    provider_config = route.get("extra_config")
+    provider_config = provider_config if isinstance(provider_config, dict) else {}
+    configured = model_params.get("runtime_request_timeout_seconds")
+    if configured in (None, ""):
+        configured = provider_config.get("runtime_request_timeout_seconds")
+    if configured in (None, ""):
+        return default
+    try:
+        return float(max(10, min(600, int(configured))))
+    except (TypeError, ValueError):
+        return default
+
+
+def runtime_route_completion_max_tokens(route: Dict[str, Any], agent_limit: int) -> int:
+    """Allow an explicit model budget for reasoning plus final answer tokens."""
+    model_params = route.get("extra_params")
+    model_params = model_params if isinstance(model_params, dict) else {}
+    configured = model_params.get("runtime_completion_max_tokens")
+    if configured not in (None, ""):
+        try:
+            return max(64, min(16384, int(configured)))
+        except (TypeError, ValueError):
+            pass
+    route_limit = route.get("max_tokens")
+    try:
+        return min(agent_limit, int(route_limit)) if route_limit is not None else agent_limit
+    except (TypeError, ValueError):
+        return agent_limit
+
+
 def _response_preview(text: str, limit: int = 180) -> str:
     compact = re.sub(r"\s+", " ", text).strip()
     if len(compact) <= limit:
@@ -1773,6 +1800,16 @@ def _model_ids_from_catalogue(payload: Any) -> List[str]:
     return sorted(model_ids)
 
 
+def _openai_base_url_candidates(base_url: str) -> List[Optional[str]]:
+    """Try /v1 only when the configured URL has no versioned API path."""
+    base_url = base_url.rstrip("/")
+    candidates: List[Optional[str]] = [base_url or None]
+    last_segment = urlsplit(base_url).path.rstrip("/").rsplit("/", 1)[-1]
+    if base_url and not re.fullmatch(r"v\d+(?:[._-].+)?", last_segment, re.IGNORECASE):
+        candidates.append(f"{base_url}/v1")
+    return candidates
+
+
 async def discover_provider_models_by_id(provider_id: int) -> Dict[str, Any]:
     """Read a provider's API model catalogue without altering routing state.
 
@@ -1792,9 +1829,7 @@ async def discover_provider_models_by_id(provider_id: int) -> Dict[str, Any]:
         api_key = provider.api_key
         headers = provider.extra_headers or {}
 
-    candidates = [base_url or None]
-    if base_url and not base_url.endswith("/v1"):
-        candidates.append(f"{base_url}/v1")
+    candidates = _openai_base_url_candidates(base_url)
     last_error: Exception | None = None
     for candidate in candidates:
         try:
@@ -1811,9 +1846,14 @@ async def discover_provider_models_by_id(provider_id: int) -> Dict[str, Any]:
             return {"success": True, "status": "available", "message": message, "models": models, "base_url": candidate or "default-openai-base-url"}
         except Exception as exc:
             last_error = exc
-            if is_rate_limit_error(exc) or getattr(exc, "status_code", None) in {400, 401, 403, 429}:
+            if getattr(exc, "status_code", None) != 404:
                 break
-    return {"success": False, "status": "rate_limited" if is_rate_limit_error(last_error) else "unavailable", "message": str(last_error or "Model catalogue request failed"), "models": []}
+    return {
+        "success": False,
+        "status": _health_check_failure_status(last_error or RuntimeError("Model catalogue request failed")),
+        "message": str(last_error or "Model catalogue request failed"),
+        "models": [],
+    }
 
 
 def _validate_test_response(text: str) -> None:
@@ -1888,22 +1928,19 @@ def _test_timeout_seconds(route: Dict[str, Any]) -> float:
 async def _test_openai_compatible(
     route: Dict[str, Any], model_name: str, *, structured: bool = False
 ) -> Dict[str, Any]:
-    base_url = str(route.get("base_url") or "").rstrip("/")
-    base_urls: List[Optional[str]] = [base_url or None]
-    if base_url and not base_url.endswith("/v1"):
-        base_urls.append(f"{base_url}/v1")
+    base_urls = _openai_base_url_candidates(str(route.get("base_url") or ""))
 
     last_error: Optional[Exception] = None
     for candidate_base_url in base_urls:
+        client = AsyncOpenAI(
+            api_key=route.get("api_key"),
+            base_url=candidate_base_url,
+            default_headers=(route.get("extra_headers") or None),
+            timeout=_test_timeout_seconds(route),
+            max_retries=0,
+        )
+        prompt = _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT
         try:
-            client = AsyncOpenAI(
-                api_key=route.get("api_key"),
-                base_url=candidate_base_url,
-                default_headers=(route.get("extra_headers") or None),
-                timeout=_test_timeout_seconds(route),
-                max_retries=0,
-            )
-            prompt = _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT
             response = await client.chat.completions.create(
                 model=model_name,
                 messages=[
@@ -1915,21 +1952,33 @@ async def _test_openai_compatible(
                 ],
                 max_tokens=max(768, min(_test_max_tokens(route), 1200)) if structured else _test_max_tokens(route),
                 temperature=0,
+                extra_body=route_completion_extra_body(route),
             )
-            text = _openai_response_text(response)
-            if structured:
-                _validate_structured_test_response(text)
-            else:
-                _validate_test_response(text)
-            return {
-                "base_url": candidate_base_url or "default-openai-base-url",
-                "response_preview": _response_preview(text),
-            }
         except Exception as exc:
             last_error = exc
-            if is_rate_limit_error(exc) or getattr(exc, "status_code", None) in {400, 401, 403, 429}:
+            # An alternate API path can fix a missing endpoint, but cannot fix
+            # a completed response, rate limit, timeout, or provider failure.
+            if getattr(exc, "status_code", None) != 404:
                 raise
             continue
+
+        text = _openai_response_text(response)
+        if not text.strip():
+            first = response.choices[0] if getattr(response, "choices", None) else None
+            finish_reason = getattr(first, "finish_reason", None)
+            completion_tokens = getattr(getattr(response, "usage", None), "completion_tokens", None)
+            raise RuntimeError(
+                "Chat completion produced no final assistant content "
+                f"(finish_reason={finish_reason!r}, completion_tokens={completion_tokens!r})"
+            )
+        if structured:
+            _validate_structured_test_response(text)
+        else:
+            _validate_test_response(text)
+        return {
+            "base_url": candidate_base_url or "default-openai-base-url",
+            "response_preview": _response_preview(text),
+        }
 
     if last_error is not None:
         raise last_error
@@ -1994,9 +2043,17 @@ async def test_route_connection(
             **details,
         }
     except Exception as exc:
+        failure_scope = (
+            "provider"
+            if is_provider_authentication_error(exc)
+            else "model"
+            if is_model_unavailable_error(exc)
+            else None
+        )
         return {
             "success": False,
-            "status": "rate_limited" if is_rate_limit_error(exc) else "unavailable",
+            "status": _health_check_failure_status(exc),
+            "failure_scope": failure_scope,
             "message": str(exc),
             "model_name": model_name,
             "test_type": "literature_workload" if structured else "chat_completion",
@@ -2010,8 +2067,16 @@ async def update_model_check_result(model_id: int, status: str, message: str) ->
         model = await db.get(AIModelConfig, model_id)
         if model is None:
             return
-        model.last_check_status = status
-        model.last_check_message = message
+        # A failed probe is not a configuration verdict. Preserve any prior
+        # hard-unavailable finding until a success proves recovery or an
+        # explicit permanent failure is observed again.
+        if (
+            status in {"available", "unavailable", "invalid"}
+            or str(model.last_check_status or "").lower() != "unavailable"
+            or _legacy_transient_probe_unavailable(model.last_check_message)
+        ):
+            model.last_check_status = status
+            model.last_check_message = message
         model.last_checked_at = _utcnow()
         if status == "available":
             model.extra_params = _write_runtime_success(
@@ -2035,8 +2100,13 @@ async def update_provider_check_result(provider_id: int, status: str, message: s
             if is_provider_authentication_error(message)
             else message
         )
-        provider.last_check_status = status
-        provider.last_check_message = safe_message
+        if (
+            status in {"available", "unavailable", "invalid"}
+            or str(provider.last_check_status or "").lower() != "unavailable"
+            or _legacy_transient_probe_unavailable(provider.last_check_message)
+        ):
+            provider.last_check_status = status
+            provider.last_check_message = safe_message
         provider.last_checked_at = _utcnow()
         if status == "available":
             provider.extra_config = _write_runtime_success(
@@ -2055,7 +2125,18 @@ def _provider_check_result_from_model_results(results: List[Dict[str, Any]]) -> 
 
     rate_limited = next((item for item in results if item.get("status") == "rate_limited"), None)
     if rate_limited is not None:
-        return "rate_limited", str(rate_limited.get("message") or "At least one enabled provider model is rate-limited")
+        return "probe_failed", str(rate_limited.get("message") or "One or more model routes are rate-limited")
+
+    if results and all(item.get("status") == "unavailable" for item in results):
+        failures = [
+            f"{item.get('model_name') or item.get('model_key') or 'model'}: {item.get('message') or 'unavailable'}"
+            for item in results
+        ]
+        return "unavailable", "All enabled provider models are unavailable: " + " | ".join(failures)
+
+    probe_failure = next((item for item in results if item.get("status") == "probe_failed"), None)
+    if probe_failure is not None:
+        return "probe_failed", str(probe_failure.get("message") or "Provider health probe failed transiently")
 
     failures = [
         f"{item.get('model_name') or item.get('model_key') or 'model'}: {item.get('message') or 'unavailable'}"
@@ -2069,19 +2150,12 @@ async def mark_route_rate_limited(
     message: str,
     retry_after_seconds: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Persist provider/model cooldown after a runtime rate-limit error."""
+    """Persist a model-only cooldown after a runtime rate-limit error."""
     route_extra_params = route.get("extra_params") or {}
-    route_extra_config = route.get("extra_config") or {}
-    mark_provider_raw = route_extra_config.get("mark_provider_rate_limited", False)
-    if isinstance(mark_provider_raw, str):
-        mark_provider_rate_limited = mark_provider_raw.strip().lower() in {"1", "true", "yes", "on"}
-    else:
-        mark_provider_rate_limited = bool(mark_provider_raw)
     cooldown_seconds = retry_after_seconds
     if cooldown_seconds is None:
         cooldown_seconds = int(
             route_extra_params.get("rate_limit_cooldown_seconds")
-            or route_extra_config.get("rate_limit_cooldown_seconds")
             or get_config().ai.rate_limit_cooldown_seconds
         )
 
@@ -2090,28 +2164,13 @@ async def mark_route_rate_limited(
 
     async with get_db() as db:
         model = await db.get(AIModelConfig, int(route["model_id"]))
-        provider = await db.get(AIProviderConfig, int(route["provider_id"]))
 
         if model is not None:
-            model.last_check_status = "rate_limited"
-            model.last_check_message = message
+            if str(model.last_check_status or "").lower() != "unavailable":
+                model.last_check_status = "rate_limited"
+                model.last_check_message = message
             model.last_checked_at = now
             model.extra_params = _mark_payload_rate_limited(model.extra_params, cooldown_until, now)
-
-        if provider is not None:
-            if mark_provider_rate_limited:
-                provider.last_check_status = "rate_limited"
-                provider.last_check_message = message
-                provider.last_checked_at = now
-                provider.extra_config = _mark_payload_rate_limited(provider.extra_config, cooldown_until, now)
-            else:
-                # Default behavior: cooldown this model route only. This prevents one throttled model
-                # from blocking sibling models under the same provider/API key.
-                provider.extra_config = _clear_payload_rate_limit(provider.extra_config, now)
-                if str(provider.last_check_status or "").strip().lower() == "rate_limited":
-                    provider.last_check_status = "unknown"
-                    provider.last_check_message = "Provider cooldown cleared; using model-level cooldown only"
-                    provider.last_checked_at = now
 
         await db.commit()
 
@@ -2128,11 +2187,11 @@ async def record_route_runtime_failure(
     duration_seconds: Optional[float] = None,
     cooldown_seconds: int = 60,
 ) -> Dict[str, Any]:
-    """Persist a real production-call transport failure for future routing.
+    """Persist a real production-call transport failure for this model route.
 
     Rate-limit and invalid-model failures already have durable specialised
-    handlers.  This function owns timeout, connection and transient 5xx
-    failures, including a provider circuit after multiple sibling timeouts.
+    handlers. This function owns timeout, connection and transient 5xx
+    failures at model scope; sibling routes must remain independently usable.
     """
     kind = _runtime_failure_kind(error)
     if kind not in _RUNTIME_FAILURE_KINDS:
@@ -2140,7 +2199,6 @@ async def record_route_runtime_failure(
 
     try:
         model_id = int(route.get("model_id"))
-        provider_id = int(route.get("provider_id"))
     except (TypeError, ValueError):
         return {"recorded": False, "reason": "route_has_no_persistent_ids"}
 
@@ -2148,7 +2206,6 @@ async def record_route_runtime_failure(
     message = str(error or "")[:1000]
     async with get_db() as db:
         model = await db.get(AIModelConfig, model_id, with_for_update=True)
-        provider = await db.get(AIProviderConfig, provider_id, with_for_update=True)
         if model is None:
             return {"recorded": False, "reason": "model_not_found"}
 
@@ -2162,24 +2219,13 @@ async def record_route_runtime_failure(
         )
         model_state = _runtime_health_state(model.extra_params, now)
 
-        provider_circuit_open = False
-        if provider is not None and kind in {"timeout", "connection"}:
-            provider.extra_config, provider_circuit_open = _write_provider_runtime_failure(
-                provider.extra_config,
-                kind=kind,
-                error=message,
-                occurred_at=now,
-                duration_seconds=duration_seconds,
-                cooldown_seconds=cooldown_seconds,
-            )
-
         await db.commit()
 
     return {
         "recorded": True,
         "kind": kind,
         "cooldown_seconds": model_state["runtime_failure_remaining_seconds"],
-        "provider_circuit_open": provider_circuit_open,
+        "provider_circuit_open": False,
     }
 
 
@@ -2191,14 +2237,12 @@ async def record_route_runtime_success(
     """Persist a successful production completion and its observed latency."""
     try:
         model_id = int(route.get("model_id"))
-        provider_id = int(route.get("provider_id"))
     except (TypeError, ValueError):
         return {"recorded": False, "reason": "route_has_no_persistent_ids"}
 
     now = _utcnow()
     async with get_db() as db:
         model = await db.get(AIModelConfig, model_id, with_for_update=True)
-        provider = await db.get(AIProviderConfig, provider_id, with_for_update=True)
         if model is None:
             return {"recorded": False, "reason": "model_not_found"}
 
@@ -2207,12 +2251,6 @@ async def record_route_runtime_success(
             occurred_at=now,
             duration_seconds=duration_seconds,
         )
-        if provider is not None:
-            provider.extra_config = _write_runtime_success(
-                provider.extra_config,
-                occurred_at=now,
-                duration_seconds=duration_seconds,
-            )
         await db.commit()
 
     return {"recorded": True}
@@ -2306,23 +2344,16 @@ async def mark_model_unavailable_by_name(
 
 
 async def clear_route_rate_limit(route: Dict[str, Any], message: str = "Connection successful") -> None:
-    """Clear persisted cooldown after a route has recovered."""
+    """Clear the model route cooldown after that route has recovered."""
     now = _utcnow()
     async with get_db() as db:
         model = await db.get(AIModelConfig, int(route["model_id"]))
-        provider = await db.get(AIProviderConfig, int(route["provider_id"]))
 
         if model is not None:
             model.last_check_status = "available"
             model.last_check_message = message
             model.last_checked_at = now
             model.extra_params = _clear_payload_rate_limit(model.extra_params, now)
-
-        if provider is not None:
-            provider.last_check_status = "available"
-            provider.last_check_message = message
-            provider.last_checked_at = now
-            provider.extra_config = _clear_payload_rate_limit(provider.extra_config, now)
 
         await db.commit()
 
@@ -2382,8 +2413,19 @@ async def check_model_by_id(model_id: int, *, structured: bool = True) -> Dict[s
         latency_ms=(time.perf_counter() - check_started_at) * 1000,
         error=check_error,
     )
+    if result["status"] == "rate_limited":
+        await mark_route_rate_limited(
+            route,
+            result["message"],
+            retry_after_seconds=result.get("retry_after_seconds"),
+        )
     await update_model_check_result(model_id, result["status"], result["message"])
     if result.get("success"):
+        await update_provider_check_result(route["provider_id"], result["status"], result["message"])
+    elif result["status"] == "unavailable" and (
+        result.get("failure_scope") == "provider"
+        or is_provider_authentication_error(result["message"])
+    ):
         await update_provider_check_result(route["provider_id"], result["status"], result["message"])
     return result
 
@@ -2411,13 +2453,15 @@ async def check_provider_by_id(provider_id: int, *, structured: bool = True) -> 
         await update_provider_check_result(provider_id, result["status"], result["message"])
         return result
 
-    failures: List[str] = []
+    model_results: List[Dict[str, Any]] = []
     for model in models:
         result = await check_model_by_id(model.id, structured=structured)
         if result.get("success"):
             return result
-        failures.append(f"{model.model_name}: {result.get('message', 'unavailable')}")
-    result = {"success": False, "status": "unavailable", "message": "All enabled provider models failed: " + " | ".join(failures), "models": []}
+        result["model_name"] = model.model_name
+        model_results.append(result)
+    status, message = _provider_check_result_from_model_results(model_results)
+    result = {"success": False, "status": status, "message": message, "models": model_results}
     await update_provider_check_result(provider_id, result["status"], result["message"])
     return result
 

@@ -10,6 +10,8 @@ import signal
 import shlex
 from typing import Any, Awaitable, Callable, Optional, Protocol
 
+from sqlalchemy.exc import DBAPIError
+
 from src.services.exceptions import TaskCancelledError
 
 
@@ -28,6 +30,8 @@ OUTPUT_TAIL_MAX_LINES = 120
 COMPLETION_TAIL_LINES = 12
 FAILURE_TAIL_LINES = 40
 OUTPUT_READ_CHUNK_BYTES = 8192
+TASK_CANCEL_CHECK_INTERVAL_SECONDS = 5
+TASK_CANCEL_STORE_GRACE_SECONDS = 60
 ANSI_ESCAPE_RE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
@@ -175,6 +179,8 @@ async def run_logged_command(
 
     loop = asyncio.get_running_loop()
     deadline = loop.time() + timeout_seconds
+    next_cancel_check = 0.0
+    cancel_store_unavailable_since: float | None = None
     chunk_lines: list[str] = []
     chunk_index = 1
     output_tail: list[str] = []
@@ -254,9 +260,29 @@ async def run_logged_command(
         )
 
     while True:
-        if await task_manager.is_cancel_requested(task_uuid):
-            await terminate(proc)
-            raise TaskCancelledError(f"Cancellation requested while running: {title}")
+        now = loop.time()
+        if now >= next_cancel_check:
+            next_cancel_check = now + TASK_CANCEL_CHECK_INTERVAL_SECONDS
+            try:
+                cancel_requested = await task_manager.is_cancel_requested(task_uuid)
+                cancel_store_unavailable_since = None
+            except (TimeoutError, OSError, DBAPIError) as exc:
+                if cancel_store_unavailable_since is None:
+                    cancel_store_unavailable_since = now
+                    logger.warning("{} cancellation check temporarily unavailable: {}", title, type(exc).__name__)
+                if now - cancel_store_unavailable_since >= TASK_CANCEL_STORE_GRACE_SECONDS:
+                    await terminate(proc)
+                    raise ReleaseCommandError(
+                        f"{title} stopped: task-store cancellation checks failed for "
+                        f"{TASK_CANCEL_STORE_GRACE_SECONDS} seconds ({type(exc).__name__})",
+                        release_stage=str(metadata.get("event") or "").strip() or None,
+                        title=title,
+                        timed_out=True,
+                    ) from exc
+                cancel_requested = False
+            if cancel_requested:
+                await terminate(proc)
+                raise TaskCancelledError(f"Cancellation requested while running: {title}")
 
         remaining_seconds = deadline - loop.time()
         if remaining_seconds <= 0:
