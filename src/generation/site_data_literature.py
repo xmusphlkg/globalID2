@@ -1,7 +1,8 @@
 """Public Research Radar projection and artifact writer.
 
-Only editorially published records are exported.  Raw abstracts and source
-payloads never cross this boundary.
+Editorially published records are the only full evidence records exported.
+Review-state records may appear as compact, title-estimated associations; raw
+abstracts and source payloads never cross this boundary.
 """
 
 from __future__ import annotations
@@ -47,6 +48,58 @@ def _parse_public_datetime(value: str) -> datetime:
 
 def _facet_slug(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+
+
+def _title_estimated_literature_links(
+    title: str,
+    diseases_by_id: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Make conservative disease associations from title mentions only."""
+    normalized = re.sub(r"[^a-z0-9\u3400-\u9fff]+", " ", title.casefold())
+    matches: list[dict[str, Any]] = []
+    for disease_id, disease in diseases_by_id.items():
+        candidates = {
+            str(disease.get(key) or "").strip()
+            for key in ("name_en", "standard_name_en", "name_zh", "standard_name_zh")
+        }
+        hit = next((term for term in candidates if len(term) >= 3 and _title_contains_term(normalized, term)), None)
+        if hit:
+            matches.append({
+                "disease_id": str(disease_id),
+                "slug": disease.get("slug"),
+                "name_en": disease.get("name_en") or disease.get("standard_name_en") or str(disease_id),
+                "name_zh": disease.get("name_zh") or disease.get("standard_name_zh"),
+                "source": "title_estimate",
+                "matched_term": hit,
+            })
+    return matches[:5]
+
+
+def _title_contains_term(title: str, term: str) -> bool:
+    term = re.sub(r"[^a-z0-9\u3400-\u9fff]+", " ", term.casefold()).strip()
+    if re.search(r"[a-z0-9]", term):
+        return bool(re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", title))
+    return term in title
+
+
+def _title_estimated_topics(title: str) -> list[dict[str, str]]:
+    vocabulary = {
+        "vaccination": ("vaccin", "immunization", "immunisation"),
+        "antimicrobial resistance": ("antimicrobial resistance", "antibiotic resistance"),
+        "outbreak response": ("outbreak", "epidemic", "cluster"),
+        "surveillance": ("surveillance", "monitoring"),
+        "genomic surveillance": ("genomic surveillance", "genomic epidemiology", "whole genome"),
+        "diagnostics": ("diagnostic", "detection assay", "testing"),
+        "epidemiology": ("epidemiology", "incidence", "prevalence", "transmission"),
+        "One Health": ("one health", "zoonotic", "animal reservoir"),
+    }
+    normalized = re.sub(r"[^a-z0-9\u3400-\u9fff]+", " ", title.casefold())
+    results = []
+    for topic, terms in vocabulary.items():
+        matched = next((term for term in terms if _title_contains_term(normalized, term)), None)
+        if matched:
+            results.append({"name": topic, "source": "title_estimate", "matched_term": matched})
+    return results
 
 
 def _normalize_seed_doi(value: Any) -> str | None:
@@ -1414,6 +1467,9 @@ def empty_literature_export() -> dict[str, Any]:
         "last_updated": None,
         "metrics": {
             "total_public_articles": 0,
+            "title_estimated_related_records": 0,
+            "title_estimated_disease_links": 0,
+            "title_estimated_topic_links": 0,
             "preprints_total": 0,
             "integrity_alerts_total": 0,
             "withheld_metadata_only": 0,
@@ -1428,6 +1484,7 @@ def empty_literature_export() -> dict[str, Any]:
         },
         "featured": [],
         "articles": [],
+        "title_estimated_related_records": [],
         "preprints": [],
         "related_only_articles": [],
         "integrity_alerts": [],
@@ -1651,6 +1708,105 @@ async def collect_literature_export(
             .order_by(LiteratureArticle.is_featured.desc(), LiteratureArticle.discovery_score.desc(), LiteratureArticle.published_at.desc())
         )
     ).scalars().all()
+    review_candidates = (
+        await session.execute(
+            select(
+                LiteratureArticle.article_id,
+                LiteratureArticle.title,
+                LiteratureArticle.doi,
+                LiteratureArticle.pmid,
+                LiteratureArticle.journal,
+                LiteratureArticle.published_at,
+                LiteratureArticle.peer_review_status,
+                LiteratureArticle.abstract_text,
+                LiteratureArticle.open_access_status,
+                LiteratureArticle.open_access_url,
+                LiteratureArticle.pmcid,
+                LiteratureArticle.study_type,
+                LiteratureArticle.article_type,
+            )
+            .where(
+                LiteratureArticle.publication_status == "review",
+                LiteratureArticle.peer_review_status.in_(("peer_reviewed", "preprint")),
+                LiteratureArticle.integrity_status.notin_(("retracted", "expression_of_concern")),
+            )
+            .order_by(LiteratureArticle.published_at.desc().nullslast(), LiteratureArticle.article_id)
+        )
+    ).all()
+    # These records cannot support a full AI evidence summary, but their
+    # bibliographic identity and conservative title matches remain useful.
+    title_estimate_records = []
+    for article in review_candidates:
+        policy = content_policy(article)
+        access_known = bool(
+            article.open_access_status == "open"
+            or article.open_access_url
+            or article.pmcid
+        )
+        if len(article.abstract_text or "") >= 180 and access_known and policy["detail_available"]:
+            continue
+        title_estimate_records.append({
+            "article_id": article.article_id,
+            "title": article.title,
+            "doi": article.doi,
+            "pmid": article.pmid,
+            "journal": article.journal,
+            "published_at": article.published_at.isoformat() if article.published_at else None,
+            "peer_review_status": article.peer_review_status,
+            "editorial_status": "review",
+            "detail_available": False,
+            "diseases": [],
+            "topics": [],
+            "title_estimated_diseases": _title_estimated_literature_links(article.title, diseases_by_id),
+            "title_estimated_topics": _title_estimated_topics(article.title),
+            "estimate_method": "title_mention_only",
+        })
+    estimate_ids = [item["article_id"] for item in title_estimate_records]
+    estimated_disease_links = (
+        (await session.execute(
+            select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(estimate_ids))
+        )).scalars().all()
+        if estimate_ids else []
+    )
+    estimated_topic_links = (
+        (await session.execute(
+            select(LiteratureTopicLink).where(LiteratureTopicLink.article_id.in_(estimate_ids))
+        )).scalars().all()
+        if estimate_ids else []
+    )
+    stored_diseases: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    stored_topics: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for link in estimated_disease_links:
+        disease = diseases_by_id.get(link.disease_id) or {}
+        stored_diseases[link.article_id].append({
+            "disease_id": link.disease_id,
+            "slug": disease.get("slug"),
+            "name_en": disease.get("name_en") or disease.get("standard_name_en") or link.disease_id,
+            "name_zh": disease.get("name_zh") or disease.get("standard_name_zh"),
+            "confidence": link.confidence,
+            "source": "stored_relation",
+        })
+    for link in estimated_topic_links:
+        stored_topics[link.article_id].append({
+            "name": link.topic,
+            "confidence": link.confidence,
+            "source": "stored_relation",
+        })
+    for item in title_estimate_records:
+        known_diseases = stored_diseases.get(item["article_id"], [])
+        known_disease_ids = {link["disease_id"] for link in known_diseases}
+        item["diseases"] = [
+            *known_diseases,
+            *(link for link in item["title_estimated_diseases"] if link["disease_id"] not in known_disease_ids),
+        ][:5]
+        known_topics = stored_topics.get(item["article_id"], [])
+        known_topic_names = {link["name"].casefold() for link in known_topics}
+        item["topics"] = [
+            *known_topics,
+            *(link for link in item["title_estimated_topics"] if link["name"].casefold() not in known_topic_names),
+        ]
+        item.pop("title_estimated_diseases")
+        item.pop("title_estimated_topics")
     article_ids = [article.article_id for article in articles]
     peer_reviewed_article_ids = [
         article.article_id for article in articles if article.peer_review_status == "peer_reviewed"
@@ -2091,6 +2247,15 @@ async def collect_literature_export(
         "last_updated": latest_updated.isoformat() if latest_updated else None,
         "metrics": {
             "total_public_articles": len(projected),
+            "title_estimated_related_records": len(title_estimate_records),
+            "title_estimated_disease_links": sum(
+                sum(link.get("source") == "title_estimate" for link in item["diseases"])
+                for item in title_estimate_records
+            ),
+            "title_estimated_topic_links": sum(
+                sum(link.get("source") == "title_estimate" for link in item["topics"])
+                for item in title_estimate_records
+            ),
             "preprints_total": len(preprints),
             "integrity_alerts_total": len(integrity_alerts),
             "withheld_metadata_only": withheld_metadata_only,
@@ -2113,6 +2278,7 @@ async def collect_literature_export(
             reverse=True,
         )[:6],
         "articles": projected,
+        "title_estimated_related_records": title_estimate_records,
         "preprints": preprints,
         "related_only_articles": related_only_articles,
         "integrity_alerts": integrity_alerts,

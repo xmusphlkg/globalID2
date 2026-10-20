@@ -169,7 +169,13 @@ const itemList = {
             <div><dt>{pick('Diseases · 7 days', '近 7 天疾病')}</dt><dd>{metrics.diseases_last_7_days ?? 0}</dd></div>
             <div><dt>{pick('Countries · 7 days', '近 7 天国家')}</dt><dd>{metrics.countries_last_7_days ?? 0}</dd></div>
             <div><dt>{pick('Reviews & guidelines · 7 days', '近 7 天综述与指南')}</dt><dd>{metrics.reviews_and_guidelines_last_7_days ?? 0}</dd></div>
+            <div><dt>{pick('Title-linked records · estimated', '标题关联文献 · 估算', 'Liens par titre · estimation')}</dt><dd>{metrics.title_estimated_related_records ?? 0}</dd></div>
           </dl>
+          {(metrics.title_estimated_related_records ?? 0) > 0 && <p class="research-estimate-note">{pick(
+            `${metrics.title_estimated_related_records} metadata-only records retained; inferred links use title mentions (${metrics.title_estimated_disease_links ?? 0} disease, ${metrics.title_estimated_topic_links ?? 0} topic matches).`,
+            `已保留 ${metrics.title_estimated_related_records} 条轻量文献元数据；缺少现有关联时才按标题补估（${metrics.title_estimated_disease_links ?? 0} 项疾病、${metrics.title_estimated_topic_links ?? 0} 项主题匹配）。`,
+            `${metrics.title_estimated_related_records} notices bibliographiques légères conservées ; les liens manquants sont estimés à partir des titres (${metrics.title_estimated_disease_links ?? 0} maladies, ${metrics.title_estimated_topic_links ?? 0} thèmes).`
+          )}</p>}
         </aside>
       </div>
     </section>
@@ -730,6 +736,7 @@ const itemList = {
   .research-week dl div:nth-child(n+3) { margin-top: .65rem; padding-top: .65rem; border-top: 1px solid rgb(var(--border) / .7); }
   .research-week dt { min-height: 2.4em; color: rgb(var(--text-faint)); font-size: .57rem; font-weight: 700; line-height: 1.2; letter-spacing: .06em; text-transform: uppercase; }
   .research-week dd { margin-top: .45rem; color: rgb(var(--text-strong)); font: 600 1.55rem/1 'IBM Plex Sans', sans-serif; }
+  .research-estimate-note { margin: .9rem 0 0; padding-top: .7rem; border-top: 1px solid rgb(var(--border) / .7); color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.5; }
   .research-section { margin-top: 1.15rem; padding: clamp(1.05rem, 2vw, 1.5rem); }
   .research-directory { margin-top: 1.15rem; padding: 1.05rem clamp(1.05rem, 2vw, 1.5rem); }
   .directory-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: .8rem; border-bottom: 1px solid rgb(var(--border) / .68); }

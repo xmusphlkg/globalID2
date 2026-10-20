@@ -2,6 +2,13 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.13.1] - 2026-10-20
+
+### Changed
+
+- Retained review records that are ineligible for detailed AI summaries as compact bibliographic references in the existing Research Radar export. Disease and public-health topic links are estimated from title mentions and explicitly identified as estimates; abstracts and full-text content remain excluded, and no per-record pages are generated.
+- Added estimated related-record and title-link counts to the existing Research Radar overview, separate from the verified public catalogue metrics.
+
 ## [0.13.0] - 2026-10-18
 
 ### Added
