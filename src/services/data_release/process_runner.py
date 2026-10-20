@@ -20,6 +20,8 @@ class WorkbookTaskManager(Protocol):
 
     async def is_cancel_requested(self, task_uuid: str) -> bool: ...
 
+    async def update_task_progress(self, task_uuid: str, percent: int) -> Any: ...
+
 
 TerminateProcess = Callable[..., Awaitable[None]]
 
@@ -32,7 +34,9 @@ FAILURE_TAIL_LINES = 40
 OUTPUT_READ_CHUNK_BYTES = 8192
 TASK_CANCEL_CHECK_INTERVAL_SECONDS = 5
 TASK_CANCEL_STORE_GRACE_SECONDS = 60
+COMMAND_PROGRESS_INTERVAL_SECONDS = 60
 ANSI_ESCAPE_RE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+COUNTRY_PROGRESS_RE = re.compile(r"^SITE_EXPORT_COUNTRIES (\d+)/(\d+) country=([A-Z0-9-]+)$")
 
 
 class ReleaseCommandError(RuntimeError):
@@ -179,6 +183,8 @@ async def run_logged_command(
 
     loop = asyncio.get_running_loop()
     deadline = loop.time() + timeout_seconds
+    started_at = loop.time()
+    next_progress_report = started_at + COMMAND_PROGRESS_INTERVAL_SECONDS
     next_cancel_check = 0.0
     cancel_store_unavailable_since: float | None = None
     chunk_lines: list[str] = []
@@ -189,6 +195,7 @@ async def run_logged_command(
     suppressed_output_chunks = 0
     suppressed_output_lines = 0
     pending_output_fragment = ""
+    latest_progress = 22
 
     def record_output_text(value: str) -> None:
         nonlocal output_tail, total_output_lines
@@ -227,6 +234,24 @@ async def run_logged_command(
             chunk_lines = []
             chunk_index += 1
 
+    async def report_progress() -> None:
+        elapsed = int(loop.time() - started_at)
+        latest_line = output_tail[-1] if output_tail else "No output yet"
+        await task_manager.add_workbook_entry(
+            task_uuid,
+            entry_type="info",
+            title=f"{title} Progress",
+            content=f"Running for {elapsed}s; {total_output_lines} output lines. Latest: {latest_line}",
+            content_type="text",
+            metadata={
+                **metadata,
+                "event": "command_progress",
+                "command_event": metadata.get("event"),
+                "elapsed_seconds": elapsed,
+                "output_lines": total_output_lines,
+            },
+        )
+
     async def fail_on_timeout() -> None:
         if pending_output_fragment:
             record_output_text(pending_output_fragment)
@@ -261,6 +286,12 @@ async def run_logged_command(
 
     while True:
         now = loop.time()
+        if metadata.get("event") == "generate_site_data" and now >= next_progress_report:
+            try:
+                await report_progress()
+            except Exception as exc:
+                logger.warning("{} progress entry unavailable: {}", title, exc)
+            next_progress_report = loop.time() + COMMAND_PROGRESS_INTERVAL_SECONDS
         if now >= next_cancel_check:
             next_cancel_check = now + TASK_CANCEL_CHECK_INTERVAL_SECONDS
             try:
@@ -281,7 +312,23 @@ async def run_logged_command(
                     ) from exc
                 cancel_requested = False
             if cancel_requested:
+                if pending_output_fragment:
+                    record_output_text(pending_output_fragment)
+                    pending_output_fragment = ""
                 await terminate(proc)
+                if metadata.get("event") == "generate_site_data":
+                    try:
+                        await flush_chunk()
+                        await task_manager.add_workbook_entry(
+                            task_uuid,
+                            entry_type="warning",
+                            title=f"{title} Cancelled",
+                            content="\n".join(output_tail[-FAILURE_TAIL_LINES:]) or "No output was captured.",
+                            content_type="text",
+                            metadata={**metadata, "event": "command_cancelled"},
+                        )
+                    except Exception as exc:
+                        logger.warning("{} cancellation output unavailable: {}", title, exc)
                 raise TaskCancelledError(f"Cancellation requested while running: {title}")
 
         remaining_seconds = deadline - loop.time()
@@ -306,6 +353,16 @@ async def run_logged_command(
         for line in lines:
             if line.endswith(("\n", "\r")):
                 record_output_text(line)
+                if metadata.get("event") == "generate_site_data":
+                    match = COUNTRY_PROGRESS_RE.match(clean_output_line(line))
+                    if match and int(match.group(2)) > 0:
+                        country_progress = 22 + 6 * int(match.group(1)) // int(match.group(2))
+                        if country_progress > latest_progress:
+                            latest_progress = country_progress
+                            try:
+                                await task_manager.update_task_progress(task_uuid, latest_progress)
+                            except Exception as exc:
+                                logger.warning("{} country progress unavailable: {}", title, exc)
             else:
                 pending_output_fragment = line
 

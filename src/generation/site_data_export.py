@@ -487,8 +487,9 @@ async def collect_site_export_context(
         if configured_pool_size <= 1:
             # The outer metadata session owns the only connection in this
             # configuration, so reuse it instead of waiting for another one.
-            country_results = [
-                await _collect_country_export(
+            country_results = []
+            for country in countries_to_refresh:
+                result = await _collect_country_export(
                     country,
                     country_name_by_code=country_name_by_code,
                     country_name_zh_by_code=country_name_zh_by_code,
@@ -499,12 +500,32 @@ async def collect_site_export_context(
                     recorded_at_as_of=recorded_at_as_of,
                     session=session,
                 )
+                country_results.append(result)
+                print(
+                    f"SITE_EXPORT_COUNTRIES {len(country_results)}/{len(countries_to_refresh)} "
+                    f"country={result['code']}",
+                    flush=True,
+                )
+        else:
+            country_tasks = [
+                asyncio.create_task(collect_with_limit(country))
                 for country in countries_to_refresh
             ]
-        else:
-            country_results = await asyncio.gather(
-                *(collect_with_limit(country) for country in countries_to_refresh)
-            )
+            country_results = []
+            try:
+                for completed in asyncio.as_completed(country_tasks):
+                    result = await completed
+                    country_results.append(result)
+                    print(
+                        f"SITE_EXPORT_COUNTRIES {len(country_results)}/{len(country_tasks)} "
+                        f"country={result['code']}",
+                        flush=True,
+                    )
+            except BaseException:
+                for country_task in country_tasks:
+                    country_task.cancel()
+                await asyncio.gather(*country_tasks, return_exceptions=True)
+                raise
         fresh_results_by_code = {result["code"]: result for result in country_results}
         for country in countries:
             code = country["code"]
