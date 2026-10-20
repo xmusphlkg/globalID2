@@ -995,6 +995,11 @@ class LiteratureEnrichmentPipeline:
                 return
             if summary.status == "published" and not existing_metadata.get("autopilot"):
                 return
+            previous_attempts = (
+                int(existing_metadata.get("quality_attempts") or 0)
+                if existing_metadata.get("source_fingerprint") == result.source_fingerprint
+                else 0
+            )
             for field, value in result.fields.items():
                 setattr(summary, field, value)
             summary.status = "review"
@@ -1008,7 +1013,7 @@ class LiteratureEnrichmentPipeline:
                 "source_fingerprint": result.source_fingerprint,
                 "token_usage": result.token_usage,
                 "publication_gate": "autopilot-quality-gate" if self.config.autopilot_enabled else "human-review-required",
-                "quality_attempts": int(existing_metadata.get("quality_attempts") or 0) + 1,
+                "quality_attempts": previous_attempts + 1,
             }
             if language in TRANSLATION_LANGUAGES:
                 summary.generation_metadata["translation_provenance"] = {
@@ -1055,7 +1060,11 @@ class LiteratureEnrichmentPipeline:
                 return
             if summary.status == "published" and not existing_metadata.get("autopilot"):
                 return
-            previous_attempts = int(existing_metadata.get("quality_attempts") or 0)
+            previous_attempts = (
+                int(existing_metadata.get("quality_attempts") or 0)
+                if existing_metadata.get("source_fingerprint") == source_fingerprint(article)
+                else 0
+            )
             transient = _is_transient_generation_error(error)
             attempts = previous_attempts if transient else previous_attempts + 1
             summary.status = "review"
