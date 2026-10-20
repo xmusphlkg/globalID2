@@ -432,6 +432,7 @@ export default function AIModelsPage() {
         temperature: "温度",
         maxTokens: "最大 Token",
         modelConcurrency: "单模型并发上限",
+        setConcurrency: "设置并发",
         modelConcurrencyHint: "留空使用默认值 1；可设置 1–64，实际并发仍受提供商准入和 worker 总上限约束。",
         modelEnabled: "启用该模型",
         defaultModel: "默认模型",
@@ -516,6 +517,7 @@ export default function AIModelsPage() {
         temperature: "Temperature",
         maxTokens: "Max Tokens",
         modelConcurrency: "Model concurrency limit",
+        setConcurrency: "Set concurrency",
         modelConcurrencyHint: "Leave blank for the default of 1; set 1–64. Provider admission and the worker total limit still apply.",
         modelEnabled: "Model is enabled",
         defaultModel: "Default model",
@@ -1026,6 +1028,15 @@ export default function AIModelsPage() {
               {copy.modelConcurrency}: {model.runtime_max_concurrency ?? 1}
             </p>
           </div>
+        ),
+      },
+      {
+        key: "concurrency",
+        header: copy.modelConcurrency,
+        render: (model) => (
+          <ActionButton onClick={() => openEditModel(model)} className="h-8 whitespace-nowrap px-2" title={copy.setConcurrency}>
+            {model.runtime_max_concurrency ?? 1} · {copy.setConcurrency}
+          </ActionButton>
         ),
       },
       {
