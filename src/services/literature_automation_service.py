@@ -399,6 +399,18 @@ def decide_article(
             "exclude",
             ("strict animal-only record has no disease link and extremely low discovery score",),
         )
+    if (
+        research_domain in {"animal_only", "basic_research"}
+        and max_disease_confidence <= 0.0
+        and score < min(float(config.autopilot_article_exclude_below_score), 0.30)
+    ):
+        # Preserve the record and revisit it when classification or disease
+        # evidence changes, without treating an obviously low-priority record
+        # as an outstanding editorial exception on every ingest run.
+        return AutomationDecision(
+            "defer",
+            ("low-scoring non-public research without a disease link; re-evaluate on new evidence",),
+        )
     if research_domain in _NON_PUBLIC_RESEARCH_DOMAINS:
         return AutomationDecision(
             "hold",

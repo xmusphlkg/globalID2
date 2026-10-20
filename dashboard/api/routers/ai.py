@@ -1245,6 +1245,8 @@ async def list_runtime_routes():
     )
     provider_capacities = worker_metadata.get("ai_provider_capacities")
     provider_capacities = provider_capacities if isinstance(provider_capacities, dict) else {}
+    model_capacities = worker_metadata.get("ai_model_capacities")
+    model_capacities = model_capacities if isinstance(model_capacities, dict) else {}
     admission_fields = {
         "runtime_provider_capacity",
         "runtime_provider_inflight",
@@ -1256,15 +1258,23 @@ async def list_runtime_routes():
     }
     for route in routes:
         worker_snapshot = provider_capacities.get(str(route.get("provider_id")))
-        if not isinstance(worker_snapshot, dict):
-            continue
-        route.update(
-            {
-                key: worker_snapshot[key]
-                for key in admission_fields
-                if key in worker_snapshot
-            }
-        )
+        if isinstance(worker_snapshot, dict):
+            route.update(
+                {
+                    key: worker_snapshot[key]
+                    for key in admission_fields
+                    if key in worker_snapshot
+                }
+            )
+        model_snapshot = model_capacities.get(str(route.get("model_id")))
+        if isinstance(model_snapshot, dict):
+            route.update(
+                {
+                    key: model_snapshot[key]
+                    for key in ("runtime_model_capacity", "runtime_model_inflight")
+                    if key in model_snapshot
+                }
+            )
     return [
         RuntimeRouteOut(
             model_id=int(route["model_id"]),

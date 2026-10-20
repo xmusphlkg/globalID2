@@ -34,14 +34,13 @@ TASK_WORKER_CONFIG = get_config().task_worker
 POLL_INTERVAL_SECONDS = TASK_WORKER_CONFIG.poll_interval_seconds
 IDLE_LOG_EVERY = TASK_WORKER_CONFIG.idle_log_every
 MAX_CONCURRENT_TASKS = TASK_WORKER_CONFIG.concurrency
-MAX_CONCURRENT_AI_TASKS = min(TASK_WORKER_CONFIG.ai_concurrency, MAX_CONCURRENT_TASKS)
 MAX_CONCURRENT_KNOWLEDGE_SOURCE_TASKS = min(
     TASK_WORKER_CONFIG.knowledge_source_concurrency,
     MAX_CONCURRENT_TASKS,
 )
 MIN_CONCURRENT_AI_TASKS = min(
     max(1, TASK_WORKER_CONFIG.ai_concurrency_min),
-    MAX_CONCURRENT_AI_TASKS,
+    MAX_CONCURRENT_TASKS,
 )
 TASK_HEARTBEAT_SECONDS = TASK_WORKER_CONFIG.task_heartbeat_seconds
 SHUTDOWN_GRACE_SECONDS = TASK_WORKER_CONFIG.shutdown_grace_seconds
@@ -133,10 +132,7 @@ class AdaptiveAIConcurrencyController:
         return self._capacity
 
     async def refresh(self, *, force: bool = False) -> int:
-        """Refresh the ceiling from routable models without disrupting running work."""
-        if not self.enabled:
-            self._capacity = self.maximum
-            return self._capacity
+        """Derive AI task slots from independent routable model limits."""
 
         now = time.monotonic()
         if not force and now - self._last_route_refresh < self.adjust_seconds:
@@ -166,97 +162,25 @@ class AdaptiveAIConcurrencyController:
                 )
             return self._capacity
 
-        provider_capacities: dict[Any, int] = {}
-        for route in active_routes:
-            provider_key = route.get("provider_id") or route.get("provider_key")
-            if provider_key is None:
-                continue
-            try:
-                # Runtime admission is the source of truth when it is present.
-                # The route-slot setting remains a compatibility fallback for
-                # callers that predate Model Center admission telemetry.
-                capacity = max(
-                    1,
-                    int(route.get("runtime_provider_capacity", self.slots_per_route)),
-                )
-            except (TypeError, ValueError):
-                capacity = self.slots_per_route
-            provider_capacities[provider_key] = max(
-                provider_capacities.get(provider_key, 0),
-                capacity,
-            )
-        provider_count = len(provider_capacities)
-        route_count = len(active_routes)
-        self._route_ceiling = min(
-            self.maximum,
-            max(self.minimum, sum(provider_capacities.values())),
+        self._route_ceiling = sum(
+            max(1, int(route.get("runtime_model_capacity") or self.slots_per_route))
+            for route in active_routes
         )
-        # One credential can back several models but still have one shared
-        # personal-plan quota. Start at one task per provider; Model Center's
-        # request admission gate enforces and earns further parallelism.
-        baseline = min(self._route_ceiling, max(self.minimum, provider_count))
         previous = self._capacity
-        if self._capacity > self._route_ceiling:
-            self._capacity = self._route_ceiling
-        elif self._capacity < baseline:
-            self._capacity = baseline
+        self._capacity = self._route_ceiling
         self._last_route_refresh = now
         if previous != self._capacity:
             logger.info(
-                "Adaptive AI concurrency adjusted from {} to {} (routable_models={}, providers={}, provider_capacity={})",
+                "AI task slots adjusted from {} to {} from {} routable model limits",
                 previous,
                 self._capacity,
                 len(active_routes),
-                provider_count,
-                sum(provider_capacities.values()),
             )
         return self._capacity
 
     def record_result(self, *, success: bool, error: Exception | None = None) -> int:
-        """Increase slowly after success; immediately back off on model pressure."""
-        if not self.enabled:
-            return self._capacity
-        if self._route_ceiling <= 0:
-            # An in-flight task may finish after ``refresh`` has paused
-            # admission. Its outcome must not reopen a slot without a fresh
-            # Model Center route snapshot.
-            return self._capacity
-        if success:
-            self._success_streak += 1
-            now = time.monotonic()
-            if (
-                self._capacity < self._route_ceiling
-                and self._success_streak >= self.scale_up_successes
-                and now - self._last_scale_up >= self.adjust_seconds
-            ):
-                previous = self._capacity
-                self._capacity += 1
-                self._success_streak = 0
-                self._last_scale_up = now
-                logger.info("Adaptive AI concurrency increased from {} to {} after successful tasks", previous, self._capacity)
-            return self._capacity
-
-        self._success_streak = 0
-        if error is None or not _is_model_pressure_error(error):
-            return self._capacity
-        previous = self._capacity
-        self._capacity = max(self.minimum, self._capacity - max(1, self._capacity // 2))
-        if previous != self._capacity:
-            logger.warning("Adaptive AI concurrency reduced from {} to {} after model pressure: {}", previous, self._capacity, error)
+        """Route health and per-model limits own pressure handling."""
         return self._capacity
-
-
-def _is_model_pressure_error(error: Exception) -> bool:
-    """Only model throttling/timeouts should shrink the shared AI budget."""
-    try:
-        from src.ai.model_center import is_rate_limit_error
-
-        if is_rate_limit_error(error):
-            return True
-    except Exception:
-        pass
-    message = str(error).lower()
-    return any(token in message for token in ("agent completion failed", "model request timeout", "rate limit", "quota exceeded"))
 
 
 async def _load_runtime_routes() -> list[dict[str, Any]]:
@@ -271,6 +195,12 @@ def _runtime_provider_capacity_snapshots() -> dict[str, dict[str, Any]]:
     from src.ai.model_center import runtime_provider_admission_snapshots
 
     return runtime_provider_admission_snapshots()
+
+
+def _runtime_model_capacity_snapshots() -> dict[str, dict[str, Any]]:
+    from src.ai.model_center import runtime_model_admission_snapshots
+
+    return runtime_model_admission_snapshots()
 
 
 def _knowledge_task_disease_id(task: Task) -> str | None:
@@ -551,17 +481,14 @@ async def _resume_knowledge_repairs_after_model_recovery() -> None:
 async def run_worker() -> None:
     """Main worker loop."""
     logger.info(
-        "Task worker started (poll_interval={}s, concurrency={}, ai_concurrency={}..{}, adaptive_ai={})",
+        "Task worker started (poll_interval={}s, non_ai_concurrency={}, ai_slots=per_model)",
         POLL_INTERVAL_SECONDS,
         MAX_CONCURRENT_TASKS,
-        MIN_CONCURRENT_AI_TASKS,
-        MAX_CONCURRENT_AI_TASKS,
-        TASK_WORKER_CONFIG.ai_dynamic_concurrency_enabled,
     )
 
     ai_concurrency = AdaptiveAIConcurrencyController(
         minimum=MIN_CONCURRENT_AI_TASKS,
-        maximum=MAX_CONCURRENT_AI_TASKS,
+        maximum=MAX_CONCURRENT_TASKS,
         enabled=TASK_WORKER_CONFIG.ai_dynamic_concurrency_enabled,
         slots_per_route=TASK_WORKER_CONFIG.ai_concurrency_per_route,
         scale_up_successes=TASK_WORKER_CONFIG.ai_concurrency_scale_up_successes,
@@ -610,10 +537,11 @@ async def run_worker() -> None:
         lease_loss_shutdown_timeout_seconds=SHUTDOWN_GRACE_SECONDS + 15,
         metadata=lambda: {
             "concurrency": MAX_CONCURRENT_TASKS,
-            "ai_concurrency_max": MAX_CONCURRENT_AI_TASKS,
+            "ai_concurrency_max": ai_concurrency.capacity,
             "ai_concurrency_current": ai_concurrency.capacity,
-            "ai_concurrency_adaptive": TASK_WORKER_CONFIG.ai_dynamic_concurrency_enabled,
+            "ai_concurrency_adaptive": True,
             "ai_provider_capacities": _runtime_provider_capacity_snapshots(),
+            "ai_model_capacities": _runtime_model_capacity_snapshots(),
         },
         on_lease_lost=_threaded_lease_lost,
     )
@@ -703,10 +631,11 @@ async def run_worker() -> None:
                 len(active_tasks),
                 SHUTDOWN_GRACE_SECONDS,
             )
-        while not stop_event.is_set() and len(active_tasks) < MAX_CONCURRENT_TASKS:
+        while not stop_event.is_set() and len(active_tasks) < MAX_CONCURRENT_TASKS + ai_concurrency.capacity:
             active_ai_tasks = sum(
                 1 for task_type in active_task_types.values() if task_type in AI_TASK_TYPES
             )
+            active_non_ai_tasks = len(active_task_types) - active_ai_tasks
             active_source_tasks = sum(
                 1
                 for task_type in active_task_types.values()
@@ -715,6 +644,8 @@ async def run_worker() -> None:
             blocked_task_types: set[TaskType] = set()
             if active_ai_tasks >= ai_concurrency.capacity:
                 blocked_task_types.update(AI_TASK_TYPES)
+            if active_non_ai_tasks >= MAX_CONCURRENT_TASKS:
+                blocked_task_types.update(set(TaskType) - AI_TASK_TYPES)
             if active_source_tasks >= MAX_CONCURRENT_KNOWLEDGE_SOURCE_TASKS:
                 blocked_task_types.update(KNOWLEDGE_SOURCE_TASK_TYPES)
             claimed = await _claim_next_task_uuid(

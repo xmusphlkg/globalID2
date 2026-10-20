@@ -289,12 +289,8 @@ class LiteratureService:
             getattr(cfg, "catch_up_max_exception_backlog", 500)
         )
         max_records = int(getattr(cfg, "max_records_per_run", 300))
-        # Catch-up is allowed only when observed + one worst-case batch is
-        # strictly below the hard limit. This is the exact resume boundary,
-        # surfaced so an operator does not have to reverse-engineer ``>=``.
-        result["catch_up_resume_below_backlog"] = (
-            result["catch_up_backlog_limit"] - max_records
-        )
+        # Editorial review volume remains visible, while each metadata sync
+        # stays bounded by max_records_per_run.
         scheduled_trigger = bool((task.input_data or {}).get("scheduled_trigger"))
         if not catch_up_required:
             return result
@@ -324,24 +320,13 @@ class LiteratureService:
         projected_upper_bound = backlog_count + max_records
         result["catch_up_backlog_projected_upper_bound"] = projected_upper_bound
         if projected_upper_bound >= backlog_limit:
-            result["catch_up_paused_backpressure"] = 1
-            result["catch_up_backpressure_reason"] = "exception_backlog_headroom_exhausted"
-            result["catch_up_status"] = "paused_backpressure"
-            result["catch_up_next_action_code"] = (
-                "reduce_exception_backlog_below_resume_threshold"
-            )
-            result["catch_up_required_backlog_reduction"] = max(
-                0,
-                backlog_count - result["catch_up_resume_below_backlog"] + 1,
-            )
+            result["catch_up_review_backlog_high"] = 1
             logger.info(
-                "Research Radar catch-up paused by backpressure backlog_count={} projected_upper_bound={} limit={} resume_below={}",
+                "Research Radar catch-up continuing with review backlog_count={} projected_upper_bound={} threshold={}",
                 backlog_count,
                 projected_upper_bound,
                 backlog_limit,
-                result["catch_up_resume_below_backlog"],
             )
-            return result
         now = datetime.now(ZoneInfo(cfg.timezone))
         next_run_at = now + timedelta(
             minutes=getattr(cfg, "catch_up_interval_minutes", 5)
@@ -848,10 +833,6 @@ class LiteratureService:
                     cfg,
                     "catch_up_max_exception_backlog",
                     None,
-                ),
-                "catch_up_resume_below_backlog": (
-                    getattr(cfg, "catch_up_max_exception_backlog", 500)
-                    - cfg.max_records_per_run
                 ),
                 "catch_up_required": bool(
                     (latest.output_data or {}).get("catch_up_required")

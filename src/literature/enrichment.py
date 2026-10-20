@@ -64,7 +64,7 @@ class LiteratureEvidenceAgent(BaseAgent):
         response = await self.complete(
             prompt=kwargs["prompt"],
             system=kwargs["system"],
-            use_cache=True,
+            use_cache=bool(kwargs.get("use_cache", True)),
             preferred_models=kwargs.get("preferred_models"),
             wait_for_model_recovery=bool(
                 kwargs.get(
@@ -200,7 +200,7 @@ def _is_transient_generation_error(error: Exception) -> bool:
 
 
 class LiteratureSummaryGenerator:
-    PROTOCOL_VERSION = 2
+    PROTOCOL_VERSION = 3
     BILINGUAL_PROTOCOL_VERSION = "canonical-en-translation.v1"
     MULTILINGUAL_PROTOCOL_VERSION = "canonical-en-translation.v2"
 
@@ -218,6 +218,7 @@ class LiteratureSummaryGenerator:
         timeout_seconds: int,
         preferred_models: list[str],
         canonical_fields: dict[str, str | None] | None = None,
+        use_cache: bool = True,
     ) -> EnrichmentResult:
         language = str(language or "en").strip().lower()
         language = language if language in SUPPORTED_SUMMARY_LANGUAGES else "en"
@@ -248,7 +249,8 @@ class LiteratureSummaryGenerator:
             "confirms the paper. Paraphrase; never reproduce a sentence or a long phrase from the abstract. If evidence "
             "does not support a field, return null, except limitations: when explicit limitations are absent, write a "
             "source-scope limitation about reliance on the supplied single-article abstract/metadata. The output language is "
-            f"{LANGUAGE_NAMES[language]}. Return JSON only."
+            f"{LANGUAGE_NAMES[language]}. Return JSON only, with all seven named fields. For every non-null field, "
+            "cite only supplied evidence sections that directly support the text and provide a calibrated confidence."
         )
         if language in TRANSLATION_LANGUAGES:
             system += (
@@ -298,6 +300,7 @@ class LiteratureSummaryGenerator:
             system=system,
             preferred_models=preferred_models,
             timeout_seconds=timeout_seconds,
+            use_cache=use_cache,
         )
         parse_failed = False
         try:
@@ -317,6 +320,7 @@ class LiteratureSummaryGenerator:
                 evidence=evidence,
                 preferred_models=preferred_models,
                 timeout_seconds=timeout_seconds,
+                use_cache=use_cache,
             )
         fields: dict[str, str | None] = {}
         evidence_map: dict[str, dict[str, Any]] = {}
@@ -416,6 +420,7 @@ class LiteratureSummaryGenerator:
         evidence: dict[str, Any],
         preferred_models: list[str],
         timeout_seconds: int,
+        use_cache: bool = True,
     ) -> dict[str, Any]:
         missing = [
             field for field in SUMMARY_FIELDS
@@ -452,6 +457,7 @@ class LiteratureSummaryGenerator:
                     ),
                     preferred_models=preferred_models,
                     timeout_seconds=timeout_seconds,
+                    use_cache=use_cache,
                 )
                 repaired = _parse_json(str(response["raw_response"]))
                 for field in missing:
@@ -619,17 +625,27 @@ class LiteratureEnrichmentPipeline:
         step = 0
         progress_lock = asyncio.Lock()
         counts_lock = asyncio.Lock()
-        concurrency = min(
-            max(1, int(getattr(self.config, "ai_enrichment_concurrency", 1))),
-            max(1, len(articles)),
-        )
-        semaphore = asyncio.Semaphore(concurrency)
         preferred_models = list(input_data.get("preferred_models") or [])
         route_preferences = (
             preferred_models
             if preferred_models
             else await self._load_route_shard_preferences()
         )
+        try:
+            active_routes = await get_active_model_routes()
+            if preferred_models:
+                active_routes = [
+                    route for route in active_routes
+                    if route.get("model_key") in preferred_models or route.get("model_name") in preferred_models
+                ]
+            route_budget = sum(
+                max(1, int(route.get("runtime_model_capacity") or 1))
+                for route in active_routes
+            )
+        except Exception as exc:
+            logger.warning("Could not read live model concurrency for literature: {}", exc)
+            route_budget = 1
+        semaphore = asyncio.Semaphore(min(max(1, len(articles)), max(1, route_budget)))
 
         async def record_progress() -> None:
             nonlocal step
@@ -663,6 +679,7 @@ class LiteratureEnrichmentPipeline:
                                 article_index * max(1, len(languages)) + language_index
                             ),
                             canonical_fields=canonical_fields if language in TRANSLATION_LANGUAGES else None,
+                            use_cache=not (force or language in context[article.article_id]["existing_languages"]),
                         )
                         await self._store(article.article_id, language=language, result=result)
                         if language == "en":
@@ -796,9 +813,14 @@ class LiteratureEnrichmentPipeline:
                     previous = str((summary.generation_metadata or {}).get("source_fingerprint") or "")
                     auto_published = bool((summary.generation_metadata or {}).get("autopilot"))
                     attempts = int((summary.generation_metadata or {}).get("quality_attempts") or 0)
+                    metadata = summary.generation_metadata or {}
+                    review_retry_needed = bool(metadata.get("last_generation_error")) or (
+                        (metadata.get("autopilot") or {}).get("decision") == "hold"
+                    )
                     if force or previous != fingerprint or (
                         summary.status == "review"
                         and self.config.autopilot_enabled
+                        and review_retry_needed
                         and attempts < self.config.ai_max_quality_attempts
                     ) or (
                         summary.status == "published" and auto_published and previous != fingerprint
@@ -808,22 +830,19 @@ class LiteratureEnrichmentPipeline:
 
             articles: list[LiteratureArticle] = []
             scan_batch_size = limit if requested_ids else max(100, limit * 20)
-            max_scan = (
-                limit
-                if requested_ids
-                else max(scan_batch_size, int(getattr(self.config, "ai_enrichment_candidate_scan_limit", 5000)))
-            )
-            scanned = 0
             offset = 0
-            while len(articles) < limit and scanned < max_scan:
-                remaining_scan = max_scan - scanned
-                batch_query = base_query.limit(min(scan_batch_size, remaining_scan))
+            # The ordered candidate pool can contain many records that are
+            # intentionally ineligible for a detailed summary. A fixed scan
+            # ceiling silently starved every eligible article below it. Keep
+            # each DB fetch bounded, but continue paging until the batch is
+            # full or the candidate pool is exhausted.
+            while len(articles) < limit:
+                batch_query = base_query.limit(scan_batch_size)
                 if not requested_ids:
                     batch_query = batch_query.offset(offset)
                 candidates = list((await db.execute(batch_query)).scalars().all())
                 if not candidates:
                     break
-                scanned += len(candidates)
                 offset += len(candidates)
                 candidate_ids = [article.article_id for article in candidates]
                 existing_summaries = list(
@@ -855,11 +874,12 @@ class LiteratureEnrichmentPipeline:
                 ).scalars().all()
             ) if article_ids else []
             context: dict[str, dict[str, Any]] = {
-                article_id: {"diseases": [], "countries": [], "topics": [], "canonical_en": None}
+                article_id: {"diseases": [], "countries": [], "topics": [], "canonical_en": None, "existing_languages": set()}
                 for article_id in article_ids
             }
             if article_ids:
                 for summary in selected_summaries:
+                    context[summary.article_id]["existing_languages"].add(summary.language)
                     if summary.article_id in context and summary.language == "en":
                         context[summary.article_id]["canonical_en"] = {
                             field: getattr(summary, field) for field in SUMMARY_FIELDS
@@ -912,9 +932,14 @@ class LiteratureEnrichmentPipeline:
         if force or fingerprint != source_fingerprint(article):
             return False
         attempts = int((existing.generation_metadata or {}).get("quality_attempts") or 0)
+        metadata = existing.generation_metadata or {}
+        review_retry_needed = bool(metadata.get("last_generation_error")) or (
+            (metadata.get("autopilot") or {}).get("decision") == "hold"
+        )
         return not (
             self.config.autopilot_enabled
             and existing.status == "review"
+            and review_retry_needed
             and attempts < self.config.ai_max_quality_attempts
         )
 
