@@ -7,7 +7,7 @@ from pathlib import Path
 
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.schema import CreateTable
+from sqlalchemy.schema import CreateIndex, CreateTable
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -287,6 +287,7 @@ def test_series_observation_identity_preserves_series_and_strata() -> None:
     index_columns = {
         index.name: tuple(column.name for column in index.columns)
         for index in DiseaseSeriesObservation.__table__.indexes
+        if all(getattr(column, "name", None) for column in index.columns)
     }
     assert index_columns["idx_disease_series_observation_series_time"] == (
         "series_code",
@@ -302,6 +303,16 @@ def test_series_observation_identity_preserves_series_and_strata() -> None:
         "dimension_key",
         "time",
     )
+    override = next(
+        index
+        for index in DiseaseSeriesObservation.__table__.indexes
+        if index.name == "idx_dso_mapping_override"
+    )
+    override_sql = str(CreateIndex(override).compile(dialect=postgresql.dialect()))
+    assert "source_disease_code" in override_sql
+    assert "source_disease_label" in override_sql
+    assert "local_code" in override_sql
+    assert "local_label" in override_sql
 
 
 def test_observation_revision_ledger_is_append_only_and_indexed_for_asof_reads() -> None:

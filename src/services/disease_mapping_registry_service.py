@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import html
 import json
+import time
 import unicodedata
 from collections import Counter
 from datetime import date, datetime, timezone
@@ -36,6 +37,27 @@ logger = get_logger(__name__)
 
 PROMPT_VERSION = "disease-mapping-v3.5"
 UNMAPPED_GROUP = "G_UNMAPPED_SOURCE_CATEGORIES"
+_COVERAGE_TTL_SECONDS = 300
+_coverage_cache: tuple[float, dict[str, Any]] | None = None
+_coverage_lock = asyncio.Lock()
+
+
+async def _enable_parallel_aggregate(db: AsyncSession) -> None:
+    """Let one large surveillance aggregate use the server's parallel workers.
+
+    The default work_mem is a few megabytes, so PostgreSQL plans these
+    grouping queries as a single process. Raising it for this transaction
+    makes the same scan about five times faster and does not change results.
+    """
+
+    for statement in (
+        "SET LOCAL work_mem = '256MB'",
+        "SET LOCAL jit = off",
+        "SET LOCAL parallel_setup_cost = 0",
+        "SET LOCAL parallel_tuple_cost = 0",
+        "SET LOCAL min_parallel_table_scan_size = '8MB'",
+    ):
+        await db.execute(text(statement))
 
 
 def normalize_source_text(value: object) -> str:
@@ -61,6 +83,71 @@ def _category_key(source_id: str, source_code: str, definition_version: str) -> 
 def _assertion_key(category_key: str, target_kind: str, target_code: str, relation: str) -> str:
     raw = f"{category_key}\x1f{target_kind}\x1f{target_code}\x1f{relation}"
     return f"MAP_{hashlib.sha256(raw.encode()).hexdigest()[:32]}"
+
+
+async def _category_page(db: AsyncSession, rows: list[Any]) -> list[dict[str, Any]]:
+    """Attach the review slice for a category page in two queries.
+
+    The page used to issue two queries per category. A 200-row page was
+    several hundred round trips and exceeded the control panel timeout.
+    """
+
+    if not rows:
+        return []
+    category_ids = [row.id for row in rows]
+    candidate_rows = (
+        await db.execute(
+            select(DiseaseMappingCandidate)
+            .where(
+                DiseaseMappingCandidate.category_id.in_(category_ids),
+                DiseaseMappingCandidate.status == "proposed",
+            )
+            .order_by(DiseaseMappingCandidate.category_id, DiseaseMappingCandidate.rank)
+        )
+    ).scalars().all()
+    assertion_rows = (
+        await db.execute(
+            select(DiseaseMappingAssertion)
+            .where(DiseaseMappingAssertion.category_id.in_(category_ids))
+            .order_by(
+                DiseaseMappingAssertion.category_id,
+                DiseaseMappingAssertion.created_at.desc(),
+            )
+        )
+    ).scalars().all()
+    candidates_by_category: dict[int, list[Any]] = {}
+    for candidate in candidate_rows:
+        bucket = candidates_by_category.setdefault(candidate.category_id, [])
+        if len(bucket) < 5:
+            bucket.append(candidate)
+    assertions_by_category: dict[int, list[Any]] = {}
+    for assertion in assertion_rows:
+        bucket = assertions_by_category.setdefault(assertion.category_id, [])
+        if len(bucket) < 5:
+            bucket.append(assertion)
+
+    output = []
+    for row in rows:
+        candidates = candidates_by_category.get(row.id, [])
+        assertions = assertions_by_category.get(row.id, [])
+        item = _model_dict(row)
+        item["candidates"] = [_model_dict(candidate) for candidate in candidates]
+        item["assertions"] = [_model_dict(assertion) for assertion in assertions]
+        has_approved_assertion = any(
+            assertion.assertion_status == "approved" for assertion in assertions
+        )
+        item["mapping_status"] = (
+            "reviewed"
+            if has_approved_assertion
+            else ("review_ready" if candidates else "awaiting_suggestion")
+        )
+        item["automation_failure_kind"] = (
+            "provider_unavailable"
+            if row.ai_status == "no_model"
+            else ("internal_processing_error" if row.ai_status == "failed" else None)
+        )
+        output.append(item)
+    return output
 
 
 def _candidate_key(category_key: str, method: str, target: str, rank: int) -> str:
@@ -125,12 +212,29 @@ class DiseaseMappingRegistryService:
                 sync_conn, tables=tables, checkfirst=True
             )
         )
-        await db.execute(
-            text(
-                "ALTER TABLE source_disease_categories "
-                "ADD COLUMN IF NOT EXISTS ai_next_attempt_at TIMESTAMPTZ"
+        # ADD COLUMN takes an exclusive lock even when the column is already
+        # present. A long coverage read can then queue every mapping request
+        # behind that lock, so check the catalog before altering.
+        column_exists = (
+            await db.execute(
+                text(
+                    """
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'source_disease_categories'
+                      AND column_name = 'ai_next_attempt_at'
+                    """
+                )
             )
-        )
+        ).scalar_one_or_none()
+        if column_exists is None:
+            await db.execute(
+                text(
+                    "ALTER TABLE source_disease_categories "
+                    "ADD COLUMN IF NOT EXISTS ai_next_attempt_at TIMESTAMPTZ"
+                )
+            )
         # Source categories already allow 120-character definition versions.
         # Holding series must preserve that identity byte-for-byte so the
         # effective release view can join facts after review. PostgreSQL will
@@ -163,8 +267,23 @@ class DiseaseMappingRegistryService:
         # labels or the legacy disease_id stored on a series definition.  A
         # release switch is therefore atomic and historical facts need no
         # destructive rewrite.
-        await db.execute(
-            text(
+        # Replacing an existing view takes an exclusive lock. A long backfill
+        # that has already read the view then blocks every mapping request, so
+        # create it only when it is missing. Ship a changed definition by
+        # dropping the view or with a migration.
+        view_exists = (
+            await db.execute(
+                text(
+                    """
+                    SELECT 1
+                    FROM information_schema.views
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'effective_disease_series_observations_v3'
+                    """
+                )
+            )
+        ).scalar_one_or_none()
+        view_sql = text(
                 """
                 CREATE OR REPLACE VIEW effective_disease_series_observations_v3 AS
                 SELECT
@@ -250,8 +369,9 @@ class DiseaseMappingRegistryService:
                  AND (a.valid_from IS NULL OR o.time::date >= a.valid_from)
                  AND (a.valid_to IS NULL OR o.time::date <= a.valid_to)
                 """
-            )
         )
+        if view_exists is None:
+            await db.execute(view_sql)
         self._schema_ready = True
 
     async def discover_rows(
@@ -1028,40 +1148,7 @@ class DiseaseMappingRegistryService:
                 .offset(offset).limit(limit)
             )
         ).scalars().all()
-        output = []
-        for row in rows:
-            candidates = (
-                await db.execute(
-                    select(DiseaseMappingCandidate)
-                    .where(DiseaseMappingCandidate.category_id == row.id, DiseaseMappingCandidate.status == "proposed")
-                    .order_by(DiseaseMappingCandidate.rank).limit(5)
-                )
-            ).scalars().all()
-            assertions = (
-                await db.execute(
-                    select(DiseaseMappingAssertion)
-                    .where(DiseaseMappingAssertion.category_id == row.id)
-                    .order_by(DiseaseMappingAssertion.created_at.desc()).limit(5)
-                )
-            ).scalars().all()
-            item = _model_dict(row)
-            item["candidates"] = [_model_dict(candidate) for candidate in candidates]
-            item["assertions"] = [_model_dict(assertion) for assertion in assertions]
-            has_approved_assertion = any(
-                assertion.assertion_status == "approved" for assertion in assertions
-            )
-            item["mapping_status"] = (
-                "reviewed"
-                if has_approved_assertion
-                else ("review_ready" if candidates else "awaiting_suggestion")
-            )
-            item["automation_failure_kind"] = (
-                "provider_unavailable"
-                if row.ai_status == "no_model"
-                else ("internal_processing_error" if row.ai_status == "failed" else None)
-            )
-            output.append(item)
-        return output
+        return await _category_page(db, rows)
 
     async def accept_candidate(
         self,
@@ -1645,10 +1732,166 @@ class DiseaseMappingRegistryService:
         """Report release-pinned adoption without mutating historical facts."""
 
         await self.ensure_schema(db)
+        global _coverage_cache
+        now = time.monotonic()
+        if _coverage_cache is not None and now - _coverage_cache[0] < _COVERAGE_TTL_SECONDS:
+            return _coverage_cache[1]
+        async with _coverage_lock:
+            now = time.monotonic()
+            if _coverage_cache is not None and now - _coverage_cache[0] < _COVERAGE_TTL_SECONDS:
+                return _coverage_cache[1]
+            payload = await self._query_effective_coverage(db)
+            _coverage_cache = (time.monotonic(), payload)
+            return payload
+
+    async def _query_effective_coverage(self, db: AsyncSession) -> dict[str, Any]:
+        await _enable_parallel_aggregate(db)
+        # Summing grouped observation counts matches COUNT(DISTINCT observation_id)
+        # only while each category has one approved assertion and none of those
+        # assertions are limited to a date range. Either condition makes one
+        # observation able to match a different number of release rows, so the
+        # query falls back to the release view.
+        use_view = bool(
+            (
+                await db.execute(
+                    text(
+                        """
+                        SELECT
+                            EXISTS (
+                                SELECT 1
+                                FROM disease_mapping_assertions_v3 assertion
+                                JOIN disease_mapping_release_items_v3 item
+                                  ON item.assertion_id = assertion.id
+                                JOIN disease_mapping_releases_v3 release
+                                  ON release.id = item.release_id
+                                 AND release.status = 'active'
+                                WHERE assertion.assertion_status = 'approved'
+                                  AND (
+                                        assertion.valid_from IS NOT NULL
+                                        OR assertion.valid_to IS NOT NULL
+                                      )
+                            )
+                            OR EXISTS (
+                                SELECT 1
+                                FROM disease_mapping_assertions_v3 assertion
+                                JOIN disease_mapping_release_items_v3 item
+                                  ON item.assertion_id = assertion.id
+                                JOIN disease_mapping_releases_v3 release
+                                  ON release.id = item.release_id
+                                 AND release.status = 'active'
+                                WHERE assertion.assertion_status = 'approved'
+                                GROUP BY assertion.category_id
+                                HAVING COUNT(*) > 1
+                            )
+                        """
+                    )
+                )
+            ).scalar_one()
+        )
+        if use_view:
+            logger.info(
+                "effective coverage is using the release view because approved assertions are date-bounded or overlap"
+            )
+        mapped_cte = (
+            """
+            mapped AS (
+                SELECT country_code,
+                       COUNT(DISTINCT observation_id) AS mapped_count,
+                       COUNT(DISTINCT observation_id) FILTER (
+                           WHERE is_canonical_projection
+                       ) AS canonical_count,
+                       COUNT(DISTINCT observation_id) FILTER (
+                           WHERE projection_policy = 'no_projection'
+                       ) AS no_projection_count,
+                       COUNT(DISTINCT observation_id) FILTER (
+                           WHERE projection_policy = 'discovery_only'
+                       ) AS discovery_only_count
+                FROM effective_disease_series_observations_v3
+                GROUP BY country_code
+            )
+            """
+            if use_view
+            else """
+            obs_keys AS (
+                SELECT series_code,
+                       COALESCE(NULLIF((dimensions ->> 'source_disease_code'), ''), NULLIF((metadata ->> 'local_code'), '')) AS code_override,
+                       lower(btrim(COALESCE(NULLIF((dimensions ->> 'source_disease_label'), ''), NULLIF((metadata ->> 'local_label'), '')))) AS label_override,
+                       COUNT(*) AS observation_count
+                FROM disease_series_observations
+                GROUP BY 1, 2, 3
+            ),
+            grouped AS (
+                SELECT s.country_code,
+                       s.source_system,
+                       s.definition_version,
+                       COALESCE(keys.code_override, s.source_series_code) AS source_code_key,
+                       COALESCE(keys.label_override, lower(btrim(s.source_label))) AS label_key,
+                       SUM(keys.observation_count) AS observation_count
+                FROM obs_keys keys
+                JOIN disease_surveillance_series s ON s.series_code = keys.series_code
+                GROUP BY 1, 2, 3, 4, 5
+            ),
+            categorized AS (
+                SELECT grouped.country_code,
+                       grouped.observation_count,
+                       category.id AS category_id
+                FROM grouped
+                JOIN LATERAL (
+                    SELECT source_category.id
+                    FROM source_disease_categories source_category
+                    WHERE source_category.source_id = grouped.source_system
+                      AND source_category.is_active IS TRUE
+                      AND (
+                            (
+                                source_category.definition_version = grouped.definition_version
+                                AND source_category.source_code = grouped.source_code_key
+                            )
+                            OR (
+                                source_category.definition_version = 'source-current'
+                                AND source_category.source_code LIKE 'label:%'
+                                AND lower(btrim(source_category.canonical_source_label))
+                                    = grouped.label_key
+                            )
+                          )
+                    ORDER BY CASE
+                        WHEN source_category.definition_version = grouped.definition_version
+                         AND source_category.source_code = grouped.source_code_key THEN 0
+                        ELSE 1
+                    END,
+                    source_category.id DESC
+                    LIMIT 1
+                ) category ON TRUE
+            ),
+            mapped AS (
+                SELECT categorized.country_code,
+                       SUM(categorized.observation_count) AS mapped_count,
+                       SUM(categorized.observation_count) FILTER (
+                           WHERE assertion.target_kind = 'concept'
+                             AND assertion.projection_policy = 'canonical'
+                       ) AS canonical_count,
+                       SUM(categorized.observation_count) FILTER (
+                           WHERE assertion.projection_policy = 'no_projection'
+                       ) AS no_projection_count,
+                       SUM(categorized.observation_count) FILTER (
+                           WHERE assertion.projection_policy = 'discovery_only'
+                       ) AS discovery_only_count
+                FROM categorized
+                JOIN disease_mapping_releases_v3 release
+                  ON release.status = 'active'
+                JOIN disease_mapping_release_items_v3 item
+                  ON item.release_id = release.id
+                JOIN disease_mapping_assertions_v3 assertion
+                  ON assertion.id = item.assertion_id
+                 AND assertion.category_id = categorized.category_id
+                 AND assertion.assertion_status = 'approved'
+                GROUP BY categorized.country_code
+            )
+            """
+        )
         rows = (
             await db.execute(
                 text(
-                    """
+                    f"""
                     WITH totals AS (
                         SELECT s.country_code,
                                COUNT(*) AS observation_count,
@@ -1658,32 +1901,20 @@ class DiseaseMappingRegistryService:
                         FROM disease_series_observations o
                         JOIN disease_surveillance_series s ON s.series_code=o.series_code
                         GROUP BY s.country_code
-                    ), mapped AS (
-                        SELECT country_code,
-                               COUNT(DISTINCT observation_id) AS mapped_count,
-                               COUNT(DISTINCT observation_id) FILTER (
-                                   WHERE is_canonical_projection
-                               ) AS canonical_count,
-                               COUNT(DISTINCT observation_id) FILTER (
-                                   WHERE projection_policy = 'no_projection'
-                               ) AS no_projection_count,
-                               COUNT(DISTINCT observation_id) FILTER (
-                                   WHERE projection_policy = 'discovery_only'
-                               ) AS discovery_only_count
-                        FROM effective_disease_series_observations_v3
-                        GROUP BY country_code
-                    ), series_stats AS (
+                    ), {mapped_cte}, series_stats AS (
                         SELECT s.country_code,
-                               COUNT(DISTINCT s.series_code) AS registered_series_count,
-                               COUNT(DISTINCT s.series_code) FILTER (
-                                   WHERE o.id IS NOT NULL
+                               COUNT(*) AS registered_series_count,
+                               COUNT(*) FILTER (
+                                   WHERE observed.series_code IS NOT NULL
                                ) AS observed_series_count,
-                               COUNT(DISTINCT s.series_code) FILTER (
+                               COUNT(*) FILTER (
                                    WHERE s.metadata->>'dynamic_holding' = 'true'
                                ) AS holding_series_count
                         FROM disease_surveillance_series s
-                        LEFT JOIN disease_series_observations o
-                          ON o.series_code = s.series_code
+                        LEFT JOIN (
+                            SELECT DISTINCT series_code
+                            FROM disease_series_observations
+                        ) observed ON observed.series_code = s.series_code
                         GROUP BY s.country_code
                     )
                     SELECT t.country_code, t.observation_count,

@@ -28,6 +28,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    text,
     Text,
     UniqueConstraint,
 )
@@ -614,6 +615,18 @@ class DiseaseSeriesObservation(BaseModel):
             "idx_disease_series_observation_quality",
             "quality_status",
             "suppressed",
+        ),
+        Index(
+            "idx_dso_mapping_override",
+            "series_code",
+            text(
+                "COALESCE(NULLIF((dimensions ->> 'source_disease_code'), ''), "
+                "NULLIF((metadata ->> 'local_code'), ''))"
+            ),
+            text(
+                "lower(btrim(COALESCE(NULLIF((dimensions ->> 'source_disease_label'), ''), "
+                "NULLIF((metadata ->> 'local_label'), ''))))"
+            ),
         ),
     )
 
