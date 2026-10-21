@@ -26,6 +26,33 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.12.1',
+    date: '2026-10-21',
+    titleEn: 'Public download refresh',
+    titleZh: '公开下载数据更新',
+    titleFr: 'Actualisation des téléchargements publics',
+    summaryEn:
+      'Republished the public country and disease download files for 21 October 2026.',
+    summaryZh: '已重新发布 2026 年 10 月 21 日的国家和疾病公开下载文件。',
+    summaryFr:
+      'Les fichiers publics de téléchargement par pays et par maladie ont été republiés pour le 21 octobre 2026.',
+    sections: [
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'The download catalogue again covers 295 country and jurisdiction datasets and 239 disease datasets, with CSV, JSON, and XLSX partitions.',
+            zh: '下载目录再次覆盖 295 个国家及地区数据集和 239 个疾病数据集，并提供 CSV、JSON 和 XLSX 分区文件。',
+            fr: 'Le catalogue couvre de nouveau 295 jeux de données par pays ou juridiction et 239 jeux par maladie, en partitions CSV, JSON et XLSX.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.12.0',
     date: '2026-10-17',
     titleEn: 'Complete surveillance data refresh',

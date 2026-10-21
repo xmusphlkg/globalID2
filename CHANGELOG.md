@@ -2,6 +2,17 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.13.4] - 2026-10-21
+
+### Changed
+
+- The browser copy of the research catalogue is written as compact JSON chunks of at most 8 MiB under `public/site-data/research`. The build input `src/data/research/index.json` stays one document.
+- Direct-download export workers now follow available memory. A 16 GiB host uses 6 workers.
+
+### Data
+
+- Published `globalID2_data_download` `main` at `5569a7aa3` via the direct `192.168.30.1` path to GitHub's Asia edge. The catalogue lists 295 jurisdictions and 239 diseases. The publish tables held 15,545 series and 4,463,205 points. GitHub accepted the push and warned that some disease partitions exceed 50 MiB.
+
 ## [0.13.3] - 2026-10-21
 
 ### Added
