@@ -105,7 +105,10 @@ def test_direct_download_default_workers_respect_tight_cgroup_memory() -> None:
 
     assert direct_download_files._default_export_workers(16, 4 * gib) == 1
     assert direct_download_files._default_export_workers(16, 8 * gib) == 2
-    assert direct_download_files._default_export_workers(16, 16 * gib) == 4
+    assert direct_download_files._default_export_workers(16, 12 * gib) == 4
+    assert direct_download_files._default_export_workers(16, 16 * gib) == 6
+    assert direct_download_files._default_export_workers(16, 24 * gib) == 8
+    assert direct_download_files._default_export_workers(4, 16 * gib) == 4
 
 
 def test_direct_download_reads_the_service_cgroup_memory_guardrail(tmp_path) -> None:

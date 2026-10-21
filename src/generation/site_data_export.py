@@ -1512,7 +1512,11 @@ def write_site_export_artifacts(
         write_pretty_json(output_dir / "reports" / f"{report_id}.json", detail)
     print(f"  ✓ reports/<id>.json ({len(report_details)} files)")
 
-    write_literature_artifacts(literature_export, output_dir)
+    write_literature_artifacts(
+        literature_export,
+        output_dir,
+        public_site_data_dir=public_site_data_dir,
+    )
     print(f"  ✓ research/index.json ({len(literature_export.get('articles') or [])} published articles)")
 
     # ── Meta ──
@@ -1771,7 +1775,11 @@ def write_incremental_site_export_artifacts(
     elif situation_latest:
         write_pretty_json(output_dir / "situation" / "v3" / "shadow-latest.json", situation_latest)
 
-    write_literature_artifacts(context["literature_export"], output_dir)
+    write_literature_artifacts(
+        context["literature_export"],
+        output_dir,
+        public_site_data_dir=public_site_data_dir,
+    )
     _write_publish_hash_manifest(output_dir, context)
 
     print(

@@ -161,16 +161,23 @@ def _read_cgroup_memory_limit_bytes(
 
 
 def _default_export_workers(cpu_count: int | None, memory_limit_bytes: int | None) -> int:
-    cpu_workers = min(4, max(1, cpu_count or 1))
+    """Scale partition workers by CPU and the cgroup memory guardrail.
+
+    Unknown memory stays at 4. A known limit keeps 1 worker through 4 GiB and
+    2 through 8 GiB. Above that, add one worker per 2 GiB, capped at 8, so a
+    16 GiB worker cgroup uses 6 cores while the parent still holds the curves.
+    """
+    cpus = max(1, cpu_count or 1)
     if not memory_limit_bytes:
-        return cpu_workers
+        return min(4, cpus)
 
     gib = 1024 * 1024 * 1024
     if memory_limit_bytes <= 4 * gib:
         return 1
     if memory_limit_bytes <= 8 * gib:
-        return min(cpu_workers, 2)
-    return cpu_workers
+        return min(2, cpus)
+    grown = 2 + (memory_limit_bytes - 8 * gib) // (2 * gib)
+    return min(cpus, grown, 8)
 
 
 DEFAULT_EXPORT_WORKERS = _default_export_workers(os.cpu_count(), _read_cgroup_memory_limit_bytes())

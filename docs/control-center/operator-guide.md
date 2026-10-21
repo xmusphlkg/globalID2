@@ -70,9 +70,9 @@ inspect the runtime before resuming it.
 The worker unit allows up to 15 minutes for an already-claimed task to finish
 cooperatively. Do not start a second worker by manually bypassing the Redis
 lease.
-The worker cgroup also applies `MemoryHigh=8G` and `MemoryMax=12G`; a memory-limit
-restart should be treated like a hard worker failure and audited with the same
-recovery commands.
+The worker cgroup applies `MemoryHigh=28G` and `MemoryMax=32G` on a 39 GB host,
+leaving room for Postgres and the API. A memory-limit restart should be treated
+like a hard worker failure and audited with the same recovery commands.
 
 `/health/ready` is degraded when PostgreSQL or the Redis runtime registry is
 unavailable, or when either the worker or scheduler heartbeat is missing. It

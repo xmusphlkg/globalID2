@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 import calendar
+import copy
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
@@ -2468,7 +2469,151 @@ def _collection_card_article(article: dict[str, Any]) -> dict[str, Any]:
     return card
 
 
-def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> None:
+# Pages rejects any one asset over 25 MiB on every plan. Keep each browser
+# file at or below 8 MiB so the research index can grow without a deploy failure.
+PUBLIC_RESEARCH_SHARD_MAX_BYTES = 8 * 1024 * 1024
+_SHARD_SKIP_KEYS = frozenset({"schema_version", "last_updated"})
+
+
+def _compact_json_bytes(value: Any) -> bytes:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def _chunk_records(records: list[Any], max_bytes: int) -> list[list[Any]]:
+    """Pack records so each compact ``{"records": [...]}`` file fits the budget."""
+
+    chunks: list[list[Any]] = []
+    current: list[Any] = []
+    for record in records:
+        trial = [*current, record]
+        if current and len(_compact_json_bytes({"records": trial})) > max_bytes:
+            chunks.append(current)
+            current = [record]
+        else:
+            current = trial
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _store_shard_value(
+    key: str,
+    value: Any,
+    shard_dir: Path,
+    max_bytes: int,
+    written: set[str],
+) -> dict[str, Any]:
+    if isinstance(value, list):
+        chunks = _chunk_records(value, max_bytes)
+        manifest: list[dict[str, Any]] = []
+        for index, chunk in enumerate(chunks):
+            name = f"{key}-{index:03d}.json"
+            write_compact_json(shard_dir / name, {"records": chunk})
+            written.add(name)
+            manifest.append({"file": f"shards/{name}", "count": len(chunk)})
+        return {
+            "sharded": True,
+            "kind": "list",
+            "count": len(value),
+            "chunks": manifest,
+        }
+
+    name = f"{key}.json"
+    payload = {"value": value}
+    if len(_compact_json_bytes(payload)) <= max_bytes or not isinstance(value, dict):
+        write_compact_json(shard_dir / name, payload)
+        written.add(name)
+        return {"sharded": True, "kind": "value", "file": f"shards/{name}"}
+
+    parts = {
+        child_key: _store_shard_value(
+            f"{key}-{child_key}",
+            child,
+            shard_dir,
+            max_bytes,
+            written,
+        )
+        for child_key, child in value.items()
+    }
+    return {"sharded": True, "kind": "object", "parts": parts}
+
+
+def _largest_inline_key(document: dict[str, Any]) -> str | None:
+    best_key = None
+    best_size = -1
+    for key, value in document.items():
+        if key in _SHARD_SKIP_KEYS or not isinstance(value, (list, dict)):
+            continue
+        if isinstance(value, dict) and value.get("sharded") is True:
+            continue
+        size = len(_compact_json_bytes(value))
+        if size > best_size:
+            best_key = key
+            best_size = size
+    return best_key
+
+
+def publish_browser_research_index(
+    document: dict[str, Any],
+    directory: Path,
+    *,
+    max_bytes: int = PUBLIC_RESEARCH_SHARD_MAX_BYTES,
+) -> dict[str, Any]:
+    """Write the Pages copy of the research index as files within ``max_bytes``.
+
+    Astro keeps reading the single build-time ``index.json``. The browser copy
+    under ``public/site-data/research`` is uploaded as static assets, so the
+    large lists move into ``shards/`` and the index keeps a manifest.
+    """
+
+    if max_bytes < 128:
+        raise ValueError("max_bytes must leave room for a JSON envelope")
+    directory.mkdir(parents=True, exist_ok=True)
+    shard_dir = directory / "shards"
+    shard_dir.mkdir(parents=True, exist_ok=True)
+    published = copy.deepcopy(document)
+    written: set[str] = set()
+    while len(_compact_json_bytes(published)) > max_bytes:
+        key = _largest_inline_key(published)
+        if key is None:
+            break
+        before = len(_compact_json_bytes(published))
+        published[key] = _store_shard_value(key, published[key], shard_dir, max_bytes, written)
+        if len(_compact_json_bytes(published)) >= before:
+            break
+
+    articles = published.get("articles")
+    catalogue = {
+        "schema_version": published.get("schema_version"),
+        "last_updated": published.get("last_updated"),
+        "articles": articles,
+    }
+    if isinstance(articles, list) and len(_compact_json_bytes(catalogue)) > max_bytes:
+        published["articles"] = _store_shard_value("articles", articles, shard_dir, max_bytes, written)
+        catalogue["articles"] = published["articles"]
+
+    write_compact_json(directory / "index.json", published)
+    write_compact_json(directory / "catalogue.json", catalogue)
+    remove_stale_json_files(shard_dir, written)
+    oversized = [
+        path.name
+        for path in (directory / "index.json", directory / "catalogue.json", *shard_dir.glob("*.json"))
+        if path.stat().st_size > max_bytes
+    ]
+    if oversized:
+        raise RuntimeError(
+            "Research browser files exceed "
+            f"{max_bytes} bytes: {', '.join(oversized)}"
+        )
+    return published
+
+
+def write_literature_artifacts(
+    payload: dict[str, Any],
+    output_dir: Path,
+    public_site_data_dir: Path | None = None,
+    shard_max_bytes: int = PUBLIC_RESEARCH_SHARD_MAX_BYTES,
+) -> None:
     research_dir = output_dir / "research"
     article_dir = research_dir / "articles"
     disease_dir = research_dir / "diseases"
@@ -2502,6 +2647,12 @@ def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> Non
             "articles": payload.get("articles") or [],
         },
     )
+    if public_site_data_dir is not None:
+        publish_browser_research_index(
+            public_index,
+            public_site_data_dir / "research",
+            max_bytes=shard_max_bytes,
+        )
     public_article_details = [
         *(payload.get("articles") or []),
         *(payload.get("preprints") or []),
@@ -2587,5 +2738,6 @@ __all__ = [
     "load_historical_seed_articles",
     "partition_public_literature_articles",
     "project_public_integrity_alerts",
+    "publish_browser_research_index",
     "write_literature_artifacts",
 ]
