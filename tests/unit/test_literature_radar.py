@@ -6,6 +6,8 @@ from types import SimpleNamespace
 import pytest
 
 from src.generation.site_data_literature import (
+    _load_title_disease_aliases,
+    _title_estimated_literature_links,
     append_historical_seed_articles,
     apply_public_summary_gate,
     attach_surveillance_evidence,
@@ -50,6 +52,41 @@ from dashboard.api.routers.literature import _publication_blockers
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_title_disease_aliases_use_correct_ids_and_specific_mentions():
+    diseases = {
+        "D003": {"name_en": "SARS"},
+        "D004": {"name_en": "COVID-19"},
+        "D005": {"name_en": "AIDS"},
+        "D008": {"name_en": "Hepatitis B"},
+        "D009": {"name_en": "Hepatitis C"},
+        "D010": {"name_en": "Hepatitis D"},
+        "D011": {"name_en": "Hepatitis E"},
+        "D014": {"name_en": "H5N1"},
+        "D015": {"name_en": "H7N9"},
+        "D038": {"name_en": "Influenza"},
+        "D162": {"name_en": "HIV infection"},
+    }
+    aliases = _load_title_disease_aliases()
+
+    assert "HBV" in aliases["D008"] and "HBV" not in aliases["D010"]
+    assert "HCV" in aliases["D009"] and "HCV" not in aliases["D011"]
+    assert "HIV" not in aliases["D005"] and "HIV" in aliases["D162"]
+
+    covid = _title_estimated_literature_links("SARS-CoV-2 infection", diseases, aliases)
+    assert [item["disease_id"] for item in covid] == ["D004"]
+
+    negative_hiv = _title_estimated_literature_links("A non-HIV cohort", diseases, aliases)
+    assert "D162" not in {item["disease_id"] for item in negative_hiv}
+
+    positive_hiv = _title_estimated_literature_links(
+        "A non-HIV cohort with HIV infection", diseases, aliases
+    )
+    assert "D162" in {item["disease_id"] for item in positive_hiv}
+
+    h5n1 = _title_estimated_literature_links("Study of H5N1 avian influenza", diseases, aliases)
+    assert [item["disease_id"] for item in h5n1] == ["D014"]
 
 
 def test_autopilot_summary_reconciliation_does_not_load_heavy_article_payloads():
@@ -1343,6 +1380,7 @@ async def test_enrichment_generation_failures_record_attempts_and_stop_requeue(m
         published_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
         abstract_text="A sufficiently long abstract about dengue vaccination and surveillance. " * 5,
         integrity_status="current",
+        metadata_={},
     )
     pipeline = LiteratureEnrichmentPipeline(SimpleNamespace(
         autopilot_enabled=True,
@@ -1389,6 +1427,7 @@ async def test_transient_enrichment_failures_do_not_consume_quality_attempts(mon
         published_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
         abstract_text="A sufficiently long abstract about dengue vaccination and surveillance. " * 5,
         integrity_status="current",
+        metadata_={},
     )
     pipeline = LiteratureEnrichmentPipeline(SimpleNamespace(
         autopilot_enabled=True,

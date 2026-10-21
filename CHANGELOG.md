@@ -2,6 +2,19 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.13.2] - 2026-10-21
+
+### Fixed
+
+- Corrected Research Radar disease alias IDs for HIV, hepatitis B/C/D/E, and influenza subtypes; removed vaccine names that had been treated as pertussis aliases.
+- Expanded title association matching to use curated aliases and ontology legacy labels, normalize accents and punctuation, prefer specific mentions, and ignore common negated mentions.
+- Added regression coverage for disease alias IDs, SARS-CoV-2 specificity, influenza subtypes, and negated HIV mentions.
+
+### Validation
+
+- Regenerated Research Radar data: 8,349 title-estimated records, 152 added disease links, and 754 topic links.
+- Literature Radar unit tests: 63 passed.
+
 ## [0.13.1] - 2026-10-20
 
 ### Changed

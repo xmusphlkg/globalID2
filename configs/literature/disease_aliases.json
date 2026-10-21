@@ -1,17 +1,23 @@
 {
   "schema_version": 1,
   "aliases": {
-    "D004": ["SARS-CoV-2", "2019-nCoV", "coronavirus disease 2019"],
-    "D005": ["human immunodeficiency virus", "HIV/AIDS"],
-    "D007": ["hepatitis A virus", "HAV"],
-    "D010": ["hepatitis B virus", "HBV"],
-    "D011": ["hepatitis C virus", "HCV"],
+    "D003": ["severe acute respiratory syndrome", "SARS coronavirus"],
+    "D004": ["SARS-CoV-2", "2019-nCoV", "coronavirus disease 2019", "COVID 19"],
+    "D005": ["acquired immunodeficiency syndrome", "HIV stage 3"],
+    "D007": ["hepatitis A virus", "HAV", "HAV infection"],
+    "D008": ["hepatitis B virus", "HBV", "HBV infection"],
+    "D009": ["hepatitis C virus", "HCV", "HCV infection"],
+    "D010": ["hepatitis D virus", "HDV", "HDV infection"],
+    "D011": ["hepatitis E virus", "HEV", "HEV infection"],
     "D017": ["measles virus", "rubeola"],
-    "D021": ["dengue virus", "DENV"],
-    "D025": ["Mycobacterium tuberculosis", "tuberculosis"],
-    "D028": ["Bordetella pertussis", "whooping cough", "DTaP", "Tdap"],
-    "D037": ["Plasmodium falciparum", "Plasmodium vivax"],
-    "D038": ["influenza virus", "avian influenza", "H5N1", "H7N9"],
-    "D065": ["mpox", "monkeypox", "MPXV"]
+    "D021": ["dengue virus", "DENV", "dengue fever"],
+    "D025": ["Mycobacterium tuberculosis", "TB infection", "tuberculosis"],
+    "D028": ["Bordetella pertussis", "whooping cough", "pertussis"],
+    "D037": ["Plasmodium falciparum", "Plasmodium vivax", "malaria parasite"],
+    "D038": ["influenza virus", "seasonal influenza", "flu"],
+    "D065": ["mpox", "monkeypox", "monkeypox virus", "MPXV"],
+    "D014": ["influenza A(H5N1)", "avian influenza A(H5N1)"],
+    "D015": ["influenza A(H7N9)", "avian influenza A(H7N9)"],
+    "D162": ["human immunodeficiency virus", "HIV", "HIV infection", "HIV-1", "HIV-2"]
   }
 }

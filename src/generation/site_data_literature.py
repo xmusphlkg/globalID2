@@ -14,6 +14,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import unicodedata
 from typing import Any
 
 from sqlalchemy import func, select
@@ -39,6 +40,7 @@ from src.literature.weekly_ai_review import load_weekly_ai_review_registry
 
 ROOT = Path(__file__).resolve().parents[2]
 HISTORICAL_LITERATURE_SEED_PATH = ROOT / "configs" / "literature" / "historical_seed.json"
+LITERATURE_DISEASE_ALIASES_PATH = ROOT / "configs" / "literature" / "disease_aliases.json"
 
 
 def _parse_public_datetime(value: str) -> datetime:
@@ -53,33 +55,142 @@ def _facet_slug(value: str) -> str:
 def _title_estimated_literature_links(
     title: str,
     diseases_by_id: dict[str, dict[str, Any]],
+    aliases_by_id: dict[str, list[str]] | None = None,
+    prepared_aliases: list[tuple[str, str, str, re.Pattern[str]]] | None = None,
 ) -> list[dict[str, Any]]:
-    """Make conservative disease associations from title mentions only."""
-    normalized = re.sub(r"[^a-z0-9\u3400-\u9fff]+", " ", title.casefold())
+    """Make conservative disease associations from canonical names and aliases."""
+    normalized = _normalize_title_match_text(title)
+    candidates: list[tuple[str, str, str, int, int]] = []
+    for disease_id, raw_term, term, pattern in prepared_aliases or _prepare_title_disease_aliases(
+        diseases_by_id, aliases_by_id or {}
+    ):
+        for match in pattern.finditer(normalized):
+            candidates.append((disease_id, raw_term, term, match.start(), match.end()))
+
+    # Prefer the longest concept mention when one disease name is embedded in
+    # a more specific name (for example, SARS inside SARS-CoV-2). A separate
+    # mention elsewhere in the title remains eligible.
+    specific_spans = [candidate[3:] for candidate in candidates]
+    best_by_disease: dict[str, tuple[str, str, int]] = {}
+    for disease_id, raw_term, term, start, end in candidates:
+        if _title_term_is_negated(normalized, start, end):
+            continue
+        if any(
+            other_start <= start and end <= other_end
+            and (other_start, other_end) != (start, end)
+            for other_start, other_end in specific_spans
+        ):
+            continue
+        current = best_by_disease.get(disease_id)
+        if current is None or len(term) > current[2]:
+            best_by_disease[disease_id] = (raw_term, term, len(term))
+
     matches: list[dict[str, Any]] = []
-    for disease_id, disease in diseases_by_id.items():
-        candidates = {
-            str(disease.get(key) or "").strip()
-            for key in ("name_en", "standard_name_en", "name_zh", "standard_name_zh")
-        }
-        hit = next((term for term in candidates if len(term) >= 3 and _title_contains_term(normalized, term)), None)
-        if hit:
-            matches.append({
-                "disease_id": str(disease_id),
-                "slug": disease.get("slug"),
-                "name_en": disease.get("name_en") or disease.get("standard_name_en") or str(disease_id),
-                "name_zh": disease.get("name_zh") or disease.get("standard_name_zh"),
-                "source": "title_estimate",
-                "matched_term": hit,
-            })
+    for disease_id, (hit, _, _) in sorted(best_by_disease.items(), key=lambda item: -item[1][2]):
+        # A subtype mention is more informative than the generic influenza
+        # concept for title-only estimates; avoid adding a second broad link.
+        if disease_id == "D038" and {"D014", "D015", "D016"}.intersection(best_by_disease):
+            continue
+        disease = diseases_by_id[disease_id]
+        matches.append({
+            "disease_id": str(disease_id),
+            "slug": disease.get("slug"),
+            "name_en": disease.get("name_en") or disease.get("standard_name_en") or str(disease_id),
+            "name_zh": disease.get("name_zh") or disease.get("standard_name_zh"),
+            "source": "title_estimate",
+            "matched_term": hit,
+        })
     return matches[:5]
 
 
+def _title_term_is_negated(title: str, start: int, end: int) -> bool:
+    left_context = title[max(0, start - 24):start]
+    right_context = title[end:min(len(title), end + 20)].lstrip()
+    return bool(
+        re.search(r"(?:^|\s)(?:non|without|no|absence of|free of|negative for)\s+$", left_context)
+        or re.match(r"(?:negative|neg|uninfected|free)\b", right_context)
+    )
+
+
+def _prepare_title_disease_aliases(
+    diseases_by_id: dict[str, dict[str, Any]], aliases_by_id: dict[str, list[str]]
+) -> list[tuple[str, str, str, re.Pattern[str]]]:
+    prepared: list[tuple[str, str, str, re.Pattern[str]]] = []
+    for disease_id, disease in diseases_by_id.items():
+        terms = {
+            str(disease.get(key) or "").strip()
+            for key in ("name_en", "standard_name_en", "name_zh", "standard_name_zh", "name_fr", "standard_name_fr")
+        }
+        terms.update(str(term).strip() for term in aliases_by_id.get(str(disease_id), []))
+        for raw_term in terms:
+            term = _normalize_title_match_text(raw_term)
+            if not _usable_title_alias(term):
+                continue
+            if re.search(r"[\u3400-\u9fff]", term) and not re.search(r"[a-z0-9]", term):
+                pattern = re.compile(re.escape(term))
+            else:
+                pattern = re.compile(rf"(?<![\w]){re.escape(term)}(?![\w])", flags=re.UNICODE)
+            prepared.append((str(disease_id), raw_term, term, pattern))
+    return prepared
+
+
+def _normalize_title_match_text(value: str) -> str:
+    value = unicodedata.normalize("NFKD", str(value or "").casefold())
+    value = "".join(char for char in value if not unicodedata.combining(char))
+    value = value.replace("_", " ")
+    return re.sub(r"[^\w\u3400-\u9fff]+", " ", value, flags=re.UNICODE).strip()
+
+
+def _usable_title_alias(term: str) -> bool:
+    if not term:
+        return False
+    # Two-character Chinese disease names are useful; short Latin abbreviations
+    # are too collision-prone unless expanded to a longer phrase in the config.
+    if re.search(r"[\u3400-\u9fff]", term):
+        return len(term.replace(" ", "")) >= 2
+    return len(term.replace(" ", "")) >= 3
+
+
+def _title_term_spans(title: str, term: str) -> list[tuple[int, int]]:
+    if re.search(r"[\u3400-\u9fff]", term) and not re.search(r"[a-z0-9]", term):
+        return [(match.start(), match.end()) for match in re.finditer(re.escape(term), title)]
+    pattern = rf"(?<![\w]){re.escape(term)}(?![\w])"
+    return [(match.start(), match.end()) for match in re.finditer(pattern, title, flags=re.UNICODE)]
+
+
+def _load_title_disease_aliases() -> dict[str, list[str]]:
+    merged: dict[str, set[str]] = defaultdict(set)
+    try:
+        payload = json.loads(LITERATURE_DISEASE_ALIASES_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        payload = {}
+    aliases = payload.get("aliases") if isinstance(payload, dict) else None
+    if isinstance(aliases, dict):
+        for disease_id, terms in aliases.items():
+            if isinstance(terms, list):
+                merged[str(disease_id)].update(str(term).strip() for term in terms if str(term).strip())
+    try:
+        ontology = json.loads((ROOT / "configs" / "disease_ontology.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        ontology = {}
+    for concept in ontology.get("concepts", []) if isinstance(ontology, dict) else []:
+        if not isinstance(concept, dict):
+            continue
+        labels = concept.get("legacy_labels") or {}
+        if not isinstance(labels, dict):
+            continue
+        for values in labels.values():
+            if isinstance(values, list):
+                merged[str(concept.get("id") or "")].update(
+                    str(term).strip() for term in values if str(term).strip()
+                )
+    return {disease_id: sorted(terms) for disease_id, terms in merged.items() if disease_id}
+
+
 def _title_contains_term(title: str, term: str) -> bool:
-    term = re.sub(r"[^a-z0-9\u3400-\u9fff]+", " ", term.casefold()).strip()
-    if re.search(r"[a-z0-9]", term):
-        return bool(re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", title))
-    return term in title
+    normalized_title = _normalize_title_match_text(title)
+    normalized_term = _normalize_title_match_text(term)
+    return bool(_usable_title_alias(normalized_term) and _title_term_spans(normalized_title, normalized_term))
 
 
 def _title_estimated_topics(title: str) -> list[dict[str, str]]:
@@ -1735,6 +1846,10 @@ async def collect_literature_export(
     ).all()
     # These records cannot support a full AI evidence summary, but their
     # bibliographic identity and conservative title matches remain useful.
+    title_disease_aliases = _load_title_disease_aliases()
+    prepared_title_disease_aliases = _prepare_title_disease_aliases(
+        diseases_by_id, title_disease_aliases
+    )
     title_estimate_records = []
     for article in review_candidates:
         policy = content_policy(article)
@@ -1757,7 +1872,9 @@ async def collect_literature_export(
             "detail_available": False,
             "diseases": [],
             "topics": [],
-            "title_estimated_diseases": _title_estimated_literature_links(article.title, diseases_by_id),
+            "title_estimated_diseases": _title_estimated_literature_links(
+                article.title, diseases_by_id, title_disease_aliases, prepared_title_disease_aliases
+            ),
             "title_estimated_topics": _title_estimated_topics(article.title),
             "estimate_method": "title_mention_only",
         })
