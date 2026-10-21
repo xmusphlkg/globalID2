@@ -63,6 +63,26 @@ def test_export_public_signature_remains_stable() -> None:
     ]
 
 
+def test_publish_hash_manifest_avoids_rereading_country_snapshots(tmp_path, monkeypatch) -> None:
+    (tmp_path / "meta.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "publish-hashes.json").write_text(
+        json.dumps(
+            {
+                "projection_version": "public-series-v1",
+                "countries": {"SG": "abc123"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def unexpected(*_args, **_kwargs):
+        raise AssertionError("country snapshot should stay unread")
+
+    monkeypatch.setattr(site_data_export, "_country_hash_from_snapshot", unexpected)
+
+    assert site_data_export._local_publish_hashes(tmp_path, ["SG"]) == {"SG": "abc123"}
+
+
 def test_incremental_export_falls_back_when_snapshot_is_missing(tmp_path, monkeypatch) -> None:
     attempts = []
 
@@ -105,6 +125,42 @@ def test_direct_download_reads_the_service_cgroup_memory_guardrail(tmp_path) -> 
         cgroup_root=cgroup_root,
         membership_path=membership,
     ) == 4 * gib
+
+
+def test_unchanged_download_parts_can_be_reused_without_reading_bytes(tmp_path) -> None:
+    directory = tmp_path / "countries" / "sg"
+    directory.mkdir(parents=True)
+    payload = b"curve"
+    for suffix in ("csv", "json", "xlsx"):
+        (directory / f"current.{suffix}").write_bytes(payload)
+    entry = {
+        "parts": [
+            {
+                "files": {
+                    suffix: {
+                        "relative_path": f"countries/sg/current.{suffix}",
+                        "bytes": len(payload),
+                        "sha256": "not-the-real-hash",
+                    }
+                    for suffix in ("csv", "json", "xlsx")
+                }
+            }
+        ]
+    }
+
+    assert direct_download_files._entry_files_available(
+        entry,
+        tmp_path,
+        "countries",
+        "sg",
+        verify_hash=False,
+    )
+    assert not direct_download_files._entry_files_available(
+        entry,
+        tmp_path,
+        "countries",
+        "sg",
+    )
 
 
 def test_direct_download_default_workers_fall_back_to_cpu_without_memory_limit() -> None:

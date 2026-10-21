@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -549,7 +550,7 @@ class CrawlService:
                     if isinstance(task.input_data, dict)
                     else None
                 )
-                return await self._execute_br_monthly(
+                result = await self._execute_br_monthly(
                     task=task,
                     source=source,
                     force=force,
@@ -559,27 +560,87 @@ class CrawlService:
                     start_year=start_year,
                     updater=updater,
                 )
-
-            handler = getattr(self, pipeline.handler_name)
-            return await handler(
+            else:
+                handler = getattr(self, pipeline.handler_name)
+                result = await handler(
+                    task=task,
+                    source=source,
+                    force=force,
+                    process=process,
+                    save_raw=save_raw,
+                    fill_missing=fill_missing,
+                    updater=updater,
+                )
+        else:
+            result = await self._execute_cn_cdc(
                 task=task,
+                country_code=normalized_country,
                 source=source,
                 force=force,
                 process=process,
                 save_raw=save_raw,
                 fill_missing=fill_missing,
-                updater=updater,
             )
+        if process:
+            await self._publish_country_series(task, normalized_country)
+        return result
 
-        return await self._execute_cn_cdc(
-            task=task,
-            country_code=normalized_country,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
+    async def _publish_country_series(self, task: Task, country_code: str) -> None:
+        """Rewrite published curves after observations have been stored.
+
+        A publish failure is recorded on the crawl task and does not discard
+        the observations. Re-run scripts/backfill_public_disease_series.py
+        for that country to repair the read model.
+        """
+
+        from src.generation.public_series_store import refresh_public_disease_series
+
+        started = time.perf_counter()
+        try:
+            summary = await refresh_public_disease_series(
+                [country_code],
+                jobs=2,
+                force=True,
+            )
+        except Exception as exc:
+            logger.exception("Public series publish failed for {}", country_code)
+            await self._record_publish_note(
+                task,
+                success=False,
+                content=f"{type(exc).__name__}: {exc}",
+            )
+            return
+        failed = summary.get("failed") or []
+        content = (
+            f"Published {summary['refreshed']} jurisdictions "
+            f"({summary['series_rows']} series, skipped {summary['skipped']}) "
+            f"in {time.perf_counter() - started:.1f}s."
         )
+        if failed:
+            content += " Failed: " + ", ".join(
+                f"{item['country_code']} ({item.get('error')})" for item in failed
+            )
+            logger.error(content)
+        else:
+            logger.info(content)
+        await self._record_publish_note(task, success=not failed, content=content)
+
+    async def _record_publish_note(self, task: Task, *, success: bool, content: str) -> None:
+        try:
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="error" if not success else "log",
+                title="Public series publish",
+                content=content,
+                success=success,
+                error_message=None if success else content,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to record public series publish note for {}: {}",
+                getattr(task, "task_uuid", ""),
+                exc,
+            )
 
     async def fail_current_run(
         self,

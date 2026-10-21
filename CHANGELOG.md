@@ -2,6 +2,22 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.13.3] - 2026-10-21
+
+### Added
+
+- Added `public_disease_series` and `country_publish_state` as the current public curve read model. Raw observations remain the system of record, and a successful crawl refreshes that country's published rows.
+
+### Changed
+
+- Current site exports read the publish tables and rewrite a country curve only when its `content_hash` differs from the local snapshot. Unchanged download partitions are reused by file size. Historical `recorded_at_as_of` exports continue to read observation history.
+
+### Validation
+
+- Backfill refreshed 295 active countries at `public-series-v1`: 15,545 series rows and 4,463,198 points, with no failed countries.
+- A current export compared all 295 snapshots, found 0 curve changes, and wrote `publish-hashes.json`. Sampled SG, CN, JP-13, US-NY, and DE hashes matched the publish table.
+- Publish-table unit tests: 21 passed.
+
 ## [0.13.2] - 2026-10-21
 
 ### Fixed

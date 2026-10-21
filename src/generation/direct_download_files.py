@@ -13,6 +13,7 @@ import multiprocessing
 import os
 from pathlib import Path
 import shutil
+import time
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
@@ -194,12 +195,39 @@ def _input_sha256(value: dict, *, projection_code: str, max_file_bytes: int) -> 
     digest = hashlib.sha256()
     digest.update(projection_code.encode("ascii"))
     digest.update(str(max_file_bytes).encode("ascii"))
-    digest.update(json.dumps(stable, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8"))
+    encoder = json.JSONEncoder(
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    pending: list[str] = []
+    pending_chars = 0
+    for chunk in encoder.iterencode(stable):
+        pending.append(chunk)
+        pending_chars += len(chunk)
+        if pending_chars >= 64 * 1024:
+            digest.update("".join(pending).encode("utf-8"))
+            pending.clear()
+            pending_chars = 0
+    if pending:
+        digest.update("".join(pending).encode("utf-8"))
     return digest.hexdigest()
 
 
-def _entry_files_available(entry: dict, output_dir: Path, directory: str, path_id: str) -> bool:
-    """Require every reused part to exist at its declared path and size."""
+def _entry_files_available(
+    entry: dict,
+    output_dir: Path,
+    directory: str,
+    path_id: str,
+    *,
+    verify_hash: bool = True,
+) -> bool:
+    """Require every reused part to exist at its declared path and size.
+
+    Hash verification reads the file bytes. Callers that already know the
+    published curve is unchanged pass verify_hash=False and trust the size.
+    """
     parts = entry.get("parts") or []
     if not parts:
         return False
@@ -215,7 +243,7 @@ def _entry_files_available(entry: dict, output_dir: Path, directory: str, path_i
             path = output_dir / relative
             if not path.is_file() or path.stat().st_size != file_meta.get("bytes"):
                 return False
-            if _file_sha256(path) != file_meta.get("sha256"):
+            if verify_hash and _file_sha256(path) != file_meta.get("sha256"):
                 return False
     return True
 
@@ -1031,10 +1059,32 @@ def build_direct_download_files(
     disease_fingerprints: dict[str, str] = {}
     selected_country_codes = {str(code).strip().upper() for code in changed_country_codes or ()}
     selected_disease_ids = {str(disease_id).strip() for disease_id in changed_disease_ids or ()}
-    for item in country_exports:
+    requested_country_codes = set(selected_country_codes)
+    requested_disease_ids = set(selected_disease_ids)
+    fingerprint_started = time.perf_counter()
+    for index, item in enumerate(country_exports, start=1):
         code = str(item["code"]).upper()
         path_id = code.lower()
         existing = existing_country_entries.get(path_id) or {}
+        if changed_country_codes is not None and code not in requested_country_codes:
+            if not _entry_files_available(
+                existing,
+                output_dir,
+                "countries",
+                path_id,
+                verify_hash=False,
+            ):
+                print(
+                    f"  Download files for unchanged country {code} are missing; "
+                    "left until its published curve changes",
+                    flush=True,
+                )
+            if index % 25 == 0 or index == len(country_exports):
+                print(
+                    f"  Download fingerprints: {index}/{len(country_exports)} countries",
+                    flush=True,
+                )
+            continue
         available = _entry_files_available(existing, output_dir, "countries", path_id)
         if changed_country_codes is None or not available:
             fingerprint = _input_sha256(
@@ -1045,10 +1095,34 @@ def build_direct_download_files(
             country_fingerprints[path_id] = fingerprint
             if fingerprint != existing.get("input_sha256") or not available:
                 selected_country_codes.add(code)
-    for item in disease_exports:
+        if index % 25 == 0 or index == len(country_exports):
+            print(
+                f"  Download fingerprints: {index}/{len(country_exports)} countries",
+                flush=True,
+            )
+    for index, item in enumerate(disease_exports, start=1):
         disease_id = str(item["disease_id"])
         path_id = disease_id.lower()
         existing = existing_disease_entries.get(disease_id) or {}
+        if changed_disease_ids is not None and disease_id not in requested_disease_ids:
+            if not _entry_files_available(
+                existing,
+                output_dir,
+                "diseases",
+                path_id,
+                verify_hash=False,
+            ):
+                print(
+                    f"  Download files for unchanged disease {disease_id} are missing; "
+                    "left until a published curve for it changes",
+                    flush=True,
+                )
+            if index % 25 == 0 or index == len(disease_exports):
+                print(
+                    f"  Download fingerprints: {index}/{len(disease_exports)} diseases",
+                    flush=True,
+                )
+            continue
         available = _entry_files_available(existing, output_dir, "diseases", path_id)
         if changed_disease_ids is None or not available:
             country_codes = (item["disease_data"].get("country_series") or {}).keys()
@@ -1064,6 +1138,16 @@ def build_direct_download_files(
             disease_fingerprints[disease_id] = fingerprint
             if fingerprint != existing.get("input_sha256") or not available:
                 selected_disease_ids.add(disease_id)
+        if index % 25 == 0 or index == len(disease_exports):
+            print(
+                f"  Download fingerprints: {index}/{len(disease_exports)} diseases",
+                flush=True,
+            )
+    print(
+        "  Download fingerprint checks took "
+        f"{time.perf_counter() - fingerprint_started:.1f}s",
+        flush=True,
+    )
     selected_country_exports = [
         item for item in country_exports if item["code"].upper() in selected_country_codes
     ]

@@ -193,6 +193,27 @@ async def has_table(session, table_name: str) -> bool:
     return bool(result[0]) if result else False
 
 
+async def _iter_query_rows(session, statement, params, *, batch_size: int = 10_000):
+    """Stream large export queries without buffering a second full row copy."""
+    stream = getattr(session, "stream", None)
+    if stream is None:
+        rows = await session.execute(statement, params)
+        for row in rows:
+            yield row
+        return
+
+    rows = await stream(
+        statement,
+        params,
+        execution_options={"yield_per": batch_size},
+    )
+    try:
+        async for row in rows:
+            yield row
+    finally:
+        await rows.close()
+
+
 async def fetch_disease_records(
     session, country_code: str, use_population_table: bool
 ) -> list[dict]:
@@ -210,6 +231,7 @@ async def fetch_disease_export_layers(
     use_population_table: bool,
     *,
     recorded_at_as_of: datetime | None = None,
+    registry_tables_exist: bool | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Return public projections and lossless source observations separately.
 
@@ -226,9 +248,10 @@ async def fetch_disease_export_layers(
         and public_config.get("public_legacy_enabled", True) is not False
         else []
     )
-    registry_tables_exist = await has_table(
-        session, "disease_surveillance_series"
-    ) and await has_table(session, "disease_series_observations")
+    if registry_tables_exist is None:
+        registry_tables_exist = await has_table(
+            session, "disease_surveillance_series"
+        ) and await has_table(session, "disease_series_observations")
     if not registry_tables_exist:
         if recorded_at_as_of is not None:
             raise RuntimeError(
@@ -589,8 +612,7 @@ async def fetch_disease_series_records(
         else "NULL::text"
     )
 
-    rows = await session.execute(
-        text(f"""
+    statement = text(f"""
             SELECT
                 timezone('UTC', dso.time)::date AS "date",
                 to_char(timezone('UTC', dso.time), 'YYYY-MM') AS year_month,
@@ -666,7 +688,10 @@ async def fetch_disease_series_records(
               AND dso.quality_status <> 'rejected'
             ORDER BY dss.disease_id, dso.series_code,
                      timezone('UTC', dso.time)::date ASC
-            """),
+            """)
+    rows = _iter_query_rows(
+        session,
+        statement,
         query_params,
     )
 
@@ -681,7 +706,7 @@ async def fetch_disease_series_records(
         if str(value).strip()
     }
     result: list[dict] = []
-    for row in rows:
+    async for row in rows:
         record = dict(row._mapping)
         if (
             public_source_systems
@@ -710,13 +735,19 @@ async def fetch_disease_series_records(
     return result
 
 
-async def fetch_country_frequency_meta(session, country_code: str) -> dict:
+async def fetch_country_frequency_meta(
+    session,
+    country_code: str,
+    *,
+    registry_tables_exist: bool | None = None,
+) -> dict:
     """Describe source periods without converting period totals into weekly rates."""
     series_country_code = country_code.split("-", 1)[0]
     source_frequencies: list[str] = []
-    registry_tables_exist = await has_table(
-        session, "disease_surveillance_series"
-    ) and await has_table(session, "disease_series_observations")
+    if registry_tables_exist is None:
+        registry_tables_exist = await has_table(
+            session, "disease_surveillance_series"
+        ) and await has_table(session, "disease_series_observations")
     if registry_tables_exist:
         series_rows = await session.execute(
             text("""

@@ -55,6 +55,7 @@ from .disease_ontology import (
     DiseaseTaxonomyEdge,
     DiseaseTaxonomyNode,
 )
+from .public_series import CountryPublishState, PublicDiseaseSeries
 from .situation import PublicHealthEvent, SituationOverride, SituationSnapshot
 from .situation_v3 import (
     SituationAnalysisRunV3,
@@ -141,6 +142,8 @@ __all__ = [
     "DiseaseSeriesObservationRevision",
     "DiseaseSourceAvailability",
     "DiseaseSurveillanceSeries",
+    "PublicDiseaseSeries",
+    "CountryPublishState",
     "PublicHealthEvent",
     "SituationOverride",
     "SituationSnapshot",

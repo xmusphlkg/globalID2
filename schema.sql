@@ -822,6 +822,57 @@ CREATE INDEX idx_disease_series_observation_geography_time ON disease_series_obs
 CREATE INDEX idx_disease_series_observation_quality ON disease_series_observations (quality_status, suppressed);
 CREATE INDEX idx_disease_series_observation_series_time ON disease_series_observations (series_code, time);
 
+CREATE TABLE public_disease_series (
+	country_code VARCHAR(10) NOT NULL,
+	disease_id VARCHAR(100) NOT NULL,
+	period_starts DATE[] NOT NULL,
+	cases INTEGER[] NOT NULL,
+	deaths INTEGER[] NOT NULL,
+	incidence DOUBLE PRECISION[] NOT NULL,
+	granularity VARCHAR(40) NOT NULL,
+	data_layer VARCHAR(40) NOT NULL,
+	source_series_code VARCHAR(180),
+	point_count INTEGER NOT NULL,
+	total_cases BIGINT NOT NULL,
+	total_deaths BIGINT NOT NULL,
+	period_start DATE,
+	period_end DATE,
+	content_hash VARCHAR(64) NOT NULL,
+	source_high_water TIMESTAMP WITH TIME ZONE,
+	projection_version VARCHAR(40) NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	PRIMARY KEY (country_code, disease_id),
+	CONSTRAINT ck_public_disease_series_array_lengths CHECK (
+		cardinality(period_starts) = cardinality(cases)
+		AND cardinality(period_starts) = cardinality(deaths)
+		AND cardinality(period_starts) = cardinality(incidence)
+	),
+	CONSTRAINT ck_public_disease_series_content_hash CHECK (char_length(content_hash) = 64),
+	FOREIGN KEY(country_code) REFERENCES countries (code) ON DELETE CASCADE,
+	FOREIGN KEY(disease_id) REFERENCES standard_diseases (disease_id) ON DELETE CASCADE
+)
+
+;
+CREATE INDEX idx_public_disease_series_disease ON public_disease_series (disease_id, country_code);
+
+CREATE TABLE country_publish_state (
+	country_code VARCHAR(10) NOT NULL,
+	source_high_water TIMESTAMP WITH TIME ZONE,
+	series_count INTEGER NOT NULL,
+	point_count INTEGER NOT NULL,
+	content_hash VARCHAR(64) NOT NULL,
+	projection_version VARCHAR(40) NOT NULL,
+	published_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	PRIMARY KEY (country_code),
+	CONSTRAINT ck_country_publish_state_content_hash CHECK (char_length(content_hash) = 64),
+	FOREIGN KEY(country_code) REFERENCES countries (code) ON DELETE CASCADE
+)
+
+;
+
 CREATE TABLE disease_source_availability (
 	availability_code VARCHAR(180) NOT NULL,
 	source_system VARCHAR(160) NOT NULL,
