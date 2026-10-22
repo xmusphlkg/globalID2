@@ -118,3 +118,54 @@ def test_nz_national_xlsx_handles_blank_column_before_values():
         "Month": "5",
         "Source": "NZ PHF Science Monthly Notifiable Disease Surveillance",
     }]
+
+
+def test_dhb_annual_rows_fall_back_when_raw_github_fails(monkeypatch):
+    import csv
+    import io
+    import requests
+
+    from src.data.crawlers.nz import DHB_JURISDICTIONS, DHB_TOTAL_CSV_MIRRORS, NewZealandPHFCrawler
+
+    buffer = io.StringIO()
+    writer = csv.DictWriter(
+        buffer,
+        fieldnames=[
+            "Disease",
+            "Report Year",
+            "DHBName",
+            "Case Count",
+            "Case rate per 100,000",
+        ],
+    )
+    writer.writeheader()
+    for name in DHB_JURISDICTIONS:
+        writer.writerow({
+            "Disease": "Pertussis",
+            "Report Year": "2024",
+            "DHBName": name,
+            "Case Count": "3",
+            "Case rate per 100,000": "1.2",
+        })
+    payload = buffer.getvalue()
+    calls: list[str] = []
+
+    class Response:
+        text = payload
+
+    def fake_get(url, **kwargs):
+        del kwargs
+        calls.append(url)
+        if url == DHB_TOTAL_CSV_MIRRORS[0]:
+            raise requests.exceptions.SSLError("UNEXPECTED_EOF_WHILE_READING")
+        return Response()
+
+    crawler = NewZealandPHFCrawler()
+    monkeypatch.setattr(crawler, "get", fake_get)
+    rows, source_url = crawler.fetch_dhb_annual_rows()
+
+    assert calls == list(DHB_TOTAL_CSV_MIRRORS)
+    assert source_url == DHB_TOTAL_CSV_MIRRORS[1]
+    assert len(rows) == len(DHB_JURISDICTIONS)
+    assert rows[0]["SourceURL"] == DHB_TOTAL_CSV_MIRRORS[1]
+    assert rows[0]["Cases"] == "3"

@@ -82,8 +82,9 @@ SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
             "Canadian national annual reported disease counts assembled by PHAC "
             "from voluntary provincial and territorial CNDSS submissions. A "
             "published national aggregate does not mean every jurisdiction is "
-            "complete: official disease-specific inclusion tables vary by year, "
-            "and Manitoba 2023 data were unavailable for 44 disease contracts. "
+            "complete: official disease-specific inclusion tables vary by year. "
+            "The October 2024 extract no longer marks 44 disease contracts as "
+            "Manitoba-2023-unavailable. "
             "Null cells remain unknown and explicit zeroes are preserved."
         ),
     },

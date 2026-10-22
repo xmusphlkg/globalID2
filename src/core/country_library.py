@@ -429,9 +429,10 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
         "notes": (
             "PHAC CNDSS national annual reported counts under the Open Government "
             "Licence – Canada. A national aggregate is not an all-jurisdiction "
-            "completeness claim: disease/year inclusion varies, and Manitoba "
-            "2023 data were unavailable for 44 disease contracts. Subdivision "
-            "feeds remain separately registered."
+            "completeness claim: disease/year inclusion varies. The October 2024 "
+            "extract no longer marks 44 disease contracts as "
+            "Manitoba-2023-unavailable. Subdivision feeds remain separately "
+            "registered."
         ),
     },
     "CA-ON": {

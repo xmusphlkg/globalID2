@@ -10,6 +10,7 @@ from src.data.storage.series_observation_store import (
     SeriesObservationQualityPolicy,
     SeriesObservationQuarantinedError,
     SeriesObservationStore,
+    _holding_series_code,
     _persist_observation_revisions,
     _quality_status,
 )
@@ -454,6 +455,134 @@ async def test_japan_sentinel_holding_series_preserves_reporting_basis() -> None
     assert existing.metadata_["surveillance_type"] == "sentinel"
     assert observations[0]["metadata"]["measure"] == "sentinel_case_notifications"
     assert observations[0]["metadata"]["frequency"] == "weekly"
+
+
+@pytest.mark.asyncio
+async def test_japan_mixed_surveillance_keeps_legacy_series_on_stored_majority() -> None:
+    now = datetime.now(timezone.utc)
+    category = SourceDiseaseCategory(
+        id=43,
+        category_key="CAT_SRC_JP_NIID_PERTUSSIS",
+        country_code="JP",
+        source_id="SRC_JP_NIID",
+        source_code="label:pertussis",
+        canonical_source_label="Pertussis (Whooping cough)",
+        normalized_label="pertussis (whooping cough)",
+        definition_version="source-current",
+        status="discovered",
+        first_seen_at=now,
+        last_seen_at=now,
+        occurrence_count=1,
+        ai_status="pending",
+        metadata_={},
+        is_active=True,
+    )
+    existing = DiseaseSurveillanceSeries(
+        series_code="HOLD_JP_PERTUSSIS_LEGACY",
+        disease_id=None,
+        target_group_code="G_UNMAPPED_SOURCE_CATEGORIES",
+        country_code="JP",
+        source_system="SRC_JP_NIID",
+        source_series_code=category.source_code,
+        source_label=category.canonical_source_label,
+        definition_version="source-current",
+        metric_type="case_notifications",
+        reporting_basis="notification",
+        temporal_granularity="unknown",
+        unit="count",
+        mapping_relation="unmapped",
+        comparability="not_comparable",
+        aggregation_policy="non_additive",
+        availability_status="active",
+        missing_value_policy="missing_is_unknown",
+        is_active=True,
+        metadata_={"dynamic_holding": True},
+    )
+    sentinel_code = _holding_series_code(
+        "JP", category.category_key, "sentinel"
+    )
+
+    class Result:
+        def __init__(self, value=None, rows=None):
+            self.value = value
+            self.rows = rows or []
+
+        def scalar_one_or_none(self):
+            return self.value
+
+        def all(self):
+            return self.rows
+
+    class FakeDB:
+        def __init__(self):
+            self.added = []
+            self.series_lookups = 0
+            self.updates = []
+
+        async def execute(self, statement, *params):
+            del params
+            sql = str(statement).lower()
+            statement.compile(dialect=postgresql.dialect())
+            if sql.startswith("update"):
+                self.updates.append(sql)
+                return Result()
+            if "count(" in sql and "disease_series_observations" in sql:
+                return Result(rows=[("all_case", 21627), ("sentinel", 3175)])
+            if "disease_surveillance_series" in sql:
+                self.series_lookups += 1
+                return Result(existing if self.series_lookups == 1 else None)
+            if "source_disease_categories" in sql:
+                return Result(category)
+            raise AssertionError(f"unexpected statement: {sql}")
+
+        def add(self, value):
+            self.added.append(value)
+
+        async def flush(self):
+            return None
+
+    db = FakeDB()
+    observations, handled = await SeriesObservationStore()._build_holding_observations(
+        db,
+        [
+            {
+                "MMWRYear": "2026",
+                "MMWRWeek": "40",
+                "RawDiseaseLabel": category.canonical_source_label,
+                "SourceDiseaseCode": category.source_code,
+                "SurveillanceType": "sentinel",
+                "Cases": "4",
+                "GeographyKey": "country:JP-01:national",
+            },
+            {
+                "MMWRYear": "2026",
+                "MMWRWeek": "40",
+                "RawDiseaseLabel": category.canonical_source_label,
+                "SourceDiseaseCode": category.source_code,
+                "SurveillanceType": "all_case",
+                "Cases": "90",
+                "GeographyKey": "country:JP-01:national",
+            },
+        ],
+        "JP",
+        source_id="SRC_JP_NIID",
+        value_field="Cases",
+        geography_key=None,
+    )
+
+    assert handled == 2
+    by_type = {
+        item["metadata"]["measure"]: item["series_code"] for item in observations
+    }
+    assert by_type["case_notifications"] == existing.series_code
+    assert by_type["sentinel_case_notifications"] == sentinel_code
+    assert existing.metadata_["surveillance_type"] == "all_case"
+    assert existing.metric_type == "case_notifications"
+    sibling = next(item for item in db.added if isinstance(item, DiseaseSurveillanceSeries))
+    assert sibling.series_code == sentinel_code
+    assert sibling.metadata_["surveillance_type"] == "sentinel"
+    assert any("disease_series_observations" in sql for sql in db.updates)
+    assert any("disease_series_observation_revisions" in sql for sql in db.updates)
 
 
 def test_quality_guard_keeps_an_isolated_reported_zero() -> None:

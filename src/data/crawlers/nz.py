@@ -19,6 +19,8 @@ import io
 import csv
 import re
 import zipfile
+
+import requests
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -71,6 +73,12 @@ _NON_NATIONAL_PDF_HINTS = ("rolling", "dhb", "district")
 
 DHB_TOTAL_CSV_URL = (
     "https://raw.githubusercontent.com/ESR-NZ/Notifiable-Diseases-Annual-Dashboard-/main/data/DHB_Total.csv"
+)
+# raw.githubusercontent.com intermittently closes the TLS stream. jsDelivr
+# serves the same repository file when the canonical URL fails.
+DHB_TOTAL_CSV_MIRRORS = (
+    DHB_TOTAL_CSV_URL,
+    "https://cdn.jsdelivr.net/gh/ESR-NZ/Notifiable-Diseases-Annual-Dashboard-@main/data/DHB_Total.csv",
 )
 DHB_REPOSITORY_URL = "https://github.com/ESR-NZ/Notifiable-Diseases-Annual-Dashboard-"
 DHB_SOURCE_ID = "SRC_NZ_PHS_DHB"
@@ -145,7 +153,24 @@ class NewZealandPHFCrawler(BaseCrawler):
 
     def fetch_dhb_annual_rows(self) -> Tuple[List[Dict[str, str]], str]:
         """Fetch the PHF Science licensed annual DHB total dataset."""
-        response = self.get(DHB_TOTAL_CSV_URL)
+        response = None
+        source_url = DHB_TOTAL_CSV_URL
+        last_error: Optional[BaseException] = None
+        for url in DHB_TOTAL_CSV_MIRRORS:
+            try:
+                response = self.get(url)
+                source_url = url
+                break
+            except requests.RequestException as exc:
+                last_error = exc
+                logger.warning(
+                    f"[NZ-DHB] annual CSV fetch failed | url={url} "
+                    f"error={exc.__class__.__name__}"
+                )
+        if response is None:
+            if last_error is None:
+                raise RuntimeError("[NZ-DHB] PHF annual CSV mirrors failed")
+            raise last_error
         rows = list(csv.DictReader(io.StringIO(response.text.lstrip("\ufeff"))))
         required = {"Disease", "Report Year", "DHBName", "Case Count", "Case rate per 100,000"}
         if not rows or not required.issubset(rows[0]):
@@ -185,12 +210,12 @@ class NewZealandPHFCrawler(BaseCrawler):
                 "ParentCountryCode": "NZ",
                 "LocationType": "subdivision",
                 "GeographyKey": f"country:{DHB_JURISDICTIONS[area]}:national",
-                "SourceURL": DHB_TOTAL_CSV_URL,
+                "SourceURL": source_url,
                 "License": "CC-BY-4.0",
             })
         if not normalized:
             raise RuntimeError("[NZ-DHB] No valid annual observations were parsed")
-        return normalized, DHB_TOTAL_CSV_URL
+        return normalized, source_url
 
     def __init__(
         self,

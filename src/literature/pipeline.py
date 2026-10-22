@@ -17,6 +17,7 @@ from src.core.database import get_db
 from src.core.logging import get_logger
 from src.core.task_manager import task_manager
 from src.domain import Country, LiteratureIngestRun, StandardDisease, Task
+from src.literature.ingest_run_recovery import supersede_earlier_running_runs
 
 from .classification import classify_candidate
 from .clients import (
@@ -376,6 +377,7 @@ class LiteraturePipeline:
         run_uuid = str(uuid.uuid4())
         await self._create_run(run_uuid, since, now, task=task)
         try:
+            await self._supersede_earlier_running_runs(run_uuid, task)
             journals_payload = _load_json(ROOT / self.config.journals_path)
             journals = [item for item in journals_payload.get("journals") or [] if item.get("issn")]
             crossref = CrossrefClient(
@@ -1225,6 +1227,19 @@ class LiteraturePipeline:
         # `_country_terms` applies those aliases and short-code safeguards.
         countries = _global_country_catalogue(country_rows, taxonomy)
         return diseases, countries
+
+    async def _supersede_earlier_running_runs(
+        self, run_uuid: str, task: Task | None
+    ) -> None:
+        task_uuid = getattr(task, "task_uuid", None)
+        if not task_uuid:
+            return
+        async with get_db() as db:
+            await supersede_earlier_running_runs(
+                db,
+                task_uuid=task_uuid,
+                current_run_uuid=run_uuid,
+            )
 
     async def _create_run(
         self,

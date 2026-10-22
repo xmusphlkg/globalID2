@@ -44,7 +44,7 @@ def test_at_de_reviewed_manifests_cover_full_source_inventory() -> None:
         "AU": 60,
         "BR": 44,
         "CA-ON": 2,
-        "CA": 70,
+        "CA": 74,
         "CH": 40,
         "CN": 3,
         "DE": 142,
