@@ -26,6 +26,184 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.13.4',
+    date: '2026-10-21',
+    titleEn: 'Published surveillance catalogue',
+    titleZh: '已发布监测目录更新',
+    titleFr: 'Catalogue de surveillance publié',
+    summaryEn:
+      'Republished the country and disease downloads, and split the in-browser research catalogue into smaller files.',
+    summaryZh:
+      '重新发布国家和疾病下载文件，并将浏览器中的研究目录拆成更小的文件。',
+    summaryFr:
+      'Les téléchargements par pays et par maladie ont été republiés, et le catalogue de recherche du navigateur est réparti en fichiers plus petits.',
+    sections: [
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'The research catalogue in the browser is delivered as compact JSON files of at most 8 MiB. The build still reads one source document.',
+            zh: '浏览器中的研究目录改为不超过 8 MiB 的紧凑 JSON 文件，构建时仍读取同一份源文档。',
+            fr: 'Le catalogue de recherche du navigateur est livré en fichiers JSON compacts d’au plus 8 Mio. La compilation continue de lire un seul document source.',
+          },
+          {
+            en: 'The published catalogue lists 295 jurisdictions and 239 diseases, with 15,545 series and 4,463,205 observations.',
+            zh: '已发布目录包含 295 个国家及地区、239 种疾病，共 15,545 条序列和 4,463,205 个观测值。',
+            fr: 'Le catalogue publié couvre 295 juridictions et 239 maladies, soit 15 545 séries et 4 463 205 observations.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.13.3',
+    date: '2026-10-21',
+    titleEn: 'Current curves update only when the data changes',
+    titleZh: '现行曲线仅在数据变化时更新',
+    titleFr: 'Les courbes courantes ne changent que si les données changent',
+    summaryEn:
+      'A completed country refresh updates that country’s published curves. Unchanged download files stay in place, and historical exports still use the observation history.',
+    summaryZh:
+      '某国抓取成功后会更新该国已发布曲线。未变化的下载文件保持不变，历史导出仍读取观测历史。',
+    summaryFr:
+      'Une actualisation terminée met à jour les courbes publiées de ce pays. Les fichiers inchangés sont conservés, et les exports historiques lisent toujours l’historique des observations.',
+    sections: [
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Current public curves are served from maintained publish tables. The stored observations remain the record of what each source reported.',
+            zh: '现行公开曲线改由维护中的发布表提供。原始观测仍是各来源报告内容的记录。',
+            fr: 'Les courbes publiques courantes sont servies depuis des tables de publication tenues à jour. Les observations enregistrées restent le relevé de ce que chaque source a déclaré.',
+          },
+          {
+            en: 'A current export rewrites a country curve only when its published content changes, and reuses download partitions that are unchanged.',
+            zh: '现行导出会在已发布内容变化时才重写该国曲线，并复用未变化的下载分区。',
+            fr: 'Un export courant ne réécrit la courbe d’un pays que lorsque son contenu publié change, et réutilise les partitions de téléchargement inchangées.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.13.2',
+    date: '2026-10-21',
+    titleEn: 'More precise Research Radar disease links',
+    titleZh: '研究雷达的疾病关联更准确',
+    titleFr: 'Associations de maladies plus précises dans le radar de recherche',
+    summaryEn:
+      'Research Radar now distinguishes HIV, viral hepatitis, and influenza subtypes more carefully, and ignores common negated mentions.',
+    summaryZh:
+      '研究雷达现在更准确地区分 HIV、病毒性肝炎和流感亚型，并忽略常见的否定表述。',
+    summaryFr:
+      'Le radar de recherche distingue plus précisément le VIH, les hépatites virales et les sous-types de grippe, et ignore les mentions négatives courantes.',
+    sections: [
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'HIV, hepatitis B, C, D, and E, and influenza subtypes use corrected disease aliases. Vaccine names are no longer treated as pertussis.',
+            zh: 'HIV、乙型、丙型、丁型和戊型肝炎以及流感亚型已更正疾病别名。疫苗名称不再被当作百日咳。',
+            fr: 'Le VIH, les hépatites B, C, D et E et les sous-types de grippe utilisent des alias corrigés. Les noms de vaccins ne sont plus traités comme la coqueluche.',
+          },
+          {
+            en: 'Title matching uses curated aliases and legacy labels, ignores accents and punctuation, prefers the more specific disease, and skips common negated mentions.',
+            zh: '标题匹配使用整理过的别名和旧标签，忽略重音和标点差异，优先采用更具体的疾病，并跳过常见的否定表述。',
+            fr: 'L’association par titre utilise des alias revus et d’anciens libellés, ignore accents et ponctuation, privilégie la maladie la plus précise et écarte les mentions négatives courantes.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.13.1',
+    date: '2026-10-20',
+    titleEn: 'Bibliographic references in Research Radar',
+    titleZh: '研究雷达保留书目型记录',
+    titleFr: 'Références bibliographiques dans le radar de recherche',
+    summaryEn:
+      'Reviews without a detailed summary stay in Research Radar as compact references. Disease and topic links estimated from the title are labelled as estimates.',
+    summaryZh:
+      '没有详细摘要的评审记录仍以简要书目形式留在研究雷达中。从标题估计的疾病和主题关联会标明为估计。',
+    summaryFr:
+      'Les revues sans résumé détaillé restent dans le radar de recherche comme références compactes. Les liens de maladie et de thème estimés à partir du titre sont signalés comme des estimations.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveau',
+        items: [
+          {
+            en: 'Records that are not eligible for a detailed AI summary remain searchable as bibliographic references. Abstracts and full text stay excluded, and no individual record page is created.',
+            zh: '不符合详细 AI 摘要条件的记录仍可作为书目参考文献检索。摘要和全文继续排除，也不会生成单篇页面。',
+            fr: 'Les notices qui ne peuvent pas recevoir de résumé IA détaillé restent consultables comme références bibliographiques. Les résumés et le texte intégral restent exclus, et aucune page individuelle n’est créée.',
+          },
+          {
+            en: 'The Research Radar overview shows estimated related-record and title-link counts separately from the verified catalogue.',
+            zh: '研究雷达概览单独显示估计的相关记录数和标题关联数，与已核实目录指标分开。',
+            fr: 'La vue d’ensemble du radar de recherche indique séparément les nombres estimés de notices liées et de liens par titre, à côté des indicateurs du catalogue vérifié.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.13.0',
+    date: '2026-10-18',
+    titleEn: 'Clearer provincial reports and model call history',
+    titleZh: '更清晰的省级报告与模型调用记录',
+    titleFr: 'Rapports provinciaux plus clairs et historique des appels de modèle',
+    summaryEn:
+      'Chinese provincial reports recognize more subtotal and no-case wording, and the AI Model Center keeps a filterable history of model calls without storing prompts or responses.',
+    summaryZh:
+      '中国省级报告能识别更多小计和无病例表述。AI 模型中心保留可筛选的模型调用记录，但不保存提示词或生成结果。',
+    summaryFr:
+      'Les rapports provinciaux chinois reconnaissent davantage de sous-totaux et de formulations sans cas. Le centre des modèles IA conserve un historique filtrable des appels, sans enregistrer les invites ni les réponses.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveau',
+        items: [
+          {
+            en: 'The AI Model Center records each model call’s provider, model, outcome, and latency. Prompts and generated responses are not retained.',
+            zh: 'AI 模型中心记录每次调用的提供方、模型、结果和耗时。提示词和生成结果不会保留。',
+            fr: 'Le centre des modèles IA enregistre le fournisseur, le modèle, le résultat et la latence de chaque appel. Les invites et les réponses générées ne sont pas conservées.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Chinese provincial report parsing recognizes more subtotal labels and no-case wording, including broader Hunan archive coverage.',
+            zh: '中国省级报告解析能识别更多小计标签和无病例表述，并扩大了湖南归档索引的覆盖。',
+            fr: 'L’analyse des rapports provinciaux chinois reconnaît davantage de libellés de sous-total et de formulations sans cas, avec une couverture élargie des archives du Hunan.',
+          },
+          {
+            en: 'Location records can store a location type and parent jurisdiction, so provincial and other subdivision series stay distinct from national totals.',
+            zh: '地点记录可以保存地点类型和上级辖区，省级及其他下级序列因此与全国总数保持区分。',
+            fr: 'Les lieux peuvent enregistrer un type de localisation et la juridiction parente, afin que les séries provinciales et autres subdivisions restent distinctes des totaux nationaux.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.12.1',
     date: '2026-10-21',
     titleEn: 'Public download refresh',

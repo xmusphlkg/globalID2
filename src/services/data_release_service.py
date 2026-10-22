@@ -27,6 +27,10 @@ from src.core.task_manager import task_manager
 from src.domain import Country, DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
 from src.services.data_release import checks as release_checks
 from src.services.data_release import pipeline as release_pipeline
+from src.services.data_release.public_changelog import (
+    missing_public_changelog_versions,
+    public_changelog_blocker,
+)
 from src.services.data_release.commands import (
     build_cloudflare_deploy_command,
     build_generate_site_data_command,
@@ -1133,6 +1137,19 @@ class DataReleaseService:
                 "Generated data is still tracked by the code repository: "
                 + ", ".join(tracked_generated_paths)
             )
+        try:
+            missing_changelog_versions = missing_public_changelog_versions(
+                markdown_path=ROOT_DIR / "CHANGELOG.md",
+                typescript_path=ASTRO_DIR / "src" / "data" / "changelog.ts",
+            )
+        except OSError as exc:
+            blockers.append(
+                "Public changelog could not be compared with CHANGELOG.md: "
+                f"{exc}"
+            )
+        else:
+            if missing_changelog_versions:
+                blockers.append(public_changelog_blocker(missing_changelog_versions))
 
         return {
             "checked_at": datetime.now(ZoneInfo("UTC")).isoformat(),

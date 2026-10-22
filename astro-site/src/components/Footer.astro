@@ -1,7 +1,7 @@
 ---
 // src/components/Footer.astro
 import BrandLogo from './BrandLogo.astro';
-import sitePackage from '../../package.json';
+import { changelogReleases } from '../data/changelog';
 import { createTranslator, localizedPath, type Lang } from '../utils/i18n';
 
 interface Props {
@@ -10,7 +10,8 @@ interface Props {
 
 const { initialLanguage = 'en' } = Astro.props;
 const year = new Date().getFullYear();
-const siteVersion = sitePackage.version;
+const siteVersion = changelogReleases[0]?.version;
+if (!siteVersion) throw new Error('Public changelog has no releases');
 const pendingDate = initialLanguage === 'zh' ? '读取中' : initialLanguage === 'fr' ? 'Chargement' : 'Loading';
 
 const copy = createTranslator(initialLanguage);
