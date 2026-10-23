@@ -416,6 +416,31 @@ def test_ordered_database_frame_skips_full_frame_copy_and_recanonicalization() -
     assert prepared["canonical_geography_key"].eq("country:US:national").all()
 
 
+def test_ordered_parallel_model_matches_serial_results() -> None:
+    source = _weekly_frame()
+    groups = []
+    for index in range(16):
+        group = source.copy()
+        group["series_code"] = f"SER_{index:02d}"
+        groups.append(group)
+    frame = pd.concat(groups, ignore_index=True)
+    frame["canonical_geography_key"] = "country:US:national"
+    frame.attrs["situation_v3_ordered"] = True
+    as_of = pd.Timestamp(frame["time"].max()).date()
+
+    serial_config = _config()
+    serial_config["v3"]["maximum_analysis_workers"] = 1
+    parallel_config = _config()
+    parallel_config["v3"]["maximum_analysis_workers"] = 2
+    serial = evaluate_frame_v3(frame, serial_config, as_of=as_of)
+    parallel = evaluate_frame_v3(frame, parallel_config, as_of=as_of)
+
+    assert [signal.model_dump(mode="json") for signal in serial[0]] == [
+        signal.model_dump(mode="json") for signal in parallel[0]
+    ]
+    assert serial[1:] == parallel[1:]
+
+
 def test_configured_source_url_fills_missing_row_evidence_only() -> None:
     configured = {"SRC_TEST": "https://example.test/source-registry"}
     assert source_adapters._source_evidence_url(

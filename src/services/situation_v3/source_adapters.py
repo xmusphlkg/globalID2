@@ -390,8 +390,10 @@ async def fetch_series_inputs_v3(
                     """
                 )
                 result = await db.stream(data_query, data_params)
-                async for row in result:
-                    rows.append(tuple(row))
+                # Fetching one Python row per await adds substantial overhead
+                # for the several hundred thousand bounded history records.
+                async for partition in result.partitions(5_000):
+                    rows.extend(tuple(row) for row in partition)
                 await result.close()
         history_seconds = perf_counter() - history_started
     transform_started = perf_counter()

@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import math
 import multiprocessing
+from collections import deque
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import date
@@ -1492,6 +1493,34 @@ def _evaluate_chunk_v3(
     return [evaluate_series_v3(group, config, as_of=as_of) for group in chunk]
 
 
+def _evaluate_ordered_parallel_v3(
+    grouped: Any,
+    config: dict[str, Any],
+    as_of: date,
+    worker_count: int,
+) -> list[SeriesV3Evaluation]:
+    """Bound queued group copies while preserving identity order for FDR."""
+    evaluations: list[SeriesV3Evaluation] = []
+    pending = deque()
+    chunk: list[pd.DataFrame] = []
+    with ProcessPoolExecutor(
+        max_workers=worker_count,
+        mp_context=multiprocessing.get_context("spawn"),
+    ) as executor:
+        for _, group in grouped:
+            chunk.append(group)
+            if len(chunk) == 16:
+                pending.append(executor.submit(_evaluate_chunk_v3, chunk, config, as_of))
+                chunk = []
+                if len(pending) >= worker_count * 2:
+                    evaluations.extend(pending.popleft().result())
+        if chunk:
+            pending.append(executor.submit(_evaluate_chunk_v3, chunk, config, as_of))
+        while pending:
+            evaluations.extend(pending.popleft().result())
+    return evaluations
+
+
 def evaluate_frame_v3(
     frame: pd.DataFrame,
     config: dict[str, Any],
@@ -1510,10 +1539,18 @@ def evaluate_frame_v3(
         min(4, int(config.get("v3", {}).get("maximum_analysis_workers", 1))),
     )
     evaluations: list[SeriesV3Evaluation]
-    if ordered_input:
-        # Database input is ordered by identity, so evaluate one cohort at a
-        # time. Materializing every group (and serializing those copies into a
-        # process pool) multiplied peak memory for no statistical benefit.
+    if ordered_input and requested_workers > 1 and grouped.ngroups >= 16:
+        try:
+            evaluations = _evaluate_ordered_parallel_v3(
+                grouped, config, as_of, min(requested_workers, grouped.ngroups)
+            )
+        except (OSError, RuntimeError) as exc:
+            logger.warning("Situation v3 process pool unavailable; using deterministic serial model: {}", exc)
+            evaluations = [
+                evaluate_series_v3(group, config, as_of=as_of)
+                for _, group in work.groupby(group_columns, dropna=False, sort=False)
+            ]
+    elif ordered_input:
         evaluations = [
             evaluate_series_v3(group, config, as_of=as_of)
             for _, group in grouped
