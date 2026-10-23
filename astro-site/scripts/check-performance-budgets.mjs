@@ -5,7 +5,11 @@ import { pathToFileURL } from 'node:url';
 
 export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxJavaScriptChunkBytes: 350_000,
-  maxRouteCompressedAssetsBytes: 370_000,
+  // Disease pages carry the surveillance explorer plus a coverage map and a
+  // seasonality heatmap. The 2026-10-23 release build measured that route at
+  // 381,198 gzip bytes. 395KB still rejects a second ECharts core: zrender
+  // alone is about 62KB gzip.
+  maxRouteCompressedAssetsBytes: 395_000,
   maxOrdinaryRouteCompressedAssetsBytes: 300_000,
   // Raised from 100KB (2026-08-23): the multilingual Research Radar graph page
   // now carries enough static graph metadata to sit just over the old cap.
@@ -151,8 +155,10 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
         assetCount: selected.size,
       };
     }
-    const isDataRoute = /^\/(?:(?:zh|fr)\/)?(?:countries|diseases|situation|research)\//.test(routePath);
-    if (!isDataRoute && gzipBytes > largestOrdinaryRoute.gzipBytes) {
+    // Compare is a chart workspace, same class as disease, country, situation,
+    // and research pages. Brochure routes stay on the ordinary cap.
+    const isChartRoute = /^\/(?:(?:zh|fr)\/)?(?:compare|countries|diseases|situation|research)\//.test(routePath);
+    if (!isChartRoute && gzipBytes > largestOrdinaryRoute.gzipBytes) {
       largestOrdinaryRoute = { path: routePath, gzipBytes, assetCount: selected.size };
     }
   }

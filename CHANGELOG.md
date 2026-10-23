@@ -20,6 +20,7 @@ This file records release-level changes to the GIDS application and its data ope
 
 - Site data view tests: 16 passed.
 - Local Astro dev, checked in Chromium: COVID-19 coverage map with territory markers, zoom, and the case scale; Chinese influenza seasonality with a country change; French dengue map; English, Chinese, and French compare pages, including a shared country query and CSV download; mobile navigation to Compare.
+- Production build performance budget, checked against the release dist: the disease route is 381,198 gzip bytes under a 395,000 byte chart-route cap. Compare is classified with the other chart pages. The largest ordinary page is 23,556 gzip bytes.
 
 ## [0.13.4] - 2026-10-21
 
