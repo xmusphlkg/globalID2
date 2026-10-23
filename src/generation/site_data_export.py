@@ -1389,6 +1389,14 @@ def write_site_export_artifacts(
     public_site_data_dir: Path,
 ) -> None:
     """Write build and public artifacts in their established order."""
+    phase_started = time.perf_counter()
+
+    def report_phase(name: str) -> None:
+        nonlocal phase_started
+        now = time.perf_counter()
+        print(f"  Artifact timing: {name} {now - phase_started:.1f}s", flush=True)
+        phase_started = now
+
     country_record_counts = context.get("country_record_counts")
     if not isinstance(country_record_counts, dict):
         country_record_counts = {
@@ -1454,6 +1462,7 @@ def write_site_export_artifacts(
             f"  ✓ countries/{code.lower()}.json "
             f"({country_record_counts.get(code, 0)} records)"
         )
+    report_phase("country JSON")
 
     knowledge_mode_counts: dict[str, int] = defaultdict(int)
     knowledge_completeness_values: list[float] = []
@@ -1504,6 +1513,7 @@ def write_site_export_artifacts(
         f"({len(country_download_entries)} countries, "
         f"{len(disease_download_entries)} diseases)"
     )
+    report_phase("disease JSON and knowledge")
 
     write_pretty_json(output_dir / "reports" / "index.json", reports)
     print(f"  ✓ reports/index.json ({len(reports)} reports)")
@@ -1511,6 +1521,7 @@ def write_site_export_artifacts(
     for report_id, detail in report_details.items():
         write_pretty_json(output_dir / "reports" / f"{report_id}.json", detail)
     print(f"  ✓ reports/<id>.json ({len(report_details)} files)")
+    report_phase("report JSON")
 
     write_literature_artifacts(
         literature_export,
@@ -1518,6 +1529,7 @@ def write_site_export_artifacts(
         public_site_data_dir=public_site_data_dir,
     )
     print(f"  ✓ research/index.json ({len(literature_export.get('articles') or [])} published articles)")
+    report_phase("literature JSON")
 
     # ── Meta ──
     meta = {
@@ -1593,6 +1605,7 @@ def write_site_export_artifacts(
         # never copied to public/site-data, indexed, or included in sitemaps.
         write_pretty_json(output_dir / "situation" / "v3" / "shadow-latest.json", situation_latest)
         print("  ✓ situation shadow preview (build-time only)")
+    report_phase("metadata and situation JSON")
 
     # Reconcile stale artifacts only after every new artifact is safely on disk.
     # This keeps unchanged files intact throughout export and prevents a failed
@@ -1659,6 +1672,7 @@ def write_site_export_artifacts(
         remove_stale_json_files(public_site_data_dir / "situation" / "v3" / "weekly", set())
         remove_stale_json_files(public_site_data_dir / "situation" / "v3" / "monthly", set())
     _write_publish_hash_manifest(output_dir, context)
+    report_phase("stale file cleanup and hashes")
 
 
 def write_incremental_site_export_artifacts(

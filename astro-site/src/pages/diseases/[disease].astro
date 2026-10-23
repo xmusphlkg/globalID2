@@ -32,16 +32,12 @@ import {
   isIndexableDisease,
   toSeoSlug,
 } from '../../lib/seo';
-import { readFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
 import metaRaw from '../../data/meta.json';
-import { countryDiseaseCandidates } from '../../lib/seo-page-data';
+import { countryDiseaseCandidates, diseaseIndex, loadDisease, loadKnowledge } from '../../lib/seo-page-data';
+import { downloadCatalogue } from '../../lib/downloads-data';
 
 export async function getStaticPaths() {
-  const diseasesPath = resolve('./src/data/diseases/index.json');
-  if (!existsSync(diseasesPath)) return [];
-  const diseases = JSON.parse(readFileSync(diseasesPath, 'utf-8')) as any[];
-  return diseases.map(d => {
+  return diseaseIndex.map(d => {
     const disease = toSeoSlug(d.slug) || d.slug;
     return {
       params: { disease },
@@ -57,27 +53,14 @@ const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const localeHref = (path: string) => `${prefix}${path}`;
 
-const dataPath = resolve(`./src/data/diseases/${diseaseId.toLowerCase()}.json`);
-const knowledgePath = resolve(`./src/data/disease-knowledge/${diseaseId.toLowerCase()}.json`);
-const downloadsPath = resolve('./src/data/downloads.json');
-let diseaseData: any = null;
-let knowledgeData: any = null;
-let diseaseDownload: any = null;
-if (existsSync(dataPath)) {
-  diseaseData = JSON.parse(readFileSync(dataPath, 'utf-8'));
-}
-if (existsSync(knowledgePath)) {
-  knowledgeData = JSON.parse(readFileSync(knowledgePath, 'utf-8'));
-}
-if (existsSync(downloadsPath)) {
-  const downloads = JSON.parse(readFileSync(downloadsPath, 'utf-8')) as any;
-  diseaseDownload = (downloads.diseases ?? []).find(
-    (entry: any) =>
-      entry.disease_id === diseaseId ||
-      entry.slug === disease ||
-      entry.id === diseaseId.toLowerCase()
-  ) ?? null;
-}
+const diseaseData: any = loadDisease(diseaseId);
+const knowledgeData: any = loadKnowledge(diseaseId);
+const diseaseDownload: any = (downloadCatalogue()?.diseases ?? []).find(
+  (entry: any) =>
+    entry.disease_id === diseaseId ||
+    entry.slug === disease ||
+    entry.id === diseaseId.toLowerCase()
+) ?? null;
 
 const categoryZh: Record<string, string> = {
   Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫', Fungal: '真菌性',

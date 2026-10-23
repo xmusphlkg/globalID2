@@ -15,6 +15,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import time
 import unicodedata
 from typing import Any
 
@@ -2484,13 +2485,18 @@ def _chunk_records(records: list[Any], max_bytes: int) -> list[list[Any]]:
 
     chunks: list[list[Any]] = []
     current: list[Any] = []
+    envelope_bytes = len(_compact_json_bytes({"records": []}))
+    current_bytes = envelope_bytes
     for record in records:
-        trial = [*current, record]
-        if current and len(_compact_json_bytes({"records": trial})) > max_bytes:
+        record_bytes = len(_compact_json_bytes(record))
+        trial_bytes = current_bytes + record_bytes + (1 if current else 0)
+        if current and trial_bytes > max_bytes:
             chunks.append(current)
             current = [record]
+            current_bytes = envelope_bytes + record_bytes
         else:
-            current = trial
+            current.append(record)
+            current_bytes = trial_bytes
     if current:
         chunks.append(current)
     return chunks
@@ -2614,6 +2620,14 @@ def write_literature_artifacts(
     public_site_data_dir: Path | None = None,
     shard_max_bytes: int = PUBLIC_RESEARCH_SHARD_MAX_BYTES,
 ) -> None:
+    phase_started = time.perf_counter()
+
+    def report_phase(name: str) -> None:
+        nonlocal phase_started
+        now = time.perf_counter()
+        print(f"  Literature timing: {name} {now - phase_started:.1f}s", flush=True)
+        phase_started = now
+
     research_dir = output_dir / "research"
     article_dir = research_dir / "articles"
     disease_dir = research_dir / "diseases"
@@ -2647,12 +2661,14 @@ def write_literature_artifacts(
             "articles": payload.get("articles") or [],
         },
     )
+    report_phase("build-time indexes")
     if public_site_data_dir is not None:
         publish_browser_research_index(
             public_index,
             public_site_data_dir / "research",
             max_bytes=shard_max_bytes,
         )
+    report_phase("browser sharded index")
     public_article_details = [
         *(payload.get("articles") or []),
         *(payload.get("preprints") or []),
@@ -2680,6 +2696,7 @@ def write_literature_artifacts(
             article_dir / f"{article['slug']}.json",
             {**article, "knowledge_graph": build_knowledge_graph([article])},
         )
+    report_phase("article details")
     for disease_id, articles in (payload.get("disease_articles") or {}).items():
         write_pretty_json(
             disease_dir / f"{disease_id}.json",
@@ -2691,6 +2708,7 @@ def write_literature_artifacts(
                 "knowledge_graph": build_knowledge_graph(articles),
             },
         )
+    report_phase("disease collections")
     for country_code, articles in (payload.get("country_articles") or {}).items():
         write_pretty_json(
             country_dir / f"{country_code}.json",
@@ -2701,6 +2719,7 @@ def write_literature_artifacts(
                 "knowledge_graph": build_knowledge_graph(articles),
             },
         )
+    report_phase("country collections")
     for topic_slug, articles in (payload.get("topic_articles") or {}).items():
         write_pretty_json(
             topic_dir / f"{topic_slug}.json",
@@ -2711,6 +2730,7 @@ def write_literature_artifacts(
                 "knowledge_graph": build_knowledge_graph(articles),
             },
         )
+    report_phase("topic collections")
     for brief in payload.get("weekly_briefs") or []:
         write_pretty_json(weekly_dir / f"{brief['week']}.json", brief)
     remove_stale_json_files(article_dir, {f"{item['slug']}.json" for item in public_article_details})
@@ -2718,6 +2738,7 @@ def write_literature_artifacts(
     remove_stale_json_files(country_dir, {f"{key}.json" for key in (payload.get("country_articles") or {})})
     remove_stale_json_files(topic_dir, {f"{key}.json" for key in (payload.get("topic_articles") or {})})
     remove_stale_json_files(weekly_dir, {f"{item['week']}.json" for item in payload.get("weekly_briefs") or []})
+    report_phase("weekly briefs and cleanup")
 
 
 __all__ = [

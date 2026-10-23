@@ -77,24 +77,34 @@ let plan = planResearchBuild({
   incremental: Boolean(process.env.PUBLIC_GIDS_RELEASE_ID || process.env.GIDS_RESEARCH_INCREMENTAL === '1'),
   snapshot,
 });
+const elapsedSeconds = started => ((performance.now() - started) / 1000).toFixed(1);
+const stagingStarted = performance.now();
 const stage = plan.reused.length ? stageReusablePages(plan) : null;
+process.stdout.write(`[build-timing] stage reusable research pages ${elapsedSeconds(stagingStarted)}s\n`);
 mkdirSync(resolve(projectRoot, 'data', 'cache'), { recursive: true });
 writeFileSync(planPath, JSON.stringify({ selected: plan.selected }));
 process.stdout.write(`[research-cache] ${plan.mode}: render ${plan.selected.length}, reuse ${plan.reused.length} article bundles\n`);
 
-const runAstro = selectedPath => spawnSync(astroBinary, ['build'], {
-  cwd: resolve(import.meta.dirname, '..'),
-  env: {
-    ...process.env,
-    PUBLIC_GA4_MEASUREMENT_ID: measurementId,
-    ...(selectedPath ? { GIDS_RESEARCH_BUILD_PLAN: selectedPath } : { GIDS_RESEARCH_BUILD_PLAN: '' }),
-  },
-  stdio: 'inherit',
-});
+const runAstro = selectedPath => {
+  const started = performance.now();
+  const result = spawnSync(astroBinary, ['build'], {
+    cwd: resolve(import.meta.dirname, '..'),
+    env: {
+      ...process.env,
+      PUBLIC_GA4_MEASUREMENT_ID: measurementId,
+      ...(selectedPath ? { GIDS_RESEARCH_BUILD_PLAN: selectedPath } : { GIDS_RESEARCH_BUILD_PLAN: '' }),
+    },
+    stdio: 'inherit',
+  });
+  process.stdout.write(`[build-timing] Astro render ${elapsedSeconds(started)}s status=${result.status ?? 'error'}\n`);
+  return result;
+};
 let result = runAstro(plan.mode === 'incremental' ? planPath : null);
 
 if ((result.status ?? 1) === 0 && stage) {
+  const restoreStarted = performance.now();
   restoreReusablePages(plan, stage);
+  process.stdout.write(`[build-timing] restore reusable research pages ${elapsedSeconds(restoreStarted)}s\n`);
   if (!reusedAssetReferencesAvailable(plan)) {
     process.stdout.write('[research-cache] cached page asset missing; rebuilding all article bundles\n');
     result = runAstro(null);

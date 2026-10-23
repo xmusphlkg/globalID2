@@ -2,6 +2,10 @@ import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 
 const siteUrl = process.env.GLOBALID_SITE_URL || process.env.SITE_URL || 'https://globalinfectiousdisease.com';
+const buildConcurrency = Number(process.env.GIDS_ASTRO_BUILD_CONCURRENCY ?? 2);
+if (!Number.isInteger(buildConcurrency) || buildConcurrency < 1 || buildConcurrency > 8) {
+  throw new Error('GIDS_ASTRO_BUILD_CONCURRENCY must be an integer from 1 to 8');
+}
 
 export default defineConfig({
   site: siteUrl,
@@ -11,6 +15,7 @@ export default defineConfig({
     react(),
   ],
   build: {
+    concurrency: buildConcurrency,
     // Inline compact page-specific styles while preserving the shared base
     // stylesheet as a cacheable asset across the generated page catalogue.
     inlineStylesheets: 'auto',

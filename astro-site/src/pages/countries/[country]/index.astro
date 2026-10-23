@@ -12,7 +12,8 @@ import DiseaseHeatmap from '../../../components/charts/DiseaseHeatmap';
 import ComparisonTable from '../../../components/charts/ComparisonTable';
 import { buildChartSourceMeta } from '../../../utils/chartMeta';
 import { hasCountryDataSnapshot } from '../../../lib/country-coverage';
-import { countryDiseaseCandidates } from '../../../lib/seo-page-data';
+import { countryDiseaseCandidates, loadCountry, reportIndex } from '../../../lib/seo-page-data';
+import { downloadCatalogue } from '../../../lib/downloads-data';
 import {
   buildCountryMetaDescription,
   buildDatasetDistributions,
@@ -23,16 +24,12 @@ import {
   formatYearRange,
   toSeoSlug,
 } from '../../../lib/seo';
-import { readFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
 import metaRaw from '../../../data/meta.json';
 import { localizedDiseaseName } from '../../../utils/diseaseNames';
 import { localizedRegionName } from '../../../utils/i18n';
 
 export function getStaticPaths() {
-  const metaPath = resolve('./src/data/meta.json');
-  const meta = JSON.parse(readFileSync(metaPath, 'utf-8')) as any;
-  return (meta.countries ?? []).filter(hasCountryDataSnapshot).map((c: any) => ({
+  return ((metaRaw as any).countries ?? []).filter(hasCountryDataSnapshot).map((c: any) => ({
     params: { country: c.code.toLowerCase() },
     props: { countryCode: c.code.toLowerCase(), locale: 'en' as 'en' | 'zh' | 'fr' },
   }));
@@ -57,29 +54,13 @@ const childJurisdictions = ((metaRaw as any).countries ?? [])
   ).localeCompare(String(
     zh ? right.name_zh ?? right.name : right.name_en ?? right.name
   ), zh ? 'zh-CN' : fr ? 'fr-FR' : 'en'));
-const dataPath = resolve(`./src/data/countries/${country}.json`);
-const reportsIndexPath = resolve('./src/data/reports/index.json');
-const downloadsPath = resolve('./src/data/downloads.json');
-
-let countryData: any = null;
-let reports: any[] = [];
-let countryDownload: any = null;
-
-if (existsSync(dataPath)) {
-  countryData = JSON.parse(readFileSync(dataPath, 'utf-8'));
-}
-if (existsSync(reportsIndexPath)) {
-  const allReports = JSON.parse(readFileSync(reportsIndexPath, 'utf-8')) as any[];
-  reports = allReports
-    .filter(r => r.country_code?.toLowerCase() === country)
-    .slice(0, 6);
-}
-if (existsSync(downloadsPath)) {
-  const downloads = JSON.parse(readFileSync(downloadsPath, 'utf-8')) as any;
-  countryDownload = (downloads.countries ?? []).find(
-    (entry: any) => entry.code?.toLowerCase() === country
-  ) ?? null;
-}
+const countryData: any = loadCountry(country);
+const reports: any[] = (reportIndex as any[])
+  .filter(r => r.country_code?.toLowerCase() === country)
+  .slice(0, 6);
+const countryDownload: any = (downloadCatalogue()?.countries ?? []).find(
+  (entry: any) => entry.code?.toLowerCase() === country
+) ?? null;
 
 function fmtNum(n: number | null | undefined) {
   if (!n) return '0';

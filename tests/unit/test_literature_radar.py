@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.generation.site_data_literature import (
+    _chunk_records,
     _compact_json_bytes,
     _load_title_disease_aliases,
     _title_estimated_literature_links,
@@ -54,6 +55,26 @@ from dashboard.api.routers.literature import _publication_blockers
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_research_chunk_boundaries_match_serialized_file_budget():
+    records = [
+        {"title": "传染病 " + "甲" * count, "tags": ["é", "β"]}
+        for count in (2, 5, 9, 1, 14, 3)
+    ]
+    for budget in (128, 180, 260):
+        expected = []
+        current = []
+        for record in records:
+            trial = [*current, record]
+            if current and len(_compact_json_bytes({"records": trial})) > budget:
+                expected.append(current)
+                current = [record]
+            else:
+                current = trial
+        if current:
+            expected.append(current)
+        assert _chunk_records(records, budget) == expected
 
 
 def test_title_disease_aliases_use_correct_ids_and_specific_mentions():
