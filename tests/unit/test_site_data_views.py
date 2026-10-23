@@ -26,7 +26,14 @@ def test_legacy_frequency_hint_survives_both_site_projections() -> None:
         assert entry["period_granularity"] == "monthly"
         assert entry["period_granularity_basis"] == "date_pattern"
         assert entry["weekly_equiv_cases"] == []
-    assert disease["global_monthly"]["coverage"]["inferred_monthly_jurisdictions"] == 1
+    national = {
+        code: series
+        for code, series in disease["country_series"].items()
+        if "-" not in code
+    }
+    monthly = views.build_national_monthly_summary(national, list(national))
+    assert monthly["coverage"]["inferred_monthly_jurisdictions"] == 1
+    assert "global_monthly" not in disease
     assert views.build_country_site_data(country)["series"][0]["period_granularity_basis"] == "date_pattern"
     assert views.build_disease_site_data(disease)["series"][0]["period_granularity_basis"] == "date_pattern"
 
@@ -304,7 +311,11 @@ def test_disease_builders_preserve_country_order_and_sorted_summary_codes() -> N
     )
 
     assert list(disease["country_series"]) == ["ZZ", "AA"]
-    assert disease["global_monthly"] == {
+    for obsolete_key in ("global_monthly", "total_cases", "total_deaths", "aggregation_scope"):
+        assert obsolete_key not in disease
+    assert views.build_national_monthly_summary(
+        disease["country_series"], ["ZZ", "AA", "CC"]
+    ) == {
         "months": ["2024-01", "2024-02"],
         "cases": [1, 2],
         "deaths": [0, 0],
@@ -332,7 +343,9 @@ def test_disease_builders_preserve_country_order_and_sorted_summary_codes() -> N
     )
     assert [entry["cc"] for entry in compact["series"]] == ["ZZ", "AA"]
     assert compact["dates"] == ["2024-01-01", "2024-02-01"]
-    assert compact["monthly"] == disease["global_monthly"]
+    assert "monthly" not in compact
+    assert "tc" not in compact["meta"]
+    assert "td" not in compact["meta"]
     disease["recorded_at_as_of"] = "2025-02-03T04:05:06+00:00"
     disease["recorded_history_complete"] = False
     compact = views.build_disease_site_data(
@@ -361,25 +374,18 @@ def test_disease_global_summary_excludes_subdivision_double_counting() -> None:
     )
 
     assert list(disease["country_series"]) == ["CN", "CN-SH", "AA"]
-    assert disease["total_cases"] == 105
-    assert disease["total_deaths"] == 11
-    assert disease["global_monthly"] == {
-        "months": ["2024-01"],
-        "cases": [105],
-        "deaths": [11],
-        "coverage": {
-            "scope": "national_jurisdictions_only",
-            "jurisdiction_universe_size": 2,
-            "excluded_weekly_jurisdictions": 0,
-            "excluded_unknown_jurisdictions": 0,
-            "inferred_monthly_jurisdictions": 0,
-            "cases_reported_jurisdictions": [2],
-            "deaths_reported_jurisdictions": [2],
-            "cases_incompatible_months": [False],
-            "deaths_incompatible_months": [False],
-        },
-    }
-    assert disease["aggregation_scope"] == "national_jurisdictions_only"
+    for obsolete_key in ("global_monthly", "total_cases", "total_deaths", "aggregation_scope"):
+        assert obsolete_key not in disease
+    monthly = views.build_national_monthly_summary(
+        {
+            code: series
+            for code, series in disease["country_series"].items()
+            if "-" not in code
+        }
+    )
+    assert monthly["cases"] == [105]
+    assert monthly["deaths"] == [11]
+    assert monthly["coverage"]["cases_reported_jurisdictions"] == [2]
     assert disease["subdivision_country_codes"] == ["CN-SH"]
 
 
@@ -392,7 +398,7 @@ def test_national_monthly_subtotal_marks_unreported_jurisdictions_and_months() -
             "BB": [_record("2024-01-01", 7)],
         },
     )
-    monthly = disease["global_monthly"]
+    monthly = views.build_national_monthly_summary(disease["country_series"])
     assert monthly["months"] == ["2024-01", "2024-02", "2024-03"]
     assert monthly["cases"] == [12, None, 0]
     assert monthly["coverage"]["cases_reported_jurisdictions"] == [2, 0, 1]
@@ -406,11 +412,9 @@ def test_national_monthly_subtotal_marks_unreported_jurisdictions_and_months() -
             "BB": [_record("2024-02-01", 7)],
         },
     )
-    assert disease["global_monthly"]["cases"] == [5, 7]
-    assert (
-        disease["global_monthly"]["coverage"]["cases_reported_jurisdictions"]
-        == [1, 1]
-    )
+    monthly = views.build_national_monthly_summary(disease["country_series"])
+    assert monthly["cases"] == [5, 7]
+    assert monthly["coverage"]["cases_reported_jurisdictions"] == [1, 1]
 
 
 def test_national_monthly_subtotal_excludes_weeks_that_can_cross_months() -> None:

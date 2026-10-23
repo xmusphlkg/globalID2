@@ -82,9 +82,12 @@ SITE_RELEASE_MANIFEST = ASTRO_DIR / "dist" / "release.json"
 SITE_VISUAL_MODULE_PREFIXES = (
     "ChartFrame.",
     "ComparisonTable.",
+    "CompareWorkspace.",
+    "CountrySeasonalityPicker.",
     "DiseaseCountryCurve.",
+    "DiseaseCoverageMap.",
     "DiseaseHeatmap.",
-    "DiseaseMonthlyBar.",
+    "DiseaseSeasonalityHeatmap.",
     "EpidemicCurve.",
 )
 # These files are atomically maintained by background quality automation and

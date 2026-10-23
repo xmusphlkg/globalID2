@@ -26,6 +26,62 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.13.5',
+    date: '2026-10-23',
+    titleEn: 'Compare countries on a map',
+    titleZh: '在地图上比较国家',
+    titleFr: 'Comparer les pays sur une carte',
+    summaryEn:
+      'Disease pages show where a condition is reported and how one country’s monthly series varies through the year. A compare page lines up a few countries without adding their numbers together.',
+    summaryZh:
+      '疾病页展示有哪些地方发布了该病数据，以及单个国家的月度序列如何随年份变化。对比页可以把少数国家放在一起查看，但不会把它们的数字加总。',
+    summaryFr:
+      'Les pages maladie montrent où une affection est déclarée et comment la série mensuelle d’un pays varie au cours de l’année. Une page de comparaison aligne quelques pays sans additionner leurs chiffres.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveautés',
+        items: [
+          {
+            en: 'The compare page accepts up to two diseases and four countries. Each line keeps its own reporting period and case definition. The selection can be shared or downloaded as PNG or CSV.',
+            zh: '对比页最多选择两种疾病和四个国家。每条曲线保留各自的报告周期和病例定义，当前选择可以分享，也可以下载 PNG 或 CSV。',
+            fr: 'La page de comparaison accepte jusqu’à deux maladies et quatre pays. Chaque courbe conserve sa période et sa définition de cas. La sélection peut être partagée ou téléchargée en PNG ou CSV.',
+          },
+          {
+            en: 'Each disease page maps reporting countries and territories. Regional series are rolled into the parent country. Hong Kong and Taiwan remain visible even though the bundled map has no polygon for them.',
+            zh: '每个疾病页用地图标出有数据的国家和地区。地区序列汇总到所属国家。即使底图没有香港和台湾的多边形，这两个地方仍会显示。',
+            fr: 'Chaque page maladie cartographie les pays et territoires déclarants. Les séries régionales sont regroupées dans leur pays. Hong Kong et Taïwan restent visibles même si le fond de carte n’a pas de polygone pour eux.',
+          },
+          {
+            en: 'A year-by-month heatmap shows one country’s published monthly series. A blank cell means the value was not published, not that the count was zero.',
+            zh: '年 × 月热图展示单个国家已发布的月度序列。空白表示该月没有公布数值，不是零。',
+            fr: 'Une carte thermique année × mois montre la série mensuelle publiée d’un seul pays. Une cellule vide signifie que la valeur n’a pas été publiée, et non que le total était zéro.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Disease data no longer includes a cross-country monthly total. Sources do not share one case definition, so those sums are not shown on disease or research pages.',
+            zh: '疾病数据不再包含跨国月度合计。各来源的病例定义并不相同，因此疾病页和研究页不再展示这种加总。',
+            fr: 'Les données de maladie n’incluent plus de total mensuel transnational. Les sources ne partagent pas une seule définition de cas, donc ces sommes ne figurent plus sur les pages maladie ou recherche.',
+          },
+          {
+            en: 'The home page counts jurisdictions, diseases, sources, and analyses instead of adding case totals across sources.',
+            zh: '首页改为统计辖区、疾病、来源和分析数量，不再把不同来源的病例数相加。',
+            fr: 'La page d’accueil compte les juridictions, les maladies, les sources et les analyses au lieu d’additionner les cas de sources différentes.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.13.4',
     date: '2026-10-21',
     titleEn: 'Published surveillance catalogue',

@@ -2,6 +2,25 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.13.5] - 2026-10-23
+
+### Added
+
+- Added a Compare page in English, Chinese, and French. It lines up at most two diseases and four countries, keeps each source period and case definition, and can share the current selection or download a PNG or CSV.
+- Disease pages now open their reporting footprint on a world map. Sub-national series roll up to the parent country. Hong Kong and Taiwan, which have no polygon in the bundled map, stay visible as markers.
+- Disease pages add a year-by-month seasonality view for one national monthly series at a time. Empty cells mean the source did not publish a value.
+
+### Changed
+
+- Stopped publishing a cross-country monthly subtotal on disease snapshots. `global_monthly`, disease-level `total_cases` and `total_deaths`, and `aggregation_scope` are removed from new site exports and stripped from older snapshots during an incremental export. Per-series totals are unchanged.
+- Research disease pages show the publication timeline and link to the surveillance page. They no longer place a summed case series beside publication counts.
+- The home page reports jurisdictions, diseases, sources, and analyses. It no longer adds case or record totals across sources.
+
+### Validation
+
+- Site data view tests: 16 passed.
+- Local Astro dev, checked in Chromium: COVID-19 coverage map with territory markers, zoom, and the case scale; Chinese influenza seasonality with a country change; French dengue map; English, Chinese, and French compare pages, including a shared country query and CSV download; mobile navigation to Compare.
+
 ## [0.13.4] - 2026-10-21
 
 ### Changed

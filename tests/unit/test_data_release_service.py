@@ -857,7 +857,7 @@ def test_site_release_manifest_records_visual_modules(monkeypatch, tmp_path):
     assets_dir = astro_dir / "dist" / "_astro"
     assets_dir.mkdir(parents=True)
     (assets_dir / "EpidemicCurve.ABC123.js").write_text("export {}", encoding="utf-8")
-    (assets_dir / "DiseaseMonthlyBar.DEF456.js").write_text("export {}", encoding="utf-8")
+    (assets_dir / "DiseaseCoverageMap.DEF456.js").write_text("export {}", encoding="utf-8")
     (assets_dir / "unrelated.GHI789.js").write_text("export {}", encoding="utf-8")
     manifest_path = astro_dir / "dist" / "release.json"
     monkeypatch.setattr(release_module, "ASTRO_DIR", astro_dir)
@@ -874,7 +874,7 @@ def test_site_release_manifest_records_visual_modules(monkeypatch, tmp_path):
     payload = DataReleaseService()._write_site_release_manifest(identity)
 
     assert payload["visual_modules"] == [
-        "DiseaseMonthlyBar.DEF456.js",
+        "DiseaseCoverageMap.DEF456.js",
         "EpidemicCurve.ABC123.js",
     ]
     assert manifest_path.read_text(encoding="utf-8").endswith("\n")

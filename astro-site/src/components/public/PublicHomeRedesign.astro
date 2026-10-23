@@ -168,8 +168,6 @@ const shadowPath = resolve('./src/data/situation/v3/shadow-latest.json');
 const readPath = existsSync(situationPath) ? situationPath : import.meta.env.DEV && existsSync(shadowPath) ? shadowPath : null;
 const rawSituation: unknown = readPath ? JSON.parse(readFileSync(readPath, 'utf-8')) : null;
 const situation: SituationReportV3 | null = isSituationReportV3(rawSituation) ? rawSituation : null;
-const totalCases = countries.reduce((sum: number, country: any) => sum + Number(country.total_cases ?? 0), 0);
-const totalRecords = countries.reduce((sum: number, country: any) => sum + Number(country.record_count ?? 0), 0);
 const dataThrough = situation?.data_currency.latest_data_through ?? meta.generated_at;
 const formatCadence = (value?: string) => {
   const key = String(value ?? '').trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
@@ -193,15 +191,11 @@ const formatDate = (value?: string) => {
     ? t.unavailable
     : date.toLocaleDateString(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', { year: 'numeric', month: zh ? 'numeric' : 'short', day: 'numeric', timeZone: 'UTC' });
 };
-const formatNumber = (value: number) => new Intl.NumberFormat(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', {
-  notation: value >= 1_000_000 ? 'compact' : 'standard',
-  maximumFractionDigits: value >= 1_000_000 ? 1 : 0,
-}).format(value);
 const assetMetrics = [
-  { label: t.observations, value: formatNumber(totalRecords) },
-  { label: t.reportedCases, value: formatNumber(totalCases) },
   { label: t.jurisdictions, value: String(countries.length) },
   { label: t.diseases, value: String(meta.total_diseases ?? t.unavailable) },
+  { label: t.sources, value: String(sourceNames.size) },
+  { label: t.analysis, value: String(latestReports.length) },
 ];
 const numericCases = (series: any) => (series?.cases ?? [])
   .map((value: unknown) => Number(value))
@@ -249,7 +243,7 @@ const backgroundBars = makeBars(japanInfluenza, chinaInfluenza);
 const explorePaths = [
   { href: href('/countries/'), index: '01', title: t.countryPath, text: t.countryPathText, stat: `${countries.length}`, metric: t.jurisdictions },
   { href: href('/diseases/'), index: '02', title: t.diseasePath, text: t.diseasePathText, stat: `${meta.total_diseases ?? t.unavailable}`, metric: t.diseases },
-  { href: href('/downloads/'), index: '03', title: t.downloadPath, text: t.downloadPathText, stat: formatNumber(totalRecords), metric: t.observations },
+  { href: href('/downloads/'), index: '03', title: t.downloadPath, text: t.downloadPathText, stat: String(sourceNames.size), metric: t.sources },
   { href: href('/research/'), index: '04', title: t.researchPath, text: t.researchPathText, stat: `${latestReports.length}`, metric: t.analysis },
 ];
 ---
@@ -295,6 +289,7 @@ const explorePaths = [
         </form>
         <div class="actions" aria-label={zh ? '主要入口' : 'Primary entry points'}>
           <a class="primary" href={href('/situation/')}>{t.situation}</a>
+          <a href={href('/compare/')}>{zh ? '对比国家与疾病' : fr ? 'Comparer les pays' : 'Compare trends'}</a>
           <a href={href('/countries/')}>{t.countries}</a>
           <a href={href('/downloads/')}>{t.downloads}</a>
         </div>

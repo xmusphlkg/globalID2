@@ -917,25 +917,9 @@ def build_disease_data_from_country_series(
 ) -> dict:
     """Build one disease snapshot from country curves already in memory."""
 
-    national_country_series = {
-        code: series for code, series in country_series.items() if "-" not in code
-    }
     return {
         **disease_info,
         "country_series": country_series,
-        "global_monthly": build_national_monthly_summary(
-            national_country_series,
-            jurisdiction_codes
-            or [code for code in national_country_series],
-        ),
-        "total_cases": sum(
-            series.get("total_cases") or 0 for series in national_country_series.values()
-        ),
-        "total_deaths": sum(
-            series.get("total_deaths") or 0
-            for series in national_country_series.values()
-        ),
-        "aggregation_scope": "national_jurisdictions_only",
         "subdivision_country_codes": sorted(
             code for code in country_series if "-" in code
         ),
@@ -1252,28 +1236,13 @@ def build_disease_data(
             ),
         }
 
-    # Country-level global summaries must not add child jurisdictions to their
-    # parent national series. Keep every series addressable, while aggregating
-    # only the comparable national layer.
-    national_country_series = {
-        code: series for code, series in country_series.items() if "-" not in code
-    }
     subdivision_country_codes = sorted(
         code for code in country_series if "-" in code
-    )
-    global_monthly = build_national_monthly_summary(
-        national_country_series,
-        jurisdiction_codes
-        or [code for code in all_records_by_country if "-" not in code],
     )
 
     return {
         **disease_info,
         "country_series": country_series,
-        "global_monthly": global_monthly,
-        "total_cases": sum(cs["total_cases"] for cs in national_country_series.values()),
-        "total_deaths": sum(cs["total_deaths"] for cs in national_country_series.values()),
-        "aggregation_scope": "national_jurisdictions_only",
         "subdivision_country_codes": subdivision_country_codes,
         "data_layer_summary": _country_series_data_layer_summary(country_series),
     }
@@ -1375,7 +1344,6 @@ def build_disease_site_data(
                 compact_entry["rs"] = rs
         compact_series.append(compact_entry)
 
-    global_monthly = disease_data.get("global_monthly") or {}
     return {
         "v": 1,
         "meta": {
@@ -1383,8 +1351,6 @@ def build_disease_site_data(
             "en": disease_data.get("name_en"),
             "zh": disease_data.get("name_zh"),
             "cat": disease_data.get("category"),
-            "tc": disease_data.get("total_cases"),
-            "td": disease_data.get("total_deaths"),
             "cc": len(country_series),
             "data_layer_summary": disease_data.get("data_layer_summary") or {},
             "recorded_at_as_of": disease_data.get("recorded_at_as_of"),
@@ -1395,10 +1361,4 @@ def build_disease_site_data(
         "dates": shared_dates,
         "sources": source_labels,
         "series": compact_series,
-        "monthly": {
-            "months": global_monthly.get("months") or [],
-            "cases": global_monthly.get("cases") or [],
-            "deaths": global_monthly.get("deaths") or [],
-            "coverage": global_monthly.get("coverage"),
-        },
     }

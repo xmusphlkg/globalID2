@@ -61,7 +61,6 @@ from src.generation.site_data_views import (
     build_disease_data,
     build_disease_data_from_country_series,
     build_disease_site_data,
-    build_national_monthly_summary,
     frequency_meta_from_granularities,
     resolve_country_display_names,
 )
@@ -662,25 +661,11 @@ def _merge_incremental_disease_snapshot(
         else:
             country_series.pop(country_code, None)
 
-    national_series = {
-        code: series for code, series in country_series.items() if "-" not in code
-    }
-    global_monthly = build_national_monthly_summary(
-        national_series, jurisdiction_codes
-    )
+    for obsolete_key in ("global_monthly", "total_cases", "total_deaths", "aggregation_scope"):
+        merged.pop(obsolete_key, None)
     merged.update(
         {
             "country_series": country_series,
-            "global_monthly": global_monthly,
-            "total_cases": sum(
-                sum(value for value in (series.get("cases") or []) if value is not None)
-                for series in national_series.values()
-            ),
-            "total_deaths": sum(
-                sum(value for value in (series.get("deaths") or []) if value is not None)
-                for series in national_series.values()
-            ),
-            "aggregation_scope": "national_jurisdictions_only",
             "subdivision_country_codes": sorted(
                 code for code in country_series if "-" in code
             ),
@@ -1221,13 +1206,10 @@ async def collect_site_export_context(
                         )
                     )
             if incremental:
-                monthly = build_national_monthly_summary(
-                    disease_data.get("country_series") or {},
-                    [str(country.get("code") or "") for country in countries],
-                )
-                if disease_data.get("global_monthly") != monthly:
-                    disease_data["global_monthly"] = monthly
-                    changed_disease_ids.add(did)
+                for obsolete_key in ("global_monthly", "total_cases", "total_deaths", "aggregation_scope"):
+                    if obsolete_key in disease_data:
+                        disease_data.pop(obsolete_key)
+                        changed_disease_ids.add(did)
             disease_site_data = build_disease_site_data(
                 disease_data,
                 country_name_by_code,
