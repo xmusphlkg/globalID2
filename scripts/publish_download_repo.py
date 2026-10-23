@@ -4,17 +4,17 @@
 from __future__ import annotations
 
 import argparse
-from collections import Counter
-from datetime import datetime, timezone
 import hashlib
 import json
 import os
 import shutil
 import subprocess
-from pathlib import Path
 import sys
+import tempfile
 import time
-
+from collections import Counter
+from datetime import datetime, timezone
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -255,9 +255,9 @@ def validate_source(source_dir: Path, branch: str) -> dict:
                     raise RuntimeError(
                         f"GitHub rejects files of 100 MiB or more: {file_path} ({size} bytes)"
                     )
-                digest = hashlib.sha256(file_path.read_bytes()).hexdigest()
-                if digest != file_meta.get("sha256"):
-                    raise RuntimeError(f"Manifest checksum mismatch: {file_path}")
+                digest = str(file_meta.get("sha256") or "")
+                if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest.lower()):
+                    raise RuntimeError(f"Manifest has an invalid SHA-256: {file_path}")
 
     actual_paths = {
         path.relative_to(source_dir)
@@ -372,12 +372,29 @@ def ensure_commit_identity(workdir: Path) -> dict[str, str]:
     }
 
 
+def _manifest_assets(manifest_path: Path) -> dict[str, tuple[int, str]]:
+    """Index declared asset sizes and hashes without reading the asset bytes."""
+    if not manifest_path.is_file():
+        return {}
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    indexed: dict[str, tuple[int, str]] = {}
+    for entry in [*(manifest.get("countries") or []), *(manifest.get("diseases") or [])]:
+        for part in entry.get("parts") or []:
+            for file_meta in (part.get("files") or {}).values():
+                relative = str(file_meta.get("relative_path") or "")
+                path = _asset_relative_path(relative).as_posix()
+                indexed[path] = (int(file_meta.get("bytes") or -1), str(file_meta.get("sha256") or ""))
+    return indexed
+
+
 def sync_managed_assets(source_dir: Path, workdir: Path) -> dict[str, int]:
-    """Copy only changed files and remove partitions no longer in the manifest."""
+    """Copy changed assets using manifest hashes; avoid rereading multi-GB files."""
 
     copied = 0
     removed = 0
     expected: set[Path] = set()
+    source_assets = _manifest_assets(source_dir / "manifest.json")
+    target_assets = _manifest_assets(workdir / "manifest.json")
     for directory_name in ("countries", "diseases"):
         source_root = source_dir / directory_name
         target_root = workdir / directory_name
@@ -389,10 +406,29 @@ def sync_managed_assets(source_dir: Path, workdir: Path) -> dict[str, int]:
             relative = source_path.relative_to(source_dir)
             target_path = workdir / relative
             expected.add(target_path)
-            if target_path.exists() and files_match(source_path, target_path):
+            relative_key = relative.as_posix()
+            source_meta = source_assets.get(relative_key)
+            target_meta = target_assets.get(relative_key)
+            if source_meta is None:
+                raise RuntimeError(f"Asset is missing from generated manifest: {relative_key}")
+            if (
+                target_path.is_file()
+                and source_meta is not None
+                and target_meta == source_meta
+                and target_path.stat().st_size == source_meta[0]
+            ):
                 continue
             target_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source_path, target_path)
+            fd, temporary_name = tempfile.mkstemp(prefix=f".{target_path.name}.", dir=target_path.parent)
+            os.close(fd)
+            temporary_path = Path(temporary_name)
+            try:
+                shutil.copy2(source_path, temporary_path)
+                if _sha256_file(temporary_path) != source_meta[1]:
+                    raise RuntimeError(f"Manifest checksum mismatch: {source_path}")
+                os.replace(temporary_path, target_path)
+            finally:
+                temporary_path.unlink(missing_ok=True)
             copied += 1
         if target_root.exists():
             for target_path in sorted(target_root.rglob("*"), reverse=True):
@@ -457,6 +493,14 @@ def commit_and_push(
 def _git_blob_sha(content: bytes) -> str:
     header = f"blob {len(content)}\0".encode()
     return hashlib.sha1(header + content).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _read_remote_blob_sha(
@@ -562,30 +606,52 @@ def main() -> None:
         action="store_true",
         help="Commit and push after validation (default is validation only)",
     )
+    parser.add_argument(
+        "--verify-checksums",
+        action="store_true",
+        help="Recompute every asset SHA-256 before publishing (full audit; reads all generated data)",
+    )
     args = parser.parse_args()
     if not args.repo_url.strip():
         raise RuntimeError("Missing data download repository URL")
 
+    phase_started = time.perf_counter()
     manifest = validate_source(args.source_dir, args.branch)
+    print(f"Download validation completed in {time.perf_counter() - phase_started:.1f}s", flush=True)
+    if args.verify_checksums:
+        for asset_path, (_size, expected) in _manifest_assets(
+            args.source_dir / "manifest.json"
+        ).items():
+            path = args.source_dir / asset_path
+            if _sha256_file(path) != expected:
+                raise RuntimeError(f"Manifest checksum mismatch: {path}")
+    phase_started = time.perf_counter()
     ensure_repo(args.repo_url, args.branch, args.workdir)
+    print(f"Download repository sync completed in {time.perf_counter() - phase_started:.1f}s", flush=True)
     identity = ensure_commit_identity(args.workdir)
     print(
         "Git commit identity: "
         f"{identity['name']} <{identity['email']}> ({identity['source']})"
     )
+    phase_started = time.perf_counter()
     sync_result = sync_managed_assets(args.source_dir, args.workdir)
     print(
         "Incremental sync: "
-        f"{sync_result['copied']} changed files, {sync_result['removed']} removed files"
+        f"{sync_result['copied']} changed files, {sync_result['removed']} removed files; "
+        f"completed in {time.perf_counter() - phase_started:.1f}s",
+        flush=True,
     )
     write_readme(args.workdir, manifest)
+    phase_started = time.perf_counter()
     pushed = commit_and_push(
         args.workdir,
         args.branch,
         args.commit_message,
         push=args.push,
     )
+    print(f"Download git commit/push completed in {time.perf_counter() - phase_started:.1f}s", flush=True)
     if args.push:
+        phase_started = time.perf_counter()
         commit_sha = run_git(["rev-parse", "HEAD"], args.workdir)
         remote_sha = run_git(
             ["ls-remote", "origin", f"refs/heads/{args.branch}"],
@@ -596,6 +662,7 @@ def main() -> None:
                 f"Remote {args.branch} is {remote_sha}, expected pushed commit {commit_sha}"
             )
         verify_public_files(args.source_dir, manifest, commit_sha)
+        print(f"Download remote verification completed in {time.perf_counter() - phase_started:.1f}s", flush=True)
     if pushed:
         print(f"Published direct downloads to {args.repo_url} ({args.branch})")
 
