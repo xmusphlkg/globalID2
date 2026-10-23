@@ -8,6 +8,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.task import Task, TaskType
 
 
+async def _add_missing_columns(
+    db: AsyncSession, table_name: str, statements: list[str]
+) -> None:
+    """Avoid taking ALTER TABLE locks when a table already has its columns."""
+    result = await db.execute(
+        text("""
+            SELECT attname FROM pg_attribute
+            WHERE attrelid = to_regclass(:table_name)
+              AND attnum > 0 AND NOT attisdropped
+        """),
+        {"table_name": table_name},
+    )
+    existing = set(result.scalars().all())
+    for statement in statements:
+        # Every statement here uses the fixed ADD COLUMN IF NOT EXISTS form.
+        column_name = statement.split()[8]
+        if column_name not in existing:
+            await db.execute(text(statement))
+
+
 async def _ensure_country_row(db: AsyncSession, country_code: str) -> None:
     """Create a minimal country row when scope migration finds missing parent country."""
     await db.execute(text("""
@@ -527,8 +547,7 @@ async def ensure_disease_knowledge_source_schema(db: AsyncSession) -> None:
         "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
     ]
 
-    for statement in alter_statements:
-        await db.execute(text(statement))
+    await _add_missing_columns(db, "disease_knowledge_sources", alter_statements)
 
     await db.execute(text(
         "CREATE INDEX IF NOT EXISTS idx_knowledge_source_disease ON disease_knowledge_sources (disease_id)"
@@ -592,8 +611,7 @@ async def ensure_disease_knowledge_schema(db: AsyncSession) -> None:
         "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
     ]
 
-    for statement in alter_statements:
-        await db.execute(text(statement))
+    await _add_missing_columns(db, "disease_knowledge_briefs", alter_statements)
 
     await db.execute(text(
         "CREATE INDEX IF NOT EXISTS idx_knowledge_brief_disease ON disease_knowledge_briefs (disease_id)"
