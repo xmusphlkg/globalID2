@@ -111,11 +111,11 @@
     },
     {
       "week": "2026-W43",
-      "brief_fingerprint": "b803ce26b2cd7e16eda85baf57f3900636d503e1c9c344152681c5b815acc408",
+      "brief_fingerprint": "2bb18920416e4f8be9accedeb05352cff3e3a5dd4ca9bc17d0157812f7432522",
       "review": {
         "verdict": "pass",
         "issue_codes": [],
-        "reviewed_at": "2026-10-21T01:32:56+00:00",
+        "reviewed_at": "2026-10-23T10:13:17+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center"
