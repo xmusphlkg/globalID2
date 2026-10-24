@@ -34,13 +34,15 @@ def test_literature_capacity_defaults_match_observed_arrival_rate():
     assert config.ai_model_request_timeout_seconds == 35
 
 
-def test_catch_up_limit_must_leave_room_for_one_bounded_batch():
-    with pytest.raises(ValueError, match="must exceed max_records_per_run"):
-        LiteratureSettings(
-            catch_up_enabled=True,
-            catch_up_max_exception_backlog=300,
-            max_records_per_run=300,
-        )
+def test_review_backlog_threshold_does_not_block_a_bounded_metadata_batch():
+    config = LiteratureSettings(
+        catch_up_enabled=True,
+        catch_up_max_exception_backlog=300,
+        max_records_per_run=300,
+    )
+
+    assert config.catch_up_max_exception_backlog == 300
+    assert config.max_records_per_run == 300
 
 
 class _AsyncSessionAdapter:
@@ -324,7 +326,6 @@ async def test_truncated_scheduled_task_pulls_persisted_schedule_forward(monkeyp
     assert result["catch_up_paused_backpressure"] == 0
     assert result["catch_up_backlog_observed_count"] == 100
     assert result["catch_up_backlog_projected_upper_bound"] == 400
-    assert result["catch_up_resume_below_backlog"] == 200
     assert result["catch_up_status"] == "scheduled"
     assert result["catch_up_next_action_code"] == "await_accelerated_catch_up"
     assert result["catch_up_next_run_at"] is not None
@@ -336,7 +337,7 @@ async def test_truncated_scheduled_task_pulls_persisted_schedule_forward(monkeyp
     assert service._state.next_run_at == next_run_at
 
 
-async def test_backpressure_pauses_only_accelerated_catch_up_and_keeps_normal_schedule(
+async def test_high_review_backlog_flags_pressure_and_still_schedules_catch_up(
     monkeypatch,
 ):
     config = SimpleNamespace(
@@ -350,6 +351,7 @@ async def test_backpressure_pauses_only_accelerated_catch_up_and_keeps_normal_sc
     service = LiteratureService()
     normal_next_run = datetime(2026, 8, 17, 15, 0, tzinfo=timezone.utc)
     service._state.next_run_at = normal_next_run
+    advanced = []
 
     class FakePipeline:
         def __init__(self, _config):
@@ -364,8 +366,9 @@ async def test_backpressure_pauses_only_accelerated_catch_up_and_keeps_normal_sc
     async def backlog_count():
         return 200
 
-    async def unexpected_schedule(*_args):
-        raise AssertionError("backpressure must not schedule a five-minute run")
+    async def schedule_earlier(job_kind, job_id, next_run_at):
+        advanced.append((job_kind, job_id, next_run_at))
+        return True
 
     monkeypatch.setattr(service, "_config", lambda: config)
     monkeypatch.setattr(literature_service_module, "LiteraturePipeline", FakePipeline)
@@ -377,26 +380,24 @@ async def test_backpressure_pauses_only_accelerated_catch_up_and_keeps_normal_sc
     monkeypatch.setattr(
         literature_service_module.schedule_state_repository,
         "schedule_earlier",
-        unexpected_schedule,
+        schedule_earlier,
     )
 
     result = await service.execute_task(
         SimpleNamespace(input_data={"scheduled_trigger": True})
     )
 
-    assert result["catch_up_scheduled"] == 0
-    assert result["catch_up_paused_backpressure"] == 1
-    assert result["catch_up_backpressure_reason"] == "exception_backlog_headroom_exhausted"
+    assert result["catch_up_scheduled"] == 1
+    assert result["catch_up_paused_backpressure"] == 0
+    assert result["catch_up_review_backlog_high"] == 1
     assert result["catch_up_backlog_observed_count"] == 200
     assert result["catch_up_backlog_projected_upper_bound"] == 500
     assert result["catch_up_backlog_limit"] == 500
-    assert result["catch_up_resume_below_backlog"] == 200
-    assert result["catch_up_required_backlog_reduction"] == 1
-    assert result["catch_up_status"] == "paused_backpressure"
-    assert result["catch_up_next_action_code"] == (
-        "reduce_exception_backlog_below_resume_threshold"
-    )
-    assert service._state.next_run_at == normal_next_run
+    assert result["catch_up_status"] == "scheduled"
+    assert result["catch_up_next_action_code"] == "await_accelerated_catch_up"
+    assert len(advanced) == 1
+    assert service._state.next_run_at == advanced[0][2]
+    assert service._state.next_run_at != normal_next_run
 
 
 async def test_backlog_measurement_failure_fails_safe_without_accelerated_schedule(monkeypatch):

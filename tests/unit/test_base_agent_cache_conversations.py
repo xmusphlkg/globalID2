@@ -611,7 +611,7 @@ async def test_per_route_timeout_falls_through_to_next_model(monkeypatch):
 
     assert result == "fast-response"
     assert agent.call_models == ["slow-model", "fast-model"]
-    assert BaseAgent._is_model_cooling_down("slow-model") is True
+    assert BaseAgent._is_route_cooling_down("runtime:slow-model") is True
 
 
 @pytest.mark.asyncio
