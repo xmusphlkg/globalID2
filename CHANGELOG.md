@@ -23,6 +23,17 @@ This file records release-level changes to the GIDS application and its data ope
 - Production build performance budget, checked against the release dist: the disease route is 381,198 gzip bytes under a 395,000 byte chart-route cap. Compare is classified with the other chart pages. The largest ordinary page is 23,556 gzip bytes.
 - Compare pages keep the single `<main>` landmark from the site layout.
 
+## [0.13.6] - 2026-10-24
+
+### Changed
+
+- Refined the comparison, disease, and research interfaces for clearer navigation, chart controls, and mobile layouts.
+- Research Radar guidance and policy evidence now requires a title-confirmed match to the disease page; guidance-related records are labeled without implying an official policy date.
+
+### Data
+
+- Published 79 changed files to `globalID2_data_download` `main` for 295 jurisdictions and 239 diseases; GitHub manifest and sample partitions verified at `5d621777a`.
+
 ## [0.13.4] - 2026-10-21
 
 ### Changed

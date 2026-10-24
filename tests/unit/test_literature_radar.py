@@ -169,6 +169,36 @@ def test_disease_evidence_events_separate_guidance_from_vaccine_policy_evidence(
     assert events[0]["date"] == "2026-08-15"
 
 
+def test_disease_evidence_events_require_title_confirmed_disease():
+    articles = [
+        {
+            "slug": "hepatitis-guidance",
+            "title": "Hepatitis A vaccination guideline",
+            "published_at": "2026-08-15T00:00:00+00:00",
+            "study_type": "Guideline",
+            "diseases": [
+                {"disease_id": "D004", "name_en": "COVID-19", "confidence": 0.88},
+                {"disease_id": "D007", "name_en": "Hepatitis A", "confidence": 0.98},
+            ],
+        },
+        {
+            "slug": "covid-guidance",
+            "title": "SARS-CoV-2 vaccination guideline",
+            "published_at": "2026-08-14T00:00:00+00:00",
+            "study_type": "Guideline",
+            "diseases": [{"disease_id": "D004", "name_en": "COVID-19", "confidence": 0.82}],
+        },
+    ]
+
+    events = build_disease_evidence_events(
+        articles,
+        disease_id="D004",
+        title_aliases={"D004": ["SARS-CoV-2"]},
+    )
+
+    assert [event["slug"] for event in events] == ["covid-guidance"]
+
+
 def _crossref_payload() -> dict:
     return {
         "DOI": "10.1000/Test.Article",

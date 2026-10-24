@@ -550,6 +550,7 @@ const diseaseSeo = {
                 <h2 class="figure-title">
                   {zh ? '报告国家和地区' : fr ? 'Pays et régions déclarants' : 'Reporting countries and regions'}
                 </h2>
+                <p class="figure-caption">{zh ? '地图显示报告覆盖范围；选择指标可查看来源报告总量，点击着色地区进入该地区页面。' : fr ? 'La carte montre la couverture déclarée. Choisissez une mesure ou ouvrez un lieu coloré pour consulter ses données.' : 'The map shows reporting coverage. Select a measure or open a shaded location to inspect its data.'}</p>
               </div>
               <span
                 class="site-control-pill inline-flex w-fit items-center border px-3 py-1.5 text-xs"
@@ -593,7 +594,9 @@ const diseaseSeo = {
 
         {countryCount > 0 && (
           <section id="seasonality" class="figure-panel scroll-mt-24">
+            <p class="figure-kicker">{zh ? '监测模式' : fr ? 'Profil de surveillance' : 'Surveillance pattern'}</p>
             <h2 class="figure-title">{zh ? '所选国家的年 × 月季节分布' : fr ? 'Saisonnalité du pays sélectionné' : 'Year × month seasonality by country'}</h2>
+            <p class="figure-caption">{zh ? '逐年查看同一国家的月度报告值。颜色深浅表示该序列中的相对高低，空白表示来源未提供数值。' : fr ? 'Consultez les valeurs mensuelles d’un pays par année. Les cases vides indiquent une valeur non publiée.' : 'Review one country’s published monthly values by year. Empty cells indicate values the source did not publish.'}</p>
             <div class="mt-5"><CountrySeasonalityPicker client:visible dataUrl={diseaseDataUrl} language={locale} initialCountry={preferredCountry} /></div>
           </section>
         )}

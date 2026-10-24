@@ -11,7 +11,7 @@ const countriesByDisease = new Map(
 );
 const options = diseaseIndex.flatMap(disease => {
   const countries = (countriesByDisease.get(disease.disease_id) ?? [])
-    .filter(country => /^[A-Z]{2}$/.test(String(country.code ?? ''))).length;
+    .filter((country: { code?: string }) => /^[A-Z]{2}$/.test(String(country.code ?? ''))).length;
   if (countries < 2) return [];
   return [{
     id: disease.disease_id,
@@ -27,8 +27,9 @@ const title = locale === 'zh' ? '国家与疾病对比' : locale === 'fr' ? 'Com
 
 <BaseLayout title={title} description={title} initialLanguage={locale}>
   <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <p class="academic-kicker">GIDS / {locale === 'zh' ? '数据工具' : locale === 'fr' ? 'Outil de données' : 'Data tool'}</p>
     <h1 class="academic-title">{title}</h1>
-    <p class="mt-3 max-w-3xl text-sm text-[rgb(var(--text-muted))]">
+    <p class="academic-lead mt-4">
       {locale === 'zh' ? '选择最多两种疾病和四个国家，按来源报告期探索趋势并分享当前选择。' : locale === 'fr' ? 'Choisissez jusqu’à deux maladies et quatre pays pour explorer les tendances et partager votre sélection.' : 'Select up to two diseases and four countries to explore source-period trends and share your selection.'}
     </p>
     <CompareWorkspace client:load diseases={options} language={locale} />

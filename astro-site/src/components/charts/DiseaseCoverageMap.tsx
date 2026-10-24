@@ -403,8 +403,8 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
   const zoomLabel = ui(lang, 'Map zoom', '地图缩放', 'Zoom de la carte');
 
   return (
-    <div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '.5rem', marginBottom: '.6rem' }}>
+    <div className="disease-coverage-map">
+      <div className="disease-coverage-toolbar">
         <span className="site-control-pill" style={{ fontSize: '.7rem' }}>
           {ui(lang, `${drawn.length} locations`, `${drawn.length} 个报告国家/地区`, `${drawn.length} lieux`)}
           {regionalSeriesCount > 0
@@ -416,7 +416,7 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
               )}`
             : ''}
         </span>
-        <span style={{ flex: '1 1 auto' }} />
+        <span className="disease-coverage-spacer" />
         {(['coverage', 'cases', 'deaths'] as Metric[]).map((value) => {
           const disabled = (value === 'cases' && !hasCases) || (value === 'deaths' && !hasDeaths);
           const active = activeMetric === value;
@@ -442,9 +442,10 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
         })}
       </div>
       <div
+        className="disease-coverage-frame"
         style={{
           position: 'relative',
-          height,
+          height: `clamp(300px, 44vw, ${height}px)`,
           overflow: 'hidden',
           background: palette.mapBg,
           border: `1px solid ${palette.tooltipBorder}`,
@@ -531,7 +532,7 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
           )}
         </span>
       </div>
-      <p style={{ marginTop: '.4rem', color: palette.muted, fontSize: '.68rem' }}>
+      <p className="disease-coverage-note" style={{ color: palette.muted }}>
         {activeMetric === 'coverage'
           ? ui(
               lang,

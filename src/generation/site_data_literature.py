@@ -452,15 +452,31 @@ def build_publication_timeline(articles: list[dict[str, Any]]) -> list[dict[str,
     ]
 
 
-def build_disease_evidence_events(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Project dated guidance and vaccine-policy evidence without claiming causality."""
+def build_disease_evidence_events(
+    articles: list[dict[str, Any]],
+    *,
+    disease_id: str | None = None,
+    title_aliases: dict[str, list[str]] | None = None,
+) -> list[dict[str, Any]]:
+    """Project dated guidance and policy evidence with a title-confirmed disease link."""
 
     events: list[dict[str, Any]] = []
+    aliases = title_aliases if title_aliases is not None else (_load_title_disease_aliases() if disease_id else {})
     for item in articles:
         if not item.get("published_at"):
             continue
         study_type = str(item.get("study_type") or "")
         title = str(item.get("title") or "")
+        if disease_id:
+            linked_disease = next(
+                (disease for disease in item.get("diseases") or []
+                 if str(disease.get("disease_id") or "").upper() == disease_id.upper()),
+                None,
+            )
+            if not linked_disease or not _title_estimated_literature_links(
+                title, {disease_id.upper(): linked_disease}, aliases
+            ):
+                continue
         title_text = title.casefold()
         topics = {str(topic.get("name") or "").casefold() for topic in item.get("topics") or []}
         event_type: str | None = None
@@ -2697,6 +2713,7 @@ def write_literature_artifacts(
             {**article, "knowledge_graph": build_knowledge_graph([article])},
         )
     report_phase("article details")
+    title_aliases = _load_title_disease_aliases()
     for disease_id, articles in (payload.get("disease_articles") or {}).items():
         write_pretty_json(
             disease_dir / f"{disease_id}.json",
@@ -2704,7 +2721,9 @@ def write_literature_artifacts(
                 "articles": [_collection_card_article(article) for article in articles],
                 "count": len(articles),
                 "publication_timeline": build_publication_timeline(articles),
-                "evidence_events": build_disease_evidence_events(articles),
+                "evidence_events": build_disease_evidence_events(
+                    articles, disease_id=disease_id.upper(), title_aliases=title_aliases
+                ),
                 "knowledge_graph": build_knowledge_graph(articles),
             },
         )

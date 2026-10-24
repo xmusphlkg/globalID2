@@ -357,6 +357,10 @@ const explorePaths = [
         </div>
         <p>{t.exploreText}</p>
       </header>
+      <a class="compare-feature" href={href('/compare/')}>
+        <span class="compare-feature-copy"><small>{zh ? '交互工具 / 01' : fr ? 'Outil interactif / 01' : 'Interactive tool / 01'}</small><strong>{zh ? '比较国家与疾病趋势' : fr ? 'Comparer les tendances par pays et maladie' : 'Compare country and disease trends'}</strong><span>{zh ? '选择最多两种疾病与四个国家，查看保留原始报告周期和定义的监测曲线。' : fr ? 'Sélectionnez jusqu’à deux maladies et quatre pays ; chaque courbe conserve sa période et sa définition.' : 'Select up to two diseases and four countries. Each series keeps its original reporting period and definition.'}</span></span>
+        <span class="compare-feature-arrow" aria-hidden="true">↗</span>
+      </a>
       <div class="path-grid">
         {explorePaths.map(path => (
           <a class="path-card" href={path.href}>
@@ -506,6 +510,13 @@ const explorePaths = [
   .section-heading.compact { display: flex; justify-content: space-between; }
   .section-heading h2, .subheading h2 { margin: 0; color: rgb(var(--text-strong)); font-size: clamp(1.55rem, 2.8vw, 2.2rem); line-height: 1.12; }
   .section-heading p:not(.eyebrow) { margin: 0; color: rgb(var(--text-muted)); font-size: .86rem; line-height: 1.65; }
+  .compare-feature { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; border: 1px solid rgb(var(--border)); border-left: 3px solid rgb(var(--color-teal)); background: rgb(var(--surface)); padding: 1.1rem 1.25rem; color: rgb(var(--text-strong)); text-decoration: none; }
+  .compare-feature:hover { background: rgb(var(--bg-soft)); }
+  .compare-feature-copy { display: grid; gap: .3rem; }
+  .compare-feature-copy small { color: rgb(var(--color-teal)); font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+  .compare-feature-copy strong { font-size: 1.05rem; line-height: 1.3; }
+  .compare-feature-copy > span { color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.55; }
+  .compare-feature-arrow { flex: none; color: rgb(var(--color-teal)); font-size: 1.4rem; }
   .path-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 1.5rem; border-top: 1px solid rgb(var(--border)); border-left: 1px solid rgb(var(--border)); }
   .path-card { display: grid; grid-template-rows: auto 1fr auto; min-height: 17rem; padding: 1rem; color: rgb(var(--text-strong)); background: rgb(var(--surface)); border-right: 1px solid rgb(var(--border)); border-bottom: 1px solid rgb(var(--border)); text-decoration: none; transition: transform .18s ease, background-color .18s ease, box-shadow .18s ease; }
   .path-card:hover { background: rgb(var(--bg-soft)); box-shadow: 0 18px 36px rgb(10 26 40 / .08); transform: translateY(-3px); }
