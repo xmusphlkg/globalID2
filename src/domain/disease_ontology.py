@@ -620,12 +620,12 @@ class DiseaseSeriesObservation(BaseModel):
             "idx_dso_mapping_override",
             "series_code",
             text(
-                "COALESCE(NULLIF((dimensions ->> 'source_disease_code'), ''), "
-                "NULLIF((metadata ->> 'local_code'), ''))"
+                "COALESCE(NULLIF(dimensions ->> 'source_disease_code', ''), "
+                "NULLIF(metadata ->> 'local_code', ''))"
             ),
             text(
-                "lower(btrim(COALESCE(NULLIF((dimensions ->> 'source_disease_label'), ''), "
-                "NULLIF((metadata ->> 'local_label'), ''))))"
+                "lower(btrim(COALESCE(NULLIF(dimensions ->> 'source_disease_label', ''), "
+                "NULLIF(metadata ->> 'local_label', ''))))"
             ),
         ),
     )
