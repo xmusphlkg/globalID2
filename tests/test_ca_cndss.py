@@ -27,7 +27,7 @@ from src.generation.site_data_about import build_country_source_info
 from src.services.crawl_service import CrawlService
 
 
-def _describe(*, last_year: int = 2023) -> dict:
+def _describe(*, last_year: int = 2024) -> dict:
     return {
         "year_min": 1924,
         "year_max": last_year,
@@ -35,12 +35,7 @@ def _describe(*, last_year: int = 2023) -> dict:
             {
                 "code": item.code,
                 "name": item.label,
-                "limitation": (
-                    "The 2023 data from MB were not available at time of data "
-                    "preparation."
-                    if item.code in MANITOBA_2023_UNAVAILABLE_CODES
-                    else "Official disease-specific reporting coverage."
-                ),
+                "limitation": "Official disease-specific reporting coverage.",
                 "tableyears": [1924, last_year],
                 "table": {
                     "MB": (
@@ -65,11 +60,21 @@ def _grid(*, first_year: int = 2023, last_year: int = 2023) -> dict:
 
 
 def test_cndss_reviewed_contract_is_complete_and_projection_safe() -> None:
-    assert len(CNDSS_DISEASE_CONTRACTS) == 70
-    assert len({item.code for item in CNDSS_DISEASE_CONTRACTS}) == 70
-    assert sum(item.projection_policy == "canonical" for item in CNDSS_DISEASE_CONTRACTS) == 62
-    assert sum(item.projection_policy == "no_projection" for item in CNDSS_DISEASE_CONTRACTS) == 8
+    assert len(CNDSS_DISEASE_CONTRACTS) == 74
+    assert len({item.code for item in CNDSS_DISEASE_CONTRACTS}) == 74
+    assert sum(item.projection_policy == "canonical" for item in CNDSS_DISEASE_CONTRACTS) == 65
+    assert sum(item.projection_policy == "no_projection" for item in CNDSS_DISEASE_CONTRACTS) == 9
     by_code = {item.code: item for item in CNDSS_DISEASE_CONTRACTS}
+    assert 147 not in by_code
+    assert (by_code[258].concept_id, by_code[258].mapping_relation, by_code[258].projection_policy) == (
+        "D115", "exact", "canonical"
+    )
+    assert (by_code[9].concept_id, by_code[9].projection_policy) == ("D090", "canonical")
+    assert (by_code[251].concept_id, by_code[251].mapping_relation, by_code[251].projection_policy) == (
+        "D098", "narrower", "no_projection"
+    )
+    assert (by_code[252].concept_id, by_code[252].projection_policy) == ("D248", "canonical")
+    assert (by_code[257].concept_id, by_code[257].projection_policy) == ("D065", "canonical")
     assert (by_code[51].concept_id, by_code[51].mapping_relation) == (
         "D071", "related"
     )
@@ -93,27 +98,24 @@ def test_canada_national_pipeline_is_registered_separately_from_ontario() -> Non
 def test_public_source_metadata_discloses_national_coverage_limitations() -> None:
     source = build_country_source_info("ca")["sources"][0]
     assert "does not mean every jurisdiction is complete" in source["description"]
-    assert "Manitoba 2023 data were unavailable for 44" in source["description"]
+    assert "no longer marks 44 disease contracts as Manitoba-2023-unavailable" in source["description"]
 
 
 def test_describe_contract_accepts_reviewed_grid_and_rejects_drift() -> None:
-    assert CanadaCNDSSNationalCrawler._validate_describe(_describe()) == (1924, 2023)
+    assert CanadaCNDSSNationalCrawler._validate_describe(_describe()) == (1924, 2024)
     changed = _describe()
     changed["descriptions"][0]["name"] = "Changed identity"
     with pytest.raises(CNDSSContractError, match="disease contract changed"):
         CanadaCNDSSNationalCrawler._validate_describe(changed)
     with pytest.raises(CNDSSContractError, match="last year changed"):
-        CanadaCNDSSNationalCrawler._validate_describe(_describe(last_year=2024))
+        CanadaCNDSSNationalCrawler._validate_describe(_describe(last_year=2023))
 
 
-def test_describe_contract_requires_reviewed_manitoba_limitations() -> None:
+def test_describe_contract_rejects_the_retired_manitoba_2023_sentence() -> None:
     changed = _describe()
-    affected = next(
-        item
-        for item in changed["descriptions"]
-        if item["code"] in MANITOBA_2023_UNAVAILABLE_CODES
+    changed["descriptions"][0]["limitation"] = (
+        "The 2023 data from MB were not available at time of data preparation."
     )
-    affected["limitation"] = "Changed upstream coverage note"
     with pytest.raises(CNDSSContractError, match="Manitoba 2023 limitation"):
         CanadaCNDSSNationalCrawler._validate_describe(changed)
 
@@ -126,8 +128,8 @@ def test_raw_archive_retains_disease_reporting_tables(tmp_path: Path) -> None:
     payload = json.loads(archived[0].read_text(encoding="utf-8"))
     assert payload["national_aggregate_is_all_jurisdiction_complete"] is False
     assert payload["national_completeness_notice"] == NATIONAL_COMPLETENESS_NOTICE
-    assert payload["manitoba_2023_unavailable_disease_count"] == 44
-    assert len(payload["describe"]["descriptions"]) == 70
+    assert payload["manitoba_2023_unavailable_disease_count"] == 0
+    assert len(payload["describe"]["descriptions"]) == 74
     assert all(
         item["limitation"] and item["table"]
         for item in payload["describe"]["descriptions"]
@@ -146,7 +148,7 @@ def test_bounded_request_still_rewrites_a_full_authoritative_snapshot(
             if "describe.json" in url:
                 return _describe()
             self.raw_params = kwargs["params"]
-            payload = _grid(first_year=1924, last_year=2023)
+            payload = _grid(first_year=1924, last_year=2024)
             next(row for row in payload["records"] if row["y"] == 1924 and row["d"] == 6)["t"] = 1
             next(row for row in payload["records"] if row["y"] == 2023 and row["d"] == 70)["t"] = 2
             return payload
@@ -158,7 +160,7 @@ def test_bounded_request_still_rewrites_a_full_authoritative_snapshot(
         rows = list(csv.DictReader(handle))
     assert summary.row_count == 2
     assert [row["Date"] for row in rows] == ["1924-01-01", "2023-01-01"]
-    assert ("f", "y:..:1924,2023") in crawler.raw_params
+    assert ("f", "y:..:1924,2024") in crawler.raw_params
 
 
 def test_empty_lab_influenza_contract_is_not_marked_available() -> None:

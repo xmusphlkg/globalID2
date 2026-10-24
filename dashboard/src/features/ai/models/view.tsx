@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Cpu,
   GitBranch,
+  History,
   KeyRound,
   ListTodo,
   MessageSquareText,
@@ -31,6 +32,7 @@ import {
   type AIRuntimeRoute,
   type ProviderModelDiscoveryResult,
   useAIModels,
+  useAIModelCallLogs,
   useAIProviders,
   useAIRuntimeRoutes,
   useCheckAllAIModels,
@@ -56,7 +58,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 type HealthFilter = "all" | "healthy" | "attention" | "checking";
 type DrawerMode = "create" | "edit" | null;
 type DiscoveryImportResult = { status: string; message: string };
-type WorkspaceView = "providers" | "models" | "runtime";
+type WorkspaceView = "providers" | "models" | "runtime" | "logs";
 
 const inputClass =
   "h-10 w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted disabled:bg-tremor-background-subtle disabled:text-tremor-content-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong";
@@ -129,6 +131,7 @@ function routeMatchesFilter(route: AIRuntimeRoute, filter: HealthFilter): boolea
 function statusTone(status: string): "neutral" | "info" | "success" | "warning" | "danger" | "primary" {
   const normalized = (status || "").toLowerCase();
   if (normalized === "available") return "success";
+  if (normalized === "probe_failed") return "info";
   if (normalized === "rate_limited" || normalized === "checking") return "warning";
   if (normalized === "unavailable" || normalized === "failed") return "danger";
   return "neutral";
@@ -313,6 +316,7 @@ export default function AIModelsPage() {
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
   const [activeView, setActiveView] = useState<WorkspaceView>("providers");
+  const { data: callLogs, isLoading: loadingCallLogs, error: callLogsError } = useAIModelCallLogs(activeView === "logs");
   const [deletingProviderId, setDeletingProviderId] = useState<string | null>(null);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
   const [discoveryResult, setDiscoveryResult] = useState<{ provider: AIProviderItem; result: ProviderModelDiscoveryResult } | null>(null);
@@ -341,6 +345,7 @@ export default function AIModelsPage() {
     api_style: "",
     temperature: "",
     max_tokens: "",
+    runtime_max_concurrency: "",
     priority: 100,
     is_enabled: true,
     is_default: false,
@@ -361,6 +366,16 @@ export default function AIModelsPage() {
         keys: "已配密钥",
         routes: "运行路由",
         runtime: "运行时",
+        callLogs: "调用日志",
+        noCallLogs: "还没有模型调用记录。新的生产请求会显示在这里。",
+        callTime: "时间",
+        callStatus: "结果",
+        callProvider: "提供商",
+        callModel: "模型",
+        callAgent: "调用方",
+        callLatency: "耗时",
+        callError: "错误",
+        callLogPrivacy: "为保护隐私，不保存提示词或模型回复。最多显示最近 100 条调用尝试。",
         defaults: "默认模型",
         searchPlaceholder: "搜索 provider、model、base url 或 route key",
         all: "全部",
@@ -416,6 +431,9 @@ export default function AIModelsPage() {
         modelType: "模型类型",
         temperature: "温度",
         maxTokens: "最大 Token",
+        modelConcurrency: "单模型并发上限",
+        setConcurrency: "设置并发",
+        modelConcurrencyHint: "留空使用默认值 1；可设置 1–64，实际并发仍受提供商准入和 worker 总上限约束。",
         modelEnabled: "启用该模型",
         defaultModel: "默认模型",
       }
@@ -433,6 +451,16 @@ export default function AIModelsPage() {
         keys: "Configured Keys",
         routes: "Runtime Routes",
         runtime: "Runtime",
+        callLogs: "Call Logs",
+        noCallLogs: "No model call records yet. New production requests will appear here.",
+        callTime: "Time",
+        callStatus: "Result",
+        callProvider: "Provider",
+        callModel: "Model",
+        callAgent: "Caller",
+        callLatency: "Latency",
+        callError: "Error",
+        callLogPrivacy: "Prompts and model responses are not stored. Showing up to the latest 100 attempts.",
         defaults: "Default Models",
         searchPlaceholder: "Search provider, model, base url, or route key",
         all: "All",
@@ -488,6 +516,9 @@ export default function AIModelsPage() {
         modelType: "Model Type",
         temperature: "Temperature",
         maxTokens: "Max Tokens",
+        modelConcurrency: "Model concurrency limit",
+        setConcurrency: "Set concurrency",
+        modelConcurrencyHint: "Leave blank for the default of 1; set 1–64. Provider admission and the worker total limit still apply.",
         modelEnabled: "Model is enabled",
         defaultModel: "Default model",
       };
@@ -611,6 +642,7 @@ export default function AIModelsPage() {
       api_style: "",
       temperature: "",
       max_tokens: "",
+      runtime_max_concurrency: "",
       priority: 100,
       is_enabled: true,
       is_default: false,
@@ -655,6 +687,7 @@ export default function AIModelsPage() {
       api_style: model.api_style || "",
       temperature: model.temperature == null ? "" : String(model.temperature),
       max_tokens: model.max_tokens == null ? "" : String(model.max_tokens),
+      runtime_max_concurrency: model.runtime_max_concurrency == null ? "" : String(model.runtime_max_concurrency),
       priority: model.priority,
       is_enabled: model.is_enabled,
       is_default: model.is_default,
@@ -710,6 +743,7 @@ export default function AIModelsPage() {
       api_style: modelForm.api_style.trim() || null,
       temperature: modelForm.temperature.trim() === "" ? null : Number(modelForm.temperature),
       max_tokens: modelForm.max_tokens.trim() === "" ? null : Number(modelForm.max_tokens),
+      runtime_max_concurrency: modelForm.runtime_max_concurrency.trim() === "" ? null : Number(modelForm.runtime_max_concurrency),
       priority: Number(modelForm.priority) || 100,
       is_enabled: modelForm.is_enabled,
       is_default: modelForm.is_default,
@@ -990,7 +1024,19 @@ export default function AIModelsPage() {
             <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
               temp {model.temperature ?? "-"} / max {model.max_tokens ?? "-"}
             </p>
+            <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              {copy.modelConcurrency}: {model.runtime_max_concurrency ?? 1}
+            </p>
           </div>
+        ),
+      },
+      {
+        key: "concurrency",
+        header: copy.modelConcurrency,
+        render: (model) => (
+          <ActionButton onClick={() => openEditModel(model)} className="h-8 whitespace-nowrap px-2" title={copy.setConcurrency}>
+            {model.runtime_max_concurrency ?? 1} · {copy.setConcurrency}
+          </ActionButton>
         ),
       },
       {
@@ -1112,15 +1158,8 @@ export default function AIModelsPage() {
               {` · ${isZh ? "累计" : "total"} ${route.runtime_failure_count}`}
             </p>
             <p className="mt-1">
-              {isZh ? "准入" : "admission"}: {route.runtime_provider_inflight}/{route.runtime_provider_capacity}/{route.runtime_provider_max_capacity}
-              {" "}{isZh ? "提供商" : "provider"}, {route.runtime_model_inflight}/{route.runtime_model_capacity}
-              {" "}{isZh ? "模型" : "model"}
-            </p>
-            <p className="mt-1">
-              {route.runtime_provider_auto_concurrency ? (isZh ? "自动调节" : "auto tuning") : (isZh ? "手动上限" : "manual cap")}
-              {route.runtime_provider_backoff_remaining_seconds > 0
-                ? ` · ${isZh ? "退避" : "backoff"} ${formatDuration(route.runtime_provider_backoff_remaining_seconds, lang)}`
-                : ""}
+              {isZh ? "模型调用" : "model calls"}: {route.runtime_model_inflight}/{route.runtime_model_capacity}
+              {" · "}{isZh ? "服务商合计" : "provider total"}: {route.runtime_provider_inflight}/{route.runtime_provider_capacity}
             </p>
             {route.runtime_last_error ? <p className="mt-1 max-w-[220px] truncate" title={route.runtime_last_error}>{route.runtime_last_error}</p> : null}
           </div>
@@ -1228,6 +1267,7 @@ export default function AIModelsPage() {
             { id: "providers" as const, label: copy.providers, count: filteredProviders.length, icon: <ShieldCheck className="h-4 w-4" /> },
             { id: "models" as const, label: copy.models, count: filteredModels.length, icon: <Cpu className="h-4 w-4" /> },
             { id: "runtime" as const, label: copy.runtime, count: filteredRuntimeRoutes.length, icon: <GitBranch className="h-4 w-4" /> },
+            { id: "logs" as const, label: copy.callLogs, count: callLogs?.length ?? 0, icon: <History className="h-4 w-4" /> },
           ].map((view) => {
             const selected = activeView === view.id;
             return (
@@ -1390,7 +1430,7 @@ export default function AIModelsPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 border-t border-tremor-border pt-3 text-xs text-tremor-content-subtle dark:border-dark-tremor-border dark:text-dark-tremor-content-subtle">
                         <span>{route.runtime_latency_ewma_ms == null ? "-" : `${Math.round(route.runtime_latency_ewma_ms)} ms`}</span>
-                        <span className="text-right">{route.runtime_provider_inflight}/{route.runtime_provider_capacity}/{route.runtime_provider_max_capacity} provider</span>
+                        <span className="text-right">{route.runtime_model_inflight}/{route.runtime_model_capacity} {isZh ? "模型调用" : "model calls"}</span>
                       </div>
                     </article>
                   )) : <EmptyState icon={<GitBranch className="h-10 w-10" />} title={copy.noRoutes} />}
@@ -1404,6 +1444,48 @@ export default function AIModelsPage() {
                   />
                 </div>
               </>
+            )}
+          </div>
+        ) : null}
+
+        {activeView === "logs" ? (
+          <div id="model-center-logs-panel" role="tabpanel" className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.callLogs}</h2>
+              <StatusBadge tone="neutral">{callLogs?.length ?? 0}</StatusBadge>
+            </div>
+            <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy.callLogPrivacy}</p>
+            {loadingCallLogs ? (
+              <SkeletonRows />
+            ) : callLogsError ? (
+              <AlertBox tone="danger">{queryErrorText(callLogsError, lang)}</AlertBox>
+            ) : callLogs?.length ? (
+              <div className="overflow-x-auto rounded-tremor-default border border-tremor-border dark:border-dark-tremor-border">
+                <table className="min-w-full divide-y divide-tremor-border text-left text-sm dark:divide-dark-tremor-border">
+                  <thead className="bg-tremor-background-subtle text-xs uppercase text-tremor-content-subtle dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-subtle">
+                    <tr>
+                      {[copy.callTime, copy.callStatus, copy.callProvider, copy.callModel, copy.callAgent, copy.callLatency, copy.callError].map((label) => (
+                        <th key={label} className="px-3 py-2 font-medium">{label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-tremor-border dark:divide-dark-tremor-border">
+                    {callLogs.map((entry) => (
+                      <tr key={entry.id} className="align-top text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                        <td className="whitespace-nowrap px-3 py-2 text-xs">{formatDateTime(entry.created_at)}</td>
+                        <td className="px-3 py-2"><StatusBadge tone={entry.status === "success" ? "success" : "danger"}>{entry.status}</StatusBadge></td>
+                        <td className="px-3 py-2 font-mono text-xs">{entry.provider_key}</td>
+                        <td className="px-3 py-2"><span className="font-medium">{entry.model_name}</span><span className="ml-1 block font-mono text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{entry.model_key}</span></td>
+                        <td className="px-3 py-2">{entry.agent_name}</td>
+                        <td className="whitespace-nowrap px-3 py-2 tabular-nums">{Math.round(entry.latency_ms)} ms</td>
+                        <td className="max-w-sm px-3 py-2 text-xs text-rose-700 dark:text-rose-300">{entry.error_message ? `${entry.error_type}: ${entry.error_message}` : "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState icon={<History className="h-10 w-10" />} title={copy.noCallLogs} />
             )}
           </div>
         ) : null}
@@ -1504,7 +1586,11 @@ export default function AIModelsPage() {
               <Field label={copy.maxTokens}>
                 <input type="number" className={inputClass} value={modelForm.max_tokens} onChange={(event) => setModelForm((prev) => ({ ...prev, max_tokens: event.target.value }))} />
               </Field>
+              <Field label={copy.modelConcurrency}>
+                <input type="number" min={1} max={64} step={1} className={inputClass} value={modelForm.runtime_max_concurrency} placeholder="1" onChange={(event) => setModelForm((prev) => ({ ...prev, runtime_max_concurrency: event.target.value }))} />
+              </Field>
             </div>
+            <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy.modelConcurrencyHint}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong">
                 <input type="checkbox" checked={modelForm.is_enabled} onChange={(event) => setModelForm((prev) => ({ ...prev, is_enabled: event.target.checked }))} />

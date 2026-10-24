@@ -16,6 +16,9 @@ const subscriptionsApiBase = (
   process.env.SUBSCRIPTIONS__PUBLIC_BASE_URL ||
   'https://subscriptions.globalinfectiousdisease.com'
 ).replace(/\/+$/, '');
+const subscriptionOptionsUrl = import.meta.env.DEV
+  ? '/__dev/subscription-options'
+  : `${subscriptionsApiBase}/api/subscriptions/options`;
 ---
 
 <BaseLayout
@@ -61,6 +64,7 @@ const subscriptionsApiBase = (
           id="subscription-form"
           class="subscribe-form"
           data-api-base={subscriptionsApiBase}
+          data-options-url={subscriptionOptionsUrl}
           data-page-locale={locale}
           novalidate
         >
@@ -155,7 +159,7 @@ const subscriptionsApiBase = (
           <label class="subscribe-consent">
             <input type="checkbox" name="consent" required />
             <span>
-              <span>{pick('I agree to receive GIDS subscription emails and accept the', '我同意接收 GIDS 订阅邮件，并接受')}</span>
+              <span>{pick('I agree to receive GIDS subscription emails and accept the', '我同意接收 GIDS 订阅邮件，并接受')}{zh ? '' : ' '}</span>
               <a href={`${prefix}/terms/`} target="_blank" rel="noopener">{pick('Service Terms', '服务协议')}</a>
               <span>{pick('.', '。')}</span>
             </span>
@@ -206,6 +210,8 @@ const subscriptionsApiBase = (
       if (!form) return;
 
       const apiBase = form.getAttribute('data-api-base') || 'https://subscriptions.globalinfectiousdisease.com';
+      const optionsUrl = form.getAttribute('data-options-url') || `${apiBase}/api/subscriptions/options`;
+      const emailInput = document.getElementById('subscriber-email');
       const submitButton = document.getElementById('subscription-submit');
       const statusEl = document.getElementById('subscription-status');
       const modal = document.getElementById('subscription-modal');
@@ -222,6 +228,8 @@ const subscriptionsApiBase = (
       const researchTopicOptions = document.getElementById('research-topic-options');
       const studyTypeOptions = document.getElementById('study-type-options');
       const peerReviewStatusOptions = document.getElementById('peer-review-status-options');
+      const requestedCountry = new URLSearchParams(window.location.search).get('country')?.trim().toUpperCase().slice(0, 12) || '';
+      const requestedDisease = new URLSearchParams(window.location.search).get('disease')?.trim().toLowerCase().slice(0, 80) || '';
       const optionState = {
         locales: [],
         frequencies: [],
@@ -233,6 +241,7 @@ const subscriptionsApiBase = (
         peerReviewStatuses: [],
       };
       let lastSubmittedPayload = null;
+      const selectedDiseases = new Set();
 
       const copy = {
         en: {
@@ -246,6 +255,7 @@ const subscriptionsApiBase = (
           network: 'Network error while contacting the subscription service.',
           optionsLoading: 'Loading subscription choices...',
           optionsFailed: 'Subscription choices could not be loaded. Please refresh in a moment.',
+          regionFallback: 'This region has no separate subscription option. Its parent country is selected instead.',
           rateLimited: 'Too many subscription attempts. Please wait a little before trying again.',
           emailRateLimited: 'Subscription saved. A confirmation email was already sent recently; please wait before requesting another one.',
           resendSending: 'Requesting another confirmation email...',
@@ -263,6 +273,7 @@ const subscriptionsApiBase = (
           network: '连接订阅服务时发生网络错误。',
           optionsLoading: '正在加载订阅选项...',
           optionsFailed: '订阅选项暂时无法加载，请稍后刷新页面。',
+          regionFallback: '该地区暂无独立订阅选项，已改为选择其所属国家。',
           rateLimited: '订阅请求过于频繁，请稍后再试。',
           emailRateLimited: '订阅已保存。确认邮件刚刚发送过，请稍后再请求重新发送。',
           resendSending: '正在请求再次发送确认邮件...',
@@ -280,6 +291,7 @@ const subscriptionsApiBase = (
           network: 'Erreur réseau lors du contact avec le service d’abonnement.',
           optionsLoading: 'Chargement des options d’abonnement…',
           optionsFailed: 'Les options d’abonnement sont indisponibles. Actualisez dans un instant.',
+          regionFallback: 'Cette région n’a pas d’option d’abonnement distincte. Son pays parent est sélectionné.',
           rateLimited: 'Trop de tentatives d’abonnement. Patientez avant de réessayer.',
           emailRateLimited: 'Abonnement enregistré. Un e-mail de confirmation a déjà été envoyé récemment.',
           resendSending: 'Demande d’un nouvel e-mail de confirmation…',
@@ -393,9 +405,8 @@ const subscriptionsApiBase = (
         });
       }
 
-      function renderChipOptions(container, name, items, disabled = false) {
+      function renderChipOptions(container, name, items, disabled = false, selected = checkedValues(name)) {
         if (!container) return;
-        const selected = checkedValues(name);
         container.replaceChildren();
         items.forEach((item) => {
           const label = document.createElement('label');
@@ -415,13 +426,15 @@ const subscriptionsApiBase = (
 
       function renderDiseaseOptions() {
         const query = String(diseaseSearch?.value || '').trim().toLowerCase();
+        const selectedFirst = optionState.diseases.filter((item) => selectedDiseases.has(item.value));
         const visible = query
           ? optionState.diseases.filter((item) => {
-              const haystack = `${item.value} ${item.label_en || ''} ${item.label_zh || ''}`.toLowerCase();
+              const haystack = `${item.value} ${item.code || ''} ${item.slug || ''} ${item.disease_id || ''} ${item.label_en || ''} ${item.label_zh || ''} ${item.label_fr || ''}`.toLowerCase();
               return haystack.includes(query);
             })
-          : optionState.diseases.slice(0, 24);
-        renderChipOptions(diseaseOptions, 'diseases', visible, false);
+          : [...selectedFirst, ...optionState.diseases.filter((item) => !selectedDiseases.has(item.value))]
+              .slice(0, Math.max(24, selectedDiseases.size));
+        renderChipOptions(diseaseOptions, 'diseases', visible, false, selectedDiseases);
       }
 
       function renderAllOptions() {
@@ -438,12 +451,31 @@ const subscriptionsApiBase = (
         renderChipOptions(peerReviewStatusOptions, 'peer_review_statuses', optionState.peerReviewStatuses);
       }
 
+      function applyRequestedTopic() {
+        const findCountry = (code) => optionState.countries.find((item) => [item.value, item.code].some((value) => String(value || '').toUpperCase() === code));
+        const exactCountry = findCountry(requestedCountry);
+        const country = exactCountry || (requestedCountry.includes('-') ? findCountry(requestedCountry.split('-')[0]) : null);
+        const disease = optionState.diseases.find((item) => [item.value, item.code, item.slug, item.disease_id].some((value) => String(value || '').toLowerCase() === requestedDisease));
+        if (country && allCountries) {
+          allCountries.checked = false;
+          renderChipOptions(countryOptions, 'countries', optionState.countries, false);
+          const input = Array.from(form.querySelectorAll('input[name="countries"]')).find((node) => node.value === country.value);
+          if (input) input.checked = true;
+          if (!exactCountry) setStatus('info', copy[currentLang()].regionFallback);
+        }
+        if (disease) {
+          selectedDiseases.add(disease.value);
+          if (diseaseSearch) diseaseSearch.value = labelFor(disease).toLowerCase();
+          renderDiseaseOptions();
+        }
+      }
+
       async function loadOptions() {
         const messages = copy[currentLang()];
         setSubmitting(true);
         setStatus('pending', messages.optionsLoading);
         try {
-          const response = await fetch(`${apiBase}/api/subscriptions/options`, {
+          const response = await fetch(optionsUrl, {
             headers: { accept: 'application/json' },
           });
           const result = await response.json().catch(() => ({}));
@@ -459,6 +491,7 @@ const subscriptionsApiBase = (
           optionState.studyTypes = Array.isArray(result.filters?.study_type) ? result.filters.study_type : [];
           optionState.peerReviewStatuses = Array.isArray(result.filters?.peer_review_status) ? result.filters.peer_review_status : [];
           renderAllOptions();
+          applyRequestedTopic();
           if (statusEl && statusEl.dataset.type === 'pending') statusEl.hidden = true;
           setSubmitting(false);
         } catch (error) {
@@ -477,6 +510,12 @@ const subscriptionsApiBase = (
 
       allCountries?.addEventListener('change', syncCountryInputs);
       diseaseSearch?.addEventListener('input', renderDiseaseOptions);
+      diseaseOptions?.addEventListener('change', (event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement) || input.name !== 'diseases') return;
+        if (input.checked) selectedDiseases.add(input.value);
+        else selectedDiseases.delete(input.value);
+      });
       loadOptions();
 
       form.addEventListener('submit', async (event) => {
@@ -488,8 +527,9 @@ const subscriptionsApiBase = (
         const consent = data.get('consent') === 'on';
         const listCodes = data.getAll('list_codes').map(String);
 
-        if (!email || !email.includes('@')) {
+        if (!email || !emailInput?.checkValidity()) {
           setStatus('error', messages.missingEmail);
+          emailInput?.focus();
           return;
         }
 
@@ -506,7 +546,7 @@ const subscriptionsApiBase = (
         const selectedCountries = allCountries?.checked
           ? []
           : data.getAll('countries').map(String);
-        const checkedDiseases = data.getAll('diseases').map(String);
+        const checkedDiseases = Array.from(selectedDiseases);
         const checkedResearchTopics = data.getAll('research_topics').map(String);
         const checkedStudyTypes = data.getAll('study_types').map(String);
         const checkedPeerReviewStatuses = data.getAll('peer_review_statuses').map(String);
@@ -554,6 +594,7 @@ const subscriptionsApiBase = (
           window.gtag?.('event', 'subscription_complete');
           showModal(successMessage);
           form.reset();
+          selectedDiseases.clear();
           if (diseaseSearch) diseaseSearch.value = '';
           renderAllOptions();
         } catch (error) {

@@ -169,7 +169,13 @@ const itemList = {
             <div><dt>{pick('Diseases · 7 days', '近 7 天疾病')}</dt><dd>{metrics.diseases_last_7_days ?? 0}</dd></div>
             <div><dt>{pick('Countries · 7 days', '近 7 天国家')}</dt><dd>{metrics.countries_last_7_days ?? 0}</dd></div>
             <div><dt>{pick('Reviews & guidelines · 7 days', '近 7 天综述与指南')}</dt><dd>{metrics.reviews_and_guidelines_last_7_days ?? 0}</dd></div>
+            <div><dt>{pick('Title-linked records · estimated', '标题关联文献 · 估算', 'Liens par titre · estimation')}</dt><dd>{metrics.title_estimated_related_records ?? 0}</dd></div>
           </dl>
+          {(metrics.title_estimated_related_records ?? 0) > 0 && <p class="research-estimate-note">{pick(
+            `${metrics.title_estimated_related_records} metadata-only records retained; inferred links use title mentions (${metrics.title_estimated_disease_links ?? 0} disease, ${metrics.title_estimated_topic_links ?? 0} topic matches).`,
+            `已保留 ${metrics.title_estimated_related_records} 条轻量文献元数据；缺少现有关联时才按标题补估（${metrics.title_estimated_disease_links ?? 0} 项疾病、${metrics.title_estimated_topic_links ?? 0} 项主题匹配）。`,
+            `${metrics.title_estimated_related_records} notices bibliographiques légères conservées ; les liens manquants sont estimés à partir des titres (${metrics.title_estimated_disease_links ?? 0} maladies, ${metrics.title_estimated_topic_links ?? 0} thèmes).`
+          )}</p>}
         </aside>
       </div>
     </section>
@@ -370,6 +376,8 @@ const itemList = {
   </div>
 
   <script>
+  import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
+    import { readResearchFilterValues, writeResearchFilterValues, type ResearchFilterValues } from '../../lib/research-filter-url';
     const search = document.querySelector<HTMLInputElement>('#research-search');
     const disease = document.querySelector<HTMLSelectElement>('#research-disease');
     const country = document.querySelector<HTMLSelectElement>('#research-country');
@@ -398,9 +406,24 @@ const itemList = {
     const studyTypeMap = parseMap(list?.dataset.studyTypeMap);
     const topicNameMap = parseMap(list?.dataset.topicNameMap);
     let visibleLimit = initialVisible;
-    let cataloguePromise: Promise<any[]> | null = null;
-    const preset = new URLSearchParams(location.search).get('disease')?.toLowerCase();
-    if (preset && disease && [...disease.options].some(option => option.value === preset)) disease.value = preset;
+    const query = new URLSearchParams(location.search);
+    const restoredFilters = readResearchFilterValues(query);
+    const restoreSelect = (control: HTMLSelectElement | null, value: string | boolean | undefined) => {
+      if (!control || typeof value !== 'string') return;
+      const normalized = value.toLowerCase();
+      if ([...control.options].some(option => option.value === normalized)) control.value = normalized;
+    };
+    restoreSelect(disease, restoredFilters.disease);
+    restoreSelect(country, restoredFilters.country);
+    restoreSelect(study, restoredFilters.study);
+    restoreSelect(topic, restoredFilters.topic);
+    restoreSelect(pathogenType, restoredFilters.pathogenType);
+    restoreSelect(population, restoredFilters.population);
+    restoreSelect(journalFilter, restoredFilters.journal);
+    restoreSelect(publisherFilter, restoredFilters.publisher);
+    if (publishedFrom && typeof restoredFilters.publishedFrom === 'string') publishedFrom.value = restoredFilters.publishedFrom;
+    if (publishedTo && typeof restoredFilters.publishedTo === 'string') publishedTo.value = restoredFilters.publishedTo;
+    if (oa) oa.checked = restoredFilters.openAccess === true;
     const hasToken = (value: string | undefined, token: string) => (value ?? '').split(/\s+/).includes(token);
     const slugifyTopic = (value: string | undefined) => (value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const currentLang = () => form?.dataset.researchLocale === 'zh' ? 'zh' : form?.dataset.researchLocale === 'fr' ? 'fr' : 'en';
@@ -449,17 +472,7 @@ const itemList = {
       populationText: (article.populations ?? []).map((item: any) => item.name).join(' ').toLowerCase(),
     });
     const articleSearchText = (article: any, tokens = articleTokens(article)) => `${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${tokens.diseaseText} ${tokens.countryText} ${tokens.topicText} ${tokens.pathogenText} ${tokens.populationText}`.toLowerCase();
-    const loadCatalogue = () => {
-      if (!cataloguePromise) {
-        cataloguePromise = fetch('/research/catalogue.json')
-          .then(response => {
-            if (!response.ok) throw new Error(`Research catalogue request failed: ${response.status}`);
-            return response.json();
-          })
-          .then(payload => Array.isArray(payload?.articles) ? payload.articles : []);
-      }
-      return cataloguePromise;
-    };
+    const loadCatalogue = (limit?: number) => loadResearchCatalogue({ limit });
     const make = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string) => {
       const element = document.createElement(tag);
       if (className) element.className = className;
@@ -618,6 +631,24 @@ const itemList = {
       || publishedTo?.value
       || oa?.checked
     );
+    const updateShareableUrl = () => {
+      const values: ResearchFilterValues = {
+        disease: disease?.value ?? '',
+        country: country?.value ?? '',
+        study: study?.value ?? '',
+        topic: topic?.value ?? '',
+        pathogenType: pathogenType?.value ?? '',
+        population: population?.value ?? '',
+        journal: journalFilter?.value ?? '',
+        publisher: publisherFilter?.value ?? '',
+        publishedFrom: publishedFrom?.value ?? '',
+        publishedTo: publishedTo?.value ?? '',
+        openAccess: oa?.checked ?? false,
+      };
+      const params = writeResearchFilterValues(values);
+      const search = params.toString();
+      history.replaceState(history.state, '', `${location.pathname}${search ? `?${search}` : ''}${location.hash}`);
+    };
     const matchesFilters = (article: any) => {
       const query = search?.value.trim().toLowerCase() ?? '';
       const tokens = articleTokens(article);
@@ -634,17 +665,17 @@ const itemList = {
         && (!publishedTo?.value || String(article.published_at ?? '').slice(0, 10) <= publishedTo.value)
         && (!oa?.checked || article.open_access_status === 'open');
     };
-    const renderArticles = (articles: any[]) => {
+    const renderArticles = (articles: any[], knownTotal = articles.length) => {
       if (!list) return;
       const visible = articles.slice(0, visibleLimit);
       list.replaceChildren(...visible.map(renderArticleCard));
       if (count) count.textContent = currentLang() === 'zh'
-        ? (articles.length === visible.length ? `${articles.length} 篇文献` : `已显示 ${visible.length} / ${articles.length} 篇文献`)
+        ? (knownTotal === visible.length ? `${knownTotal} 篇文献` : `已显示 ${visible.length} / ${knownTotal} 篇文献`)
         : currentLang() === 'fr'
-          ? (articles.length === visible.length ? `${articles.length} publication${articles.length === 1 ? '' : 's'}` : `${visible.length} publications sur ${articles.length} affichées`)
-          : (articles.length === visible.length ? `${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}` : `${visible.length} of ${articles.length} publications shown`);
-      empty?.classList.toggle('hidden', articles.length > 0);
-      if (loadMore) loadMore.hidden = articles.length <= visibleLimit;
+          ? (knownTotal === visible.length ? `${knownTotal} publication${knownTotal === 1 ? '' : 's'}` : `${visible.length} publications sur ${knownTotal} affichées`)
+          : (knownTotal === visible.length ? `${knownTotal} ${knownTotal === 1 ? 'publication' : 'publications'}` : `${visible.length} of ${knownTotal} publications shown`);
+      empty?.classList.toggle('hidden', knownTotal > 0);
+      if (loadMore) loadMore.hidden = knownTotal <= visibleLimit;
     };
     const applyFilters = async (requireCatalogue = filtersAreActive() || visibleLimit > initialVisible) => {
       if (!requireCatalogue) {
@@ -658,8 +689,10 @@ const itemList = {
         return;
       }
       try {
-        const articles = await loadCatalogue();
-        renderArticles(articles.filter(matchesFilters));
+        const activeFilters = filtersAreActive();
+        const articles = await loadCatalogue(activeFilters ? undefined : visibleLimit);
+        const matching = articles.filter(matchesFilters);
+        renderArticles(matching, activeFilters ? matching.length : totalArticles);
       } catch (error) {
         console.error(error);
         if (loadMore) loadMore.hidden = true;
@@ -671,6 +704,7 @@ const itemList = {
     });
     [search, disease, country, study, topic, pathogenType, population, journalFilter, publisherFilter, publishedFrom, publishedTo, oa].forEach(control => control?.addEventListener(control instanceof HTMLInputElement && control.type === 'search' ? 'input' : 'change', () => {
       visibleLimit = initialVisible;
+      updateShareableUrl();
       void applyFilters(true);
     }));
     loadMore?.addEventListener('click', () => {
@@ -702,6 +736,7 @@ const itemList = {
   .research-week dl div:nth-child(n+3) { margin-top: .65rem; padding-top: .65rem; border-top: 1px solid rgb(var(--border) / .7); }
   .research-week dt { min-height: 2.4em; color: rgb(var(--text-faint)); font-size: .57rem; font-weight: 700; line-height: 1.2; letter-spacing: .06em; text-transform: uppercase; }
   .research-week dd { margin-top: .45rem; color: rgb(var(--text-strong)); font: 600 1.55rem/1 'IBM Plex Sans', sans-serif; }
+  .research-estimate-note { margin: .9rem 0 0; padding-top: .7rem; border-top: 1px solid rgb(var(--border) / .7); color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.5; }
   .research-section { margin-top: 1.15rem; padding: clamp(1.05rem, 2vw, 1.5rem); }
   .research-directory { margin-top: 1.15rem; padding: 1.05rem clamp(1.05rem, 2vw, 1.5rem); }
   .directory-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: .8rem; border-bottom: 1px solid rgb(var(--border) / .68); }

@@ -83,6 +83,13 @@ const showTitle = Astro.props.showTitle ?? variant === 'list';
           behavior,
         });
       };
+      const settleSection = (id: string) => {
+        // Charts below the fold hydrate after navigation and can change the
+        // height of earlier sections. Align the requested heading again.
+        window.setTimeout(() => {
+          if (window.location.hash === `#${id}`) scrollToSection(id);
+        }, 700);
+      };
 
       const update = () => {
         const offset = nav.classList.contains('page-anchor-nav-sticky')
@@ -102,15 +109,18 @@ const showTitle = Astro.props.showTitle ?? variant === 'list';
         window.history.pushState(null, '', link.hash);
         selectSection(id);
         scrollToSection(id, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+        settleSection(id);
       }));
       if (window.location.hash) {
         const id = decodeURIComponent(window.location.hash.slice(1));
         requestAnimationFrame(() => scrollToSection(id));
+        settleSection(id);
       } else update();
       window.addEventListener('scroll', update, { passive: true });
       window.addEventListener('hashchange', () => {
         const id = decodeURIComponent(window.location.hash.slice(1));
         scrollToSection(id);
+        settleSection(id);
         update();
       });
     });
@@ -142,10 +152,8 @@ const showTitle = Astro.props.showTitle ?? variant === 'list';
   .page-anchor-nav-list a.is-active { box-shadow: inset 2px 0 0 rgb(var(--anchor-accent)); }
 
   @media (max-width: 720px) {
-    .page-anchor-nav-bar .page-anchor-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .page-anchor-nav-bar a { min-height: 2.6rem; padding: .48rem .55rem; font-size: .68rem; line-height: 1.2; white-space: normal; }
-    .page-anchor-nav-bar a:nth-child(2n) { border-right: 0; }
-    .page-anchor-nav-bar a:nth-child(n + 3) { border-top: 1px solid rgb(var(--border) / .72); }
+    .page-anchor-nav-bar .page-anchor-links { display: flex; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: thin; scroll-snap-type: x proximity; }
+    .page-anchor-nav-bar a { flex: 0 0 auto; min-height: 2.65rem; padding: .6rem .85rem; font-size: .7rem; line-height: 1.2; scroll-snap-align: start; }
   }
   @media (prefers-reduced-motion: reduce) {
     .page-anchor-nav a, .page-anchor-nav a::after { transition: none; }

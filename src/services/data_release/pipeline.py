@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS = 30 * 60
+
 
 class ReleasePreflightError(RuntimeError):
     """A release preflight failure retaining integration diagnostics."""
@@ -137,12 +139,16 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     raw_archive_branch = str(
         getattr(raw_archive_cfg, "branch", runtime.raw_archive_branch) or runtime.raw_archive_branch
     )
-    if not raw_archive_cfg.enabled:
+    literature_only = bool(input_data.get("incremental_site")) and not input_data.get("incremental_country_codes")
+    if not raw_archive_cfg.enabled or literature_only:
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid,
             entry_type="info",
             title="Raw Crawler Archive Skipped",
-            content="RAW_ARCHIVE__ENABLED is disabled for this run.",
+            content=(
+                "Literature-triggered incremental release; raw crawler archives publish on the full release path."
+                if literature_only else "RAW_ARCHIVE__ENABLED is disabled for this run."
+            ),
             content_type="text",
             metadata={
                 "event": "raw_git_archive_skipped",
@@ -158,7 +164,10 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         cwd=runtime.root_dir,
         env=git_env,
         metadata={"event": "refresh_situation_room", "release_job_id": job.job_id},
-        timeout_seconds=min(runtime.generate_timeout_seconds, 10 * 60),
+        timeout_seconds=min(
+            runtime.generate_timeout_seconds,
+            SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS,
+        ),
     )
     await runtime.task_manager.update_task_progress(task.task_uuid, 22)
 
@@ -166,13 +175,14 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         python_path=python_path,
         download_url_base=download_url_base,
         incremental_country_codes=input_data.get("incremental_country_codes") or [],
+        incremental_site=bool(input_data.get("incremental_site")),
     )
     await service._run_logged_command(
         task.task_uuid,
         title="Generate Site Data",
         cmd=generate_cmd,
         cwd=runtime.root_dir,
-        env=git_env,
+        env={**git_env, "PYTHONUNBUFFERED": "1"},
         metadata={"event": "generate_site_data", "release_job_id": job.job_id},
         timeout_seconds=runtime.generate_timeout_seconds,
     )
@@ -193,6 +203,10 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         cmd=["npm", "run", "build"],
         cwd=runtime.astro_dir,
         env={
+            # The full static catalogue can exceed Node's default ~4 GiB old
+            # space on the production worker. Keep the build within its
+            # 14 GiB cgroup while giving Astro enough room to finish.
+            "NODE_OPTIONS": "--max-old-space-size=6144",
             "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
             "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
             "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
@@ -224,7 +238,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     await runtime.task_manager.update_task_progress(task.task_uuid, 60)
 
     repository_publications: list[tuple[str, Awaitable[None]]] = []
-    if raw_archive_cfg.enabled:
+    if raw_archive_cfg.enabled and not literature_only:
         raw_git_transport = str(
             (checks.get("raw_archive") or {}).get("ssh_transport") or "default"
         )
@@ -254,7 +268,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             )
         )
 
-    if job.include_git_push:
+    if job.include_git_push and not literature_only:
         repository_publications.append(
             (
                 "direct_downloads",
@@ -283,7 +297,10 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             task.task_uuid,
             entry_type="info",
             title="Direct Download Publish Skipped",
-            content="The validated CSV/JSON/XLSX partitions remain local for this run.",
+            content=(
+                "Literature-triggered release: existing GitHub download files remain published."
+                if literature_only else "The validated CSV/JSON/XLSX partitions remain local for this run."
+            ),
             content_type="text",
             metadata={
                 "event": "github_direct_download_publish_skipped",
@@ -472,7 +489,8 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             f"Site release: {release_identity['release_id']}\n"
             f"Production URL: {cloudflare_deployment.get('production_url') if cloudflare_deployment else '-'}\n"
             f"Subscription options synced: {'yes' if subscription_options_synced else 'no'}\n"
-            f"Reviewed Situation alerts dispatched: {'yes' if situation_alert_dispatch_attempted else 'no'}\n"
+            "Reviewed Situation alert dispatch attempted: "
+            f"{'yes' if situation_alert_dispatch_attempted else 'no'}\n"
             f"Download repo: {download_repo_url or '-'}"
         ),
         content_type="text",

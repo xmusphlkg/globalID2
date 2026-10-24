@@ -208,7 +208,7 @@ def _pipeline_checks(
                 "catch_up_backlog_projected_upper_bound"
             ),
             "backlog_limit": catch_up.get("catch_up_backlog_limit"),
-            "resume_below_backlog": catch_up.get("catch_up_resume_below_backlog"),
+            "review_backlog_high": catch_up.get("catch_up_review_backlog_high"),
             "required_backlog_reduction": catch_up.get(
                 "catch_up_required_backlog_reduction"
             ),

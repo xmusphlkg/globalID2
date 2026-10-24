@@ -50,6 +50,25 @@ for (const release of changelogReleases) {
   }
 }
 
+// Data release builds this site from changelog.ts. CHANGELOG.md is not copied
+// into that file, so a newer Markdown release would otherwise ship a stale page.
+// The CI fixture copies only astro-site, where this sibling file is absent.
+const changelogMarkdownPath = resolve(import.meta.dirname, '../../CHANGELOG.md');
+if (existsSync(changelogMarkdownPath)) {
+  const markdownVersions = [];
+  const seenVersions = new Set();
+  for (const match of readFileSync(changelogMarkdownPath, 'utf8').matchAll(/^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}\s*$/gm)) {
+    if (seenVersions.has(match[1])) continue;
+    seenVersions.add(match[1]);
+    markdownVersions.push(match[1]);
+  }
+  const publicVersions = new Set(changelogReleases.map((release) => release.version));
+  const missingVersions = markdownVersions.filter((version) => !publicVersions.has(version));
+  if (missingVersions.length) {
+    fail(`CHANGELOG.md versions missing from src/data/changelog.ts: ${missingVersions.join(', ')}`);
+  }
+}
+
 const sourceChecks = [
   {
     path: 'src/pages/terms.astro',

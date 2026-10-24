@@ -40,7 +40,7 @@ from .disease_mapping_registry import (
 )
 from .country_scope import CountryScope
 from .population_record import PopulationRecord
-from .ai_model_center import AIProviderConfig, AIModelConfig
+from .ai_model_center import AIProviderConfig, AIModelConfig, AIModelCallLog
 from .automation_job import AutomationJob
 from .data_release_job import DataReleaseJob
 from .scheduled_job_state import ScheduledJobState
@@ -55,6 +55,7 @@ from .disease_ontology import (
     DiseaseTaxonomyEdge,
     DiseaseTaxonomyNode,
 )
+from .public_series import CountryPublishState, PublicDiseaseSeries
 from .situation import PublicHealthEvent, SituationOverride, SituationSnapshot
 from .situation_v3 import (
     SituationAnalysisRunV3,
@@ -126,6 +127,7 @@ __all__ = [
     "PopulationRecord",
     "AIProviderConfig",
     "AIModelConfig",
+    "AIModelCallLog",
     "AutomationJob",
     "DataReleaseJob",
     "ScheduledJobState",
@@ -140,6 +142,8 @@ __all__ = [
     "DiseaseSeriesObservationRevision",
     "DiseaseSourceAvailability",
     "DiseaseSurveillanceSeries",
+    "PublicDiseaseSeries",
+    "CountryPublishState",
     "PublicHealthEvent",
     "SituationOverride",
     "SituationSnapshot",

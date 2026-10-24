@@ -1,7 +1,7 @@
+import threading
 from contextlib import asynccontextmanager
 from datetime import date
 from types import SimpleNamespace
-import threading
 
 import pytest
 
@@ -187,9 +187,8 @@ async def test_monthly_pipeline_preserves_no_process_lifecycle(
     )
 
     assert result == (0, 0, 0, 42)
-    if country_code == "TW":
-        # Synchronous CDC downloads must not occupy the worker event loop.
-        assert updater.refresh_thread != threading.get_ident()
+    # Synchronous source refresh must not occupy the worker event loop.
+    assert updater.refresh_thread != threading.get_ident()
     assert updater.refresh_calls == [
         {
             "source": "all",

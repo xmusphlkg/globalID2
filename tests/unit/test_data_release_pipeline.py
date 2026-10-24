@@ -70,6 +70,8 @@ async def test_repository_publisher_failures_are_aggregated_after_all_finish():
 @pytest.mark.asyncio
 async def test_pipeline_local_only_success_preserves_stage_order():
     commands = []
+    timeouts = []
+    command_envs = {}
     progress = []
     stored_task = SimpleNamespace(output_data=None)
 
@@ -169,6 +171,8 @@ async def test_pipeline_local_only_success_preserves_stage_order():
 
         async def _run_logged_command(self, _task_uuid, *, title, **_kwargs):
             commands.append(title)
+            timeouts.append(_kwargs.get("timeout_seconds"))
+            command_envs[title] = _kwargs.get("env")
 
         def _write_site_release_manifest(self, identity):
             return identity
@@ -201,6 +205,8 @@ async def test_pipeline_local_only_success_preserves_stage_order():
         "Build Astro Site",
         "Validate Situation Release Gate",
     ]
+    assert timeouts[0] == pipeline.SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS
+    assert command_envs["Build Astro Site"]["NODE_OPTIONS"] == "--max-old-space-size=6144"
     assert progress == [5, 15, 22, 35, 45, 60, 88, 100]
     assert output["direct_downloads_published"] is False
     assert output["raw_archive_published"] is False
@@ -343,6 +349,11 @@ async def test_pipeline_passes_local_gates_before_remote_publication():
     assert commands.index("Validate Situation Release Gate") < commands.index(
         "Publish Partitioned Data Downloads"
     )
+    commands.clear()
+    task.input_data = {"release_job_id": "site-release", "incremental_site": True}
+    await pipeline.execute_release_task(Service(), task, runtime=runtime)
+    assert "Archive Raw Crawler Data" not in commands
+    assert "Publish Partitioned Data Downloads" not in commands
 
 
 @pytest.mark.asyncio
@@ -525,6 +536,11 @@ async def test_retry_reuses_completed_cloudflare_deploy_and_only_verifies():
     assert "Dispatch Reviewed Situation Alerts" in commands
     assert output["pages_deployed"] is True
     assert output["situation_alert_dispatch_attempted"] is True
+    completion = next(
+        entry for entry in entries if entry["title"] == "Data Release Completed"
+    )
+    assert "Reviewed Situation alert dispatch attempted: yes" in completion["content"]
+    assert "Reviewed Situation alerts dispatched:" not in completion["content"]
     assert any(entry["title"] == "Cloudflare Deploy Reused" for entry in entries)
 
 

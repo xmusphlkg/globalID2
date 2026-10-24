@@ -2,15 +2,18 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ReportLayout from '../../../layouts/ReportLayout.astro';
-import researchData from '../../../data/research/index.json';
+import researchRoutes from '../../../data/research/routes.json';
 import { integrityAlertLabel, normalizeIntegrityAlerts } from '../../../lib/research-integrity';
 import { buildAlternatePaths, clampSeoDescription, clampSeoTitle } from '../../../lib/seo';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../../utils/diseaseNames';
 import { localizedRegionName, translateUi } from '../../../utils/i18n';
 
 export function getStaticPaths() {
-  const data: any = researchData;
-  return [...(data.articles ?? []), ...(data.preprints ?? [])]
+  const plan = process.env.GIDS_RESEARCH_BUILD_PLAN
+    ? new Set(JSON.parse(readFileSync(process.env.GIDS_RESEARCH_BUILD_PLAN, 'utf8')).selected as string[])
+    : null;
+  return ((researchRoutes as any).articles ?? [])
+    .filter((article: any) => !plan || plan.has(article.slug))
     .map((article: any) => ({ params: { slug: article.slug }, props: { articleSlug: article.slug, locale: 'en' } }));
 }
 
@@ -25,8 +28,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
 const file = resolve(`./src/data/research/articles/${slug}.json`);
 const article: any = existsSync(file)
   ? JSON.parse(readFileSync(file, 'utf-8'))
-  : [...((researchData as any).articles ?? []), ...((researchData as any).preprints ?? [])]
-    .find((item: any) => item.slug === slug);
+  : null;
 if (!article) return Astro.redirect(localeHref('/research/'));
 const isPreprint = article.peer_review_status === 'preprint';
 const versionRelation = (article.version_relations ?? []).find((relation: any) => (
@@ -59,15 +61,12 @@ const studyTypeFr: Record<string, string> = {
   'Mathematical modelling': 'Modélisation mathématique', 'Outbreak investigation': 'Investigation d’épidémie',
   'Randomised controlled trial': 'Essai contrôlé randomisé',
 };
-const allResearchArticles = [...((researchData as any).articles ?? []), ...((researchData as any).preprints ?? [])];
 const frenchDiseaseByEnglish = new Map<string, string>();
-for (const item of allResearchArticles) {
-  for (const disease of item.diseases ?? []) {
-    const translated = disease.name_fr
-      ?? DISEASE_NAMES_FR[String(disease.slug ?? '').toLowerCase()]
-      ?? DISEASE_NAMES_FR_BY_ID[String(disease.disease_id ?? '').toUpperCase()];
-    if (disease.name_en && translated) frenchDiseaseByEnglish.set(disease.name_en, translated);
-  }
+for (const disease of (researchRoutes as any).diseases ?? []) {
+  const translated = disease.name_fr
+    ?? DISEASE_NAMES_FR[String(disease.slug ?? '').toLowerCase()]
+    ?? DISEASE_NAMES_FR_BY_ID[String(disease.disease_id ?? '').toUpperCase()];
+  if (disease.name_en && translated) frenchDiseaseByEnglish.set(disease.name_en, translated);
 }
 const diseaseNameFr = (disease: any) => disease.name_fr
   ?? disease.disease_name_fr

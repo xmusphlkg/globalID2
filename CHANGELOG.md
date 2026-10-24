@@ -2,6 +2,183 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.13.5] - 2026-10-23
+
+### Added
+
+- Added a Compare page in English, Chinese, and French. It lines up at most two diseases and four countries, keeps each source period and case definition, and can share the current selection or download a PNG or CSV.
+- Disease pages now open their reporting footprint on a world map. Sub-national series roll up to the parent country. Hong Kong and Taiwan, which have no polygon in the bundled map, stay visible as markers.
+- Disease pages add a year-by-month seasonality view for one national monthly series at a time. Empty cells mean the source did not publish a value.
+
+### Changed
+
+- Stopped publishing a cross-country monthly subtotal on disease snapshots. `global_monthly`, disease-level `total_cases` and `total_deaths`, and `aggregation_scope` are removed from new site exports and stripped from older snapshots during an incremental export. Per-series totals are unchanged.
+- Research disease pages show the publication timeline and link to the surveillance page. They no longer place a summed case series beside publication counts.
+- The home page reports jurisdictions, diseases, sources, and analyses. It no longer adds case or record totals across sources.
+
+### Validation
+
+- Site data view tests: 16 passed.
+- Local Astro dev, checked in Chromium: COVID-19 coverage map with territory markers, zoom, and the case scale; Chinese influenza seasonality with a country change; French dengue map; English, Chinese, and French compare pages, including a shared country query and CSV download; mobile navigation to Compare.
+- Production build performance budget, checked against the release dist: the disease route is 381,198 gzip bytes under a 395,000 byte chart-route cap. Compare is classified with the other chart pages. The largest ordinary page is 23,556 gzip bytes.
+- Compare pages keep the single `<main>` landmark from the site layout.
+
+## [0.13.6] - 2026-10-24
+
+### Changed
+
+- Refined the comparison, disease, and research interfaces for clearer navigation, chart controls, and mobile layouts.
+- Research Radar guidance and policy evidence now requires a title-confirmed match to the disease page; guidance-related records are labeled without implying an official policy date.
+
+### Data
+
+- Published 79 changed files to `globalID2_data_download` `main` for 295 jurisdictions and 239 diseases; GitHub manifest and sample partitions verified at `5d621777a`.
+
+## [0.13.4] - 2026-10-21
+
+### Changed
+
+- The browser copy of the research catalogue is written as compact JSON chunks of at most 8 MiB under `public/site-data/research`. The build input `src/data/research/index.json` stays one document.
+- Direct-download export workers now follow available memory. A 16 GiB host uses 6 workers.
+
+### Data
+
+- Published `globalID2_data_download` `main` at `5569a7aa3` via the direct `192.168.30.1` path to GitHub's Asia edge. The catalogue lists 295 jurisdictions and 239 diseases. The publish tables held 15,545 series and 4,463,205 points. GitHub accepted the push and warned that some disease partitions exceed 50 MiB.
+
+## [0.13.3] - 2026-10-21
+
+### Added
+
+- Added `public_disease_series` and `country_publish_state` as the current public curve read model. Raw observations remain the system of record, and a successful crawl refreshes that country's published rows.
+
+### Changed
+
+- Current site exports read the publish tables and rewrite a country curve only when its `content_hash` differs from the local snapshot. Unchanged download partitions are reused by file size. Historical `recorded_at_as_of` exports continue to read observation history.
+
+### Validation
+
+- Backfill refreshed 295 active countries at `public-series-v1`: 15,545 series rows and 4,463,198 points, with no failed countries.
+- A current export compared all 295 snapshots, found 0 curve changes, and wrote `publish-hashes.json`. Sampled SG, CN, JP-13, US-NY, and DE hashes matched the publish table.
+- Publish-table unit tests: 21 passed.
+
+## [0.13.2] - 2026-10-21
+
+### Fixed
+
+- Corrected Research Radar disease alias IDs for HIV, hepatitis B/C/D/E, and influenza subtypes; removed vaccine names that had been treated as pertussis aliases.
+- Expanded title association matching to use curated aliases and ontology legacy labels, normalize accents and punctuation, prefer specific mentions, and ignore common negated mentions.
+- Added regression coverage for disease alias IDs, SARS-CoV-2 specificity, influenza subtypes, and negated HIV mentions.
+
+### Validation
+
+- Regenerated Research Radar data: 8,349 title-estimated records, 152 added disease links, and 754 topic links.
+- Literature Radar unit tests: 63 passed.
+
+## [0.13.1] - 2026-10-20
+
+### Changed
+
+- Retained review records that are ineligible for detailed AI summaries as compact bibliographic references in the existing Research Radar export. Disease and public-health topic links are estimated from title mentions and explicitly identified as estimates; abstracts and full-text content remain excluded, and no per-record pages are generated.
+- Added estimated related-record and title-link counts to the existing Research Radar overview, separate from the verified public catalogue metrics.
+
+## [0.13.0] - 2026-10-18
+
+### Added
+
+- Added request-level AI model call telemetry for production attempts and model health checks, including provider/model identity, agent, outcome, latency, and sanitized error details; prompts and generated responses are not retained.
+- Added a paginated and filterable AI model call-log API and a live-updating call-log panel in the AI Model Center.
+- Added the `ai_model_call_logs` schema migration and subdivision geography fields for location type and parent jurisdiction.
+
+### Changed
+
+- Improved Chinese provincial report parsing to recognize subtotal labels and additional no-case narrative forms; expanded Hunan archive-index coverage and matching aliases for provincial disease labels.
+- Refreshed the 2026-W42 weekly AI review fingerprint and review timestamp to match the reviewed brief.
+
+### Validation
+
+- Added unit coverage for metadata-only AI call logging and secret redaction.
+
+## [0.12.1] - 2026-10-18
+
+### Fixed
+
+- Corrected Germany SurvStat state exports to apply the hierarchical state geography filter before downloading, preventing state requests from silently returning national observations.
+- Added geography, dimension, reference, and checksum metadata to archived German state exports so each raw payload can be traced and validated.
+- Kept German pathogen category identifiers in source-series identity rather than analytical dimensions, allowing reviewed case-count mappings to reach standard disease projections.
+
+### Data
+
+- Refreshed and normalized the 16 German state series from official SurvStat exports, restoring their standard disease projections for state detail pages and trend charts.
+
+## [0.12.0] - 2026-10-16
+
+### Added
+
+- Added 26 disease and surveillance concepts required to preserve source-specific mappings across Australia, Brazil, China, Hong Kong, South Korea, Taiwan, and Ontario; added separate concepts for community-associated MRSA infection, enterovirus 71 infection, and food-poisoning outbreaks.
+- Added reviewed source-category decisions for 256 previously unresolved categories, including explicit no-projection dispositions for aggregate totals, residual or mixed categories, and Candida auris colonization/unspecified reports.
+
+### Changed
+
+- Completed the active source-category mapping review: all 4,802 active registry categories now have an approved mapping assertion. Canonical concepts project only where the source semantics support comparison; reviewed groups remain source-only and do not appear as canonical disease curves.
+- Reduced disease-page HTML by previewing up to 12 official source records and linking to the full source register in the dataset JSON; full source provenance remains available for download.
+- Expanded the ontology release to `2026.10.16.2` and published full mapping snapshot `DMR-COVERAGE-20261016T154733073582Z`.
+
+### Validation
+
+- The mapping release contains 4,802 approved assertions and has checksum `e84c48bbadd23be48590b1b400613d7dc2a4045edb2fe5ce10a5fb994926819c`.
+- Rehearsed the final import with 195 new assertions, 0 unmatched categories, and 0 conflicts; the separate 61-row import also had 0 unmatched categories and 0 conflicts.
+- Preserved 30 retired New Zealand synthetic categories outside the active mapping set; all active categories have a reviewed disposition.
+
+## [0.11.0] - 2026-10-16
+
+### Added
+
+- Added source-aware subnational surveillance ingestion for Japan (47 prefectures), Sweden (21 counties), Germany (16 states), Switzerland (26 cantons), the United States (56 states, districts, and territories), and New Zealand (19 district health boards).
+- Imported historical regional observations across all six countries, including Japan's prefecture series back to 2015, Germany's state series back to 2001, Switzerland's canton series back to 2013, and New Zealand's annual DHB series for 2006–2025.
+- Added CDC NNDSS state and territory data from the current Socrata feed and archived CDC weekly tables from 2014–2021. Explicitly blank current-week cells are retained as unknown (`NULL`) observations with source flags and provenance; reported zeroes remain zero.
+- Added a shared subdivision registry that supplies stable jurisdiction codes, parent-country relationships, source labels, geographic identities, and country profiles to ingestion and public data queries.
+- Enabled incremental crawl routing for registered subdivisions through the existing country pipelines. The six parent-country schedules remain enabled, so new regional observations flow through the normal crawl, database, and release workflow.
+- Added an annual New Zealand DHB pipeline and the database migration that permits explicitly marked source-missing observations while continuing to reject unclassified null values.
+- Added 12 Japanese disease concepts for JIHS categories that previously had no exact ontology target, including sentinel-only infections and syndrome-specific hantavirus surveillance.
+- Reviewed 168 additional current and historical US NNDSS categories. Each now has an approved disease target or an explicit source-only disposition when the metric or disease identity cannot safely project to a canonical curve.
+
+### Changed
+
+- Expanded Japan, Sweden, Germany, Switzerland, United States, and New Zealand source adapters and processors to retain jurisdiction-specific geography and source provenance without overwriting national series.
+- Batched PostgreSQL observation and revision upserts with executemany to keep large historical imports within practical query and memory limits.
+- Batched Situation Room source-history queries so releases remain below PostgreSQL's bind-parameter limit as regional series counts grow.
+- Preserved unmapped source categories in holding series so source facts remain available for later disease-mapping review rather than being dropped.
+- Published versioned source-category mappings in the site export, preserving sentinel versus all-case reporting and keeping non-comparable source categories outside canonical curves.
+- Corrected Swiss FOPH CHFL observations and revision identities so Switzerland-and-Liechtenstein aggregates are no longer assigned to Switzerland-only geography; retained the Swiss-only legacy records.
+- Inherited mappings for label-only source categories only when same-source, same-label source-series definitions agree on one exact disease target; release-pinned and site-export queries now resolve those categories with exact-code priority, and source-current placeholder reconciliation runs during mapping bootstrap under the release lock.
+- Expanded Chinese provincial monthly-report retrieval for Guangxi, Heilongjiang, Jiangxi, and Qinghai, including explicit disease counts in article text and embedded or attached tables; added province-level HIV infection as a distinct category from AIDS.
+
+### Validation
+
+- Imported 2.85 million Japanese prefecture observations, 893,139 German state observations, 147,576 Swedish county observations, 2,574 Swiss canton observations, and 17,100 New Zealand DHB observations.
+- Completed the US NNDSS source-missing backfill with 1,523,825 distinct missing observations across 58 reporting scopes; source-label aliases that resolve to an already represented canonical observation are deduplicated, and no non-null count was overwritten by a source blank.
+- Confirmed enabled scheduled crawl jobs for all six parent countries and successful read/write access checks for the data repositories and Cloudflare Pages integration.
+- Activated a reviewed mapping release with 2,573 assertions; all 5,809,371 stored observations across the six countries now have an explicit mapping disposition, including 5,483,077 canonical projections and 326,294 source-only/no-projection observations.
+- Added 70 unambiguous reviewed source-series and source-identity assertions in mapping release `DMR-SOURCE-COVERAGE-20261016T152842267458Z`; preserved the one conflicting US NHSS HIV category for manual review.
+- Verified the CHFL repair moved 419 observation identities and 213 revision identities with no key collisions and no changes to reported values; the migration audit supports exact restoration.
+- Configured and verified 19 staggered New Zealand DHB refresh jobs in `Pacific/Auckland`.
+- Imported 124 explicit September 2026 reports from Guangxi (55), Heilongjiang (48), and Qinghai (21); Jiangxi had no matching September report and no zeroes were synthesized.
+- Passed 52 targeted subdivision and series-storage tests plus 19 US NNDSS crawler tests; three environment-dependent crawler tests were skipped.
+- Refreshed the Situation Room against the expanded database after splitting qualified source histories into bounded queries.
+
+## [0.10.6] - 2026-10-13
+
+### Changed
+
+- Rebuild only changed Research Radar article pages and social cards during data releases; automatically rebuild all articles when shared templates or assets change.
+- Split the browser research catalogue into bounded JSON chunks, so catalogue growth no longer creates one ever-growing static file.
+- Read site and database dates from small current release artifacts, allowing unchanged article pages to be reused safely.
+- Literature-triggered releases skip raw crawler archive and download repository publication while retaining existing GitHub download links.
+
+### Validation
+
+- Verified full and incremental production builds, catalogue integrity, SEO, localization, and the published release.
+
 ## [0.10.5] - 2026-10-12
 
 ### Fixed

@@ -13,7 +13,7 @@ from src.core.country_library import (
     get_country_profile,
     get_standard_country_codes,
 )
-from src.core.database import get_db, init_database
+from src.core.database import Base, get_db, init_database
 from src.core.db_schema import ensure_country_scope, ensure_country_scope_schema
 
 
@@ -153,9 +153,64 @@ async def ensure_standard_country_rows(
 
 async def ensure_site_export_database_ready() -> int:
     """Create missing tables, seed countries, and return the country count."""
-    await init_database()
     async with get_db() as session:
-        await ensure_country_scope_schema(session)
+        tables_ready = bool(
+            (
+                await session.execute(
+                    text("""
+                        SELECT NOT EXISTS (
+                          SELECT 1
+                          FROM unnest(CAST(:table_names AS text[])) AS expected(table_name)
+                          WHERE to_regclass('public.' || expected.table_name) IS NULL
+                        )
+                    """),
+                    {"table_names": sorted(Base.metadata.tables)},
+                )
+            ).scalar_one()
+        )
+        required_columns_ready = bool(
+            (
+                await session.execute(
+                    text("""
+                        SELECT
+                          (SELECT COUNT(*) FROM information_schema.columns
+                           WHERE table_schema='public'
+                             AND (table_name, column_name) IN (
+                               ('disease_knowledge_briefs','definition'),
+                               ('disease_knowledge_briefs','source_ids'),
+                               ('disease_knowledge_briefs','metadata'),
+                               ('disease_knowledge_sources','resolved_url'),
+                               ('disease_knowledge_sources','content_text'),
+                               ('disease_knowledge_sources','review_status'),
+                               ('country_scopes','scope_code'),
+                               ('country_scopes','scope_type'),
+                               ('country_scopes','language_code'),
+                               ('country_scopes','display_name'),
+                               ('country_scopes','is_default'),
+                               ('country_scopes','is_active'),
+                               ('country_scopes','metadata')
+                             )) = 13
+                          AND EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_schema='public' AND table_name='disease_mappings'
+                              AND column_name='country_code'
+                              AND character_maximum_length >= 20
+                          )
+                    """)
+                )
+            ).scalar_one()
+        )
+        if not tables_ready or not required_columns_ready:
+            # Runtime site exports share this database with active workers.
+            # Re-running CREATE/ALTER TABLE on an already migrated schema can
+            # deadlock with worker reads, so DDL is only a repair path when a
+            # required table or column is actually missing.
+            await session.rollback()
+            await init_database()
+            async with get_db() as repair_session:
+                await ensure_country_scope_schema(repair_session)
+        else:
+            await session.rollback()
         await ensure_standard_country_rows(session)
         result = await session.execute(text("SELECT COUNT(*) FROM countries"))
         return int(result.scalar() or 0)

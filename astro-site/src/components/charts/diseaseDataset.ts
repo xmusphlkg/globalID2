@@ -56,7 +56,6 @@ export interface DiseaseDatasetMonthlyData {
 
 export interface DiseaseDataset {
   country_series?: Record<string, DiseaseDatasetSeriesEntry>;
-  global_monthly?: DiseaseDatasetMonthlyData | null;
 }
 
 interface CompactDiseaseDatasetSeriesEntry {
@@ -100,7 +99,6 @@ interface CompactDiseaseDataset {
   dates: string[];
   sources?: string[];
   series: CompactDiseaseDatasetSeriesEntry[];
-  monthly?: DiseaseDatasetMonthlyData | null;
 }
 
 const cache = new Map<string, Promise<DiseaseDataset>>();
@@ -173,7 +171,6 @@ function normalizeDiseaseDataset(raw: DiseaseDataset | CompactDiseaseDataset): D
 
   return {
     country_series: countrySeries,
-    global_monthly: raw.monthly ?? null,
   };
 }
 

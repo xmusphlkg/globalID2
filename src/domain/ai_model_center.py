@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -105,4 +105,33 @@ class AIModelConfig(BaseModel):
         Index("idx_ai_model_enabled", "is_enabled"),
         Index("idx_ai_model_priority", "priority"),
         Index("idx_ai_model_provider", "provider_id"),
+    )
+
+
+class AIModelCallLog(BaseModel):
+    """One provider attempt made by a production agent completion.
+
+    Prompts and generated text are intentionally excluded to avoid retaining
+    potentially sensitive user and clinical content in operational logs.
+    """
+
+    __tablename__ = "ai_model_call_logs"
+
+    request_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    model_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    provider_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    model_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    provider_key: Mapped[str] = mapped_column(String(120), nullable=False)
+    agent_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    latency_ms: Mapped[float] = mapped_column(Float, nullable=False)
+    error_type: Mapped[Optional[str]] = mapped_column(String(160), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (
+        Index("idx_ai_model_call_logs_created", "created_at"),
+        Index("idx_ai_model_call_logs_provider_created", "provider_key", "created_at"),
+        Index("idx_ai_model_call_logs_model_created", "model_key", "created_at"),
+        Index("idx_ai_model_call_logs_request", "request_id"),
     )

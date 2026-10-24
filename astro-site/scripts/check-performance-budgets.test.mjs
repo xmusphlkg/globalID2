@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -71,6 +72,54 @@ test('fails closed when generated HTML exceeds average and compressed all-site b
   assert.match(result.errors.join('\n'), /Generated HTML averages/);
   assert.ok(result.html.rawBytes > 100);
   assert.ok(result.html.gzipBytes > 10);
+});
+
+test('treats compare workspaces as chart routes in every locale', (t) => {
+  const directory = fixture();
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  writeFileSync(join(directory, '_astro', 'chart.js'), randomBytes(2_000));
+  const island = '<astro-island component-url="/_astro/chart.js"></astro-island>';
+  mkdirSync(join(directory, 'compare'));
+  mkdirSync(join(directory, 'zh', 'compare'), { recursive: true });
+  mkdirSync(join(directory, 'fr', 'compare'), { recursive: true });
+  writeFileSync(join(directory, 'index.html'), '<main>home</main>');
+  for (const route of ['compare', 'zh/compare', 'fr/compare']) {
+    writeFileSync(join(directory, route, 'index.html'), island);
+  }
+
+  const result = auditPerformance(directory, {
+    maxJavaScriptChunkBytes: 100_000,
+    maxRouteCompressedAssetsBytes: 100_000,
+    maxOrdinaryRouteCompressedAssetsBytes: 500,
+    maxWorldMapBytes: 1_000,
+    maxWorldMapBrotliBytes: 1_000,
+  });
+
+  assert.equal(result.passed, true);
+  assert.equal(result.largestOrdinaryRoute.gzipBytes, 0);
+  assert.ok(result.largestRoute.gzipBytes > 500);
+});
+
+test('keeps a heavy brochure page on the ordinary route cap', (t) => {
+  const directory = fixture();
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  writeFileSync(join(directory, '_astro', 'chart.js'), randomBytes(2_000));
+  mkdirSync(join(directory, 'about'));
+  writeFileSync(
+    join(directory, 'about', 'index.html'),
+    '<astro-island component-url="/_astro/chart.js"></astro-island>',
+  );
+
+  const result = auditPerformance(directory, {
+    maxJavaScriptChunkBytes: 100_000,
+    maxRouteCompressedAssetsBytes: 100_000,
+    maxOrdinaryRouteCompressedAssetsBytes: 500,
+    maxWorldMapBytes: 1_000,
+    maxWorldMapBrotliBytes: 1_000,
+  });
+
+  assert.equal(result.passed, false);
+  assert.match(result.errors.join('\n'), /ordinary route asset graph \/about\/index\.html/);
 });
 
 test('scales the all-site gzip allowance while preserving a per-page ceiling', (t) => {

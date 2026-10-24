@@ -8,6 +8,7 @@ interface Props {
   sourceMeta?: ChartSourceMeta | null;
   initialLanguage?: "en" | "zh" | "fr";
   contextKind?: "disease" | "research";
+  initialSelectionIds?: string[];
 }
 
 export default function DiseaseCountryCurve({
@@ -16,6 +17,7 @@ export default function DiseaseCountryCurve({
   sourceMeta,
   initialLanguage = "en",
   contextKind = "disease",
+  initialSelectionIds,
 }: Props) {
   const context = useMemo(
     () => ({
@@ -33,6 +35,7 @@ export default function DiseaseCountryCurve({
       language={initialLanguage}
       presentation={contextKind === "research" ? "compact" : "standard"}
       sourceMeta={sourceMeta}
+      initialSelectionIds={initialSelectionIds}
     />
   );
 }

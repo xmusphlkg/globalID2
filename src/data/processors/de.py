@@ -60,12 +60,19 @@ class DEWeeklyUpdater:
     ontology_source_id = ONTOLOGY_SOURCE_ID
     series_registered_rows_only = True
     series_registry_coverage = "required"
-    series_geography_key = "country:DE:national"
+    series_geography_from_rows = True
+    series_country_code = "DE"
     public_release_enabled = True
     license_review_status = "reviewed_source_attribution_required"
 
-    def __init__(self, *, output_csv: Path = DEFAULT_OUTPUT_CSV, full_history_start_year: int = HISTORY_START_YEAR, refresh_recent_weeks: int = 12, crawler_type=GermanySurvStatCrawler, export_url_template: Optional[str] = None) -> None:
-        self.output_csv = Path(output_csv)
+    def __init__(self, *, country_code: str = "DE", output_csv: Optional[Path] = None, full_history_start_year: int = HISTORY_START_YEAR, refresh_recent_weeks: int = 12, crawler_type=GermanySurvStatCrawler, export_url_template: Optional[str] = None) -> None:
+        self.country_code = country_code.upper()
+        if self.country_code != "DE" and not self.country_code.startswith("DE-"):
+            raise ValueError(f"Unsupported Germany subdivision code: {self.country_code}")
+        self.output_csv = Path(output_csv) if output_csv else (
+            DEFAULT_OUTPUT_CSV if self.country_code == "DE" else
+            DEFAULT_OUTPUT_CSV.parent / "subdivisions" / f"{self.country_code.lower()}_rki_survstat_weekly.csv"
+        )
         self.full_history_start_year = max(HISTORY_START_YEAR, int(full_history_start_year))
         self.refresh_recent_weeks = max(4, min(52, int(refresh_recent_weeks)))
         self.crawler_type = crawler_type
@@ -103,7 +110,10 @@ class DEWeeklyUpdater:
         targets = list(weeks) if weeks is not None else (self.history_weeks(today=today) if force else self._recent_weeks(today))
         years = sorted({target.isocalendar().year for target in targets})
         crawler = self.crawler_type(save_raw=save_raw, raw_dir=raw_dir or ROOT / "data/raw/de", export_url_template=self.export_url_template)
-        summary = crawler.crawl_weekly_national(self.output_csv, years=years)
+        if self.country_code == "DE":
+            summary = crawler.crawl_weekly_national(self.output_csv, years=years)
+        else:
+            summary = crawler.crawl_weekly_subdivision(self.output_csv, years=years, region=self.country_code)
         rows = self._load_rows(self.output_csv)
         wanted = set(targets)
         if not force:

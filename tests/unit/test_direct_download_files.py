@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import copy
 
 from openpyxl import load_workbook
 import pytest
@@ -11,6 +12,7 @@ from src.generation.direct_download_files import (
     build_direct_download_files,
     partition_rows,
 )
+from src.generation import direct_download_files
 from src.generation.site_data_views import (
     build_country_data,
     build_country_site_data,
@@ -165,6 +167,37 @@ def test_build_writes_three_formats_for_every_partition(tmp_path) -> None:
     xlsx_path = tmp_path / current["files"]["xlsx"]["relative_path"]
     workbook = load_workbook(xlsx_path, read_only=True)
     assert workbook.sheetnames == ["records", "metadata"]
+
+
+def test_full_refresh_skips_unchanged_datasets_and_rebuilds_only_changed_scope(
+    tmp_path, monkeypatch,
+) -> None:
+    base = "https://raw.githubusercontent.com/example/data/main"
+    first = build_direct_download_files(_context(), tmp_path, download_url_base=base)
+    assert all(entry.get("input_sha256") for entry in first["countries"] + first["diseases"])
+
+    real_executor = direct_download_files.ProcessPoolExecutor
+    monkeypatch.setattr(
+        direct_download_files,
+        "ProcessPoolExecutor",
+        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("unchanged datasets started workers")),
+    )
+    unchanged = _context(generated_at="2026-08-02T00:00:00+00:00")
+    unchanged["country_exports"][0]["country_data"]["generated_at"] = unchanged["generated_at"]
+    unchanged["disease_exports"][0]["disease_data"]["generated_at"] = unchanged["generated_at"]
+    second = build_direct_download_files(unchanged, tmp_path, download_url_base=base)
+    assert second["generation"]["changed_files"] == 0
+
+    monkeypatch.setattr(direct_download_files, "ProcessPoolExecutor", real_executor)
+    changed = copy.deepcopy(unchanged)
+    changed["disease_exports"][0]["disease_data"]["country_series"]["CN"] = copy.deepcopy(
+        changed["disease_exports"][0]["disease_data"]["country_series"]["CN"]
+    )
+    changed["country_exports"][0]["country_data"]["disease_series"]["D007"]["cases"][-1] = 99
+    third = build_direct_download_files(changed, tmp_path, download_url_base=base)
+    assert third["countries"][0]["input_sha256"] != second["countries"][0]["input_sha256"]
+    assert third["diseases"][0]["input_sha256"] == second["diseases"][0]["input_sha256"]
+    assert third["generation"]["changed_files"] > 0
 
 
 def test_downloads_include_lossless_source_series_and_projection_provenance(

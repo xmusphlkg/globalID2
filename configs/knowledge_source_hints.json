@@ -782,6 +782,79 @@
           ]
         }
       ]
+    },
+    "D218": {
+      "aliases": [
+        "Eastern equine encephalitis virus",
+        "Eastern equine encephalitis prevention",
+        "EEE mosquito bite prevention"
+      ],
+      "sources": [
+        {
+          "source_type": "web_search",
+          "source_name": "US Centers for Disease Control and Prevention",
+          "title": "Preventing Eastern Equine Encephalitis",
+          "url": "https://www.cdc.gov/eastern-equine-encephalitis/prevention/index.html",
+          "authority_level": "high",
+          "raw_excerpt": "CDC states that preventing mosquito bites is the best way to prevent eastern equine encephalitis; no human vaccine or preventive medicine is available.",
+          "content_text": "The US Centers for Disease Control and Prevention states that eastern equine encephalitis virus reaches people through bites from infected mosquitoes. There is no human vaccine or medicine to prevent eastern equine encephalitis. The best prevention is to avoid mosquito bites by using insect repellent, wearing long sleeves and pants, treating clothing and gear, and controlling mosquitoes indoors and outdoors. CDC notes that mosquitoes can bite during both day and night.",
+          "content_sections": [
+            {
+              "heading": "Prevention",
+              "text": "CDC states that there is no human vaccine or preventive medicine for eastern equine encephalitis. To reduce risk, avoid mosquito bites with insect repellent, long sleeves and pants, treated clothing and gear, and mosquito control indoors and outdoors; mosquitoes can bite during both day and night."
+            }
+          ]
+        }
+      ]
+    },
+    "D230": {
+      "aliases": [
+        "Brazil SINAN child exposed to HIV notification",
+        "criança exposta ao HIV",
+        "perinatal HIV exposure notification"
+      ],
+      "sources": [
+        {
+          "source_type": "web_search",
+          "source_name": "Brazil Ministry of Health",
+          "title": "Health Surveillance Guide: HIV and exposed-child notifications",
+          "url": "https://bvsms.saude.gov.br/bvs/publicacoes/guia_vigilancia_saude_4ed.pdf",
+          "authority_level": "high",
+          "raw_excerpt": "Brazil's Ministry of Health defines an HIV-exposed child through maternal HIV evidence and records exposed children using a dedicated SINAN notification form.",
+          "content_text": "Brazil's Ministry of Health describes a child exposed to HIV as a child born to a woman with HIV or breastfed by a woman with HIV. The SINAN surveillance guide identifies an exposed child through a reactive maternal HIV test and lists a dedicated notification and investigation form for exposed children. This is an exposure-notification event used to follow the child until HIV infection status is determined; it is not itself a diagnosis of HIV infection.",
+          "content_sections": [
+            {
+              "heading": "Definition and surveillance scope",
+              "text": "Brazil's Ministry of Health defines an HIV-exposed child as one born to a woman with HIV or breastfed by a woman with HIV. The SINAN guide identifies the child through a reactive maternal HIV test and uses a dedicated notification form. Exposure notification is not itself an HIV infection diagnosis."
+            }
+          ]
+        }
+      ]
+    },
+    "D231": {
+      "aliases": [
+        "Brazil SINAN HIV during pregnancy notification",
+        "gestante HIV",
+        "HIV pregnancy surveillance event",
+        "HIV notification during pregnancy childbirth puerperium"
+      ],
+      "sources": [
+        {
+          "source_type": "web_search",
+          "source_name": "Brazil Ministry of Health",
+          "title": "Health Surveillance Guide: HIV in pregnancy, childbirth, and puerperium",
+          "url": "https://bvsms.saude.gov.br/bvs/publicacoes/guia_vigilancia_saude_4ed.pdf",
+          "authority_level": "high",
+          "raw_excerpt": "Brazil's Ministry of Health treats HIV in pregnancy, childbirth, or puerperium as a separately notifiable event, including when HIV was diagnosed before pregnancy.",
+          "content_text": "Brazil's Ministry of Health describes the SINAN HIV-positive pregnancy notification as an event tied to each pregnancy in a woman living with HIV. The event includes a woman with a prior HIV diagnosis and a woman first diagnosed during pregnancy, childbirth, or puerperium. Notification can occur during prenatal care, childbirth, or puerperium. When HIV is first diagnosed during pregnancy, the pregnancy event and the person's HIV infection are separately notified. This pregnancy-event record is not additive to person-based HIV diagnosis counts.",
+          "content_sections": [
+            {
+              "heading": "Definition and surveillance scope",
+              "text": "Brazil's Ministry of Health treats HIV notification in pregnancy, childbirth, or puerperium as a pregnancy event for a woman with a prior HIV diagnosis or a diagnosis first made during pregnancy, childbirth, or puerperium. Each pregnancy is notified separately, and the pregnancy event is distinct from the person's HIV infection notification."
+            }
+          ]
+        }
+      ]
     }
   }
 }

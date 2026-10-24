@@ -1,8 +1,7 @@
 ---
 // src/components/Footer.astro
 import BrandLogo from './BrandLogo.astro';
-import metaData from '../data/meta.json';
-import sitePackage from '../../package.json';
+import { changelogReleases } from '../data/changelog';
 import { createTranslator, localizedPath, type Lang } from '../utils/i18n';
 
 interface Props {
@@ -11,32 +10,16 @@ interface Props {
 
 const { initialLanguage = 'en' } = Astro.props;
 const year = new Date().getFullYear();
-const siteVersion = sitePackage.version;
-const siteUpdatedAt = import.meta.env.PUBLIC_GIDS_BUILT_AT?.trim() || new Date().toISOString();
-const databaseLatestAt = metaData?.generated_at;
-const formatDate = (value: string | undefined, locale: 'en-US' | 'zh-CN' | 'fr-FR', fallback: string) => {
-  const date = value ? new Date(value) : null;
-  return date && !Number.isNaN(date.getTime())
-    ? date.toLocaleDateString(locale, {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        timeZone: 'UTC',
-      })
-    : fallback;
-};
-const siteUpdatedEn = formatDate(siteUpdatedAt, 'en-US', 'Unknown');
-const siteUpdatedZh = formatDate(siteUpdatedAt, 'zh-CN', '未知');
-const siteUpdatedFr = formatDate(siteUpdatedAt, 'fr-FR', 'Inconnu');
-const databaseLatestEn = formatDate(databaseLatestAt, 'en-US', 'Unknown');
-const databaseLatestZh = formatDate(databaseLatestAt, 'zh-CN', '未知');
-const databaseLatestFr = formatDate(databaseLatestAt, 'fr-FR', 'Inconnu');
+const siteVersion = changelogReleases[0]?.version;
+if (!siteVersion) throw new Error('Public changelog has no releases');
+const pendingDate = initialLanguage === 'zh' ? '读取中' : initialLanguage === 'fr' ? 'Chargement' : 'Loading';
 
 const copy = createTranslator(initialLanguage);
 const links = [
   { href: '/situation/', label: copy('Situation', '全球态势', 'Situation') },
   { href: '/countries/', label: copy('Countries', '国家/地区', 'Pays') },
   { href: '/diseases/', label: copy('Disease Directory', '疾病目录', 'Répertoire des maladies') },
+  { href: '/compare/', label: copy('Compare', '对比工具', 'Comparer') },
   { href: '/downloads/', label: copy('Downloads', '数据下载', 'Téléchargements') },
   { href: '/research/', label: copy('Research Radar', '研究雷达', 'Radar de recherche') },
   { href: '/about/', label: copy('About', '关于', 'À propos') },
@@ -114,8 +97,8 @@ const maintainer = copy({
               {copy('Website updated', '网站更新', 'Site mis à jour')}
             </span>:
             {' '}
-            <span class="site-footer-meta-value">
-              {copy(siteUpdatedEn, siteUpdatedZh, siteUpdatedFr)}
+            <span class="site-footer-meta-value" data-site-updated>
+              {pendingDate}
             </span>
           </li>
           <li>
@@ -123,8 +106,8 @@ const maintainer = copy({
               {copy('Latest database date', '数据库最新日期', 'Date la plus récente de la base de données')}
             </span>:
             {' '}
-            <span class="site-footer-meta-value">
-              {copy(databaseLatestEn, databaseLatestZh, databaseLatestFr)}
+            <span class="site-footer-meta-value" data-database-updated>
+              {pendingDate}
             </span>
           </li>
           <li><a class="site-footer-link" href={localizedHref('/about/')}>{copy('Sources and methods', '数据来源与方法', 'Sources et méthodes')}</a></li>
@@ -162,6 +145,33 @@ const maintainer = copy({
     </div>
   </div>
 </footer>
+
+<script>
+  const pageLanguage = document.documentElement.lang.toLowerCase();
+  const language = pageLanguage.startsWith('zh') ? 'zh-CN' : pageLanguage.startsWith('fr') ? 'fr-FR' : 'en-US';
+  const fallback = language === 'zh-CN' ? '未知' : language === 'fr-FR' ? 'Inconnu' : 'Unknown';
+  const showDate = (selector: string, value: unknown) => {
+    const target = document.querySelector<HTMLElement>(selector);
+    if (!target) return;
+    const date = typeof value === 'string' ? new Date(value) : null;
+    target.textContent = date && !Number.isNaN(date.getTime())
+      ? new Intl.DateTimeFormat(language, { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(date)
+      : fallback;
+  };
+  if (import.meta.env.DEV) {
+    const target = document.querySelector<HTMLElement>('[data-site-updated]');
+    if (target) target.textContent = language === 'zh-CN' ? '本地预览' : language === 'fr-FR' ? 'Aperçu local' : 'Local preview';
+  } else {
+    void fetch('/release.json', { cache: 'no-store' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => showDate('[data-site-updated]', data?.built_at))
+      .catch(() => showDate('[data-site-updated]', null));
+  }
+  void fetch('/site-data/site-status.json')
+    .then(response => response.ok ? response.json() : null)
+    .then(data => showDate('[data-database-updated]', data?.generated_at))
+    .catch(() => showDate('[data-database-updated]', null));
+</script>
 
 <style>
   .site-footer-main {

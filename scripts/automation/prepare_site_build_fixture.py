@@ -399,6 +399,11 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
             "formats": [],
         },
         "src/data/research/index.json": research,
+        "src/data/research/routes.json": {
+            "articles": [{"slug": sample_article["slug"], "indexable": True}],
+            "diseases": sample_article.get("diseases") or [],
+        },
+        f"src/data/research/articles/{sample_article['slug']}.json": sample_article,
         "src/data/research/hotspots.json": hotspots,
         "src/data/countries/jp.json": {
             "country_code": "JP",

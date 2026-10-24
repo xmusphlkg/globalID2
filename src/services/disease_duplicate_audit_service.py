@@ -37,6 +37,7 @@ DEFAULT_MAPPING_DIR = ROOT / "configs" / "mapping"
 DEFAULT_CURRENT_DATA_DIR = ROOT / "data" / "current"
 DEFAULT_AUDIT_LOG_PATH = ROOT / "logs" / "disease-audit.jsonl"
 logger = get_logger(__name__)
+_AUDIT_STATUS_CACHE: dict[tuple, dict[str, Any]] = {}
 
 FOOTNOTE_RE = re.compile(r"[¹²³⁴⁵⁶⁷⁸⁹⁰]+")
 PUNCT_RE = re.compile(r"[^0-9a-zA-Z\u4e00-\u9fff]+")
@@ -113,6 +114,29 @@ def is_code_like(value: str) -> bool:
 def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8-sig") as handle:
         return list(csv.DictReader(handle))
+
+
+def _iter_disease_cells(path: Path):
+    """Yield disease-column cells without building a dict for every CSV row."""
+
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.reader(handle)
+        try:
+            header = next(reader)
+        except StopIteration:
+            return
+        indexes = [
+            index
+            for index, name in enumerate(header)
+            if clean(name).replace(" ", "_") in DISEASE_COLUMN_HINTS
+        ]
+        if not indexes:
+            return
+        for row in reader:
+            width = len(row)
+            for index in indexes:
+                if index < width and row[index]:
+                    yield row[index]
 
 
 def _candidate_ids_from_text(text: str) -> list[str]:
@@ -306,8 +330,35 @@ class DiseaseDuplicateAuditService:
         )
         raise RuntimeError(f"All model-center routes failed for duplicate audit: {errors}")
 
+    def _source_fingerprint(self) -> tuple:
+        def stamp(path: Path) -> tuple:
+            if not path.exists():
+                return (str(path), None)
+            if path.is_file():
+                stat = path.stat()
+                return (str(path), stat.st_mtime_ns, stat.st_size)
+            files = []
+            for child in sorted(path.rglob("*")):
+                if child.is_file():
+                    stat = child.stat()
+                    files.append((str(child), stat.st_mtime_ns, stat.st_size))
+            return tuple(files)
+
+        return (
+            stamp(self.standard_path),
+            stamp(self.mapping_dir),
+            stamp(self.current_data_dir),
+        )
+
     async def status(self, include_new_disease_candidates: bool = True) -> dict[str, Any]:
-        audit = self.run_local_audit(include_new_disease_candidates=include_new_disease_candidates)
+        cache_key = (self._source_fingerprint(), include_new_disease_candidates)
+        audit = _AUDIT_STATUS_CACHE.get(cache_key)
+        if audit is None:
+            audit = self.run_local_audit(
+                include_new_disease_candidates=include_new_disease_candidates
+            )
+            _AUDIT_STATUS_CACHE.clear()
+            _AUDIT_STATUS_CACHE[cache_key] = audit
         routes = await get_runtime_routes()
         safe_routes = []
         for route in routes:
@@ -486,44 +537,33 @@ class DiseaseDuplicateAuditService:
         grouped: dict[tuple[str, str], dict[str, Any]] = {}
         for path in sorted(self.current_data_dir.glob("**/*.csv")):
             try:
-                with path.open(newline="", encoding="utf-8-sig") as handle:
-                    reader = csv.DictReader(handle)
-                    fieldnames = reader.fieldnames or []
-                    disease_columns = [
-                        name
-                        for name in fieldnames
-                        if clean(name).replace(" ", "_") in DISEASE_COLUMN_HINTS
-                    ]
-                    if not disease_columns:
+                country_code = path.parent.name.upper()
+                file_label = str(path.relative_to(ROOT))
+                for raw in _iter_disease_cells(path):
+                    raw = raw.strip()
+                    key = clean(raw)
+                    if not key or key in known or key in {"total", "unknown"} or is_code_like(key):
                         continue
-                    country_code = path.parent.name.upper()
-                    for row in reader:
-                        for column in disease_columns:
-                            raw = str(row.get(column, "") or "").strip()
-                            key = clean(raw)
-                            if not key or key in known or key in {"total", "unknown"} or is_code_like(key):
-                                continue
-                            if re.fullmatch(r"D\d{3}", raw.strip().upper()):
-                                continue
-                            item_key = (country_code, key)
-                            item = grouped.setdefault(
-                                item_key,
-                                {
-                                    "category": "new_disease_candidate",
-                                    "country_code": country_code,
-                                    "term": key,
-                                    "raw_terms": [],
-                                    "files": [],
-                                    "row_count": 0,
-                                    "finding": "",
-                                },
-                            )
-                            if raw not in item["raw_terms"]:
-                                item["raw_terms"].append(raw)
-                            file_label = str(path.relative_to(ROOT))
-                            if file_label not in item["files"]:
-                                item["files"].append(file_label)
-                            item["row_count"] += 1
+                    if re.fullmatch(r"D\d{3}", raw.upper()):
+                        continue
+                    item_key = (country_code, key)
+                    item = grouped.setdefault(
+                        item_key,
+                        {
+                            "category": "new_disease_candidate",
+                            "country_code": country_code,
+                            "term": key,
+                            "raw_terms": [],
+                            "files": [],
+                            "row_count": 0,
+                            "finding": "",
+                        },
+                    )
+                    if raw not in item["raw_terms"]:
+                        item["raw_terms"].append(raw)
+                    if file_label not in item["files"]:
+                        item["files"].append(file_label)
+                    item["row_count"] += 1
             except (OSError, UnicodeDecodeError, csv.Error):
                 continue
 

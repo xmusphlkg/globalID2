@@ -10,6 +10,7 @@ from src.data.storage.series_observation_store import (
     SeriesObservationQualityPolicy,
     SeriesObservationQuarantinedError,
     SeriesObservationStore,
+    _holding_series_code,
     _persist_observation_revisions,
     _quality_status,
 )
@@ -78,11 +79,14 @@ async def test_revision_capture_seeds_existing_state_and_appends_only_changes() 
         def mappings(self):
             return self
 
+        def scalars(self):
+            return self
+
         def all(self):
             return self.rows
 
     class FakeDB:
-        async def execute(self, statement):
+        async def execute(self, statement, *params):
             sql = str(statement)
             if getattr(statement, "is_select", False):
                 rows = (
@@ -92,7 +96,7 @@ async def test_revision_capture_seeds_existing_state_and_appends_only_changes() 
                 )
                 return Result(rows)
             statement.compile(dialect=postgresql.dialect())
-            batch = statement._multi_values[0]
+            batch = params[0] if params else statement._multi_values[0]
             inserted = []
             for row in batch:
                 key = tuple(row[column] for column in ("time", "series_code", "geography_key", "dimension_key", "recorded_at"))
@@ -102,7 +106,7 @@ async def test_revision_capture_seeds_existing_state_and_appends_only_changes() 
                 ):
                     revisions.append(dict(row))
                     inserted.append(row)
-            return Result(rowcount=len(inserted))
+            return Result([row["time"] for row in inserted], rowcount=len(inserted))
 
     observation = {
         key: current[key]
@@ -126,6 +130,73 @@ async def test_revision_capture_seeds_existing_state_and_appends_only_changes() 
     ) == 0
     assert [row["value"] for row in revisions] == [10, 12]
     assert [row["recorded_at"] for row in revisions] == [first_seen, changed_at]
+
+
+@pytest.mark.asyncio
+async def test_revision_capture_batches_large_source_refresh() -> None:
+    point_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    observations = [
+        {
+            "time": point_time,
+            "series_code": f"SER_ZZ_{index}",
+            "geography_key": "country:ZZ:national",
+            "dimension_key": "all",
+        }
+        for index in range(1001)
+    ]
+
+    class Result:
+        def __init__(self, rows=(), rowcount=0):
+            self.rows = rows
+            self.rowcount = rowcount
+
+        def mappings(self):
+            return self
+
+        def scalars(self):
+            return self
+
+        def all(self):
+            return self.rows
+
+    class FakeDB:
+        def __init__(self):
+            self.lookup_sizes = []
+            self.insert_sizes = []
+
+        async def execute(self, statement, *params):
+            if getattr(statement, "is_select", False):
+                keys = statement._where_criteria[0].right.value
+                self.lookup_sizes.append(len(keys))
+                if "disease_series_observation_revisions" in str(statement):
+                    return Result()
+                return Result([
+                    {
+                        **dict(zip(("time", "series_code", "geography_key", "dimension_key"), key)),
+                        "value": 1,
+                        "unit": "count",
+                        "suppressed": False,
+                        "suppression_reason": None,
+                        "quality_status": "validated",
+                        "dimensions": {},
+                        "raw_data": {},
+                        "metadata": {},
+                        "created_at": point_time,
+                        "updated_at": point_time,
+                    }
+                    for key in keys
+                ])
+            rows = params[0] if params else statement._multi_values[0]
+            self.insert_sizes.append(len(rows))
+            assert len(statement.compile(dialect=postgresql.dialect()).params) < 32767
+            return Result([row["time"] for row in rows], rowcount=len(rows))
+
+    db = FakeDB()
+    assert await _persist_observation_revisions(
+        db, observations, recorded_at=point_time, seed_current_state=True
+    ) == 1001
+    assert db.lookup_sizes == [500, 500, 500, 500, 1, 1]
+    assert db.insert_sizes == [500, 500, 1]
 
 
 def test_series_resolution_reuses_source_identity_across_months(monkeypatch) -> None:
@@ -259,7 +330,7 @@ async def test_unknown_category_builds_nonprojectable_holding_observation() -> N
             self.results = iter((category, None))
             self.added = []
 
-        async def execute(self, _statement):
+        async def execute(self, _statement, *params):
             return ScalarResult(next(self.results))
 
         def add(self, value):
@@ -299,6 +370,219 @@ async def test_unknown_category_builds_nonprojectable_holding_observation() -> N
     assert holding_series.target_group_code == "G_UNMAPPED_SOURCE_CATEGORIES"
     assert holding_series.mapping_relation == "unmapped"
     assert holding_series.comparability == "not_comparable"
+
+
+@pytest.mark.asyncio
+async def test_japan_sentinel_holding_series_preserves_reporting_basis() -> None:
+    now = datetime.now(timezone.utc)
+    category = SourceDiseaseCategory(
+        id=42,
+        category_key="CAT_SRC_JP_NIID_PHARYNGOCONJUNCTIVAL",
+        country_code="JP",
+        source_id="SRC_JP_NIID",
+        source_code="label:test-pharyngoconjunctival",
+        canonical_source_label="Pharyngoconjunctival fever",
+        normalized_label="pharyngoconjunctival fever",
+        definition_version="source-current",
+        status="discovered",
+        first_seen_at=now,
+        last_seen_at=now,
+        occurrence_count=1,
+        ai_status="pending",
+        metadata_={},
+        is_active=True,
+    )
+    existing = DiseaseSurveillanceSeries(
+        series_code="HOLD_JP_PHARYNGOCONJUNCTIVAL",
+        disease_id=None,
+        target_group_code="G_UNMAPPED_SOURCE_CATEGORIES",
+        country_code="JP",
+        source_system="SRC_JP_NIID",
+        source_series_code=category.source_code,
+        source_label=category.canonical_source_label,
+        definition_version="source-current",
+        metric_type="case_notifications",
+        reporting_basis="notification",
+        temporal_granularity="unknown",
+        unit="count",
+        mapping_relation="unmapped",
+        comparability="not_comparable",
+        aggregation_policy="non_additive",
+        availability_status="active",
+        missing_value_policy="missing_is_unknown",
+        is_active=True,
+        metadata_={"dynamic_holding": True},
+    )
+
+    class ScalarResult:
+        def __init__(self, value):
+            self.value = value
+
+        def scalar_one_or_none(self):
+            return self.value
+
+    class FakeDB:
+        def __init__(self):
+            self.results = iter((category, existing))
+
+        async def execute(self, _statement, *params):
+            return ScalarResult(next(self.results))
+
+        async def flush(self):
+            return None
+
+    observations, handled = await SeriesObservationStore()._build_holding_observations(
+        FakeDB(),
+        [{
+            "MMWRYear": "2026",
+            "MMWRWeek": "40",
+            "RawDiseaseLabel": category.canonical_source_label,
+            "SourceDiseaseCode": category.source_code,
+            "SurveillanceType": "sentinel",
+            "Cases": "12",
+            "GeographyKey": "country:JP-01:national",
+        }],
+        "JP",
+        source_id="SRC_JP_NIID",
+        value_field="Cases",
+        geography_key=None,
+    )
+
+    assert handled == 1
+    assert existing.metric_type == "sentinel_case_notifications"
+    assert existing.reporting_basis == "sentinel_surveillance"
+    assert existing.temporal_granularity == "weekly"
+    assert existing.metadata_["surveillance_type"] == "sentinel"
+    assert observations[0]["metadata"]["measure"] == "sentinel_case_notifications"
+    assert observations[0]["metadata"]["frequency"] == "weekly"
+
+
+@pytest.mark.asyncio
+async def test_japan_mixed_surveillance_keeps_legacy_series_on_stored_majority() -> None:
+    now = datetime.now(timezone.utc)
+    category = SourceDiseaseCategory(
+        id=43,
+        category_key="CAT_SRC_JP_NIID_PERTUSSIS",
+        country_code="JP",
+        source_id="SRC_JP_NIID",
+        source_code="label:pertussis",
+        canonical_source_label="Pertussis (Whooping cough)",
+        normalized_label="pertussis (whooping cough)",
+        definition_version="source-current",
+        status="discovered",
+        first_seen_at=now,
+        last_seen_at=now,
+        occurrence_count=1,
+        ai_status="pending",
+        metadata_={},
+        is_active=True,
+    )
+    existing = DiseaseSurveillanceSeries(
+        series_code="HOLD_JP_PERTUSSIS_LEGACY",
+        disease_id=None,
+        target_group_code="G_UNMAPPED_SOURCE_CATEGORIES",
+        country_code="JP",
+        source_system="SRC_JP_NIID",
+        source_series_code=category.source_code,
+        source_label=category.canonical_source_label,
+        definition_version="source-current",
+        metric_type="case_notifications",
+        reporting_basis="notification",
+        temporal_granularity="unknown",
+        unit="count",
+        mapping_relation="unmapped",
+        comparability="not_comparable",
+        aggregation_policy="non_additive",
+        availability_status="active",
+        missing_value_policy="missing_is_unknown",
+        is_active=True,
+        metadata_={"dynamic_holding": True},
+    )
+    sentinel_code = _holding_series_code(
+        "JP", category.category_key, "sentinel"
+    )
+
+    class Result:
+        def __init__(self, value=None, rows=None):
+            self.value = value
+            self.rows = rows or []
+
+        def scalar_one_or_none(self):
+            return self.value
+
+        def all(self):
+            return self.rows
+
+    class FakeDB:
+        def __init__(self):
+            self.added = []
+            self.series_lookups = 0
+            self.updates = []
+
+        async def execute(self, statement, *params):
+            del params
+            sql = str(statement).lower()
+            statement.compile(dialect=postgresql.dialect())
+            if sql.startswith("update"):
+                self.updates.append(sql)
+                return Result()
+            if "count(" in sql and "disease_series_observations" in sql:
+                return Result(rows=[("all_case", 21627), ("sentinel", 3175)])
+            if "disease_surveillance_series" in sql:
+                self.series_lookups += 1
+                return Result(existing if self.series_lookups == 1 else None)
+            if "source_disease_categories" in sql:
+                return Result(category)
+            raise AssertionError(f"unexpected statement: {sql}")
+
+        def add(self, value):
+            self.added.append(value)
+
+        async def flush(self):
+            return None
+
+    db = FakeDB()
+    observations, handled = await SeriesObservationStore()._build_holding_observations(
+        db,
+        [
+            {
+                "MMWRYear": "2026",
+                "MMWRWeek": "40",
+                "RawDiseaseLabel": category.canonical_source_label,
+                "SourceDiseaseCode": category.source_code,
+                "SurveillanceType": "sentinel",
+                "Cases": "4",
+                "GeographyKey": "country:JP-01:national",
+            },
+            {
+                "MMWRYear": "2026",
+                "MMWRWeek": "40",
+                "RawDiseaseLabel": category.canonical_source_label,
+                "SourceDiseaseCode": category.source_code,
+                "SurveillanceType": "all_case",
+                "Cases": "90",
+                "GeographyKey": "country:JP-01:national",
+            },
+        ],
+        "JP",
+        source_id="SRC_JP_NIID",
+        value_field="Cases",
+        geography_key=None,
+    )
+
+    assert handled == 2
+    by_type = {
+        item["metadata"]["measure"]: item["series_code"] for item in observations
+    }
+    assert by_type["case_notifications"] == existing.series_code
+    assert by_type["sentinel_case_notifications"] == sentinel_code
+    assert existing.metadata_["surveillance_type"] == "all_case"
+    assert existing.metric_type == "case_notifications"
+    sibling = next(item for item in db.added if isinstance(item, DiseaseSurveillanceSeries))
+    assert sibling.series_code == sentinel_code
+    assert sibling.metadata_["surveillance_type"] == "sentinel"
+    assert any("disease_series_observations" in sql for sql in db.updates)
+    assert any("disease_series_observation_revisions" in sql for sql in db.updates)
 
 
 def test_quality_guard_keeps_an_isolated_reported_zero() -> None:
@@ -1065,7 +1349,7 @@ async def test_save_rows_builds_metadata_safe_postgresql_upsert(
         def __init__(self) -> None:
             self.upserts = []
 
-        async def execute(self, statement):
+        async def execute(self, statement, *params):
             if getattr(statement, "is_select", False):
                 return ScalarResult()
             # Compilation catches the DeclarativeBase.metadata collision that
@@ -1139,7 +1423,7 @@ async def test_save_rows_reports_only_rows_postgres_actually_affected() -> None:
             return Result([])
 
     class FakeDB:
-        async def execute(self, statement):
+        async def execute(self, statement, *params):
             if getattr(statement, "is_select", False):
                 return Result(["SER_US_NHSS_HIV_ANNUAL"])
             # Simulate ON CONFLICT ... DO UPDATE WHERE rejecting a lower-quality

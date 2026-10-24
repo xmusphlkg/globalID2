@@ -199,7 +199,21 @@ export function localizedRegionName(
       // Non-ISO two-letter codes are handled by the explicit missing-name path below.
     }
   }
-  if (lang === 'fr') throw new Error(`Missing French region name: ${normalizedCode || 'unknown'}`);
+  if (lang === 'fr' && /^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(normalizedCode)) {
+    const parentCode = normalizedCode.slice(0, 2);
+    const englishName = names.en?.trim() || normalizedCode;
+    try {
+      const englishParent = new Intl.DisplayNames(['en'], { type: 'region' }).of(parentCode);
+      const frenchParent = new Intl.DisplayNames(['fr'], { type: 'region' }).of(parentCode);
+      const childName = englishParent && englishName.toLowerCase().endsWith(`, ${englishParent.toLowerCase()}`)
+        ? englishName.slice(0, -(englishParent.length + 2))
+        : englishName;
+      if (frenchParent && frenchParent !== parentCode) return `${childName}, ${frenchParent}`;
+    } catch {
+      // Fall back to the supplied English label below if ICU lacks a region name.
+    }
+  }
+  if (lang === 'fr') return names.en?.trim() || normalizedCode || 'Région inconnue';
   return names.en?.trim() || normalizedCode;
 }
 

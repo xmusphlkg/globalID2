@@ -27,6 +27,7 @@ from src.services.situation_v3.persistence import latest_report_v3
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLIC_DATA_ROOT = ROOT / "astro-site" / "src" / "data"
+PUBLIC_BROWSER_DATA_ROOT = ROOT / "astro-site" / "public" / "site-data"
 PUBLIC_EXPORT_LOCK_PATH = ROOT / "data" / "cache" / "research-public-artifacts.lock"
 
 
@@ -77,7 +78,11 @@ async def export_public_research_artifacts(
     )
     assert_public_research_payload(payload)
     with _public_export_lock():
-        write_literature_artifacts(payload, output)
+        write_literature_artifacts(
+            payload,
+            output,
+            public_site_data_dir=PUBLIC_BROWSER_DATA_ROOT,
+        )
     return {
         "articles": len(payload.get("articles") or []),
         "diseases": len(payload.get("disease_articles") or {}),

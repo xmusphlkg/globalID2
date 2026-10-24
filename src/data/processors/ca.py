@@ -519,7 +519,7 @@ class CAOntarioMonthlyUpdater:
         result = await db.execute(
             text(
                 """
-                SELECT dso.time, dso.series_code
+                SELECT dso.time, dso.series_code, dss.source_label
                 FROM disease_series_observations dso
                 JOIN disease_surveillance_series dss
                   ON dss.series_code = dso.series_code
@@ -543,22 +543,29 @@ class CAOntarioMonthlyUpdater:
             },
         )
         existing: set[tuple[date, str]] = set()
-        for raw_time, raw_series_code in result.fetchall():
+        series_by_label = self._registered_series_by_label()
+        for raw_time, raw_series_code, raw_source_label in result.fetchall():
             observation_date = (
                 raw_time.date() if isinstance(raw_time, datetime) else raw_time
             )
-            if not isinstance(observation_date, date) or not raw_series_code:
+            source_label = " ".join(str(raw_source_label or "").split()).casefold()
+            if not isinstance(observation_date, date) or not raw_series_code or not source_label:
                 raise ValueError("Ontario IDTO stored identity is malformed")
-            existing.add((observation_date, str(raw_series_code)))
+            series_code = str(raw_series_code)
+            if source_label in series_by_label and series_by_label[source_label] != series_code:
+                raise ValueError("Ontario IDTO stored source label has conflicting series identities")
+            # Newly discovered labels have holding series in the database but
+            # are intentionally absent from the reviewed mapping CSV.
+            series_by_label[source_label] = series_code
+            existing.add((observation_date, series_code))
 
-        series_by_label = self._registered_series_by_label()
         incoming = {
             (
                 date.fromisoformat(str(row.get("Date") or "")),
-                series_by_label[str(row.get("RawDiseaseLabel") or "").casefold()],
+                series_by_label[" ".join(str(row.get("RawDiseaseLabel") or "").split()).casefold()],
             )
             for row in rows
-            if str(row.get("RawDiseaseLabel") or "").casefold()
+            if " ".join(str(row.get("RawDiseaseLabel") or "").split()).casefold()
             in series_by_label
         }
         retracted = sorted(existing - incoming)

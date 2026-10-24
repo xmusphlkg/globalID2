@@ -28,6 +28,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    text,
     Text,
     UniqueConstraint,
 )
@@ -585,7 +586,8 @@ class DiseaseSeriesObservation(BaseModel):
             name="ck_disease_series_observation_unit",
         ),
         CheckConstraint(
-            "suppressed OR value IS NOT NULL",
+            "suppressed OR value IS NOT NULL OR "
+            "metadata->>'missing_value_status' = 'source_missing'",
             name="ck_disease_series_observation_value_or_suppressed",
         ),
         CheckConstraint(
@@ -613,6 +615,18 @@ class DiseaseSeriesObservation(BaseModel):
             "idx_disease_series_observation_quality",
             "quality_status",
             "suppressed",
+        ),
+        Index(
+            "idx_dso_mapping_override",
+            "series_code",
+            text(
+                "COALESCE(NULLIF(dimensions ->> 'source_disease_code', ''), "
+                "NULLIF(metadata ->> 'local_code', ''))"
+            ),
+            text(
+                "lower(btrim(COALESCE(NULLIF(dimensions ->> 'source_disease_label', ''), "
+                "NULLIF(metadata ->> 'local_label', ''))))"
+            ),
         ),
     )
 

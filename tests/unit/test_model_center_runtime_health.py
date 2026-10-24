@@ -12,60 +12,63 @@ from src.ai.model_center import (
     _runtime_failure_kind,
     _runtime_health_state,
     _utcnow,
-    _write_provider_runtime_failure,
     _write_runtime_failure,
     _write_runtime_success,
 )
 
 
-def test_runtime_timeout_opens_model_circuit_and_success_records_latency() -> None:
+def test_repeated_runtime_timeouts_open_model_circuit_and_success_records_latency() -> None:
     now = _utcnow()
-    failed = _write_runtime_failure(
-        {},
-        kind="timeout",
-        error="request timed out",
-        occurred_at=now,
-        duration_seconds=12.5,
-        cooldown_seconds=30,
-    )
-    health = _runtime_health_state(failed, now)
+    failed = {}
+    for index in range(3):
+        failed = _write_runtime_failure(
+            failed,
+            kind="timeout",
+            error="request timed out",
+            occurred_at=now + timedelta(seconds=index),
+            duration_seconds=12.5,
+            cooldown_seconds=30,
+        )
+    health = _runtime_health_state(failed, now + timedelta(seconds=2))
 
     assert health["runtime_failure_active"] is True
     assert health["runtime_failure_kind"] == "timeout"
-    assert health["runtime_failure_streak"] == 1
-    assert health["runtime_timeout_count"] == 1
+    assert health["runtime_failure_streak"] == 3
+    assert health["runtime_timeout_count"] == 3
     assert health["runtime_last_latency_ms"] == 12500.0
 
     recovered = _write_runtime_success(
         failed,
-        occurred_at=now + timedelta(seconds=1),
+        occurred_at=now + timedelta(seconds=3),
         duration_seconds=0.8,
     )
-    recovered_health = _runtime_health_state(recovered, now + timedelta(seconds=1))
+    recovered_health = _runtime_health_state(recovered, now + timedelta(seconds=3))
     assert recovered_health["runtime_failure_active"] is False
     assert recovered_health["runtime_failure_streak"] == 0
     assert recovered_health["runtime_success_count"] == 1
     assert recovered_health["runtime_latency_ewma_ms"] == 800.0
 
 
-def test_provider_health_can_temporarily_block_an_otherwise_healthy_model() -> None:
+def test_provider_runtime_cooldown_does_not_block_healthy_sibling_model() -> None:
     now = _utcnow()
-    provider_state = _write_runtime_failure(
-        {},
-        kind="connection",
-        error="connection reset",
-        occurred_at=now,
-        duration_seconds=1.0,
-        cooldown_seconds=60,
-    )
+    provider_state = {}
+    for index in range(3):
+        provider_state = _write_runtime_failure(
+            provider_state,
+            kind="connection",
+            error="connection reset",
+            occurred_at=now + timedelta(seconds=index),
+            duration_seconds=1.0,
+            cooldown_seconds=60,
+        )
     model = SimpleNamespace(extra_params={})
     provider = SimpleNamespace(extra_config=provider_state)
 
     combined = _combined_route_runtime_health_state(model, provider)
 
-    assert combined["runtime_failure_active"] is True
-    assert combined["runtime_failure_scope"] == "provider"
-    assert combined["runtime_failure_kind"] == "connection"
+    assert combined["runtime_failure_active"] is False
+    assert combined["runtime_failure_scope"] is None
+    assert combined["runtime_failure_kind"] is None
 
 
 def test_chronic_model_failures_keep_route_out_of_active_candidates() -> None:
@@ -134,42 +137,36 @@ def test_route_status_distinguishes_probe_success_from_runtime_cooldown() -> Non
     assert "production workload failure" in reason
 
 
-def test_empty_model_output_does_not_open_a_shared_provider_connection_circuit() -> None:
+def test_empty_model_output_is_not_a_route_health_failure() -> None:
     assert (
         _runtime_failure_kind(RuntimeError("Model returned an empty completion response"))
-        == "structured_output"
+        is None
     )
 
 
-def test_intermittent_empty_output_requires_three_consecutive_failures_to_cool_route() -> None:
+def test_consecutive_transport_failures_are_required_before_route_cooldown() -> None:
     now = _utcnow()
     payload = {}
-
     for index in range(2):
         payload = _write_runtime_failure(
             payload,
-            kind="structured_output",
-            error="Model returned an empty completion response",
+            kind="timeout",
+            error="request timed out",
             occurred_at=now + timedelta(seconds=index),
             duration_seconds=1.0,
             cooldown_seconds=60,
         )
-        assert _runtime_health_state(payload, now + timedelta(seconds=index))[
-            "runtime_failure_active"
-        ] is False
+        assert not _runtime_health_state(payload, now + timedelta(seconds=index))["runtime_failure_active"]
 
     payload = _write_runtime_failure(
         payload,
-        kind="structured_output",
-        error="Model returned an empty completion response",
+        kind="timeout",
+        error="request timed out",
         occurred_at=now + timedelta(seconds=2),
         duration_seconds=1.0,
         cooldown_seconds=60,
     )
-
-    assert _runtime_health_state(payload, now + timedelta(seconds=2))[
-        "runtime_failure_active"
-    ] is True
+    assert _runtime_health_state(payload, now + timedelta(seconds=2))["runtime_failure_active"]
 
 
 def test_degraded_routes_receive_bounded_automatic_recovery_probes(monkeypatch) -> None:
@@ -226,82 +223,61 @@ def test_degraded_routes_receive_bounded_automatic_recovery_probes(monkeypatch) 
     asyncio.run(exercise())
 
 
-def test_active_provider_circuit_does_not_extend_its_recovery_window() -> None:
+def test_legacy_structured_output_cooldown_does_not_block_route() -> None:
     now = _utcnow()
-    first, first_open = _write_provider_runtime_failure(
-        {},
-        kind="connection",
-        error="connection reset",
-        occurred_at=now,
-        duration_seconds=1.0,
-        cooldown_seconds=60,
-    )
-    assert first_open is False
+    payload = {
+        "routing_state": {
+            "last_runtime_failure_kind": "structured_output",
+            "last_runtime_failure_at": now.isoformat(),
+            "runtime_failure_streak": 6,
+            "runtime_cooldown_until": (now + timedelta(minutes=10)).isoformat(),
+        }
+    }
+    health = _runtime_health_state(payload, now)
 
-    opened, second_open = _write_provider_runtime_failure(
-        first,
-        kind="connection",
-        error="connection reset",
-        occurred_at=now + timedelta(seconds=1),
-        duration_seconds=1.0,
-        cooldown_seconds=60,
-    )
-    assert second_open is True
-    opened_state = _runtime_health_state(opened, now + timedelta(seconds=1))
-    assert opened_state["runtime_failure_streak"] == 2
-
-    preserved, still_open = _write_provider_runtime_failure(
-        opened,
-        kind="connection",
-        error="late concurrent completion",
-        occurred_at=now + timedelta(seconds=2),
-        duration_seconds=1.0,
-        cooldown_seconds=60,
-    )
-    preserved_state = _runtime_health_state(preserved, now + timedelta(seconds=2))
-
-    assert still_open is True
-    assert preserved_state["runtime_failure_streak"] == 2
-    assert (
-        preserved_state["runtime_failure_cooldown_until"]
-        == opened_state["runtime_failure_cooldown_until"]
-    )
+    assert health["runtime_failure_active"] is False
+    assert health["runtime_failure_streak"] == 0
+    assert health["runtime_failure_streak_raw"] == 6
 
 
-def test_runtime_admission_balances_providers_and_earns_parallelism() -> None:
+def test_runtime_admission_scores_only_the_busy_model() -> None:
     async def exercise() -> None:
         controller = RuntimeRouteAdmissionController()
         centos_fast = {
             "provider_id": 1,
             "model_id": 11,
-            "extra_config": {"runtime_max_concurrency": 2},
-            "extra_params": {},
+            "runtime_provider_auto_max_concurrency": 4,
+            "extra_params": {"runtime_max_concurrency": 2},
         }
         centos_second = {
             "provider_id": 1,
             "model_id": 12,
-            "extra_config": {"runtime_max_concurrency": 2},
-            "extra_params": {},
+            "runtime_provider_auto_max_concurrency": 4,
+            "extra_params": {"runtime_max_concurrency": 2},
         }
         qwen = {
             "provider_id": 2,
             "model_id": 21,
-            "extra_config": {"runtime_max_concurrency": 1},
-            "extra_params": {},
+            "runtime_provider_auto_max_concurrency": 1,
+            "extra_params": {"runtime_max_concurrency": 1},
         }
 
         first = await controller.acquire(centos_fast)
-        assert controller.score(qwen) < controller.score(centos_second)
+        assert controller.score(centos_fast) == (0.5, 0.5)
+        assert controller.score(centos_second) == (0.0, 0.0)
+        assert controller.score(qwen) == (0.0, 0.0)
         await first.release(success=True)
 
-        second = await controller.acquire(centos_fast)
-        await second.release(success=True)
-        assert controller.snapshot(centos_fast)["runtime_provider_capacity"] == 2
+        snapshot = controller.snapshot(centos_fast)
+        assert snapshot["runtime_model_capacity"] == 2
+        assert snapshot["runtime_provider_capacity"] == 4
 
         left = await controller.acquire(centos_fast)
         right = await controller.acquire(centos_second)
         snapshot = controller.snapshot(centos_fast)
+        assert snapshot["runtime_model_inflight"] == 1
         assert snapshot["runtime_provider_inflight"] == 2
+        assert controller.snapshot(centos_second)["runtime_model_inflight"] == 1
         await left.release(success=True)
         await right.release(success=True)
 
@@ -334,52 +310,43 @@ def test_runtime_admission_waits_for_capacity_without_raising_a_model_timeout() 
     asyncio.run(exercise())
 
 
-def test_runtime_admission_uses_provider_specific_auto_ceiling(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "src.ai.model_center._runtime_admission_global_ceiling",
-        lambda: 6,
-    )
+def test_runtime_admission_uses_provider_telemetry_and_model_permit() -> None:
     automatic = _runtime_admission_settings(
         {
             "runtime_provider_auto_max_concurrency": 5,
-            "extra_config": {},
             "extra_params": {},
         }
     )
     configured = _runtime_admission_settings(
         {
             "runtime_provider_auto_max_concurrency": 5,
-            "extra_config": {"runtime_max_concurrency": 3},
-            "extra_params": {},
+            "extra_config": {"runtime_max_concurrency": 9},
+            "extra_params": {"runtime_max_concurrency": 3},
         }
     )
 
     assert automatic["provider_maximum"] == 5
-    assert automatic["provider_auto"] is True
-    assert configured["provider_maximum"] == 3
+    assert automatic["provider_minimum"] == 5
+    assert automatic["provider_auto"] is False
+    assert automatic["model_maximum"] == 1
+    assert configured["provider_maximum"] == 5
+    assert configured["model_maximum"] == 3
     assert configured["provider_auto"] is False
 
 
-def test_runtime_admission_learns_and_backs_off_each_provider_independently() -> None:
+def test_runtime_admission_keeps_each_model_limit_when_another_model_fails() -> None:
     async def exercise() -> None:
         controller = RuntimeRouteAdmissionController()
         fast = {
             "provider_id": 1,
             "model_id": 11,
-            "extra_config": {
-                "runtime_max_concurrency": 6,
-                "runtime_successes_to_scale_up": 1,
-                "runtime_concurrency_adjust_seconds": 20,
-            },
+            "runtime_provider_auto_max_concurrency": 6,
             "extra_params": {"runtime_max_concurrency": 6},
         }
         cautious = {
             "provider_id": 2,
             "model_id": 21,
-            "extra_config": {
-                "runtime_max_concurrency": 3,
-                "runtime_successes_to_scale_up": 1,
-            },
+            "runtime_provider_auto_max_concurrency": 3,
             "extra_params": {"runtime_max_concurrency": 3},
         }
 
@@ -390,31 +357,23 @@ def test_runtime_admission_learns_and_backs_off_each_provider_independently() ->
             permit = await controller.acquire(cautious)
             await permit.release(success=True)
 
+        assert controller.snapshot(fast)["runtime_model_capacity"] == 6
+        assert controller.snapshot(cautious)["runtime_model_capacity"] == 3
         assert controller.snapshot(fast)["runtime_provider_capacity"] == 6
-        assert controller.snapshot(cautious)["runtime_provider_capacity"] == 3
-        provider_snapshots = controller.provider_snapshots()
-        assert provider_snapshots["1"]["runtime_provider_capacity"] == 6
-        assert provider_snapshots["2"]["runtime_provider_capacity"] == 3
+        assert controller.provider_snapshots()["2"]["runtime_provider_capacity"] == 3
+        assert controller.snapshot(fast)["runtime_provider_backoff_remaining_seconds"] == 0
 
-        pressured = await controller.acquire(fast)
-        await pressured.release(success=False, error=RuntimeError("429 Too Many Requests"))
-
-        fast_snapshot = controller.snapshot(fast)
-        assert fast_snapshot["runtime_provider_capacity"] == 3
-        assert fast_snapshot["runtime_provider_backoff_remaining_seconds"] > 0
-        assert controller.snapshot(cautious)["runtime_provider_capacity"] == 3
-
-        # A malformed response belongs to this model, not to the shared
-        # provider quota, so it must not reduce sibling-model concurrency.
-        malformed = await controller.acquire(fast)
-        await malformed.release(success=False, error=ValueError("invalid structured output"))
-        assert controller.snapshot(fast)["runtime_provider_capacity"] == 3
-
-        # Successful calls during the hold-down window do not immediately
-        # reopen the capacity that just triggered provider pressure.
-        recovering = await controller.acquire(fast)
-        await recovering.release(success=True)
-        assert controller.snapshot(fast)["runtime_provider_capacity"] == 3
+        for error in (
+            RuntimeError("429 Too Many Requests"),
+            TimeoutError("request timed out"),
+            RuntimeError("provider server busy"),
+            ValueError("invalid structured output"),
+        ):
+            permit = await controller.acquire(fast)
+            await permit.release(success=False, error=error)
+            assert controller.snapshot(fast)["runtime_model_capacity"] == 6
+            assert controller.snapshot(fast)["runtime_provider_backoff_remaining_seconds"] == 0
+            assert controller.snapshot(cautious)["runtime_model_capacity"] == 3
 
     import asyncio
 
@@ -443,7 +402,7 @@ def test_provider_check_stays_available_when_any_sibling_model_succeeds() -> Non
     assert message == "Structured workload probe successful"
 
 
-def test_provider_check_rate_limited_only_when_no_sibling_succeeds() -> None:
+def test_provider_check_does_not_apply_model_rate_limit_to_provider_status() -> None:
     status, message = _provider_check_result_from_model_results(
         [
             {
@@ -461,5 +420,5 @@ def test_provider_check_rate_limited_only_when_no_sibling_succeeds() -> None:
         ]
     )
 
-    assert status == "rate_limited"
+    assert status == "probe_failed"
     assert message == "quota exhausted"

@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CompareWorkspace from '../components/charts/CompareWorkspace';
+import { downloadCatalogue } from '../lib/downloads-data';
+import { diseaseIndex } from '../lib/seo-page-data';
+import { localizedDiseaseName } from '../utils/diseaseNames';
+
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
+const countriesByDisease = new Map(
+  (downloadCatalogue()?.diseases ?? []).map(entry => [entry.disease_id, entry.countries ?? []]),
+);
+const options = diseaseIndex.flatMap(disease => {
+  const countries = (countriesByDisease.get(disease.disease_id) ?? [])
+    .filter((country: { code?: string }) => /^[A-Z]{2}$/.test(String(country.code ?? ''))).length;
+  if (countries < 2) return [];
+  return [{
+    id: disease.disease_id,
+    slug: disease.slug,
+    en: disease.name_en,
+    zh: disease.name_zh,
+    fr: localizedDiseaseName({ disease_id: disease.disease_id, slug: disease.slug, name_en: disease.name_en, name_zh: disease.name_zh }, 'fr'),
+    countries,
+  }];
+}).sort((a, b) => b.countries - a.countries || a.en.localeCompare(b.en));
+const title = locale === 'zh' ? '国家与疾病对比' : locale === 'fr' ? 'Comparer les pays et les maladies' : 'Compare countries and diseases';
+---
+
+<BaseLayout title={title} description={title} initialLanguage={locale}>
+  <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <p class="academic-kicker">GIDS / {locale === 'zh' ? '数据工具' : locale === 'fr' ? 'Outil de données' : 'Data tool'}</p>
+    <h1 class="academic-title">{title}</h1>
+    <p class="academic-lead mt-4">
+      {locale === 'zh' ? '选择最多两种疾病和四个国家，按来源报告期探索趋势并分享当前选择。' : locale === 'fr' ? 'Choisissez jusqu’à deux maladies et quatre pays pour explorer les tendances et partager votre sélection.' : 'Select up to two diseases and four countries to explore source-period trends and share your selection.'}
+    </p>
+    <CompareWorkspace client:load diseases={options} language={locale} />
+  </div>
+</BaseLayout>

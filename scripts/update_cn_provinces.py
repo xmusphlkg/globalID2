@@ -134,7 +134,7 @@ def _select_all_monthly_rows(year: int | None, month: int | None) -> list[dict[s
     rows: list[dict[str, object]] = []
     statuses: list[dict[str, object]] = []
     for province, config in sorted(province_configs().items()):
-        if config.parser in {"narrative_only", "discovery_pending"}:
+        if config.parser == "discovery_pending":
             statuses.append({
                 "province": province,
                 "status": config.parser,

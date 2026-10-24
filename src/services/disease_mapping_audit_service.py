@@ -111,13 +111,33 @@ class DiseaseMappingAuditService:
                     SELECT
                       (SELECT COUNT(*) FROM disease_series_observations o
                        JOIN disease_surveillance_series s ON s.series_code=o.series_code
-                       LEFT JOIN source_disease_categories c
-                         ON c.source_id=s.source_system
-                        AND c.definition_version=s.definition_version
-                        AND c.source_code=COALESCE(
-                            NULLIF(o.dimensions->>'source_disease_code',''),
-                            NULLIF(o.metadata->>'local_code',''),s.source_series_code)
-                        AND c.is_active=true
+                       LEFT JOIN LATERAL (
+                         SELECT category.id
+                         FROM source_disease_categories category
+                         WHERE category.source_id=s.source_system
+                           AND category.is_active=true
+                           AND (
+                             (category.definition_version=s.definition_version
+                              AND category.source_code=COALESCE(
+                                NULLIF(o.dimensions->>'source_disease_code',''),
+                                NULLIF(o.metadata->>'local_code',''),s.source_series_code))
+                             OR
+                             (category.definition_version='source-current'
+                              AND category.source_code LIKE 'label:%'
+                              AND lower(btrim(category.canonical_source_label))=lower(btrim(
+                                COALESCE(
+                                  NULLIF(o.dimensions->>'source_disease_label',''),
+                                  NULLIF(o.metadata->>'local_label',''),s.source_label))))
+                           )
+                         ORDER BY CASE
+                           WHEN category.definition_version=s.definition_version
+                            AND category.source_code=COALESCE(
+                              NULLIF(o.dimensions->>'source_disease_code',''),
+                              NULLIF(o.metadata->>'local_code',''),s.source_series_code)
+                           THEN 0 ELSE 1 END,
+                           category.id DESC
+                         LIMIT 1
+                       ) c ON true
                        WHERE c.id IS NULL) AS orphan_observations,
                       (SELECT COUNT(*) FROM (
                          SELECT a.category_id

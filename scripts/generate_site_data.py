@@ -204,6 +204,11 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--incremental-site",
+        action="store_true",
+        help="Reuse existing surveillance snapshots while refreshing literature and Situation data",
+    )
+    parser.add_argument(
         "--recorded-at-as-of",
         help=(
             "Build a complete surveillance site snapshot using the latest "
@@ -237,6 +242,7 @@ def main() -> None:
             direct_download_workers=args.direct_download_workers,
             incremental_country_codes=args.incremental_country_codes,
             recorded_at_as_of=recorded_at_as_of,
+            incremental_site=args.incremental_site,
         )
     )
 

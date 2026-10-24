@@ -8,7 +8,9 @@ from datetime import date, datetime, timedelta, timezone
 from time import perf_counter
 from typing import Any
 
-from src.core.database import init_database
+from sqlalchemy import text
+
+from src.core.database import get_db, init_database
 from src.services.situation_events import (
     fetch_cdc_respiratory_history,
     fetch_external_events,
@@ -44,6 +46,32 @@ from .source_adapters import fetch_series_inputs_v3
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(microsecond=0)
+
+
+_REQUIRED_TABLES = (
+    "disease_series_observations", "disease_surveillance_series",
+    "standard_diseases", "countries", "public_health_events",
+    "situation_overrides", "situation_snapshots",
+    "situation_analysis_runs_v3", "situation_signal_results_v3",
+    "situation_event_clusters_v3", "situation_event_cluster_items_v3",
+    "situation_period_reports_v3", "situation_report_members_v3",
+    "situation_review_decisions_v3", "situation_policy_decisions_v3",
+    "situation_publication_pointers_v3", "situation_calibration_runs_v3",
+)
+
+
+async def _ensure_situation_database_ready() -> None:
+    """Keep schema creation off the release hot path once tables exist."""
+    async with get_db() as db:
+        missing = (await db.execute(
+            text("""
+                SELECT name FROM jsonb_array_elements_text(CAST(:tables AS jsonb)) AS names(name)
+                WHERE to_regclass(name) IS NULL
+            """),
+            {"tables": json.dumps(_REQUIRED_TABLES)},
+        )).scalars().all()
+    if missing:
+        await init_database()
 
 
 def _config_hash(config: dict[str, Any]) -> str:
@@ -145,11 +173,13 @@ async def refresh_situation_v3(
     fetch_events: bool = True,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    await init_database()
+    init_started = perf_counter()
+    await _ensure_situation_database_ready()
+    init_seconds = perf_counter() - init_started
     checked_at = now or utc_now()
     checked_at = checked_at if checked_at.tzinfo else checked_at.replace(tzinfo=timezone.utc)
     config = validate_v32_config(load_config())
-    timings: dict[str, float] = {}
+    timings: dict[str, float] = {"schema_check_seconds": round(init_seconds, 4)}
     source_health: dict[str, Any] = {}
     respiratory_cards: list[dict[str, Any]] = []
     acquisition_started = perf_counter()

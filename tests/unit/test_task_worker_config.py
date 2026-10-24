@@ -79,7 +79,7 @@ def test_worker_concurrency_uses_unified_config(monkeypatch):
     assert _worker_concurrency() == 7
 
 
-def test_adaptive_ai_concurrency_uses_routes_and_aimd_backoff():
+def test_adaptive_ai_concurrency_sums_routable_model_slots():
     async def routes():
         return [
             {"available_for_routing": True, "provider_id": 1},
@@ -97,21 +97,20 @@ def test_adaptive_ai_concurrency_uses_routes_and_aimd_backoff():
         route_loader=routes,
     )
 
-    assert asyncio.run(controller.refresh(force=True)) == 2
-    controller.record_result(success=True)
-    assert controller.capacity == 2
-    controller.record_result(success=True)
-    assert controller.capacity == 3
-    controller.record_result(success=False, error=RuntimeError("Agent completion failed after route timeout"))
-    assert controller.capacity == 2
+    assert asyncio.run(controller.refresh(force=True)) == 6
+    assert controller.record_result(success=True) == 6
+    assert controller.record_result(
+        success=False,
+        error=RuntimeError("Agent completion failed after route timeout"),
+    ) == 6
 
 
-def test_adaptive_ai_concurrency_tracks_model_center_provider_capacity():
+def test_adaptive_ai_concurrency_tracks_model_center_model_capacity():
     async def routes():
         return [
-            {"available_for_routing": True, "provider_id": 1, "runtime_provider_capacity": 1},
-            {"available_for_routing": True, "provider_id": 1, "runtime_provider_capacity": 1},
-            {"available_for_routing": True, "provider_id": 2, "runtime_provider_capacity": 2},
+            {"available_for_routing": True, "provider_id": 1, "runtime_model_capacity": 1},
+            {"available_for_routing": True, "provider_id": 1, "runtime_model_capacity": 1},
+            {"available_for_routing": True, "provider_id": 2, "runtime_model_capacity": 2},
         ]
 
     controller = task_worker.AdaptiveAIConcurrencyController(
@@ -124,13 +123,11 @@ def test_adaptive_ai_concurrency_tracks_model_center_provider_capacity():
         route_loader=routes,
     )
 
-    assert asyncio.run(controller.refresh(force=True)) == 2
-    controller.record_result(success=True)
-    controller.record_result(success=True)
-    assert controller.capacity == 3
+    assert asyncio.run(controller.refresh(force=True)) == 4
+    assert controller.record_result(success=True) == 4
 
     async def reduced_routes():
-        return [{"available_for_routing": True, "provider_id": 1, "runtime_provider_capacity": 1}]
+        return [{"available_for_routing": True, "provider_id": 1, "runtime_model_capacity": 1}]
 
     controller.route_loader = reduced_routes
     assert asyncio.run(controller.refresh(force=True)) == 1

@@ -8,7 +8,19 @@ import pytest
 
 from src.domain import TaskStatus
 from src.services import data_release_service as release_module
+from src.core.country_library import expand_country_scopes
 from src.services.data_release_service import DataReleaseService
+
+
+def test_release_expands_parent_to_registered_subdivisions():
+    scopes = expand_country_scopes(
+        ["jp", "SE", "US-CA", "CN"], available_codes=["CN-BJ", "CN-GD"]
+    )
+    assert "JP" in scopes and "JP-01" in scopes and "JP-47" in scopes
+    assert "SE" in scopes and "SE-AB" in scopes
+    assert "CN" in scopes and "CN-BJ" in scopes
+    assert "US-CA" in scopes and "US-NY" not in scopes
+    assert len(scopes) == len(set(scopes))
 
 
 @pytest.mark.asyncio
@@ -79,7 +91,13 @@ async def test_run_logged_command_timeout_terminates_process_group_and_records_e
     terminated = []
 
     class BlockingStream:
+        def __init__(self):
+            self.reads = 0
+
         async def read(self, _size=-1):
+            self.reads += 1
+            if self.reads == 1:
+                return b"download partitions: 5/349 datasets complete\n"
             await asyncio.Event().wait()
 
     class FakeProcess:
@@ -138,6 +156,7 @@ async def test_run_logged_command_timeout_terminates_process_group_and_records_e
     assert entries[-1]["entry_type"] == "error"
     assert entries[-1]["title"] == "Test Command Timed Out"
     assert "terminated process group 9876" in entries[-1]["content"]
+    assert "download partitions: 5/349 datasets complete" in entries[-1]["content"]
     assert entries[-1]["metadata"]["event"] == "command_timeout"
 
 
@@ -528,6 +547,17 @@ def test_generate_site_data_command_carries_incremental_country_scope(tmp_path):
     ]
 
 
+def test_generate_site_data_command_supports_literature_only_refresh(tmp_path):
+    command = DataReleaseService()._generate_site_data_command(
+        python_path=tmp_path / "python",
+        download_url_base="https://raw.example/data/main",
+        incremental_site=True,
+    )
+
+    assert command[-1] == "--incremental-site"
+    assert "--incremental-country" not in command
+
+
 @pytest.mark.asyncio
 async def test_release_preflight_checks_direct_download_repo_when_enabled(
     monkeypatch, tmp_path
@@ -827,7 +857,7 @@ def test_site_release_manifest_records_visual_modules(monkeypatch, tmp_path):
     assets_dir = astro_dir / "dist" / "_astro"
     assets_dir.mkdir(parents=True)
     (assets_dir / "EpidemicCurve.ABC123.js").write_text("export {}", encoding="utf-8")
-    (assets_dir / "DiseaseMonthlyBar.DEF456.js").write_text("export {}", encoding="utf-8")
+    (assets_dir / "DiseaseCoverageMap.DEF456.js").write_text("export {}", encoding="utf-8")
     (assets_dir / "unrelated.GHI789.js").write_text("export {}", encoding="utf-8")
     manifest_path = astro_dir / "dist" / "release.json"
     monkeypatch.setattr(release_module, "ASTRO_DIR", astro_dir)
@@ -844,7 +874,7 @@ def test_site_release_manifest_records_visual_modules(monkeypatch, tmp_path):
     payload = DataReleaseService()._write_site_release_manifest(identity)
 
     assert payload["visual_modules"] == [
-        "DiseaseMonthlyBar.DEF456.js",
+        "DiseaseCoverageMap.DEF456.js",
         "EpidemicCurve.ABC123.js",
     ]
     assert manifest_path.read_text(encoding="utf-8").endswith("\n")

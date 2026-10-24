@@ -16,6 +16,7 @@ class ProvinceSourceConfig:
     index_url: str
     parser: str
     timezone: str = "Asia/Shanghai"
+    archive_index_urls: tuple[str, ...] = ()
 
     @property
     def parent_country_code(self) -> str:

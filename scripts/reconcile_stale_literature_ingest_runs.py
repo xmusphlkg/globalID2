@@ -19,7 +19,10 @@ _IMPORT_LOG_SINK = io.StringIO()
 with redirect_stderr(_IMPORT_LOG_SINK):
     from loguru import logger
     from src.core import dispose_database, get_database
-    from src.literature.ingest_run_recovery import reconcile_stale_unbound_runs
+    from src.literature.ingest_run_recovery import (
+        reconcile_stale_terminal_task_runs,
+        reconcile_stale_unbound_runs,
+    )
 
 logger.remove()
 
@@ -27,8 +30,8 @@ logger.remove()
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Dry-run by default; --apply terminalizes only unbound running "
-            "literature ingest rows older than the cutoff."
+            "Dry-run by default. --apply terminalizes unbound running rows "
+            "and stale running rows whose task is already terminal."
         )
     )
     parser.add_argument("--apply", action="store_true", help="persist reconciliation")
@@ -52,11 +55,22 @@ async def _main() -> int:
         return 2
     try:
         async with get_database() as db:
-            result = await reconcile_stale_unbound_runs(
+            unbound = await reconcile_stale_unbound_runs(
                 db,
                 stale_after_minutes=args.stale_after_minutes,
                 apply=args.apply,
             )
+            terminal = await reconcile_stale_terminal_task_runs(
+                db,
+                stale_after_minutes=args.stale_after_minutes,
+                apply=args.apply,
+            )
+            result = {
+                **unbound,
+                "terminal_task_eligible_count": terminal["eligible_count"],
+                "terminal_task_updated_count": terminal["updated_count"],
+                "terminal_task_not_updated_count": terminal["not_updated_count"],
+            }
         print(json.dumps(result, separators=(",", ":"), sort_keys=True))
         return 0
     except Exception:

@@ -31,6 +31,7 @@ from src.data.crawlers.se import (
     SwedenSmiNetCrawler,
     closed_months,
 )
+from src.data.crawlers.subdivision_registry import source_label_for_code
 from src.data.processors.mapping_lookup import (
     load_country_mapping_dict,
     normalize_mapping_key,
@@ -102,7 +103,12 @@ class SEMonthlyUpdater:
     country_code = "SE"
     source_scope = SOURCE_SCOPE
     ontology_source_id = ONTOLOGY_SOURCE_ID
-    series_geography_key = NATIONAL_GEOGRAPHY_KEY
+    # Each source row already carries its national or ISO county geography.
+    # Leaving this unset is required when ``series_geography_from_rows`` is
+    # true; a fixed national key would collapse all 21 county rows onto the
+    # Totalt observation and create conflicting identities.
+    series_geography_key = None
+    series_geography_from_rows = True
     series_registered_rows_only = True
     series_registry_coverage = "required"
 
@@ -120,7 +126,11 @@ class SEMonthlyUpdater:
         include_current_month: bool = False,
         catalog_rescan_interval_days: int = 7,
         catalog_scan_state: Optional[Path] = None,
+        country_code: str = "SE",
+        series_country_code: str = "SE",
     ) -> None:
+        self.country_code = country_code.upper()
+        self.series_country_code = series_country_code.upper()
         self.source_name = source_name
         self.output_csv = Path(output_csv)
         self.refresh_recent_months = max(1, min(24, int(refresh_recent_months)))
@@ -209,10 +219,11 @@ class SEMonthlyUpdater:
     ) -> tuple[List[Dict[str, str]], int]:
         """Prefer live identities and recover only missing disease-month rows."""
 
-        merged: dict[tuple[str, str], Dict[str, str]] = {}
+        merged: dict[tuple[str, str, str], Dict[str, str]] = {}
         for row in cached_rows:
             identity = (
                 _norm_text(row.get("Date")),
+                _norm_text(row.get("GeographyKey")) or NATIONAL_GEOGRAPHY_KEY,
                 _norm_text(row.get("DiseaseCode") or row.get("RawDiseaseLabel")).casefold(),
             )
             merged[identity] = row
@@ -220,6 +231,7 @@ class SEMonthlyUpdater:
         for row in live_rows:
             identity = (
                 _norm_text(row.get("Date")),
+                _norm_text(row.get("GeographyKey")) or NATIONAL_GEOGRAPHY_KEY,
                 _norm_text(row.get("DiseaseCode") or row.get("RawDiseaseLabel")).casefold(),
             )
             merged[identity] = row
@@ -375,6 +387,13 @@ class SEMonthlyUpdater:
         if recovered:
             logs.append(f"[recovery] retained {recovered} cached disease-month row(s)")
 
+        if self.country_code != self.series_country_code:
+            target_label = source_label_for_code(self.series_country_code, self.country_code)
+            rows = [
+                row for row in rows
+                if target_label and row.get("Geography") == f"SE:county:{target_label}"
+            ]
+
         return SEUpdateFetchResult(
             rows=rows,
             source_latest_date=self._latest_row_date(rows),
@@ -440,7 +459,7 @@ class SEMonthlyUpdater:
                     }
                 )
 
-        rows.sort(key=lambda item: (item["Date"], item["RawDiseaseLabel"], item["DiseaseCode"]))
+        rows.sort(key=lambda item: (item["Date"], item["GeographyKey"], item["RawDiseaseLabel"], item["DiseaseCode"]))
         return rows
 
     @staticmethod
@@ -494,7 +513,7 @@ class SEMonthlyUpdater:
     async def _load_mapping_dict(self, db: AsyncSession) -> Dict[str, int]:
         return await load_country_mapping_dict(
             db,
-            self.country_code,
+            self.series_country_code,
             source_id=MAPPING_SOURCE_ID,
         )
 
@@ -519,6 +538,13 @@ class SEMonthlyUpdater:
         skipped_unmapped = 0
 
         for row in rows:
+            # Keep the legacy table's country projection national. Regional
+            # SmiNet rows are retained by the geography-aware series store.
+            if (
+                self.country_code != self.series_country_code
+                or row.get("GeographyKey") != NATIONAL_GEOGRAPHY_KEY
+            ):
+                continue
             report_date = _parse_date(row)
             cases = _parse_int(row.get("Cases"))
             if report_date is None or cases is None:

@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -523,21 +523,9 @@ class LiteratureSettings(_BaseEnvSettings):
         ge=1,
         le=100_000,
         description=(
-            "Pause accelerated catch-up before the distinct article/summary review backlog can reach this limit"
+            "Flag a high distinct article/summary review backlog while bounded metadata catch-up continues"
         ),
     )
-
-    @model_validator(mode="after")
-    def _validate_catch_up_headroom(self) -> "LiteratureSettings":
-        if (
-            self.catch_up_enabled
-            and self.catch_up_max_exception_backlog <= self.max_records_per_run
-        ):
-            raise ValueError(
-                "catch_up_max_exception_backlog must exceed max_records_per_run "
-                "so one bounded catch-up batch can fit below the fail-closed limit"
-            )
-        return self
 
     poll_interval_seconds: int = Field(default=30, ge=5, le=300)
     timezone: str = Field(default="UTC")

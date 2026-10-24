@@ -25,12 +25,15 @@ def resolve_country_display_names(
     """Resolve stable English and Chinese country names for public exports."""
     normalized = (code or "").strip().upper()
     row = row or {}
+    profile_name_en = get_country_display_name(normalized, "en")
+    # Subdivision labels in stored metadata can end in an ISO code (for
+    # example, "Hokkaido, JP"). The registry has the canonical parent name.
     name_en = (
-        row.get("name_en")
-        or row.get("name")
-        or get_country_display_name(normalized, "en")
-        or normalized
-    )
+        (profile_name_en if profile_name_en != normalized else None)
+        if "-" in normalized
+        else None
+    ) or row.get("name_en") or row.get("name") or profile_name_en
+    name_en = name_en or normalized
     local_name = str(row.get("name_local") or "").strip()
     chinese_local_name = (
         local_name
@@ -705,6 +708,225 @@ def build_country_data(
     }
 
 
+_PUBLISHED_FREQUENCY_ORDER = {
+    "DAILY": 0,
+    "WEEKLY": 1,
+    "MONTHLY": 2,
+    "QUARTERLY": 3,
+    "ANNUAL": 4,
+}
+
+
+def frequency_meta_from_granularities(granularities: list[str | None]) -> dict:
+    """Describe the published curves without scanning raw observations."""
+
+    normalized: set[str] = set()
+    for value in granularities:
+        text = str(value or "").strip().upper()
+        if not text or text == "UNKNOWN":
+            continue
+        normalized.add("ANNUAL" if text == "YEARLY" else text)
+    source_frequencies = sorted(
+        normalized,
+        key=lambda item: (_PUBLISHED_FREQUENCY_ORDER.get(item, 99), item),
+    )
+    if not source_frequencies:
+        source_frequency = "UNKNOWN"
+    elif len(source_frequencies) == 1:
+        source_frequency = source_frequencies[0]
+    else:
+        source_frequency = "MIXED"
+    return {
+        "source_frequency": source_frequency,
+        "source_frequencies": source_frequencies,
+        "canonical_frequency": "SOURCE_REPORTED_PERIODS",
+        "aggregation_rule": "preserve_source_period_counts",
+    }
+
+
+def _iso_period(value) -> str:
+    if hasattr(value, "isoformat"):
+        return value.isoformat()[:10]
+    return str(value)[:10]
+
+
+def _series_entry_from_published_row(row: dict, diseases_by_id: dict) -> dict:
+    """Rebuild one public curve from a publish-table row."""
+
+    disease_id = str(row.get("disease_id") or "")
+    disease_info = diseases_by_id.get(disease_id, {})
+    dates = [_iso_period(value) for value in (row.get("period_starts") or [])]
+    cases = list(row.get("cases") or [])
+    deaths = list(row.get("deaths") or [])
+    incidence = list(row.get("incidence") or [])
+    granularity = str(row.get("granularity") or "unknown")
+    data_layer = str(row.get("data_layer") or LEGACY_DATA_LAYER)
+    source_code = row.get("source_series_code") or None
+    selected = [source_code] if source_code else []
+    observed_cases = [value for value in cases if value is not None]
+    observed_deaths = [value for value in deaths if value is not None]
+    total_cases = row.get("total_cases")
+    total_deaths = row.get("total_deaths")
+    return {
+        "disease_id": disease_id,
+        "name_en": disease_info.get("name_en", disease_id),
+        "name_zh": disease_info.get("name_zh", disease_id),
+        "category": disease_info.get("category", "Unknown"),
+        "slug": disease_info.get("slug", disease_id.lower()),
+        "dates": dates,
+        "cases": cases,
+        "weekly_equiv_cases": calculate_weekly_equivalent(dates, cases, granularity),
+        "deaths": deaths,
+        "incidence_rates": incidence,
+        "incidence_sources": [],
+        "mortality_rates": [],
+        "quality_statuses": [],
+        "point_granularities": [],
+        "point_series_codes": [source_code] * len(dates) if source_code else [],
+        "point_data_layers": [],
+        "provisional_from": None,
+        "total_cases": int(total_cases if total_cases is not None else sum(observed_cases)),
+        "total_deaths": int(
+            total_deaths if total_deaths is not None else sum(observed_deaths)
+        ),
+        "latest_cases": latest_or_none(cases),
+        "latest_deaths": latest_or_none(deaths),
+        "data_layer": data_layer,
+        "period_granularity": granularity,
+        "period_granularity_basis": (
+            "source" if granularity and granularity != "unknown" else "unknown"
+        ),
+        "selected_series_codes": selected,
+        "projection_policy": "published_series",
+        "available_series_count": 1 if source_code else 0,
+        "content_hash": row.get("content_hash"),
+    }
+
+
+def _heatmap_from_published_series(disease_series: dict[str, dict]) -> dict:
+    eligible = {
+        disease_id: series
+        for disease_id, series in disease_series.items()
+        if str(series.get("period_granularity") or "").lower()
+        not in {"annual", "yearly", "quarterly"}
+    }
+    months = sorted(
+        {
+            str(value)[:7]
+            for series in eligible.values()
+            for value in (series.get("dates") or [])
+            if value and len(str(value)) >= 7
+        }
+    )
+    diseases = sorted(
+        eligible,
+        key=lambda disease_id: eligible[disease_id].get("total_cases") or 0,
+        reverse=True,
+    )[:50]
+    heatmap_z = []
+    for disease_id in diseases:
+        series = eligible[disease_id]
+        month_totals: dict[str, int] = defaultdict(int)
+        for value_date, cases in zip(series.get("dates") or [], series.get("cases") or []):
+            if not value_date:
+                continue
+            month_totals[str(value_date)[:7]] += cases or 0
+        heatmap_z.append([math.log10(month_totals.get(month, 0) + 1) for month in months])
+    return {
+        "diseases": diseases,
+        "disease_labels": [eligible[disease_id].get("name_en") for disease_id in diseases],
+        "months": months,
+        "z": heatmap_z,
+    }
+
+
+def build_country_data_from_published_series(
+    country_code: str,
+    country_name: str,
+    rows: list[dict],
+    diseases_by_id: dict,
+    frequency_meta: dict | None = None,
+) -> dict:
+    """Build the country snapshot from publish-table curves.
+
+    Names and heatmap totals are derived here. The stored row already resolved
+    mapping, population, and period alignment, so this path does not read
+    observations.
+    """
+
+    disease_series = {}
+    for row in rows:
+        entry = _series_entry_from_published_row(row, diseases_by_id)
+        if entry["dates"]:
+            disease_series[entry["disease_id"]] = entry
+    dates = sorted(
+        {
+            value
+            for entry in disease_series.values()
+            for value in entry["dates"]
+            if value
+        }
+    )
+    resolved_frequency = frequency_meta or frequency_meta_from_granularities(
+        [entry.get("period_granularity") for entry in disease_series.values()]
+    )
+    country_name_en, country_name_zh = resolve_country_display_names(
+        country_code,
+        {"name": country_name},
+    )
+    return {
+        "country_code": country_code,
+        "country_name": country_name_en,
+        "country_name_en": country_name_en,
+        "country_name_zh": country_name_zh,
+        "total_cases": sum(entry["total_cases"] for entry in disease_series.values()),
+        "total_deaths": sum(entry["total_deaths"] for entry in disease_series.values()),
+        "disease_count": len(disease_series),
+        "frequency_meta": resolved_frequency,
+        "date_range": {
+            "start": dates[0] if dates else None,
+            "end": dates[-1] if dates else None,
+        },
+        "comparison_basis": {
+            "frequency": "SOURCE_REPORTED_PERIODS",
+            "metric": "cases",
+            "note_en": "Counts are shown at each source's declared reporting period and are not normalized across annual, quarterly, monthly, and weekly series.",
+            "note_zh": "病例数按各来源声明的报告期间展示，不在年度、季度、月度和周度序列之间进行频率归一化。",
+        },
+        "incidence_rate_basis": {
+            "formula": "cases / population * 100000",
+            "unit": "per_100k",
+            "population_source": None,
+            "source_counts": {},
+            "period_semantics": "per_source_reporting_period",
+            "note_en": "Values are cases per 100,000 population for each source reporting period (for example, per week, month, or year); they are not annualized. Incidence was resolved when the curve was published.",
+            "note_zh": "数值表示各来源报告期间内每10万人病例数（如每周、每月或每年），未作年化。发病率在曲线发布时已经算好。",
+        },
+        "disease_series": disease_series,
+        "data_layer_summary": _data_layer_summary(disease_series),
+        "heatmap": _heatmap_from_published_series(disease_series),
+    }
+
+
+def build_disease_data_from_country_series(
+    disease_id: str,
+    disease_info: dict,
+    country_series: dict[str, dict],
+    *,
+    jurisdiction_codes: list[str] | tuple[str, ...] | None = None,
+) -> dict:
+    """Build one disease snapshot from country curves already in memory."""
+
+    return {
+        **disease_info,
+        "country_series": country_series,
+        "subdivision_country_codes": sorted(
+            code for code in country_series if "-" in code
+        ),
+        "data_layer_summary": _country_series_data_layer_summary(country_series),
+    }
+
+
 def build_country_site_data(country_data: dict) -> dict:
     """Build a compact country payload used only by the site charts."""
     disease_series = country_data.get("disease_series") or {}
@@ -1014,28 +1236,13 @@ def build_disease_data(
             ),
         }
 
-    # Country-level global summaries must not add child jurisdictions to their
-    # parent national series. Keep every series addressable, while aggregating
-    # only the comparable national layer.
-    national_country_series = {
-        code: series for code, series in country_series.items() if "-" not in code
-    }
     subdivision_country_codes = sorted(
         code for code in country_series if "-" in code
-    )
-    global_monthly = build_national_monthly_summary(
-        national_country_series,
-        jurisdiction_codes
-        or [code for code in all_records_by_country if "-" not in code],
     )
 
     return {
         **disease_info,
         "country_series": country_series,
-        "global_monthly": global_monthly,
-        "total_cases": sum(cs["total_cases"] for cs in national_country_series.values()),
-        "total_deaths": sum(cs["total_deaths"] for cs in national_country_series.values()),
-        "aggregation_scope": "national_jurisdictions_only",
         "subdivision_country_codes": subdivision_country_codes,
         "data_layer_summary": _country_series_data_layer_summary(country_series),
     }
@@ -1137,7 +1344,6 @@ def build_disease_site_data(
                 compact_entry["rs"] = rs
         compact_series.append(compact_entry)
 
-    global_monthly = disease_data.get("global_monthly") or {}
     return {
         "v": 1,
         "meta": {
@@ -1145,8 +1351,6 @@ def build_disease_site_data(
             "en": disease_data.get("name_en"),
             "zh": disease_data.get("name_zh"),
             "cat": disease_data.get("category"),
-            "tc": disease_data.get("total_cases"),
-            "td": disease_data.get("total_deaths"),
             "cc": len(country_series),
             "data_layer_summary": disease_data.get("data_layer_summary") or {},
             "recorded_at_as_of": disease_data.get("recorded_at_as_of"),
@@ -1157,10 +1361,4 @@ def build_disease_site_data(
         "dates": shared_dates,
         "sources": source_labels,
         "series": compact_series,
-        "monthly": {
-            "months": global_monthly.get("months") or [],
-            "cases": global_monthly.get("cases") or [],
-            "deaths": global_monthly.get("deaths") or [],
-            "coverage": global_monthly.get("coverage"),
-        },
     }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from datetime import date
 from types import SimpleNamespace
 
@@ -185,6 +186,7 @@ async def test_us_success_preserves_series_rows_and_import_summary():
     class Updater:
         def fetch_latest(self, *, source):
             assert source == "all"
+            assert threading.get_ident() != main_thread_id
             return SimpleNamespace(
                 rows=rows,
                 series_rows=series_rows,
@@ -196,6 +198,7 @@ async def test_us_success_preserves_series_rows_and_import_summary():
         async def get_db_latest_date(self, db):
             return date(2025, 12, 27)
 
+    main_thread_id = threading.get_ident()
     result = await execute_us_pipeline(
         service,
         task=_task(),

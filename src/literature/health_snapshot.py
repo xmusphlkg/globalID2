@@ -475,7 +475,7 @@ async def collect_health_snapshot(
                     "catch_up_backlog_observed_count",
                     "catch_up_backlog_projected_upper_bound",
                     "catch_up_backlog_limit",
-                    "catch_up_resume_below_backlog",
+                    "catch_up_review_backlog_high",
                     "catch_up_required_backlog_reduction",
                     "catch_up_backpressure_reason",
                 )

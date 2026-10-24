@@ -46,6 +46,7 @@ interface Marker {
   statusLabel: string;
   href?: string;
   meta?: MetaCountry;
+  regionalCount?: number;
 }
 
 interface DotPos extends Marker {
@@ -197,7 +198,17 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
   const metaByCode = useMemo(() => Object.fromEntries(metaCountries.map(meta => [meta.code.toUpperCase(), meta])), [metaCountries]);
   const allMarkers = useMemo(() => {
     if (!worldGeoJson) return [];
-    const countries = makeCountryPoints(worldGeoJson, metaByCode, initialLanguage);
+    const regionalCounts = new Map<string, number>();
+    for (const meta of metaCountries) {
+      if (!hasCountryDataSnapshot(meta)) continue;
+      const parent = meta.parent_code || (meta.location_type === 'subdivision' ? meta.code.split('-')[0] : '');
+      if (parent) regionalCounts.set(parent.toUpperCase(), (regionalCounts.get(parent.toUpperCase()) || 0) + 1);
+    }
+    const countries = makeCountryPoints(worldGeoJson, metaByCode, initialLanguage).map(marker => ({
+      ...marker,
+      regionalCount: regionalCounts.get(marker.iso2) || 0,
+      href: marker.href || (regionalCounts.has(marker.iso2) ? `/countries/${marker.iso2.toLowerCase()}/` : undefined),
+    }));
     const subdivisions: Marker[] = metaCountries
       .filter(meta => meta.parent_code || meta.location_type === 'subdivision')
       .map(meta => {
@@ -301,9 +312,10 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
         const color = isUnsupported ? palette.unsupported : isPlanned ? palette.planned : palette.supported;
         return <button key={marker.iso2} type="button" className={`coverage-map-dot ${isSubdivision ? 'is-subdivision' : 'is-country'} ${isUnsupported ? 'is-unsupported' : ''} ${isPlanned ? 'is-planned' : ''}`} style={{ left: marker.px, top: marker.py, '--dot-color': color } as React.CSSProperties} aria-label={`${marker.name} — ${marker.statusLabel}`} onMouseEnter={() => setHovered(marker)} onMouseLeave={() => setHovered(null)} onFocus={() => setHovered(marker)} onBlur={() => setHovered(null)} onClick={() => marker.href && (window.location.href = `${initialLanguage === 'zh' ? '/zh' : initialLanguage === 'fr' ? '/fr' : ''}${marker.href}`)} />;
       })}
-      {hovered && <div className="coverage-map-tooltip" style={{ left: Math.min(Math.max(8, hovered.px + 12), Math.max(8, (containerRef.current?.clientWidth || 800) - 190)), top: Math.min(Math.max(8, hovered.py - 46), Math.max(8, (containerRef.current?.clientHeight || height) - 82)), background: palette.tooltipBg, borderColor: palette.tooltipBorder, color: palette.text }} role="status">
+      {hovered && <div className="coverage-map-tooltip" style={{ left: Math.min(Math.max(8, hovered.px + 12), Math.max(8, (containerRef.current?.clientWidth || 800) - 190)), top: Math.min(Math.max(8, hovered.py - 46), Math.max(8, (containerRef.current?.clientHeight || height) - (hovered.regionalCount ? 110 : 82))), background: palette.tooltipBg, borderColor: palette.tooltipBorder, color: palette.text }} role="status">
         <div className="coverage-map-tooltip-title"><img src={getFlagAssetPath(hovered.iso2)} alt="" aria-hidden="true" /> <strong>{hovered.name}</strong></div>
         <div className="coverage-map-tooltip-meta">{hovered.kind === 'subdivision' ? (initialLanguage === 'zh' ? '省级/地区' : 'Province / region') : (initialLanguage === 'zh' ? '国家' : 'Country')} · {hovered.statusLabel}</div>
+        {hovered.kind === 'country' && Boolean(hovered.regionalCount) && <div className="coverage-map-tooltip-meta">{initialLanguage === 'zh' ? `${hovered.regionalCount} 个地区数据集` : initialLanguage === 'fr' ? `${hovered.regionalCount} jeux de données régionaux` : `${hovered.regionalCount} regional datasets`}</div>}
         {hovered.href && <div className="coverage-map-tooltip-action">{initialLanguage === 'zh' ? '单击打开详情页 ↗' : 'Click to open details ↗'}</div>}
       </div>}
     </div>

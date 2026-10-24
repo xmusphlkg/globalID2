@@ -1,6 +1,7 @@
 """ECDC annual baseline crawl orchestration."""
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -47,7 +48,8 @@ async def execute_ecdc_pipeline(service, *, task, source, force, process, save_r
     except Exception as exc:
         logger.warning("Could not create ECDC CrawlRun record: {}", exc)
     await task_manager.update_task_progress(task.task_uuid, 15)
-    fetched = updater.refresh_source(
+    fetched = await asyncio.to_thread(
+        updater.refresh_source,
         source=source, force=force, fill_missing=fill_missing,
         start_year=start_year, save_raw=save_raw,
         raw_dir=raw_dir if save_raw else None,

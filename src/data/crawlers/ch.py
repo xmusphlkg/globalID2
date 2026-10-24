@@ -39,6 +39,33 @@ CASE_VALUE_TOPIC = "cases"
 CASE_VALUE_METRIC = "value"
 SUPPORTED_PERIODS = {"month", "iso_week", "year"}
 PERIOD_PRIORITY = {"year": 1, "iso_week": 2, "month": 3}
+CH_CANTONS = {
+    "AG": "Aargau", "AI": "Appenzell Innerrhoden", "AR": "Appenzell Ausserrhoden",
+    "BE": "Bern", "BL": "Basel-Landschaft", "BS": "Basel-Stadt", "FR": "Fribourg",
+    "GE": "Geneva", "GL": "Glarus", "GR": "Graubünden", "JU": "Jura", "LU": "Lucerne",
+    "NE": "Neuchâtel", "NW": "Nidwalden", "OW": "Obwalden", "SG": "St. Gallen",
+    "SH": "Schaffhausen", "SO": "Solothurn", "SZ": "Schwyz", "TG": "Thurgau",
+    "TI": "Ticino", "UR": "Uri", "VD": "Vaud", "VS": "Valais", "ZG": "Zug", "ZH": "Zürich",
+}
+
+# The IDD API publishes some national charts for Switzerland and
+# Liechtenstein together.  That population is not the CH national population
+# and must never share its observation identity with a CH-only row.
+CHFL_GEOGRAPHY_KEY = "country-group:CH-FL:national"
+
+
+def idd_geography_key(geography: str, *, explicit: str = "") -> str:
+    """Preserve the exact territory represented by an IDD series."""
+    code = _norm_text(geography).upper()
+    if code == "CHFL":
+        return CHFL_GEOGRAPHY_KEY
+    if code == "CH":
+        return "country:CH:national"
+    if code in CH_CANTONS:
+        return f"country:CH-{code}:national"
+    if key := _norm_text(explicit):
+        return key
+    raise ValueError(f"IDD row has no recognized geography: {geography!r}")
 
 DISEASE_DISPLAY_NAMES: dict[str, str] = {
     "aids": "AIDS",
@@ -218,6 +245,17 @@ def choose_national_series_config(configs: Sequence[Dict[str, str]]) -> tuple[Di
     return dict(config), geography
 
 
+def choose_canton_series_configs(configs: Sequence[Dict[str, str]]) -> Dict[str, Dict[str, str]]:
+    """Keep only all-demographic, source-published canton configurations."""
+    return {
+        code: dict(config)
+        for config in configs
+        if config.get("georegion") == "canton"
+        and (code := _norm_text(config.get("canton")).upper()) in CH_CANTONS
+        and _is_demographic_total(config)
+    }
+
+
 def _flatten_values(values: object) -> Iterable[tuple[Optional[str], Dict[str, Any]]]:
     if isinstance(values, list):
         for item in values:
@@ -379,6 +417,10 @@ class SwitzerlandIDDCrawler(BaseCrawler):
                     "PeriodValue": _period_value_text(item.get("x")),
                     "Cases": str(max(0, cases)),
                     "Geography": series.geography,
+                    "GeographyKey": idd_geography_key(series.geography),
+                    "Geocode": series.geography,
+                    "LocationType": "country_group" if series.geography == "CHFL" else "country",
+                    "ParentCountryCode": "" if series.geography == "CHFL" else "CH",
                     "Group": group or "",
                     "DataComplete": _norm_text(properties.get("dataComplete")),
                     "Trend": _norm_text(properties.get("trend")),
@@ -552,6 +594,93 @@ class SwitzerlandIDDCrawler(BaseCrawler):
             source_url=self.portal_url,
             version=version,
         )
+
+    def crawl_canton(
+        self,
+        output_csv: Path,
+        *,
+        canton_code: str,
+        history: bool = False,
+        years: Optional[Iterable[int]] = None,
+        start_year: Optional[int] = None,
+        disease_slugs: Optional[List[str]] = None,
+    ) -> CHFetchSummary:
+        """Fetch only annual case series for cantons exposed by the IDD API."""
+        code = _norm_text(canton_code).upper()
+        if code not in CH_CANTONS:
+            raise ValueError(f"Unsupported Switzerland canton code: {canton_code!r}")
+        slug_filter = {slug.strip() for slug in disease_slugs or [] if slug.strip()} or None
+        version = self.fetch_version()
+        annual = [identifier for identifier in self.fetch_sets() if identifier.endswith("/cases/value/year")]
+        rows: List[Dict[str, str]] = []
+        series_count = 0
+        for identifier in sorted(annual):
+            slug = identifier.split("/", 1)[0]
+            if slug_filter and slug not in slug_filter:
+                continue
+            details_url = self._api_url(f"data/{identifier}/details")
+            details = self.get(details_url).json()
+            configs = details.get("availableSeriesConfigurations") if isinstance(details, dict) else None
+            if not isinstance(configs, list):
+                continue
+            canton_config = choose_canton_series_configs(configs).get(code)
+            if canton_config is None:
+                continue
+            series = CHSeriesSource(
+                slug=slug,
+                display_name=_display_name_for_slug(slug),
+                identifier=identifier,
+                period_type="year",
+                config=canton_config,
+                geography=code,
+                source_date=_norm_text(details.get("sourceDate")) if isinstance(details, dict) else None,
+            )
+            try:
+                canton_rows, series_version = self._fetch_one_series(series)
+            except Exception as exc:
+                logger.warning(f"[CH-IDD] Canton fetch failed | identifier={identifier} canton={code} error={exc}")
+                continue
+            selected_rows: List[Dict[str, str]] = []
+            allowed_years = {int(value) for value in years} if years is not None else None
+            for row in canton_rows:
+                year = int(row["Year"])
+                if allowed_years is not None and year not in allowed_years:
+                    continue
+                if start_year is not None and year < int(start_year):
+                    continue
+                row.update({
+                    "Geography": CH_CANTONS[code],
+                    "GeographyKey": f"country:CH-{code}:national",
+                    "Geocode": f"CH-{code}",
+                    "ReportingArea": CH_CANTONS[code],
+                    "ParentCountryCode": "CH",
+                    "LocationType": "subdivision",
+                })
+                selected_rows.append(row)
+            rows.extend(selected_rows)
+            series_count += 1
+            if series_version:
+                version = series_version
+            time.sleep(0.02)
+        if not rows:
+            raise RuntimeError(f"[CH-IDD] No official annual canton rows available for {code}")
+        merged: Dict[Tuple[str, str], Dict[str, str]] = {}
+        if output_csv.exists():
+            with output_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+                for cached in csv.DictReader(handle):
+                    identity = (_norm_text(cached.get("Date")), _norm_text(cached.get("DiseaseCode")))
+                    if all(identity):
+                        merged[identity] = {key: _norm_text(value) for key, value in cached.items()}
+        for row in rows:
+            merged[(row["Date"], row["DiseaseCode"])] = row
+        rows = sorted(merged.values(), key=lambda row: (row["Date"], row["DiseaseCode"]))
+        output_csv.parent.mkdir(parents=True, exist_ok=True)
+        fields = sorted({key for row in rows for key in row})
+        with output_csv.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader(); writer.writerows(rows)
+        latest = max((date.fromisoformat(row["Date"]) for row in rows), default=None)
+        return CHFetchSummary(len(rows), latest, series_count, self.portal_url, version)
 
     async def crawl(self, **kwargs: Any) -> List[CrawlerResult]:
         output_csv = Path(

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import json
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
-import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -11,18 +11,21 @@ import pandas as pd
 import pytest
 from pydantic import ValidationError
 
-from src.services.situation_v3.contracts import PublicHealthRisk, SituationReportV3
-from src.services.situation_v3.backtest import simulate_weekly_batch
 from src.services.situation_v3 import model as situation_model
-from src.services.situation_v3.model import benjamini_hochberg, evaluate_frame_v3
+from src.services.situation_v3 import persistence, source_adapters
+from src.services.situation_v3 import pipeline as situation_pipeline
+from src.services.situation_v3.backtest import simulate_weekly_batch
+from src.services.situation_v3.contracts import PublicHealthRisk, SituationReportV3
+from src.services.situation_v3.model import (
+    benjamini_hochberg,
+    evaluate_frame_v3,
+    prepare_frame_v3,
+)
 from src.services.situation_v3.reporting import (
     build_daily_report_v3,
     build_period_report_v3,
     cluster_official_events,
 )
-from src.services.situation_v3 import persistence
-from src.services.situation_v3 import pipeline as situation_pipeline
-from src.services.situation_v3 import source_adapters
 
 
 def _config() -> dict:
@@ -402,6 +405,42 @@ def test_nan_source_url_is_not_published_as_evidence() -> None:
     assert "source_evidence_url_missing" in signals[0].assessment.evidence_gaps
 
 
+def test_ordered_database_frame_skips_full_frame_copy_and_recanonicalization() -> None:
+    frame = _weekly_frame()
+    frame["canonical_geography_key"] = "country:US:national"
+    frame.attrs["situation_v3_ordered"] = True
+
+    prepared = prepare_frame_v3(frame)
+
+    assert prepared is frame
+    assert prepared["canonical_geography_key"].eq("country:US:national").all()
+
+
+def test_ordered_parallel_model_matches_serial_results() -> None:
+    source = _weekly_frame()
+    groups = []
+    for index in range(16):
+        group = source.copy()
+        group["series_code"] = f"SER_{index:02d}"
+        groups.append(group)
+    frame = pd.concat(groups, ignore_index=True)
+    frame["canonical_geography_key"] = "country:US:national"
+    frame.attrs["situation_v3_ordered"] = True
+    as_of = pd.Timestamp(frame["time"].max()).date()
+
+    serial_config = _config()
+    serial_config["v3"]["maximum_analysis_workers"] = 1
+    parallel_config = _config()
+    parallel_config["v3"]["maximum_analysis_workers"] = 2
+    serial = evaluate_frame_v3(frame, serial_config, as_of=as_of)
+    parallel = evaluate_frame_v3(frame, parallel_config, as_of=as_of)
+
+    assert [signal.model_dump(mode="json") for signal in serial[0]] == [
+        signal.model_dump(mode="json") for signal in parallel[0]
+    ]
+    assert serial[1:] == parallel[1:]
+
+
 def test_configured_source_url_fills_missing_row_evidence_only() -> None:
     configured = {"SRC_TEST": "https://example.test/source-registry"}
     assert source_adapters._source_evidence_url(
@@ -413,6 +452,13 @@ def test_configured_source_url_fills_missing_row_evidence_only() -> None:
     assert source_adapters._source_evidence_url(
         None, "SRC_UNKNOWN", configured
     ) is None
+
+
+def test_qualified_source_queries_are_chunked_below_postgres_parameter_limit() -> None:
+    qualified = [{"index": index} for index in range(4_501)]
+    batches = list(source_adapters._qualified_query_batches(qualified))
+    assert [len(batch) for batch in batches] == [2_000, 2_000, 501]
+    assert [row["index"] for batch in batches for row in batch] == list(range(4_501))
 
 
 def test_public_signal_without_evidence_fails_daily_publication_gate() -> None:

@@ -10,19 +10,18 @@ and push only actual changes; no pull request or GitHub Release is created.
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict, dataclass
 import fcntl
 import hashlib
 import json
 import os
-from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
+from dataclasses import asdict, dataclass
+from pathlib import Path, PurePosixPath
 from typing import BinaryIO, Iterator
-
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE_DIR = ROOT / "data" / "raw"
@@ -877,16 +876,23 @@ def publish_raw_archive(
                         updated += 1
                     else:
                         added += 1
+                    sync_items.append(
+                        _SyncItem(
+                            source_path=relative.as_posix(),
+                            storage_paths=(direct_relative.as_posix(),),
+                            stored_bytes=size,
+                        )
+                    )
                 if split_destination.exists():
                     shutil.rmtree(split_destination)
-                expected_storage_files.add(direct_relative.as_posix())
-                sync_items.append(
-                    _SyncItem(
-                        source_path=relative.as_posix(),
-                        storage_paths=(direct_relative.as_posix(), split_relative.as_posix()),
-                        stored_bytes=size,
+                    sync_items.append(
+                        _SyncItem(
+                            source_path=f"{relative.as_posix()} (obsolete parts)",
+                            storage_paths=(split_relative.as_posix(),),
+                            stored_bytes=0,
+                        )
                     )
-                )
+                expected_storage_files.add(direct_relative.as_posix())
                 continue
 
             previous = previous_large_files.get(relative.as_posix())
@@ -912,20 +918,25 @@ def publish_raw_archive(
                     updated += 1
                 else:
                     added += 1
-            if direct_destination.exists():
-                direct_destination.unlink()
             large_files.append(record)
             part_paths = tuple(part.path for part in record.parts)
             expected_storage_files.update(part_paths)
-            for part_index, part in enumerate(record.parts, start=1):
-                storage_paths = [part.path]
-                if part_index == 1:
-                    storage_paths.append(direct_relative.as_posix())
+            if not current:
+                for part in record.parts:
+                    sync_items.append(
+                        _SyncItem(
+                            source_path=f"{relative.as_posix()} ({part.path})",
+                            storage_paths=(part.path,),
+                            stored_bytes=part.size,
+                        )
+                    )
+            if direct_destination.exists():
+                direct_destination.unlink()
                 sync_items.append(
                     _SyncItem(
-                        source_path=f"{relative.as_posix()} (part {part_index})",
-                        storage_paths=tuple(storage_paths),
-                        stored_bytes=part.size,
+                        source_path=f"{relative.as_posix()} (obsolete direct file)",
+                        storage_paths=(direct_relative.as_posix(),),
+                        stored_bytes=0,
                     )
                 )
             if previous is not None:
@@ -940,6 +951,22 @@ def publish_raw_archive(
                             stored_bytes=0,
                         )
                     )
+
+        # A previous run may have copied a file before it was interrupted.
+        # Its bytes already match, but Git still needs to commit it.
+        pending_paths: set[str] = set()
+        for args in (
+            ["ls-files", "--others", "--exclude-standard", "-z", "--", DATA_ROOT.as_posix()],
+            ["diff", "--name-only", "-z", "--", DATA_ROOT.as_posix()],
+            ["diff", "--cached", "--name-only", "-z", "--", DATA_ROOT.as_posix()],
+        ):
+            result = run_git(args, repository_root, timeout_seconds=git_timeout_seconds)
+            pending_paths.update(path for path in result.stdout.split("\0") if path)
+        already_scheduled = {
+            path for item in sync_items for path in item.storage_paths
+        }
+        for path in sorted((pending_paths & expected_storage_files) - already_scheduled):
+            sync_items.append(_SyncItem(source_path=path, storage_paths=(path,), stored_bytes=0))
 
         stale_paths, removed_count = _remove_stale_storage(
             repository_root,

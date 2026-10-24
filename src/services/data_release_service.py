@@ -22,10 +22,15 @@ from src.core.data_share import (
     get_data_share_repo_branch,
     get_data_share_repo_url,
 )
+from src.core.country_library import expand_country_scopes
 from src.core.task_manager import task_manager
-from src.domain import DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
+from src.domain import Country, DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
 from src.services.data_release import checks as release_checks
 from src.services.data_release import pipeline as release_pipeline
+from src.services.data_release.public_changelog import (
+    missing_public_changelog_versions,
+    public_changelog_blocker,
+)
 from src.services.data_release.commands import (
     build_cloudflare_deploy_command,
     build_generate_site_data_command,
@@ -54,6 +59,7 @@ except ImportError:  # pragma: no cover - python-dotenv is part of project requi
 
 logger = get_logger(__name__)
 
+
 ROOT_DIR = Path(__file__).resolve().parents[2]
 ASTRO_DIR = ROOT_DIR / "astro-site"
 ENV_PATH = ROOT_DIR / ".env"
@@ -76,9 +82,12 @@ SITE_RELEASE_MANIFEST = ASTRO_DIR / "dist" / "release.json"
 SITE_VISUAL_MODULE_PREFIXES = (
     "ChartFrame.",
     "ComparisonTable.",
+    "CompareWorkspace.",
+    "CountrySeasonalityPicker.",
     "DiseaseCountryCurve.",
+    "DiseaseCoverageMap.",
     "DiseaseHeatmap.",
-    "DiseaseMonthlyBar.",
+    "DiseaseSeasonalityHeatmap.",
     "EpidemicCurve.",
 )
 # These files are atomically maintained by background quality automation and
@@ -106,7 +115,9 @@ SUBSCRIPTION_SYNC_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 SUBSCRIPTION_SYNC_STRICT_VALUES = {"1", "true", "yes", "on", "required", "strict", "force"}
 LOGGED_COMMAND_CANCEL_POLL_SECONDS = 1.0
 DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS = 15 * 60
-GENERATE_SITE_DATA_TIMEOUT_SECONDS = 30 * 60
+# A complete export can revalidate several gigabytes of partitioned downloads.
+# Allow the full catalogue to finish under the worker's bounded memory budget.
+GENERATE_SITE_DATA_TIMEOUT_SECONDS = 2 * 60 * 60
 # The multilingual static site now renders thousands of country/disease pages.
 # Keep the build guard finite, but allow a full production render to finish on
 # memory-constrained release workers instead of aborting at the legacy 15 min.
@@ -818,12 +829,20 @@ class DataReleaseService:
         download_url_base = self._download_repo_raw_base(job)
         raw_archive = self._raw_archive_runtime()
         incremental_country_codes: list[str] = []
+        available_country_codes: list[str] = []
+        incremental_site = False
         async with get_database() as db:
             if trigger_task_uuid:
                 trigger_task = await db.execute(
                     select(Task).where(Task.task_uuid == trigger_task_uuid)
                 )
                 trigger_task = trigger_task.scalar_one_or_none()
+                incremental_site = bool(
+                    trigger_task
+                    and trigger_task.task_type in LITERATURE_RELEASE_TASK_TYPES
+                    and (ASTRO_DIR / "src" / "data" / "meta.json").is_file()
+                    and (DIRECT_DOWNLOAD_DIR / "manifest.json").is_file()
+                )
                 trigger_input = dict(
                     (trigger_task.input_data if trigger_task else None) or {}
                 )
@@ -861,7 +880,7 @@ class DataReleaseService:
                     )
                 crawl_tasks = (
                     await db.execute(
-                        crawl_query.order_by(Task.completed_at.asc()).limit(100)
+                        crawl_query.order_by(Task.completed_at.asc())
                     )
                 ).scalars().all()
                 for crawl_task in crawl_tasks:
@@ -873,6 +892,13 @@ class DataReleaseService:
                     ).strip().upper()
                     if country and country not in incremental_country_codes:
                         incremental_country_codes.append(country)
+            if incremental_country_codes:
+                available_country_codes = list(
+                    (await db.execute(select(Country.code))).scalars().all()
+                )
+        incremental_country_codes = expand_country_scopes(
+            incremental_country_codes, available_codes=available_country_codes
+        )
         description_parts = [
             f"Refresh and generate site data, then build Astro site for release job {job.job_id}.",
             (
@@ -906,6 +932,7 @@ class DataReleaseService:
             "trigger": trigger,
             "manual_trigger": manual,
             "incremental_country_codes": incremental_country_codes,
+            "incremental_site": incremental_site,
             "trigger_task_uuid": trigger_task_uuid,
             "generated_paths": list(GENERATED_DATA_PATHS),
             "raw_archive_enabled": raw_archive.enabled,
@@ -1113,6 +1140,19 @@ class DataReleaseService:
                 "Generated data is still tracked by the code repository: "
                 + ", ".join(tracked_generated_paths)
             )
+        try:
+            missing_changelog_versions = missing_public_changelog_versions(
+                markdown_path=ROOT_DIR / "CHANGELOG.md",
+                typescript_path=ASTRO_DIR / "src" / "data" / "changelog.ts",
+            )
+        except OSError as exc:
+            blockers.append(
+                "Public changelog could not be compared with CHANGELOG.md: "
+                f"{exc}"
+            )
+        else:
+            if missing_changelog_versions:
+                blockers.append(public_changelog_blocker(missing_changelog_versions))
 
         return {
             "checked_at": datetime.now(ZoneInfo("UTC")).isoformat(),
@@ -1412,11 +1452,13 @@ class DataReleaseService:
         python_path: Path,
         download_url_base: str,
         incremental_country_codes: list[str] | tuple[str, ...] | None = None,
+        incremental_site: bool = False,
     ) -> list[str]:
         return build_generate_site_data_command(
             python_path=python_path,
             download_url_base=download_url_base,
             incremental_country_codes=incremental_country_codes,
+            incremental_site=incremental_site,
         )
 
     def _update_situation_room_command(self, *, python_path: Path) -> list[str]:

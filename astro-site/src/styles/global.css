@@ -1,6 +1,61 @@
 @import 'tailwindcss/index.css';
-
 @config '../../tailwind.config.mjs';
+
+.disease-trend-heading, .disease-trend-controls, .disease-trend-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; }
+.disease-trend-heading { justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.disease-trend-note { max-width: 52rem; margin-top: .3rem; color: rgb(var(--text-muted)); font-size: .75rem; line-height: 1.5; }
+.disease-trend-actions button, .disease-trend-controls button { border: 1px solid rgb(var(--border)); color: rgb(var(--text)); padding: .35rem .65rem; font-size: .75rem; cursor: pointer; }
+.disease-trend-actions button:hover, .disease-trend-controls button:hover, .disease-trend-controls button[aria-pressed='true'] { border-color: rgb(var(--color-teal)); color: rgb(var(--text-strong)); background: rgb(var(--color-teal) / .14); }
+.disease-trend-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.disease-trend-controls { margin-top: 1rem; }
+.disease-trend-divider { width: 1px; height: 1.5rem; background: rgb(var(--border)); margin: 0 .2rem; }
+.disease-trend-custom input { border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); color: rgb(var(--text)); padding: .25rem .4rem; }
+.disease-trend-empty { padding: 3rem 1rem; color: rgb(var(--text-muted)); text-align: center; }
+.disease-seasonality-fallback { overflow-x: auto; margin-top: 1rem; }
+.disease-seasonality-fallback table { width: 100%; min-width: 570px; border-spacing: 3px; border-collapse: separate; color: rgb(var(--text-muted)); font-size: .7rem; text-align: center; }
+.disease-seasonality-fallback th { font-weight: 600; padding: .2rem; }
+.disease-seasonality-fallback td { height: 19px; min-width: 25px; border: 1px solid rgb(var(--border) / .35); color: rgb(var(--text-faint)); }
+.disease-seasonality-select { display: inline-flex; align-items: center; gap: .65rem; color: rgb(var(--text-strong)); font-size: .8rem; font-weight: 600; }
+.disease-seasonality-select select { border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); color: rgb(var(--text)); padding: .4rem .6rem; max-width: 20rem; }
+.disease-seasonality-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .8rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .7); }
+.disease-seasonality-toolbar > span { color: rgb(var(--text-faint)); font: 500 .7rem/1.4 ui-monospace, monospace; }
+.disease-seasonality-scale { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; margin-top: -.15rem; color: rgb(var(--text-muted)); font-size: .7rem; font-variant-numeric: tabular-nums; }
+.disease-seasonality-scale i { display: block; width: clamp(5rem, 18vw, 10rem); height: .55rem; background: linear-gradient(90deg, #e9f4ef, #75c8b6, #0f766e); }
+[data-theme='dark'] .disease-seasonality-scale i { background: linear-gradient(90deg, #1e3544, #147d76, #5eead4); }
+.disease-coverage-map { margin-top: 1.25rem; }
+.disease-coverage-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
+.disease-coverage-spacer { flex: 1 1 auto; }
+.disease-coverage-frame { isolation: isolate; }
+.disease-coverage-note { margin-top: .6rem; font-size: .72rem; line-height: 1.55; }
+.compare-workspace { margin-top: 1.75rem; }
+.compare-method-note { display: grid; gap: .4rem; border-left: 3px solid rgb(var(--color-teal)); background: rgb(var(--bg-soft) / .5); padding: .9rem 1.1rem; }
+.compare-method-note p { max-width: 72rem; color: rgb(var(--text-muted)); font-size: .83rem; line-height: 1.65; }
+.compare-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1.3rem 0 2rem; }
+.compare-filter-panel { min-width: 0; border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); padding: 1rem; }
+.compare-filter-panel legend { padding: 0 .45rem; color: rgb(var(--text-strong)); font-size: .95rem; font-weight: 650; }
+.compare-filter-panel legend span { margin-left: .35rem; color: rgb(var(--color-teal)); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.compare-filter-hint { margin-bottom: .65rem; color: rgb(var(--text-faint)); font-size: .73rem; }
+.compare-search { width: 100%; border: 1px solid rgb(var(--border)); background: rgb(var(--bg-soft)); color: rgb(var(--text-strong)); padding: .65rem .75rem; font-size: .83rem; outline-offset: 2px; }
+.compare-search:focus-visible { outline: 2px solid rgb(var(--color-teal)); }
+.compare-choice-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; max-height: 15rem; margin-top: .7rem; overflow-y: auto; scrollbar-color: rgb(var(--border)) transparent; }
+.compare-choice-list label { display: flex; align-items: center; gap: .5rem; min-width: 0; min-height: 2.7rem; border: 1px solid rgb(var(--border) / .56); padding: .35rem .5rem; color: rgb(var(--text)); font-size: .77rem; cursor: pointer; }
+.compare-choice-list label:hover, .compare-choice-list label:focus-within, .compare-choice-list label.is-selected { border-color: rgb(var(--color-teal) / .7); background: rgb(var(--color-teal) / .09); }
+.compare-choice-list label:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+.compare-choice-list label span { min-width: 0; flex: 1; overflow-wrap: anywhere; line-height: 1.25; }
+.compare-choice-list label small { flex: none; color: rgb(var(--text-faint)); font-size: .64rem; }
+.compare-choice-list input { flex: none; accent-color: rgb(var(--color-teal)); }
+.compare-no-matches { grid-column: 1 / -1; padding: 1rem; color: rgb(var(--text-muted)); font-size: .8rem; }
+.compare-results-heading { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border)); }
+.compare-results-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; }
+.compare-results-actions .disease-trend-controls { margin: 0; }
+.compare-share { border: 1px solid rgb(var(--color-teal)); background: rgb(var(--color-teal) / .1); color: rgb(var(--text-strong)); padding: .35rem .7rem; font-size: .75rem; cursor: pointer; }
+.compare-share:hover { background: rgb(var(--color-teal) / .2); }
+.compare-chart { border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); margin-top: 1rem; padding: clamp(1rem, 2vw, 1.5rem); }
+.coverage-territory-marker { position: absolute; z-index: 2; width: 12px; height: 12px; margin: -6px 0 0 -6px; padding: 0; border-width: 1px; border-style: solid; border-radius: 999px; cursor: pointer; }
+.coverage-scale { position: absolute; left: 8px; bottom: 8px; z-index: 2; display: inline-flex; align-items: center; gap: .35rem; font-size: .65rem; }
+.coverage-scale i { display: block; width: 4.5rem; height: .45rem; }
+@media (max-width: 680px) { .compare-controls { grid-template-columns: 1fr; } .compare-choice-list { grid-template-columns: 1fr; max-height: 12rem; } .compare-results-actions { width: 100%; } }
+
 
 @layer base {
   :root {

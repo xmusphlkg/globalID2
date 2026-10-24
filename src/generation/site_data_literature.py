@@ -1,18 +1,22 @@
 """Public Research Radar projection and artifact writer.
 
-Only editorially published records are exported.  Raw abstracts and source
-payloads never cross this boundary.
+Editorially published records are the only full evidence records exported.
+Review-state records may appear as compact, title-estimated associations; raw
+abstracts and source payloads never cross this boundary.
 """
 
 from __future__ import annotations
 
 from collections import Counter, defaultdict
 import calendar
+import copy
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 from pathlib import Path
 import re
+import time
+import unicodedata
 from typing import Any
 
 from sqlalchemy import func, select
@@ -38,6 +42,7 @@ from src.literature.weekly_ai_review import load_weekly_ai_review_registry
 
 ROOT = Path(__file__).resolve().parents[2]
 HISTORICAL_LITERATURE_SEED_PATH = ROOT / "configs" / "literature" / "historical_seed.json"
+LITERATURE_DISEASE_ALIASES_PATH = ROOT / "configs" / "literature" / "disease_aliases.json"
 
 
 def _parse_public_datetime(value: str) -> datetime:
@@ -47,6 +52,167 @@ def _parse_public_datetime(value: str) -> datetime:
 
 def _facet_slug(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+
+
+def _title_estimated_literature_links(
+    title: str,
+    diseases_by_id: dict[str, dict[str, Any]],
+    aliases_by_id: dict[str, list[str]] | None = None,
+    prepared_aliases: list[tuple[str, str, str, re.Pattern[str]]] | None = None,
+) -> list[dict[str, Any]]:
+    """Make conservative disease associations from canonical names and aliases."""
+    normalized = _normalize_title_match_text(title)
+    candidates: list[tuple[str, str, str, int, int]] = []
+    for disease_id, raw_term, term, pattern in prepared_aliases or _prepare_title_disease_aliases(
+        diseases_by_id, aliases_by_id or {}
+    ):
+        for match in pattern.finditer(normalized):
+            candidates.append((disease_id, raw_term, term, match.start(), match.end()))
+
+    # Prefer the longest concept mention when one disease name is embedded in
+    # a more specific name (for example, SARS inside SARS-CoV-2). A separate
+    # mention elsewhere in the title remains eligible.
+    specific_spans = [candidate[3:] for candidate in candidates]
+    best_by_disease: dict[str, tuple[str, str, int]] = {}
+    for disease_id, raw_term, term, start, end in candidates:
+        if _title_term_is_negated(normalized, start, end):
+            continue
+        if any(
+            other_start <= start and end <= other_end
+            and (other_start, other_end) != (start, end)
+            for other_start, other_end in specific_spans
+        ):
+            continue
+        current = best_by_disease.get(disease_id)
+        if current is None or len(term) > current[2]:
+            best_by_disease[disease_id] = (raw_term, term, len(term))
+
+    matches: list[dict[str, Any]] = []
+    for disease_id, (hit, _, _) in sorted(best_by_disease.items(), key=lambda item: -item[1][2]):
+        # A subtype mention is more informative than the generic influenza
+        # concept for title-only estimates; avoid adding a second broad link.
+        if disease_id == "D038" and {"D014", "D015", "D016"}.intersection(best_by_disease):
+            continue
+        disease = diseases_by_id[disease_id]
+        matches.append({
+            "disease_id": str(disease_id),
+            "slug": disease.get("slug"),
+            "name_en": disease.get("name_en") or disease.get("standard_name_en") or str(disease_id),
+            "name_zh": disease.get("name_zh") or disease.get("standard_name_zh"),
+            "source": "title_estimate",
+            "matched_term": hit,
+        })
+    return matches[:5]
+
+
+def _title_term_is_negated(title: str, start: int, end: int) -> bool:
+    left_context = title[max(0, start - 24):start]
+    right_context = title[end:min(len(title), end + 20)].lstrip()
+    return bool(
+        re.search(r"(?:^|\s)(?:non|without|no|absence of|free of|negative for)\s+$", left_context)
+        or re.match(r"(?:negative|neg|uninfected|free)\b", right_context)
+    )
+
+
+def _prepare_title_disease_aliases(
+    diseases_by_id: dict[str, dict[str, Any]], aliases_by_id: dict[str, list[str]]
+) -> list[tuple[str, str, str, re.Pattern[str]]]:
+    prepared: list[tuple[str, str, str, re.Pattern[str]]] = []
+    for disease_id, disease in diseases_by_id.items():
+        terms = {
+            str(disease.get(key) or "").strip()
+            for key in ("name_en", "standard_name_en", "name_zh", "standard_name_zh", "name_fr", "standard_name_fr")
+        }
+        terms.update(str(term).strip() for term in aliases_by_id.get(str(disease_id), []))
+        for raw_term in terms:
+            term = _normalize_title_match_text(raw_term)
+            if not _usable_title_alias(term):
+                continue
+            if re.search(r"[\u3400-\u9fff]", term) and not re.search(r"[a-z0-9]", term):
+                pattern = re.compile(re.escape(term))
+            else:
+                pattern = re.compile(rf"(?<![\w]){re.escape(term)}(?![\w])", flags=re.UNICODE)
+            prepared.append((str(disease_id), raw_term, term, pattern))
+    return prepared
+
+
+def _normalize_title_match_text(value: str) -> str:
+    value = unicodedata.normalize("NFKD", str(value or "").casefold())
+    value = "".join(char for char in value if not unicodedata.combining(char))
+    value = value.replace("_", " ")
+    return re.sub(r"[^\w\u3400-\u9fff]+", " ", value, flags=re.UNICODE).strip()
+
+
+def _usable_title_alias(term: str) -> bool:
+    if not term:
+        return False
+    # Two-character Chinese disease names are useful; short Latin abbreviations
+    # are too collision-prone unless expanded to a longer phrase in the config.
+    if re.search(r"[\u3400-\u9fff]", term):
+        return len(term.replace(" ", "")) >= 2
+    return len(term.replace(" ", "")) >= 3
+
+
+def _title_term_spans(title: str, term: str) -> list[tuple[int, int]]:
+    if re.search(r"[\u3400-\u9fff]", term) and not re.search(r"[a-z0-9]", term):
+        return [(match.start(), match.end()) for match in re.finditer(re.escape(term), title)]
+    pattern = rf"(?<![\w]){re.escape(term)}(?![\w])"
+    return [(match.start(), match.end()) for match in re.finditer(pattern, title, flags=re.UNICODE)]
+
+
+def _load_title_disease_aliases() -> dict[str, list[str]]:
+    merged: dict[str, set[str]] = defaultdict(set)
+    try:
+        payload = json.loads(LITERATURE_DISEASE_ALIASES_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        payload = {}
+    aliases = payload.get("aliases") if isinstance(payload, dict) else None
+    if isinstance(aliases, dict):
+        for disease_id, terms in aliases.items():
+            if isinstance(terms, list):
+                merged[str(disease_id)].update(str(term).strip() for term in terms if str(term).strip())
+    try:
+        ontology = json.loads((ROOT / "configs" / "disease_ontology.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        ontology = {}
+    for concept in ontology.get("concepts", []) if isinstance(ontology, dict) else []:
+        if not isinstance(concept, dict):
+            continue
+        labels = concept.get("legacy_labels") or {}
+        if not isinstance(labels, dict):
+            continue
+        for values in labels.values():
+            if isinstance(values, list):
+                merged[str(concept.get("id") or "")].update(
+                    str(term).strip() for term in values if str(term).strip()
+                )
+    return {disease_id: sorted(terms) for disease_id, terms in merged.items() if disease_id}
+
+
+def _title_contains_term(title: str, term: str) -> bool:
+    normalized_title = _normalize_title_match_text(title)
+    normalized_term = _normalize_title_match_text(term)
+    return bool(_usable_title_alias(normalized_term) and _title_term_spans(normalized_title, normalized_term))
+
+
+def _title_estimated_topics(title: str) -> list[dict[str, str]]:
+    vocabulary = {
+        "vaccination": ("vaccin", "immunization", "immunisation"),
+        "antimicrobial resistance": ("antimicrobial resistance", "antibiotic resistance"),
+        "outbreak response": ("outbreak", "epidemic", "cluster"),
+        "surveillance": ("surveillance", "monitoring"),
+        "genomic surveillance": ("genomic surveillance", "genomic epidemiology", "whole genome"),
+        "diagnostics": ("diagnostic", "detection assay", "testing"),
+        "epidemiology": ("epidemiology", "incidence", "prevalence", "transmission"),
+        "One Health": ("one health", "zoonotic", "animal reservoir"),
+    }
+    normalized = re.sub(r"[^a-z0-9\u3400-\u9fff]+", " ", title.casefold())
+    results = []
+    for topic, terms in vocabulary.items():
+        matched = next((term for term in terms if _title_contains_term(normalized, term)), None)
+        if matched:
+            results.append({"name": topic, "source": "title_estimate", "matched_term": matched})
+    return results
 
 
 def _normalize_seed_doi(value: Any) -> str | None:
@@ -286,15 +452,31 @@ def build_publication_timeline(articles: list[dict[str, Any]]) -> list[dict[str,
     ]
 
 
-def build_disease_evidence_events(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Project dated guidance and vaccine-policy evidence without claiming causality."""
+def build_disease_evidence_events(
+    articles: list[dict[str, Any]],
+    *,
+    disease_id: str | None = None,
+    title_aliases: dict[str, list[str]] | None = None,
+) -> list[dict[str, Any]]:
+    """Project dated guidance and policy evidence with a title-confirmed disease link."""
 
     events: list[dict[str, Any]] = []
+    aliases = title_aliases if title_aliases is not None else (_load_title_disease_aliases() if disease_id else {})
     for item in articles:
         if not item.get("published_at"):
             continue
         study_type = str(item.get("study_type") or "")
         title = str(item.get("title") or "")
+        if disease_id:
+            linked_disease = next(
+                (disease for disease in item.get("diseases") or []
+                 if str(disease.get("disease_id") or "").upper() == disease_id.upper()),
+                None,
+            )
+            if not linked_disease or not _title_estimated_literature_links(
+                title, {disease_id.upper(): linked_disease}, aliases
+            ):
+                continue
         title_text = title.casefold()
         topics = {str(topic.get("name") or "").casefold() for topic in item.get("topics") or []}
         event_type: str | None = None
@@ -1414,6 +1596,9 @@ def empty_literature_export() -> dict[str, Any]:
         "last_updated": None,
         "metrics": {
             "total_public_articles": 0,
+            "title_estimated_related_records": 0,
+            "title_estimated_disease_links": 0,
+            "title_estimated_topic_links": 0,
             "preprints_total": 0,
             "integrity_alerts_total": 0,
             "withheld_metadata_only": 0,
@@ -1428,6 +1613,7 @@ def empty_literature_export() -> dict[str, Any]:
         },
         "featured": [],
         "articles": [],
+        "title_estimated_related_records": [],
         "preprints": [],
         "related_only_articles": [],
         "integrity_alerts": [],
@@ -1651,6 +1837,111 @@ async def collect_literature_export(
             .order_by(LiteratureArticle.is_featured.desc(), LiteratureArticle.discovery_score.desc(), LiteratureArticle.published_at.desc())
         )
     ).scalars().all()
+    review_candidates = (
+        await session.execute(
+            select(
+                LiteratureArticle.article_id,
+                LiteratureArticle.title,
+                LiteratureArticle.doi,
+                LiteratureArticle.pmid,
+                LiteratureArticle.journal,
+                LiteratureArticle.published_at,
+                LiteratureArticle.peer_review_status,
+                LiteratureArticle.abstract_text,
+                LiteratureArticle.open_access_status,
+                LiteratureArticle.open_access_url,
+                LiteratureArticle.pmcid,
+                LiteratureArticle.study_type,
+                LiteratureArticle.article_type,
+            )
+            .where(
+                LiteratureArticle.publication_status == "review",
+                LiteratureArticle.peer_review_status.in_(("peer_reviewed", "preprint")),
+                LiteratureArticle.integrity_status.notin_(("retracted", "expression_of_concern")),
+            )
+            .order_by(LiteratureArticle.published_at.desc().nullslast(), LiteratureArticle.article_id)
+        )
+    ).all()
+    # These records cannot support a full AI evidence summary, but their
+    # bibliographic identity and conservative title matches remain useful.
+    title_disease_aliases = _load_title_disease_aliases()
+    prepared_title_disease_aliases = _prepare_title_disease_aliases(
+        diseases_by_id, title_disease_aliases
+    )
+    title_estimate_records = []
+    for article in review_candidates:
+        policy = content_policy(article)
+        access_known = bool(
+            article.open_access_status == "open"
+            or article.open_access_url
+            or article.pmcid
+        )
+        if len(article.abstract_text or "") >= 180 and access_known and policy["detail_available"]:
+            continue
+        title_estimate_records.append({
+            "article_id": article.article_id,
+            "title": article.title,
+            "doi": article.doi,
+            "pmid": article.pmid,
+            "journal": article.journal,
+            "published_at": article.published_at.isoformat() if article.published_at else None,
+            "peer_review_status": article.peer_review_status,
+            "editorial_status": "review",
+            "detail_available": False,
+            "diseases": [],
+            "topics": [],
+            "title_estimated_diseases": _title_estimated_literature_links(
+                article.title, diseases_by_id, title_disease_aliases, prepared_title_disease_aliases
+            ),
+            "title_estimated_topics": _title_estimated_topics(article.title),
+            "estimate_method": "title_mention_only",
+        })
+    estimate_ids = [item["article_id"] for item in title_estimate_records]
+    estimated_disease_links = (
+        (await session.execute(
+            select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(estimate_ids))
+        )).scalars().all()
+        if estimate_ids else []
+    )
+    estimated_topic_links = (
+        (await session.execute(
+            select(LiteratureTopicLink).where(LiteratureTopicLink.article_id.in_(estimate_ids))
+        )).scalars().all()
+        if estimate_ids else []
+    )
+    stored_diseases: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    stored_topics: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for link in estimated_disease_links:
+        disease = diseases_by_id.get(link.disease_id) or {}
+        stored_diseases[link.article_id].append({
+            "disease_id": link.disease_id,
+            "slug": disease.get("slug"),
+            "name_en": disease.get("name_en") or disease.get("standard_name_en") or link.disease_id,
+            "name_zh": disease.get("name_zh") or disease.get("standard_name_zh"),
+            "confidence": link.confidence,
+            "source": "stored_relation",
+        })
+    for link in estimated_topic_links:
+        stored_topics[link.article_id].append({
+            "name": link.topic,
+            "confidence": link.confidence,
+            "source": "stored_relation",
+        })
+    for item in title_estimate_records:
+        known_diseases = stored_diseases.get(item["article_id"], [])
+        known_disease_ids = {link["disease_id"] for link in known_diseases}
+        item["diseases"] = [
+            *known_diseases,
+            *(link for link in item["title_estimated_diseases"] if link["disease_id"] not in known_disease_ids),
+        ][:5]
+        known_topics = stored_topics.get(item["article_id"], [])
+        known_topic_names = {link["name"].casefold() for link in known_topics}
+        item["topics"] = [
+            *known_topics,
+            *(link for link in item["title_estimated_topics"] if link["name"].casefold() not in known_topic_names),
+        ]
+        item.pop("title_estimated_diseases")
+        item.pop("title_estimated_topics")
     article_ids = [article.article_id for article in articles]
     peer_reviewed_article_ids = [
         article.article_id for article in articles if article.peer_review_status == "peer_reviewed"
@@ -2091,6 +2382,15 @@ async def collect_literature_export(
         "last_updated": latest_updated.isoformat() if latest_updated else None,
         "metrics": {
             "total_public_articles": len(projected),
+            "title_estimated_related_records": len(title_estimate_records),
+            "title_estimated_disease_links": sum(
+                sum(link.get("source") == "title_estimate" for link in item["diseases"])
+                for item in title_estimate_records
+            ),
+            "title_estimated_topic_links": sum(
+                sum(link.get("source") == "title_estimate" for link in item["topics"])
+                for item in title_estimate_records
+            ),
             "preprints_total": len(preprints),
             "integrity_alerts_total": len(integrity_alerts),
             "withheld_metadata_only": withheld_metadata_only,
@@ -2113,6 +2413,7 @@ async def collect_literature_export(
             reverse=True,
         )[:6],
         "articles": projected,
+        "title_estimated_related_records": title_estimate_records,
         "preprints": preprints,
         "related_only_articles": related_only_articles,
         "integrity_alerts": integrity_alerts,
@@ -2160,7 +2461,189 @@ async def collect_literature_export(
     }
 
 
-def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> None:
+_COLLECTION_CARD_FIELDS = (
+    "article_id", "slug", "title", "doi", "journal", "publisher", "authors",
+    "study_type", "published_at", "publication_date_label_en",
+    "publication_date_label_zh", "publication_date_label_fr", "open_access_status",
+    "open_access_url", "peer_review_status", "diseases", "countries", "topics",
+    "related_surveillance", "source_kind", "historical_baseline",
+    "why_it_matters_en", "why_it_matters_zh", "why_it_matters_fr",
+)
+
+
+def _collection_card_article(article: dict[str, Any]) -> dict[str, Any]:
+    """Keep only fields used by collection cards and their client filters."""
+    card = {key: article[key] for key in _COLLECTION_CARD_FIELDS if key in article}
+    publisher_url = (article.get("source_urls") or {}).get("publisher")
+    if publisher_url:
+        card["source_urls"] = {"publisher": publisher_url}
+    if not card.get("why_it_matters_fr"):
+        french_relevance = ((article.get("summary") or {}).get("fr") or {}).get(
+            "public_health_relevance"
+        )
+        if french_relevance:
+            card["why_it_matters_fr"] = french_relevance
+    return card
+
+
+# Pages rejects any one asset over 25 MiB on every plan. Keep each browser
+# file at or below 8 MiB so the research index can grow without a deploy failure.
+PUBLIC_RESEARCH_SHARD_MAX_BYTES = 8 * 1024 * 1024
+_SHARD_SKIP_KEYS = frozenset({"schema_version", "last_updated"})
+
+
+def _compact_json_bytes(value: Any) -> bytes:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def _chunk_records(records: list[Any], max_bytes: int) -> list[list[Any]]:
+    """Pack records so each compact ``{"records": [...]}`` file fits the budget."""
+
+    chunks: list[list[Any]] = []
+    current: list[Any] = []
+    envelope_bytes = len(_compact_json_bytes({"records": []}))
+    current_bytes = envelope_bytes
+    for record in records:
+        record_bytes = len(_compact_json_bytes(record))
+        trial_bytes = current_bytes + record_bytes + (1 if current else 0)
+        if current and trial_bytes > max_bytes:
+            chunks.append(current)
+            current = [record]
+            current_bytes = envelope_bytes + record_bytes
+        else:
+            current.append(record)
+            current_bytes = trial_bytes
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _store_shard_value(
+    key: str,
+    value: Any,
+    shard_dir: Path,
+    max_bytes: int,
+    written: set[str],
+) -> dict[str, Any]:
+    if isinstance(value, list):
+        chunks = _chunk_records(value, max_bytes)
+        manifest: list[dict[str, Any]] = []
+        for index, chunk in enumerate(chunks):
+            name = f"{key}-{index:03d}.json"
+            write_compact_json(shard_dir / name, {"records": chunk})
+            written.add(name)
+            manifest.append({"file": f"shards/{name}", "count": len(chunk)})
+        return {
+            "sharded": True,
+            "kind": "list",
+            "count": len(value),
+            "chunks": manifest,
+        }
+
+    name = f"{key}.json"
+    payload = {"value": value}
+    if len(_compact_json_bytes(payload)) <= max_bytes or not isinstance(value, dict):
+        write_compact_json(shard_dir / name, payload)
+        written.add(name)
+        return {"sharded": True, "kind": "value", "file": f"shards/{name}"}
+
+    parts = {
+        child_key: _store_shard_value(
+            f"{key}-{child_key}",
+            child,
+            shard_dir,
+            max_bytes,
+            written,
+        )
+        for child_key, child in value.items()
+    }
+    return {"sharded": True, "kind": "object", "parts": parts}
+
+
+def _largest_inline_key(document: dict[str, Any]) -> str | None:
+    best_key = None
+    best_size = -1
+    for key, value in document.items():
+        if key in _SHARD_SKIP_KEYS or not isinstance(value, (list, dict)):
+            continue
+        if isinstance(value, dict) and value.get("sharded") is True:
+            continue
+        size = len(_compact_json_bytes(value))
+        if size > best_size:
+            best_key = key
+            best_size = size
+    return best_key
+
+
+def publish_browser_research_index(
+    document: dict[str, Any],
+    directory: Path,
+    *,
+    max_bytes: int = PUBLIC_RESEARCH_SHARD_MAX_BYTES,
+) -> dict[str, Any]:
+    """Write the Pages copy of the research index as files within ``max_bytes``.
+
+    Astro keeps reading the single build-time ``index.json``. The browser copy
+    under ``public/site-data/research`` is uploaded as static assets, so the
+    large lists move into ``shards/`` and the index keeps a manifest.
+    """
+
+    if max_bytes < 128:
+        raise ValueError("max_bytes must leave room for a JSON envelope")
+    directory.mkdir(parents=True, exist_ok=True)
+    shard_dir = directory / "shards"
+    shard_dir.mkdir(parents=True, exist_ok=True)
+    published = copy.deepcopy(document)
+    written: set[str] = set()
+    while len(_compact_json_bytes(published)) > max_bytes:
+        key = _largest_inline_key(published)
+        if key is None:
+            break
+        before = len(_compact_json_bytes(published))
+        published[key] = _store_shard_value(key, published[key], shard_dir, max_bytes, written)
+        if len(_compact_json_bytes(published)) >= before:
+            break
+
+    articles = published.get("articles")
+    catalogue = {
+        "schema_version": published.get("schema_version"),
+        "last_updated": published.get("last_updated"),
+        "articles": articles,
+    }
+    if isinstance(articles, list) and len(_compact_json_bytes(catalogue)) > max_bytes:
+        published["articles"] = _store_shard_value("articles", articles, shard_dir, max_bytes, written)
+        catalogue["articles"] = published["articles"]
+
+    write_compact_json(directory / "index.json", published)
+    write_compact_json(directory / "catalogue.json", catalogue)
+    remove_stale_json_files(shard_dir, written)
+    oversized = [
+        path.name
+        for path in (directory / "index.json", directory / "catalogue.json", *shard_dir.glob("*.json"))
+        if path.stat().st_size > max_bytes
+    ]
+    if oversized:
+        raise RuntimeError(
+            "Research browser files exceed "
+            f"{max_bytes} bytes: {', '.join(oversized)}"
+        )
+    return published
+
+
+def write_literature_artifacts(
+    payload: dict[str, Any],
+    output_dir: Path,
+    public_site_data_dir: Path | None = None,
+    shard_max_bytes: int = PUBLIC_RESEARCH_SHARD_MAX_BYTES,
+) -> None:
+    phase_started = time.perf_counter()
+
+    def report_phase(name: str) -> None:
+        nonlocal phase_started
+        now = time.perf_counter()
+        print(f"  Literature timing: {name} {now - phase_started:.1f}s", flush=True)
+        phase_started = now
+
     research_dir = output_dir / "research"
     article_dir = research_dir / "articles"
     disease_dir = research_dir / "diseases"
@@ -2194,46 +2677,79 @@ def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> Non
             "articles": payload.get("articles") or [],
         },
     )
+    report_phase("build-time indexes")
+    if public_site_data_dir is not None:
+        publish_browser_research_index(
+            public_index,
+            public_site_data_dir / "research",
+            max_bytes=shard_max_bytes,
+        )
+    report_phase("browser sharded index")
     public_article_details = [
         *(payload.get("articles") or []),
         *(payload.get("preprints") or []),
     ]
+    route_diseases: dict[str, dict[str, Any]] = {}
+    for article in public_article_details:
+        for disease in article.get("diseases") or []:
+            if disease.get("name_en"):
+                route_diseases[disease["name_en"]] = {
+                    key: disease.get(key)
+                    for key in ("name_en", "name_fr", "slug", "disease_id")
+                }
+    write_compact_json(
+        research_dir / "routes.json",
+        {
+            "articles": [
+                {"slug": article["slug"], "indexable": article.get("indexable") is not False}
+                for article in public_article_details
+            ],
+            "diseases": list(route_diseases.values()),
+        },
+    )
     for article in public_article_details:
         write_pretty_json(
             article_dir / f"{article['slug']}.json",
             {**article, "knowledge_graph": build_knowledge_graph([article])},
         )
+    report_phase("article details")
+    title_aliases = _load_title_disease_aliases()
     for disease_id, articles in (payload.get("disease_articles") or {}).items():
         write_pretty_json(
             disease_dir / f"{disease_id}.json",
             {
-                "articles": articles,
+                "articles": [_collection_card_article(article) for article in articles],
                 "count": len(articles),
                 "publication_timeline": build_publication_timeline(articles),
-                "evidence_events": build_disease_evidence_events(articles),
+                "evidence_events": build_disease_evidence_events(
+                    articles, disease_id=disease_id.upper(), title_aliases=title_aliases
+                ),
                 "knowledge_graph": build_knowledge_graph(articles),
             },
         )
+    report_phase("disease collections")
     for country_code, articles in (payload.get("country_articles") or {}).items():
         write_pretty_json(
             country_dir / f"{country_code}.json",
             {
-                "articles": articles,
+                "articles": [_collection_card_article(article) for article in articles],
                 "count": len(articles),
                 "publication_timeline": build_publication_timeline(articles),
                 "knowledge_graph": build_knowledge_graph(articles),
             },
         )
+    report_phase("country collections")
     for topic_slug, articles in (payload.get("topic_articles") or {}).items():
         write_pretty_json(
             topic_dir / f"{topic_slug}.json",
             {
-                "articles": articles,
+                "articles": [_collection_card_article(article) for article in articles],
                 "count": len(articles),
                 "publication_timeline": build_publication_timeline(articles),
                 "knowledge_graph": build_knowledge_graph(articles),
             },
         )
+    report_phase("topic collections")
     for brief in payload.get("weekly_briefs") or []:
         write_pretty_json(weekly_dir / f"{brief['week']}.json", brief)
     remove_stale_json_files(article_dir, {f"{item['slug']}.json" for item in public_article_details})
@@ -2241,6 +2757,7 @@ def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> Non
     remove_stale_json_files(country_dir, {f"{key}.json" for key in (payload.get("country_articles") or {})})
     remove_stale_json_files(topic_dir, {f"{key}.json" for key in (payload.get("topic_articles") or {})})
     remove_stale_json_files(weekly_dir, {f"{item['week']}.json" for item in payload.get("weekly_briefs") or []})
+    report_phase("weekly briefs and cleanup")
 
 
 __all__ = [
@@ -2261,5 +2778,6 @@ __all__ = [
     "load_historical_seed_articles",
     "partition_public_literature_articles",
     "project_public_integrity_alerts",
+    "publish_browser_research_index",
     "write_literature_artifacts",
 ]

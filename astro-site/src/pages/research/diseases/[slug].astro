@@ -20,24 +20,15 @@ const zh = locale === 'zh';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const researchFile = resolve(`./src/data/research/diseases/${String(facet.disease_id).toLowerCase()}.json`);
 const research = existsSync(researchFile) ? JSON.parse(readFileSync(researchFile, 'utf-8')) : { articles: [], publication_timeline: [] };
-const surveillanceFile = resolve(`./src/data/diseases/${String(facet.disease_id).toLowerCase()}.json`);
-const surveillance = existsSync(surveillanceFile) ? JSON.parse(readFileSync(surveillanceFile, 'utf-8')) : null;
 const fr = locale === 'fr';
-const publications = new Map((research.publication_timeline ?? []).map((item: any) => [item.month, Number(item.publication_count ?? 0)]));
 const evidenceEvents: any[] = research.evidence_events ?? [];
-const months: string[] = surveillance?.global_monthly?.months ?? [];
-const cases: Array<number | null> = surveillance?.global_monthly?.cases ?? [];
-const caseCoverage = surveillance?.global_monthly?.coverage;
-const timeline = months.slice(-24).map((month, offset) => {
-  const index = months.length - Math.min(24, months.length) + offset;
-  return { month, cases: cases[index] ?? null, reported: caseCoverage?.cases_reported_jurisdictions?.[index] ?? null, eligible: caseCoverage?.eligible_jurisdictions ?? null, publications: Number(publications.get(month) ?? 0) };
-});
-const maxCases = Math.max(1, ...timeline.map((item) => item.cases ?? 0));
-const maxPublications = Math.max(1, ...timeline.map((item) => item.publications));
-const description = `A curated view of published ${facet.name_en} research, auditable classifier relationships, and the available GIDS surveillance timeline.`;
-const descriptionZh = `${facet.name_zh ?? facet.name_en}已发布研究、可审计分类关系与可用 GIDS 监测时间线的专题视图。`;
+const timeline = (research.publication_timeline ?? []).slice(-24).map((item: any) => ({ month: item.month, publications: Number(item.publication_count ?? 0) }));
+const maxPublications = Math.max(1, ...timeline.map((item: any) => item.publications));
+const peakPublication = timeline.reduce((peak: { month: string; publications: number } | null, item: { month: string; publications: number }) => !peak || item.publications > peak.publications ? item : peak, null);
+const description = `A curated view of published ${facet.name_en} research, auditable classifier relationships, and its publication timeline.`;
+const descriptionZh = `${facet.name_zh ?? facet.name_en}已发布研究、可审计分类关系与文献发布时间线的专题视图。`;
 const diseaseNameFr = localizedDiseaseName(facet, 'fr');
-const descriptionFr = `Une vue ciblée des recherches publiées sur ${diseaseNameFr}, des relations de classification auditables et de la chronologie de surveillance GIDS disponible.`;
+const descriptionFr = `Une vue ciblée des recherches publiées sur ${diseaseNameFr}, des relations de classification auditables et de la chronologie des publications.`;
 ---
 
 <ResearchCollectionPage
@@ -58,53 +49,58 @@ const descriptionFr = `Une vue ciblée des recherches publiées sur ${diseaseNam
 >
   <section slot="context" class="card evidence-timeline">
     <div class="timeline-heading">
-      <div><p class="academic-kicker">{zh ? '证据时间线' : fr ? 'Chronologie des preuves' : 'Evidence timeline'}</p><h2>{zh ? '监测活动与发表数量' : fr ? 'Activité de surveillance et volume de publications' : 'Surveillance activity and publication volume'}</h2></div>
+      <div><p class="academic-kicker">{zh ? '证据时间线' : fr ? 'Chronologie des preuves' : 'Evidence timeline'}</p><h2>{zh ? '文献发表时间线' : fr ? 'Chronologie des publications' : 'Publication timeline'}</h2></div>
       <a href={`${prefix}/diseases/${facet.slug}/`}>{zh ? '查看疾病监测 →' : fr ? 'Ouvrir la surveillance →' : 'Open disease surveillance →'}</a>
     </div>
-    {timeline.length > 0 ? <div class="timeline-table" role="table" aria-label="Monthly surveillance cases and publication volume">
-      {timeline.map((item) => <div class="timeline-row" role="row">
+    <div class="timeline-overview"><p class="timeline-intro">{zh ? '按月展示已收录文献的发表数量，便于识别研究活动的时间分布。' : fr ? 'Nombre mensuel de publications du catalogue, pour situer l’activité de recherche dans le temps.' : 'Monthly publication counts from the catalogue show how research activity changes over time.'}</p>{peakPublication && <span>{zh ? `近 ${timeline.length} 个发表月份 · 峰值 ${peakPublication.month}（${peakPublication.publications} 篇）` : fr ? `${timeline.length} mois publiés · pic ${peakPublication.month} (${peakPublication.publications})` : `${timeline.length} publication months · peak ${peakPublication.month} (${peakPublication.publications})`}</span>}</div>
+    {timeline.length > 0 ? <div class="timeline-table" role="table" aria-label="Monthly publication volume">
+      {timeline.map((item: { month: string; publications: number }) => <div class="timeline-row" role="row">
         <time role="cell" datetime={`${item.month}-01`}>{item.month}</time>
-        <div class="bar-cell" role="cell"><span class="cases-bar" style={`width:${Math.max(item.cases ? 3 : 0, (item.cases ?? 0) / maxCases * 100)}%`}></span><strong>{item.cases == null ? '—' : item.cases.toLocaleString()}{item.reported != null && item.eligible != null ? ` · ${item.reported}/${item.eligible}` : ''}</strong></div>
-        <div class="bar-cell" role="cell"><span class="papers-bar" style={`width:${Math.max(item.publications ? 8 : 0, item.publications / maxPublications * 100)}%`}></span><strong>{item.publications}</strong></div>
+        <div class="bar-cell" role="cell"><span class="papers-bar" style={`width:${item.publications / maxPublications * 100}%`}></span></div>
+        <strong class="timeline-count" role="cell">{item.publications}</strong>
       </div>)}
-      <div class="timeline-legend"><span><i class="cases-dot"></i><b>{zh ? 'GIDS 报告记录' : fr ? 'Cas déclarés à GIDS' : 'GIDS reported records'}</b></span><span><i class="papers-dot"></i><b>{zh ? '研究雷达发表数量' : fr ? 'Publications du Radar de recherche' : 'Research Radar publications'}</b></span></div>
-    </div> : <p class="timeline-empty">{zh ? '该疾病暂无 GIDS 月度序列；文献集合仍可独立使用。' : fr ? 'Aucune série mensuelle GIDS n’est disponible pour cette maladie ; la collection de publications reste utilisable séparément.' : 'No monthly GIDS series is available for this disease; the literature collection remains usable independently.'}</p>}
+      <div class="timeline-legend"><span><i class="papers-dot"></i><b>{zh ? '研究雷达发表数量' : fr ? 'Publications du Radar de recherche' : 'Research Radar publications'}</b></span></div>
+    </div> : <p class="timeline-empty">{zh ? '暂无月度发表记录。' : fr ? 'Aucune publication mensuelle disponible.' : 'No monthly publication records are available.'}</p>}
     {evidenceEvents.length > 0 && <div class="evidence-events" aria-label={fr ? 'Publications de recommandations et de politiques vaccinales' : 'Guidance and vaccine-policy evidence publications'}>
       <h3>{zh ? '指南与疫苗政策证据' : fr ? 'Recommandations et politiques vaccinales' : 'Guidance and vaccine-policy evidence'}</h3>
       {evidenceEvents.slice(0, 8).map((event) => <a href={`${prefix}/research/articles/${event.slug}/`}>
         <time datetime={event.date}>{event.date}</time>
-        <span>{event.event_type === 'guideline_publication' ? (zh ? '指南发布' : fr ? 'Publication de recommandation' : 'Guideline publication') : (zh ? '疫苗政策证据' : fr ? 'Preuve de politique vaccinale' : 'Vaccine-policy evidence')}</span>
+        <span>{event.event_type === 'guideline_publication' ? (zh ? '指南相关文献' : fr ? 'Étude liée aux recommandations' : 'Guidance-related publication') : (zh ? '疫苗政策证据' : fr ? 'Preuve de politique vaccinale' : 'Vaccine-policy evidence')}</span>
         <strong>{event.title}</strong>
       </a>)}
     </div>}
-    <p class="timeline-note">{zh ? '病例数字是国家级已报告部分小计；每月 x/y 表示该月报告国家数/本次导出国家级辖区数。两组条形使用独立刻度，并列不表示发表活动能够解释监测活动。' : fr ? 'Les nombres de cas sont des sous-totaux nationaux déclarés ; x/y indique les juridictions déclarantes sur celles de cet export. Les barres utilisent des échelles indépendantes et leur alignement ne suggère pas que les publications expliquent la surveillance.' : 'Case values are national reported subtotals; x/y shows reporting jurisdictions over national jurisdictions in this export. Bars use independent scales; their alignment does not imply publications explain surveillance activity.'}</p>
-    <p class="timeline-note">{zh ? '指南与政策标记表示已收录文献的发布日期；该标记本身不代表官方政策一定在当日发生变化。' : fr ? 'Les marqueurs de recommandations et de politiques indiquent la date des publications du catalogue ; ils n’établissent pas à eux seuls qu’une politique officielle a changé ce jour-là.' : 'Guidance and policy markers identify dated publications in the curated catalogue; they do not by themselves establish that an official policy changed on that date.'}</p>
+    {evidenceEvents.length > 0 && <p class="timeline-note">{zh ? '指南与政策标记表示已收录文献的发布日期；该标记本身不代表官方政策一定在当日发生变化。' : fr ? 'Les marqueurs de recommandations et de politiques indiquent la date des publications du catalogue ; ils n’établissent pas à eux seuls qu’une politique officielle a changé ce jour-là.' : 'Guidance and policy markers identify dated publications in the curated catalogue; they do not by themselves establish that an official policy changed on that date.'}</p>}
   </section>
 </ResearchCollectionPage>
 
 <style>
-  .evidence-timeline { margin-top: 1.5rem; padding: clamp(1.25rem, 3vw, 2rem); }
+  .evidence-timeline { margin-top: 1.5rem; padding: clamp(1.25rem, 3vw, 2rem); border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
   .timeline-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .72); }
   .timeline-heading h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 clamp(1.3rem, 3vw, 1.8rem)/1.1 'IBM Plex Sans', sans-serif; }
-  .timeline-heading a { flex: none; color: rgb(var(--color-brand)); font-size: .72rem; font-weight: 650; }
-  .timeline-table { margin-top: 1rem; }
-  .timeline-row { display: grid; grid-template-columns: 4.5rem minmax(0, 1.35fr) minmax(0, .65fr); gap: .75rem; align-items: center; min-height: 1.45rem; }
-  .timeline-row time { color: rgb(var(--text-faint)); font: 500 .58rem/1 ui-monospace, monospace; }
+  .timeline-heading a { flex: none; color: rgb(var(--color-teal)); font-size: .78rem; font-weight: 650; }
+  .timeline-heading a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .timeline-overview { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1rem; margin-top: 1rem; }
+  .timeline-intro { max-width: 42rem; color: rgb(var(--text-muted)); font-size: .82rem; line-height: 1.6; }
+  .timeline-overview > span { color: rgb(var(--text-faint)); font: 500 .68rem/1.5 ui-monospace, monospace; }
+  .timeline-table { margin-top: 1.25rem; }
+  .timeline-row { display: grid; grid-template-columns: 5rem minmax(0, 1fr) 2.5rem; gap: .75rem; align-items: center; min-height: 1.8rem; }
+  .timeline-row time { color: rgb(var(--text-muted)); font: 500 .7rem/1 ui-monospace, monospace; }
   .bar-cell { position: relative; height: .72rem; background: rgb(var(--surface-raised) / .7); }
   .bar-cell span { display: block; height: 100%; }
-  .bar-cell strong { position: absolute; right: .25rem; top: 50%; color: rgb(var(--text)); font: 600 .52rem/1 ui-monospace, monospace; transform: translateY(-50%); }
+  .timeline-count { color: rgb(var(--text-strong)); font: 600 .72rem/1 ui-monospace, monospace; text-align: right; font-variant-numeric: tabular-nums; }
   .cases-bar, .cases-dot { background: rgb(var(--color-teal) / .54); }
-  .papers-bar, .papers-dot { background: rgb(var(--color-accent) / .7); }
+  .papers-bar, .papers-dot { background: rgb(var(--color-teal) / .8); }
   .timeline-legend { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; color: rgb(var(--text-muted)); font-size: .64rem; }
   .timeline-legend span { display: inline-flex; align-items: center; gap: .4rem; }
   .timeline-legend i { width: .48rem; height: .48rem; }
   .timeline-legend b { font-weight: 550; }
   .evidence-events { display: grid; gap: .45rem; margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid rgb(var(--border) / .6); }
   .evidence-events h3 { color: rgb(var(--text-strong)); font: 600 .82rem/1.3 'IBM Plex Sans', sans-serif; }
-  .evidence-events a { display: grid; grid-template-columns: 5.6rem 8.6rem minmax(0, 1fr); gap: .65rem; align-items: baseline; color: rgb(var(--text)); font-size: .66rem; }
+  .evidence-events a { display: grid; grid-template-columns: 5.6rem 8.6rem minmax(0, 1fr); gap: .65rem; align-items: baseline; border-bottom: 1px solid rgb(var(--border) / .45); padding: .55rem 0; color: rgb(var(--text)); font-size: .74rem; line-height: 1.45; }
   .evidence-events time { color: rgb(var(--text-faint)); font-family: ui-monospace, monospace; }
-  .evidence-events span { color: rgb(var(--color-brand)); font-weight: 650; }
+  .evidence-events span { color: rgb(var(--color-teal)); font-weight: 650; }
   .evidence-events strong { font-weight: 550; }
+  .evidence-events a:hover strong { color: rgb(var(--color-teal)); text-decoration: underline; text-underline-offset: 2px; }
   .timeline-note, .timeline-empty { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.55; }
-  @media (max-width: 640px) { .timeline-heading { align-items: start; flex-direction: column; } .timeline-row { grid-template-columns: 3.8rem 1fr; } .timeline-row .bar-cell:last-child { grid-column: 2; } .evidence-events a { grid-template-columns: 5.4rem 1fr; } .evidence-events strong { grid-column: 1 / -1; } }
+  @media (max-width: 640px) { .timeline-heading { align-items: start; flex-direction: column; } .timeline-row { grid-template-columns: 4rem minmax(0, 1fr) 2rem; gap: .45rem; } .evidence-events a { grid-template-columns: 5.4rem 1fr; } .evidence-events strong { grid-column: 1 / -1; } }
 </style>
