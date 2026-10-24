@@ -26,6 +26,52 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.13.6',
+    date: '2026-10-24',
+    titleEn: 'Clearer comparison and research views',
+    titleZh: '优化对比与研究页面',
+    titleFr: 'Comparaison et recherche plus claires',
+    summaryEn:
+      'Comparison, disease, and research pages have clearer navigation and chart controls, with improved layouts on small screens. Research guidance evidence is now matched to disease titles before publication.',
+    summaryZh:
+      '对比、疾病和研究页面的导航与图表控件更加清晰，移动端布局也得到优化。研究页面的指南相关证据现在会先按疾病标题匹配后再发布。',
+    summaryFr:
+      'Les pages de comparaison, de maladie et de recherche offrent une navigation et des commandes de graphiques plus claires, ainsi que de meilleures mises en page sur petit écran. Les preuves liées aux recommandations sont désormais associées aux titres des maladies avant publication.',
+    sections: [
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Refined the comparison, disease, and research interfaces for clearer navigation, chart controls, and mobile layouts.',
+            zh: '优化了对比、疾病和研究界面的导航、图表控件与移动端布局。',
+            fr: 'Les interfaces de comparaison, de maladie et de recherche ont été améliorées pour clarifier la navigation et les commandes des graphiques, ainsi que pour optimiser les mises en page mobiles.',
+          },
+          {
+            en: 'Research Radar guidance and policy evidence now require a title-confirmed match to the disease page. Guidance-related records are labeled without implying an official policy date.',
+            zh: 'Research Radar 的指南与政策证据现在必须与疾病页标题确认匹配；相关文献标签也不会暗示其为官方政策发布日期。',
+            fr: 'Les preuves de recommandations et de politiques de Research Radar doivent désormais correspondre au titre de la maladie. Les notices associées sont libellées sans laisser entendre qu’il s’agit d’une date officielle de politique.',
+          },
+        ],
+      },
+      {
+        kind: 'new',
+        labelEn: 'Data',
+        labelZh: '数据',
+        labelFr: 'Données',
+        items: [
+          {
+            en: 'Published 79 changed files to the public data download repository for 295 jurisdictions and 239 diseases.',
+            zh: '向公开数据下载仓库发布了 79 个变更文件，涵盖 295 个辖区和 239 种疾病。',
+            fr: '79 fichiers modifiés ont été publiés dans le dépôt public de téléchargement des données, couvrant 295 juridictions et 239 maladies.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.13.5',
     date: '2026-10-23',
     titleEn: 'Compare countries on a map',
