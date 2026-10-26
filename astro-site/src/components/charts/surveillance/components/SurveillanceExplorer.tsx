@@ -14,8 +14,9 @@ import {
 } from "../state/config";
 import { useExplorerAnalysis } from "../state/useExplorerAnalysis";
 import { label, lineName } from "../presentation/labels";
+import ChartResultActions from "../../ChartResultActions";
 import SeriesPicker from "./SeriesPicker";
-import { PrimaryControls } from "./ExplorerControls";
+import { MeasureSelect, PrimaryControls } from "./ExplorerControls";
 import SurveillancePlot, { seriesColor } from "./SurveillancePlot";
 import {
   DataPanel,
@@ -35,6 +36,8 @@ interface Props extends CatalogInput {
   title?: string;
   sourceMeta?: ChartSourceMeta | null;
   reportComparison?: boolean;
+  /** Hide the data button when this page has no published-file dialog. */
+  showData?: boolean;
 }
 export default function SurveillanceExplorer(props: Props) {
   const data = useCatalog(props);
@@ -82,6 +85,7 @@ function ExplorerWorkspace({
   loadSources,
   sourceMeta,
   reportComparison = false,
+  showData = true,
 }: WorkspaceProps) {
   const [panelPage, setPanelPage] = useState(0);
   const [notice, setNotice] = useState("");
@@ -190,19 +194,14 @@ function ExplorerWorkspace({
         : analyze(catalog, { ...config, window: null }).domain;
     if (full) patch({ window: months ? trailingWindow(full, months) : null });
   };
-  const share = async () => {
+  const share = () => {
     const url = new URL(window.location.href);
     url.searchParams.set(
       "analysis",
       serializeConfig(catalog.contextId, config),
     );
     setShareLink(url.toString());
-    try {
-      await navigator.clipboard.writeText(url.toString());
-      setNotice(label("copied", lang));
-    } catch {
-      setNotice(label("shareManual", lang));
-    }
+    return url.toString();
   };
   const toggleFullscreen = async () => {
     if (!canFullscreen) return;
@@ -238,10 +237,17 @@ function ExplorerWorkspace({
       data-testid="surveillance-explorer"
       data-context={catalog.contextId}
       data-result-id={result.id}
+      data-chart-title={title || undefined}
+      data-source-label={sourceMeta?.label || undefined}
+      data-source-coverage={sourceMeta?.coverage || undefined}
+      data-source-updated={sourceMeta?.updatedAt || undefined}
     >
       <div className="surveillance-heading">
         {(title || presentation === "compact") && <strong>{title ?? label("title", lang)}</strong>}
         <div className="surveillance-actions">
+          {expanded && (
+            <MeasureSelect config={config} catalog={catalog} lang={lang} patch={patch} />
+          )}
           {presentation === "compact" && (
             <button
               type="button"
@@ -251,30 +257,25 @@ function ExplorerWorkspace({
               {label("advanced", lang)}
             </button>
           )}
-          {canFullscreen && (
+          {expanded && (
             <button
+              className="surveillance-mobile-picker"
               type="button"
-              className="chart-link-btn chart-fullscreen-btn"
-              onClick={toggleFullscreen}
-              aria-label={label(fullscreen ? "exitFullscreen" : "fullscreen", lang)}
-              aria-pressed={fullscreen}
-              title={label(fullscreen ? "exitFullscreen" : "fullscreen", lang)}
+              onClick={() => setPickerOpen(true)}
             >
-              {fullscreen ? (
-                <svg viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M7.25 3.5v3.75H3.5M12.75 3.5v3.75h3.75M7.25 16.5v-3.75H3.5M12.75 16.5v-3.75h3.75" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M7.25 3.5H3.5v3.75M12.75 3.5h3.75v3.75M7.25 16.5H3.5v-3.75M12.75 16.5h3.75v-3.75" />
-                </svg>
-              )}
-              <span>{label(fullscreen ? "exitFullscreen" : "fullscreen", lang)}</span>
+              {label("objects", lang)}
             </button>
           )}
-          <button type="button" className="chart-link-btn" onClick={share}>
-            {label("share", lang)}
-          </button>
+          <ChartResultActions
+            lang={lang}
+            shellRef={shell}
+            fullscreen={{ active: fullscreen, enabled: canFullscreen, toggle: toggleFullscreen }}
+            onShare={share}
+            showShareLink={false}
+            pngFilename={`gids-surveillance-${result.id}.png`}
+            pngSelector=".surveillance-plot"
+            showData={showData}
+          />
         </div>
       </div>
       {context.kind === "report" && (
@@ -292,7 +293,6 @@ function ExplorerWorkspace({
         chooseWindow={chooseWindow}
         dateValue={dateValue}
         setDate={setDate}
-        setPickerOpen={setPickerOpen}
       />
       {notice && (
         <p role="status" className="surveillance-note">

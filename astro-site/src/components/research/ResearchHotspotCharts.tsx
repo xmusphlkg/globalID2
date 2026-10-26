@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import EChartsReact from '../../lib/echartsReact';
 import echarts from '../../lib/echartsResearch';
 import ChartFrame from '../charts/ChartFrame';
@@ -159,6 +159,10 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
   const lang = useChartLanguage(initialLanguage);
   const theme = useChartTheme();
   const [active, setActive] = useState<ChartKey>('stream');
+  useEffect(() => {
+    const value = new URLSearchParams(window.location.search).get('research_chart');
+    if (value === 'heatmap' || value === 'burst' || value === 'migration' || value === 'stream') setActive(value);
+  }, []);
   const [isChartReady, setIsChartReady] = useState(false);
 
   const t = (en: string, zh: string, fr: string) => (lang === 'zh' ? zh : lang === 'fr' ? fr : en);
@@ -748,6 +752,13 @@ export default function ResearchHotspotCharts({ hotspots, initialLanguage = 'en'
         )}
         table={renderTable}
         stageHeight={activeHeight}
+        pngFilename={`gids-research-${active}.png`}
+        showData={false}
+        onShare={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.set('research_chart', active);
+          return url.toString();
+        }}
       />
     </div>
   );

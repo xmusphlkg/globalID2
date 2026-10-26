@@ -26,6 +26,57 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.13.7',
+    date: '2026-10-26',
+    titleEn: 'More reliable chart downloads',
+    titleZh: '更稳定的图表下载',
+    titleFr: 'Téléchargements de graphiques plus fiables',
+    summaryEn:
+      'Chart PNG downloads now save in every supported browser, the export library loads only when a download starts, and compare charts point to the disease page’s published files.',
+    summaryZh:
+      '图表 PNG 下载现在可以在所有支持的浏览器中保存；导出库只在开始下载时加载；对比图表的数据入口会跳转到疾病页已发布的文件列表。',
+    summaryFr:
+      'Les téléchargements PNG des graphiques fonctionnent désormais dans tous les navigateurs pris en charge, la bibliothèque d’export ne se charge qu’au moment du téléchargement, et les graphiques de comparaison renvoient vers les fichiers publiés de la page maladie.',
+    sections: [
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'Downloading a chart PNG now saves the file in browsers that ignored an anchor which was not part of the page.',
+            zh: '下载图表 PNG 时，链接会先加入文档再触发，之前在部分浏览器中不会保存文件的问题已修复。',
+            fr: 'Le téléchargement d’un graphique PNG enregistre désormais le fichier dans les navigateurs qui ignoraient une ancre absente de la page.',
+          },
+          {
+            en: 'The surveillance explorer shares a configuration once instead of building the shared link twice for one click.',
+            zh: '监测浏览器的分享只构建一次配置链接，不再一次点击重复生成两遍。',
+            fr: 'L’explorateur de surveillance partage une configuration une seule fois au lieu de générer deux fois le lien à chaque clic.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Compare charts link to the disease page download dialog for published CSV, JSON, and XLSX files, so every data download runs through the same dialog.',
+            zh: '对比图表的数据按钮会跳转到疾病页的下载弹窗，提供已发布的 CSV、JSON 和 XLSX 文件，所有数据下载统一走同一个弹窗。',
+            fr: 'Les graphiques de comparaison renvoient vers la boîte de dialogue de téléchargement de la page maladie pour les fichiers CSV, JSON et XLSX publiés : tous les téléchargements passent par la même boîte de dialogue.',
+          },
+          {
+            en: 'The QR attribution added to exported PNGs loads only when an export starts, keeping the initial chart bundle smaller.',
+            zh: '导出 PNG 时附加的二维码署名仅在开始导出时加载，初始图表脚本体积更小。',
+            fr: 'L’attribution QR ajoutée aux PNG exportés ne se charge qu’au début de l’export, ce qui réduit le lot JavaScript initial des graphiques.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.13.6',
     date: '2026-10-24',
     titleEn: 'Clearer comparison and research views',

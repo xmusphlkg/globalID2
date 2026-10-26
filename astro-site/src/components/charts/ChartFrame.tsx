@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { ChartSourceMeta } from '../../utils/chartMeta';
+import ChartResultActions from './ChartResultActions';
 
 type RenderablePanel = ReactNode | ((state: { isFullscreen: boolean }) => ReactNode);
 
@@ -15,6 +16,9 @@ interface Props {
   fullscreenSidebar?: ReactNode;
   stageHeight?: number;
   sourceMeta?: ChartSourceMeta | null;
+  pngFilename?: string;
+  showData?: boolean;
+  onShare?: () => string | Promise<string | void> | void;
 }
 
 export default function ChartFrame({
@@ -28,6 +32,9 @@ export default function ChartFrame({
   fullscreenSidebar,
   stageHeight,
   sourceMeta = null,
+  pngFilename = 'gids-chart.png',
+  showData = true,
+  onShare,
 }: Props) {
   const [mode, setMode] = useState<'chart' | 'table'>('chart');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -88,24 +95,21 @@ export default function ChartFrame({
   const renderPanel = (panel: RenderablePanel) => (
     typeof panel === 'function' ? panel({ isFullscreen }) : panel
   );
-  const fullscreenLabel = isFullscreen
-    ? (lang === 'zh' ? '退出全屏' : 'Exit full-screen')
-    : (lang === 'zh' ? '进入全屏' : 'Enter full-screen');
+  const viewLabel = lang === 'zh' ? '切换图表视图' : lang === 'fr' ? 'Changer la vue du graphique' : 'Switch chart view';
+  const tableLabel = lang === 'zh' ? '数据' : lang === 'fr' ? 'Données' : 'Data';
+  const chartLabel = lang === 'zh' ? '图表' : lang === 'fr' ? 'Graphique' : 'Chart';
 
   return (
-    <div ref={shellRef} data-source-label={sourceMeta?.label} className={`chart-shell panel-fullscreen ${isFullscreen ? 'chart-shell-fullscreen' : ''}`}>
+    <div
+      ref={shellRef}
+      data-source-label={sourceMeta?.label}
+      data-source-coverage={sourceMeta?.coverage}
+      data-source-updated={sourceMeta?.updatedAt}
+      className={`chart-shell panel-fullscreen ${isFullscreen ? 'chart-shell-fullscreen' : ''}`}
+    >
       <div className="chart-frame-toolbar">
         <div className="chart-frame-toolbar-left">
-          <div className="chart-view-toggle" role="tablist" aria-label={lang === 'zh' ? '切换图表视图' : 'Switch chart view'}>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'table'}
-              onClick={() => setMode('table')}
-              className={`chart-view-btn ${mode === 'table' ? 'chart-view-btn-active' : ''}`}
-            >
-              {lang === 'zh' ? '表格' : 'Table'}
-            </button>
+          <div className="chart-view-toggle" role="tablist" aria-label={viewLabel}>
             <button
               type="button"
               role="tab"
@@ -113,33 +117,31 @@ export default function ChartFrame({
               onClick={() => setMode('chart')}
               className={`chart-view-btn ${mode === 'chart' ? 'chart-view-btn-active' : ''}`}
             >
-              {lang === 'zh' ? '图表' : 'Chart'}
+              {chartLabel}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'table'}
+              onClick={() => setMode('table')}
+              className={`chart-view-btn ${mode === 'table' ? 'chart-view-btn-active' : ''}`}
+            >
+              {tableLabel}
             </button>
           </div>
           {toolbar && <div className="chart-frame-toolbar-main">{toolbar}</div>}
         </div>
         <div className="chart-frame-actions">
-          {canFullscreen && (
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="chart-link-btn chart-fullscreen-btn"
-              aria-label={fullscreenLabel}
-              aria-pressed={isFullscreen}
-              title={fullscreenLabel}
-            >
-              {isFullscreen ? (
-                <svg viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M7.25 3.5v3.75H3.5M12.75 3.5v3.75h3.75M7.25 16.5v-3.75H3.5M12.75 16.5v-3.75h3.75" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M7.25 3.5H3.5v3.75M12.75 3.5h3.75v3.75M7.25 16.5H3.5v-3.75M12.75 16.5h3.75v-3.75" />
-                </svg>
-              )}
-              <span>{fullscreenLabel}</span>
-            </button>
-          )}
+          <ChartResultActions
+            lang={lang}
+            shellRef={shellRef}
+            fullscreen={{ active: isFullscreen, enabled: canFullscreen, toggle: toggleFullscreen }}
+            onShare={onShare}
+            pngFilename={pngFilename}
+            pngSelector=".chart-canvas"
+            pngDisabled={mode !== 'chart'}
+            showData={showData}
+          />
         </div>
       </div>
 

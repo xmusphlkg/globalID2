@@ -62,6 +62,13 @@ export default function ReportSurveillanceCurve({
       initialMeasures={showDeaths ? ["cases", "deaths"] : ["cases"]}
       presentation="compact"
       reportComparison={comparison.compareLatest}
+      title={
+        lang === "zh"
+          ? `${disease.name_zh || disease.name_en}疫情曲线`
+          : lang === "fr"
+            ? `Courbe épidémique : ${disease.name_fr || disease.name_en}`
+            : `${disease.name_en} epidemic curve`
+      }
     />
   );
 }

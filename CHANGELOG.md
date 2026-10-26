@@ -2,6 +2,25 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.13.7] - 2026-10-26
+
+### Fixed
+
+- Chart PNG downloads attach the download link to the document before clicking it. Browsers that ignore a detached anchor (Safari and iOS in particular) had saved nothing.
+- The surveillance explorer shares a configuration once. It no longer builds and renders the shared link twice for one click.
+
+### Changed
+
+- The QR attribution used by PNG export is imported only when an export starts, so it stays out of the initial chart JavaScript chunk.
+- Compare charts no longer offer a per-chart CSV button. Their data action opens the disease page's published-file dialog, so every data download goes through the same download dialog.
+- Removed the unused CSV helpers from the shared chart export module.
+
+### Validation
+
+- `astro check`: 0 errors, 0 warnings across 277 files; style boundaries and trilingual i18n checks pass.
+- Unit tests: chart, SEO, and performance-budget suites pass (56 + 27 + 10 tests).
+- Production build: 6,295 pages; largest JavaScript chunk 108,579 gzip bytes against a 350,000 byte cap; largest chart route 384,255 gzip bytes against a 395,000 byte cap; average page 17,083 gzip bytes.
+
 ## [0.13.5] - 2026-10-23
 
 ### Added

@@ -3,6 +3,8 @@
 // are derived from the bundled world GeoJSON and the MIT-licensed flag-icons
 // country catalogue, so the map does not depend on a third-party tile service.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ChartResultActions from './ChartResultActions';
+import { pngFromCanvases } from './chartExport';
 import ReactEChartsCore from '../../lib/echartsReact';
 import echarts from '../../lib/echartsMap';
 import countryCatalogue from 'flag-icons/country.json' with { type: 'json' };
@@ -185,6 +187,7 @@ function makeCountryPoints(worldGeoJson: any, metaByCode: Record<string, MetaCou
 
 export default function CountriesMapView({ metaCountries = [], height = 450, initialLanguage = 'en' }: Props) {
   const chartRef = useRef<any>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [mapReady, setMapReady] = useState(false);
@@ -295,8 +298,25 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
   const zoom = (factor: number) => chartRef.current?.getEchartsInstance?.()?.dispatchAction({ type: 'geoRoam', geoIndex: 0, zoom: factor });
   const resetZoom = () => chartRef.current?.getEchartsInstance?.()?.setOption({ geo: { zoom: 1, center: [0, 0] } });
 
-  if (!mapReady) return <div style={{ height }} className="flex items-center justify-center text-sm text-[rgb(var(--text-muted))]">{initialLanguage === 'zh' ? '正在加载地图…' : 'Loading map…'}</div>;
+  if (!mapReady) return <div style={{ height }} className="flex items-center justify-center text-sm text-[rgb(var(--text-muted))]">{initialLanguage === 'zh' ? '正在加载地图…' : initialLanguage === 'fr' ? 'Chargement de la carte…' : 'Loading map…'}</div>;
+  const lang = initialLanguage;
+  const markerColor = (marker: DotPos) => marker.status === 'Unsupported' ? palette.unsupported : marker.status === 'Scheduled' ? palette.planned : palette.supported;
   return (
+    <div ref={shellRef} className="panel-fullscreen">
+    <div className="chart-result-row">
+      <ChartResultActions
+        lang={lang}
+        shellRef={shellRef}
+        pngFilename="gids-country-coverage.png"
+        showData={false}
+        getPng={() => containerRef.current ? pngFromCanvases(containerRef.current, dotPositions.map((marker) => ({
+          x: marker.px,
+          y: marker.py,
+          color: markerColor(marker),
+          radius: marker.kind === 'subdivision' ? 4 : 5,
+        }))) : null}
+      />
+    </div>
     <div ref={containerRef} className="coverage-map-canvas" style={{ position: 'relative', height, overflow: 'hidden', background: palette.mapBg }}>
       <ReactEChartsCore ref={chartRef} echarts={echarts} option={option} style={{ height: '100%', width: '100%' }} onEvents={handleEvents} notMerge />
       <div className="coverage-map-controls" role="group" aria-label={initialLanguage === 'zh' ? '地图缩放' : 'Map zoom'}>
@@ -318,6 +338,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
         {hovered.kind === 'country' && Boolean(hovered.regionalCount) && <div className="coverage-map-tooltip-meta">{initialLanguage === 'zh' ? `${hovered.regionalCount} 个地区数据集` : initialLanguage === 'fr' ? `${hovered.regionalCount} jeux de données régionaux` : `${hovered.regionalCount} regional datasets`}</div>}
         {hovered.href && <div className="coverage-map-tooltip-action">{initialLanguage === 'zh' ? '单击打开详情页 ↗' : 'Click to open details ↗'}</div>}
       </div>}
+    </div>
     </div>
   );
 }

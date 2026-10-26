@@ -36,6 +36,7 @@ export default function DiseaseCountryCurve({
       presentation={contextKind === "research" ? "compact" : "standard"}
       sourceMeta={sourceMeta}
       initialSelectionIds={initialSelectionIds}
+      showData={contextKind !== "research"}
     />
   );
 }

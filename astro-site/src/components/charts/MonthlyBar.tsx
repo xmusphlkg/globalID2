@@ -238,6 +238,7 @@ export default function MonthlyBar({
       fullscreenSidebar={fullSelector}
       stageHeight={height}
       sourceMeta={sourceMeta}
+      pngFilename="gids-monthly-bars.png"
     />
   );
 }

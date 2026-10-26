@@ -414,9 +414,6 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
         <h2 class="figure-title">
           {zh ? '各疾病监测趋势' : fr ? 'Tendances de surveillance par maladie' : 'Surveillance trends by disease'}
         </h2>
-        <p class="figure-caption mt-2">
-          {zh ? '选择疾病和指标，调整时间范围后查看图表或数据表。页面下方提供完整数据下载。不同来源或报告频率的数据会分别标明。' : fr ? 'Choisissez une maladie et une mesure, ajustez la période, puis consultez le graphique ou le tableau. Le jeu de données complet est disponible plus bas. Les sources et fréquences différentes sont signalées séparément.' : 'Choose a disease and measure, adjust the time range, then view the chart or table. Download the full dataset below. Different sources and reporting frequencies are labeled separately.'}
-        </p>
       <div class="mt-5">
         {countryData?.disease_series ? (
           <EpidemicCurve

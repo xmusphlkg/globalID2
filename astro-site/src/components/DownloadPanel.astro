@@ -307,6 +307,7 @@ const formatCards = [
             <div>
               <p class="figure-kicker">{pick('Partitioned public data', '分块公开数据', 'Données publiques partitionnées')}</p>
               <h2 class="download-dialog__title">{pick('Choose a time range and format', '选择时间范围和格式', 'Choisir une période et un format')}</h2>
+              <p class="download-dialog__note">{pick('These files are the published dataset for this page. A chart may show only part of the same release.', '这些文件是本页已发布的数据集。图表可能只展示同一版本中的一部分。', 'Ces fichiers sont le jeu de données publié pour cette page. Un graphique peut n’en montrer qu’une partie.')}</p>
             </div>
             <button class="download-dialog__close" type="button" data-download-modal-close aria-label={pick('Close', '关闭', 'Fermer')}>×</button>
           </div>
@@ -410,6 +411,12 @@ const formatCards = [
     };
     timeFilter?.addEventListener('change', applyFilters);
     formatFilter?.addEventListener('change', applyFilters);
+    dialog.addEventListener('toggle', (event) => {
+      if (!(event instanceof ToggleEvent) || event.newState !== 'open') return;
+      if (timeFilter instanceof HTMLSelectElement) timeFilter.value = 'all';
+      if (formatFilter instanceof HTMLSelectElement) formatFilter.value = 'all';
+      applyFilters();
+    });
   });
 
   document.querySelectorAll('[data-file-download]').forEach((control) => {
@@ -419,9 +426,14 @@ const formatCards = [
       const url = control.dataset.downloadUrl ?? '';
       const filename = control.dataset.downloadFilename ?? 'globalid-data';
       const status = control.closest('[data-download-file]')?.querySelector('[data-download-status]');
-      const isChinese = document.documentElement.lang.toLowerCase().startsWith('zh');
+      const pageLang = document.documentElement.lang.toLowerCase();
+      const statusText = pageLang.startsWith('zh')
+        ? { preparing: '正在准备下载…', started: '下载已开始。', failed: '自动下载失败，已打开 Raw 文件。' }
+        : pageLang.startsWith('fr')
+          ? { preparing: 'Préparation du téléchargement…', started: 'Téléchargement lancé.', failed: 'Le téléchargement automatique a échoué ; ouverture du fichier Raw.' }
+          : { preparing: 'Preparing download…', started: 'Download started.', failed: 'Automatic download failed; opening the Raw file.' };
       control.disabled = true;
-      if (status) status.textContent = isChinese ? '正在准备下载…' : 'Preparing download…';
+      if (status) status.textContent = statusText.preparing;
       try {
         const response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -433,9 +445,9 @@ const formatCards = [
         anchor.click();
         anchor.remove();
         window.setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
-        if (status) status.textContent = isChinese ? '下载已开始。' : 'Download started.';
+        if (status) status.textContent = statusText.started;
       } catch {
-        if (status) status.textContent = isChinese ? '自动下载失败，已打开 Raw 文件。' : 'Automatic download failed; opening the Raw file.';
+        if (status) status.textContent = statusText.failed;
         window.open(url, '_blank', 'noopener,noreferrer');
       } finally {
         control.disabled = false;
@@ -502,6 +514,7 @@ const formatCards = [
   .download-dialog__toolbar::before { content: ''; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, rgb(var(--color-brand) / .85), rgb(var(--color-accent) / .4), transparent 78%); pointer-events: none; }
   .download-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
   .download-dialog__title { margin-top: .15rem; color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: 1.2rem; font-weight: 600; letter-spacing: -.015em; line-height: 1.25; }
+  .download-dialog__note { max-width: 46rem; margin: .4rem 0 0; color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.45; }
   .download-dialog__close { display: grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface-raised) / .48); color: rgb(var(--text-muted)); cursor: pointer; font-size: 1.25rem; line-height: 1; transition: border-color .18s ease, background-color .18s ease, color .18s ease; }
   .download-dialog__close:hover { border-color: rgb(var(--color-brand) / .72); background: rgb(var(--bg-soft) / .82); color: rgb(var(--text-strong)); }
   .download-dialog__close:focus-visible { outline: 2px solid rgb(var(--color-brand)); outline-offset: 2px; }

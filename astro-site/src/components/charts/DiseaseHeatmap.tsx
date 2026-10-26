@@ -594,6 +594,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
       )}
       table={renderTable}
       sourceMeta={sourceMeta}
+      pngFilename="gids-seasonal-heatmap.png"
     />
   );
 }

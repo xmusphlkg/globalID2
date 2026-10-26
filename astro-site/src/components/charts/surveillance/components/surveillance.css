@@ -76,7 +76,6 @@
   white-space: nowrap;
 }
 .surveillance-actions,
-.surveillance-toolbar,
 .surveillance-time,
 .surveillance-selected,
 .surveillance-tabs {
@@ -85,11 +84,16 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.surveillance-toolbar,
 .surveillance-time {
   margin: 14px 0;
 }
-.surveillance-toolbar label,
+.surveillance-actions {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+.surveillance-actions .chart-measure {
+  margin-right: auto;
+}
 .surveillance-time label,
 .surveillance-field {
   display: flex;
@@ -97,9 +101,6 @@
   gap: 6px;
   color: rgb(var(--text-muted));
   font-size: 13px;
-}
-.surveillance-toolbar select {
-  max-width: 290px;
 }
 .surveillance-time {
   padding: 14px 0;
@@ -477,13 +478,10 @@
   .surveillance-picker-dialog button {
     min-height: 44px;
   }
-  .surveillance-toolbar {
-    align-items: stretch;
-  }
-  .surveillance-toolbar label {
+  .surveillance-actions .chart-measure {
     flex: 1 1 180px;
   }
-  .surveillance-toolbar select {
+  .surveillance-actions .chart-measure select {
     width: 100%;
     max-width: 100%;
   }

@@ -1,10 +1,12 @@
 ---
 import ReportLayout from '../../../../layouts/ReportLayout.astro';
 import CountryFlag from '../../../../components/CountryFlag.astro';
+import DownloadPanel from '../../../../components/DownloadPanel.astro';
 import EpidemicCurve from '../../../../components/charts/EpidemicCurve';
 import DiseaseResearchPanel from '../../../../components/research/DiseaseResearchPanel.astro';
 import { buildChartSourceMeta } from '../../../../utils/chartMeta';
 import { countryDiseaseCandidates } from '../../../../lib/seo-page-data';
+import { downloadCatalogue } from '../../../../lib/downloads-data';
 import {
   buildAlternatePaths,
   buildDatasetStructuredData,
@@ -87,6 +89,9 @@ const granularityLabels: Record<string, string> = {
   yearly: copy('Annual', '每年', 'Annuelle'),
 };
 const sourceInfo = country.source_info ?? {};
+const countryDownload = (downloadCatalogue()?.countries ?? []).find(
+  (entry) => String(entry.code ?? '').toLowerCase() === String(code).toLowerCase(),
+) ?? null;
 const diseaseId = String(series.disease_id ?? '');
 const countryDataUrl = `/site-data/countries/${String(code).toLowerCase()}.json`;
 const chartSourceMeta = buildChartSourceMeta(
@@ -177,5 +182,18 @@ const seo = {
       </div>
     </section>
     <div class="mt-6" id="research"><DiseaseResearchPanel diseaseId={diseaseId || slug} locale={locale} /></div>
+    {countryDownload && (
+      <div id="downloads" class="mt-6 scroll-mt-24">
+        <DownloadPanel
+          entry={{ ...countryDownload, source_info: sourceInfo }}
+          title="Data access"
+          titleFr="Accès aux données"
+          initialLanguage={locale}
+          descriptionEn="CSV, JSON, XLSX · the published country dataset. This page’s chart may show one disease from that release."
+          descriptionZh="CSV、JSON、XLSX · 已发布的国家数据集。本页图表可能只展示其中一种疾病。"
+          descriptionFr="CSV, JSON, XLSX · jeu de données national publié. Le graphique de cette page peut n’en montrer qu’une maladie."
+        />
+      </div>
+    )}
   </article>
 </ReportLayout>
