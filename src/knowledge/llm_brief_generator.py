@@ -49,9 +49,8 @@ class KnowledgeBriefAgent(BaseAgent):
 class AIDiseaseBriefGenerator:
     """Generate source-grounded disease briefs with model-center routing."""
 
-    # v5 adds independent, targeted semantic repair after format and citation
-    # recovery. Keep it explicit so task traces distinguish earlier drafts.
-    PROMPT_PROTOCOL_VERSION = 5
+    # v6 makes target-key completeness and supported required-field behavior explicit.
+    PROMPT_PROTOCOL_VERSION = 6
     PUBLIC_SOURCE_TYPES = {"registry_definition", "who", "who_don", "web_search", "wikidata", "wikipedia", "pubmed"}
     AUTHORITATIVE_SOURCE_TYPES = {"registry_definition", "who", "who_don"}
 
@@ -1319,7 +1318,10 @@ class AIDiseaseBriefGenerator:
             "Write fluent scholarly prose in the payload's output_language. Return JSON only with "
             "exactly these keys: "
             "brief, definition, clinical_features, epidemiology, transmission, prevention, "
-            "surveillance_note, risk_groups. Values are substantive strings or null. Prefer concise "
+            "surveillance_note, risk_groups. Every key must be present; never omit a key. For each "
+            "key listed in target_sections, return substantive cited prose when the evidence supports it; "
+            "use null only when the evidence does not support that field. In particular, do not leave a "
+            "supported required_fields entry null or omit it. Values are substantive strings or null. Prefer concise "
             "2-4 sentence sections; a brief may contain 2-5 sentences. For prevention, risk_groups, "
             "and surveillance_note, avoid one-sentence minimal answers when evidence supports more "
             "detail. Every key outside target_sections must be null; do not expand a narrow repair "
@@ -1419,6 +1421,9 @@ class AIDiseaseBriefGenerator:
         )
         return (
             "Generate only target_sections; every other key must be null. Use evidence_manifest as the sole factual boundary; "
+            "Return every schema key explicitly, including keys whose value is null. For each "
+            "required_fields entry inside target_sections, use substantive cited prose whenever "
+            "the manifest supports it; do not omit or leave a supported required field null. "
             "sources contains attribution labels only. If no allowed fragment supports a field, set it "
             "to null—never guess or add an absence explanation. When repair_context is present, treat it as "
             "deterministic validation feedback: correct exactly the named target fields and citations, without "

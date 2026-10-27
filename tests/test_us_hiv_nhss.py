@@ -123,31 +123,50 @@ def test_nhss_current_workbook_rejects_non_contiguous_years() -> None:
         )
 
 
-def test_nndss_crawler_requests_total_and_us_residents(monkeypatch) -> None:
+def test_nndss_crawler_requests_regions_and_archive_history(monkeypatch) -> None:
     requested_urls: list[str] = []
+    archive_years: list[int] = []
 
     class FakeResponse:
         text = (
             "states,year,week,label,m1,sort_order\n"
             "TOTAL,2024,1,Anthrax,2,1\n"
             "U.S. Residents,2024,1,Anthrax,1,1\n"
+            "ALABAMA,2024,1,Anthrax,1,1\n"
+            "CALIFORNIA,2024,1,Anthrax,3,1\n"
         )
 
     crawler = USNNDSSCrawler(delay=0)
 
-    def fake_get(url: str):
+    def fake_get(url: str, **_kwargs):
         requested_urls.append(url)
         return FakeResponse()
 
+    def fake_fetch_archive_year(year: int):
+        archive_years.append(year)
+        rows = (
+            [{"states": "ALABAMA", "year": str(year), "week": "1", "label": "Anthrax", "m1": "4"}]
+            if year == 2014
+            else []
+        )
+        return rows, f"archive:{year}"
+
     monkeypatch.setattr(crawler, "get", fake_get)
+    monkeypatch.setattr(crawler, "_fetch_archive_year", fake_fetch_archive_year)
 
     rows, _source_url = crawler.fetch_raw_pages()
 
-    assert {row["states"] for row in rows} == {"TOTAL", "U.S. Residents"}
+    assert {row["states"] for row in rows} == {
+        "TOTAL", "U.S. Residents", "ALABAMA", "CALIFORNIA"
+    }
     assert len(requested_urls) == 1
     assert "'TOTAL'" in requested_urls[0]
     assert "'US RESIDENTS'" in requested_urls[0]
     assert "'U.S. RESIDENTS'" in requested_urls[0]
+    assert "'ALABAMA'" in requested_urls[0]
+    assert "'CALIFORNIA'" in requested_urls[0]
+    assert archive_years == list(range(2014, 2022))
+    assert any(row["year"] == "2014" for row in rows)
 
 
 def test_us_updater_all_combines_weekly_nndss_and_annual_nhss(monkeypatch) -> None:

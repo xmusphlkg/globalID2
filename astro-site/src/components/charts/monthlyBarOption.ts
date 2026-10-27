@@ -13,6 +13,7 @@ export interface MonthlyBarChartColors {
 interface BuildMonthlyBarOptionInput {
   summaries: YearSummary[];
   metricLabel: string;
+  lang: 'en' | 'zh' | 'fr';
   colors: MonthlyBarChartColors;
   title?: string;
 }
@@ -20,6 +21,7 @@ interface BuildMonthlyBarOptionInput {
 export const MONTHLY_BAR_REPLACE_MERGE: string[] = ['series'];
 
 function formatValue(value: unknown) {
+  if (value == null || value === '-') return '—';
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue.toLocaleString() : '—';
 }
@@ -27,6 +29,7 @@ function formatValue(value: unknown) {
 export function buildMonthlyBarOption({
   summaries,
   metricLabel,
+  lang,
   colors,
   title,
 }: BuildMonthlyBarOptionInput) {
@@ -54,11 +57,30 @@ export function buildMonthlyBarOption({
       textStyle: { color: colors.hoverFont, fontSize: 12 },
       formatter: (params: any[]) => {
         const month = params[0]?.axisValueLabel ?? params[0]?.name ?? '';
+        const monthIndex = params[0]?.dataIndex ?? -1;
         return [
           `<b>${month}</b>`,
-          ...params.map((param) => (
-            `${param.marker}${param.seriesName}: <b>${formatValue(param.value)}</b>`
-          )),
+          ...params.flatMap((param) => {
+            const summary = summaries.find((item) => item.year === param.seriesName);
+            const coverage = summary?.monthlyCoverage[monthIndex];
+            const coverageStatus = coverage?.status === 'complete'
+              ? (lang === 'zh' ? '完整' : lang === 'fr' ? 'complet' : 'complete')
+              : coverage?.status === 'incompatible'
+                ? (lang === 'zh' ? '来源定义不兼容' : lang === 'fr' ? 'définitions incompatibles' : 'incompatible definitions')
+              : coverage?.status === 'no_data'
+                ? (lang === 'zh' ? '无报告' : lang === 'fr' ? 'aucun rapport' : 'no reports')
+                : (lang === 'zh' ? '部分' : lang === 'fr' ? 'partiel' : 'partial');
+            return [
+              `${param.marker}${param.seriesName}: <b>${formatValue(param.value)}</b>`,
+              ...(coverage
+                ? [lang === 'zh'
+                  ? `报告地区：${coverage.reported}/${coverage.eligible}（${coverageStatus}）`
+                  : lang === 'fr'
+                    ? `Juridictions déclarantes : ${coverage.reported}/${coverage.eligible} (${coverageStatus})`
+                    : `Reporting jurisdictions: ${coverage.reported}/${coverage.eligible} (${coverageStatus})`]
+                : []),
+            ];
+          }),
         ].join('<br/>');
       },
     },

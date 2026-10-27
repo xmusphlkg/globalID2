@@ -3,14 +3,17 @@ import CountryFlag from '../CountryFlag.astro';
 import downloadsRaw from '../../data/downloads.json';
 import metaRaw from '../../data/meta.json';
 import { toSeoSlug } from '../../lib/seo';
+import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { localizedRegionName } from '../../utils/i18n';
 
 interface Props {
-  locale?: 'en' | 'zh';
+  locale?: 'en' | 'zh' | 'fr';
 }
 
 const { locale = 'en' } = Astro.props;
 const zh = locale === 'zh';
-const prefix = zh ? '/zh' : '';
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const downloads = downloadsRaw as any;
 const countryMetaByCode = new Map(
   ((metaRaw as any).countries ?? []).map((entry: any) => [String(entry.code).toUpperCase(), entry]),
@@ -24,9 +27,9 @@ const downloadableCountries = (downloads.countries ?? [])
         Object.values(part.files ?? {}).some((file: any) => Boolean((file as any)?.url)),
       ),
   );
-const chinaSubdivisionCount = downloadableCountries.filter((entry: any) => {
+const subdivisionCount = downloadableCountries.filter((entry: any) => {
   const metadata = countryMetaByCode.get(String(entry.code).toUpperCase()) as any;
-  return metadata?.parent_code === 'CN';
+  return metadata?.location_type === 'subdivision' || Boolean(metadata?.parent_code);
 }).length;
 const countries = downloadableCountries
   .filter((entry: any) => {
@@ -42,13 +45,15 @@ const countries = downloadableCountries
       id: entry.code,
       name: zh
         ? entry.name_zh ?? entry.name_en ?? entry.code
-        : entry.name_en ?? entry.name ?? entry.code,
-      aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''}`,
+        : fr
+          ? entry.name_fr ?? localizedRegionName('fr', entry.code, { en: entry.name_en ?? entry.name })
+          : entry.name_en ?? entry.name ?? entry.code,
+      aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''} ${entry.name_fr ?? ''}`,
       detail: zh
         ? `${recordCount.toLocaleString('zh-CN')} 条记录 · ${partsCount} 个时间范围`
-        : `${recordCount.toLocaleString('en-US')} records · ${partsCount} time ranges`,
+        : `${recordCount.toLocaleString(fr ? 'fr-FR' : 'en-US')} ${fr ? 'enregistrements' : 'records'} · ${partsCount} ${fr ? 'périodes' : 'time ranges'}`,
       files: part?.files ?? {},
-      period: part?.label ?? (zh ? '最新可用' : 'Latest available'),
+      period: part?.label ?? (zh ? '最新可用' : fr ? 'Dernière période disponible' : 'Latest available'),
       pageHref: `${prefix}/countries/${String(entry.code).toLowerCase()}/#downloads`,
       count: recordCount,
     };
@@ -63,13 +68,15 @@ const diseases = (downloads.diseases ?? []).map((entry: any) => {
     id: entry.disease_id ?? entry.id,
     name: zh
       ? entry.name_zh ?? entry.name_en ?? entry.slug
-      : entry.name_en ?? entry.slug ?? entry.id,
-    aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''} ${entry.slug ?? ''}`,
+      : fr
+        ? localizedDiseaseName({ ...entry, disease_id: entry.disease_id ?? entry.id }, 'fr')
+        : entry.name_en ?? entry.slug ?? entry.id,
+    aliases: `${entry.name_en ?? ''} ${entry.name_zh ?? ''} ${entry.name_fr ?? ''} ${entry.slug ?? ''}`,
     detail: zh
       ? `${recordCount.toLocaleString('zh-CN')} 条记录 · ${countryCount} 个国家/地区`
-      : `${recordCount.toLocaleString('en-US')} records · ${countryCount} countries/regions`,
+      : `${recordCount.toLocaleString(fr ? 'fr-FR' : 'en-US')} ${fr ? 'enregistrements' : 'records'} · ${countryCount} ${fr ? 'pays/régions' : 'countries/regions'}`,
     files: part?.files ?? {},
-    period: part?.label ?? (zh ? '最新可用' : 'Latest available'),
+    period: part?.label ?? (zh ? '最新可用' : fr ? 'Dernière période disponible' : 'Latest available'),
     pageHref: `${prefix}/diseases/${toSeoSlug(entry.slug)}/#downloads`,
     count: recordCount,
   };
@@ -77,18 +84,20 @@ const diseases = (downloads.diseases ?? []).map((entry: any) => {
 
 const entries = [...countries, ...diseases];
 const generatedAt = downloads.generated_at
-  ? new Date(downloads.generated_at).toLocaleDateString(zh ? 'zh-CN' : 'en-US', {
+  ? new Date(downloads.generated_at).toLocaleDateString(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', {
       year: 'numeric',
       month: zh ? 'numeric' : 'long',
       day: 'numeric',
       timeZone: 'UTC',
     })
-  : zh
+    : zh
     ? '暂无'
-    : 'Not available';
+    : fr
+      ? 'Non disponible'
+      : 'Not available';
 const totalRecords = entries.reduce((sum: number, entry: any) => sum + entry.count, 0);
 const compact = (value: number) =>
-  new Intl.NumberFormat(zh ? 'zh-CN' : 'en-US', {
+  new Intl.NumberFormat(zh ? 'zh-CN' : fr ? 'fr-FR' : 'en-US', {
     notation: 'compact',
     maximumFractionDigits: 1,
   }).format(value);
@@ -111,8 +120,8 @@ const copy = zh
       choose: '选择数据集',
       intro: '列表默认显示最新时间范围；详情页提供历史周期和来源说明。',
       subdivisionTitle: '分省数据按国家归档',
-      subdivisionNote: `${chinaSubdivisionCount} 个中国省级数据集已接入，但不混入国家数据目录和汇总统计。`,
-      subdivisionLink: '从中国页面浏览分省下载 →',
+      subdivisionNote: `${subdivisionCount} 个分省/州级数据集已接入，可从所属国家页面下载。`,
+      subdivisionLink: '浏览国家与地区目录 →',
       search: '搜索数据集',
       placeholder: '国家、疾病或代码',
       type: '数据集类型',
@@ -153,8 +162,8 @@ const copy = zh
       intro:
         'The table links the latest range. Detail pages include historical periods and source notes.',
       subdivisionTitle: 'Subnational data is grouped by country',
-      subdivisionNote: `${chinaSubdivisionCount} China province-level datasets are available but excluded from the country catalogue and summary totals.`,
-      subdivisionLink: 'Browse province downloads from China →',
+      subdivisionNote: `${subdivisionCount} regional datasets are available from their parent country pages.`,
+      subdivisionLink: 'Browse countries and regions →',
       search: 'Search datasets',
       placeholder: 'Country, disease, or code',
       type: 'Dataset type',
@@ -182,6 +191,15 @@ const copy = zh
       terms: 'Read data-use guidance',
       download: 'Download',
     };
+
+if (fr) Object.assign(copy, {
+  kicker: 'Données de surveillance ouvertes', title: 'Téléchargement des données',
+  lead: 'Trouvez les jeux de données par pays et par maladie. Téléchargez les derniers fichiers CSV, JSON ou XLSX.',
+  countrySets: 'Jeux de données par pays', diseaseSets: 'Jeux de données par maladie', records: 'Enregistrements publiés', date: 'Date de l’instantané',
+  catalogue: 'Catalogue des données', choose: 'Choisir un jeu de données', intro: 'Le tableau renvoie vers la période la plus récente. Les pages de détail présentent les périodes historiques et les sources.',
+  subdivisionTitle: 'Les données infranationales sont regroupées par pays', subdivisionNote: `${subdivisionCount} jeux de données régionaux sont disponibles depuis la page de leur pays.`, subdivisionLink: 'Parcourir les pays et régions →',
+  search: 'Rechercher des jeux de données', placeholder: 'Pays, maladie ou code', type: 'Type de jeu de données', all: 'Tous', countries: 'Pays', diseases: 'Maladies', sort: 'Trier', featured: 'Ordre recommandé', nameAsc: 'Nom A-Z', recordsDesc: 'Plus d’enregistrements', kindSort: 'Type et nom', showing: 'Affichage', of: 'sur', dataset: 'jeux de données', range: 'Période actuelle', formats: 'Formats', details: 'Toutes les périodes et sources', empty: 'Aucun jeu de données ne correspond à cette recherche.', more: 'Afficher davantage', before: 'Avant d’utiliser les données', context: 'Conserver le contexte de la source', guidance: 'Avant de comparer des lieux ou de combiner des séries temporelles, conservez la source, la définition et le contexte de révision de chaque jeu de données.', methods: 'Lire les méthodes et limites', terms: 'Lire les règles d’utilisation des données', download: 'Télécharger',
+});
 ---
 
 <div class="downloads-page">
@@ -222,10 +240,10 @@ const copy = zh
       <p>{copy.intro}</p>
     </header>
 
-    {chinaSubdivisionCount > 0 && (
+    {subdivisionCount > 0 && (
       <a
         class="mb-6 flex flex-col gap-2 border border-[rgb(var(--border))] bg-[rgb(var(--surface-muted))] p-4 transition-colors hover:border-[rgb(var(--color-teal))] sm:flex-row sm:items-center sm:justify-between"
-        href={`${prefix}/countries/cn/#subnational-data`}
+        href={`${prefix}/countries/`}
       >
         <span>
           <strong class="block text-[rgb(var(--text-strong))]">{copy.subdivisionTitle}</strong>

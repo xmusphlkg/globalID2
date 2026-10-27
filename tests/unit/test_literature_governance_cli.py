@@ -5,8 +5,6 @@ from types import SimpleNamespace
 
 import pytest
 
-import pytest
-
 from scripts import backfill_literature_metadata
 from scripts import govern_literature_backlog
 from scripts import run_literature_autopilot
@@ -47,6 +45,30 @@ def test_autopilot_cli_requires_explicit_apply(monkeypatch, capsys) -> None:
 
     assert run_literature_autopilot.main(["--apply", "--no-export"]) == 0
     assert calls[-1] == {"dry_run": False, "export": False}
+
+
+def test_autopilot_cli_passes_only_explicit_resource_overrides(monkeypatch, capsys) -> None:
+    calls = []
+
+    async def fake_run(**kwargs) -> dict:
+        calls.append(kwargs)
+        return {"dry_run": kwargs["dry_run"]}
+
+    monkeypatch.setattr(run_literature_autopilot, "run", fake_run)
+
+    assert run_literature_autopilot.main([
+        "--batch-size", "250",
+        "--statement-timeout-seconds", "180",
+        "--lock-timeout-seconds", "10",
+    ]) == 0
+    assert calls == [{
+        "dry_run": True,
+        "export": True,
+        "batch_size": 250,
+        "statement_timeout_seconds": 180,
+        "lock_timeout_seconds": 10,
+    }]
+    assert json.loads(capsys.readouterr().out) == {"dry_run": True}
 
 
 def _governance_preview(**updates):

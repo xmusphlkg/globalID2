@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_database, get_logger
 from src.core.country_library import get_country_bootstrap_config
+from src.core.country_library import SUBDIVISION_REGISTRY
 from src.core.ecdc_baselines import ECDC_BASELINE_COUNTRY_CODES
 from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
 from src.core.task_manager import task_manager
@@ -92,6 +94,17 @@ class CrawlService:
             _au_subdivision_code,
             _PipelineSpec("_execute_au_monthly", "AUMonthlyUpdater"),
         )
+    for _subdivision_code, _subdivision in SUBDIVISION_REGISTRY.items():
+        _parent_code = str(_subdivision.get("parent_country_code") or "").upper()
+        if _parent_code not in {"JP", "SE", "DE", "US", "CH", "NZ"}:
+            continue
+        _parent_pipeline = _PIPELINES.get(_parent_code)
+        if _parent_pipeline is not None:
+            _PIPELINES[_subdivision_code] = (
+                _PipelineSpec("_execute_nz_dhb_annual", "NZDHBAnnualUpdater")
+                if _parent_code == "NZ"
+                else _parent_pipeline
+            )
     _SERIES_SOURCE_IDS: Dict[str, str | Dict[str, str]] = {
         "US": {
             "US CDC NNDSS": "SRC_US_NNDSS",
@@ -168,6 +181,7 @@ class CrawlService:
             JPWeeklyUpdater,
             KRMonthlyUpdater,
             NOMonthlyUpdater,
+            NZDHBAnnualUpdater,
             NZMonthlyUpdater,
             SEMonthlyUpdater,
             DEWeeklyUpdater,
@@ -191,6 +205,7 @@ class CrawlService:
             "JPWeeklyUpdater": JPWeeklyUpdater,
             "KRMonthlyUpdater": KRMonthlyUpdater,
             "NOMonthlyUpdater": NOMonthlyUpdater,
+            "NZDHBAnnualUpdater": NZDHBAnnualUpdater,
             "NZMonthlyUpdater": NZMonthlyUpdater,
             "SEMonthlyUpdater": SEMonthlyUpdater,
             "DEWeeklyUpdater": DEWeeklyUpdater,
@@ -204,6 +219,13 @@ class CrawlService:
             return updater_type(country_code or "FR")
         if updater_name == "AUMonthlyUpdater" and country_code:
             return updater_type(country_code=country_code)
+        subdivision = SUBDIVISION_REGISTRY.get(str(country_code or "").upper())
+        if subdivision and updater_name in {
+            "JPWeeklyUpdater", "SEMonthlyUpdater", "DEWeeklyUpdater",
+            "USWeeklyUpdater", "CHMonthlyUpdater", "NZMonthlyUpdater",
+            "NZDHBAnnualUpdater",
+        }:
+            return updater_type(country_code=str(country_code).upper())
         return updater_type()
 
     @staticmethod
@@ -528,7 +550,7 @@ class CrawlService:
                     if isinstance(task.input_data, dict)
                     else None
                 )
-                return await self._execute_br_monthly(
+                result = await self._execute_br_monthly(
                     task=task,
                     source=source,
                     force=force,
@@ -538,27 +560,87 @@ class CrawlService:
                     start_year=start_year,
                     updater=updater,
                 )
-
-            handler = getattr(self, pipeline.handler_name)
-            return await handler(
+            else:
+                handler = getattr(self, pipeline.handler_name)
+                result = await handler(
+                    task=task,
+                    source=source,
+                    force=force,
+                    process=process,
+                    save_raw=save_raw,
+                    fill_missing=fill_missing,
+                    updater=updater,
+                )
+        else:
+            result = await self._execute_cn_cdc(
                 task=task,
+                country_code=normalized_country,
                 source=source,
                 force=force,
                 process=process,
                 save_raw=save_raw,
                 fill_missing=fill_missing,
-                updater=updater,
             )
+        if process:
+            await self._publish_country_series(task, normalized_country)
+        return result
 
-        return await self._execute_cn_cdc(
-            task=task,
-            country_code=normalized_country,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
+    async def _publish_country_series(self, task: Task, country_code: str) -> None:
+        """Rewrite published curves after observations have been stored.
+
+        A publish failure is recorded on the crawl task and does not discard
+        the observations. Re-run scripts/backfill_public_disease_series.py
+        for that country to repair the read model.
+        """
+
+        from src.generation.public_series_store import refresh_public_disease_series
+
+        started = time.perf_counter()
+        try:
+            summary = await refresh_public_disease_series(
+                [country_code],
+                jobs=2,
+                force=True,
+            )
+        except Exception as exc:
+            logger.exception("Public series publish failed for {}", country_code)
+            await self._record_publish_note(
+                task,
+                success=False,
+                content=f"{type(exc).__name__}: {exc}",
+            )
+            return
+        failed = summary.get("failed") or []
+        content = (
+            f"Published {summary['refreshed']} jurisdictions "
+            f"({summary['series_rows']} series, skipped {summary['skipped']}) "
+            f"in {time.perf_counter() - started:.1f}s."
         )
+        if failed:
+            content += " Failed: " + ", ".join(
+                f"{item['country_code']} ({item.get('error')})" for item in failed
+            )
+            logger.error(content)
+        else:
+            logger.info(content)
+        await self._record_publish_note(task, success=not failed, content=content)
+
+    async def _record_publish_note(self, task: Task, *, success: bool, content: str) -> None:
+        try:
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="error" if not success else "log",
+                title="Public series publish",
+                content=content,
+                success=success,
+                error_message=None if success else content,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to record public series publish note for {}: {}",
+                getattr(task, "task_uuid", ""),
+                exc,
+            )
 
     async def fail_current_run(
         self,
@@ -779,9 +861,14 @@ class CrawlService:
         """Delegate a monthly country pipeline while preserving service hooks."""
         from src.services.crawl_pipelines.monthly import CONFIGS, execute_monthly_pipeline
 
+        updater = kwargs.get("updater")
+        target_code = str(getattr(updater, "country_code", country_code) or country_code).upper()
+        pipeline_config = CONFIGS[country_code]
+        if target_code != pipeline_config.country_code:
+            pipeline_config = replace(pipeline_config, country_code=target_code)
         return await execute_monthly_pipeline(
             self,
-            config=CONFIGS[country_code],
+            config=pipeline_config,
             get_database=get_database,
             task_manager=task_manager,
             crawl_run_type=CrawlRun,
@@ -885,6 +972,36 @@ class CrawlService:
             save_raw=save_raw,
             fill_missing=fill_missing,
             updater=updater,
+        )
+
+    async def _execute_nz_dhb_annual(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        """Run PHF Science's annual DHB series for one registered NZ region."""
+        from src.services.crawl_pipelines.nz_dhb import execute_nz_dhb_pipeline
+
+        return await execute_nz_dhb_pipeline(
+            self,
+            task=task,
+            source=source,
+            force=force,
+            process=process,
+            save_raw=save_raw,
+            fill_missing=fill_missing,
+            updater=updater,
+            get_database=get_database,
+            task_manager=task_manager,
+            crawl_run_type=CrawlRun,
+            result_type=CrawlResult,
+            logger=logger,
         )
 
     async def _execute_tw_monthly(

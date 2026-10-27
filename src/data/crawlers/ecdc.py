@@ -30,7 +30,7 @@ ATLAS_URL = "https://atlas.ecdc.europa.eu/public/index.aspx/"
 API_BASE = "https://atlas.ecdc.europa.eu/public/AtlasService/rest/"
 DATASET_ID = 27
 DATASET_CODE = "CURRENT.GENERAL"
-CONTRACT_VERSION = "ecdc-atlas-current-general-annual-v1-observed-2026-08"
+CONTRACT_VERSION = "ecdc-atlas-current-general-annual-v1-observed-2026-10"
 ATTRIBUTION = "Data provided by ECDC based on data reported by EU/EEA Member States."
 REUSE_TERMS_URL = "https://www.ecdc.europa.eu/en/publications-data/access-eueea-surveillance-data-third-parties"
 TARGET_COUNTRIES = ECDC_BASELINE_COUNTRY_CODES
@@ -81,7 +81,12 @@ TOPIC_CONTRACTS: tuple[ECDCTopicContract, ...] = (
     ECDCTopicContract("ECHI", "Echinococcosis", ("Confirmed cases",), "D045"),
     ECDCTopicContract("FILO", "Ebola and Marburg virus disease", ("All cases",), None, "aggregate"),
     ECDCTopicContract("GIAR", "Giardiasis", ("Confirmed cases",), "D099"),
-    ECDCTopicContract("GONO", "Gonorrhoea", ("Confirmed cases",), "D033"),
+    ECDCTopicContract(
+        "GONO",
+        "Gonorrhoea",
+        ("Disease surveillance|Confirmed cases",),
+        "D033",
+    ),
     ECDCTopicContract("HAEINF", "Invasive Haemophilus influenzae disease", ("Confirmed cases",), "D100"),
     ECDCTopicContract("HANTA", "Hantavirus infection", ("All cases",), "D102"),
     ECDCTopicContract("HEPA", "Hepatitis A", ("Confirmed cases",), "D007"),

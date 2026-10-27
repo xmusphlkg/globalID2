@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +24,7 @@ class ReportV4Persistence:
         document: dict[str, Any],
         quality_gate: dict[str, Any],
         evidence_packet: dict[str, Any],
+        surveillance_snapshot: dict[str, Any],
     ) -> list[dict[str, Any]]:
         existing = (
             await db.execute(
@@ -64,6 +65,7 @@ class ReportV4Persistence:
             "references": document.get("references") or [],
             "figures": document.get("figures") or [],
             "figure_data": {},
+            "surveillance_snapshot": surveillance_snapshot,
             "data_signature": (document.get("metrics") or {}).get("data_signature"),
             "evidence_packet": {
                 key: value
@@ -93,6 +95,10 @@ class ReportV4Persistence:
                         "en": {
                             "title": section_payload["title"]["en"],
                             "content": section_payload["body"]["en"],
+                        },
+                        "fr": {
+                            "title": section_payload["title"]["fr"],
+                            "content": section_payload["body"]["fr"],
                         },
                     },
                     "evidence_refs": section_payload.get("evidence_refs") or [],
@@ -124,9 +130,16 @@ class ReportV4FileExporter:
     def __init__(self, formatter: ReportFormatter | None = None):
         self.formatter = formatter or ReportFormatter()
 
-    def write_files(self, *, report: Report, output_dir: Path, document: dict[str, Any]) -> None:
+    def write_files(
+        self,
+        *,
+        report: Report,
+        output_dir: Path,
+        document: dict[str, Any],
+        surveillance_snapshot: dict[str, Any],
+    ) -> None:
         output_dir.mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         prefix = f"report_{report.id}_{timestamp}"
         sections = [
             {
@@ -138,6 +151,7 @@ class ReportV4FileExporter:
                     "locales": {
                         "zh": {"title": section["title"]["zh"], "content": section["body"]["zh"]},
                         "en": {"title": section["title"]["en"], "content": section["body"]["en"]},
+                        "fr": {"title": section["title"]["fr"], "content": section["body"]["fr"]},
                     }
                 },
                 "figures": section.get("figures") or [],
@@ -152,7 +166,7 @@ class ReportV4FileExporter:
             "country": (document.get("metrics") or {}).get("country_name"),
             "period_start": getattr(report.period_start, "strftime", lambda _fmt: "")("%Y-%m-%d"),
             "period_end": getattr(report.period_end, "strftime", lambda _fmt: "")("%Y-%m-%d"),
-            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
             "language": "zh",
             "disease_directory": document.get("disease_directory") or [],
             "attention_ranking": document.get("attention_ranking") or document.get("risk_ranking") or [],
@@ -168,7 +182,10 @@ class ReportV4FileExporter:
         report.html_path = str(html_path)
 
         json_path = output_dir / f"{prefix}.report-v4.json"
-        self.formatter.save(json.dumps(document, ensure_ascii=False, indent=2), str(json_path))
+        self.formatter.save(
+            json.dumps({**document, "surveillance_snapshot": surveillance_snapshot}, ensure_ascii=False, indent=2),
+            str(json_path),
+        )
 
 
 def _extract_recommendations(document: dict[str, Any]) -> list[str]:

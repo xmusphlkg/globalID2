@@ -23,7 +23,11 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
+from src.core import get_logger
+
 from .base import BaseCrawler, CrawlerResult
+
+logger = get_logger(__name__)
 
 DEFAULT_SOURCE_NAME = "Austria AGES Radar for Infectious Diseases"
 DEFAULT_SCOPE = "ages_radar"
@@ -197,7 +201,18 @@ class AustriaAGESRadarCrawler(BaseCrawler):
             wanted |= {(issue.report_month.year, issue.report_month.month) for issue in issues}
         selected = [issue for issue in issues if not wanted or (issue.report_month.year, issue.report_month.month) in wanted]
         if not selected:
-            raise ATAGESContractError("No AGES issues match requested months; source archive may be incomplete")
+            latest_available = max(issues, key=lambda issue: issue.report_month).report_month
+            requested = ",".join(f"{year:04d}-{month:02d}" for year, month in sorted(wanted))
+            logger.info(
+                "[AT-AGES] No issue in requested revision window | requested_months={} latest_available={}",
+                requested,
+                latest_available.isoformat(),
+            )
+            # A valid, machine-readable archive can lag the rolling revision
+            # window. Leave the normalized cache untouched and let the task
+            # complete with no rows for this window; a broken archive still
+            # fails in discover_issues()/parse_ages_csv above.
+            return ATFetchSummary(0, 0, latest_available)
         rows: List[Dict[str, str]] = []
         for issue in selected:
             response = self.get(issue.csv_url)

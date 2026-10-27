@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -121,7 +122,8 @@ async def execute_ie_pipeline(
     await task_manager.update_task_progress(task.task_uuid, 10)
 
     phase1_started = perf_counter()
-    fetched = updater.refresh_source(
+    fetched = await asyncio.to_thread(
+        updater.refresh_source,
         source=source,
         run_external=False,
         force=force,

@@ -29,7 +29,7 @@ class MonthlyPipelineConfig:
     no_rows_summary: str
     force_fetches_history: bool = False
     supports_fill_missing: bool = True
-    refresh_in_thread: bool = False
+    refresh_in_thread: bool = True
 
 
 CONFIGS = {
@@ -77,6 +77,7 @@ CONFIGS = {
     "TW": MonthlyPipelineConfig(
         country_code="TW",
         raw_dir_name="tw",
+        refresh_in_thread=True,
         start_year=1998,
         recent_months=3,
         default_months_label="3",

@@ -1,0 +1,119 @@
+from __future__ import annotations
+
+import pytest
+
+import src.literature.pipeline as pipeline_module
+from src.literature.pipeline import _is_postgres_deadlock, _retry_postgres_deadlock
+
+
+class _DeadlockError(RuntimeError):
+    sqlstate = "40P01"
+
+
+def test_deadlock_detection_follows_wrapped_database_error() -> None:
+    wrapped = RuntimeError("statement failed")
+    wrapped.__cause__ = _DeadlockError("transaction chosen as victim")
+
+    assert _is_postgres_deadlock(wrapped) is True
+    assert _is_postgres_deadlock(RuntimeError("connection reset")) is False
+
+
+@pytest.mark.asyncio
+async def test_deadlock_retry_uses_fresh_operation_attempt(monkeypatch) -> None:
+    attempts = 0
+    delays: list[float] = []
+
+    async def operation() -> str:
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            raise _DeadlockError("deadlock")
+        return "committed"
+
+    async def fake_sleep(delay: float) -> None:
+        delays.append(delay)
+
+    monkeypatch.setattr(pipeline_module.asyncio, "sleep", fake_sleep)
+
+    result = await _retry_postgres_deadlock(
+        operation,
+        max_retries=3,
+        base_delay_seconds=0.25,
+    )
+
+    assert result == "committed"
+    assert attempts == 3
+    assert delays == [0.25, 0.5]
+
+
+@pytest.mark.asyncio
+async def test_non_deadlock_database_error_is_not_retried(monkeypatch) -> None:
+    attempts = 0
+
+    async def operation() -> None:
+        nonlocal attempts
+        attempts += 1
+        raise RuntimeError("connection reset")
+
+    async def fail_sleep(_delay: float) -> None:
+        raise AssertionError("sleep should not be called")
+
+    monkeypatch.setattr(pipeline_module.asyncio, "sleep", fail_sleep)
+
+    with pytest.raises(RuntimeError, match="connection reset"):
+        await _retry_postgres_deadlock(
+            operation,
+            max_retries=3,
+            base_delay_seconds=0.25,
+        )
+    assert attempts == 1
+
+
+@pytest.mark.asyncio
+async def test_reconciliation_retries_transaction_before_export(monkeypatch) -> None:
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from src.core.config import LiteratureSettings
+    import src.services.literature_automation_service as automation
+    import src.services.literature_publication_service as publication
+
+    config = LiteratureSettings(autopilot_enabled=True)
+    monkeypatch.setattr(automation, "get_config", lambda: SimpleNamespace(literature=config))
+    service = automation.LiteratureAutomationService()
+    transaction = AsyncMock(side_effect=[_DeadlockError("deadlock"), {"changed": 2}])
+    export = AsyncMock(return_value={"ok": True})
+    monkeypatch.setattr(service, "_reconcile_database", transaction)
+    monkeypatch.setattr(publication, "export_public_research_artifacts", export)
+    monkeypatch.setattr(pipeline_module.asyncio, "sleep", AsyncMock())
+
+    result = await service.reconcile(export=True)
+
+    assert result == {"changed": 2, "public_export": {"ok": True}}
+    assert transaction.await_count == 2
+    assert transaction.await_args_list[0] == transaction.await_args_list[1]
+    export.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error", [_DeadlockError("deadlock"), RuntimeError("connection reset")])
+async def test_reconciliation_failure_does_not_export(monkeypatch, error) -> None:
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from src.core.config import LiteratureSettings
+    import src.services.literature_automation_service as automation
+    import src.services.literature_publication_service as publication
+
+    config = LiteratureSettings(autopilot_enabled=True, persistence_deadlock_max_retries=1)
+    monkeypatch.setattr(automation, "get_config", lambda: SimpleNamespace(literature=config))
+    service = automation.LiteratureAutomationService()
+    transaction = AsyncMock(side_effect=error)
+    export = AsyncMock()
+    monkeypatch.setattr(service, "_reconcile_database", transaction)
+    monkeypatch.setattr(publication, "export_public_research_artifacts", export)
+    monkeypatch.setattr(pipeline_module.asyncio, "sleep", AsyncMock())
+
+    with pytest.raises(type(error)):
+        await service.reconcile(export=True)
+
+    assert transaction.await_count == (2 if isinstance(error, _DeadlockError) else 1)
+    export.assert_not_awaited()

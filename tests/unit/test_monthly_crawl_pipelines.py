@@ -1,3 +1,4 @@
+import threading
 from contextlib import asynccontextmanager
 from datetime import date
 from types import SimpleNamespace
@@ -62,6 +63,7 @@ class _Updater:
         self.refresh_calls = []
 
     def refresh_source(self, **values):
+        self.refresh_thread = threading.get_ident()
         self.refresh_calls.append(values)
         return SimpleNamespace(
             source_latest_date=date(2026, 7, 1),
@@ -185,6 +187,8 @@ async def test_monthly_pipeline_preserves_no_process_lifecycle(
     )
 
     assert result == (0, 0, 0, 42)
+    # Synchronous source refresh must not occupy the worker event loop.
+    assert updater.refresh_thread != threading.get_ident()
     assert updater.refresh_calls == [
         {
             "source": "all",

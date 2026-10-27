@@ -19,6 +19,7 @@ from bs4 import BeautifulSoup
 from src.core import get_logger
 from src.core.country_library import get_country_bootstrap_config
 from .base import BaseCrawler
+from .subdivision_registry import geography_key, source_label_codes
 
 logger = get_logger(__name__)
 ROOT = Path(__file__).resolve().parents[3]
@@ -188,15 +189,22 @@ class JapanIDWRCrawler(BaseCrawler):
                 debug_logs=debug_logs,
             )
 
-        merged: Dict[tuple[str, str, str, str], Tuple[int, Dict[str, str]]] = {}
+        merged: Dict[tuple[str, str, str, str, str], Tuple[int, Dict[str, str]]] = {}
         if output_csv.exists() and not force:
             with output_csv.open("r", encoding="utf-8-sig", newline="") as handle:
                 for row in csv.DictReader(handle):
+                    # Rows from pre-SurveillanceType snapshots are retained
+                    # as explicitly unspecified rather than discarded or
+                    # silently conflated with the all-case feed.
+                    row["SurveillanceType"] = (
+                        _norm_text(row.get("SurveillanceType")) or "unspecified"
+                    )
                     key = (
                         row.get("Reporting Area", ""),
                         row.get("Current MMWR Year", ""),
                         row.get("MMWR WEEK", ""),
                         row.get("Disease", ""),
+                        row.get("SurveillanceType", ""),
                     )
                     if all(key):
                         merged[key] = (2, dict(row))
@@ -211,11 +219,22 @@ class JapanIDWRCrawler(BaseCrawler):
             normalized = self._normalize_rows(table, reporting_area=reporting_area, source_kind=source_kind)
             debug_logs.append(f"[parse] {source_kind}: {csv_url} -> {len(normalized)} rows")
             for row in normalized:
+                row["SurveillanceType"] = _norm_text(
+                    row.get("SurveillanceType")
+                    or (
+                        "all_case"
+                        if source_kind == "zensu"
+                        else "sentinel"
+                        if source_kind == "teiten"
+                        else "unspecified"
+                    )
+                )
                 key = (
                     row.get("Reporting Area", ""),
                     row.get("Current MMWR Year", ""),
                     row.get("MMWR WEEK", ""),
                     row.get("Disease", ""),
+                    row.get("SurveillanceType", ""),
                 )
                 priority = 0 if source_kind == "zensu" else 1
                 existing = merged.get(key)
@@ -237,9 +256,11 @@ class JapanIDWRCrawler(BaseCrawler):
                 handle,
                 fieldnames=[
                     "Reporting Area",
+                    "GeographyKey",
                     "Current MMWR Year",
                     "MMWR WEEK",
                     "Disease",
+                    "SurveillanceType",
                     "Current week",
                     "Current week, flag",
                 ],
@@ -267,9 +288,20 @@ class JapanIDWRCrawler(BaseCrawler):
     @staticmethod
     def _parse_year_week_from_url(url: str) -> Tuple[Optional[int], Optional[int]]:
         m = re.search(r"/(provisional|rapid)/(20\d{2})/(\d{1,2})/index\.html", url.lower())
-        if not m:
-            return None, None
-        return int(m.group(2)), int(m.group(3))
+        if m:
+            return int(m.group(2)), int(m.group(3))
+
+        # JIHS's archived annual tables (2015–2022) link directly to legacy
+        # NIID articles. Their suffix encodes the MMWR year/week, e.g. 2252 is
+        # 2022 week 52. These pages contain the same weekly CSV downloads as
+        # the newer /rapid/YYYY/WW/index.html pages.
+        archived = re.search(
+            r"idwr-sokuho-data-e-(\d{2})(\d{2})\.html(?:$|[?#])", url.lower()
+        )
+        if archived:
+            year_suffix, week = (int(value) for value in archived.groups())
+            return 2000 + year_suffix, week
+        return None, None
 
     @staticmethod
     def _load_existing_year_weeks(output_csv: Path) -> Set[Tuple[int, int]]:
@@ -343,6 +375,15 @@ class JapanIDWRCrawler(BaseCrawler):
             full = urljoin(base_url, href)
             if re.search(r"/(provisional|rapid)/(20\d{2})/(\d{1,2})/index\.html", full.lower()):
                 candidates.add(full)
+                continue
+
+            # The historical annual tables link directly to an IDWR data
+            # article (`.../idwr-sokuho-data-e-2252.html`) instead of a
+            # week index. Keep these URLs in source order-independent form so
+            # the shared CSV discovery code can fetch their zensu/teiten files.
+            if re.search(r"/niid/en/data/\d+-idwr-sokuho-data-e-\d{4}\.html", full.lower()):
+                if self._parse_year_week_from_url(full)[0] is not None:
+                    candidates.add(full)
 
         sorted_candidates = sorted(
             candidates,
@@ -528,7 +569,7 @@ class JapanIDWRCrawler(BaseCrawler):
             for raw in rows[1:]:
                 src = {header[i]: raw[i] if i < len(raw) else "" for i in range(len(header))}
                 area = _norm_text(src.get("Reporting Area") or src.get("states") or reporting_area)
-                if area != reporting_area:
+                if reporting_area not in {"*", "ALL", "all"} and area != reporting_area:
                     continue
 
                 year = _parse_int(src.get("Current MMWR Year") or src.get("year"))
@@ -545,9 +586,14 @@ class JapanIDWRCrawler(BaseCrawler):
                 normalized.append(
                     {
                         "Reporting Area": area,
+                        "GeographyKey": _norm_text(src.get("GeographyKey")) or geography_key("JP", area),
                         "Current MMWR Year": str(year),
                         "MMWR WEEK": str(week),
                         "Disease": disease,
+                        "SurveillanceType": _norm_text(
+                            src.get("SurveillanceType")
+                            or ("all_case" if source_kind == "zensu" else "sentinel" if source_kind == "teiten" else "")
+                        ),
                         "Current week": str(max(0, cases)),
                         "Current week, flag": flag,
                     }
@@ -603,6 +649,7 @@ class JapanIDWRCrawler(BaseCrawler):
 
         header_row: List[str] = []
         header_start_idx: Optional[int] = None
+        header_row_idx: Optional[int] = None
         if total_row_idx is not None:
             for ridx in range(total_row_idx - 1, -1, -1):
                 row = rows[ridx]
@@ -610,38 +657,83 @@ class JapanIDWRCrawler(BaseCrawler):
                     if _norm_text(cell).lower() in {"prefecture", "都道府県"}:
                         header_row = row
                         header_start_idx = cidx
+                        header_row_idx = ridx
                         break
                 if header_row:
                     break
+
+        # Pre-2015 IDWR archived CSVs use a compact matrix: their disease
+        # names are on a row whose first cell is blank, followed by a separate
+        # "報告 / 累積" row. The newer English exports add an explicit
+        # "Prefecture" header, so fall back to the dense disease-name row only
+        # when that marker is absent.
+        if not header_row and total_row_idx is not None:
+            candidates = []
+            for ridx in range(total_row_idx - 1, -1, -1):
+                row = rows[ridx]
+                nonempty = [
+                    _norm_text(cell)
+                    for cell in row[1:]
+                    if _norm_text(cell)
+                ]
+                if len(nonempty) >= 3 and not any(
+                    value in {"報告", "累積", "Current week", "Cumulative"}
+                    for value in nonempty
+                ):
+                    candidates.append((ridx, row))
+            if candidates:
+                header_row_idx, header_row = candidates[0]
+                header_start_idx = 0
 
         if not header_row or not total_row or total_start_idx is None:
             return normalized
 
         start_col = max((header_start_idx or 0) + 1, total_start_idx + 1)
-        max_len = min(len(header_row), len(total_row))
-        for idx in range(start_col, max_len):
-            disease = _norm_text(header_row[idx])
-            if not disease:
+        # The JIHS matrix contains one row per prefecture plus a national
+        # ``総数`` row. Preserve all valid geography rows in the standardized
+        # file; callers that need only the national total can still request it.
+        data_rows: List[Tuple[str, List[str]]] = []
+        configured_area_labels = source_label_codes("JP")
+        first_data_row = header_row_idx if header_row_idx is not None else total_row_idx
+        for candidate in rows[first_data_row + 1 :]:
+            area = _norm_text(candidate[header_start_idx]) if header_start_idx < len(candidate) else ""
+            if not area or area in {"累計", "Prefecture", "都道府県"}:
                 continue
-            disease = JP_ENGLISH_DISEASE_ALIASES.get(disease, disease)
-            lower_disease = disease.lower()
-            if lower_disease == "current week" or lower_disease.startswith("cum"):
+            if (
+                area == "総数"
+                or area.casefold() in configured_area_labels
+                or re.search(r"(?:都|道|府|県)$", area)
+            ):
+                data_rows.append((area, candidate))
+        max_len = len(header_row)
+        for area, area_row in data_rows:
+            if reporting_area not in {"*", "ALL", "all"} and area != reporting_area:
                 continue
+            for idx in range(start_col, max_len):
+                disease = _norm_text(header_row[idx])
+                if not disease:
+                    continue
+                disease = JP_ENGLISH_DISEASE_ALIASES.get(disease, disease)
+                lower_disease = disease.lower()
+                if lower_disease == "current week" or lower_disease.startswith("cum"):
+                    continue
 
-            cases = _parse_int(total_row[idx] if idx < len(total_row) else "")
-            if cases is None:
-                continue
+                cases = _parse_int(area_row[idx] if idx < len(area_row) else "")
+                if cases is None:
+                    continue
 
-            normalized.append(
-                {
-                    "Reporting Area": reporting_area,
-                    "Current MMWR Year": str(year),
-                    "MMWR WEEK": str(week),
-                    "Disease": disease,
-                    "Current week": str(max(0, cases)),
-                    "Current week, flag": "",
-                }
-            )
+                normalized.append(
+                    {
+                        "Reporting Area": area,
+                        "GeographyKey": geography_key("JP", area),
+                        "Current MMWR Year": str(year),
+                        "MMWR WEEK": str(week),
+                        "Disease": disease,
+                        "SurveillanceType": "all_case" if source_kind == "zensu" else "sentinel" if source_kind == "teiten" else "",
+                        "Current week": str(max(0, cases)),
+                        "Current week, flag": "",
+                    }
+                )
 
         normalized.sort(key=lambda r: (r["Current MMWR Year"], r["MMWR WEEK"], r["Disease"]))
         return normalized

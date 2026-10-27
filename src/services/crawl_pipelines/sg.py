@@ -1,6 +1,7 @@
 """Singapore weekly notification crawl orchestration."""
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -46,7 +47,8 @@ async def execute_sg_pipeline(service, *, task, source, force, process, save_raw
         task.task_uuid, entry_type="info", title="Phase 1/3: Fetching SG Source",
         content=f"Refreshing Singapore weekly case notifications ({mode})...", content_type="text",
     )
-    fetched = updater.refresh_source(
+    fetched = await asyncio.to_thread(
+        updater.refresh_source,
         source=source, force=force, fill_missing=fill_missing, start_year=start_year,
         save_raw=save_raw, raw_dir=raw_dir if save_raw else None,
     )

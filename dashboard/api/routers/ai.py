@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -30,7 +30,7 @@ from src.ai.model_center import (
 from src.control_plane.runtime import runtime_registry
 from src.core.db_schema import ensure_task_type_enum_schema
 from src.core.task_manager import task_manager
-from src.domain.ai_model_center import AIModelConfig, AIProviderConfig
+from src.domain.ai_model_center import AIModelCallLog, AIModelConfig, AIProviderConfig
 from src.domain.country import Country
 from src.domain.report import Report, ReportType
 from src.domain.task import Task, TaskPriority, TaskStatus, TaskType
@@ -625,6 +625,7 @@ class ModelCreateRequest(BaseModel):
     api_style: Optional[str] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
+    runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=64)
     extra_params: Dict[str, Any] = Field(default_factory=dict)
     is_enabled: bool = True
     is_default: bool = False
@@ -637,6 +638,7 @@ class ModelUpdateRequest(BaseModel):
     api_style: Optional[str] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
+    runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=64)
     extra_params: Optional[Dict[str, Any]] = None
     is_enabled: Optional[bool] = None
     is_default: Optional[bool] = None
@@ -655,6 +657,7 @@ class ModelOut(BaseModel):
     api_style: Optional[str] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
+    runtime_max_concurrency: Optional[int] = None
     extra_params: Dict[str, Any] = {}
     is_enabled: bool
     is_default: bool
@@ -727,6 +730,20 @@ class RuntimeRouteOut(BaseModel):
     runtime_provider_backoff_remaining_seconds: int = 0
     runtime_model_capacity: int = 1
     runtime_model_inflight: int = 0
+
+
+class AIModelCallLogOut(BaseModel):
+    id: int
+    request_id: str
+    model_key: str
+    model_name: str
+    provider_key: str
+    agent_name: str
+    status: str
+    latency_ms: float
+    error_type: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: str
 
 
 @router.post("/reports/runs", response_model=TaskOut, status_code=202)
@@ -1029,6 +1046,9 @@ async def create_model(body: ModelCreateRequest, db: AsyncSession = Depends(get_
         for old in (await db.execute(select(AIModelConfig).where(AIModelConfig.is_default.is_(True)))).scalars().all():
             old.is_default = False
 
+    extra_params = dict(body.extra_params)
+    if body.runtime_max_concurrency is not None:
+        extra_params["runtime_max_concurrency"] = body.runtime_max_concurrency
     model = AIModelConfig(
         provider_id=provider.id,
         model_key=model_key,
@@ -1038,7 +1058,7 @@ async def create_model(body: ModelCreateRequest, db: AsyncSession = Depends(get_
         api_style=body.api_style,
         temperature=body.temperature,
         max_tokens=body.max_tokens,
-        extra_params=body.extra_params,
+        extra_params=extra_params,
         is_enabled=body.is_enabled,
         is_default=body.is_default,
         priority=body.priority,
@@ -1066,6 +1086,7 @@ async def update_model(model_key: str, body: ModelUpdateRequest, db: AsyncSessio
             select(AIModelConfig)
             .options(selectinload(AIModelConfig.provider))
             .where(AIModelConfig.model_key == model_key)
+            .with_for_update(of=AIModelConfig)
         )
     ).scalar_one_or_none()
     if model is None:
@@ -1081,8 +1102,14 @@ async def update_model(model_key: str, body: ModelUpdateRequest, db: AsyncSessio
         model.temperature = body.temperature
     if body.max_tokens is not None:
         model.max_tokens = body.max_tokens
-    if body.extra_params is not None:
-        model.extra_params = body.extra_params
+    if body.extra_params is not None or "runtime_max_concurrency" in body.model_fields_set:
+        extra_params = dict(body.extra_params if body.extra_params is not None else (model.extra_params or {}))
+        if "runtime_max_concurrency" in body.model_fields_set:
+            if body.runtime_max_concurrency is None:
+                extra_params.pop("runtime_max_concurrency", None)
+            else:
+                extra_params["runtime_max_concurrency"] = body.runtime_max_concurrency
+        model.extra_params = extra_params
     if body.is_enabled is not None:
         model.is_enabled = body.is_enabled
     if body.priority is not None:
@@ -1161,6 +1188,50 @@ async def test_all_models(structured: bool = True):
     return await check_all_models(structured=structured)
 
 
+@router.get("/ai/models/call-logs", response_model=List[AIModelCallLogOut])
+async def list_ai_model_call_logs(
+    response: Response,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
+    provider_key: Optional[str] = None,
+    model_key: Optional[str] = None,
+    status: Optional[str] = Query(None, pattern="^(success|failed)$"),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(AIModelCallLog)
+    if provider_key:
+        query = query.where(AIModelCallLog.provider_key == provider_key)
+    if model_key:
+        query = query.where(AIModelCallLog.model_key == model_key)
+    if status:
+        query = query.where(AIModelCallLog.status == status)
+    rows = (
+        await db.execute(
+            query.order_by(desc(AIModelCallLog.created_at), desc(AIModelCallLog.id))
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    ).scalars().all()
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str((page - 1) * page_size)
+    return [
+        AIModelCallLogOut(
+            id=row.id,
+            request_id=row.request_id,
+            model_key=row.model_key,
+            model_name=row.model_name,
+            provider_key=row.provider_key,
+            agent_name=row.agent_name,
+            status=row.status,
+            latency_ms=row.latency_ms,
+            error_type=row.error_type,
+            error_message=row.error_message,
+            created_at=row.created_at.isoformat(),
+        )
+        for row in rows
+    ]
+
+
 @router.get("/ai/models/runtime", response_model=List[RuntimeRouteOut])
 async def list_runtime_routes():
     routes = await get_runtime_routes()
@@ -1174,6 +1245,8 @@ async def list_runtime_routes():
     )
     provider_capacities = worker_metadata.get("ai_provider_capacities")
     provider_capacities = provider_capacities if isinstance(provider_capacities, dict) else {}
+    model_capacities = worker_metadata.get("ai_model_capacities")
+    model_capacities = model_capacities if isinstance(model_capacities, dict) else {}
     admission_fields = {
         "runtime_provider_capacity",
         "runtime_provider_inflight",
@@ -1185,15 +1258,23 @@ async def list_runtime_routes():
     }
     for route in routes:
         worker_snapshot = provider_capacities.get(str(route.get("provider_id")))
-        if not isinstance(worker_snapshot, dict):
-            continue
-        route.update(
-            {
-                key: worker_snapshot[key]
-                for key in admission_fields
-                if key in worker_snapshot
-            }
-        )
+        if isinstance(worker_snapshot, dict):
+            route.update(
+                {
+                    key: worker_snapshot[key]
+                    for key in admission_fields
+                    if key in worker_snapshot
+                }
+            )
+        model_snapshot = model_capacities.get(str(route.get("model_id")))
+        if isinstance(model_snapshot, dict):
+            route.update(
+                {
+                    key: model_snapshot[key]
+                    for key in ("runtime_model_capacity", "runtime_model_inflight")
+                    if key in model_snapshot
+                }
+            )
     return [
         RuntimeRouteOut(
             model_id=int(route["model_id"]),
@@ -1439,6 +1520,7 @@ def _model_to_out(model: AIModelConfig) -> ModelOut:
         api_style=model.api_style,
         temperature=model.temperature,
         max_tokens=model.max_tokens,
+        runtime_max_concurrency=(model.extra_params or {}).get("runtime_max_concurrency"),
         extra_params=model.extra_params or {},
         is_enabled=model.is_enabled,
         is_default=model.is_default,

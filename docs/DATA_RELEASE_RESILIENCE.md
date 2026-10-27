@@ -59,6 +59,16 @@ Task workbook events expose `release_auto_retry_scheduled` and
 delay, and deadline. Inspect `tasks.metadata.automatic_retry` for the durable
 state and `tasks.metadata.release_checkpoints` for completed external effects.
 
+The clean-worktree gate has one deliberate, narrow exception:
+`configs/literature/weekly_ai_reviews.json` is an atomically-written runtime
+quality registry maintained by the background Research Radar review job. It is
+included in the generated release snapshot and is therefore reported under
+`git.dirty_runtime_mutable_paths` without blocking an unattended release.
+The release manifest still marks such a snapshot as dirty for provenance.
+All other tracked changes remain blocking, and the preflight payload retains
+both the complete `git.dirty_paths` list and the effective
+`git.dirty_blocking_paths` list for auditability.
+
 If a task is terminal, fix the reported code/configuration/credential/gate issue
 and use the normal manual retry action. Do not broaden the transient pattern list
 to mask a deterministic failure.

@@ -15,7 +15,11 @@ from dashboard.api.routers.diseases import (
     list_disease_ontology_series,
 )
 from dashboard.api.schemas.sources import AutomationJobCreate, AutomationJobUpdate
-from src.core.country_library import get_country_bootstrap_config, get_country_profile
+from src.core.country_library import (
+    get_country_bootstrap_config,
+    get_country_display_name,
+    get_country_profile,
+)
 from src.domain.automation_job import AutomationJob
 from src.generation.site_data_database import _build_country_metadata
 from src.services.automation_service import _country_code_resize_sql
@@ -92,3 +96,20 @@ def test_australia_state_database_metadata_is_subdivision_not_alpha2() -> None:
     assert metadata["location_type"] == "subdivision"
     assert metadata["iso_subdivision_code"] == "AU-NSW"
     assert metadata["flag_country_code"] == "AU"
+
+
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
+        ("JP-01", "Hokkaido, Japan"),
+        ("SE-AB", "Stockholms, Sweden"),
+        ("US-CA", "California, United States"),
+        ("DE-BE", "Berlin, Germany"),
+        ("CH-AG", "Aargau, Switzerland"),
+        ("NZ-AKL", "Auckland, New Zealand"),
+    ],
+)
+def test_registered_subdivision_names_use_parent_country_name(
+    code: str, expected: str,
+) -> None:
+    assert get_country_display_name(code) == expected

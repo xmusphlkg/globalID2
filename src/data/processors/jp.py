@@ -31,7 +31,7 @@ MAPPING_SOURCE_ID = "SRC_JP_NIID"
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_CSV = ROOT / "data/current/jp/weekly_cases_standardized.csv"
 DEFAULT_REPORTING_AREA = "総数"
-DEFAULT_SOURCE_NAME = "Japan NIID Weekly Sentinel"
+DEFAULT_SOURCE_NAME = "Japan JIHS IDWR Weekly"
 
 
 @dataclass
@@ -82,6 +82,9 @@ class JPWeeklyUpdater:
     # This mirrors the US/KR migration strategy and prevents partial registry
     # coverage from rejecting an otherwise valid source refresh.
     series_registered_rows_only = True
+    # IDWR rows carry their own geography. The national row remains the legacy
+    # projection; every prefecture row is persisted through the series store.
+    series_geography_from_rows = True
 
     def __init__(
         self,
@@ -90,8 +93,10 @@ class JPWeeklyUpdater:
         reporting_area: str = DEFAULT_REPORTING_AREA,
         source_name: str = DEFAULT_SOURCE_NAME,
         output_csv: Path = DEFAULT_OUTPUT_CSV,
+        series_country_code: str = "JP",
     ) -> None:
         self.country_code = country_code.upper()
+        self.series_country_code = series_country_code.upper()
         self.reporting_area = reporting_area
         self.source_name = source_name
         self.output_csv = output_csv
@@ -115,7 +120,7 @@ class JPWeeklyUpdater:
             try:
                 fetch_summary = crawler.crawl_standardized_csv(
                     self.output_csv,
-                    reporting_area=self.reporting_area,
+                    reporting_area="ALL",
                     force=force,
                     fill_missing=fill_missing,
                 )
@@ -131,6 +136,12 @@ class JPWeeklyUpdater:
                 ) from exc
 
         rows = self._load_standardized_rows(self.output_csv)
+        if self.country_code != self.series_country_code:
+            target_geography = f"country:{self.country_code}:national"
+            rows = [
+                row for row in rows
+                if row.get("GeographyKey") == target_geography
+            ]
         latest = self._latest_row_date(rows)
 
         return JPUpdateFetchResult(
@@ -151,7 +162,7 @@ class JPWeeklyUpdater:
             reader = csv.DictReader(handle)
             for row in reader:
                 area = _norm_text(row.get("Reporting Area", ""))
-                if area != self.reporting_area:
+                if not area:
                     continue
 
                 disease = _norm_text(row.get("Disease", ""))
@@ -167,9 +178,14 @@ class JPWeeklyUpdater:
                 rows.append(
                     {
                         "ReportingArea": area,
+                        "Geography": "JP:national" if area == "総数" else f"JP:prefecture:{area}",
+                        "GeographyKey": _norm_text(row.get("GeographyKey")) or (
+                            "country:JP:national" if area == "総数" else f"country:JP:source-region:{area}"
+                        ),
                         "MMWRYear": str(year),
                         "MMWRWeek": str(week),
                         "RawDiseaseLabel": disease,
+                        "SurveillanceType": _norm_text(row.get("SurveillanceType", "")),
                         "Cases": str(max(0, cases)),
                         "CurrentWeekFlag": _norm_text(row.get("Current week, flag", "")),
                         "Source": self.source_name,
@@ -226,7 +242,7 @@ class JPWeeklyUpdater:
 
     async def _load_mapping_dict(self, db: AsyncSession) -> Dict[str, int]:
         return await load_country_mapping_dict(
-            db, self.country_code, source_id=MAPPING_SOURCE_ID
+            db, self.series_country_code, source_id=MAPPING_SOURCE_ID
         )
 
     async def import_rows(
@@ -252,6 +268,13 @@ class JPWeeklyUpdater:
         seen_keys: set[Tuple[datetime, int, int]] = set()
 
         for row in rows:
+            # disease_records has no region dimension. The parent-country run
+            # writes only its national aggregate; child runs are series-only.
+            if self.country_code == self.series_country_code:
+                if _norm_text(row.get("ReportingArea")) != "総数":
+                    continue
+            else:
+                continue
             year = _parse_int(row.get("MMWRYear"))
             week = _parse_int(row.get("MMWRWeek"))
             if year is None or week is None:
@@ -274,6 +297,7 @@ class JPWeeklyUpdater:
                 "mmwr_year": row.get("MMWRYear", ""),
                 "mmwr_week": row.get("MMWRWeek", ""),
                 "current_week_flag": row.get("CurrentWeekFlag", ""),
+                "surveillance_type": row.get("SurveillanceType", ""),
                 "source_file": row.get("__source_file", ""),
                 "death_reporting": "not_provided_by_source",
                 "death_reporting_note": "Japan IDWR weekly feed used here reports cases only.",

@@ -35,17 +35,19 @@ ATTRIBUTION = (
     "source: Public Health Agency of Canada, Canadian Notifiable Disease "
     "Surveillance System (CNDSS)."
 )
-CONTRACT_VERSION = "phac-cndss-national-annual-v1-1924-2023-2026-08"
+CONTRACT_VERSION = "phac-cndss-national-annual-v2-1924-2024-2026-10"
 EXPECTED_FIRST_YEAR = 1924
-EXPECTED_LAST_YEAR = 2023
-MANITOBA_2023_UNAVAILABLE_CODES = frozenset({
-    6, 13, 15, 16, 21, 32, 43, 48, 49, 61, 64, 66, 69, 70, 74, 78, 85,
-    89, 94, 98, 106, 107, 108, 111, 112, 120, 127, 129, 134, 136, 141, 142, 144,
-    147, 153, 173, 176, 179, 180, 182, 199, 211, 220, 242,
-})
+EXPECTED_LAST_YEAR = 2024
+# The October 2024 extract removed this sentence. Validation now fails closed
+# if it returns, rather than requiring it for a fixed disease-code set.
+RETIRED_MANITOBA_2023_SENTENCE = (
+    "The 2023 data from MB were not available at time of data preparation."
+)
+MANITOBA_2023_UNAVAILABLE_CODES = frozenset()
 MANITOBA_2023_NOTICE = (
-    "The official disease-specific reporting tables state that Manitoba 2023 "
-    "data were unavailable at preparation time for 44 disease contracts."
+    "The October 2024 CNDSS extract no longer marks 44 disease contracts as "
+    "Manitoba-2023-unavailable. Disease and year inclusion still varies, and a "
+    "national aggregate is not an all-jurisdiction completeness claim."
 )
 NATIONAL_COMPLETENESS_NOTICE = (
     "A published CNDSS national aggregate is not evidence of complete reporting "
@@ -87,7 +89,9 @@ CNDSS_DISEASE_CONTRACTS: tuple[CNDSSDiseaseContract, ...] = (
     CNDSSDiseaseContract(86, "Acquired Immune Deficiency Syndrome", "D005"),
     CNDSSDiseaseContract(177, "Acute Flaccid Paralysis", "D178"),
     CNDSSDiseaseContract(2, "Amoebiasis", "D165"),
+    CNDSSDiseaseContract(251, "Anaplasmosis", "D098", "narrower", "no_projection"),
     CNDSSDiseaseContract(6, "Anthrax", "D023"),
+    CNDSSDiseaseContract(9, "Babesiosis", "D090"),
     CNDSSDiseaseContract(13, "Botulism", "D091"),
     CNDSSDiseaseContract(15, "Brucellosis", "D032"),
     CNDSSDiseaseContract(16, "Campylobacteriosis", "D092"),
@@ -134,6 +138,7 @@ CNDSS_DISEASE_CONTRACTS: tuple[CNDSSDiseaseContract, ...] = (
     CNDSSDiseaseContract(73, "Meningitis, Viral", "D134"),
     CNDSSDiseaseContract(74, "Meningococcal Disease, Invasive", "D110"),
     CNDSSDiseaseContract(78, "Mumps", "D039"),
+    CNDSSDiseaseContract(257, "Mpox", "D065"),
     CNDSSDiseaseContract(220, "Norovirus Infection", None, projection_policy="no_projection"),
     CNDSSDiseaseContract(221, "Paralytic Shellfish Poisoning", "D247"),
     CNDSSDiseaseContract(83, "Paratyphoid", "D234"),
@@ -141,11 +146,13 @@ CNDSS_DISEASE_CONTRACTS: tuple[CNDSSDiseaseContract, ...] = (
     CNDSSDiseaseContract(89, "Plague", "D001"),
     CNDSSDiseaseContract(182, "Pneumococcal Disease, Invasive", "D106"),
     CNDSSDiseaseContract(94, "Poliomyelitis", "D013"),
+    CNDSSDiseaseContract(252, "Powassan Virus Disease", "D248"),
     CNDSSDiseaseContract(98, "Rabies", "D019"),
     CNDSSDiseaseContract(106, "Rubella", "D040"),
     CNDSSDiseaseContract(108, "Salmonellosis", "D114"),
     CNDSSDiseaseContract(115, "Scarlet Fever and Streptococcal Sore Throat", None, projection_policy="no_projection", target_group="G_STREPTOCOCCAL_DISEASE_SPECTRUM"),
     CNDSSDiseaseContract(199, "Severe Acute Respiratory Syndrome", "D003"),
+    CNDSSDiseaseContract(258, "Shiga toxin producing Escherichia coli infection", "D115"),
     CNDSSDiseaseContract(111, "Shigellosis", "D105"),
     CNDSSDiseaseContract(112, "Smallpox", "D064"),
     CNDSSDiseaseContract(117, "Syphilis", "D034"),
@@ -156,7 +163,6 @@ CNDSS_DISEASE_CONTRACTS: tuple[CNDSSDiseaseContract, ...] = (
     CNDSSDiseaseContract(127, "Tularemia", "D123"),
     CNDSSDiseaseContract(161, "Typhoid and Paratyphoid", "D026"),
     CNDSSDiseaseContract(129, "Typhoid Fever", "D124"),
-    CNDSSDiseaseContract(147, "Verotoxigenic Escherichia coli Infection", "D115"),
     CNDSSDiseaseContract(141, "Viral Haemorrhagic Fever", "D127"),
     CNDSSDiseaseContract(196, "West Nile Virus Infection", "D128"),
     CNDSSDiseaseContract(134, "Yellow Fever", "D059"),
@@ -222,17 +228,15 @@ class CanadaCNDSSNationalCrawler(BaseCrawler):
             raise CNDSSContractError(
                 f"CNDSS disease contract changed; missing={missing}, extra={extra}, labels={changed}"
             )
-        affected = {
+        affected = sorted(
             int(item["code"])
             for item in descriptions
-            if "The 2023 data from MB were not available at time of data preparation."
-            in str(item.get("limitation") or "")
-        }
-        if affected != MANITOBA_2023_UNAVAILABLE_CODES:
+            if RETIRED_MANITOBA_2023_SENTENCE in str(item.get("limitation") or "")
+        )
+        if affected:
             raise CNDSSContractError(
                 "CNDSS Manitoba 2023 limitation contract changed; "
-                f"expected={sorted(MANITOBA_2023_UNAVAILABLE_CODES)}, "
-                f"actual={sorted(affected)}"
+                f"retired sentence returned for {affected}"
             )
         incomplete = [
             int(item["code"])

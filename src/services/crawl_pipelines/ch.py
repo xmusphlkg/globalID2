@@ -1,6 +1,7 @@
 """Switzerland FOPH IDD monthly crawl orchestration."""
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -127,7 +128,8 @@ async def execute_ch_pipeline(
         months_to_fetch = sorted(months_set)
 
     phase1_started = perf_counter()
-    fetched = updater.refresh_source(
+    fetched = await asyncio.to_thread(
+        updater.refresh_source,
         source=source,
         run_external=False,
         force=force,

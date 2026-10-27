@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from src.ai.model_center import (
     _effective_route_check_status,
     extract_retry_after_seconds,
+    is_model_channel_failure,
     is_provider_authentication_error,
     is_model_unavailable_error,
     is_rate_limit_error,
@@ -123,3 +124,30 @@ def test_is_model_unavailable_error_does_not_match_quota_error() -> None:
     error = DummyRateLimitError("insufficient_quota: please upgrade your plan")
 
     assert is_model_unavailable_error(error) is False
+
+
+def test_is_model_unavailable_error_does_not_mask_channel_failure() -> None:
+    error = DummyRateLimitError(
+        "Error code: 500 - {'error': {'message': '分组 Claude特惠 下模型 claude-opus 的可用渠道不存在（retry）', 'code': 'get_channel_failed'}}",
+        status_code=500,
+    )
+
+    assert is_model_unavailable_error(error) is False
+
+
+def test_is_model_channel_failure_detects_get_channel_failed_code() -> None:
+    error = DummyRateLimitError(
+        "Error code: 500 - {'error': {'message': '分组 Claude特惠 下模型 claude-opus 的可用渠道不存在（retry）', 'code': 'get_channel_failed'}}",
+        status_code=500,
+    )
+
+    assert is_model_channel_failure(error) is True
+
+
+def test_is_model_channel_failure_detects_missing_channel_message() -> None:
+    error = DummyRateLimitError(
+        "Error code: 500 - {'error': {'message': 'No available channel for requested model right now. Please retry later.', 'code': ''}}",
+        status_code=500,
+    )
+
+    assert is_model_channel_failure(error) is True

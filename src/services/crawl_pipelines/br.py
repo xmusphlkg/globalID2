@@ -5,6 +5,7 @@ separate from the simpler configured monthly pipelines.
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import date, datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -186,7 +187,8 @@ async def execute_br_pipeline(
             else int(max(1, updater.refresh_recent_months))
         )
         try:
-            fetched = updater.refresh_source(
+            fetched = await asyncio.to_thread(
+                updater.refresh_source,
                 source=source,
                 run_external=False,
                 force=force or False,

@@ -102,6 +102,8 @@ class BRMonthlyUpdater:
         output_csv: Path = DEFAULT_OUTPUT_CSV,
     ) -> None:
         self.country_code = country_code.upper()
+        self.series_country_code = "BR"
+        self.series_geography_key = f"country:{self.country_code}:national"
         self.source_name = source_name
         self.output_csv = output_csv
         cfg = get_country_bootstrap_config(self.country_code)
@@ -453,7 +455,7 @@ class BRMonthlyUpdater:
 
     async def _load_mapping_dict(self, db: AsyncSession) -> Dict[str, int]:
         return await load_country_mapping_dict(
-            db, self.country_code, source_id=MAPPING_SOURCE_ID
+            db, self.series_country_code, source_id=MAPPING_SOURCE_ID
         )
 
     async def _get_standard_disease_db_id(
@@ -564,6 +566,7 @@ class BRMonthlyUpdater:
                 "source_files": bucket["source_files"],
                 "source_urls": bucket["source_urls"],
                 "case_definition": "SINAN notification records aggregated by notification month",
+                "geography_basis": "residence" if self.country_code.startswith("BR-") else "national",
                 "death_reporting": "not_provided_by_source",
                 "death_reporting_note": "Brazil SINAN notification extract used here is case-count based.",
             }

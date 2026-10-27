@@ -1,5 +1,8 @@
+import { localizedDiseaseName } from "../../utils/diseaseNames";
+
 export interface SourceSeriesMetadata {
   series_code?: string;
+  selection_key?: string;
   source_series_code?: string;
   source_system?: string;
   source_label?: string;
@@ -10,6 +13,7 @@ export interface SourceSeriesMetadata {
   unit?: string;
   geography_key?: string;
   dimension_key?: string;
+  dimensions?: Record<string, string | number | boolean | null>;
   mapping_relation?: string;
   comparability?: string | null;
   aggregation_policy?: string;
@@ -31,12 +35,24 @@ export interface SourceSeriesMetadata {
   point_quality_statuses?: string[];
   provisional_from?: string | null;
   latest_quality_status?: string | null;
+  incidence_rates?: (number | null)[];
+  incidence_sources?: (string | null)[];
+  population_values?: (number | null)[];
+  population_sources?: (string | null)[];
+  has_incidence_rates?: boolean;
+  period_starts?: (string | null)[];
+  period_ends_exclusive?: (string | null)[];
+  calendar?: string | null;
 }
 
 export interface CountryDatasetSeriesEntry {
+  snapshot_version?: string;
+  recorded_at_as_of?: string | null;
+  recorded_history_complete?: boolean | null;
   disease_id: string;
   name_en: string;
   name_zh: string;
+  name_fr?: string;
   category?: string;
   slug?: string;
   dates: string[];
@@ -48,8 +64,12 @@ export interface CountryDatasetSeriesEntry {
   point_granularities?: (string | null)[];
   point_series_codes?: (string | null)[];
   point_data_layers?: (string | null)[];
+  point_quality_statuses?: string[];
+  period_starts?: (string | null)[];
+  period_ends_exclusive?: (string | null)[];
+  calendar?: string | null;
   total_cases: number;
-  total_deaths?: number;
+  total_deaths?: number | null;
   latest_cases?: number | null;
   latest_deaths?: number | null;
   provisional_from?: string | null;
@@ -57,6 +77,7 @@ export interface CountryDatasetSeriesEntry {
   reporting_basis?: string | null;
   time_basis?: string | null;
   comparability?: string | null;
+  aggregation_policy?: string;
   definition_version?: string | null;
   incidence_rate?: number | null;
   mortality_rate?: number | null;
@@ -64,6 +85,7 @@ export interface CountryDatasetSeriesEntry {
   projection_policy?: string;
   loss_risk?: string | null;
   period_granularity?: string | null;
+  period_granularity_basis?: "source" | "date_pattern" | "unknown";
   available_series_count?: number;
   coverage_status?: string | null;
   selected_series_codes?: string[];
@@ -85,6 +107,22 @@ export interface CountryDataset {
 
 export type SourceSeriesObservations = Record<string, SourceSeriesMetadata[]>;
 
+export function decodeCompactIncidence(
+  pointCount: number,
+  entry: { ri?: number[]; rv?: number[]; rs?: Array<number | null> },
+  sourceLabels: string[],
+) {
+  const rates = new Array<number | null>(pointCount).fill(null);
+  const sources = new Array<string | null>(pointCount).fill(null);
+  (entry.ri ?? []).forEach((pointIndex, sparseIndex) => {
+    if (pointIndex < 0 || pointIndex >= pointCount) return;
+    rates[pointIndex] = entry.rv?.[sparseIndex] ?? null;
+    const sourceCode = entry.rs?.[sparseIndex];
+    sources[pointIndex] = sourceCode == null ? null : (sourceLabels[sourceCode] ?? null);
+  });
+  return { rates, sources };
+}
+
 interface CountrySourceSeriesDataset {
   v: number;
   series?: SourceSeriesObservations;
@@ -94,6 +132,7 @@ interface CompactCountryDatasetSeriesEntry {
   id: string;
   en: string;
   zh: string;
+  fr?: string;
   cat?: string;
   slug?: string;
   tc?: number;
@@ -120,6 +159,7 @@ interface CompactCountryDatasetSeriesEntry {
   projection_policy?: string;
   loss_risk?: string | null;
   period_granularity?: string | null;
+  period_granularity_basis?: "source" | "date_pattern" | "unknown";
   available_series_count?: number;
   coverage_status?: string | null;
   selected_series_codes?: string[];
@@ -129,6 +169,7 @@ interface CompactCountryDatasetSeriesEntry {
 
 interface CompactCountryDataset {
   v: number;
+  meta?: { recorded_at_as_of?: string | null; recorded_history_complete?: boolean | null };
   dates: string[];
   sources?: string[];
   series: CompactCountryDatasetSeriesEntry[];
@@ -143,30 +184,48 @@ const cache = new Map<string, Promise<CountryDataset>>();
 const sourceSeriesCache = new Map<string, Promise<SourceSeriesObservations>>();
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 
-function isCompactCountryDataset(value: unknown): value is CompactCountryDataset {
-  if (!value || typeof value !== 'object') return false;
+function isCompactCountryDataset(
+  value: unknown,
+): value is CompactCountryDataset {
+  if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<CompactCountryDataset>;
-  return candidate.v === 1 && Array.isArray(candidate.dates) && Array.isArray(candidate.series);
+  return (
+    candidate.v === 1 &&
+    Array.isArray(candidate.dates) &&
+    Array.isArray(candidate.series)
+  );
 }
 
-function normalizeCountryDataset(raw: CountryDataset | CompactCountryDataset): CountryDataset {
+function normalizeCountryDataset(
+  raw: CountryDataset | CompactCountryDataset,
+): CountryDataset {
   if (!isCompactCountryDataset(raw)) {
-    return raw;
+    if (!raw.disease_series) return raw;
+    return {
+      ...raw,
+      disease_series: Object.fromEntries(
+        Object.entries(raw.disease_series).map(([id, entry]) => [
+          id,
+          {
+            ...entry,
+            recorded_at_as_of: entry.recorded_at_as_of ?? null,
+            recorded_history_complete: entry.recorded_history_complete ?? null,
+            name_fr: localizedDiseaseName(
+              { ...entry, disease_id: entry.disease_id ?? id },
+              "fr",
+            ),
+          },
+        ]),
+      ),
+    };
   }
 
   const sourceLabels = raw.sources ?? [];
   const diseaseSeries = Object.fromEntries(
     raw.series.map((entry) => {
-      const dates = entry.x.map((index) => raw.dates[index] ?? '');
-      const incidenceRates = new Array<number | null>(dates.length).fill(null);
-      const incidenceSources = new Array<string | null>(dates.length).fill(null);
-
-      (entry.ri ?? []).forEach((pointIndex, sparseIndex) => {
-        if (pointIndex < 0 || pointIndex >= dates.length) return;
-        incidenceRates[pointIndex] = entry.rv?.[sparseIndex] ?? null;
-        const sourceCode = entry.rs?.[sparseIndex];
-        incidenceSources[pointIndex] = sourceCode == null ? null : (sourceLabels[sourceCode] ?? null);
-      });
+      const dates = entry.x.map((index) => raw.dates[index] ?? "");
+      const { rates: incidenceRates, sources: incidenceSources } =
+        decodeCompactIncidence(dates.length, entry, sourceLabels);
 
       return [
         entry.id,
@@ -174,6 +233,16 @@ function normalizeCountryDataset(raw: CountryDataset | CompactCountryDataset): C
           disease_id: entry.id,
           name_en: entry.en,
           name_zh: entry.zh,
+          name_fr: localizedDiseaseName(
+            {
+              disease_id: entry.id,
+              slug: entry.slug,
+              name_en: entry.en,
+              name_zh: entry.zh,
+              name_fr: entry.fr,
+            },
+            "fr",
+          ),
           category: entry.cat,
           slug: entry.slug,
           dates,
@@ -199,20 +268,25 @@ function normalizeCountryDataset(raw: CountryDataset | CompactCountryDataset): C
           projection_policy: entry.projection_policy,
           loss_risk: entry.loss_risk,
           period_granularity: entry.period_granularity,
+          period_granularity_basis: entry.period_granularity_basis,
           available_series_count: entry.available_series_count ?? 0,
           coverage_status: entry.coverage_status,
           selected_series_codes: entry.selected_series_codes ?? [],
           metric_layers: entry.metric_layers ?? {},
           source_series: entry.source_series ?? [],
+          recorded_at_as_of: raw.meta?.recorded_at_as_of ?? null,
+          recorded_history_complete: raw.meta?.recorded_history_complete ?? null,
         } satisfies CountryDatasetSeriesEntry,
       ];
-    })
+    }),
   );
 
   const heatmap = raw.heatmap
     ? {
         diseases: raw.heatmap.disease_ids ?? [],
-        disease_labels: (raw.heatmap.disease_ids ?? []).map((id) => diseaseSeries[id]?.name_en ?? id),
+        disease_labels: (raw.heatmap.disease_ids ?? []).map(
+          (id) => diseaseSeries[id]?.name_en ?? id,
+        ),
         months: raw.heatmap.months ?? [],
         z: raw.heatmap.z ?? [],
       }
@@ -234,7 +308,7 @@ export function invalidateCountryDataset(dataUrl: string) {
 
 export function loadCountrySourceSeries(
   dataUrl?: string | null,
-  { timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS }: LoadCountryDatasetOptions = {}
+  { timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS }: LoadCountryDatasetOptions = {},
 ): Promise<SourceSeriesObservations> {
   if (!dataUrl) return Promise.resolve({});
 
@@ -245,14 +319,16 @@ export function loadCountrySourceSeries(
   const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs);
   const request = fetch(dataUrl, {
     signal: controller.signal,
-    credentials: 'same-origin',
+    credentials: "same-origin",
   })
     .then(async (response) => {
       if (!response.ok) {
-        throw new Error(`Failed to load country source series: ${response.status}`);
+        throw new Error(
+          `Failed to load country source series: ${response.status}`,
+        );
       }
-      const raw = await response.json() as CountrySourceSeriesDataset;
-      return raw?.v === 1 && raw.series && typeof raw.series === 'object'
+      const raw = (await response.json()) as CountrySourceSeriesDataset;
+      return raw?.v === 1 && raw.series && typeof raw.series === "object"
         ? raw.series
         : {};
     })
@@ -268,7 +344,7 @@ export function loadCountrySourceSeries(
 
 export function loadCountryDataset(
   dataUrl?: string | null,
-  { timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS }: LoadCountryDatasetOptions = {}
+  { timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS }: LoadCountryDatasetOptions = {},
 ): Promise<CountryDataset> {
   if (!dataUrl) {
     return Promise.resolve({});
@@ -281,14 +357,16 @@ export function loadCountryDataset(
   const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs);
   const request = fetch(dataUrl, {
     signal: controller.signal,
-    credentials: 'same-origin',
+    credentials: "same-origin",
   })
     .then(async (response) => {
       if (!response.ok) {
         throw new Error(`Failed to load country dataset: ${response.status}`);
       }
       const raw = await response.json();
-      return normalizeCountryDataset(raw as CountryDataset | CompactCountryDataset);
+      return normalizeCountryDataset(
+        raw as CountryDataset | CompactCountryDataset,
+      );
     })
     .catch((error) => {
       cache.delete(dataUrl);

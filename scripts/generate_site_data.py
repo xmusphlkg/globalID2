@@ -12,6 +12,7 @@ the Astro build process consumes at build time.
 
 import argparse
 import asyncio
+from datetime import datetime, timezone
 import sys
 from pathlib import Path
 
@@ -192,7 +193,40 @@ def main() -> None:
         action="store_true",
         help="Allow overwriting site data even when the database currently exports zero disease records",
     )
+    parser.add_argument(
+        "--incremental-country",
+        dest="incremental_country_codes",
+        action="append",
+        default=[],
+        help=(
+            "Refresh only the listed country scopes and merge them into the existing "
+            "site snapshot; repeat for multiple countries"
+        ),
+    )
+    parser.add_argument(
+        "--incremental-site",
+        action="store_true",
+        help="Reuse existing surveillance snapshots while refreshing literature and Situation data",
+    )
+    parser.add_argument(
+        "--recorded-at-as-of",
+        help=(
+            "Build a complete surveillance site snapshot using the latest "
+            "recorded observation states at this timezone-aware ISO datetime"
+        ),
+    )
     args = parser.parse_args()
+    recorded_at_as_of = None
+    if args.recorded_at_as_of:
+        try:
+            recorded_at_as_of = datetime.fromisoformat(
+                args.recorded_at_as_of.replace("Z", "+00:00")
+            )
+        except ValueError as exc:
+            parser.error(f"invalid --recorded-at-as-of value: {exc}")
+        if recorded_at_as_of.tzinfo is None:
+            parser.error("--recorded-at-as-of must include a timezone")
+        recorded_at_as_of = recorded_at_as_of.astimezone(timezone.utc)
     print(f"Exporting site data to {args.output} …")
     print(f"Writing partitioned CSV/JSON/XLSX files to {args.direct_download_output} …")
     print(f"Writing download manifest to {args.manifest_output} …\n")
@@ -206,6 +240,9 @@ def main() -> None:
             direct_download_url_base=args.direct_download_url_base,
             direct_download_max_file_bytes=args.direct_download_max_file_bytes,
             direct_download_workers=args.direct_download_workers,
+            incremental_country_codes=args.incremental_country_codes,
+            recorded_at_as_of=recorded_at_as_of,
+            incremental_site=args.incremental_site,
         )
     )
 

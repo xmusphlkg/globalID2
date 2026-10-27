@@ -72,7 +72,6 @@ def test_packet_allowlists_public_fields_and_treats_prompt_injection_as_data():
 
 
 @pytest.mark.parametrize("response", [
-    '```json {"verdict":"pass","issue_codes":[]} ```',
     '{"verdict":"pass","issue_codes":[],"reasoning":"hidden"}',
     '{"verdict":"pass","issue_codes":["unsupported_claim"]}',
     '{"verdict":"needs_editorial_review","issue_codes":["invented_code"]}',
@@ -80,6 +79,16 @@ def test_packet_allowlists_public_fields_and_treats_prompt_injection_as_data():
 def test_malformed_inconsistent_or_unknown_model_output_fails_closed(response):
     with pytest.raises(WeeklyAIReviewError):
         parse_ai_review_response(response)
+
+
+def test_single_json_fence_without_prose_is_accepted():
+    assert parse_ai_review_response(
+        '```json\n{"verdict":"pass","issue_codes":[]}\n```'
+    ) == {"verdict": "pass", "issue_codes": []}
+    with pytest.raises(WeeklyAIReviewError):
+        parse_ai_review_response(
+            'Result:\n```json\n{"verdict":"pass","issue_codes":[]}\n```'
+        )
 
 
 @pytest.mark.asyncio
@@ -92,6 +101,7 @@ async def test_runner_uses_bounded_packet_and_returns_no_reasoning():
     }
     assert len(agent.calls) == 1
     assert "outside knowledge" in agent.calls[0]["system"]
+    assert "empty evidence_gaps array is valid" in agent.calls[0]["system"]
     assert "private_note" not in agent.calls[0]["prompt"]
 
 
@@ -197,6 +207,45 @@ async def test_partial_failure_is_recoverable_and_does_not_erase_completed_week(
     )
     assert recovered["counts"]["ai_reviewed"] == 1
     assert recovered["counts"]["skipped"] == 1
+
+
+@pytest.mark.asyncio
+async def test_older_ai_hold_is_automatically_rechecked_and_cleared(tmp_path):
+    weekly = tmp_path / "weekly"
+    weekly.mkdir()
+    brief = _brief()
+    (weekly / "2026-W33.json").write_text(json.dumps(brief), encoding="utf-8")
+    registry = tmp_path / "reviews.json"
+    registry.write_text(json.dumps({
+        "schema_version": 1,
+        "reviews": [{
+            "week": "2026-W33",
+            "brief_fingerprint": weekly_brief_review_fingerprint(brief),
+            "review": {
+                "verdict": "needs_editorial_review",
+                "issue_codes": ["missing_bilingual_gap"],
+                "reviewed_at": "2026-08-16T10:00:00Z",
+                "protocol_version": AI_REVIEW_PROTOCOL_VERSION,
+                "model": "configured-review-model",
+                "provider": "model-center",
+            },
+        }],
+    }), encoding="utf-8")
+    agent = FakeAgent('{"verdict":"pass","issue_codes":[]}')
+
+    result = await review_weekly_brief_files(
+        weekly_dir=weekly,
+        registry_path=registry,
+        weeks=["2026-W33"],
+        recheck_after_hours=6,
+        apply=True,
+        runner=WeeklyAIReviewRunner(agent),
+    )
+
+    assert result["counts"]["ai_reviewed"] == 1
+    stored = json.loads(registry.read_text(encoding="utf-8"))["reviews"][0]["review"]
+    assert stored["verdict"] == "pass"
+    assert stored["issue_codes"] == []
 
 
 @pytest.mark.asyncio

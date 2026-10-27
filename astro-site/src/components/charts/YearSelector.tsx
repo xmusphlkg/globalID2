@@ -4,7 +4,7 @@ import type { YearSummary } from './monthlyBarModel';
 
 interface Props {
   density?: 'compact' | 'full';
-  lang: 'en' | 'zh';
+  lang: 'en' | 'zh' | 'fr';
   allYears: string[];
   recentYears: string[];
   selectedYearSet: Set<string>;
@@ -19,8 +19,8 @@ interface Props {
   isShowingAllYears: boolean;
 }
 
-function formatValue(value: number) {
-  return Number.isFinite(value) ? value.toLocaleString() : '—';
+function formatValue(value: number | null) {
+  return value != null && Number.isFinite(value) ? value.toLocaleString() : '—';
 }
 
 export default function YearSelector({
@@ -46,7 +46,10 @@ export default function YearSelector({
     : visibleYearSummaries;
   const totalRange = useMemo(() => {
     if (visibleYearSummaries.length === 0) return { min: 0, max: 0 };
-    const totals = visibleYearSummaries.map((summary) => summary.total);
+    const totals = visibleYearSummaries
+      .map((summary) => summary.total)
+      .filter((total): total is number => total !== null);
+    if (totals.length === 0) return { min: 0, max: 0 };
     return {
       min: Math.min(...totals),
       max: Math.max(...totals),
@@ -147,7 +150,9 @@ export default function YearSelector({
         ) : (
           displayedSummaries.map((summary) => {
             const isActive = selectedYearSet.has(summary.year);
-            const volumePercent = totalRange.max <= totalRange.min
+            const volumePercent = summary.total == null
+              ? 0
+              : totalRange.max <= totalRange.min
               ? (totalRange.max === 0 ? 0 : 100)
               : ((summary.total - totalRange.min) / (totalRange.max - totalRange.min)) * 100;
             const itemStyle = isCompact
@@ -193,7 +198,9 @@ export default function YearSelector({
                     </div>
                     {!isCompact && (
                       <div className="chart-sidebar-meta">
-                        {lang === 'zh' ? '年度合计' : 'Year total'} {formatValue(summary.total)}
+                        {summary.total == null
+                          ? (lang === 'zh' ? '年度总量不完整' : 'Incomplete annual total')
+                          : <>{lang === 'zh' ? '完整年度合计' : 'Complete-year total'} {formatValue(summary.total)}</>}
                         {' · '}
                         {lang === 'zh' ? '峰值' : 'Peak'} {summary.peakMonth}
                         {summary.peakMonth !== '—' ? ` (${formatValue(summary.peakValue)})` : ''}

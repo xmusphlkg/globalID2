@@ -121,7 +121,15 @@ export function Sidebar({
     <div className={cn("flex h-full flex-col border-r border-[#D9D9D6] bg-white", collapsed ? "px-2" : "px-3")}>
       <div className={cn("flex h-16 items-center border-b border-[#ECECEA]", collapsed ? "justify-center" : "gap-3 px-2")}>
         <Link href="/overview" onClick={onClose} className="flex items-center gap-3" aria-label="GIDS Control Center overview">
-          <span className="control-center-mark" aria-hidden="true"><span /></span>
+          <img
+            className="control-center-logo"
+            src="/icons/gids-192.png"
+            alt=""
+            aria-hidden="true"
+            width={36}
+            height={36}
+            decoding="async"
+          />
           {!collapsed ? (
             <span className="min-w-0">
               <span className="block text-sm font-semibold tracking-tight text-[var(--cc-text-strong)]">GIDS</span>

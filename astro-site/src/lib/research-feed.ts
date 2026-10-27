@@ -17,8 +17,10 @@ export interface ResearchFeedArticle {
   peer_review_status?: unknown;
   editorial_status?: unknown;
   why_it_matters_en?: unknown;
-  diseases?: Array<{ disease_id?: unknown; slug?: unknown; name_en?: unknown }>;
-  countries?: Array<{ code?: unknown; slug?: unknown; name_en?: unknown }>;
+  why_it_matters_zh?: unknown;
+  why_it_matters_fr?: unknown;
+  diseases?: Array<{ disease_id?: unknown; slug?: unknown; name_en?: unknown; name_zh?: unknown; name_fr?: unknown }>;
+  countries?: Array<{ code?: unknown; slug?: unknown; name_en?: unknown; name_zh?: unknown; name_fr?: unknown }>;
   topics?: Array<{ name?: unknown; slug?: unknown }>;
 }
 
@@ -28,8 +30,8 @@ export interface ResearchFeedData {
   preprints?: ResearchFeedArticle[];
   reviews_and_guidelines?: ResearchFeedArticle[];
   facets?: {
-    diseases?: Array<{ disease_id?: unknown; slug?: unknown; name_en?: unknown; name_zh?: unknown }>;
-    countries?: Array<{ code?: unknown; slug?: unknown; name_en?: unknown; name_zh?: unknown }>;
+    diseases?: Array<{ disease_id?: unknown; slug?: unknown; name_en?: unknown; name_zh?: unknown; name_fr?: unknown }>;
+    countries?: Array<{ code?: unknown; slug?: unknown; name_en?: unknown; name_zh?: unknown; name_fr?: unknown }>;
     topics?: Array<{ slug?: unknown; name?: unknown }>;
   };
 }
@@ -39,9 +41,12 @@ export interface ResearchFeedDefinition {
   value: string;
   label: string;
   labelZh?: string;
+  labelFr?: string;
   path: string;
   count: number;
 }
+
+export type ResearchFeedLanguage = 'en' | 'zh' | 'fr';
 
 const dynamicFeedPrefix = '/research/rss';
 const peerReviewedValues = new Set(['peer-reviewed', 'peer-reviewed-article', 'peer-reviewed-paper']);
@@ -146,7 +151,7 @@ export function filterResearchFeedArticles(
 
 export function buildResearchFeedDefinitions(data: ResearchFeedData): ResearchFeedDefinition[] {
   const definitions = new Map<string, Omit<ResearchFeedDefinition, 'count'>>();
-  const add = (scope: ResearchFeedScope, rawValue: unknown, rawLabel: unknown, rawLabelZh?: unknown) => {
+  const add = (scope: ResearchFeedScope, rawValue: unknown, rawLabel: unknown, rawLabelZh?: unknown, rawLabelFr?: unknown) => {
     const value = toResearchFeedSlug(rawValue);
     const label = text(rawLabel);
     if (!value || !label) return;
@@ -156,15 +161,16 @@ export function buildResearchFeedDefinitions(data: ResearchFeedData): ResearchFe
       value,
       label,
       labelZh: text(rawLabelZh) || undefined,
+      ...(text(rawLabelFr) ? { labelFr: text(rawLabelFr) } : {}),
       path,
     });
   };
 
   for (const facet of data.facets?.diseases ?? []) {
-    add('diseases', facet.slug ?? facet.disease_id, facet.name_en ?? facet.slug, facet.name_zh);
+    add('diseases', facet.slug ?? facet.disease_id, facet.name_en ?? facet.slug, facet.name_zh, facet.name_fr);
   }
   for (const facet of data.facets?.countries ?? []) {
-    add('countries', facet.slug ?? facet.code, facet.name_en ?? facet.code, facet.name_zh);
+    add('countries', facet.slug ?? facet.code, facet.name_en ?? facet.code, facet.name_zh, facet.name_fr);
   }
   for (const facet of data.facets?.topics ?? []) {
     add('topics', facet.slug ?? facet.name, facet.name ?? facet.slug);
@@ -181,9 +187,9 @@ export function buildResearchFeedDefinitions(data: ResearchFeedData): ResearchFe
   }
 
   // Keep these high-value subscription URLs available even when a release contains no matches.
-  add('collections', 'reviews-and-guidelines', 'Reviews and guidelines', '综述与指南');
-  add('peer-review', 'peer-reviewed', 'Peer-reviewed research', '同行评议研究');
-  add('peer-review', 'preprint', 'Preprints', '预印本');
+  add('collections', 'reviews-and-guidelines', 'Reviews and guidelines', '综述与指南', 'Revues et recommandations');
+  add('peer-review', 'peer-reviewed', 'Peer-reviewed research', '同行评议研究', 'Recherche évaluée par les pairs');
+  add('peer-review', 'preprint', 'Preprints', '预印本', 'Prépublications');
 
   return [...definitions.values()].map(definition => ({
     ...definition,
@@ -230,30 +236,39 @@ export function renderResearchFeedXml({
   definition,
   site,
   limit = 50,
+  language = 'en',
 }: {
   data: ResearchFeedData;
   definition?: ResearchFeedDefinition | null;
   site: URL | string;
   limit?: number;
+  language?: ResearchFeedLanguage;
 }): string {
   const origin = site instanceof URL ? site : new URL(site);
-  const feedPath = definition?.path ?? '/research/rss.xml';
-  const feedTitle = definition ? `GIDS Research Radar · ${definition.label}` : 'GIDS Research Radar';
+  const localePrefix = language === 'fr' ? '/fr' : language === 'zh' ? '/zh' : '';
+  const feedPath = `${localePrefix}${definition?.path ?? '/research/rss.xml'}`;
+  const label = language === 'fr' ? (definition?.labelFr || definition?.label || '') : language === 'zh' ? (definition?.labelZh || definition?.label || '') : definition?.label || '';
+  const feedTitle = definition
+    ? language === 'fr' ? `Radar de recherche GIDS · ${label}` : language === 'zh' ? `GIDS Research Radar · ${label}` : `GIDS Research Radar · ${label}`
+    : language === 'fr' ? 'Radar de recherche GIDS' : 'GIDS Research Radar';
   const feedDescription = definition
-    ? `Published infectious-disease literature filtered to ${definition.label}.`
-    : 'Published infectious-disease literature metadata and quality-gated GIDS evidence summaries.';
+    ? language === 'fr' ? `Publications sur les maladies infectieuses filtrées par ${label}.` : language === 'zh' ? `按${label}筛选的已发表传染病文献。` : `Published infectious-disease literature filtered to ${label}.`
+    : language === 'fr' ? 'Métadonnées de la littérature sur les maladies infectieuses et résumés GIDS contrôlés par la qualité.' : language === 'zh' ? '传染病文献元数据及通过质量门禁的 GIDS 证据摘要。' : 'Published infectious-disease literature metadata and quality-gated GIDS evidence summaries.';
   const articles = sortedArticles(filterResearchFeedArticles(data, definition?.scope, definition?.value))
     .slice(0, Math.max(0, limit));
   const items = articles.map(article => {
     const slug = text(article.slug);
     if (!slug) return '';
-    const url = new URL(`/research/articles/${slug}/`, origin).toString();
-    const diseases = (article.diseases ?? []).map(item => text(item.name_en)).filter(Boolean);
-    const description = text(article.why_it_matters_en)
-      || `A Research Radar record related to ${diseases.join(', ') || 'infectious disease'}.`;
+    const url = new URL(`${localePrefix}/research/articles/${slug}/`, origin).toString();
+    const diseaseName = (item: NonNullable<ResearchFeedArticle['diseases']>[number]) => language === 'fr'
+      ? text(item.name_fr) || text(item.name_en)
+      : language === 'zh' ? text(item.name_zh) || text(item.name_en) : text(item.name_en);
+    const diseases = (article.diseases ?? []).map(diseaseName).filter(Boolean);
+    const description = (language === 'fr' ? text(article.why_it_matters_fr) : language === 'zh' ? text(article.why_it_matters_zh) : text(article.why_it_matters_en))
+      || (language === 'fr' ? `Notice Research Radar liée à ${diseases.join(', ') || 'une maladie infectieuse'}.` : language === 'zh' ? `与${diseases.join('、') || '传染病'}相关的 Research Radar 记录。` : `A Research Radar record related to ${diseases.join(', ') || 'infectious disease'}.`);
     const publishedAt = validDate(article.published_at);
     const categories = [
-      ...(article.diseases ?? []).map(item => text(item.name_en)),
+      ...(article.diseases ?? []).map(diseaseName),
       ...(article.topics ?? []).map(item => text(item.name)),
       text(article.study_type),
     ].filter(Boolean).map(category => `    <category>${escapeXml(category)}</category>`).join('\n');
@@ -270,9 +285,9 @@ ${categories ? `${categories}\n` : ''}  </item>`;
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
   <title>${escapeXml(feedTitle)}</title>
-  <link>${escapeXml(new URL('/research/', origin).toString())}</link>
+  <link>${escapeXml(new URL(`${localePrefix}/research/`, origin).toString())}</link>
   <description>${escapeXml(feedDescription)}</description>
-  <language>en</language>
+  <language>${language}</language>
   <atom:link href="${escapeXml(new URL(feedPath, origin).toString())}" rel="self" type="application/rss+xml" />
 ${lastBuildDate ? `  <lastBuildDate>${escapeXml(lastBuildDate.toUTCString())}</lastBuildDate>\n` : ''}${items}
 </channel>

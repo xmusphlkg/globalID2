@@ -1,6 +1,7 @@
 """Canada CNDSS national annual crawl orchestration."""
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -78,7 +79,8 @@ async def execute_ca_national_pipeline(
     except Exception as exc:
         logger.warning("Could not create Canada CNDSS CrawlRun record: {}", exc)
     await task_manager.update_task_progress(task.task_uuid, 15)
-    fetched = updater.refresh_source(
+    fetched = await asyncio.to_thread(
+        updater.refresh_source,
         source=source,
         force=force,
         fill_missing=fill_missing,

@@ -1,5 +1,7 @@
 import ast
+import asyncio
 import inspect
+import json
 from types import SimpleNamespace
 
 from scripts import generate_site_data as legacy_api
@@ -55,7 +57,47 @@ def test_export_public_signature_remains_stable() -> None:
         "direct_download_url_base",
         "direct_download_max_file_bytes",
         "direct_download_workers",
+        "incremental_country_codes",
+        "recorded_at_as_of",
+        "incremental_site",
     ]
+
+
+def test_publish_hash_manifest_avoids_rereading_country_snapshots(tmp_path, monkeypatch) -> None:
+    (tmp_path / "meta.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "publish-hashes.json").write_text(
+        json.dumps(
+            {
+                "projection_version": "public-series-v1",
+                "countries": {"SG": "abc123"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def unexpected(*_args, **_kwargs):
+        raise AssertionError("country snapshot should stay unread")
+
+    monkeypatch.setattr(site_data_export, "_country_hash_from_snapshot", unexpected)
+
+    assert site_data_export._local_publish_hashes(tmp_path, ["SG"]) == {"SG": "abc123"}
+
+
+def test_incremental_export_falls_back_when_snapshot_is_missing(tmp_path, monkeypatch) -> None:
+    attempts = []
+
+    async def collect(*args, **kwargs):
+        attempts.append((args[2], kwargs.get("incremental_site", False)))
+        if kwargs.get("incremental_site"):
+            raise RuntimeError("Incremental site export is missing the existing country snapshot for XX.")
+        return {"incremental": False, "country_download_entries": [], "disease_download_entries": []}
+
+    monkeypatch.setattr(site_data_export, "collect_site_export_context", collect)
+    monkeypatch.setattr(site_data_export, "write_site_export_artifacts", lambda *args: None)
+    monkeypatch.setattr(site_data_export, "build_direct_download_files", lambda *args, **kwargs: {})
+    asyncio.run(site_data_export.export(tmp_path / "data", tmp_path / "manifest.json", incremental_site=True))
+
+    assert attempts == [(None, True), (None, False)]
 
 
 def test_direct_download_default_workers_respect_tight_cgroup_memory() -> None:
@@ -63,7 +105,10 @@ def test_direct_download_default_workers_respect_tight_cgroup_memory() -> None:
 
     assert direct_download_files._default_export_workers(16, 4 * gib) == 1
     assert direct_download_files._default_export_workers(16, 8 * gib) == 2
-    assert direct_download_files._default_export_workers(16, 16 * gib) == 4
+    assert direct_download_files._default_export_workers(16, 12 * gib) == 4
+    assert direct_download_files._default_export_workers(16, 16 * gib) == 6
+    assert direct_download_files._default_export_workers(16, 24 * gib) == 8
+    assert direct_download_files._default_export_workers(4, 16 * gib) == 4
 
 
 def test_direct_download_reads_the_service_cgroup_memory_guardrail(tmp_path) -> None:
@@ -83,6 +128,42 @@ def test_direct_download_reads_the_service_cgroup_memory_guardrail(tmp_path) -> 
         cgroup_root=cgroup_root,
         membership_path=membership,
     ) == 4 * gib
+
+
+def test_unchanged_download_parts_can_be_reused_without_reading_bytes(tmp_path) -> None:
+    directory = tmp_path / "countries" / "sg"
+    directory.mkdir(parents=True)
+    payload = b"curve"
+    for suffix in ("csv", "json", "xlsx"):
+        (directory / f"current.{suffix}").write_bytes(payload)
+    entry = {
+        "parts": [
+            {
+                "files": {
+                    suffix: {
+                        "relative_path": f"countries/sg/current.{suffix}",
+                        "bytes": len(payload),
+                        "sha256": "not-the-real-hash",
+                    }
+                    for suffix in ("csv", "json", "xlsx")
+                }
+            }
+        ]
+    }
+
+    assert direct_download_files._entry_files_available(
+        entry,
+        tmp_path,
+        "countries",
+        "sg",
+        verify_hash=False,
+    )
+    assert not direct_download_files._entry_files_available(
+        entry,
+        tmp_path,
+        "countries",
+        "sg",
+    )
 
 
 def test_direct_download_default_workers_fall_back_to_cpu_without_memory_limit() -> None:
@@ -222,3 +303,41 @@ def test_site_artifact_writer_reads_download_index_counts_from_context(
     )
 
     assert tmp_path / "build" / "about.json" in writes
+
+
+def test_incremental_export_reuses_unchanged_browser_projections(tmp_path) -> None:
+    output = tmp_path / "build"
+    public = tmp_path / "public"
+    country_path = public / "countries" / "xx.json"
+    disease_path = public / "diseases" / "d_test.json"
+    country_path.parent.mkdir(parents=True)
+    disease_path.parent.mkdir(parents=True)
+    country_path.write_text('{"old":true}', encoding="utf-8")
+    (country_path.parent / "xx-source-series.json").write_text('{}', encoding="utf-8")
+    disease_path.write_text('{"old":true}', encoding="utf-8")
+
+    site_data_export.write_incremental_site_export_artifacts(
+        {
+            "incremental_country_codes": [],
+            "changed_disease_ids": [],
+            "country_exports": [
+                {"code": "XX", "country_data": {"disease_series": {}}, "site_data": {"v": 1}}
+            ],
+            "disease_exports": [
+                {"disease_id": "D_TEST", "site_data": {"v": 1, "series": []}}
+            ],
+            "countries_simple": [],
+            "diseases": [],
+            "reports": [],
+            "generated_at": "2026-10-11T00:00:00Z",
+            "literature_export": {},
+        },
+        output,
+        public,
+    )
+
+    assert json.loads(country_path.read_text(encoding="utf-8")) == {"old": True}
+    assert json.loads(disease_path.read_text(encoding="utf-8")) == {"old": True}
+    assert (output / "research" / "index.json").is_file()
+    assert not (output / "countries" / "xx.json").exists()
+    assert not (output / "diseases" / "d_test.json").exists()

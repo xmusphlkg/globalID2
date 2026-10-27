@@ -6,6 +6,10 @@ from types import SimpleNamespace
 import pytest
 
 from src.generation.site_data_literature import (
+    _chunk_records,
+    _compact_json_bytes,
+    _load_title_disease_aliases,
+    _title_estimated_literature_links,
     append_historical_seed_articles,
     apply_public_summary_gate,
     attach_surveillance_evidence,
@@ -20,6 +24,7 @@ from src.generation.site_data_literature import (
     load_historical_seed_articles,
     partition_public_literature_articles,
     project_public_integrity_alerts,
+    publish_browser_research_index,
     write_literature_artifacts,
 )
 from src.literature.classification import classify_candidate
@@ -37,7 +42,11 @@ from src.literature.normalization import normalize_europe_pmc
 from src.domain import LiteratureSummary
 from src.services.literature_gap_service import build_gap_query_plan
 from src.services.literature_automation_service import (
+    _article_reconciliation_statement,
+    _english_summary_fingerprint_statement,
+    _link_reconciliation_statement,
     _published_revalidation_status,
+    _summary_reconciliation_statement,
     decide_article,
     decide_evidence_link,
     decide_summary,
@@ -46,6 +55,85 @@ from dashboard.api.routers.literature import _publication_blockers
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_research_chunk_boundaries_match_serialized_file_budget():
+    records = [
+        {"title": "传染病 " + "甲" * count, "tags": ["é", "β"]}
+        for count in (2, 5, 9, 1, 14, 3)
+    ]
+    for budget in (128, 180, 260):
+        expected = []
+        current = []
+        for record in records:
+            trial = [*current, record]
+            if current and len(_compact_json_bytes({"records": trial})) > budget:
+                expected.append(current)
+                current = [record]
+            else:
+                current = trial
+        if current:
+            expected.append(current)
+        assert _chunk_records(records, budget) == expected
+
+
+def test_title_disease_aliases_use_correct_ids_and_specific_mentions():
+    diseases = {
+        "D003": {"name_en": "SARS"},
+        "D004": {"name_en": "COVID-19"},
+        "D005": {"name_en": "AIDS"},
+        "D008": {"name_en": "Hepatitis B"},
+        "D009": {"name_en": "Hepatitis C"},
+        "D010": {"name_en": "Hepatitis D"},
+        "D011": {"name_en": "Hepatitis E"},
+        "D014": {"name_en": "H5N1"},
+        "D015": {"name_en": "H7N9"},
+        "D038": {"name_en": "Influenza"},
+        "D162": {"name_en": "HIV infection"},
+    }
+    aliases = _load_title_disease_aliases()
+
+    assert "HBV" in aliases["D008"] and "HBV" not in aliases["D010"]
+    assert "HCV" in aliases["D009"] and "HCV" not in aliases["D011"]
+    assert "HIV" not in aliases["D005"] and "HIV" in aliases["D162"]
+
+    covid = _title_estimated_literature_links("SARS-CoV-2 infection", diseases, aliases)
+    assert [item["disease_id"] for item in covid] == ["D004"]
+
+    negative_hiv = _title_estimated_literature_links("A non-HIV cohort", diseases, aliases)
+    assert "D162" not in {item["disease_id"] for item in negative_hiv}
+
+    positive_hiv = _title_estimated_literature_links(
+        "A non-HIV cohort with HIV infection", diseases, aliases
+    )
+    assert "D162" in {item["disease_id"] for item in positive_hiv}
+
+    h5n1 = _title_estimated_literature_links("Study of H5N1 avian influenza", diseases, aliases)
+    assert [item["disease_id"] for item in h5n1] == ["D014"]
+
+
+def test_autopilot_summary_reconciliation_does_not_load_heavy_article_payloads():
+    sql = str(_summary_reconciliation_statement())
+
+    assert "literature_articles.abstract_text" in sql
+    assert "literature_articles.publication_status" in sql
+    assert "literature_articles.source_payload" not in sql
+    assert "literature_articles.source_urls" not in sql
+
+
+def test_autopilot_reconciliation_queries_are_keyset_bounded():
+    link_sql = str(_link_reconciliation_statement(after_id=10, batch_size=25))
+    article_sql = str(_article_reconciliation_statement(after_id=10, batch_size=25))
+    english_sql = str(
+        _english_summary_fingerprint_statement(after_id=10, batch_size=25)
+    )
+
+    assert "literature_signal_article_links.id >" in link_sql
+    assert "literature_articles.source_payload" not in link_sql
+    assert "literature_articles.id >" in article_sql
+    assert "literature_articles.source_payload" not in article_sql
+    assert "literature_summaries.id >" in english_sql
+    assert "literature_articles" not in english_sql
 
 
 def test_disease_evidence_events_separate_guidance_from_vaccine_policy_evidence():
@@ -79,6 +167,36 @@ def test_disease_evidence_events_separate_guidance_from_vaccine_policy_evidence(
         "vaccine_policy_evidence",
     ]
     assert events[0]["date"] == "2026-08-15"
+
+
+def test_disease_evidence_events_require_title_confirmed_disease():
+    articles = [
+        {
+            "slug": "hepatitis-guidance",
+            "title": "Hepatitis A vaccination guideline",
+            "published_at": "2026-08-15T00:00:00+00:00",
+            "study_type": "Guideline",
+            "diseases": [
+                {"disease_id": "D004", "name_en": "COVID-19", "confidence": 0.88},
+                {"disease_id": "D007", "name_en": "Hepatitis A", "confidence": 0.98},
+            ],
+        },
+        {
+            "slug": "covid-guidance",
+            "title": "SARS-CoV-2 vaccination guideline",
+            "published_at": "2026-08-14T00:00:00+00:00",
+            "study_type": "Guideline",
+            "diseases": [{"disease_id": "D004", "name_en": "COVID-19", "confidence": 0.82}],
+        },
+    ]
+
+    events = build_disease_evidence_events(
+        articles,
+        disease_id="D004",
+        title_aliases={"D004": ["SARS-CoV-2"]},
+    )
+
+    assert [event["slug"] for event in events] == ["covid-guidance"]
 
 
 def _crossref_payload() -> dict:
@@ -394,6 +512,66 @@ def test_public_summary_gate_withholds_metadata_only_peer_reviewed_and_preprint_
     assert withheld == 2
 
 
+def test_browser_research_index_splits_lists_that_exceed_the_file_budget(tmp_path):
+    articles = [{"slug": f"article-{index}", "title": "x" * 40} for index in range(8)]
+    document = {
+        "schema_version": 1,
+        "last_updated": "2026-10-21T00:00:00Z",
+        "metrics": {"articles_total": 8},
+        "articles": articles,
+    }
+    full_size = len(_compact_json_bytes(document))
+    slim_size = len(_compact_json_bytes({**document, "articles": []}))
+    budget = slim_size + (full_size - slim_size) // 3
+    assert budget < full_size
+
+    published = publish_browser_research_index(document, tmp_path, max_bytes=budget)
+
+    assert published["articles"]["sharded"] is True
+    assert published["articles"]["count"] == 8
+    assert len(published["articles"]["chunks"]) >= 2
+    assert (tmp_path / "index.json").stat().st_size <= budget
+    assert (tmp_path / "catalogue.json").stat().st_size <= budget
+    restored = []
+    for chunk in published["articles"]["chunks"]:
+        path = tmp_path / chunk["file"]
+        assert path.stat().st_size <= budget
+        records = json.loads(path.read_text(encoding="utf-8"))["records"]
+        assert len(records) == chunk["count"]
+        restored.extend(records)
+    assert restored == articles
+    catalogue = json.loads((tmp_path / "catalogue.json").read_text(encoding="utf-8"))
+    assert catalogue["articles"] == published["articles"]
+
+    smaller = {**document, "articles": articles[:1]}
+    republished = publish_browser_research_index(smaller, tmp_path, max_bytes=budget)
+    assert republished["articles"] == articles[:1]
+    assert list((tmp_path / "shards").glob("*.json")) == []
+
+
+def test_literature_artifacts_keep_the_build_index_while_sharding_the_browser_copy(tmp_path):
+    article = {
+        "article_id": "published-1",
+        "slug": "published-article",
+        "title": "Published article",
+        "peer_review_status": "peer_reviewed",
+        "editorial_status": "published",
+        "diseases": [],
+        "countries": [],
+        "topics": [],
+    }
+    payload = {**empty_literature_export(), "articles": [article]}
+    public_dir = tmp_path / "public"
+
+    write_literature_artifacts(payload, tmp_path / "build", public_site_data_dir=public_dir)
+
+    build_index = json.loads((tmp_path / "build/research/index.json").read_text(encoding="utf-8"))
+    browser_index = json.loads((public_dir / "research/index.json").read_text(encoding="utf-8"))
+    assert build_index["articles"][0]["slug"] == "published-article"
+    assert browser_index["articles"][0]["slug"] == "published-article"
+    assert (public_dir / "research/index.json").stat().st_size <= 8 * 1024 * 1024
+
+
 def test_literature_artifacts_write_preprints_outside_the_main_catalogue(tmp_path):
     preprint = {
         "article_id": "preprint-1",
@@ -419,6 +597,46 @@ def test_literature_artifacts_write_preprints_outside_the_main_catalogue(tmp_pat
     assert '"published-preprint"' in index
     assert '"published-preprint"' not in catalogue
     assert (tmp_path / "research/articles/published-preprint.json").exists()
+
+
+def test_literature_collection_files_keep_card_fields_without_repeating_summaries(tmp_path):
+    article = {
+        "article_id": "published-1",
+        "slug": "published-article",
+        "title": "Published article",
+        "doi": "10.1000/example",
+        "open_access_status": "open",
+        "source_urls": {"publisher": "https://example.org/article", "doi": "https://doi.org/10.1000/example"},
+        "diseases": [{"disease_id": "D001", "name_en": "Disease"}],
+        "countries": [{"code": "US", "name_en": "United States"}],
+        "topics": [{"name": "Surveillance"}],
+        "summary": {"fr": {"public_health_relevance": "Pertinence publique", "main_findings": "Long detail"}},
+    }
+    payload = {
+        **empty_literature_export(),
+        "articles": [article],
+        "disease_articles": {"d001": [article]},
+        "country_articles": {"us": [article]},
+        "topic_articles": {"surveillance": [article]},
+    }
+
+    write_literature_artifacts(payload, tmp_path)
+
+    for path in (
+        "research/diseases/d001.json",
+        "research/countries/us.json",
+        "research/topics/surveillance.json",
+    ):
+        card = json.loads((tmp_path / path).read_text(encoding="utf-8"))["articles"][0]
+        assert card["slug"] == article["slug"]
+        assert card["diseases"] == article["diseases"]
+        assert card["source_urls"] == {"publisher": "https://example.org/article"}
+        assert card["why_it_matters_fr"] == "Pertinence publique"
+        assert "summary" not in card
+    detail = json.loads((tmp_path / "research/articles/published-article.json").read_text(encoding="utf-8"))
+    assert detail["summary"]["fr"]["main_findings"] == "Long detail"
+    routes = json.loads((tmp_path / "research/routes.json").read_text(encoding="utf-8"))
+    assert routes["articles"] == [{"slug": "published-article", "indexable": True}]
 
 
 def test_integrity_alert_projection_is_publication_gated_and_metadata_only():
@@ -1107,6 +1325,22 @@ async def test_model_enrichment_coerces_scalar_field_payloads():
     assert "Coerced scalar fields" in result.review_notes
 
 
+def test_parse_json_supports_mixed_prefix_and_suffix() -> None:
+    parsed = enrichment_module._parse_json(
+        "prefix text\n```json\n{\"research_question\": {\"text\": \"ok\"}, \"study_design\": null, \"population_setting\": null, \"main_findings\": null, \"public_health_relevance\": null, \"limitations\": null, \"gids_interpretation\": null}\n```tail"
+    )
+
+    assert parsed["research_question"]["text"] == "ok"
+
+
+def test_parse_json_extracts_first_json_object_from_messy_text() -> None:
+    parsed = enrichment_module._parse_json(
+        'noise {"research_question": {"text": "ok"}, "study_design": null, "population_setting": null, "main_findings": null, "public_health_relevance": null, "limitations": null, "gids_interpretation": null} trailing'
+    )
+
+    assert parsed["research_question"]["text"] == "ok"
+
+
 @pytest.mark.asyncio
 async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeypatch):
     captured = {}
@@ -1135,7 +1369,7 @@ async def test_literature_evidence_agent_waits_for_model_center_recovery(monkeyp
 
     assert captured["wait_for_model_recovery"] is True
     assert captured["max_quota_recovery_rounds"] == 1
-    assert captured["max_attempts_per_model"] == 1
+    assert captured["max_attempts_per_model"] == 2
 
 
 @pytest.mark.asyncio
@@ -1259,6 +1493,7 @@ async def test_enrichment_generation_failures_record_attempts_and_stop_requeue(m
         published_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
         abstract_text="A sufficiently long abstract about dengue vaccination and surveillance. " * 5,
         integrity_status="current",
+        metadata_={},
     )
     pipeline = LiteratureEnrichmentPipeline(SimpleNamespace(
         autopilot_enabled=True,
@@ -1279,6 +1514,8 @@ async def test_enrichment_generation_failures_record_attempts_and_stop_requeue(m
     assert db.summary.generation_metadata["publication_gate"] == "generation-failed"
     assert db.summary.generation_metadata["quality_attempts"] == 1
     assert db.summary.generation_metadata["last_generation_error"] == "ValueError"
+    assert db.summary.generation_metadata["translation_provenance"]["target_language"] == "zh"
+    assert db.summary.generation_metadata["translation_provenance"]["status"] == "retry_pending"
     assert await pipeline._should_skip(article, language="zh", force=False) is False
 
     await pipeline._store_failure(
@@ -1303,6 +1540,7 @@ async def test_transient_enrichment_failures_do_not_consume_quality_attempts(mon
         published_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
         abstract_text="A sufficiently long abstract about dengue vaccination and surveillance. " * 5,
         integrity_status="current",
+        metadata_={},
     )
     pipeline = LiteratureEnrichmentPipeline(SimpleNamespace(
         autopilot_enabled=True,
@@ -1319,6 +1557,7 @@ async def test_transient_enrichment_failures_do_not_consume_quality_attempts(mon
     assert db.summary.generation_metadata["publication_gate"] == "generation-transient-failure"
     assert db.summary.generation_metadata["quality_attempts"] == 0
     assert db.summary.generation_metadata["last_generation_error_transient"] is True
+    assert "translation_provenance" not in db.summary.generation_metadata
     assert await pipeline._should_skip(article, language="en", force=False) is False
 
 
@@ -1774,3 +2013,25 @@ def test_autopilot_holds_protocol_v2_chinese_summary_without_alignment_evidence(
         _autopilot_config(),
         expected_canonical_summary_fingerprint="abc123",
     ).action == "publish"
+
+
+@pytest.mark.asyncio
+async def test_french_enrichment_uses_canonical_english_contract():
+    candidate = normalize_crossref(_crossref_payload())
+    assert candidate is not None
+    canonical = {field: f"Canonical {field}." for field in SUMMARY_FIELDS}
+    agent = _FakeLiteratureAgent()
+    result = await LiteratureSummaryGenerator(agent=agent).generate(
+        article=candidate,
+        language="fr",
+        diseases=["Dengue"],
+        countries=["Japan"],
+        topics=["Surveillance"],
+        timeout_seconds=10,
+        preferred_models=[],
+        canonical_fields=canonical,
+    )
+    assert result.canonical_summary_fingerprint
+    request = json.loads(agent.calls[0]["prompt"])
+    assert "French" in agent.calls[0]["system"]
+    assert request["canonical_summary_en"]["main_findings"] == canonical["main_findings"]

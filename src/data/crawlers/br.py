@@ -535,7 +535,10 @@ class BrazilSINANCrawler(BaseCrawler):
                     time.sleep(self.request_delay_seconds)
 
                 with urlopen(url, timeout=self.timeout) as response:
-                    return response.read()
+                    payload = response.read()
+                    if not payload:
+                        raise OSError("DATASUS returned an empty response")
+                    return payload
             except (HTTPError, URLError, OSError, TimeoutError) as exc:
                 last_error = exc
             except Exception as exc:  # pragma: no cover - defensive; keep behavior unchanged for unknown transport errors

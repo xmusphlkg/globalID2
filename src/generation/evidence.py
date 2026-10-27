@@ -18,12 +18,12 @@ import pandas as pd
 
 from src.core import get_logger
 from src.core.missing_values import normalize_rate_columns
-from src.generation.data_cleaner import Frequency, infer_frequency, long_to_wide
+from src.generation.data_cleaner import Frequency, infer_frequency, long_to_wide, resolve_frequency
 from src.generation.v3_historical import build_historical_context
 
 logger = get_logger(__name__)
 
-METHOD_VERSION = "report_v4.1"
+METHOD_VERSION = "report_v4.3"
 
 ATTENTION_SCORE_SEMANTICS: Dict[str, Any] = {
     "type": "surveillance_attention_priority",
@@ -189,6 +189,11 @@ class EvidenceAnalyzer:
         frequency = infer_frequency(frequency_input, "time") if not df.empty else "monthly"
         disease_packets = self._build_diseases(df, diseases, frequency, knowledge_status or {}, history_df)
         self._rank_diseases(disease_packets)
+        disease_cadences = {item["reporting_cadence"] for item in disease_packets}
+        report_cadence = (
+            next(iter(disease_cadences)) if len(disease_cadences) == 1
+            else "mixed" if disease_cadences else frequency
+        )
 
         summary_metrics = self._summary_metrics(df, disease_packets)
         data_quality = self._data_quality(df, period_end)
@@ -201,7 +206,7 @@ class EvidenceAnalyzer:
                 "start": _fmt_date(period_start),
                 "end": _fmt_date(period_end),
             },
-            "reporting_cadence": frequency,
+            "reporting_cadence": report_cadence,
             "data_signature": self._signature(df, country, period_start, period_end),
             "summary_metrics": summary_metrics,
             "score_semantics": ATTENTION_SCORE_SEMANTICS,
@@ -238,7 +243,8 @@ class EvidenceAnalyzer:
         for disease_id, group in df.groupby("disease_id"):
             meta = diseases.get(int(disease_id), {})
             disease_code = str(meta.get("code") or meta.get("name") or disease_id)
-            wide = long_to_wide(group.copy(), frequency, time_col="time")
+            disease_frequency = resolve_frequency(group) or frequency
+            wide = long_to_wide(group.copy(), disease_frequency, time_col="time")
             if wide.empty:
                 continue
             wide = wide.sort_values("_period").reset_index(drop=True)
@@ -264,7 +270,7 @@ class EvidenceAnalyzer:
             )
             change_pct = _pct_change(latest_cases, previous_cases)
             death_change_pct = _pct_change(latest_deaths, previous_deaths)
-            yoy_cases = self._prior_year_change(wide, "cases", frequency)
+            yoy_cases = self._prior_year_change(wide, "cases", disease_frequency)
             rolling_cases = self._rolling_mean(wide, "cases")
             anomaly = self._latest_anomaly(wide, "cases")
             fatality_rate = (
@@ -289,10 +295,10 @@ class EvidenceAnalyzer:
                 death_unavailable=death_reporting.get("status") == "unavailable",
             )
             history_group = historical_groups.get(int(disease_id), group)
-            historical_wide = long_to_wide(history_group.copy(), frequency, time_col="time")
+            historical_wide = long_to_wide(history_group.copy(), disease_frequency, time_col="time")
             if not historical_wide.empty:
                 historical_wide = historical_wide.sort_values("_period").reset_index(drop=True)
-            historical_context = build_historical_context(historical_wide if not historical_wide.empty else wide, frequency)
+            historical_context = build_historical_context(historical_wide if not historical_wide.empty else wide, disease_frequency)
             attention_score = self._attention_score(
                 latest_cases=latest_cases,
                 total_cases=total_cases,
@@ -313,6 +319,7 @@ class EvidenceAnalyzer:
                     "name_en": meta.get("name_en") or disease_code,
                     "name_zh": meta.get("name_zh") or meta.get("name_en") or disease_code,
                     "category": meta.get("category"),
+                    "reporting_cadence": disease_frequency,
                     "period_start": _fmt_date(wide["_period"].min()),
                     "period_end": _fmt_date(wide["_period"].max()),
                     "record_count": int(len(group)),
@@ -960,7 +967,7 @@ class EvidenceAnalyzer:
         target = latest_period - pd.DateOffset(years=1)
         if frequency == "weekly":
             tolerance_days = 14
-        elif frequency == "monthly":
+        elif frequency in {"monthly", "quarterly"}:
             tolerance_days = 35
         else:
             tolerance_days = 3

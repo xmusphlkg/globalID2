@@ -48,7 +48,7 @@ type Article = {
 type ArticlePatch = {
   publication_status?: Article["publication_status"];
   is_featured?: boolean;
-  summary_language?: "en" | "zh";
+  summary_language?: "en" | "zh" | "fr";
   summary_status?: "draft" | "review" | "published" | "rejected";
 };
 
@@ -237,7 +237,7 @@ export default function ResearchRadarView() {
   const enrich = useMutation({
     mutationFn: (articleIds: string[] = []) => apiFetch<{ task_uuid?: string; status: string; reason?: string }>("/research-radar/enrich", {
       method: "POST",
-      body: JSON.stringify({ article_ids: articleIds, languages: ["en", "zh"] }),
+      body: JSON.stringify({ article_ids: articleIds, languages: ["en", "zh", "fr"] }),
     }),
     onSuccess: refreshAll,
   });

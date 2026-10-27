@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import math
 import multiprocessing
+from collections import deque
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import date
@@ -32,7 +33,6 @@ from .contracts import (
     SignalIdentity,
     SituationSignalV3,
 )
-
 
 CADENCE_DEFAULTS: dict[str, dict[str, Any]] = {
     "daily": {
@@ -149,6 +149,18 @@ def canonical_geography_key(row: pd.Series | dict[str, Any]) -> str:
 def prepare_frame_v3(frame: pd.DataFrame) -> pd.DataFrame:
     if frame.empty:
         return frame.copy()
+    if frame.attrs.get("situation_v3_ordered"):
+        # The database adapter has already canonicalized geography, coerced
+        # SQL values to numeric types, and sorted each identity by period.
+        # Avoid a second full-frame copy, row-wise apply, and global sort.
+        work = frame
+        if not isinstance(work["time"].dtype, pd.DatetimeTZDtype):
+            work["time"] = pd.to_datetime(work["time"], errors="coerce", utc=True)
+        work["value"] = pd.to_numeric(work["value"], errors="coerce")
+        valid = work["time"].notna() & work["value"].notna()
+        if not valid.all():
+            work = work.loc[valid].copy()
+        return work
     work = frame.copy()
     work["time"] = pd.to_datetime(work["time"], errors="coerce", utc=True)
     work["value"] = pd.to_numeric(work["value"], errors="coerce")
@@ -1481,6 +1493,34 @@ def _evaluate_chunk_v3(
     return [evaluate_series_v3(group, config, as_of=as_of) for group in chunk]
 
 
+def _evaluate_ordered_parallel_v3(
+    grouped: Any,
+    config: dict[str, Any],
+    as_of: date,
+    worker_count: int,
+) -> list[SeriesV3Evaluation]:
+    """Bound queued group copies while preserving identity order for FDR."""
+    evaluations: list[SeriesV3Evaluation] = []
+    pending = deque()
+    chunk: list[pd.DataFrame] = []
+    with ProcessPoolExecutor(
+        max_workers=worker_count,
+        mp_context=multiprocessing.get_context("spawn"),
+    ) as executor:
+        for _, group in grouped:
+            chunk.append(group)
+            if len(chunk) == 16:
+                pending.append(executor.submit(_evaluate_chunk_v3, chunk, config, as_of))
+                chunk = []
+                if len(pending) >= worker_count * 2:
+                    evaluations.extend(pending.popleft().result())
+        if chunk:
+            pending.append(executor.submit(_evaluate_chunk_v3, chunk, config, as_of))
+        while pending:
+            evaluations.extend(pending.popleft().result())
+    return evaluations
+
+
 def evaluate_frame_v3(
     frame: pd.DataFrame,
     config: dict[str, Any],
@@ -1491,13 +1531,31 @@ def evaluate_frame_v3(
     if work.empty:
         return [], {"empty": 1}, []
     group_columns = ["series_code", "canonical_geography_key", "dimension_key"]
-    groups = [group for _, group in work.groupby(group_columns, dropna=False, sort=True)]
+    ordered_input = bool(work.attrs.get("situation_v3_ordered"))
+    grouped = work.groupby(group_columns, dropna=False, sort=not ordered_input)
+    groups = None if ordered_input else [group for _, group in grouped]
     requested_workers = max(
         1,
         min(4, int(config.get("v3", {}).get("maximum_analysis_workers", 1))),
     )
     evaluations: list[SeriesV3Evaluation]
-    if requested_workers > 1 and len(groups) >= 16:
+    if ordered_input and requested_workers > 1 and grouped.ngroups >= 16:
+        try:
+            evaluations = _evaluate_ordered_parallel_v3(
+                grouped, config, as_of, min(requested_workers, grouped.ngroups)
+            )
+        except (OSError, RuntimeError) as exc:
+            logger.warning("Situation v3 process pool unavailable; using deterministic serial model: {}", exc)
+            evaluations = [
+                evaluate_series_v3(group, config, as_of=as_of)
+                for _, group in work.groupby(group_columns, dropna=False, sort=False)
+            ]
+    elif ordered_input:
+        evaluations = [
+            evaluate_series_v3(group, config, as_of=as_of)
+            for _, group in grouped
+        ]
+    elif requested_workers > 1 and groups is not None and len(groups) >= 16:
         worker_count = min(requested_workers, len(groups))
         chunk_size = math.ceil(len(groups) / worker_count)
         chunks = [groups[offset : offset + chunk_size] for offset in range(0, len(groups), chunk_size)]

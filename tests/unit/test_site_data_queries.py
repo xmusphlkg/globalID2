@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
 import pytest
 
 from scripts import generate_site_data
 from src.generation import site_data_queries
-
 
 QUERY_EXPORTS = (
     "compact_report_metadata",
@@ -234,6 +233,44 @@ async def test_direct_disease_rows_preserve_missing_counts() -> None:
 
 
 @pytest.mark.asyncio
+async def test_swiss_legacy_export_excludes_chfl_combined_geography() -> None:
+    session = FakeSession(FakeRows([]))
+
+    await site_data_queries.fetch_disease_records_direct(session, "CH", False)
+
+    sql, params = session.calls[0]
+    assert "dr.raw_data::jsonb->0->>'Geography'" in sql
+    assert ") = 'CH'" in sql
+    assert params == {"code": "CH"}
+
+
+@pytest.mark.asyncio
+async def test_japanese_legacy_sentinel_history_keeps_its_reporting_basis() -> None:
+    session = FakeSession(FakeRows([]))
+
+    await site_data_queries.fetch_disease_records_direct(session, "JP", False)
+
+    sql, _params = session.calls[0]
+    assert "d.name IN ('D136', 'D138', 'D139', 'D141', 'D143')" in sql
+    assert "THEN 'sentinel_case_notifications'" in sql
+    assert "THEN 'sentinel_surveillance'" in sql
+    assert "THEN 'weekly'" in sql
+
+
+@pytest.mark.asyncio
+async def test_japanese_reviewed_sentinel_series_uses_legacy_semantics() -> None:
+    session = FakeSession(FakeRows([]))
+
+    await site_data_queries.fetch_disease_series_records(session, "JP", False)
+
+    sql, _params = session.calls[0]
+    assert "dss.country_code = 'JP' AND mapping.target_code IN ('D136', 'D138', 'D139', 'D141', 'D143')" in sql
+    assert "THEN 'sentinel_case_notifications'" in sql
+    assert "THEN 'sentinel_surveillance'" in sql
+    assert "THEN 'weekly'" in sql
+
+
+@pytest.mark.asyncio
 async def test_series_query_exports_inactive_history_with_active_selection_flag() -> None:
     session = FakeSession(
         FakeRows(
@@ -266,8 +303,123 @@ async def test_series_query_exports_inactive_history_with_active_selection_flag(
     sql, params = session.calls[0]
     assert "dss.is_active AS series_is_active" in sql
     assert "metadata::jsonb ->> 'time_basis'" in sql
+    assert "dso.dimensions" in sql
+    assert "AND dso.dimension_key = 'all'" not in sql
     assert "dss.is_active IS TRUE" not in sql
     assert params == {
         "code": "IS",
         "geography_key": "country:IS:national",
     }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("code", ["JP-01", "SE-AB", "DE-BE", "CH-ZH", "US-CA", "NZ-AKL"])
+async def test_new_subnational_sources_use_active_reviewed_mapping(code):
+    session = FakeSession(FakeRows([]))
+
+    await site_data_queries.fetch_disease_series_records(session, code, False)
+
+    sql, _params = session.calls[0]
+    assert "mapping.target_code AS disease_id" in sql
+    assert "JOIN LATERAL" in sql
+    assert "source_category.source_code = COALESCE(" in sql
+    assert "source_category.definition_version = 'source-current'" in sql
+    assert "source_category.canonical_source_label" in sql
+    assert "dso.dimensions->>'source_disease_code'" in sql
+    assert "mapping.projection_policy = 'canonical'" in sql
+    assert "mapping_release.status = 'active'" in sql
+    assert "mapping.mapping_relation AS mapping_relation" in sql
+    assert "dss.disease_id IS NOT NULL" not in sql
+
+
+@pytest.mark.asyncio
+async def test_series_query_can_reconstruct_latest_recorded_state_as_of() -> None:
+    cutoff = datetime(2025, 6, 1, tzinfo=timezone.utc)
+    session = FakeSession(
+        FakeRows(
+            [
+                mapped_row(
+                    date=date(2025, 1, 1),
+                    year_month="2025-01",
+                    disease_id="D001",
+                    cases=8,
+                    deaths=None,
+                    recoveries=None,
+                    incidence_rate=None,
+                    incidence_rate_source="missing_population",
+                    mortality_rate=None,
+                    recorded_at=cutoff,
+                    recorded_history_complete=False,
+                )
+            ]
+        )
+    )
+    records = await site_data_queries.fetch_disease_series_records(
+        session, "ZZ", False, recorded_at_as_of=cutoff
+    )
+    assert records[0]["recorded_at"] == cutoff.isoformat()
+    assert records[0]["recorded_history_complete"] is False
+    sql, params = session.calls[0]
+    assert "FROM disease_series_observation_revisions" in sql
+    assert "recorded_at <= :recorded_at_as_of" in sql
+    assert "DISTINCT ON" in sql
+    assert params["recorded_at_as_of"] == cutoff
+
+
+@pytest.mark.asyncio
+async def test_reviewed_mapping_also_gates_historical_revisions() -> None:
+    cutoff = datetime(2025, 6, 1, tzinfo=timezone.utc)
+    session = FakeSession(FakeRows([]))
+
+    await site_data_queries.fetch_disease_series_records(
+        session, "US-CA", False, recorded_at_as_of=cutoff
+    )
+
+    sql, _params = session.calls[0]
+    assert "FROM disease_series_observation_revisions" in sql
+    assert "mapping.target_code AS disease_id" in sql
+    assert "mapping_release.status = 'active'" in sql
+
+
+@pytest.mark.asyncio
+async def test_as_of_query_requires_timezone_aware_recorded_time() -> None:
+    with pytest.raises(ValueError, match="must include a timezone"):
+        await site_data_queries.fetch_disease_series_records(
+            FakeSession(FakeRows([])),
+            "ZZ",
+            False,
+            recorded_at_as_of=datetime(2025, 6, 1),
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("code,parent", [
+    ("CN-GD", "CN"), ("AU-NSW", "AU"), ("BR-SP", "BR"),
+    ("JP-01", "JP"), ("SE-AB", "SE"), ("DE-BE", "DE"),
+    ("CH-ZH", "CH"), ("US-CA", "US"), ("NZ-AKL", "NZ"),
+])
+async def test_subdivision_registry_uses_parent_but_population_uses_local_id(code, parent):
+    session = FakeSession(FakeRows([]))
+    await site_data_queries.fetch_disease_series_records(session, code, True)
+    sql, params = session.calls[0]
+    assert params == {"code": parent, "geography_key": f"country:{code}:national", "population_code": code}
+    assert "pr.country_id = registry_country.id" in sql
+    assert "pr.year = EXTRACT(YEAR FROM dso.time)::int" in sql
+    assert "lower(pr.source) || '_computed'" in sql
+    assert "CASE WHEN dso.dimension_key = 'all'" in sql
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("code,parent", [
+    ("CN-GD", "CN"), ("AU-NSW", "AU"), ("BR-SP", "BR"),
+    ("JP-01", "JP"), ("SE-AB", "SE"), ("DE-BE", "DE"),
+    ("CH-ZH", "CH"), ("US-CA", "US"), ("NZ-AKL", "NZ"),
+])
+async def test_subdivision_frequency_uses_parent_registry(code, parent):
+    session = FakeSession(
+        FakeRows([(True,)]), FakeRows([(True,)]),
+        FakeRows([]), FakeRows([]),
+    )
+    await site_data_queries.fetch_country_frequency_meta(session, code)
+    series_calls = [params for sql, params in session.calls if "disease_surveillance_series dss" in sql]
+    assert series_calls == [{"code": parent, "geography_key": f"country:{code}:national"}]

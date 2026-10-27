@@ -15,6 +15,7 @@ from scripts.generate_site_data import (
     build_disease_site_data,
     validate_series_first_projection,
 )
+from src.generation.site_data_views import build_country_source_series_data
 from src.generation.site_series_projection import (
     apply_disease_cutover_projection as extracted_cutover_projection,
 )
@@ -445,6 +446,83 @@ def test_non_additive_series_are_exposed_but_never_silently_summed() -> None:
     assert {item["total_value"] for item in context["source_series"]} == {11, 100}
     assert context["supplemental_legacy_metrics"]["deaths"] == [7]
     assert context["metric_layers"]["deaths"] == "supplemental_legacy_only"
+
+
+def test_stratified_observations_are_exported_without_changing_public_total() -> None:
+    series = [
+        _series("D001", "SER_TOTAL", "2024-01-01", 100),
+        {
+            **_series("D001", "SER_TOTAL", "2024-01-01", 40),
+            "dimension_key": "sex:female",
+            "dimensions": {"sex": "female"},
+        },
+        {
+            **_series("D001", "SER_TOTAL", "2024-01-01", 60),
+            "dimension_key": "sex:male",
+            "dimensions": {"sex": "male"},
+        },
+    ]
+
+    projected = apply_series_first_projection([], series)
+
+    assert len(projected) == 1
+    assert projected[0]["cases"] == 100
+    source_series = projected[0]["_series_context"]["source_series"]
+    assert len(source_series) == 3
+    assert len({item["selection_key"] for item in source_series}) == 3
+    assert {
+        item["dimension_key"]: item["total_value"]
+        for item in source_series
+    } == {"all": 100, "sex:female": 40, "sex:male": 60}
+
+
+def test_stratified_only_facts_do_not_block_legacy_unstratified_curve() -> None:
+    legacy = [_legacy("D001", "2024-01-01", 100)]
+    stratified = [
+        {
+            **_series("D001", "SER_FEMALE", "2024-01-01", 40),
+            "dimension_key": "sex:female",
+            "dimensions": {"sex": "female"},
+        }
+    ]
+
+    projected = apply_series_first_projection(legacy, stratified)
+
+    assert len(projected) == 1
+    assert projected[0]["cases"] == 100
+    assert projected[0]["data_layer"] == LEGACY_DATA_LAYER
+
+
+def test_stratified_only_facts_remain_discoverable_in_country_and_disease_exports() -> None:
+    source = {
+        **_series("D001", "SER_FEMALE", "2024-01-01", 40),
+        "dimension_key": "sex:female",
+        "dimensions": {"sex": "female"},
+    }
+    disease_info = {"D001": {"disease_id": "D001", "name_en": "Example"}}
+    country = build_country_data(
+        "XX",
+        "Exampleland",
+        [],
+        disease_info,
+        source_records=[source],
+    )
+    country_site = build_country_site_data(country)
+    country_source = build_country_source_series_data(country)
+    assert country_site["series"][0]["id"] == "D001"
+    assert country_site["series"][0]["x"] == []
+    assert country_source["series"]["D001"][0]["dimensions"] == {"sex": "female"}
+    assert country_source["series"]["D001"][0]["values"] == [40]
+
+    disease = build_disease_data(
+        "D001",
+        disease_info["D001"],
+        {},
+        {"XX": [source]},
+    )
+    disease_site = build_disease_site_data(disease)
+    assert disease_site["series"][0]["cc"] == "XX"
+    assert disease_site["series"][0]["x"] == []
 
 
 def test_multi_series_sum_requires_explicit_disjoint_policy() -> None:

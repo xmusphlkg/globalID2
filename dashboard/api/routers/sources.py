@@ -1,9 +1,12 @@
 """Sources router – data flow pipeline view per country or across all countries."""
 
+import asyncio
+import time
+from types import SimpleNamespace
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
@@ -23,7 +26,6 @@ from ..schemas.sources import (
 from src.domain import AutomationJob
 from src.domain.country import Country
 from src.domain.disease_ontology import (
-    DiseaseSeriesObservation,
     DiseaseSourceAvailability,
     DiseaseSurveillanceSeries,
 )
@@ -78,6 +80,7 @@ _SERIES_SOURCE_SCOPE_OVERRIDES = {
     "SRC_JP_NIID": "jp_weekly",
     "SRC_KR_KDCA": "kdca_open_api",
     "SRC_NO_FHI_MSIS": "fhi_msis",
+    "SRC_NZ_PHS_DHB": "phf_dhb_annual",
     "SRC_SE_FOHM_SMINET": "fohm_sminet",
     "SRC_SG_CDA_WIDB": "cda_weekly_bulletin",
     "SRC_SG_DATA_GOV_WIDB": "cda_weekly_bulletin",
@@ -91,8 +94,292 @@ _OBSERVATION_GEOGRAPHY_SERIES_SOURCES = frozenset(
         "SRC_AU_NINDSS",
         "SRC_CN_PROV_DATACENTER",
         "SRC_CN_PROV_MONTHLY_REPORT",
+        "SRC_CH_FOPH_IDD",
+        "SRC_DE_RKI_SURVSTAT",
+        "SRC_JP_NIID",
+        "SRC_NZ_PHS_DHB",
+        "SRC_SE_FOHM_SMINET",
+        "SRC_US_NNDSS",
     }
 )
+_FLOW_ROLLUP_TTL_SECONDS = 60
+_flow_rollup_cache: tuple[float, list[tuple]] | None = None
+_flow_rollup_lock = asyncio.Lock()
+# The doubled backslash keeps the geography pattern from being read as a bind parameter.
+_FLOW_ROLLUP_SQL = text(
+    """
+    SELECT series_code,
+           CASE WHEN geography_key LIKE 'country:%\\:national'
+                THEN split_part(geography_key, ':', 2)
+                ELSE NULL END AS national_country,
+           quality_status,
+           count(*) AS observation_count,
+           min(time) AS earliest_date,
+           max(time) AS latest_date
+    FROM disease_series_observations
+    GROUP BY 1, 2, 3
+    """
+)
+
+
+async def _enable_parallel_aggregate(db: AsyncSession) -> None:
+    for statement in (
+        "SET LOCAL work_mem = '256MB'",
+        "SET LOCAL jit = off",
+        "SET LOCAL parallel_setup_cost = 0",
+        "SET LOCAL parallel_tuple_cost = 0",
+        "SET LOCAL min_parallel_table_scan_size = '8MB'",
+    ):
+        await db.execute(text(statement))
+
+
+async def _observation_rollup(db: AsyncSession) -> list[tuple]:
+    """Group every observation once, instead of scanning the table per metric."""
+
+    global _flow_rollup_cache
+    now = time.monotonic()
+    if _flow_rollup_cache is not None and now - _flow_rollup_cache[0] < _FLOW_ROLLUP_TTL_SECONDS:
+        return _flow_rollup_cache[1]
+    async with _flow_rollup_lock:
+        now = time.monotonic()
+        if _flow_rollup_cache is not None and now - _flow_rollup_cache[0] < _FLOW_ROLLUP_TTL_SECONDS:
+            return _flow_rollup_cache[1]
+        await _enable_parallel_aggregate(db)
+        fetched = (await db.execute(_FLOW_ROLLUP_SQL)).all()
+        rows = [
+            (
+                row.series_code,
+                row.national_country,
+                str(row.quality_status),
+                int(row.observation_count or 0),
+                row.earliest_date,
+                row.latest_date,
+            )
+            for row in fetched
+        ]
+        _flow_rollup_cache = (time.monotonic(), rows)
+        return rows
+
+
+def _flow_bucket() -> dict:
+    return {
+        "series_ids": set(),
+        "observation_count": 0,
+        "earliest": None,
+        "latest": None,
+    }
+
+
+def _flow_dates(bucket: dict, earliest, latest) -> None:
+    if earliest is not None and (bucket["earliest"] is None or earliest < bucket["earliest"]):
+        bucket["earliest"] = earliest
+    if latest is not None and (bucket["latest"] is None or latest > bucket["latest"]):
+        bucket["latest"] = latest
+
+
+async def _load_series_flow_facts(db: AsyncSession, country_id: int | None):
+    """Build the series, definition, quality, and availability rows for source flow.
+
+    Geography-owned sources are attributed to the country encoded on each
+    national observation. Every other source keeps the series' own country,
+    including series that do not have observations yet.
+    """
+
+    rollup = await _observation_rollup(db)
+    countries = (
+        await db.execute(select(Country.id, Country.code, Country.name_en))
+    ).all()
+    country_by_code = {row.code: row for row in countries}
+    series_list = (
+        await db.execute(
+            select(
+                DiseaseSurveillanceSeries.series_code,
+                DiseaseSurveillanceSeries.source_system,
+                DiseaseSurveillanceSeries.country_code,
+                DiseaseSurveillanceSeries.availability_status,
+                DiseaseSurveillanceSeries.metric_type,
+                DiseaseSurveillanceSeries.mapping_relation,
+                DiseaseSurveillanceSeries.comparability,
+            )
+        )
+    ).all()
+    series_by_code = {row.series_code: row for row in series_list}
+
+    series_buckets: dict[tuple, dict] = {}
+    definition_counts: dict[tuple, set] = {}
+    quality_counts: dict[tuple, int] = {}
+
+    def country_ok(country) -> bool:
+        return country is not None and (country_id is None or country.id == country_id)
+
+    def series_bucket(country, source_system: str) -> dict:
+        key = (country.id, source_system)
+        bucket = series_buckets.get(key)
+        if bucket is None:
+            bucket = _flow_bucket()
+            bucket.update(
+                {
+                    "country_id": country.id,
+                    "country_code": country.code,
+                    "country_name": country.name_en,
+                    "source_system": source_system,
+                }
+            )
+            series_buckets[key] = bucket
+        return bucket
+
+    for series in series_list:
+        if series.source_system in _OBSERVATION_GEOGRAPHY_SERIES_SOURCES:
+            continue
+        country = country_by_code.get(series.country_code)
+        if not country_ok(country):
+            continue
+        bucket = series_bucket(country, series.source_system)
+        bucket["series_ids"].add(series.series_code)
+        definition_key = (
+            country.id,
+            country.code,
+            series.source_system,
+            series.availability_status,
+            series.metric_type,
+            series.mapping_relation,
+            series.comparability,
+        )
+        definition_counts.setdefault(definition_key, set()).add(series.series_code)
+
+    national_countries_by_series: dict[str, set[str]] = {}
+    for series_code, national_country, quality_status, count, earliest, latest in rollup:
+        series = series_by_code.get(series_code)
+        if series is None or count <= 0:
+            continue
+        geography_owned = series.source_system in _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
+        if geography_owned:
+            if not national_country:
+                continue
+            country = country_by_code.get(national_country)
+            if not country_ok(country):
+                continue
+            national_countries_by_series.setdefault(series_code, set()).add(national_country)
+            definition_key = (
+                country.id,
+                country.code,
+                series.source_system,
+                series.availability_status,
+                series.metric_type,
+                series.mapping_relation,
+                series.comparability,
+            )
+            definition_counts.setdefault(definition_key, set()).add(series_code)
+        else:
+            country = country_by_code.get(series.country_code)
+            if not country_ok(country):
+                continue
+        bucket = series_bucket(country, series.source_system)
+        bucket["series_ids"].add(series_code)
+        bucket["observation_count"] += count
+        _flow_dates(bucket, earliest, latest)
+        quality_key = (country.id, country.code, series.source_system, quality_status)
+        quality_counts[quality_key] = quality_counts.get(quality_key, 0) + count
+
+    series_rows = [
+        SimpleNamespace(
+            country_id=bucket["country_id"],
+            country_code=bucket["country_code"],
+            country_name=bucket["country_name"],
+            source_system=bucket["source_system"],
+            series_count=len(bucket["series_ids"]),
+            observation_count=bucket["observation_count"],
+            earliest_date=bucket["earliest"],
+            latest_date=bucket["latest"],
+        )
+        for bucket in series_buckets.values()
+    ]
+    definition_rows = [
+        SimpleNamespace(
+            country_id=key[0],
+            country_code=key[1],
+            source_system=key[2],
+            availability_status=key[3],
+            metric_type=key[4],
+            mapping_relation=key[5],
+            comparability=key[6],
+            count=len(series_ids),
+        )
+        for key, series_ids in definition_counts.items()
+    ]
+    quality_rows = [
+        SimpleNamespace(
+            country_id=key[0],
+            country_code=key[1],
+            source_system=key[2],
+            quality_status=key[3],
+            count=count,
+        )
+        for key, count in quality_counts.items()
+    ]
+
+    availability_rows = (
+        await db.execute(
+            select(
+                Country.id.label("country_id"),
+                Country.code.label("country_code"),
+                DiseaseSourceAvailability.source_system,
+                DiseaseSourceAvailability.status,
+                func.count().label("count"),
+            )
+            .select_from(DiseaseSourceAvailability)
+            .join(Country, Country.code == DiseaseSourceAvailability.country_code)
+            .where(
+                DiseaseSourceAvailability.source_system.not_in(
+                    _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
+                )
+            )
+            .group_by(
+                Country.id,
+                Country.code,
+                DiseaseSourceAvailability.source_system,
+                DiseaseSourceAvailability.status,
+            )
+        )
+    ).all()
+    if country_id is not None:
+        availability_rows = [row for row in availability_rows if row.country_id == country_id]
+
+    geo_availability = (
+        await db.execute(
+            select(
+                DiseaseSourceAvailability.source_system,
+                DiseaseSourceAvailability.status,
+                DiseaseSourceAvailability.availability_code,
+                DiseaseSourceAvailability.series_code,
+            ).where(
+                DiseaseSourceAvailability.source_system.in_(
+                    _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
+                ),
+                DiseaseSourceAvailability.series_code.is_not(None),
+            )
+        )
+    ).all()
+    geo_counts: dict[tuple, set] = {}
+    for row in geo_availability:
+        for code in national_countries_by_series.get(row.series_code, ()):
+            country = country_by_code.get(code)
+            if not country_ok(country):
+                continue
+            geo_counts.setdefault((country.id, country.code, row.source_system, row.status), set()).add(
+                row.availability_code
+            )
+    availability_rows = list(availability_rows) + [
+        SimpleNamespace(
+            country_id=key[0],
+            country_code=key[1],
+            source_system=key[2],
+            status=key[3],
+            count=len(codes),
+        )
+        for key, codes in geo_counts.items()
+    ]
+    return series_rows, definition_rows, quality_rows, availability_rows
 
 
 def _source_kind(country_code: str, scope: str) -> str:
@@ -679,287 +966,12 @@ async def get_sources_flow(
     # counted independently from ``disease_records`` compatibility projections
     # so the same observation is never double-counted and non-case metrics such
     # as Iceland's registered diagnoses retain their actual semantics.
-    series_q = (
-        select(
-            Country.id.label("country_id"),
-            Country.code.label("country_code"),
-            Country.name_en.label("country_name"),
-            DiseaseSurveillanceSeries.source_system,
-            func.count(
-                func.distinct(DiseaseSurveillanceSeries.series_code)
-            ).label("series_count"),
-            func.count(DiseaseSeriesObservation.id).label("observation_count"),
-            func.min(DiseaseSeriesObservation.time).label("earliest_date"),
-            func.max(DiseaseSeriesObservation.time).label("latest_date"),
-        )
-        .select_from(DiseaseSurveillanceSeries)
-        .join(Country, Country.code == DiseaseSurveillanceSeries.country_code)
-        .outerjoin(
-            DiseaseSeriesObservation,
-            DiseaseSeriesObservation.series_code
-            == DiseaseSurveillanceSeries.series_code,
-        )
-        .where(
-            DiseaseSurveillanceSeries.source_system.not_in(
-                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
-            )
-        )
-        .group_by(
-            Country.id,
-            Country.code,
-            Country.name_en,
-            DiseaseSurveillanceSeries.source_system,
-        )
-    )
-    if country_id is not None:
-        series_q = series_q.where(Country.id == country_id)
-    series_rows = (await db.execute(series_q)).all()
-
-    # Some source series are registered by the national publishing authority
-    # while their facts belong to the geography encoded on each observation.
-    # Map those observations to the Country row named by geography_key so
-    # regional flows appear under their own jurisdictions without inflating the
-    # parent country's source-series counts.
-    observation_country_code = func.split_part(
-        DiseaseSeriesObservation.geography_key, ":", 2
-    )
-    jurisdiction_series_q = (
-        select(
-            Country.id.label("country_id"),
-            Country.code.label("country_code"),
-            Country.name_en.label("country_name"),
-            DiseaseSurveillanceSeries.source_system,
-            func.count(func.distinct(DiseaseSurveillanceSeries.series_code)).label(
-                "series_count"
-            ),
-            func.count(DiseaseSeriesObservation.id).label("observation_count"),
-            func.min(DiseaseSeriesObservation.time).label("earliest_date"),
-            func.max(DiseaseSeriesObservation.time).label("latest_date"),
-        )
-        .select_from(DiseaseSurveillanceSeries)
-        .join(
-            DiseaseSeriesObservation,
-            DiseaseSeriesObservation.series_code
-            == DiseaseSurveillanceSeries.series_code,
-        )
-        .join(Country, Country.code == observation_country_code)
-        .where(
-            DiseaseSurveillanceSeries.source_system.in_(
-                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
-            ),
-            DiseaseSeriesObservation.geography_key.like("country:%:national"),
-        )
-        .group_by(
-            Country.id,
-            Country.code,
-            Country.name_en,
-            DiseaseSurveillanceSeries.source_system,
-        )
-    )
-    if country_id is not None:
-        jurisdiction_series_q = jurisdiction_series_q.where(Country.id == country_id)
-    series_rows += (await db.execute(jurisdiction_series_q)).all()
-
-    definition_q = (
-        select(
-            Country.id.label("country_id"),
-            Country.code.label("country_code"),
-            DiseaseSurveillanceSeries.source_system,
-            DiseaseSurveillanceSeries.availability_status,
-            DiseaseSurveillanceSeries.metric_type,
-            DiseaseSurveillanceSeries.mapping_relation,
-            DiseaseSurveillanceSeries.comparability,
-            func.count().label("count"),
-        )
-        .select_from(DiseaseSurveillanceSeries)
-        .join(Country, Country.code == DiseaseSurveillanceSeries.country_code)
-        .where(
-            DiseaseSurveillanceSeries.source_system.not_in(
-                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
-            )
-        )
-        .group_by(
-            Country.id,
-            Country.code,
-            DiseaseSurveillanceSeries.source_system,
-            DiseaseSurveillanceSeries.availability_status,
-            DiseaseSurveillanceSeries.metric_type,
-            DiseaseSurveillanceSeries.mapping_relation,
-            DiseaseSurveillanceSeries.comparability,
-        )
-    )
-    if country_id is not None:
-        definition_q = definition_q.where(Country.id == country_id)
-    definition_rows = (await db.execute(definition_q)).all()
-    jurisdiction_definition_q = (
-        select(
-            Country.id.label("country_id"),
-            Country.code.label("country_code"),
-            DiseaseSurveillanceSeries.source_system,
-            DiseaseSurveillanceSeries.availability_status,
-            DiseaseSurveillanceSeries.metric_type,
-            DiseaseSurveillanceSeries.mapping_relation,
-            DiseaseSurveillanceSeries.comparability,
-            func.count(func.distinct(DiseaseSurveillanceSeries.series_code)).label(
-                "count"
-            ),
-        )
-        .select_from(DiseaseSurveillanceSeries)
-        .join(
-            DiseaseSeriesObservation,
-            DiseaseSeriesObservation.series_code
-            == DiseaseSurveillanceSeries.series_code,
-        )
-        .join(Country, Country.code == observation_country_code)
-        .where(
-            DiseaseSurveillanceSeries.source_system.in_(
-                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
-            ),
-            DiseaseSeriesObservation.geography_key.like("country:%:national"),
-        )
-        .group_by(
-            Country.id,
-            Country.code,
-            DiseaseSurveillanceSeries.source_system,
-            DiseaseSurveillanceSeries.availability_status,
-            DiseaseSurveillanceSeries.metric_type,
-            DiseaseSurveillanceSeries.mapping_relation,
-            DiseaseSurveillanceSeries.comparability,
-        )
-    )
-    if country_id is not None:
-        jurisdiction_definition_q = jurisdiction_definition_q.where(
-            Country.id == country_id
-        )
-    definition_rows += (await db.execute(jurisdiction_definition_q)).all()
-
-    quality_q = (
-        select(
-            Country.id.label("country_id"),
-            Country.code.label("country_code"),
-            DiseaseSurveillanceSeries.source_system,
-            DiseaseSeriesObservation.quality_status,
-            func.count().label("count"),
-        )
-        .select_from(DiseaseSurveillanceSeries)
-        .join(Country, Country.code == DiseaseSurveillanceSeries.country_code)
-        .join(
-            DiseaseSeriesObservation,
-            DiseaseSeriesObservation.series_code
-            == DiseaseSurveillanceSeries.series_code,
-        )
-        .where(
-            DiseaseSurveillanceSeries.source_system.not_in(
-                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
-            )
-        )
-        .group_by(
-            Country.id,
-            Country.code,
-            DiseaseSurveillanceSeries.source_system,
-            DiseaseSeriesObservation.quality_status,
-        )
-    )
-    if country_id is not None:
-        quality_q = quality_q.where(Country.id == country_id)
-    quality_rows = (await db.execute(quality_q)).all()
-    jurisdiction_quality_q = (
-        select(
-            Country.id.label("country_id"),
-            Country.code.label("country_code"),
-            DiseaseSurveillanceSeries.source_system,
-            DiseaseSeriesObservation.quality_status,
-            func.count().label("count"),
-        )
-        .select_from(DiseaseSurveillanceSeries)
-        .join(
-            DiseaseSeriesObservation,
-            DiseaseSeriesObservation.series_code
-            == DiseaseSurveillanceSeries.series_code,
-        )
-        .join(Country, Country.code == observation_country_code)
-        .where(
-            DiseaseSurveillanceSeries.source_system.in_(
-                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
-            ),
-            DiseaseSeriesObservation.geography_key.like("country:%:national"),
-        )
-        .group_by(
-            Country.id,
-            Country.code,
-            DiseaseSurveillanceSeries.source_system,
-            DiseaseSeriesObservation.quality_status,
-        )
-    )
-    if country_id is not None:
-        jurisdiction_quality_q = jurisdiction_quality_q.where(Country.id == country_id)
-    quality_rows += (await db.execute(jurisdiction_quality_q)).all()
-
-    availability_q = (
-        select(
-            Country.id.label("country_id"),
-            Country.code.label("country_code"),
-            DiseaseSourceAvailability.source_system,
-            DiseaseSourceAvailability.status,
-            func.count().label("count"),
-        )
-        .select_from(DiseaseSourceAvailability)
-        .join(Country, Country.code == DiseaseSourceAvailability.country_code)
-        .where(
-            DiseaseSourceAvailability.source_system.not_in(
-                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
-            )
-        )
-        .group_by(
-            Country.id,
-            Country.code,
-            DiseaseSourceAvailability.source_system,
-            DiseaseSourceAvailability.status,
-        )
-    )
-    if country_id is not None:
-        availability_q = availability_q.where(Country.id == country_id)
-    availability_rows = (await db.execute(availability_q)).all()
-    jurisdiction_availability_q = (
-        select(
-            Country.id.label("country_id"),
-            Country.code.label("country_code"),
-            DiseaseSourceAvailability.source_system,
-            DiseaseSourceAvailability.status,
-            func.count(func.distinct(DiseaseSourceAvailability.availability_code)).label(
-                "count"
-            ),
-        )
-        .select_from(DiseaseSourceAvailability)
-        .join(
-            DiseaseSurveillanceSeries,
-            DiseaseSurveillanceSeries.series_code
-            == DiseaseSourceAvailability.series_code,
-        )
-        .join(
-            DiseaseSeriesObservation,
-            DiseaseSeriesObservation.series_code
-            == DiseaseSurveillanceSeries.series_code,
-        )
-        .join(Country, Country.code == observation_country_code)
-        .where(
-            DiseaseSourceAvailability.source_system.in_(
-                _OBSERVATION_GEOGRAPHY_SERIES_SOURCES
-            ),
-            DiseaseSeriesObservation.geography_key.like("country:%:national"),
-        )
-        .group_by(
-            Country.id,
-            Country.code,
-            DiseaseSourceAvailability.source_system,
-            DiseaseSourceAvailability.status,
-        )
-    )
-    if country_id is not None:
-        jurisdiction_availability_q = jurisdiction_availability_q.where(
-            Country.id == country_id
-        )
-    availability_rows += (await db.execute(jurisdiction_availability_q)).all()
+    (
+        series_rows,
+        definition_rows,
+        quality_rows,
+        availability_rows,
+    ) = await _load_series_flow_facts(db, country_id)
 
     series_availability_by_key: Dict[str, Dict[str, int]] = {}
     metric_types_by_key: Dict[str, Dict[str, int]] = {}

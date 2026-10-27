@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 
@@ -23,6 +24,7 @@ from src.control_plane.overview import ControlPlaneOverviewService
 from src.control_plane.runtime import runtime_registry
 
 router = APIRouter()
+EVENT_STREAM_MAX_LIFETIME_SECONDS = 8.0
 
 
 def _request_id(request: Request) -> str | None:
@@ -77,17 +79,30 @@ async def event_stream(request: Request):
     last_event_id = request.headers.get("last-event-id")
 
     async def generate():
-        async for event in control_plane_events.subscribe(last_event_id):
-            if await request.is_disconnected():
-                break
-            event_id = str(event.get("stream_id") or event.get("event_id") or "")
-            event_type = str(event.get("type") or "message")
-            if event_type == "heartbeat" and not event_id:
-                yield ": keepalive\n\n"
-                continue
-            payload = json.dumps(event, ensure_ascii=False, default=str)
-            id_line = f"id: {event_id}\n" if event_id else ""
-            yield f"{id_line}event: {event_type}\ndata: {payload}\n\n"
+        events = control_plane_events.subscribe(last_event_id)
+        deadline = asyncio.get_running_loop().time() + EVENT_STREAM_MAX_LIFETIME_SECONDS
+        # EventSource reconnects automatically. Bounding each connection lets
+        # Uvicorn drain long-lived streams cleanly during service maintenance.
+        yield "retry: 1000\n\n"
+        try:
+            while not await request.is_disconnected():
+                remaining = deadline - asyncio.get_running_loop().time()
+                if remaining <= 0:
+                    break
+                try:
+                    event = await asyncio.wait_for(anext(events), timeout=remaining)
+                except (StopAsyncIteration, TimeoutError):
+                    break
+                event_id = str(event.get("stream_id") or event.get("event_id") or "")
+                event_type = str(event.get("type") or "message")
+                if event_type == "heartbeat" and not event_id:
+                    yield ": keepalive\n\n"
+                    continue
+                payload = json.dumps(event, ensure_ascii=False, default=str)
+                id_line = f"id: {event_id}\n" if event_id else ""
+                yield f"{id_line}event: {event_type}\ndata: {payload}\n\n"
+        finally:
+            await events.aclose()
 
     return StreamingResponse(
         generate(),

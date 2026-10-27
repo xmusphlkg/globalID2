@@ -1,0 +1,1055 @@
+{
+  "applied": true,
+  "checked_at": "2026-10-06",
+  "rows": 1900,
+  "locations": 68,
+  "coverage": {
+    "AU-ACT": {
+      "first_year": 1981,
+      "last_year": 2026,
+      "missing_years": []
+    },
+    "AU-NSW": {
+      "first_year": 1981,
+      "last_year": 2026,
+      "missing_years": []
+    },
+    "AU-NT": {
+      "first_year": 1981,
+      "last_year": 2026,
+      "missing_years": []
+    },
+    "AU-QLD": {
+      "first_year": 1981,
+      "last_year": 2026,
+      "missing_years": []
+    },
+    "AU-SA": {
+      "first_year": 1981,
+      "last_year": 2026,
+      "missing_years": []
+    },
+    "AU-TAS": {
+      "first_year": 1981,
+      "last_year": 2026,
+      "missing_years": []
+    },
+    "AU-VIC": {
+      "first_year": 1981,
+      "last_year": 2026,
+      "missing_years": []
+    },
+    "AU-WA": {
+      "first_year": 1981,
+      "last_year": 2026,
+      "missing_years": []
+    },
+    "BR": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-AC": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-AL": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-AM": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-AP": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-BA": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-CE": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-DF": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-ES": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-GO": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-MA": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-MG": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-MS": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-MT": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-PA": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-PB": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-PE": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-PI": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-PR": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-RJ": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-RN": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-RO": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-RR": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-RS": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-SC": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-SE": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-SP": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "BR-TO": {
+      "first_year": 2000,
+      "last_year": 2026,
+      "missing_years": [
+        2007,
+        2023
+      ]
+    },
+    "CN": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-AH": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-BJ": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-CQ": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-FJ": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-GD": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-GS": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-GX": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-GZ": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-HA": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-HB": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-HE": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-HI": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-HL": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-HN": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-JL": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-JS": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-JX": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-LN": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-NM": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-NX": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-QH": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-SC": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-SD": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-SH": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-SN": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-SX": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-TJ": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-XJ": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-XZ": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-YN": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    },
+    "CN-ZJ": {
+      "first_year": 2000,
+      "last_year": 2025,
+      "missing_years": []
+    }
+  },
+  "sources": {
+    "nbs_provinces.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/getAllProvince",
+      "sha256": "26df14fbfee2621fa4a48071ab713f71c55163ec22e21fdf8906be73bc2a9a84",
+      "request_body": null
+    },
+    "nbs_provinces_tree_0.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/new/queryIndexTreeAsync?code=6",
+      "sha256": "a2a11a1f288c7bbb97de5e49e753baf435566ab7cbf76c6ba927300e46cc1416",
+      "request_body": null
+    },
+    "nbs_provinces_tree_1.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/new/queryIndexTreeAsync?code=6&pid=c4d82af16c3d4f0cb4f09d4af7d5888e",
+      "sha256": "a95f9d260dee79ef14c45a01b2432223f4da7de3b99e67f3dc5b2884ab706134",
+      "request_body": null
+    },
+    "nbs_provinces_tree_2.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/new/queryIndexTreeAsync?code=6&pid=1b8b3021a931466d99b65cac34d89ee3",
+      "sha256": "9cf0e1b351db124286735257ebf1daa136d8f558903fc553d0153d78a138515e",
+      "request_body": null
+    },
+    "nbs_provinces_indicators.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/new/queryIndicatorsByCid?cid=755d5f6efbcf41a6a411ad819aa93c17",
+      "sha256": "351eddee1b5affcbef48ad5b09d8a17fd689cfc91d44f1786dd45d3b3503707a",
+      "request_body": null
+    },
+    "nbs_provinces_2000_2009.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/stream/esData",
+      "sha256": "6d332bf3028abd0bbad1c17b66ec6d0974c09f8a0e25c7818286d1bf7314a671",
+      "request_body": {
+        "cid": "755d5f6efbcf41a6a411ad819aa93c17",
+        "rootId": "1b8b3021a931466d99b65cac34d89ee3",
+        "indicatorIds": [
+          "4810ad6e9ddc41fc804a66134afe587f"
+        ],
+        "daCatalogId": "",
+        "das": [
+          {
+            "text": "北京市",
+            "value": "110000000000"
+          },
+          {
+            "text": "天津市",
+            "value": "120000000000"
+          },
+          {
+            "text": "河北省",
+            "value": "130000000000"
+          },
+          {
+            "text": "山西省",
+            "value": "140000000000"
+          },
+          {
+            "text": "内蒙古自治区",
+            "value": "150000000000"
+          },
+          {
+            "text": "辽宁省",
+            "value": "210000000000"
+          },
+          {
+            "text": "吉林省",
+            "value": "220000000000"
+          },
+          {
+            "text": "黑龙江省",
+            "value": "230000000000"
+          },
+          {
+            "text": "上海市",
+            "value": "310000000000"
+          },
+          {
+            "text": "江苏省",
+            "value": "320000000000"
+          },
+          {
+            "text": "浙江省",
+            "value": "330000000000"
+          },
+          {
+            "text": "安徽省",
+            "value": "340000000000"
+          },
+          {
+            "text": "福建省",
+            "value": "350000000000"
+          },
+          {
+            "text": "江西省",
+            "value": "360000000000"
+          },
+          {
+            "text": "山东省",
+            "value": "370000000000"
+          },
+          {
+            "text": "河南省",
+            "value": "410000000000"
+          },
+          {
+            "text": "湖北省",
+            "value": "420000000000"
+          },
+          {
+            "text": "湖南省",
+            "value": "430000000000"
+          },
+          {
+            "text": "广东省",
+            "value": "440000000000"
+          },
+          {
+            "text": "广西壮族自治区",
+            "value": "450000000000"
+          },
+          {
+            "text": "海南省",
+            "value": "460000000000"
+          },
+          {
+            "text": "重庆市",
+            "value": "500000000000"
+          },
+          {
+            "text": "四川省",
+            "value": "510000000000"
+          },
+          {
+            "text": "贵州省",
+            "value": "520000000000"
+          },
+          {
+            "text": "云南省",
+            "value": "530000000000"
+          },
+          {
+            "text": "西藏自治区",
+            "value": "540000000000"
+          },
+          {
+            "text": "陕西省",
+            "value": "610000000000"
+          },
+          {
+            "text": "甘肃省",
+            "value": "620000000000"
+          },
+          {
+            "text": "青海省",
+            "value": "630000000000"
+          },
+          {
+            "text": "宁夏回族自治区",
+            "value": "640000000000"
+          },
+          {
+            "text": "新疆维吾尔自治区",
+            "value": "650000000000"
+          }
+        ],
+        "dts": [
+          "2000YY",
+          "2001YY",
+          "2002YY",
+          "2003YY",
+          "2004YY",
+          "2005YY",
+          "2006YY",
+          "2007YY",
+          "2008YY",
+          "2009YY"
+        ],
+        "showType": 3
+      }
+    },
+    "nbs_provinces_2010_2019.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/stream/esData",
+      "sha256": "5a16dd13bf6d43e2ff492ef06bf44ba809bdd6aa102141a78b91205dd84a8641",
+      "request_body": {
+        "cid": "755d5f6efbcf41a6a411ad819aa93c17",
+        "rootId": "1b8b3021a931466d99b65cac34d89ee3",
+        "indicatorIds": [
+          "4810ad6e9ddc41fc804a66134afe587f"
+        ],
+        "daCatalogId": "",
+        "das": [
+          {
+            "text": "北京市",
+            "value": "110000000000"
+          },
+          {
+            "text": "天津市",
+            "value": "120000000000"
+          },
+          {
+            "text": "河北省",
+            "value": "130000000000"
+          },
+          {
+            "text": "山西省",
+            "value": "140000000000"
+          },
+          {
+            "text": "内蒙古自治区",
+            "value": "150000000000"
+          },
+          {
+            "text": "辽宁省",
+            "value": "210000000000"
+          },
+          {
+            "text": "吉林省",
+            "value": "220000000000"
+          },
+          {
+            "text": "黑龙江省",
+            "value": "230000000000"
+          },
+          {
+            "text": "上海市",
+            "value": "310000000000"
+          },
+          {
+            "text": "江苏省",
+            "value": "320000000000"
+          },
+          {
+            "text": "浙江省",
+            "value": "330000000000"
+          },
+          {
+            "text": "安徽省",
+            "value": "340000000000"
+          },
+          {
+            "text": "福建省",
+            "value": "350000000000"
+          },
+          {
+            "text": "江西省",
+            "value": "360000000000"
+          },
+          {
+            "text": "山东省",
+            "value": "370000000000"
+          },
+          {
+            "text": "河南省",
+            "value": "410000000000"
+          },
+          {
+            "text": "湖北省",
+            "value": "420000000000"
+          },
+          {
+            "text": "湖南省",
+            "value": "430000000000"
+          },
+          {
+            "text": "广东省",
+            "value": "440000000000"
+          },
+          {
+            "text": "广西壮族自治区",
+            "value": "450000000000"
+          },
+          {
+            "text": "海南省",
+            "value": "460000000000"
+          },
+          {
+            "text": "重庆市",
+            "value": "500000000000"
+          },
+          {
+            "text": "四川省",
+            "value": "510000000000"
+          },
+          {
+            "text": "贵州省",
+            "value": "520000000000"
+          },
+          {
+            "text": "云南省",
+            "value": "530000000000"
+          },
+          {
+            "text": "西藏自治区",
+            "value": "540000000000"
+          },
+          {
+            "text": "陕西省",
+            "value": "610000000000"
+          },
+          {
+            "text": "甘肃省",
+            "value": "620000000000"
+          },
+          {
+            "text": "青海省",
+            "value": "630000000000"
+          },
+          {
+            "text": "宁夏回族自治区",
+            "value": "640000000000"
+          },
+          {
+            "text": "新疆维吾尔自治区",
+            "value": "650000000000"
+          }
+        ],
+        "dts": [
+          "2010YY",
+          "2011YY",
+          "2012YY",
+          "2013YY",
+          "2014YY",
+          "2015YY",
+          "2016YY",
+          "2017YY",
+          "2018YY",
+          "2019YY"
+        ],
+        "showType": 3
+      }
+    },
+    "nbs_provinces_2020_2025.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/stream/esData",
+      "sha256": "480cbd43fdc2d135ccddcc33516563aa3290cc1a972890dc6d3e4d05c98ff32c",
+      "request_body": {
+        "cid": "755d5f6efbcf41a6a411ad819aa93c17",
+        "rootId": "1b8b3021a931466d99b65cac34d89ee3",
+        "indicatorIds": [
+          "4810ad6e9ddc41fc804a66134afe587f"
+        ],
+        "daCatalogId": "",
+        "das": [
+          {
+            "text": "北京市",
+            "value": "110000000000"
+          },
+          {
+            "text": "天津市",
+            "value": "120000000000"
+          },
+          {
+            "text": "河北省",
+            "value": "130000000000"
+          },
+          {
+            "text": "山西省",
+            "value": "140000000000"
+          },
+          {
+            "text": "内蒙古自治区",
+            "value": "150000000000"
+          },
+          {
+            "text": "辽宁省",
+            "value": "210000000000"
+          },
+          {
+            "text": "吉林省",
+            "value": "220000000000"
+          },
+          {
+            "text": "黑龙江省",
+            "value": "230000000000"
+          },
+          {
+            "text": "上海市",
+            "value": "310000000000"
+          },
+          {
+            "text": "江苏省",
+            "value": "320000000000"
+          },
+          {
+            "text": "浙江省",
+            "value": "330000000000"
+          },
+          {
+            "text": "安徽省",
+            "value": "340000000000"
+          },
+          {
+            "text": "福建省",
+            "value": "350000000000"
+          },
+          {
+            "text": "江西省",
+            "value": "360000000000"
+          },
+          {
+            "text": "山东省",
+            "value": "370000000000"
+          },
+          {
+            "text": "河南省",
+            "value": "410000000000"
+          },
+          {
+            "text": "湖北省",
+            "value": "420000000000"
+          },
+          {
+            "text": "湖南省",
+            "value": "430000000000"
+          },
+          {
+            "text": "广东省",
+            "value": "440000000000"
+          },
+          {
+            "text": "广西壮族自治区",
+            "value": "450000000000"
+          },
+          {
+            "text": "海南省",
+            "value": "460000000000"
+          },
+          {
+            "text": "重庆市",
+            "value": "500000000000"
+          },
+          {
+            "text": "四川省",
+            "value": "510000000000"
+          },
+          {
+            "text": "贵州省",
+            "value": "520000000000"
+          },
+          {
+            "text": "云南省",
+            "value": "530000000000"
+          },
+          {
+            "text": "西藏自治区",
+            "value": "540000000000"
+          },
+          {
+            "text": "陕西省",
+            "value": "610000000000"
+          },
+          {
+            "text": "甘肃省",
+            "value": "620000000000"
+          },
+          {
+            "text": "青海省",
+            "value": "630000000000"
+          },
+          {
+            "text": "宁夏回族自治区",
+            "value": "640000000000"
+          },
+          {
+            "text": "新疆维吾尔自治区",
+            "value": "650000000000"
+          }
+        ],
+        "dts": [
+          "2020YY",
+          "2021YY",
+          "2022YY",
+          "2023YY",
+          "2024YY",
+          "2025YY"
+        ],
+        "showType": 3
+      }
+    },
+    "nbs_national_tree_0.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/new/queryIndexTreeAsync?code=3",
+      "sha256": "73c0dd94247f33bf4b501e56202acd805789bcb495c73dd37650564aafd26374",
+      "request_body": null
+    },
+    "nbs_national_tree_1.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/new/queryIndexTreeAsync?code=3&pid=884c062607104a91967b22742537f44f",
+      "sha256": "4c51ae04c2006e48090d890e2b917f2a617b7f08971e412d4755808b1656fef2",
+      "request_body": null
+    },
+    "nbs_national_tree_2.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/new/queryIndexTreeAsync?code=3&pid=040faf60f9b64535957e242e62a18a85",
+      "sha256": "c7be0044181c6293afdbcba6cfeddfe6110c87d51a2014cf6918c05e564b6ce0",
+      "request_body": null
+    },
+    "nbs_national_indicators.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/new/queryIndicatorsByCid?cid=6331ad868e8b4f55b8e9b6e765609ce1",
+      "sha256": "1f32718bc293e8bb1b22ad6005abd6867a5c89f94db08f21d8d1d8a2b396480c",
+      "request_body": null
+    },
+    "nbs_national_2000_2009.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/stream/esData",
+      "sha256": "0a0091863f3ee7c8d0316f0841ba4dc1ff966031daee7d577b5ae0010ed6bd3a",
+      "request_body": {
+        "cid": "6331ad868e8b4f55b8e9b6e765609ce1",
+        "rootId": "040faf60f9b64535957e242e62a18a85",
+        "indicatorIds": [
+          "806083491dbe46a08995783945a30b9d"
+        ],
+        "daCatalogId": "",
+        "das": [
+          {
+            "text": "全国",
+            "value": "000000000000"
+          }
+        ],
+        "dts": [
+          "2000YY",
+          "2001YY",
+          "2002YY",
+          "2003YY",
+          "2004YY",
+          "2005YY",
+          "2006YY",
+          "2007YY",
+          "2008YY",
+          "2009YY"
+        ],
+        "showType": 1
+      }
+    },
+    "nbs_national_2010_2019.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/stream/esData",
+      "sha256": "3605ac95da869a52c5e80ee1de09e9baedaa640246e9efa93e5e735ecf878abc",
+      "request_body": {
+        "cid": "6331ad868e8b4f55b8e9b6e765609ce1",
+        "rootId": "040faf60f9b64535957e242e62a18a85",
+        "indicatorIds": [
+          "806083491dbe46a08995783945a30b9d"
+        ],
+        "daCatalogId": "",
+        "das": [
+          {
+            "text": "全国",
+            "value": "000000000000"
+          }
+        ],
+        "dts": [
+          "2010YY",
+          "2011YY",
+          "2012YY",
+          "2013YY",
+          "2014YY",
+          "2015YY",
+          "2016YY",
+          "2017YY",
+          "2018YY",
+          "2019YY"
+        ],
+        "showType": 1
+      }
+    },
+    "nbs_national_2020_2025.json": {
+      "url": "https://data.stats.gov.cn/dg/website/publicrelease/web/external/stream/esData",
+      "sha256": "0924c039c70043c0ab8c42b10d0f43233f0aec823995d940558ac88cb9b583b5",
+      "request_body": {
+        "cid": "6331ad868e8b4f55b8e9b6e765609ce1",
+        "rootId": "040faf60f9b64535957e242e62a18a85",
+        "indicatorIds": [
+          "806083491dbe46a08995783945a30b9d"
+        ],
+        "daCatalogId": "",
+        "das": [
+          {
+            "text": "全国",
+            "value": "000000000000"
+          }
+        ],
+        "dts": [
+          "2020YY",
+          "2021YY",
+          "2022YY",
+          "2023YY",
+          "2024YY",
+          "2025YY"
+        ],
+        "showType": 1
+      }
+    },
+    "abs_latest.html": {
+      "url": "https://www.abs.gov.au/statistics/people/population/national-state-and-territory-population",
+      "sha256": "947fe28ee3ce6969fb13be3653cfbb5946ace38a89f0b7c484dadf743b439eb6",
+      "request_body": null
+    },
+    "abs_release.html": {
+      "url": "https://www.abs.gov.au/statistics/people/population/national-state-and-territory-population/mar-2026",
+      "sha256": "13c3474d3220293a2636b6a1356dbf22b2dc0bc813ad509bba595f7b3ad23523",
+      "request_body": null
+    },
+    "abs_310104.xlsx": {
+      "url": "https://www.abs.gov.au/statistics/people/population/national-state-and-territory-population/mar-2026/310104.xlsx",
+      "sha256": "2bcc8b90b39032707f0f8b2cea482d98df6317d2a07ee53cc9573a999fd749b2",
+      "request_body": null
+    },
+    "ibge_states.json": {
+      "url": "https://servicodados.ibge.gov.br/api/v1/localidades/estados",
+      "sha256": "7ca1368dea3af83cba1af84ae8a7e88f1173c97586831d086cc8b3c1ba9c6596",
+      "request_body": null
+    },
+    "ibge_estimates.json": {
+      "url": "https://apisidra.ibge.gov.br/values/t/6579/n1/all/n3/all/v/9324/p/all",
+      "sha256": "c333a15311b3add340082afa108e03f1fb429f73e0ade79b2abddbff250f8a2d",
+      "request_body": null
+    },
+    "ibge_census_2022.json": {
+      "url": "https://apisidra.ibge.gov.br/values/t/4714/n1/all/n3/all/v/93/p/2022",
+      "sha256": "4c045e3709e098e289a4d5babb13a29127698cacecad7a53ec4b2cc29a0e4caa",
+      "request_body": null
+    },
+    "ibge_census_2000_2010.json": {
+      "url": "https://apisidra.ibge.gov.br/values/t/202/n1/all/n3/all/v/93/p/2000,2010/c2/0/c1/0",
+      "sha256": "8a8e9fa58e012e0f878aff63f4333c66d858381d37638e1df4eca4dd0873594a",
+      "request_body": null
+    }
+  },
+  "input_sha256": "9a7798d5cb88800df60c7b3df940d0edbddffdd1e46a12150223e2bb76eed06a",
+  "snapshot": "data/processed/official_population/20261006T205417",
+  "policy": "exact geography, same calendar year, no interpolation or carry-forward"
+}

@@ -6,8 +6,9 @@ from types import SimpleNamespace
 import pytest
 
 from src.domain import TaskStatus, TaskType
-from src.services import data_release_service as release_module
 from src.services import _lifecycle as lifecycle_module
+from src.services import data_release_service as release_module
+from src.services.data_release import checks as release_checks
 from src.services.data_release.pipeline import ReleasePreflightError
 from src.services.data_release.process_runner import ReleaseCommandError
 from src.services.data_release.resilience import (
@@ -155,6 +156,16 @@ def test_only_unattended_release_triggers_are_retry_eligible():
     assert not automatic_trigger_eligible(
         {"trigger": "scheduled", "manual_trigger": True}
     )
+
+
+def test_release_worktree_filter_allows_only_explicit_runtime_paths():
+    assert release_checks.release_blocking_worktree_paths(
+        [
+            "configs/literature/weekly_ai_reviews.json",
+            "src/services/data_release_service.py",
+        ],
+        runtime_mutable_paths=("configs/literature/weekly_ai_reviews.json",),
+    ) == ["src/services/data_release_service.py"]
 
 
 class _ScalarResult:

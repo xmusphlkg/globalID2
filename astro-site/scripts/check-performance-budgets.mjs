@@ -5,16 +5,27 @@ import { pathToFileURL } from 'node:url';
 
 export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxJavaScriptChunkBytes: 350_000,
-  maxRouteCompressedAssetsBytes: 370_000,
+  // Disease pages carry the surveillance explorer plus a coverage map and a
+  // seasonality heatmap. The 2026-10-23 release build measured that route at
+  // 381,198 gzip bytes. 395KB still rejects a second ECharts core: zrender
+  // alone is about 62KB gzip.
+  maxRouteCompressedAssetsBytes: 395_000,
   maxOrdinaryRouteCompressedAssetsBytes: 300_000,
-  // Raised from 100KB (2026-08-23): the bilingual Research Radar graph page
+  // Raised from 100KB (2026-08-23): the multilingual Research Radar graph page
   // now carries enough static graph metadata to sit just over the old cap.
   maxPageHtmlGzipBytes: 115_000,
   maxAverageHtmlBytes: 105_000,
-  // Use both a fixed site floor and a compressed per-page ceiling. This keeps
-  // large catalogues honest without making ordinary route growth consume a
-  // permanently fixed allowance.
-  maxAverageHtmlGzipBytes: 18_500,
+  // Use both a fixed site floor and a compressed per-page ceiling. The 18.7KB
+  // baseline includes the complete en/zh/fr catalogue and deterministic CI
+  // fixture while the independent
+  // 115KB page cap and route-asset caps continue to catch local regressions.
+  // Release builds stamp each page with a unique release id, source commit,
+  // deployment branch, and build timestamp.  Keep enough headroom for those
+  // bounded metadata values while preserving the same underlying page budget.
+  // The 2026-10 jurisdiction expansion adds state/territory profile routes,
+  // raising the full-site average to about 19.0KB while individual page and
+  // route-asset limits remain unchanged.
+  maxAverageHtmlGzipBytes: 19_050,
   maxTotalHtmlGzipBytes: 26_000_000,
   maxFontAssetBytes: 220_000,
   maxLegacyWoffFiles: 0,
@@ -144,8 +155,10 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
         assetCount: selected.size,
       };
     }
-    const isDataRoute = /^\/(?:zh\/)?(?:countries|diseases|situation|research)\//.test(routePath);
-    if (!isDataRoute && gzipBytes > largestOrdinaryRoute.gzipBytes) {
+    // Compare is a chart workspace, same class as disease, country, situation,
+    // and research pages. Brochure routes stay on the ordinary cap.
+    const isChartRoute = /^\/(?:(?:zh|fr)\/)?(?:compare|countries|diseases|situation|research)\//.test(routePath);
+    if (!isChartRoute && gzipBytes > largestOrdinaryRoute.gzipBytes) {
       largestOrdinaryRoute = { path: routePath, gzipBytes, assetCount: selected.size };
     }
   }

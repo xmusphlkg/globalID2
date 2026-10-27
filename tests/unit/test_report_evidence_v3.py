@@ -171,6 +171,37 @@ def test_report_v4_composer_outputs_locale_first_contract_without_english_marker
     ReportV4QualityGate().ensure_passed(document)
 
 
+def test_report_v4_quality_gate_rejects_missing_disease_level_french_section() -> None:
+    period_start, period_end = _period()
+    data = pd.DataFrame(
+        [{"disease_id": 1, "time": "2026-01-05", "cases": 12, "deaths": pd.NA, "data_source": "fixture"}]
+    )
+    packet = build_evidence_packet(
+        data=data,
+        historical_data=data,
+        country=_country(),
+        diseases=_diseases(),
+        period_start=period_start,
+        period_end=period_end,
+        source_policy=SourcePolicy(death_counts="not_reported", case_scope="sentinel", rate_basis="unavailable"),
+    )
+    document = compose_report_document(
+        evidence_packet=packet,
+        country=_country(),
+        period_start=period_start,
+        period_end=period_end,
+    ).to_dict()
+    del document["disease_directory"][0]["analysis_sections"][0]["content_i18n"]["fr"]
+
+    result = ReportV4QualityGate().check(document)
+
+    assert result["passed"] is False
+    assert any(
+        "disease_directory[0].analysis_sections[0].content_i18n.fr is missing" in issue["message"]
+        for issue in result["issues"]
+    )
+
+
 def test_report_v4_quality_gate_passes_valid_document() -> None:
     period_start, period_end = _period()
     data = pd.DataFrame(

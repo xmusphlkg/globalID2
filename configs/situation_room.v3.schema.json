@@ -623,6 +623,18 @@
         "zh": {
           "title": "Zh",
           "type": "string"
+        },
+        "fr": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fr"
         }
       },
       "required": [

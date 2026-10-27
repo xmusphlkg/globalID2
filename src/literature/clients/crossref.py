@@ -42,6 +42,7 @@ class _JournalStream:
     duplicate_records: int = 0
     pages_fetched: int = 0
     exhausted: bool = False
+    error: str | None = None
 
 
 def _crossref_datetime(value: datetime) -> str:
@@ -150,15 +151,23 @@ class CrossrefClient(LiteratureHttpClient):
         async with httpx.AsyncClient(base_url=self.BASE_URL, follow_redirects=True) as client:
             async def fill(stream: _JournalStream) -> None:
                 async with semaphore:
-                    await self._fill_journal_stream(
-                        client,
-                        stream=stream,
-                        since=since,
-                        until=until,
-                        rows=page_size,
-                        resume_indexed_at=resume_indexed_at,
-                        resume_record_ids=resume_record_ids,
-                    )
+                    try:
+                        await self._fill_journal_stream(
+                            client,
+                            stream=stream,
+                            since=since,
+                            until=until,
+                            rows=page_size,
+                            resume_indexed_at=resume_indexed_at,
+                            resume_record_ids=resume_record_ids,
+                        )
+                    except Exception as exc:
+                        # One journal's TLS or upstream failure must not cancel
+                        # all other streams. The pipeline can still persist
+                        # partial Crossref results and will use PubMed as a
+                        # core fallback when every stream is unavailable.
+                        stream.error = type(exc).__name__ or "Exception"
+                        stream.exhausted = True
 
             await asyncio.gather(*(fill(stream) for stream in streams))
             heap: list[tuple[datetime, str, int, dict[str, Any]]] = []
@@ -257,6 +266,7 @@ class CrossrefClient(LiteratureHttpClient):
                 "pages_fetched": stream.pages_fetched,
                 "exhausted": stream.exhausted,
                 "next_cursor": None if stream.exhausted else stream.cursor,
+                "error": stream.error,
             }
             for stream in streams
         ]
@@ -287,6 +297,7 @@ class CrossrefClient(LiteratureHttpClient):
             "catch_up_required": truncated,
             "remaining_index_span_seconds": remaining_index_span_seconds,
             "journal_count": len(journal_checkpoints),
+            "source_errors": sum(1 for stream in streams if stream.error),
             "journals": journal_checkpoints,
             "sort": "indexed",
             "order": "asc",

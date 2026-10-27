@@ -1002,16 +1002,17 @@ def test_export_rejects_mixed_or_duplicate_month_schemas() -> None:
 async def test_live_snapshot_continuity_rejects_blank_retractions() -> None:
     rows = _live_release_rows("2026-07-16T15:28:46.083")
     measles_series = CAOntarioMonthlyUpdater._registered_series_by_label()["measles"]
+    holding_series = "HOLD_CA_ON_970831affe6ed2773fbb7441a447"
 
     class _Result:
-        def __init__(self, identities: list[tuple[date, str]]) -> None:
+        def __init__(self, identities: list[tuple[date, str, str]]) -> None:
             self.identities = identities
 
-        def fetchall(self) -> list[tuple[date, str]]:
+        def fetchall(self) -> list[tuple[date, str, str]]:
             return self.identities
 
     class _Database:
-        def __init__(self, identities: list[tuple[date, str]]) -> None:
+        def __init__(self, identities: list[tuple[date, str, str]]) -> None:
             self.identities = identities
             self.params: dict[str, object] = {}
 
@@ -1022,7 +1023,7 @@ async def test_live_snapshot_continuity_rejects_blank_retractions() -> None:
             return _Result(self.identities)
 
     updater = CAOntarioMonthlyUpdater()
-    existing_db = _Database([(date(2026, 1, 1), measles_series)])
+    existing_db = _Database([(date(2026, 1, 1), measles_series, "Measles")])
     assert await updater.validate_live_snapshot_continuity(
         existing_db, rows
     ) == 1
@@ -1031,8 +1032,21 @@ async def test_live_snapshot_continuity_rejects_blank_retractions() -> None:
 
     with pytest.raises(ValueError, match="retracts stored observations"):
         await updater.validate_live_snapshot_continuity(
-            _Database([(date(2026, 4, 1), measles_series)]), rows
+            _Database([(date(2026, 4, 1), measles_series, "Measles")]), rows
         )
+
+    holding_row = {
+        **rows[0],
+        "Date": "2026-01-01",
+        "RawDiseaseLabel": "Candida auris colonization",
+        "Cases": "1",
+    }
+    holding_db = _Database([(date(2026, 1, 1), holding_series, "Candida auris colonization")])
+    assert await updater.validate_live_snapshot_continuity(
+        holding_db, [*rows, holding_row]
+    ) == 1
+    with pytest.raises(ValueError, match="retracts stored observations"):
+        await updater.validate_live_snapshot_continuity(holding_db, rows)
 
 
 @pytest.mark.asyncio

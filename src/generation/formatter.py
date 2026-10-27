@@ -135,17 +135,17 @@ class ReportFormatter:
         return {
             "schema_version": "report_v4.0",
             "default_locale": "zh",
-            "locales": ["zh", "en"],
-            "title": {"zh": metadata.get("title") or "疾病监测报告", "en": metadata.get("title") or "Surveillance report"},
-            "summary": {"zh": metadata.get("summary") or "", "en": metadata.get("summary") or ""},
-            "key_findings": {"zh": metadata.get("key_findings") or [], "en": metadata.get("key_findings") or []},
+            "locales": ["zh", "en", "fr"],
+            "title": {"zh": metadata.get("title") or "疾病监测报告", "en": metadata.get("title") or "Surveillance report", "fr": "Rapport de surveillance"},
+            "summary": {"zh": metadata.get("summary") or "", "en": metadata.get("summary") or "", "fr": "Traduction française en attente."},
+            "key_findings": {"zh": metadata.get("key_findings") or [], "en": metadata.get("key_findings") or [], "fr": ["Traduction française en attente."]},
             "sections": [
                 {
                     "id": section.get("section_type") or section.get("type") or f"section_{index}",
                     "type": section.get("section_type") or section.get("type") or "section",
                     "order": index,
-                    "title": {"zh": section.get("title") or "", "en": section.get("title") or ""},
-                    "body": {"zh": section.get("content") or "", "en": section.get("content") or ""},
+                    "title": {"zh": section.get("title") or "", "en": section.get("title") or "", "fr": "Traduction française en attente."},
+                    "body": {"zh": section.get("content") or "", "en": section.get("content") or "", "fr": "Traduction française en attente."},
                 }
                 for index, section in enumerate(sections, 1)
             ],
@@ -155,8 +155,10 @@ class ReportFormatter:
     def _localized(value: Any, locale: str, fallback: str = "") -> str:
         if isinstance(value, dict):
             direct = value.get(locale)
-            if isinstance(direct, str):
+            if isinstance(direct, str) and direct.strip():
                 return direct
+            if locale == "fr":
+                return fallback or "Traduction française en attente."
             zh = value.get("zh")
             if isinstance(zh, str):
                 return zh

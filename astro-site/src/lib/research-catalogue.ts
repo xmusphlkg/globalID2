@@ -8,6 +8,7 @@ export const compactResearchArticle = (article: any) => ({
   authors: article.authors ?? [],
   study_type: article.study_type,
   published_at: article.published_at,
+  publication_week: article.publication_week,
   open_access_status: article.open_access_status,
   open_access_url: article.open_access_url,
   peer_review_status: article.peer_review_status,
@@ -23,6 +24,9 @@ export const compactResearchArticle = (article: any) => ({
   historical_baseline: article.historical_baseline,
   publication_date_label_en: article.publication_date_label_en,
   publication_date_label_zh: article.publication_date_label_zh,
+  publication_date_label_fr: article.publication_date_label_fr,
   why_it_matters_en: article.why_it_matters_en,
   why_it_matters_zh: article.why_it_matters_zh,
+  why_it_matters_fr: article.why_it_matters_fr,
+  summary: article.summary ?? {},
 });

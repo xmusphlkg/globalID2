@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import copy
 
 from openpyxl import load_workbook
 import pytest
@@ -11,6 +12,7 @@ from src.generation.direct_download_files import (
     build_direct_download_files,
     partition_rows,
 )
+from src.generation import direct_download_files
 from src.generation.site_data_views import (
     build_country_data,
     build_country_site_data,
@@ -165,6 +167,37 @@ def test_build_writes_three_formats_for_every_partition(tmp_path) -> None:
     xlsx_path = tmp_path / current["files"]["xlsx"]["relative_path"]
     workbook = load_workbook(xlsx_path, read_only=True)
     assert workbook.sheetnames == ["records", "metadata"]
+
+
+def test_full_refresh_skips_unchanged_datasets_and_rebuilds_only_changed_scope(
+    tmp_path, monkeypatch,
+) -> None:
+    base = "https://raw.githubusercontent.com/example/data/main"
+    first = build_direct_download_files(_context(), tmp_path, download_url_base=base)
+    assert all(entry.get("input_sha256") for entry in first["countries"] + first["diseases"])
+
+    real_executor = direct_download_files.ProcessPoolExecutor
+    monkeypatch.setattr(
+        direct_download_files,
+        "ProcessPoolExecutor",
+        lambda **_kwargs: (_ for _ in ()).throw(AssertionError("unchanged datasets started workers")),
+    )
+    unchanged = _context(generated_at="2026-08-02T00:00:00+00:00")
+    unchanged["country_exports"][0]["country_data"]["generated_at"] = unchanged["generated_at"]
+    unchanged["disease_exports"][0]["disease_data"]["generated_at"] = unchanged["generated_at"]
+    second = build_direct_download_files(unchanged, tmp_path, download_url_base=base)
+    assert second["generation"]["changed_files"] == 0
+
+    monkeypatch.setattr(direct_download_files, "ProcessPoolExecutor", real_executor)
+    changed = copy.deepcopy(unchanged)
+    changed["disease_exports"][0]["disease_data"]["country_series"]["CN"] = copy.deepcopy(
+        changed["disease_exports"][0]["disease_data"]["country_series"]["CN"]
+    )
+    changed["country_exports"][0]["country_data"]["disease_series"]["D007"]["cases"][-1] = 99
+    third = build_direct_download_files(changed, tmp_path, download_url_base=base)
+    assert third["countries"][0]["input_sha256"] != second["countries"][0]["input_sha256"]
+    assert third["diseases"][0]["input_sha256"] == second["diseases"][0]["input_sha256"]
+    assert third["generation"]["changed_files"] > 0
 
 
 def test_downloads_include_lossless_source_series_and_projection_provenance(
@@ -393,7 +426,14 @@ def test_iceland_exports_all_125_series_and_9396_observations_without_false_curv
         )
 
     compact = build_country_site_data(country)
-    assert {item["id"] for item in compact["series"]} == {"D033"}
+    assert {item["id"] for item in compact["series"]} == {
+        "D033", *source_only_diseases,
+    }
+    for item in compact["series"]:
+        if item["id"] in source_only_diseases:
+            assert item["x"] == []
+            assert item["c"] == []
+            assert item["available_series_count"] == 2
 
     rows = build_country_download_rows(
         country,
@@ -477,6 +517,41 @@ def test_reused_partition_metadata_uses_the_current_download_base(tmp_path) -> N
         relative_path: (tmp_path / relative_path).read_bytes()
         for relative_path in bytes_before
     } == bytes_before
+
+
+def test_incremental_download_build_only_rewrites_selected_country(tmp_path) -> None:
+    base = "https://raw.githubusercontent.com/example/data/main"
+    first = build_direct_download_files(
+        _context(),
+        tmp_path,
+        download_url_base=base,
+    )
+    before = {
+        file_meta["relative_path"]: (tmp_path / file_meta["relative_path"]).read_bytes()
+        for entry in first["countries"] + first["diseases"]
+        for part in entry["parts"]
+        for file_meta in part["files"].values()
+    }
+
+    changed = _context(["2010-01-01", "2015-01-01", "2020-01-01", "2026-01-01", "2027-01-01"])
+    second = build_direct_download_files(
+        changed,
+        tmp_path,
+        download_url_base=base,
+        changed_country_codes={"CN"},
+        changed_disease_ids=set(),
+    )
+
+    assert second["generation"]["changed_files"] >= 1
+    disease_paths = {
+        file_meta["relative_path"]
+        for part in first["diseases"][0]["parts"]
+        for file_meta in part["files"].values()
+    }
+    assert {
+        relative_path: (tmp_path / relative_path).read_bytes()
+        for relative_path in disease_paths
+    } == {relative_path: before[relative_path] for relative_path in disease_paths}
 
 
 def test_corrupted_reused_artifact_is_regenerated(tmp_path) -> None:

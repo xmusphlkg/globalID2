@@ -8,12 +8,18 @@ import {
 } from './report-routes';
 
 const reportsIndexPath = resolve('./src/data/reports/index.json');
+const cacheDuringBuild = process.env.NODE_ENV === 'production';
+const jsonCache = new Map<string, unknown | null>();
+let publishableReportsCache: PublishableReport[] | undefined;
 
 export function readJsonFile(path: string): unknown | null {
+  if (cacheDuringBuild && jsonCache.has(path)) return jsonCache.get(path) ?? null;
   if (!existsSync(path)) return null;
 
   try {
-    return JSON.parse(readFileSync(path, 'utf-8'));
+    const value = JSON.parse(readFileSync(path, 'utf-8'));
+    if (cacheDuringBuild) jsonCache.set(path, value);
+    return value;
   } catch (error) {
     console.warn(`Unable to read JSON data at ${path}`, error);
     return null;
@@ -31,5 +37,8 @@ export function loadReportDetail(id: string): unknown | null {
 }
 
 export function readPublishableReports(): PublishableReport[] {
-  return buildPublishableReports(readReportsIndex(), loadReportDetail);
+  if (cacheDuringBuild && publishableReportsCache) return publishableReportsCache;
+  const reports = buildPublishableReports(readReportsIndex(), loadReportDetail);
+  if (cacheDuringBuild) publishableReportsCache = reports;
+  return reports;
 }

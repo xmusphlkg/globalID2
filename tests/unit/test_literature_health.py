@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import replace
-from datetime import datetime, timedelta, timezone
 import json
-from pathlib import Path
 import subprocess
 import sys
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
@@ -16,7 +16,6 @@ from src.literature.health import (
     evaluate_health,
     exit_code_for,
 )
-
 
 NOW = datetime(2026, 8, 17, 12, 0, tzinfo=timezone.utc)
 ROOT = Path(__file__).resolve().parents[2]
@@ -458,7 +457,9 @@ def test_truncated_checkpoint_exposes_catch_up_capacity_without_weakening_freshn
     catch_up = _checks(report)["catch_up_orchestration"]
     assert catch_up["status"] == "pass"
     assert catch_up["next_action_code"] == "await_accelerated_catch_up"
-    assert catch_up["observed"]["resume_below_backlog"] == 200
+    assert catch_up["observed"]["backlog_observed_count"] == 100
+    assert catch_up["observed"]["backlog_projected_upper_bound"] == 400
+    assert catch_up["observed"]["backlog_limit"] == 500
 
 
 def test_catch_up_backpressure_reports_exact_resume_action() -> None:
@@ -499,8 +500,10 @@ def test_catch_up_backpressure_reports_exact_resume_action() -> None:
     assert catch_up["next_action_code"] == (
         "reduce_exception_backlog_below_resume_threshold"
     )
-    assert catch_up["observed"]["resume_below_backlog"] == 2200
+    assert catch_up["observed"]["backlog_observed_count"] == 2404
+    assert catch_up["observed"]["backlog_limit"] == 2500
     assert catch_up["observed"]["required_backlog_reduction"] == 205
+    assert catch_up["observed"]["pause_reason"] == "exception_backlog_headroom_exhausted"
 
 
 def test_release_classification_and_provider_regressions_fail_closed() -> None:
@@ -709,6 +712,8 @@ def test_exception_backlog_excludes_only_explicit_deferred_and_archived_state() 
 
 
 def test_threshold_mapping_rejects_typos_and_invalid_ratios() -> None:
+    with pytest.raises(TypeError, match="must be a JSON object"):
+        HealthThresholds.from_mapping([])
     with pytest.raises(ValueError, match="unknown health threshold"):
         HealthThresholds.from_mapping({"max_syn_age_hours": 1})
     with pytest.raises(ValueError, match="between zero and one"):

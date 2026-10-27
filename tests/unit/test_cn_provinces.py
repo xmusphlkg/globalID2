@@ -11,9 +11,11 @@ from src.data.crawlers.cn_province_adapters.registry import ADAPTERS
 from src.data.crawlers.cn_provinces import (
     DATACENTER_SOURCE_ID,
     MONTHLY_REPORT_SOURCE_ID,
+    MonthlyReportLink,
     ProvinceDataCenterCrawler,
     _antiword_tables,
     _attachment_suffix,
+    _normalize_narrative_report,
     _normalize_report_table,
     _resolve_report_disease,
     load_config,
@@ -49,11 +51,11 @@ def test_each_province_has_an_independent_adapter_module() -> None:
     assert "xinjiang" in modules
 
 
-def test_province_registry_covers_all_49_phsm_non_total_disease_categories() -> None:
+def test_province_registry_covers_phsm_categories_and_reviewed_monthly_additions() -> None:
     diseases = load_config()["diseases"]
 
-    assert len(diseases) == 49
-    assert len({item["code"] for item in diseases}) == 49
+    assert len(diseases) == 60
+    assert len({item["code"] for item in diseases}) == 60
     assert {item["code"] for item in diseases} >= {
         "viral_hepatitis",
         "hepatitis_d",
@@ -358,22 +360,63 @@ def test_both_sources_resolve_to_distinct_registered_series() -> None:
     assert report.observations[0]["series_code"] == "SER_CN_PROV_REPORT_HEPATITIS_A"
 
 
-def test_all_49_province_diseases_have_both_registered_source_series() -> None:
+def test_province_source_series_include_49_phsm_categories_and_monthly_additions() -> None:
     ontology = load_disease_ontology()
 
     center = ontology.series_lookup(source_id=DATACENTER_SOURCE_ID)
     report = ontology.series_lookup(source_id=MONTHLY_REPORT_SOURCE_ID)
 
     assert len(center) == 49
-    assert len(report) == 49
-    assert {item["local_codes"][0] for item in center} == {
-        item["local_codes"][0] for item in report
-    }
+    assert len(report) == 60
+    center_codes = {item["local_codes"][0] for item in center}
+    report_codes = {item["local_codes"][0] for item in report}
+    assert center_codes <= report_codes
+    assert {
+        "novel_influenza",
+        "sfts",
+        "chikungunya",
+        "mers",
+        "streptococcus_suis_human",
+        "ebola",
+        "zika",
+        "lassa_fever",
+        "clonorchiasis",
+        "acute_flaccid_paralysis",
+    } <= report_codes
     viral_hepatitis = next(
         item for item in center if item["local_codes"] == ["viral_hepatitis"]
     )
     assert viral_hepatitis["aggregation_policy"] == "reported_aggregate"
     assert viral_hepatitis["rollup_policy"] == "no_auto_rollup"
+
+
+def test_narrative_monthly_disease_values_respect_valid_from_date() -> None:
+    before_source_start = _normalize_narrative_report(
+        "发热伴血小板减少综合征病例数为发热伴血小板减少综合征（10例）",
+        link=MonthlyReportLink(
+            jurisdiction_code="CN-BJ",
+            report_date=date(2026, 3, 1),
+            title="2026年3月传染病报告",
+            url="https://example.cn/report",
+        ),
+        source_url="https://example.cn/report",
+        artifact_sha256="test",
+    )
+    after_source_start = _normalize_narrative_report(
+        "发热伴血小板减少综合征病例数为发热伴血小板减少综合征（10例）",
+        link=MonthlyReportLink(
+            jurisdiction_code="CN-BJ",
+            report_date=date(2026, 4, 1),
+            title="2026年4月传染病报告",
+            url="https://example.cn/report",
+        ),
+        source_url="https://example.cn/report",
+        artifact_sha256="test",
+    )
+
+    assert before_source_start == []
+    assert len(after_source_start) == 1
+    assert after_source_start[0]["SourceDiseaseCode"] == "sfts"
 
 
 @pytest.mark.asyncio

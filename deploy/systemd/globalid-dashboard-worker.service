@@ -20,10 +20,12 @@ RestartSec=10
 # lease. Do not turn that expected ownership race into a restart storm.
 RestartPreventExitStatus=75
 # Contain an accidental unbounded ORM/JSON allocation inside the worker
-# cgroup. Normal concurrent crawler + literature load stays well below the
-# soft limit; a hard-limit restart is recovered through persisted task leases.
-MemoryHigh=4G
-MemoryMax=6G
+# cgroup. A 39 GB host still needs room for Postgres and the API. The soft
+# limit used to be 8 GB, which throttled a normal site export while RAM was
+# free; 16 GB was still tight once download page cache was charged to the
+# cgroup. A hard-limit restart is recovered through persisted task leases.
+MemoryHigh=28G
+MemoryMax=32G
 # Long-running crawlers and literature syncs finish cooperatively after SIGTERM.
 # Keep this above the normal upper bound so a maintenance restart does not turn
 # a healthy idempotent task into a forced recovery.

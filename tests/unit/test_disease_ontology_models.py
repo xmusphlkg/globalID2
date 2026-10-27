@@ -7,7 +7,7 @@ from pathlib import Path
 
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy.dialects import postgresql
-from sqlalchemy.schema import CreateTable
+from sqlalchemy.schema import CreateIndex, CreateTable
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -17,6 +17,7 @@ from src.domain import (  # noqa: E402
     DiseaseConceptAssignment,
     DiseaseConceptRelation,
     DiseaseSeriesObservation,
+    DiseaseSeriesObservationRevision,
     DiseaseSourceAvailability,
     DiseaseSurveillanceSeries,
     DiseaseTaxonomyEdge,
@@ -286,6 +287,7 @@ def test_series_observation_identity_preserves_series_and_strata() -> None:
     index_columns = {
         index.name: tuple(column.name for column in index.columns)
         for index in DiseaseSeriesObservation.__table__.indexes
+        if all(getattr(column, "name", None) for column in index.columns)
     }
     assert index_columns["idx_disease_series_observation_series_time"] == (
         "series_code",
@@ -301,6 +303,47 @@ def test_series_observation_identity_preserves_series_and_strata() -> None:
         "dimension_key",
         "time",
     )
+    override = next(
+        index
+        for index in DiseaseSeriesObservation.__table__.indexes
+        if index.name == "idx_dso_mapping_override"
+    )
+    override_sql = str(CreateIndex(override).compile(dialect=postgresql.dialect()))
+    assert "source_disease_code" in override_sql
+    assert "source_disease_label" in override_sql
+    assert "local_code" in override_sql
+    assert "local_label" in override_sql
+
+
+def test_observation_revision_ledger_is_append_only_and_indexed_for_asof_reads() -> None:
+    constraint = next(
+        item
+        for item in DiseaseSeriesObservationRevision.__table__.constraints
+        if item.name == "uq_disease_series_observation_revision"
+    )
+    assert tuple(column.name for column in constraint.columns) == (
+        "time",
+        "series_code",
+        "geography_key",
+        "dimension_key",
+        "recorded_at",
+    )
+    assert DiseaseSeriesObservationRevision.__table__.c.recorded_at.nullable is False
+    assert DiseaseSeriesObservationRevision.__table__.c.raw_data.nullable is False
+    assert DiseaseSeriesObservationRevision.__table__.c.metadata.nullable is False
+    assert "published_at" not in DiseaseSeriesObservationRevision.__table__.c
+    assert any(
+        index.name == "idx_disease_series_observation_revision_asof"
+        and tuple(column.name for column in index.columns)
+        == (
+            "series_code",
+            "geography_key",
+            "dimension_key",
+            "time",
+            "recorded_at",
+        )
+        for index in DiseaseSeriesObservationRevision.__table__.indexes
+    )
 
 
 def test_all_ontology_tables_compile_for_postgresql() -> None:
@@ -312,6 +355,7 @@ def test_all_ontology_tables_compile_for_postgresql() -> None:
         DiseaseSurveillanceSeries,
         DiseaseSourceAvailability,
         DiseaseSeriesObservation,
+        DiseaseSeriesObservationRevision,
     ):
         ddl = str(CreateTable(model.__table__).compile(dialect=postgresql.dialect()))
         assert f"CREATE TABLE {model.__tablename__}" in ddl

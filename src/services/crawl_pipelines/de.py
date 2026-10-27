@@ -1,6 +1,7 @@
 """Germany RKI SurvStat weekly crawl orchestration."""
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
@@ -34,7 +35,7 @@ async def execute_de_pipeline(service, *, task, source, force, process, save_raw
         logger.warning("Could not create DE CrawlRun record: {}", exc)
     await task_manager.add_workbook_entry(task.task_uuid, entry_type="info", title="Phase 1/3: Fetching DE Source", content=f"Exporting national weekly RKI SurvStat CSV/ZIP sessions ({mode})...", content_type="text")
     await task_manager.update_task_progress(task.task_uuid, 15)
-    fetched = updater.refresh_source(source=source, force=force, weeks=weeks, save_raw=save_raw, raw_dir=raw_dir if save_raw else None)
+    fetched = await asyncio.to_thread(updater.refresh_source, source=source, force=force, weeks=weeks, save_raw=save_raw, raw_dir=raw_dir if save_raw else None)
     await task_manager.update_task_progress(task.task_uuid, 40)
     await task_manager.add_workbook_entry(task.task_uuid, entry_type="success", title="Phase 1/3 Complete", content=f"Source rows prepared: {len(fetched.rows)}\nSource latest date: {fetched.source_latest_date or 'none'}\nCurrent CSV: {fetched.source_csv}", content_type="text")
     if fetched.script_logs:

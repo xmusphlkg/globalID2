@@ -13,12 +13,14 @@ import multiprocessing
 import os
 from pathlib import Path
 import shutil
+import time
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from openpyxl import Workbook
 
 from src.services.disease_series_policy import is_case_count_series
+from src.services import disease_series_policy
 
 
 DOWNLOAD_FIELDS = [
@@ -159,19 +161,98 @@ def _read_cgroup_memory_limit_bytes(
 
 
 def _default_export_workers(cpu_count: int | None, memory_limit_bytes: int | None) -> int:
-    cpu_workers = min(4, max(1, cpu_count or 1))
+    """Scale partition workers by CPU and the cgroup memory guardrail.
+
+    Unknown memory stays at 4. A known limit keeps 1 worker through 4 GiB and
+    2 through 8 GiB. Above that, add one worker per 2 GiB, capped at 8, so a
+    16 GiB worker cgroup uses 6 cores while the parent still holds the curves.
+    """
+    cpus = max(1, cpu_count or 1)
     if not memory_limit_bytes:
-        return cpu_workers
+        return min(4, cpus)
 
     gib = 1024 * 1024 * 1024
     if memory_limit_bytes <= 4 * gib:
         return 1
     if memory_limit_bytes <= 8 * gib:
-        return min(cpu_workers, 2)
-    return cpu_workers
+        return min(2, cpus)
+    grown = 2 + (memory_limit_bytes - 8 * gib) // (2 * gib)
+    return min(cpus, grown, 8)
 
 
 DEFAULT_EXPORT_WORKERS = _default_export_workers(os.cpu_count(), _read_cgroup_memory_limit_bytes())
+
+
+def _projection_code_sha256() -> str:
+    """Invalidate dataset reuse whenever download projection rules change."""
+    digest = hashlib.sha256()
+    for source in (Path(__file__), Path(disease_series_policy.__file__)):
+        digest.update(source.read_bytes())
+    return digest.hexdigest()
+
+
+def _input_sha256(value: dict, *, projection_code: str, max_file_bytes: int) -> str:
+    stable = dict(value)
+    stable.pop("generated_at", None)
+    for key in ("country_data", "disease_data"):
+        if isinstance(stable.get(key), dict):
+            snapshot = dict(stable[key])
+            snapshot.pop("generated_at", None)
+            stable[key] = snapshot
+    digest = hashlib.sha256()
+    digest.update(projection_code.encode("ascii"))
+    digest.update(str(max_file_bytes).encode("ascii"))
+    encoder = json.JSONEncoder(
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    pending: list[str] = []
+    pending_chars = 0
+    for chunk in encoder.iterencode(stable):
+        pending.append(chunk)
+        pending_chars += len(chunk)
+        if pending_chars >= 64 * 1024:
+            digest.update("".join(pending).encode("utf-8"))
+            pending.clear()
+            pending_chars = 0
+    if pending:
+        digest.update("".join(pending).encode("utf-8"))
+    return digest.hexdigest()
+
+
+def _entry_files_available(
+    entry: dict,
+    output_dir: Path,
+    directory: str,
+    path_id: str,
+    *,
+    verify_hash: bool = True,
+) -> bool:
+    """Require every reused part to exist at its declared path and size.
+
+    Hash verification reads the file bytes. Callers that already know the
+    published curve is unchanged pass verify_hash=False and trust the size.
+    """
+    parts = entry.get("parts") or []
+    if not parts:
+        return False
+    prefix = f"{directory}/{path_id}/"
+    for part in parts:
+        files = part.get("files") or {}
+        if set(files) != set(PUBLIC_FORMATS):
+            return False
+        for file_meta in files.values():
+            relative = str(file_meta.get("relative_path") or "")
+            if not relative.startswith(prefix) or ".." in Path(relative).parts:
+                return False
+            path = output_dir / relative
+            if not path.is_file() or path.stat().st_size != file_meta.get("bytes"):
+                return False
+            if verify_hash and _file_sha256(path) != file_meta.get("sha256"):
+                return False
+    return True
 
 
 def _process_pool_context() -> multiprocessing.context.BaseContext:
@@ -929,6 +1010,8 @@ def build_direct_download_files(
     download_url_base: str,
     max_file_bytes: int = DEFAULT_TARGET_FILE_BYTES,
     workers: int | None = None,
+    changed_country_codes: set[str] | None = None,
+    changed_disease_ids: set[str] | None = None,
 ) -> dict:
     """Write deterministic CSV/JSON/XLSX partitions and return the manifest.
 
@@ -972,7 +1055,117 @@ def build_direct_download_files(
     }
     country_exports = context["country_exports"]
     disease_exports = context["disease_exports"]
-    task_count = len(country_exports) + len(disease_exports)
+    existing_country_entries = {
+        str(entry.get("id")): entry for entry in existing_manifest.get("countries") or []
+    }
+    existing_disease_entries = {
+        str(entry.get("disease_id")): entry for entry in existing_manifest.get("diseases") or []
+    }
+    projection_code = _projection_code_sha256()
+    country_fingerprints: dict[str, str] = {}
+    disease_fingerprints: dict[str, str] = {}
+    selected_country_codes = {str(code).strip().upper() for code in changed_country_codes or ()}
+    selected_disease_ids = {str(disease_id).strip() for disease_id in changed_disease_ids or ()}
+    requested_country_codes = set(selected_country_codes)
+    requested_disease_ids = set(selected_disease_ids)
+    fingerprint_started = time.perf_counter()
+    for index, item in enumerate(country_exports, start=1):
+        code = str(item["code"]).upper()
+        path_id = code.lower()
+        existing = existing_country_entries.get(path_id) or {}
+        if changed_country_codes is not None and code not in requested_country_codes:
+            if not _entry_files_available(
+                existing,
+                output_dir,
+                "countries",
+                path_id,
+                verify_hash=False,
+            ):
+                print(
+                    f"  Download files for unchanged country {code} are missing; "
+                    "left until its published curve changes",
+                    flush=True,
+                )
+            if index % 25 == 0 or index == len(country_exports):
+                print(
+                    f"  Download fingerprints: {index}/{len(country_exports)} countries",
+                    flush=True,
+                )
+            continue
+        available = _entry_files_available(existing, output_dir, "countries", path_id)
+        if changed_country_codes is None or not available:
+            fingerprint = _input_sha256(
+                {"country_data": item["country_data"], "source_info": item["source_info"]},
+                projection_code=projection_code,
+                max_file_bytes=max_file_bytes,
+            )
+            country_fingerprints[path_id] = fingerprint
+            if fingerprint != existing.get("input_sha256") or not available:
+                selected_country_codes.add(code)
+        if index % 25 == 0 or index == len(country_exports):
+            print(
+                f"  Download fingerprints: {index}/{len(country_exports)} countries",
+                flush=True,
+            )
+    for index, item in enumerate(disease_exports, start=1):
+        disease_id = str(item["disease_id"])
+        path_id = disease_id.lower()
+        existing = existing_disease_entries.get(disease_id) or {}
+        if changed_disease_ids is not None and disease_id not in requested_disease_ids:
+            if not _entry_files_available(
+                existing,
+                output_dir,
+                "diseases",
+                path_id,
+                verify_hash=False,
+            ):
+                print(
+                    f"  Download files for unchanged disease {disease_id} are missing; "
+                    "left until a published curve for it changes",
+                    flush=True,
+                )
+            if index % 25 == 0 or index == len(disease_exports):
+                print(
+                    f"  Download fingerprints: {index}/{len(disease_exports)} diseases",
+                    flush=True,
+                )
+            continue
+        available = _entry_files_available(existing, output_dir, "diseases", path_id)
+        if changed_disease_ids is None or not available:
+            country_codes = (item["disease_data"].get("country_series") or {}).keys()
+            fingerprint = _input_sha256(
+                {
+                    "disease_data": item["disease_data"],
+                    "country_sources": {code: context["country_sources_by_code"].get(code) for code in country_codes},
+                    "country_names": {code: country_names.get(code) for code in country_codes},
+                },
+                projection_code=projection_code,
+                max_file_bytes=max_file_bytes,
+            )
+            disease_fingerprints[disease_id] = fingerprint
+            if fingerprint != existing.get("input_sha256") or not available:
+                selected_disease_ids.add(disease_id)
+        if index % 25 == 0 or index == len(disease_exports):
+            print(
+                f"  Download fingerprints: {index}/{len(disease_exports)} diseases",
+                flush=True,
+            )
+    print(
+        "  Download fingerprint checks took "
+        f"{time.perf_counter() - fingerprint_started:.1f}s",
+        flush=True,
+    )
+    selected_country_exports = [
+        item for item in country_exports if item["code"].upper() in selected_country_codes
+    ]
+    selected_disease_exports = [
+        item for item in disease_exports if item["disease_id"] in selected_disease_ids
+    ]
+    tasks: list[tuple[str, dict]] = [
+        *[("country", item) for item in selected_country_exports],
+        *[("disease", item) for item in selected_disease_exports],
+    ]
+    task_count = len(tasks)
     worker_count = min(max(1, workers or DEFAULT_EXPORT_WORKERS), max(1, task_count))
     results_by_index: dict[int, dict] = {}
 
@@ -989,8 +1182,9 @@ def build_direct_download_files(
                 nonlocal next_index
                 index = next_index
                 next_index += 1
-                if index < len(country_exports):
-                    country_export = country_exports[index]
+                kind, item = tasks[index]
+                if kind == "country":
+                    country_export = item
                     path_id = country_export["code"].lower()
                     future = executor.submit(
                         _build_country_parts_task,
@@ -1001,7 +1195,7 @@ def build_direct_download_files(
                         existing_country_parts.get(path_id, {}),
                     )
                 else:
-                    disease_export = disease_exports[index - len(country_exports)]
+                    disease_export = item
                     future = executor.submit(
                         _build_disease_parts_task,
                         disease_export,
@@ -1017,16 +1211,34 @@ def build_direct_download_files(
             while next_index < task_count and len(pending) < max_pending:
                 submit_next()
 
+            completed_count = 0
             while pending:
-                done, _ = wait(pending, return_when=FIRST_COMPLETED)
+                done, _ = wait(pending, timeout=60, return_when=FIRST_COMPLETED)
+                if not done:
+                    active = [
+                        f"{tasks[index][0]}:{tasks[index][1].get('code') or tasks[index][1].get('disease_id')}"
+                        for index in pending.values()
+                    ]
+                    print(
+                        f"  Download partitions: {completed_count}/{task_count} datasets complete; "
+                        f"waiting for {', '.join(active)}",
+                        flush=True,
+                    )
+                    continue
                 for future in done:
                     index = pending.pop(future)
                     results_by_index[index] = future.result()
+                    completed_count += 1
                     if next_index < task_count:
                         submit_next()
+                if completed_count % 25 < len(done) or completed_count == task_count:
+                    print(
+                        f"  Download partitions: {completed_count}/{task_count} datasets complete",
+                        flush=True,
+                    )
 
-    country_entries: list[dict] = []
-    disease_entries: list[dict] = []
+    processed_country_results: dict[str, dict] = {}
+    processed_disease_results: dict[str, dict] = {}
     changed_files = 0
     for index in range(task_count):
         result = results_by_index[index]
@@ -1035,22 +1247,90 @@ def build_direct_download_files(
         expected_paths.update(result["paths"])
         changed_files += result["changed"]
         if kind == "country":
-            entry = dict(country_entries_by_id[dataset["path_id"]])
-            entry.update(
-                {
-                    "record_count": result["row_count"],
-                    **result["provenance_counts"],
-                    "includes_series_provenance": True,
-                    "parts": result["parts"],
-                    "source_info": result["source_info"],
-                }
-            )
-            country_entries.append(entry)
+            processed_country_results[dataset["path_id"]] = result
             continue
+        processed_disease_results[dataset["dataset_id"]] = result
 
+    def reuse_existing_entry(entry: dict) -> dict:
+        reused = dict(entry)
+        reused["generated_at"] = generated_at
+        for part in (entry or {}).get("parts") or []:
+            for file_meta in (part.get("files") or {}).values():
+                relative_path = str(file_meta.get("relative_path") or "")
+                if relative_path:
+                    expected_paths.add(output_dir / relative_path)
+                    file_meta["url"] = _download_url(
+                        download_url_base,
+                        relative_path,
+                    )
+        return reused
+
+    country_entries: list[dict] = []
+    for country_export in country_exports:
+        path_id = country_export["code"].lower()
+        result = processed_country_results.get(path_id)
+        if result is None:
+            entry = existing_manifest.get("countries") or []
+            existing_entry = next(
+                (item for item in entry if item.get("id") == path_id),
+                None,
+            )
+            if existing_entry is None:
+                raise RuntimeError(
+                    f"Incremental download manifest is missing country {path_id}"
+                )
+            country_entries.append(reuse_existing_entry(existing_entry))
+            continue
+        dataset = result["dataset"]
+        entry = dict(country_entries_by_id[dataset["path_id"]])
+        entry.update(
+            {
+                "input_sha256": country_fingerprints.get(dataset["path_id"]) or _input_sha256(
+                    {"country_data": country_export["country_data"], "source_info": country_export["source_info"]},
+                    projection_code=projection_code,
+                    max_file_bytes=max_file_bytes,
+                ),
+                "record_count": result["row_count"],
+                **result["provenance_counts"],
+                "includes_series_provenance": True,
+                "parts": result["parts"],
+                "source_info": result["source_info"],
+            }
+        )
+        country_entries.append(entry)
+
+    disease_entries: list[dict] = []
+    for disease_export in disease_exports:
+        disease_id = disease_export["disease_id"]
+        result = processed_disease_results.get(disease_id)
+        if result is None:
+            existing_entry = next(
+                (
+                    item
+                    for item in (existing_manifest.get("diseases") or [])
+                    if item.get("disease_id") == disease_id
+                ),
+                None,
+            )
+            if existing_entry is None:
+                raise RuntimeError(
+                    f"Incremental download manifest is missing disease {disease_id}"
+                )
+            disease_entries.append(reuse_existing_entry(existing_entry))
+            continue
+        dataset = result["dataset"]
         entry = dict(disease_entries_by_id[dataset["dataset_id"]])
         entry.update(
             {
+                "input_sha256": disease_fingerprints.get(disease_id) or _input_sha256(
+                    {
+                        "disease_data": disease_export["disease_data"],
+                        "country_sources": {code: context["country_sources_by_code"].get(code) for code in result["country_codes"]},
+                        "country_names": {code: country_names.get(code) for code in result["country_codes"]},
+                    },
+                    projection_code=projection_code,
+                    max_file_bytes=max_file_bytes,
+                ),
                 "record_count": result["row_count"],
                 **result["provenance_counts"],
                 "includes_series_provenance": True,

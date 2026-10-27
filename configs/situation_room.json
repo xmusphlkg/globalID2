@@ -9,7 +9,7 @@
     "strong_q": 0.01,
     "fdr_method": "benjamini_hochberg",
     "fdr_family": "detector_tier_metric_type_cadence",
-    "maximum_analysis_workers": 4,
+    "maximum_analysis_workers": 2,
     "detectors": {
       "multi_horizon": {
         "enabled": true,

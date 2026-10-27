@@ -110,7 +110,7 @@ def validate_public_research_payload(payload: dict[str, Any]) -> list[str]:
         ai_review = byline.get("ai_review")
         valid_reviewer = project_weekly_editorial_review(reviewer)
         if isinstance(reviewer, dict) and set(reviewer) - {
-            "name", "role", "reviewed_at", "institution", "note_en", "note_zh",
+            "name", "role", "reviewed_at", "institution", "note_en", "note_zh", "note_fr",
         }:
             blockers.append(f"weekly brief reviewer exports non-public fields: {brief.get('week')}")
         if status == "editorially_reviewed" and valid_reviewer is None:

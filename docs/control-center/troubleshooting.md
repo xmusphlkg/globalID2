@@ -1,5 +1,22 @@
 # Troubleshooting
 
+## Local launcher reports that the API port is already in use
+
+The dashboard launcher fails closed when another application owns the API
+port; it must not silently attach the control panel to an unrelated service.
+Choose an unused API port and keep the browser on the usual dashboard port:
+
+```bash
+GLOBALID_API_PORT=18000 GLOBALID_DASHBOARD_PORT=3000 ./scripts/dashboard.sh start
+GLOBALID_API_PORT=18000 GLOBALID_DASHBOARD_PORT=3000 ./scripts/dashboard.sh status
+```
+
+The launcher passes the selected API port to the Next.js same-origin proxy, so
+no change to `dashboard/.env.local` is needed. If the conflict is unexpected,
+inspect the owner first with `ss -ltnp` and stop only the process belonging to
+the other application. Do not run the shell launcher and the systemd stack at
+the same time.
+
 ## Runtime reports a missing service
 
 Run `./scripts/dashboard.sh status` and inspect the corresponding log. A heartbeat expires after 45 seconds. If the process is running but absent, verify `REDIS_URL`, Redis reachability, and clock sanity. The task list continues polling when event streaming is unavailable.

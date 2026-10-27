@@ -277,6 +277,7 @@ class LiteratureService:
     async def execute_task(self, task: Task) -> dict[str, Any]:
         cfg = self._config()
         result = await LiteraturePipeline(cfg).execute(task)
+        result["new_article_enrichment"] = await self._enqueue_new_article_enrichment(result)
         catch_up_required = bool(result.get("source_truncated"))
         result["catch_up_required"] = int(catch_up_required)
         result["catch_up_scheduled"] = 0
@@ -288,12 +289,8 @@ class LiteratureService:
             getattr(cfg, "catch_up_max_exception_backlog", 500)
         )
         max_records = int(getattr(cfg, "max_records_per_run", 300))
-        # Catch-up is allowed only when observed + one worst-case batch is
-        # strictly below the hard limit. This is the exact resume boundary,
-        # surfaced so an operator does not have to reverse-engineer ``>=``.
-        result["catch_up_resume_below_backlog"] = (
-            result["catch_up_backlog_limit"] - max_records
-        )
+        # Editorial review volume remains visible, while each metadata sync
+        # stays bounded by max_records_per_run.
         scheduled_trigger = bool((task.input_data or {}).get("scheduled_trigger"))
         if not catch_up_required:
             return result
@@ -323,24 +320,13 @@ class LiteratureService:
         projected_upper_bound = backlog_count + max_records
         result["catch_up_backlog_projected_upper_bound"] = projected_upper_bound
         if projected_upper_bound >= backlog_limit:
-            result["catch_up_paused_backpressure"] = 1
-            result["catch_up_backpressure_reason"] = "exception_backlog_headroom_exhausted"
-            result["catch_up_status"] = "paused_backpressure"
-            result["catch_up_next_action_code"] = (
-                "reduce_exception_backlog_below_resume_threshold"
-            )
-            result["catch_up_required_backlog_reduction"] = max(
-                0,
-                backlog_count - result["catch_up_resume_below_backlog"] + 1,
-            )
+            result["catch_up_review_backlog_high"] = 1
             logger.info(
-                "Research Radar catch-up paused by backpressure backlog_count={} projected_upper_bound={} limit={} resume_below={}",
+                "Research Radar catch-up continuing with review backlog_count={} projected_upper_bound={} threshold={}",
                 backlog_count,
                 projected_upper_bound,
                 backlog_limit,
-                result["catch_up_resume_below_backlog"],
             )
-            return result
         now = datetime.now(ZoneInfo(cfg.timezone))
         next_run_at = now + timedelta(
             minutes=getattr(cfg, "catch_up_interval_minutes", 5)
@@ -385,6 +371,76 @@ class LiteratureService:
                 "Research Radar catch-up could not confirm a durable earlier schedule"
             )
         return result
+
+    async def _enqueue_new_article_enrichment(self, result: dict[str, Any]) -> dict[str, Any]:
+        """Queue summaries for articles inserted by the just-finished sync.
+
+        The regular enrichment scheduler remains responsible for backlog and
+        retry work.  This targeted hand-off makes a newly discovered article
+        eligible for English canonical generation and French translation as
+        soon as its ingest transaction commits, without making the source sync
+        wait for model calls.
+        """
+        cfg = self._config()
+        raw_ids = result.get("inserted_article_ids") or []
+        article_ids = list(dict.fromkeys(str(value) for value in raw_ids if value))
+        base: dict[str, Any] = {
+            "status": "not_required",
+            "selected_articles": len(article_ids),
+            "languages": [],
+            "task_uuid": None,
+        }
+        if not article_ids:
+            base["reason"] = "no_new_articles"
+            return base
+        if not getattr(cfg, "ai_enrichment_enabled", False):
+            base["status"] = "disabled"
+            base["reason"] = "ai_enrichment_disabled"
+            return base
+        if not getattr(cfg, "ai_enrichment_auto_on_ingest", True):
+            base["status"] = "disabled"
+            base["reason"] = "auto_on_ingest_disabled"
+            return base
+
+        configured = getattr(cfg, "ai_enrichment_languages", None) or ["en", "zh", "fr"]
+        languages = list(dict.fromkeys(
+            str(value).strip().lower()
+            for value in configured
+            if str(value).strip().lower() in {"en", "zh", "fr"}
+        ))
+        # Translations use English as their semantic contract.  Add both
+        # languages even when a legacy environment still lists only en/zh.
+        languages = ["en", *[value for value in languages if value != "en"]]
+        if "fr" not in languages:
+            languages.append("fr")
+        base["languages"] = languages
+        try:
+            queued = await self.trigger_enrichment(
+                article_ids=article_ids,
+                languages=languages,
+                limit=min(
+                    len(article_ids),
+                    max(1, int(getattr(cfg, "ai_enrichment_batch_size", 50))),
+                ),
+                manual=False,
+            )
+        except Exception as exc:
+            base["status"] = "failed"
+            base["reason"] = type(exc).__name__ or "Exception"
+            logger.warning(
+                "Research Radar new-article French enrichment could not be queued error_type={}",
+                type(exc).__name__ or "Exception",
+            )
+            return base
+        base["task_uuid"] = queued.get("task_uuid")
+        base["status"] = (
+            "queued"
+            if queued.get("status") == "queued"
+            else str(queued.get("status") or "skipped")
+        )
+        if queued.get("reason"):
+            base["reason"] = queued["reason"]
+        return base
 
     async def trigger_enrichment(
         self,
@@ -511,6 +567,7 @@ class LiteratureService:
                     preferred_models=list((task.input_data or {}).get("preferred_models") or []),
                     timeout_seconds=cfg.weekly_ai_review_timeout_seconds,
                     max_attempts=cfg.weekly_ai_review_max_attempts,
+                    recheck_after_hours=getattr(cfg, "weekly_ai_review_recheck_hours", 6),
                     apply=True,
                 )
                 if output["weekly_ai_review"]["counts"]["failed"]:
@@ -777,10 +834,6 @@ class LiteratureService:
                     "catch_up_max_exception_backlog",
                     None,
                 ),
-                "catch_up_resume_below_backlog": (
-                    getattr(cfg, "catch_up_max_exception_backlog", 500)
-                    - cfg.max_records_per_run
-                ),
                 "catch_up_required": bool(
                     (latest.output_data or {}).get("catch_up_required")
                     if latest is not None and isinstance(latest.output_data, dict)
@@ -843,6 +896,16 @@ class LiteratureService:
                 "source": "Model Center evidence agent",
                 "batch_size": cfg.ai_enrichment_batch_size,
                 "languages": cfg.ai_enrichment_languages,
+                "translation_queue": (
+                    ((latest_enrichment.output_data or {}).get("summaries") or {}).get("translation_queue")
+                    if latest_enrichment is not None and isinstance(latest_enrichment.output_data, dict)
+                    else None
+                ),
+                "language_counts": (
+                    ((latest_enrichment.output_data or {}).get("summaries") or {}).get("language_counts")
+                    if latest_enrichment is not None and isinstance(latest_enrichment.output_data, dict)
+                    else None
+                ),
                 "catch_up_interval_minutes": getattr(
                     cfg,
                     "ai_enrichment_catch_up_interval_minutes",

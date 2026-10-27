@@ -34,7 +34,10 @@ def _run_astro_build() -> subprocess.CompletedProcess[str]:
             check=False,
             capture_output=True,
             text=True,
-            timeout=180,
+            # The French locale doubles the static route surface; keep this
+            # deterministic build budget above the production-sized snapshot
+            # render time on shared CI runners.
+            timeout=300,
         )
 
     completed = invoke()

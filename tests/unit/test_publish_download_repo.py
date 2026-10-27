@@ -95,6 +95,42 @@ def test_incremental_sync_copies_only_changed_partition(tmp_path):
     assert third["copied"] == 4  # three current files plus manifest
 
 
+def test_incremental_sync_does_not_compare_unchanged_asset_bytes(tmp_path, monkeypatch):
+    source = tmp_path / "source"
+    checkout = tmp_path / "checkout"
+    source.mkdir()
+    checkout.mkdir()
+    _write_source(source)
+    sync_managed_assets(source, checkout)
+
+    def manifest_only(source_path, target_path):
+        assert source_path.name == target_path.name == "manifest.json"
+        return True
+
+    monkeypatch.setattr("scripts.publish_download_repo.files_match", manifest_only)
+    assert sync_managed_assets(source, checkout) == {"copied": 0, "removed": 0}
+
+
+def test_incremental_sync_restores_missing_file_and_checks_changed_content(tmp_path):
+    source = tmp_path / "source"
+    checkout = tmp_path / "checkout"
+    source.mkdir()
+    checkout.mkdir()
+    _write_source(source)
+    sync_managed_assets(source, checkout)
+    target = checkout / "diseases/d007/2026-2029.csv"
+    target.unlink()
+    assert sync_managed_assets(source, checkout) == {"copied": 1, "removed": 0}
+
+    original = target.read_bytes()
+    _write_source(source, payload=b"revised current partition")
+    changed = source / "diseases/d007/2026-2029.csv"
+    changed.write_bytes(b"x" * changed.stat().st_size)
+    with pytest.raises(RuntimeError, match="Manifest checksum mismatch"):
+        sync_managed_assets(source, checkout)
+    assert target.read_bytes() == original
+
+
 def test_ensure_repo_switches_a_stale_checkout_to_divergent_remote_branch(tmp_path):
     remote = tmp_path / "remote.git"
     seed = tmp_path / "seed"

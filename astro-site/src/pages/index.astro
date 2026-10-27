@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PublicHomeRedesign from '../components/public/PublicHomeRedesign.astro';
-const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' };
+const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
 ---
 
@@ -9,7 +9,7 @@ const zh = locale === 'zh';
   title={zh ? '全球传染病监测' : 'Global Infectious Disease Surveillance'}
   description={zh ? '浏览官方来源的传染病监测数据、当前态势报告、趋势和可下载数据集。' : 'Explore official-source infectious disease surveillance data, current situation reports, trends, and downloadable datasets.'}
   initialLanguage={locale}
-  seo={{ title: zh ? '全球传染病监测 | GIDS' : 'Global Infectious Disease Surveillance | GIDS', description: zh ? '浏览官方来源的传染病监测数据、当前态势报告、趋势和可下载数据集。' : 'Explore official-source infectious disease surveillance data, current situation reports, trends, and downloadable datasets.', locale, canonicalPath: zh ? '/zh/' : '/', alternatePaths: { en: '/', zh: '/zh/' } }}
+  seo={{ title: zh ? '全球传染病监测 | GIDS' : locale === 'fr' ? 'Surveillance mondiale des maladies infectieuses | GIDS' : 'Global Infectious Disease Surveillance | GIDS', description: zh ? '浏览官方来源的传染病监测数据、当前态势报告、趋势和可下载数据集。' : locale === 'fr' ? 'Explorez les données officielles de surveillance, les tendances et les jeux de données téléchargeables.' : 'Explore official-source infectious disease surveillance data, current situation reports, trends, and downloadable datasets.', locale, canonicalPath: zh ? '/zh/' : locale === 'fr' ? '/fr/' : '/', alternatePaths: { en: '/', zh: '/zh/', fr: '/fr/' } }}
 >
   <PublicHomeRedesign locale={locale} />
 </BaseLayout>

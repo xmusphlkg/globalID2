@@ -17,6 +17,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -61,11 +62,15 @@ class LiteratureArticle(BaseModel):
     publication_status: Mapped[str] = mapped_column(String(40), nullable=False, default="review")
     is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     source_payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    source_payload_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    source_payload_compacted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     metadata_ = mapped_column("metadata", JSON, nullable=False, default=dict)
 
     __table_args__ = (
         Index("idx_literature_article_published", "published_at"),
         Index("idx_literature_article_status", "publication_status"),
+        Index("idx_literature_article_status_id", "publication_status", "id"),
+        Index("idx_literature_article_payload_version_id", "source_payload_version", "id"),
         Index("idx_literature_article_discovery", "discovery_score"),
         Index("idx_literature_article_integrity", "integrity_status"),
     )
@@ -147,6 +152,7 @@ class LiteratureSummary(BaseModel):
     __table_args__ = (
         UniqueConstraint("article_id", "language", name="uq_literature_summary_language"),
         Index("idx_literature_summary_status", "status"),
+        Index("idx_literature_summary_status_id", "status", "id"),
     )
 
 
@@ -174,7 +180,11 @@ class LiteratureIngestRun(BaseModel):
     # later pruned. Recovery always matches this exact value; it never guesses
     # ownership from timestamps.
     task_uuid: Mapped[Optional[str]] = mapped_column(String(36))
-    source: Mapped[str] = mapped_column(String(80), nullable=False)
+    # Source labels are composed from all enabled providers and fallback
+    # markers (for example ``crossref-unavailable``). Keep enough room for
+    # future providers without allowing a persistence failure to mask a
+    # partially successful ingest.
+    source: Mapped[str] = mapped_column(String(256), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="running")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

@@ -48,6 +48,7 @@ export interface AIModelItem {
   api_style: string | null;
   temperature: number | null;
   max_tokens: number | null;
+  runtime_max_concurrency: number | null;
   extra_params: Record<string, unknown>;
   is_enabled: boolean;
   is_default: boolean;
@@ -122,6 +123,20 @@ export interface AIRuntimeRoute {
   runtime_model_inflight: number;
 }
 
+export interface AIModelCallLogItem {
+  id: number;
+  request_id: string;
+  model_key: string;
+  model_name: string;
+  provider_key: string;
+  agent_name: string;
+  status: "success" | "failed";
+  latency_ms: number;
+  error_type: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
 export interface ProviderPayload {
   provider_key: string;
   provider_name: string;
@@ -158,6 +173,7 @@ export interface ModelPayload {
   api_style?: string | null;
   temperature?: number | null;
   max_tokens?: number | null;
+  runtime_max_concurrency?: number | null;
   extra_params?: Record<string, unknown>;
   is_enabled?: boolean;
   is_default?: boolean;
@@ -170,6 +186,7 @@ export interface ModelUpdatePayload {
   api_style?: string | null;
   temperature?: number | null;
   max_tokens?: number | null;
+  runtime_max_concurrency?: number | null;
   extra_params?: Record<string, unknown>;
   is_enabled?: boolean;
   is_default?: boolean;
@@ -218,6 +235,16 @@ export function useAIRuntimeRoutes() {
   });
 }
 
+export function useAIModelCallLogs(enabled = true) {
+  return useQuery<AIModelCallLogItem[]>({
+    queryKey: ["ai-model-call-logs"],
+    queryFn: () => apiFetch("/ai/models/call-logs?page=1&page_size=100"),
+    enabled,
+    staleTime: 5 * 1000,
+    refetchInterval: enabled ? 15 * 1000 : false,
+  });
+}
+
 export function useCreateAIProvider() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -237,6 +264,10 @@ export function useUpdateAIProvider() {
       apiFetch(`/ai/models/providers/${encodeURIComponent(providerKey)}`, {
         method: "PUT",
         body: JSON.stringify(payload),
+        // Saving is local, but a busy API/DB during a provider refresh can
+        // exceed the generic 10s UI timeout. Testing/discovery have their own
+        // longer timeouts below; keep the save request bounded but forgiving.
+        timeoutMs: 30_000,
       }),
     onSuccess: () => invalidateAIModelQueries(queryClient),
   });

@@ -22,10 +22,15 @@ from src.core.data_share import (
     get_data_share_repo_branch,
     get_data_share_repo_url,
 )
+from src.core.country_library import expand_country_scopes
 from src.core.task_manager import task_manager
-from src.domain import DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
+from src.domain import Country, DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
 from src.services.data_release import checks as release_checks
 from src.services.data_release import pipeline as release_pipeline
+from src.services.data_release.public_changelog import (
+    missing_public_changelog_versions,
+    public_changelog_blocker,
+)
 from src.services.data_release.commands import (
     build_cloudflare_deploy_command,
     build_generate_site_data_command,
@@ -54,6 +59,7 @@ except ImportError:  # pragma: no cover - python-dotenv is part of project requi
 
 logger = get_logger(__name__)
 
+
 ROOT_DIR = Path(__file__).resolve().parents[2]
 ASTRO_DIR = ROOT_DIR / "astro-site"
 ENV_PATH = ROOT_DIR / ".env"
@@ -76,10 +82,20 @@ SITE_RELEASE_MANIFEST = ASTRO_DIR / "dist" / "release.json"
 SITE_VISUAL_MODULE_PREFIXES = (
     "ChartFrame.",
     "ComparisonTable.",
+    "CompareWorkspace.",
+    "CountrySeasonalityPicker.",
     "DiseaseCountryCurve.",
+    "DiseaseCoverageMap.",
     "DiseaseHeatmap.",
-    "DiseaseMonthlyBar.",
+    "DiseaseSeasonalityHeatmap.",
     "EpidemicCurve.",
+)
+# These files are atomically maintained by background quality automation and
+# are part of the generated public-data snapshot, not source code.  They must
+# not make an otherwise valid unattended release fail its clean-worktree gate.
+# Keep this list deliberately narrow: unknown tracked changes remain blocking.
+RELEASE_RUNTIME_MUTABLE_PATHS = (
+    "configs/literature/weekly_ai_reviews.json",
 )
 AUTO_RELEASE_TASK_TYPES = (
     TaskType.CRAWL_DATA,
@@ -99,11 +115,19 @@ SUBSCRIPTION_SYNC_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 SUBSCRIPTION_SYNC_STRICT_VALUES = {"1", "true", "yes", "on", "required", "strict", "force"}
 LOGGED_COMMAND_CANCEL_POLL_SECONDS = 1.0
 DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS = 15 * 60
-GENERATE_SITE_DATA_TIMEOUT_SECONDS = 30 * 60
-ASTRO_BUILD_TIMEOUT_SECONDS = 15 * 60
+# A complete export can revalidate several gigabytes of partitioned downloads.
+# Allow the full catalogue to finish under the worker's bounded memory budget.
+GENERATE_SITE_DATA_TIMEOUT_SECONDS = 2 * 60 * 60
+# The multilingual static site now renders thousands of country/disease pages.
+# Keep the build guard finite, but allow a full production render to finish on
+# memory-constrained release workers instead of aborting at the legacy 15 min.
+ASTRO_BUILD_TIMEOUT_SECONDS = 60 * 60
 CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS = 15 * 60
 SUBSCRIPTION_SYNC_TIMEOUT_SECONDS = 10 * 60
-DOWNLOAD_PUBLISH_TIMEOUT_SECONDS = 15 * 60
+# The initial partitioned download publication can introduce tens of thousands
+# of files and a multi-gigabyte Git pack. Keep this bounded, while giving the
+# first full sync enough time to upload after the raw archive is published.
+DOWNLOAD_PUBLISH_TIMEOUT_SECONDS = 60 * 60
 DOWNLOAD_REPO_BRANCH = get_data_share_repo_branch()
 DIRECT_DOWNLOAD_DIR = ROOT_DIR / "exports" / "site-downloads"
 
@@ -804,8 +828,79 @@ class DataReleaseService:
         download_repo_url = self._download_repo_url()
         download_url_base = self._download_repo_raw_base(job)
         raw_archive = self._raw_archive_runtime()
+        incremental_country_codes: list[str] = []
+        available_country_codes: list[str] = []
+        incremental_site = False
+        async with get_database() as db:
+            if trigger_task_uuid:
+                trigger_task = await db.execute(
+                    select(Task).where(Task.task_uuid == trigger_task_uuid)
+                )
+                trigger_task = trigger_task.scalar_one_or_none()
+                incremental_site = bool(
+                    trigger_task
+                    and trigger_task.task_type in LITERATURE_RELEASE_TASK_TYPES
+                    and (ASTRO_DIR / "src" / "data" / "meta.json").is_file()
+                    and (DIRECT_DOWNLOAD_DIR / "manifest.json").is_file()
+                )
+                trigger_input = dict(
+                    (trigger_task.input_data if trigger_task else None) or {}
+                )
+                trigger_country = str(
+                    trigger_input.get("country")
+                    or trigger_input.get("country_code")
+                    or ""
+                ).strip().upper()
+                if trigger_country:
+                    incremental_country_codes = [trigger_country]
+            elif manual:
+                # A manual control-panel refresh should still be incremental
+                # when it follows one or more completed country crawls. If no
+                # crawl happened since the last release, keep the safe full
+                # refresh behavior for code/configuration changes.
+                latest_release = (
+                    await db.execute(
+                        select(Task.completed_at)
+                        .where(
+                            Task.task_type == TaskType.EXPORT_DATA,
+                            Task.status == TaskStatus.COMPLETED,
+                            Task.completed_at.is_not(None),
+                        )
+                        .order_by(Task.completed_at.desc())
+                        .limit(1)
+                    )
+                ).scalar_one_or_none()
+                crawl_query = select(Task).where(
+                    Task.task_type == TaskType.CRAWL_DATA,
+                    Task.status == TaskStatus.COMPLETED,
+                )
+                if latest_release is not None:
+                    crawl_query = crawl_query.where(
+                        Task.completed_at > latest_release
+                    )
+                crawl_tasks = (
+                    await db.execute(
+                        crawl_query.order_by(Task.completed_at.asc())
+                    )
+                ).scalars().all()
+                for crawl_task in crawl_tasks:
+                    crawl_input = dict(crawl_task.input_data or {})
+                    country = str(
+                        crawl_input.get("country")
+                        or crawl_input.get("country_code")
+                        or ""
+                    ).strip().upper()
+                    if country and country not in incremental_country_codes:
+                        incremental_country_codes.append(country)
+            if incremental_country_codes:
+                available_country_codes = list(
+                    (await db.execute(select(Country.code))).scalars().all()
+                )
+        incremental_country_codes = expand_country_scopes(
+            incremental_country_codes, available_codes=available_country_codes
+        )
         description_parts = [
-            f"Generate site data and build Astro site for release job {job.job_id}.",
+            f"Refresh and generate site data, then build Astro site for release job {job.job_id}.",
             (
                 f"Incrementally archive raw crawler data to {raw_archive.branch}."
                 if raw_archive.enabled
@@ -836,6 +931,8 @@ class DataReleaseService:
             "timezone": job.timezone or self._config().timezone,
             "trigger": trigger,
             "manual_trigger": manual,
+            "incremental_country_codes": incremental_country_codes,
+            "incremental_site": incremental_site,
             "trigger_task_uuid": trigger_task_uuid,
             "generated_paths": list(GENERATED_DATA_PATHS),
             "raw_archive_enabled": raw_archive.enabled,
@@ -981,7 +1078,14 @@ class DataReleaseService:
             },
             "blockers": [],
         }
-        worktree = await self._git_status_paths()
+        worktree_all = await self._git_status_paths()
+        worktree = release_checks.release_blocking_worktree_paths(
+            worktree_all,
+            runtime_mutable_paths=RELEASE_RUNTIME_MUTABLE_PATHS,
+        )
+        runtime_mutable_worktree = [
+            path for path in worktree_all if path not in worktree
+        ]
         tracked_generated_paths = await self._tracked_generated_paths()
 
         python_path = self._python_executable()
@@ -1036,6 +1140,19 @@ class DataReleaseService:
                 "Generated data is still tracked by the code repository: "
                 + ", ".join(tracked_generated_paths)
             )
+        try:
+            missing_changelog_versions = missing_public_changelog_versions(
+                markdown_path=ROOT_DIR / "CHANGELOG.md",
+                typescript_path=ASTRO_DIR / "src" / "data" / "changelog.ts",
+            )
+        except OSError as exc:
+            blockers.append(
+                "Public changelog could not be compared with CHANGELOG.md: "
+                f"{exc}"
+            )
+        else:
+            if missing_changelog_versions:
+                blockers.append(public_changelog_blocker(missing_changelog_versions))
 
         return {
             "checked_at": datetime.now(ZoneInfo("UTC")).isoformat(),
@@ -1052,7 +1169,9 @@ class DataReleaseService:
                 "write_check_output": download_repo["payload"]["write_check_output"],
                 "ssh_transport": download_repo["payload"].get("ssh_transport"),
                 "require_clean_worktree": job.require_clean_worktree,
+                "dirty_paths": worktree_all,
                 "dirty_blocking_paths": worktree,
+                "dirty_runtime_mutable_paths": runtime_mutable_worktree,
             },
             "cloudflare": cloudflare["payload"],
             "raw_archive": raw_archive["payload"],
@@ -1066,6 +1185,7 @@ class DataReleaseService:
                 "generated_paths": list(GENERATED_DATA_PATHS),
                 "tracked_paths": tracked_generated_paths,
                 "enforced": not tracked_generated_paths,
+                "runtime_mutable_paths": list(RELEASE_RUNTIME_MUTABLE_PATHS),
             },
         }
 
@@ -1282,6 +1402,9 @@ class DataReleaseService:
             "source_branch": source_branch or "detached",
             "source_commit": source_commit or "unknown",
             "deployment_branch": deployment_branch,
+            # Keep the provenance flag truthful: runtime-mutated registries do
+            # not block the release, but they are still changes relative to
+            # the source commit and must be surfaced to the deployment system.
             "commit_dirty": bool(await self._git_status_paths()),
         }
 
@@ -1328,10 +1451,14 @@ class DataReleaseService:
         *,
         python_path: Path,
         download_url_base: str,
+        incremental_country_codes: list[str] | tuple[str, ...] | None = None,
+        incremental_site: bool = False,
     ) -> list[str]:
         return build_generate_site_data_command(
             python_path=python_path,
             download_url_base=download_url_base,
+            incremental_country_codes=incremental_country_codes,
+            incremental_site=incremental_site,
         )
 
     def _update_situation_room_command(self, *, python_path: Path) -> list[str]:

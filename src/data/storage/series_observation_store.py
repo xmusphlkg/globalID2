@@ -10,13 +10,14 @@ from dataclasses import dataclass, field as dataclass_field
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Iterable, Mapping
 
-from sqlalchemy import and_, case, or_, select
+from sqlalchemy import and_, case, func, or_, select, tuple_, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
 from src.domain import (
     DiseaseSeriesObservation,
+    DiseaseSeriesObservationRevision,
     DiseaseSurveillanceSeries,
     SourceDiseaseCategory,
 )
@@ -29,6 +30,286 @@ _QUALITY_MODES = {"off", "report", "quarantine", "fail_closed"}
 _REGISTRY_COVERAGE_MODES = {"auto", "required", "legacy_only"}
 _SEVERITY_RANK = {"info": 0, "warning": 1, "error": 2, "critical": 3}
 _UNMAPPED_GROUP_CODE = "G_UNMAPPED_SOURCE_CATEGORIES"
+
+
+def _holding_series_measure_profile(
+    row: Mapping[str, Any], *, country_code: str, source_id: str
+) -> tuple[str, str, str]:
+    """Preserve Japan IDWR all-case versus sentinel reporting in holding series."""
+
+    measure = _first_text(row, "Measure", "measure") or "case_notifications"
+    basis = _first_text(row, "ReportingBasis", "reporting_basis") or "notification"
+    frequency = _first_text(row, "Frequency", "frequency") or "unknown"
+    if country_code.upper() == "JP" and source_id == "SRC_JP_NIID":
+        surveillance_type = (_first_text(row, "SurveillanceType") or "").casefold()
+        if surveillance_type == "sentinel":
+            measure, basis = "sentinel_case_notifications", "sentinel_surveillance"
+        elif surveillance_type == "all_case":
+            measure, basis = "case_notifications", "notification"
+        if _first_text(row, "MMWRYear") and _first_text(row, "MMWRWeek"):
+            frequency = "weekly"
+    return measure, basis, frequency
+
+
+def _holding_series_code(
+    country_code: str, category_key: str, surveillance_type: str | None = None
+) -> str:
+    """Stable holding code. Typed siblings keep the legacy code for one type."""
+
+    material = category_key if not surveillance_type else f"{category_key}|{surveillance_type}"
+    digest = hashlib.sha256(material.encode()).hexdigest()[:28]
+    prefix = country_code.upper().replace("-", "_")
+    return f"HOLD_{prefix}_{digest}"
+
+
+def _jp_surveillance_type(row: Mapping[str, Any]) -> str:
+    return (_first_text(dict(row), "SurveillanceType") or "").casefold()
+
+
+def _bind_legacy_jp_surveillance_type(metadata_type: str, counts: Mapping[str, int]) -> str:
+    """Keep an untyped legacy series on the stored majority, preferring all-case ties."""
+
+    stamped = metadata_type.casefold()
+    if stamped in {"all_case", "sentinel"}:
+        return stamped
+    if counts.get("sentinel", 0) > counts.get("all_case", 0):
+        return "sentinel"
+    return "all_case"
+
+
+def _stamp_jp_holding_series(
+    series: DiseaseSurveillanceSeries,
+    row: Mapping[str, Any],
+    *,
+    country_code: str,
+    source_id: str,
+    surveillance_type: str,
+) -> None:
+    measure, basis, frequency = _holding_series_measure_profile(
+        row, country_code=country_code, source_id=source_id
+    )
+    series.metric_type = measure
+    series.reporting_basis = basis
+    series.temporal_granularity = frequency
+    series.metadata_ = {
+        **(series.metadata_ or {}),
+        "surveillance_type": surveillance_type,
+    }
+
+
+def _new_dynamic_holding_series(
+    *,
+    series_code: str,
+    category: SourceDiseaseCategory,
+    country_code: str,
+    row: Mapping[str, Any],
+    measure: str,
+    reporting_basis: str,
+    frequency: str,
+    surveillance_type: str = "",
+) -> DiseaseSurveillanceSeries:
+    source_series_code = category.source_code
+    if len(source_series_code) > 240:
+        source_series_code = (
+            source_series_code[:210]
+            + ":"
+            + hashlib.sha256(source_series_code.encode()).hexdigest()[:24]
+        )
+    metadata: dict[str, Any] = {
+        "dynamic_holding": True,
+        "source_category_id": category.id,
+        "category_key": category.category_key,
+    }
+    if surveillance_type:
+        metadata["surveillance_type"] = surveillance_type
+    return DiseaseSurveillanceSeries(
+        series_code=series_code,
+        disease_id=None,
+        target_group_code=_UNMAPPED_GROUP_CODE,
+        country_code=country_code.upper(),
+        source_system=category.source_id,
+        source_series_code=source_series_code,
+        source_label=category.canonical_source_label,
+        definition_version=category.definition_version,
+        case_definition=category.source_definition,
+        case_definition_uri=category.source_definition_uri,
+        metric_type=measure,
+        reporting_basis=reporting_basis,
+        temporal_granularity=frequency,
+        unit=_first_text(dict(row), "Unit", "unit") or "count",
+        mapping_relation="unmapped",
+        comparability="not_comparable",
+        aggregation_policy="non_additive",
+        availability_status="active",
+        missing_value_policy="missing_is_unknown",
+        is_active=True,
+        metadata_=metadata,
+    )
+
+
+def _json_surveillance_type(column):
+    return func.lower(column["SurveillanceType"].as_string())
+
+
+_REVISION_KEY_COLUMNS = ("time", "series_code", "geography_key", "dimension_key")
+_REVISION_STATE_COLUMNS = (
+    "value",
+    "unit",
+    "suppressed",
+    "suppression_reason",
+    "quality_status",
+    "dimensions",
+    "raw_data",
+    "metadata",
+)
+_REVISION_COMPARISON_COLUMNS = (
+    "value",
+    "unit",
+    "suppressed",
+    "suppression_reason",
+    "quality_status",
+    "dimensions",
+)
+
+
+def _revision_identity(row: Mapping[str, Any]) -> tuple[Any, ...]:
+    return tuple(
+        _as_utc(row[key]) if key == "time" else row[key]
+        for key in _REVISION_KEY_COLUMNS
+    )
+
+
+def _revision_state(row: Mapping[str, Any]) -> str:
+    # Retrieval timestamps and raw artifact locations may change on a routine
+    # refresh. Preserve them in snapshots, but only create a new value revision
+    # when the reported observation or its interpretation actually changes.
+    state = {key: row.get(key) for key in _REVISION_COMPARISON_COLUMNS}
+    return json.dumps(state, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _revision_snapshot(row: Mapping[str, Any], recorded_at: datetime) -> dict[str, Any]:
+    snapshot = {
+        key: (_as_utc(row[key]) if key == "time" else row[key])
+        for key in _REVISION_KEY_COLUMNS
+    }
+    snapshot.update({key: row.get(key) for key in _REVISION_STATE_COLUMNS})
+    snapshot["recorded_at"] = _as_utc(recorded_at)
+    return snapshot
+
+
+async def _persist_observation_revisions(
+    db: AsyncSession,
+    observations: list[dict[str, Any]],
+    *,
+    recorded_at: datetime,
+    seed_current_state: bool,
+) -> int:
+    """Seed legacy current rows once, then append only changed accepted states."""
+    # Each identity expands to four bind parameters in both lookup queries,
+    # and each revision insert expands to all snapshot columns. Large source
+    # refreshes must keep both statements within PostgreSQL/asyncpg limits.
+    inserted = 0
+    for offset in range(0, len(observations), _WRITE_BATCH_SIZE):
+        inserted += await _persist_observation_revisions_batch(
+            db,
+            observations[offset : offset + _WRITE_BATCH_SIZE],
+            recorded_at=recorded_at,
+            seed_current_state=seed_current_state,
+        )
+    return inserted
+
+
+async def _persist_observation_revisions_batch(
+    db: AsyncSession,
+    observations: list[dict[str, Any]],
+    *,
+    recorded_at: datetime,
+    seed_current_state: bool,
+) -> int:
+    if not observations:
+        return 0
+    keys = list(dict.fromkeys(_revision_identity(row) for row in observations))
+    current_result = await db.execute(
+        select(
+            DiseaseSeriesObservation.time,
+            DiseaseSeriesObservation.series_code,
+            DiseaseSeriesObservation.geography_key,
+            DiseaseSeriesObservation.dimension_key,
+            DiseaseSeriesObservation.value,
+            DiseaseSeriesObservation.unit,
+            DiseaseSeriesObservation.suppressed,
+            DiseaseSeriesObservation.suppression_reason,
+            DiseaseSeriesObservation.quality_status,
+            DiseaseSeriesObservation.dimensions,
+            DiseaseSeriesObservation.raw_data,
+            DiseaseSeriesObservation.metadata_.label("metadata"),
+            DiseaseSeriesObservation.created_at,
+            DiseaseSeriesObservation.updated_at,
+        ).where(
+            tuple_(
+                DiseaseSeriesObservation.time,
+                DiseaseSeriesObservation.series_code,
+                DiseaseSeriesObservation.geography_key,
+                DiseaseSeriesObservation.dimension_key,
+            ).in_(keys)
+        )
+    )
+    current = [dict(row) for row in current_result.mappings().all()]
+    if not current:
+        return 0
+
+    history_result = await db.execute(
+        select(
+            DiseaseSeriesObservationRevision.time,
+            DiseaseSeriesObservationRevision.series_code,
+            DiseaseSeriesObservationRevision.geography_key,
+            DiseaseSeriesObservationRevision.dimension_key,
+            DiseaseSeriesObservationRevision.recorded_at,
+            DiseaseSeriesObservationRevision.value,
+            DiseaseSeriesObservationRevision.unit,
+            DiseaseSeriesObservationRevision.suppressed,
+            DiseaseSeriesObservationRevision.suppression_reason,
+            DiseaseSeriesObservationRevision.quality_status,
+            DiseaseSeriesObservationRevision.dimensions,
+            DiseaseSeriesObservationRevision.raw_data,
+            DiseaseSeriesObservationRevision.metadata_.label("metadata"),
+        )
+        .where(
+            tuple_(
+                DiseaseSeriesObservationRevision.time,
+                DiseaseSeriesObservationRevision.series_code,
+                DiseaseSeriesObservationRevision.geography_key,
+                DiseaseSeriesObservationRevision.dimension_key,
+            ).in_(keys)
+        )
+        .order_by(DiseaseSeriesObservationRevision.recorded_at.desc())
+    )
+    revisions = [dict(row) for row in history_result.mappings().all()]
+
+    inserts: list[dict[str, Any]] = []
+    if seed_current_state:
+        known = {_revision_identity(row) for row in revisions}
+        for row in current:
+            if _revision_identity(row) not in known:
+                timestamp = row.get("updated_at") or row.get("created_at") or recorded_at
+                inserts.append(_revision_snapshot(row, timestamp))
+    else:
+        latest: dict[tuple[Any, ...], Mapping[str, Any]] = {}
+        for row in revisions:
+            latest.setdefault(_revision_identity(row), row)
+        for row in current:
+            previous = latest.get(_revision_identity(row))
+            if previous is None or _revision_state(previous) != _revision_state(row):
+                inserts.append(_revision_snapshot(row, recorded_at))
+
+    if not inserts:
+        return 0
+    statement = pg_insert(DiseaseSeriesObservationRevision.__table__)
+    statement = statement.on_conflict_do_nothing(
+        constraint="uq_disease_series_observation_revision"
+    ).returning(DiseaseSeriesObservationRevision.time)
+    result = await db.execute(statement, inserts)
+    return len(result.scalars().all())
 
 
 @dataclass(frozen=True)
@@ -230,6 +511,9 @@ class SeriesObservationStore:
 
     def __init__(self, ontology: DiseaseOntology | None = None) -> None:
         self.ontology = ontology or load_disease_ontology()
+        # The ontology is immutable for this store's lifetime. Many locations
+        # and months share a source identity; resolve it once per batch/store.
+        self._resolved_series_cache: dict[tuple, list[dict[str, Any]]] = {}
 
     def enrich_registry_identities(
         self,
@@ -327,6 +611,10 @@ class SeriesObservationStore:
         skipped_unregistered = 0
         skipped_missing = 0
         for row in rows:
+            source_missing = (
+                str(row.get("MissingValueStatus") or "").strip().lower()
+                == "source_missing"
+            )
             label = _first_text(
                 row,
                 "RawDiseaseLabel",
@@ -357,8 +645,9 @@ class SeriesObservationStore:
                 continue
             raw_value = row.get(value_field)
             if raw_value is None or not str(raw_value).strip():
-                skipped_missing += 1
-                continue
+                if not source_missing:
+                    skipped_missing += 1
+                    continue
             selected.append(row)
         return RegistryRowSelection(
             rows=selected,
@@ -385,7 +674,13 @@ class SeriesObservationStore:
         for row in rows:
             report_time = _parse_report_time(row)
             value, suppressed = _parse_value(row.get(value_field))
-            if report_time is None or (value is None and not suppressed):
+            source_missing = (
+                str(row.get("MissingValueStatus") or "").strip().lower()
+                == "source_missing"
+            )
+            if report_time is None or (
+                value is None and not suppressed and not source_missing
+            ):
                 skipped_invalid += 1
                 continue
 
@@ -468,6 +763,9 @@ class SeriesObservationStore:
                         row, "PopulationScope", "population_scope"
                     ),
                     "authoritative_revision": _allows_authoritative_revision(row),
+                    "missing_value_status": (
+                        "source_missing" if source_missing else None
+                    ),
                     "allow_equal_quality_overwrite": (
                         _allows_equal_quality_overwrite(row)
                     ),
@@ -615,13 +913,20 @@ class SeriesObservationStore:
         # rolls back both stores instead of leaving a partially imported batch.
         self.enforce_quality(quality_report, policy)
 
+        revision_time = datetime.now(timezone.utc)
+        await _persist_observation_revisions(
+            db,
+            observations,
+            recorded_at=revision_time,
+            seed_current_state=True,
+        )
         affected_rows = 0
         for offset in range(0, len(observations), _WRITE_BATCH_SIZE):
             batch = observations[offset : offset + _WRITE_BATCH_SIZE]
             # Build the insert against the underlying table.  Passing the ORM
             # class here makes SQLAlchemy interpret the physical ``metadata``
             # column as DeclarativeBase.metadata, which breaks bulk inserts.
-            statement = pg_insert(DiseaseSeriesObservation.__table__).values(batch)
+            statement = pg_insert(DiseaseSeriesObservation.__table__)
             existing_quality_rank = case(
                 (DiseaseSeriesObservation.quality_status == "final", 4),
                 (DiseaseSeriesObservation.quality_status == "revised", 3),
@@ -670,8 +975,15 @@ class SeriesObservationStore:
                     == "true",
                 ),
             ).returning(DiseaseSeriesObservation.series_code)
-            write_result = await db.execute(statement)
+            write_result = await db.execute(statement, batch)
             affected_rows += len(write_result.scalars().all())
+
+        await _persist_observation_revisions(
+            db,
+            observations,
+            recorded_at=revision_time,
+            seed_current_state=False,
+        )
 
         return SeriesObservationSaveResult(
             upserted=affected_rows,
@@ -682,6 +994,250 @@ class SeriesObservationStore:
             quality_report=quality_report,
             holding_observations=len(holding_observations),
         )
+
+    def _jp_mixed_holding_profiles(
+        self,
+        rows: list[dict[str, Any]],
+        country_code: str,
+        source_id: str | Mapping[str, str] | None,
+        value_field: str,
+    ) -> dict[tuple, dict[str, dict[str, Any]]]:
+        """Find JP categories whose current batch contains both surveillance types.
+
+        The scan is in memory. A single-type batch must not issue an extra query.
+        """
+
+        if country_code.upper() != "JP":
+            return {}
+        profiles: dict[tuple, dict[str, dict[str, Any]]] = {}
+        for row in rows:
+            label = _first_text(
+                row,
+                "RawDiseaseLabel",
+                "Disease",
+                "DiseasesCN",
+                "Diseases",
+                "local_label",
+            )
+            local_code = _first_text(
+                row,
+                "SourceDiseaseCode",
+                "source_disease_code",
+                "DiseaseCode",
+                "local_code",
+                "Diseases",
+            )
+            resolved_source = _source_id_for_row(row, source_id)
+            if resolved_source != "SRC_JP_NIID":
+                continue
+            surveillance_type = _jp_surveillance_type(row)
+            if surveillance_type not in {"all_case", "sentinel"}:
+                continue
+            if self._resolve_series(
+                country_code=country_code,
+                source_id=resolved_source,
+                local_code=local_code,
+                local_label=label,
+            ):
+                continue
+            report_time = _parse_report_time(row)
+            value, suppressed = _parse_value(row.get(value_field))
+            source_missing = (
+                str(row.get("MissingValueStatus") or "").strip().lower()
+                == "source_missing"
+            )
+            if (
+                report_time is None
+                or (value is None and not suppressed and not source_missing)
+                or not resolved_source
+            ):
+                continue
+            source_code = local_code or (
+                "label:"
+                + hashlib.sha256(_normalized_identity(label).encode()).hexdigest()[:20]
+            )
+            definition_version = (
+                _first_text(row, "DefinitionVersion", "definition_version")
+                or "source-current"
+            )
+            identity = (resolved_source, source_code, definition_version)
+            profiles.setdefault(identity, {}).setdefault(surveillance_type, row)
+        return {
+            identity: by_type
+            for identity, by_type in profiles.items()
+            if {"all_case", "sentinel"} <= set(by_type)
+        }
+
+    async def _load_holding_series(
+        self, db: AsyncSession, series_code: str
+    ) -> DiseaseSurveillanceSeries | None:
+        return (
+            await db.execute(
+                select(DiseaseSurveillanceSeries).where(
+                    DiseaseSurveillanceSeries.series_code == series_code
+                )
+            )
+        ).scalar_one_or_none()
+
+    async def _stored_jp_surveillance_counts(
+        self, db: AsyncSession, series_code: str
+    ) -> dict[str, int]:
+        type_expr = _json_surveillance_type(DiseaseSeriesObservation.raw_data)
+        rows = (
+            await db.execute(
+                select(type_expr, func.count())
+                .where(DiseaseSeriesObservation.series_code == series_code)
+                .group_by(type_expr)
+            )
+        ).all()
+        counts: dict[str, int] = {}
+        for label, count in rows:
+            key = str(label or "").casefold()
+            if key in {"all_case", "sentinel"}:
+                counts[key] = counts.get(key, 0) + int(count)
+        return counts
+
+    async def _relocate_jp_surveillance_rows(
+        self,
+        db: AsyncSession,
+        *,
+        legacy_code: str,
+        sibling_code: str,
+        surveillance_type: str,
+    ) -> None:
+        """Move stored rows of one surveillance type onto the sibling series.
+
+        The sibling series is flushed first so the series_code foreign key holds.
+        Incoming rows are written later in this same transaction.
+        """
+
+        observation_type = _json_surveillance_type(DiseaseSeriesObservation.raw_data)
+        await db.execute(
+            update(DiseaseSeriesObservation)
+            .where(
+                DiseaseSeriesObservation.series_code == legacy_code,
+                observation_type == surveillance_type,
+            )
+            .values(series_code=sibling_code)
+        )
+        revision_type = _json_surveillance_type(
+            DiseaseSeriesObservationRevision.raw_data
+        )
+        await db.execute(
+            update(DiseaseSeriesObservationRevision)
+            .where(
+                DiseaseSeriesObservationRevision.series_code == legacy_code,
+                revision_type == surveillance_type,
+            )
+            .values(series_code=sibling_code)
+        )
+
+    async def _assign_jp_split_holding_series(
+        self,
+        db: AsyncSession,
+        *,
+        category: SourceDiseaseCategory,
+        country_code: str,
+        source_id: str,
+        surveillance_type: str,
+        profile_rows: Mapping[str, Mapping[str, Any]],
+        splits: dict[int, dict[str, Any]],
+    ) -> DiseaseSurveillanceSeries:
+        """Route one mixed JP category without letting row order claim the legacy code."""
+
+        split = splits.get(category.id)
+        if split is None:
+            legacy_code = _holding_series_code(country_code, category.category_key)
+            legacy = await self._load_holding_series(db, legacy_code)
+            metadata_type = ""
+            counts: dict[str, int] = {}
+            if legacy is not None:
+                metadata_type = str(
+                    (legacy.metadata_ or {}).get("surveillance_type") or ""
+                )
+                counts = await self._stored_jp_surveillance_counts(
+                    db, legacy.series_code
+                )
+            bound_type = _bind_legacy_jp_surveillance_type(metadata_type, counts)
+            bound_row = profile_rows[bound_type]
+            if legacy is None:
+                measure, basis, frequency = _holding_series_measure_profile(
+                    bound_row, country_code=country_code, source_id=source_id
+                )
+                legacy = _new_dynamic_holding_series(
+                    series_code=legacy_code,
+                    category=category,
+                    country_code=country_code,
+                    row=bound_row,
+                    measure=measure,
+                    reporting_basis=basis,
+                    frequency=frequency,
+                    surveillance_type=bound_type,
+                )
+                db.add(legacy)
+                await db.flush()
+            else:
+                _stamp_jp_holding_series(
+                    legacy,
+                    bound_row,
+                    country_code=country_code,
+                    source_id=source_id,
+                    surveillance_type=bound_type,
+                )
+            split = {
+                "bound_type": bound_type,
+                "legacy": legacy,
+                "by_type": {bound_type: legacy},
+                "counts": counts,
+                "relocated": set(),
+            }
+            splits[category.id] = split
+
+        cached = split["by_type"].get(surveillance_type)
+        if cached is not None:
+            return cached
+        sibling_code = _holding_series_code(
+            country_code, category.category_key, surveillance_type
+        )
+        series = await self._load_holding_series(db, sibling_code)
+        profile = profile_rows[surveillance_type]
+        if series is None:
+            measure, basis, frequency = _holding_series_measure_profile(
+                profile, country_code=country_code, source_id=source_id
+            )
+            series = _new_dynamic_holding_series(
+                series_code=sibling_code,
+                category=category,
+                country_code=country_code,
+                row=profile,
+                measure=measure,
+                reporting_basis=basis,
+                frequency=frequency,
+                surveillance_type=surveillance_type,
+            )
+            db.add(series)
+            await db.flush()
+        else:
+            _stamp_jp_holding_series(
+                series,
+                profile,
+                country_code=country_code,
+                source_id=source_id,
+                surveillance_type=surveillance_type,
+            )
+        split["by_type"][surveillance_type] = series
+        if (
+            surveillance_type not in split["relocated"]
+            and split["counts"].get(surveillance_type, 0) > 0
+        ):
+            await self._relocate_jp_surveillance_rows(
+                db,
+                legacy_code=split["legacy"].series_code,
+                sibling_code=series.series_code,
+                surveillance_type=surveillance_type,
+            )
+            split["relocated"].add(surveillance_type)
+        return series
 
     async def _build_holding_observations(
         self,
@@ -705,6 +1261,11 @@ class SeriesObservationStore:
         observations: list[dict[str, Any]] = []
         observation_by_key: dict[tuple[object, ...], dict[str, Any]] = {}
         series_by_category: dict[int, DiseaseSurveillanceSeries] = {}
+        categories_by_identity: dict[tuple, SourceDiseaseCategory | None] = {}
+        jp_profiles = self._jp_mixed_holding_profiles(
+            rows, country_code, source_id, value_field
+        )
+        jp_splits: dict[int, dict[str, Any]] = {}
         handled = 0
 
         for row in rows:
@@ -736,7 +1297,15 @@ class SeriesObservationStore:
 
             report_time = _parse_report_time(row)
             value, suppressed = _parse_value(row.get(value_field))
-            if report_time is None or (value is None and not suppressed) or not resolved_source:
+            source_missing = (
+                str(row.get("MissingValueStatus") or "").strip().lower()
+                == "source_missing"
+            )
+            if (
+                report_time is None
+                or (value is None and not suppressed and not source_missing)
+                or not resolved_source
+            ):
                 continue
 
             source_code = local_code or (
@@ -747,75 +1316,84 @@ class SeriesObservationStore:
                 _first_text(row, "DefinitionVersion", "definition_version")
                 or "source-current"
             )
-            category = (
-                await db.execute(
-                    select(SourceDiseaseCategory).where(
-                        SourceDiseaseCategory.source_id == resolved_source,
-                        SourceDiseaseCategory.source_code == source_code,
-                        SourceDiseaseCategory.definition_version == definition_version,
-                        SourceDiseaseCategory.is_active.is_(True),
-                    )
-                )
-            ).scalar_one_or_none()
-            if category is None:
-                continue
-
-            series = series_by_category.get(category.id)
-            if series is None:
-                digest = hashlib.sha256(category.category_key.encode()).hexdigest()[:28]
-                series_code = f"HOLD_{country_code.upper().replace('-', '_')}_{digest}"
-                series = (
+            category_identity = (resolved_source, source_code, definition_version)
+            if category_identity not in categories_by_identity:
+                categories_by_identity[category_identity] = (
                     await db.execute(
-                        select(DiseaseSurveillanceSeries).where(
-                            DiseaseSurveillanceSeries.series_code == series_code
+                        select(SourceDiseaseCategory).where(
+                            SourceDiseaseCategory.source_id == resolved_source,
+                            SourceDiseaseCategory.source_code == source_code,
+                            SourceDiseaseCategory.definition_version == definition_version,
+                            SourceDiseaseCategory.is_active.is_(True),
                         )
                     )
                 ).scalar_one_or_none()
+            category = categories_by_identity[category_identity]
+            if category is None:
+                continue
+
+            measure, reporting_basis, frequency = _holding_series_measure_profile(
+                row, country_code=country_code, source_id=resolved_source
+            )
+            surveillance_type = (_first_text(row, "SurveillanceType") or "").casefold()
+            if (
+                category_identity in jp_profiles
+                and surveillance_type in {"all_case", "sentinel"}
+            ):
+                series = await self._assign_jp_split_holding_series(
+                    db,
+                    category=category,
+                    country_code=country_code,
+                    source_id=resolved_source,
+                    surveillance_type=surveillance_type,
+                    profile_rows=jp_profiles[category_identity],
+                    splits=jp_splits,
+                )
+            else:
+                series = series_by_category.get(category.id)
                 if series is None:
-                    source_series_code = category.source_code
-                    if len(source_series_code) > 240:
-                        source_series_code = (
-                            source_series_code[:210]
-                            + ":"
-                            + hashlib.sha256(source_series_code.encode()).hexdigest()[:24]
-                        )
-                    series = DiseaseSurveillanceSeries(
-                        series_code=series_code,
-                        disease_id=None,
-                        target_group_code=_UNMAPPED_GROUP_CODE,
-                        country_code=country_code.upper(),
-                        source_system=category.source_id,
-                        source_series_code=source_series_code,
-                        source_label=category.canonical_source_label,
-                        definition_version=category.definition_version,
-                        case_definition=category.source_definition,
-                        case_definition_uri=category.source_definition_uri,
-                        metric_type=_first_text(row, "Measure", "measure")
-                        or "case_notifications",
-                        reporting_basis=_first_text(
-                            row, "ReportingBasis", "reporting_basis"
-                        )
-                        or "notification",
-                        temporal_granularity=_first_text(
-                            row, "Frequency", "frequency"
-                        )
-                        or "unknown",
-                        unit=_first_text(row, "Unit", "unit") or "count",
-                        mapping_relation="unmapped",
-                        comparability="not_comparable",
-                        aggregation_policy="non_additive",
-                        availability_status="active",
-                        missing_value_policy="missing_is_unknown",
-                        is_active=True,
-                        metadata_={
-                            "dynamic_holding": True,
-                            "source_category_id": category.id,
-                            "category_key": category.category_key,
-                        },
+                    series_code = _holding_series_code(
+                        country_code, category.category_key
                     )
-                    db.add(series)
-                    await db.flush()
-                series_by_category[category.id] = series
+                    series = await self._load_holding_series(db, series_code)
+                    if series is None:
+                        series = _new_dynamic_holding_series(
+                            series_code=series_code,
+                            category=category,
+                            country_code=country_code,
+                            row=row,
+                            measure=measure,
+                            reporting_basis=reporting_basis,
+                            frequency=frequency,
+                            surveillance_type=surveillance_type,
+                        )
+                        db.add(series)
+                        await db.flush()
+                    series_by_category[category.id] = series
+
+                if (
+                    country_code.upper() == "JP"
+                    and resolved_source == "SRC_JP_NIID"
+                    and surveillance_type in {"all_case", "sentinel"}
+                    and (series.metadata_ or {}).get("dynamic_holding") is True
+                ):
+                    prior_type = str(
+                        (series.metadata_ or {}).get("surveillance_type") or ""
+                    ).casefold()
+                    if prior_type and prior_type != surveillance_type:
+                        raise ValueError(
+                            "Japan IDWR surveillance type changed within one holding "
+                            f"series: {series.series_code} ({prior_type} -> {surveillance_type})"
+                        )
+                    # Existing HOLD rows were created before the source's
+                    # SurveillanceType field was reflected in series metadata.
+                    _stamp_jp_holding_series(
+                        series,
+                        row,
+                        country_code=country_code,
+                        source_id=resolved_source,
+                        surveillance_type=surveillance_type,
+                    )
 
             dimensions = _parse_dimensions(row.get("Dimensions") or row.get("dimensions"))
             if dimensions is None:
@@ -849,6 +1427,9 @@ class SeriesObservationStore:
                     ),
                     "authoritative_revision": _allows_authoritative_revision(row),
                     "allow_equal_quality_overwrite": _allows_equal_quality_overwrite(row),
+                    "missing_value_status": (
+                        "source_missing" if source_missing else None
+                    ),
                 },
             }
             identity = (
@@ -998,6 +1579,9 @@ class SeriesObservationStore:
         local_code: str | None,
         local_label: str | None,
     ) -> list[dict[str, Any]]:
+        cache_key = (country_code, source_id, local_code, local_label)
+        if cache_key in self._resolved_series_cache:
+            return self._resolved_series_cache[cache_key]
         filters = {
             "country_code": country_code,
             "source_id": source_id,
@@ -1008,6 +1592,7 @@ class SeriesObservationStore:
             **{key: value for key, value in filters.items() if value}
         )
         if isinstance(matches, list) and matches:
+            self._resolved_series_cache[cache_key] = matches
             return matches
 
         # Some source extracts omit one side of their code/label pair.  Retry
@@ -1024,7 +1609,9 @@ class SeriesObservationStore:
             if isinstance(fallback, list):
                 for item in fallback:
                     candidates[item["id"]] = item
-        return [candidates[key] for key in sorted(candidates)]
+        resolved = [candidates[key] for key in sorted(candidates)]
+        self._resolved_series_cache[cache_key] = resolved
+        return resolved
 
 
 def _mapping_coverage_issues(
@@ -1827,10 +2414,20 @@ def _geography_key(
         }:
             expected = "country:US:national"
         else:
-            raise ValueError(
-                "Unsupported SRC_US_NNDSS ReportingArea; expected TOTAL or "
-                f"US RESIDENTS, received {reporting_area!r}"
-            )
+            jurisdiction = (
+                _first_text(row, "JurisdictionCode", "jurisdiction_code") or ""
+            ).upper()
+            expected = f"country:{jurisdiction}:national"
+            if (
+                not re.fullmatch(r"US-[A-Z]{2}", jurisdiction)
+                or not reporting_area
+                or explicit != expected
+            ):
+                raise ValueError(
+                    "Unsupported SRC_US_NNDSS ReportingArea; expected TOTAL, "
+                    "US RESIDENTS, or a state/territory row with an explicit "
+                    f"jurisdiction GeographyKey, received {reporting_area!r}"
+                )
         if explicit and explicit != expected:
             raise ValueError(
                 "Explicit geography_key conflicts with SRC_US_NNDSS "

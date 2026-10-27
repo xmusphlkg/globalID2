@@ -35,6 +35,22 @@ REPORT_TIME_UTC = time(hour=12)
 NNDSS_REVISION_LOOKBACK_WEEKS = 8
 NNDSS_MAPPING_SOURCE_ID = "SRC_US_NNDSS"
 NHSS_MAPPING_SOURCE_ID = "SRC_US_NHSS"
+US_STATE_CODES = {
+    "alabama": "AL", "alaska": "AK", "arizona": "AZ", "arkansas": "AR", "california": "CA",
+    "colorado": "CO", "connecticut": "CT", "delaware": "DE", "district of columbia": "DC",
+    "florida": "FL", "georgia": "GA", "hawaii": "HI", "idaho": "ID", "illinois": "IL",
+    "indiana": "IN", "iowa": "IA", "kansas": "KS", "kentucky": "KY", "louisiana": "LA",
+    "maine": "ME", "maryland": "MD", "massachusetts": "MA", "michigan": "MI", "minnesota": "MN",
+    "mississippi": "MS", "missouri": "MO", "montana": "MT", "nebraska": "NE", "nevada": "NV",
+    "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY",
+    "north carolina": "NC", "north dakota": "ND", "ohio": "OH", "oklahoma": "OK", "oregon": "OR",
+    "pennsylvania": "PA", "rhode island": "RI", "south carolina": "SC", "south dakota": "SD",
+    "tennessee": "TN", "texas": "TX", "utah": "UT", "vermont": "VT", "virginia": "VA",
+    "washington": "WA", "west virginia": "WV", "wisconsin": "WI", "wyoming": "WY",
+    "american samoa": "AS", "commonwealth of northern mariana islands": "MP",
+    "northern mariana islands": "MP", "guam": "GU", "puerto rico": "PR",
+    "u.s. virgin islands": "VI", "us virgin islands": "VI",
+}
 
 
 
@@ -73,6 +89,9 @@ def _canonical_nndss_reporting_area(value: object) -> Optional[str]:
         "united states residents",
     }:
         return NNDSS_US_RESIDENTS_REPORTING_AREA
+    code = US_STATE_CODES.get(normalized)
+    if code:
+        return f"US-{code}"
     return None
 
 
@@ -136,8 +155,11 @@ def _build_normalized_record(
     source_file: str,
 ) -> Optional[Dict[str, str]]:
     reporting_area = _first_value(row, "Reporting Area", "states")
+    filter_text = _normalize_text(reporting_area_filter).casefold()
     canonical_filter = _canonical_nndss_reporting_area(reporting_area_filter)
-    if canonical_filter is None:
+    if canonical_filter is None and filter_text.startswith("us-"):
+        canonical_filter = filter_text.upper()
+    if canonical_filter is None and filter_text != "subdivisions" and not filter_text.startswith("us-"):
         raise ValueError(
             f"Unsupported NNDSS reporting-area filter: {reporting_area_filter!r}"
         )
@@ -147,7 +169,10 @@ def _build_normalized_record(
             "Unsupported NNDSS ReportingArea; expected TOTAL or a known "
             f"US-resident alias, received {reporting_area!r}"
         )
-    if canonical_reporting_area != canonical_filter:
+    if filter_text == "subdivisions":
+        if not (canonical_reporting_area or "").startswith("US-"):
+            return None
+    elif canonical_reporting_area != canonical_filter:
         return None
 
     year_text = _first_value(row, "Current MMWR Year", "year")
@@ -163,22 +188,55 @@ def _build_normalized_record(
     except ValueError:
         return None
 
+    is_subdivision = (canonical_reporting_area or "").startswith("US-")
     population_scope = (
+        "reporting_jurisdiction"
+        if is_subdivision
+        else (
         "us_residents_excluding_territories"
         if canonical_reporting_area == NNDSS_US_RESIDENTS_REPORTING_AREA
         else (
             "nndss_total_including_us_residents_territories_"
             "and_non_us_residents"
         )
+        )
     )
+    geography_key = (
+        f"country:{canonical_reporting_area}:national"
+        if is_subdivision
+        else (
+            "country:US:national"
+            if canonical_reporting_area == NNDSS_US_RESIDENTS_REPORTING_AREA
+            else "source:SRC_US_NNDSS:reporting-area:total"
+        )
+    )
+    raw_current_week = _first_value(row, "Current week", "m1")
+    current_week_cases = _parse_numeric(raw_current_week)
+    missing_value_status = ""
+    if not current_week_cases:
+        if raw_current_week in {"-", "*", "<5"}:
+            # Preserve CDC's explicit no-report/suppression marker for the
+            # store's suppressed-value semantics.
+            current_week_cases = raw_current_week
+        else:
+            # A blank/non-numeric current-week cell is unknown, not zero.
+            # Keep the row so the source's explicit missingness and flag are
+            # queryable without inventing a count.
+            missing_value_status = "source_missing"
     return {
         "Date": datetime.combine(week_end, time.min).strftime("%Y-%m-%d"),
         "Diseases": label,
         "DiseasesCN": label,
-        "Cases": _parse_numeric(_first_value(row, "Current week", "m1")),
+        "Cases": current_week_cases,
+        "SourceValueRaw": raw_current_week,
+        "MissingValueStatus": missing_value_status,
         "Deaths": "",
         "Source": source_name,
         "CountryCode": "US",
+        "JurisdictionCode": canonical_reporting_area if is_subdivision else "US",
+        "ParentCountryCode": "US" if is_subdivision else "",
+        "LocationType": "subdivision" if is_subdivision else "country",
+        "GeographyKey": geography_key,
         "ReportingArea": reporting_area,
         "MMWRYear": str(year),
         "MMWRWeek": str(week),
@@ -194,6 +252,10 @@ def _build_normalized_record(
         "SortOrder": _first_value(row, "sort_order"),
         "Geocode": _first_value(row, "geocode"),
         "RawDiseaseLabel": label,
+        "ArchiveTableID": _first_value(row, "ArchiveTableID"),
+        "ArchiveTableTitle": _first_value(row, "ArchiveTableTitle"),
+        "ArchiveRowSignature": _first_value(row, "ArchiveRowSignature"),
+        "Dimensions": _first_value(row, "Dimensions"),
         "IsProvisional": "true",
         "UpdateMode": update_mode,
         "Frequency": "weekly",
@@ -225,6 +287,41 @@ def _normalize_rows(
 
     normalized.sort(key=lambda item: (item["Date"], item["Diseases"], item["SortOrder"]))
     return normalized
+
+
+def _preserve_archive_table_collisions(
+    rows: List[Dict[str, str]],
+) -> List[Dict[str, str]]:
+    """Deduplicate exact archive repeats and retain conflicting table scopes."""
+    archive_rows = [row for row in rows if row.get("ArchiveTableID")]
+    current_rows = [row for row in rows if not row.get("ArchiveTableID")]
+    grouped: Dict[tuple[str, str, str], List[Dict[str, str]]] = {}
+    for row in archive_rows:
+        key = (row.get("Date", ""), row.get("GeographyKey", ""), row.get("Diseases", ""))
+        grouped.setdefault(key, []).append(row)
+
+    retained: List[Dict[str, str]] = []
+    for group in grouped.values():
+        exact: Dict[tuple[str, str, str], Dict[str, str]] = {}
+        for row in group:
+            value_key = (
+                row.get("ArchiveTableID", ""),
+                row.get("ArchiveRowSignature", ""),
+                row.get("Cases", ""),
+            )
+            exact.setdefault(value_key, row)
+        distinct = list(exact.values())
+        if len(distinct) > 1:
+            for row in distinct:
+                row["Dimensions"] = json.dumps(
+                    {
+                        "cdc_archive_table": row["ArchiveTableID"],
+                        "cdc_archive_row_variant": row.get("ArchiveRowSignature") or "unknown",
+                    },
+                    sort_keys=True,
+                )
+        retained.extend(distinct)
+    return [*current_rows, *retained]
 
 
 def _latest_row_date(rows: List[Dict[str, str]]) -> Optional[date]:
@@ -263,15 +360,23 @@ class USWeeklyUpdater:
         source_name: str = DEFAULT_SOURCE_NAME,
     ) -> None:
         self.country_code = country_code.upper()
+        self.series_country_code = "US"
+        self.series_geography_from_rows = True
+        self.series_registered_rows_only = True
+        self.series_registry_coverage = "required"
+        self.subdivision_code = (
+            self.country_code if self.country_code.startswith("US-") else None
+        )
         if (
             _canonical_nndss_reporting_area(reporting_area)
             != NNDSS_US_RESIDENTS_REPORTING_AREA
+            and self.subdivision_code is None
         ):
             raise ValueError(
                 "US legacy disease_records projection must use US RESIDENTS; "
                 "NNDSS TOTAL is a broader source aggregate"
             )
-        self.reporting_area = NNDSS_US_RESIDENTS_REPORTING_AREA
+        self.reporting_area = self.subdivision_code or NNDSS_US_RESIDENTS_REPORTING_AREA
         self.source_name = source_name
 
     def fetch_latest(self, source: str = "all") -> USUpdateFetchResult:
@@ -300,7 +405,7 @@ class USWeeklyUpdater:
             # distinct source aggregate in the lossless series projection.
             resident_rows = _normalize_rows(
                 raw_rows,
-                reporting_area=self.reporting_area,
+                reporting_area=NNDSS_US_RESIDENTS_REPORTING_AREA,
                 source_name=self.source_name,
                 update_mode="api_sync",
                 source_file=nndss_ref,
@@ -322,13 +427,31 @@ class USWeeklyUpdater:
                     "[US-NNDSS] TOTAL rows are missing from the requested "
                     "dual-scope series feed"
                 )
-            normalized_rows.extend(resident_rows)
-            series_rows.extend(resident_rows)
-            series_rows.extend(total_rows)
+            subdivision_rows = _normalize_rows(
+                raw_rows,
+                reporting_area=self.subdivision_code or "subdivisions",
+                source_name=self.source_name,
+                update_mode="api_sync",
+                source_file=nndss_ref,
+            )
+            subdivision_rows = _preserve_archive_table_collisions(subdivision_rows)
+            if self.subdivision_code:
+                if not subdivision_rows:
+                    raise RuntimeError(
+                        f"[US-NNDSS] {self.subdivision_code} rows are missing"
+                    )
+                series_rows.extend(subdivision_rows)
+            else:
+                normalized_rows.extend(resident_rows)
+                series_rows.extend(resident_rows)
+                series_rows.extend(total_rows)
+                series_rows.extend(subdivision_rows)
             source_refs.append(nndss_ref)
-            latest_by_source[self.source_name] = _latest_row_date(resident_rows)
+            latest_by_source[self.source_name] = _latest_row_date(
+                subdivision_rows if self.subdivision_code else resident_rows
+            )
 
-        if normalized_source in {"all", "nhss_hiv"}:
+        if normalized_source in {"all", "nhss_hiv"} and self.subdivision_code is None:
             nhss_rows, nhss_ref = USNHSSHIVCrawler().fetch_national_annual_rows()
             typed_nhss_rows = [dict(row) for row in nhss_rows]
             normalized_rows.extend(typed_nhss_rows)

@@ -46,8 +46,8 @@ def _page(code: str) -> SEDiseasePage:
     )
 
 
-def _current_year_html(*, august_cases: int) -> str:
-    return (
+def _current_year_html(*, august_cases: int, zero_county_august: bool = False) -> str:
+    html = (
         _fixture("gonorre_2025.html")
         .replace("2025", "2026")
         .replace(
@@ -55,6 +55,22 @@ def _current_year_html(*, august_cases: int) -> str:
             f'<strong class="total">{august_cases}</strong>',
         )
     )
+    if zero_county_august:
+        # Stockholm's August cell is independent of the national total. A
+        # source-wide placeholder only exists when every geography is zero.
+        html = html.replace(
+            '<strong class="total">55</strong> / <em class="per1000">2,27</em>',
+            '<strong class="total">0</strong> / <em class="per1000">2,27</em>',
+            1,
+        )
+    return html
+
+
+def _series(rows: list[dict[str, str]]) -> list[tuple[str, str, str]]:
+    return [
+        (row["DiseaseCode"], row["Geography"], row["Cases"])
+        for row in rows
+    ]
 
 
 def test_se_index_discovery_deduplicates_aliases_and_restricts_host():
@@ -146,9 +162,11 @@ def test_se_current_month_is_retained_for_all_series_after_nonzero_source_eviden
         crawler.close()
 
     rows = list(csv.DictReader(output.open(encoding="utf-8")))
-    assert [(row["DiseaseCode"], row["Cases"]) for row in rows] == [
-        ("alpha", "0"),
-        ("beta", "7"),
+    assert _series(rows) == [
+        ("alpha", "SE:county:Stockholm", "55"),
+        ("alpha", "SE:national", "0"),
+        ("beta", "SE:county:Stockholm", "55"),
+        ("beta", "SE:national", "7"),
     ]
     assert {row["Date"] for row in rows} == {"2026-08-01"}
     assert {row["DatasetStatus"] for row in rows} == {"provisional"}
@@ -168,7 +186,10 @@ def test_se_all_zero_open_month_is_omitted_as_one_source_wide_placeholder(
     monkeypatch.setattr(
         crawler,
         "_fetch_page_html",
-        lambda page, _year: (_current_year_html(august_cases=0), page.url),
+        lambda page, _year: (
+            _current_year_html(august_cases=0, zero_county_august=True),
+            page.url,
+        ),
     )
     monkeypatch.setattr(crawler, "_fetch_csv_bytes", lambda _url: b"")
     output = tmp_path / "se-placeholder.csv"
@@ -183,7 +204,12 @@ def test_se_all_zero_open_month_is_omitted_as_one_source_wide_placeholder(
         crawler.close()
 
     rows = list(csv.DictReader(output.open(encoding="utf-8")))
-    assert len(rows) == 2
+    assert _series(rows) == [
+        ("alpha", "SE:county:Stockholm", "58"),
+        ("alpha", "SE:national", "420"),
+        ("beta", "SE:county:Stockholm", "58"),
+        ("beta", "SE:national", "420"),
+    ]
     assert {row["Date"] for row in rows} == {"2026-06-01"}
     assert {row["DatasetStatus"] for row in rows} == {"closed_revisable"}
     assert {row["IsProvisional"] for row in rows} == {"false"}
@@ -214,10 +240,15 @@ def test_se_crawler_prefers_machine_csv_and_retains_provenance(tmp_path, monkeyp
     finally:
         crawler.close()
 
-    row = next(csv.DictReader(output.open(encoding="utf-8")))
-    assert summary.row_count == 1
+    rows = list(csv.DictReader(output.open(encoding="utf-8")))
+    row = next(item for item in rows if item["Geography"] == "SE:national")
+    assert summary.row_count == 2
     assert summary.csv_pages == 1
     assert row["Cases"] == "431"
+    assert {item["Geography"] for item in rows} == {
+        "SE:national",
+        "SE:county:Stockholm",
+    }
     assert row["RetrievalMethod"] == "machine_csv"
     assert row["SourceURL"] == PAGE_URL + "?year=2025"
     assert row["DownloadURL"] == CSV_URL
@@ -260,8 +291,10 @@ def test_se_csv_tls_failure_falls_back_to_html_and_caches_failed_host(
     finally:
         crawler.close()
 
-    row = next(csv.DictReader(output.open(encoding="utf-8")))
+    rows = list(csv.DictReader(output.open(encoding="utf-8")))
+    row = next(item for item in rows if item["Geography"] == "SE:national")
     assert client.calls == 1
+    assert summary.row_count == 2
     assert summary.csv_pages == 0
     assert summary.html_fallback_pages == 1
     assert row["Cases"] == "431"
@@ -298,7 +331,7 @@ def test_se_probe_year_filters_non_sminet_pages_before_history(tmp_path, monkeyp
 
     assert calls == [("gonorre", 2025), ("gonorre", 2024), ("alkohol", 2025)]
     assert summary.pages_inspected == 3
-    assert summary.row_count == 2
+    assert summary.row_count == 4
 
 
 def test_se_updater_adds_revision_window_and_keeps_public_release_enabled(tmp_path):
