@@ -10,6 +10,8 @@ import { marked } from 'marked';
 import echarts from '../../lib/echarts';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import type { CountryDatasetSeriesEntry } from './countryDataset';
+import ChartResultActions from './ChartResultActions';
+import { pngFromCanvases } from './chartExport';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -311,29 +313,34 @@ function SectionBlock({ section, theme, lang }: {
 
 // ─── Figure wrapper ───────────────────────────────────────────────────────────
 
-function Figure({ number, caption, children, theme, lang }: {
+function Figure({ number, caption, children, theme, lang, actions = true, pngFilename = 'gids-figure.png' }: {
   number: number;
   caption: string;
   children: React.ReactNode;
   theme: 'light' | 'dark';
   lang: 'en' | 'zh' | 'fr';
+  actions?: boolean;
+  pngFilename?: string;
 }) {
   const isLight = theme === 'light';
   const figureRef = useRef<HTMLElement>(null);
+  const plotRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [canFullscreen, setCanFullscreen] = useState(false);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(document.fullscreenElement === figureRef.current);
     };
 
+    setCanFullscreen(Boolean(document.fullscreenEnabled));
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
   async function toggleFullscreen() {
     const figure = figureRef.current;
-    if (!figure) return;
+    if (!figure || !canFullscreen) return;
 
     if (document.fullscreenElement === figure) {
       await document.exitFullscreen();
@@ -352,16 +359,21 @@ function Figure({ number, caption, children, theme, lang }: {
         background: isLight ? '#ffffff' : 'rgba(15,23,42,0.5)',
         border: `1px solid ${isLight ? '#e2e8f0' : '#1e293b'}`,
       }}
+      data-chart-title={caption}
       className={`panel-fullscreen p-4 md:p-6 ${isFullscreen ? 'comparison-shell-fullscreen' : ''}`}
     >
-      <div className="mb-3 flex justify-end">
-        <button type="button" onClick={toggleFullscreen} className="chart-link-btn">
-          {isFullscreen
-            ? ui(lang, 'Exit full-screen', '退出全屏', 'Quitter le plein écran')
-            : ui(lang, 'Enter full-screen', '进入全屏', 'Plein écran')}
-        </button>
-      </div>
-      <div className="mb-3">
+      {actions && (
+        <div className="chart-result-actions-fill mb-3">
+          <ChartResultActions
+            lang={lang}
+            shellRef={figureRef}
+            fullscreen={{ active: isFullscreen, enabled: canFullscreen, toggle: toggleFullscreen }}
+            pngFilename={pngFilename}
+            getPng={() => (plotRef.current ? pngFromCanvases(plotRef.current) : null)}
+          />
+        </div>
+      )}
+      <div className="mb-3" ref={plotRef}>
         {children}
       </div>
       <figcaption
@@ -419,6 +431,15 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, lates
     bg: 'rgba(100,116,139,0.1)', text: '#94a3b8', border: 'rgba(100,116,139,0.25)'
   };
 
+  // Exports carry every published name so the strip reads in any language.
+  const exportNames = useMemo(() => {
+    let french = diseaseMeta.name_fr?.trim() ?? '';
+    if (!french) {
+      try { french = localizedDiseaseName(diseaseMeta, 'fr'); } catch { french = ''; }
+    }
+    return JSON.stringify({ en: diseaseMeta.name_en, zh: diseaseMeta.name_zh, fr: french });
+  }, [diseaseMeta]);
+
   // Compute aggregate stats
   const totalCases  = series?.total_cases ?? 0;
   const totalDeaths = series?.total_deaths ?? 0;
@@ -462,7 +483,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, lates
   }
 
   return (
-    <div style={{ background: bgPage, minHeight: '100vh' }}>
+    <div style={{ background: bgPage, minHeight: '100vh' }} data-disease-names={exportNames}>
       {/* ── Journal-style page wrapper ── */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
 
@@ -625,6 +646,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, lates
               caption={ui(lang, ...curveCaption)}
               theme={theme}
               lang={lang}
+              actions={false}
             >
               <ReportSurveillanceCurve series={series!} latestSeries={latestSeries} disease={diseaseMeta} report={reportMeta} lang={lang} showDeaths={showDeathMetrics && hasDeathsData} />
             </Figure>
@@ -636,6 +658,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, lates
                 caption={ui(lang, 'Monthly distribution of cases by year.', '月度病例分布（按年分组）', 'Répartition mensuelle des cas par année.')}
                 theme={theme}
                 lang={lang}
+                pngFilename="gids-monthly-cases.png"
               >
                 <MonthlyDistributionChart series={series!} metric="cases" theme={theme} lang={lang} />
               </Figure>
@@ -645,6 +668,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, lates
                   caption={ui(lang, 'Monthly distribution of deaths by year.', '月度死亡分布（按年分组）', 'Répartition mensuelle des décès par année.')}
                   theme={theme}
                   lang={lang}
+                  pngFilename="gids-monthly-deaths.png"
                 >
                   <MonthlyDistributionChart series={series!} metric="deaths" theme={theme} lang={lang} />
                 </Figure>

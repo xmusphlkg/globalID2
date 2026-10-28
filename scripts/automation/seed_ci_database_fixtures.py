@@ -23,12 +23,12 @@ from src.domain import (  # noqa: E402
     Country,
     DiseaseSeriesObservation,
     DiseaseSurveillanceSeries,
-    SituationSnapshot,
+    SituationNotice,
+    SituationNoticeEntity,
     StandardDisease,
 )
 
 
-DEFAULT_SITUATION_FIXTURE = ROOT / "tests" / "fixtures" / "situation" / "public_report_v3.json"
 CI_DISEASE_ID = "D038"
 CI_SERIES_CODE = "CI_US_D038_WEEKLY_CASES"
 CI_SOURCE_SYSTEM = "SRC_FIXTURE"
@@ -40,113 +40,31 @@ def _utc(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def _legacy_history_signal() -> dict[str, Any]:
-    return {
-        "id": "ci-situation-signal-1",
-        "kind": "statistical_signal",
-        "disease_id": CI_DISEASE_ID,
-        "disease_name": "Influenza",
-        "disease_slug": "influenza",
-        "country_code": "US",
-        "country_name": "United States",
-        "geography_key": "country:US:national",
-        "geographies": [{"code": "US", "name": "United States"}],
-        "series_code": CI_SERIES_CODE,
-        "source_system": CI_SOURCE_SYSTEM,
-        "source_label": "CI fixture surveillance",
-        "source_url": "https://example.invalid/source",
-        "metric_type": "case_notifications",
-        "metric_label": "cases",
-        "unit": "count",
-        "cadence": "weekly",
-        "data_through": CI_DATA_THROUGH,
-        "evidence_links": [
-            {
-                "title": "CI fixture source",
-                "url": "https://example.invalid/source",
-                "source": "fixture",
-            }
-        ],
-        "window": {
-            "label": "Last 4 weeks",
-            "periods": 4,
-            "aggregation": "sum",
-            "current": 240,
-            "previous": 100,
-            "change_pct": 140,
-        },
-        "statistics": {
-            "z_score": 3.2,
-            "robust_z": 3.7,
-            "ewma_residual": 1.4,
-            "bayesian_change_probability": 0.91,
-            "detector_votes": 3,
-            "detectors": {
-                "seasonal_band": True,
-                "z_score": True,
-                "ewma": False,
-                "bayesian_change": True,
-            },
-        },
-        "risk": {
-            "score": 52.0,
-            "level": "high",
-            "confidence": "low",
-            "dimensions": {
-                "trend": 52.0,
-                "severity": None,
-                "geographic_spread": None,
-                "official_concern": None,
-            },
-            "missing_dimensions": [
-                "severity",
-                "geographic_spread",
-                "official_concern",
-            ],
-        },
-    }
+CI_NOTICE_ID = "who_don:ci-fixture-1"
 
 
-def situation_snapshot_values(fixture: dict[str, Any]) -> dict[str, Any]:
-    report = fixture.get("report") or {}
-    method = fixture.get("method") or {}
-    quality_gate = fixture.get("quality_gate") or {}
-    data_currency = fixture.get("data_currency") or {}
-    signal = _legacy_history_signal()
-    payload = dict(fixture)
-    payload.update(
-        {
-            "increasing": [signal],
-            "respiratory": [],
-            "emerging": [],
-            "unusual": [],
-            "freshness": {
-                CI_SOURCE_SYSTEM: {
-                    "status": "fresh",
-                    "checked_at": CI_AS_OF,
-                    "item_count": 1,
-                }
-            },
-        }
-    )
-    snapshot_id = str(report.get("report_id") or "ci-situation-v3-daily-r1")
+def situation_notice_values() -> dict[str, Any]:
+    """One deterministic authority notice for the notice-based Situation module."""
+
+    now = _utc(CI_AS_OF)
     return {
-        "snapshot_id": snapshot_id,
-        "snapshot_kind": str(report.get("kind") or "daily"),
-        "period_key": str(report.get("period_key") or "2026-08-17"),
-        "iso_week": None,
-        "generated_at": str(report.get("as_of") or CI_AS_OF),
-        "checked_at": str(report.get("as_of") or CI_AS_OF),
-        "content_updated_at": str(report.get("as_of") or CI_AS_OF),
-        "data_through": str(data_currency.get("latest_data_through") or CI_DATA_THROUGH),
-        "method_version": str(method.get("version") or "ci_fixture"),
-        "input_hash": str(method.get("config_hash") or "ci-fixture"),
-        "status": str(report.get("status") or "published"),
-        "quality_gate_status": str(quality_gate.get("status") or "passed"),
-        "quality_gate": quality_gate,
-        "revision": int(report.get("revision") or 1),
-        "supersedes_snapshot_id": report.get("supersedes_report_id"),
-        "payload": payload,
+        "notice_id": CI_NOTICE_ID,
+        "source_id": "who_don",
+        "native_id": "ci-fixture-1",
+        "record_type": "outbreak_notice",
+        "title_en": "Influenza - United States of America",
+        "summary_en": None,
+        "url": "https://www.who.int/emergencies/disease-outbreak-news/item/ci-fixture-1",
+        "language": "en",
+        "redistribution": "metadata_and_extract",
+        "published_date": now.date(),
+        "updated_at_source": now.date().isoformat(),
+        "iso_week_key": f"{now.isocalendar()[0]}-W{now.isocalendar()[1]:02d}",
+        "content_hash": "ci-fixture",
+        "first_seen_at": now,
+        "last_seen_at": now,
+        "ai_status": "pending",
+        "ai_attempts": 0,
     }
 
 
@@ -181,11 +99,8 @@ def series_observation_values() -> list[dict[str, Any]]:
     return rows
 
 
-async def seed_database(fixture_path: Path = DEFAULT_SITUATION_FIXTURE) -> dict[str, Any]:
+async def seed_database() -> dict[str, Any]:
     await init_database()
-    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
-    if not isinstance(fixture, dict):
-        raise ValueError("situation_fixture_object_required")
 
     async with get_db() as db:
         await db.execute(
@@ -270,40 +185,41 @@ async def seed_database(fixture_path: Path = DEFAULT_SITUATION_FIXTURE) -> dict[
                 ]
             )
         )
-        snapshot = situation_snapshot_values(fixture)
         await db.execute(
-            pg_insert(SituationSnapshot.__table__)
-            .values(snapshot)
-            .on_conflict_do_update(
-                index_elements=["snapshot_id"],
-                set_={
-                    "checked_at": snapshot["checked_at"],
-                    "content_updated_at": snapshot["content_updated_at"],
-                    "status": snapshot["status"],
-                    "quality_gate_status": snapshot["quality_gate_status"],
-                    "quality_gate": snapshot["quality_gate"],
-                    "payload": snapshot["payload"],
-                },
-            )
+            pg_insert(SituationNotice.__table__)
+            .values(situation_notice_values())
+            .on_conflict_do_nothing(index_elements=["notice_id"])
         )
+        for entity_type, entity_id, name in (("disease", CI_DISEASE_ID, "Influenza"), ("country", "US", "United States")):
+            await db.execute(
+                pg_insert(SituationNoticeEntity.__table__)
+                .values(
+                    notice_id=CI_NOTICE_ID,
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    name_en=name,
+                    method="rule",
+                    active=True,
+                )
+                .on_conflict_do_nothing(constraint="uq_situation_notice_entity")
+            )
 
     return {
         "status": "seeded",
         "series_code": CI_SERIES_CODE,
         "observations": len(series_observation_values()),
-        "snapshot_id": situation_snapshot_values(fixture)["snapshot_id"],
+        "notice_id": CI_NOTICE_ID,
     }
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--situation-fixture", type=Path, default=DEFAULT_SITUATION_FIXTURE)
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
-    result = asyncio.run(seed_database(args.situation_fixture))
+    result = asyncio.run(seed_database())
     print(json.dumps(result, sort_keys=True))
     return 0
 

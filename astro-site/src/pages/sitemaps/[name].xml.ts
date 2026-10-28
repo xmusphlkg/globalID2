@@ -16,27 +16,28 @@ import {
   reportIndex,
   siteMeta,
 } from '../../lib/seo-page-data';
+import { listDigestMonths } from '../../utils/international';
 
 const fallbackSite = 'https://globalinfectiousdisease.com';
 const situationDirectory = resolve('./src/data/situation');
 const researchFile = resolve('./src/data/research/index.json');
 
+/** Adapt the international notice export to the sitemap's situation shape. */
 function loadSituation() {
-  const latestFile = resolve(situationDirectory, 'v3', 'latest.json');
-  const latest = existsSync(latestFile) ? JSON.parse(readFileSync(latestFile, 'utf-8')) : null;
-  const loadDirectory = (directoryName: string, pattern: RegExp) => {
-    const directory = resolve(situationDirectory, 'v3', directoryName);
-    return existsSync(directory)
-      ? readdirSync(directory)
-        .filter(name => pattern.test(name))
-        .map(name => JSON.parse(readFileSync(resolve(directory, name), 'utf-8')))
-      : [];
-  };
-  return {
-    latest,
-    weeks: loadDirectory('weekly', /^\d{4}-W\d{2}\.json$/),
-    months: loadDirectory('monthly', /^\d{4}-\d{2}\.json$/),
-  };
+  const base = resolve(situationDirectory, 'international');
+  const latestFile = resolve(base, 'latest.json');
+  const raw = existsSync(latestFile) ? JSON.parse(readFileSync(latestFile, 'utf-8')) : null;
+  const latest = raw
+    ? { public_enabled: true, generated_at: raw.generated_at, report: { as_of: raw.window?.as_of } }
+    : null;
+  const digestDir = resolve(base, 'digests');
+  const weeks = existsSync(digestDir)
+    ? readdirSync(digestDir)
+      .filter(name => /^\d{4}-W\d{2}\.json$/.test(name))
+      .map(name => JSON.parse(readFileSync(resolve(digestDir, name), 'utf-8')))
+      .map(row => ({ period_key: row.period_key, generated_at: row.generated_at }))
+    : [];
+  return { latest, weeks, months: listDigestMonths().map(period_key => ({ period_key })) };
 }
 
 export function getStaticPaths() {

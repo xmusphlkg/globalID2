@@ -8,30 +8,14 @@ import {
 } from "../domain/types";
 import { label } from "../presentation/labels";
 
-interface PrimaryProps {
-  expanded: boolean;
+interface MeasureProps {
   config: AnalysisConfig;
-  result: AnalysisResult;
   catalog: Catalog;
   lang: Language;
   patch: (values: Partial<AnalysisConfig>) => void;
-  chooseWindow: (months: number | null) => void;
-  dateValue: DateWindow | null;
-  setDate: (field: "startDate" | "endDate", value: string) => void;
-  setPickerOpen: (open: boolean) => void;
 }
-export function PrimaryControls({
-  expanded,
-  config,
-  result,
-  catalog,
-  lang,
-  patch,
-  chooseWindow,
-  dateValue,
-  setDate,
-  setPickerOpen,
-}: PrimaryProps) {
+
+export function MeasureSelect({ config, catalog, lang, patch }: MeasureProps) {
   const selectedMeasure = config.measures.length > 1 ? "both" : config.measures[0];
   const selectionIds = config.selectionIds.length
     ? config.selectionIds
@@ -45,52 +29,67 @@ export function PrimaryControls({
     ),
   );
   return (
+    <label className="chart-measure">
+      {label("metric", lang)}
+      <select
+        aria-label={label("metric", lang)}
+        value={selectedMeasure}
+        onChange={(event) =>
+          patch({
+            measures:
+              event.target.value === "both"
+                ? ["cases", "deaths"]
+                : [event.target.value as Measure],
+          })
+        }
+      >
+        {(
+          [
+            "cases",
+            "deaths",
+            "incidence_rates",
+            "source_value",
+            "both",
+          ] as const
+        ).map((metric) => {
+          const available = metric === "both"
+            ? availableMeasures.has("cases") && availableMeasures.has("deaths")
+            : availableMeasures.has(metric);
+          return (
+            <option value={metric} key={metric} disabled={!available}>
+              {label(metric, lang)}{available ? "" : ` · ${label("unavailableOption", lang)}`}
+            </option>
+          );
+        })}
+      </select>
+    </label>
+  );
+}
+
+interface PrimaryProps {
+  expanded: boolean;
+  config: AnalysisConfig;
+  result: AnalysisResult;
+  catalog: Catalog;
+  lang: Language;
+  patch: (values: Partial<AnalysisConfig>) => void;
+  chooseWindow: (months: number | null) => void;
+  dateValue: DateWindow | null;
+  setDate: (field: "startDate" | "endDate", value: string) => void;
+}
+export function PrimaryControls({
+  expanded,
+  config,
+  result,
+  catalog,
+  lang,
+  patch,
+  chooseWindow,
+  dateValue,
+  setDate,
+}: PrimaryProps) {
+  return (
     <>
-      {expanded && (
-        <div className="surveillance-toolbar">
-          <label>
-            {label("metric", lang)}
-            <select
-              aria-label={label("metric", lang)}
-              value={selectedMeasure}
-              onChange={(event) =>
-                patch({
-                  measures:
-                    event.target.value === "both"
-                      ? ["cases", "deaths"]
-                      : [event.target.value as Measure],
-                })
-              }
-            >
-              {(
-                [
-                  "cases",
-                  "deaths",
-                  "incidence_rates",
-                  "source_value",
-                  "both",
-                ] as const
-              ).map((metric) => {
-                const available = metric === "both"
-                  ? availableMeasures.has("cases") && availableMeasures.has("deaths")
-                  : availableMeasures.has(metric);
-                return (
-                  <option value={metric} key={metric} disabled={!available}>
-                    {label(metric, lang)}{available ? "" : ` · ${label("unavailableOption", lang)}`}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
-          <button
-            className="surveillance-mobile-picker"
-            type="button"
-            onClick={() => setPickerOpen(true)}
-          >
-            {label("objects", lang)}
-          </button>
-        </div>
-      )}
       <div className="surveillance-time">
         <span>{label("time", lang)}</span>
         {[6, 12, 36].map((months) => (

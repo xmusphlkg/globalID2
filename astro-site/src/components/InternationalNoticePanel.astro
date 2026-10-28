@@ -1,0 +1,179 @@
+---
+/**
+ * Authority notices already mapped onto one GIDS disease or jurisdiction.
+ *
+ * Rendered from the sharded international export, so every entry shares the
+ * page's own disease id / ISO country key instead of being a free-text feed.
+ */
+import { noticeEntityName, noticeSummary, noticeTitle, type InternationalNotice } from '../utils/international';
+import { noticeSnapshotBadges } from '../utils/internationalSnapshot';
+
+interface Props {
+  notices: InternationalNotice[];
+  locale: 'en' | 'zh' | 'fr';
+  limit?: number;
+  /** Jurisdictions the host page is about, cross-referenced when a notice does not name them. */
+  contextCodes?: string[];
+}
+
+const { notices, locale, limit = 8, contextCodes = [] } = Astro.props;
+
+const COPY = {
+  en: {
+    heading: 'International authority notices',
+    lead: 'WHO and ECDC notices that reference this entry, newest first.',
+    empty: 'No authority notice references this entry in the current window.',
+    unavailable: 'source unavailable this run',
+  },
+  zh: {
+    heading: '国际权威机构通报',
+    lead: '引用该条目的世卫组织与欧洲疾控中心通报，按时间倒序。',
+    empty: '当前时间窗内暂无提及该条目的权威机构通报。',
+    unavailable: '本轮该来源不可用',
+  },
+  fr: {
+    heading: 'Avis des autorités internationales',
+    lead: 'Avis OMS et ECDC citant cette entrée, du plus récent au plus ancien.',
+    empty: "Aucun avis d'autorité ne cite cette entrée dans la fenêtre courante.",
+    unavailable: 'source indisponible lors de cette exécution',
+  },
+} as const;
+
+const copy = COPY[locale];
+const rows = notices.slice(0, limit);
+
+// Only pages that render a row ship the panel CSS, so the stylesheet is
+// inlined next to the markup rather than living in a static style block
+// that Astro emits for every importer.
+const PANEL_CSS = `  .intl-panel {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.28));
+  }
+  .intl-panel-heading {
+    margin: 0 0 0.35rem;
+    font-size: 1.1rem;
+    font-weight: 650;
+  }
+  .intl-panel-lead {
+    margin: 0 0 0.9rem;
+    font-size: 0.86rem;
+    color: var(--text-muted, #64748b);
+  }
+  .intl-panel-list {
+    display: grid;
+    gap: 0.85rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .intl-panel-item {
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--border-subtle, rgba(148, 163, 184, 0.22));
+    border-radius: 10px;
+    background: var(--surface-soft, rgba(248, 250, 252, 0.6));
+  }
+  .intl-panel-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--accent, #0f766e);
+    text-decoration: none;
+  }
+  .intl-panel-title:hover {
+    text-decoration: underline;
+  }
+  .intl-panel-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 0.3rem 0 0;
+    font-size: 0.76rem;
+    color: var(--text-muted, #64748b);
+  }
+  .intl-panel-summary {
+    margin: 0.4rem 0 0;
+    font-size: 0.83rem;
+    line-height: 1.5;
+    color: var(--text-body, #334155);
+  }
+  .intl-panel-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.5rem 0 0;
+  }
+  .intl-panel-chip {
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(15, 118, 110, 0.1);
+    font-size: 0.7rem;
+    color: var(--accent-strong, #115e59);
+  }
+  .intl-panel-snapshot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.45rem 0 0;
+  }
+  .intl-snapshot-badge {
+    padding: 0.12rem 0.5rem;
+    border: 1px dashed rgba(15, 118, 110, 0.45);
+    border-radius: 8px;
+    font-size: 0.7rem;
+    color: var(--accent-strong, #115e59);
+    background: rgba(15, 118, 110, 0.06);
+  }
+`;
+---
+
+{
+  rows.length > 0 && (
+    <>
+      <style set:html={PANEL_CSS} />
+      <section class="intl-panel" aria-labelledby="intl-panel-heading">
+        <h2 id="intl-panel-heading" class="intl-panel-heading">
+          {copy.heading}
+        </h2>
+        <p class="intl-panel-lead">{copy.lead}</p>
+        <ul class="intl-panel-list">
+          {rows.map((notice) => (
+            <li class="intl-panel-item">
+              <a class="intl-panel-title" href={notice.url} target="_blank" rel="noopener noreferrer">
+                {noticeTitle(notice, locale)}
+              </a>
+              <p class="intl-panel-meta">
+                {notice.published_date && <span class="intl-panel-date">{notice.published_date}</span>}
+                <span class="intl-panel-source">
+                  {noticeEntityName(
+                    { name_en: notice.source_label_en, name_zh: notice.source_label_zh },
+                    locale,
+                  ) || notice.source_id}
+                </span>
+              </p>
+              {noticeSummary(notice, locale) && <p class="intl-panel-summary">{noticeSummary(notice, locale)}</p>}
+              {(notice.countries.length > 0 || notice.diseases.length > 0) && (
+                <p class="intl-panel-chips">
+                  {notice.countries.map((country) => (
+                    <span class="intl-panel-chip">{noticeEntityName(country, locale) || country.code}</span>
+                  ))}
+                  {notice.diseases.map((disease) => (
+                    <span class="intl-panel-chip">
+                      {noticeEntityName(disease, locale) || disease.disease_id}
+                    </span>
+                  ))}
+                </p>
+              )}
+              {noticeSnapshotBadges(notice, locale, { contextCodes }).length > 0 && (
+                <p class="intl-panel-snapshot">
+                  {noticeSnapshotBadges(notice, locale, { contextCodes }).map((badge) => (
+                    <span class="intl-snapshot-badge">{badge}</span>
+                  ))}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </>
+  )
+}

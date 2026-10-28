@@ -45,11 +45,9 @@
 .compare-choice-list label small { flex: none; color: rgb(var(--text-faint)); font-size: .64rem; }
 .compare-choice-list input { flex: none; accent-color: rgb(var(--color-teal)); }
 .compare-no-matches { grid-column: 1 / -1; padding: 1rem; color: rgb(var(--text-muted)); font-size: .8rem; }
-.compare-results-heading { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border)); }
+.compare-results-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border)); }
 .compare-results-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; }
 .compare-results-actions .disease-trend-controls { margin: 0; }
-.compare-share { border: 1px solid rgb(var(--color-teal)); background: rgb(var(--color-teal) / .1); color: rgb(var(--text-strong)); padding: .35rem .7rem; font-size: .75rem; cursor: pointer; }
-.compare-share:hover { background: rgb(var(--color-teal) / .2); }
 .compare-chart { border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); margin-top: 1rem; padding: clamp(1rem, 2vw, 1.5rem); }
 .coverage-territory-marker { position: absolute; z-index: 2; width: 12px; height: 12px; margin: -6px 0 0 -6px; padding: 0; border-width: 1px; border-style: solid; border-radius: 999px; cursor: pointer; }
 .coverage-scale { position: absolute; left: 8px; bottom: 8px; z-index: 2; display: inline-flex; align-items: center; gap: .35rem; font-size: .65rem; }

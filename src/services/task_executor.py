@@ -467,8 +467,6 @@ async def _dispatch(task: Task) -> Dict[str, Any]:
         return await _run_export(task)
     elif task_type == TaskType.AGENT_WORKFLOW:
         return await _run_agent_workflow(task)
-    elif task_type == TaskType.SYNC_SITUATION_HISTORY:
-        return await _run_situation_history_sync(task)
     elif task_type == TaskType.REFRESH_SITUATION_SOURCES:
         return await _run_situation_sources_refresh(task)
     elif task_type == TaskType.SYNC_LITERATURE:
@@ -619,46 +617,26 @@ async def _run_export(task: Task) -> Dict[str, Any]:
         return await data_release_service.execute_release_task(task)
 
 
-async def _run_situation_history_sync(task: Task) -> Dict[str, Any]:
-    """Reconcile primary Situation snapshots into the history database."""
-    from src.services.situation_history_service import sync_history
-
-    async with task_lifecycle(task, exit_on_cancel=False):
-        await task_manager.update_task_progress(task.task_uuid, 10)
-        result = await sync_history(mode=str((task.input_data or {}).get("mode") or "reconcile"))
-        await task_manager.update_task_progress(task.task_uuid, 100)
-        async with get_database() as db:
-            task_obj = await db.get(Task, task.id)
-            if task_obj:
-                task_obj.output_data = result
-                await db.commit()
-        return result
-
-
 async def _run_situation_sources_refresh(task: Task) -> Dict[str, Any]:
-    """Fetch configured Situation adapters and publish a v3 analysis run."""
-    from src.services.situation_v3.pipeline import refresh_situation_v3
+    """Collect authority notices, run peer-reviewed AI enrichment, and export."""
+    from src.services.situation_notices.runner import run_situation
 
     async with task_lifecycle(task, exit_on_cancel=False):
-        fetch_events = bool((task.input_data or {}).get("fetch_events", True))
-        await task_manager.update_task_progress(task.task_uuid, 10)
-        refresh = await refresh_situation_v3(fetch_events=fetch_events)
-        payload = refresh["report"]
-        report = payload.get("report") or {}
-        await task_manager.update_task_progress(task.task_uuid, 100)
-        result = {
-            "schema_version": payload.get("schema_version"),
-            "report_id": report.get("report_id"),
-            "run_id": refresh.get("run_id"),
-            "checked_at": report.get("as_of"),
-            "data_through": (payload.get("data_currency") or {}).get("latest_data_through"),
-            "revision": report.get("revision"),
-            "quality_gate_status": (payload.get("quality_gate") or {}).get("status"),
-            "source_health": payload.get("sources") or [],
-            "coverage": payload.get("coverage") or {},
-            "timings": refresh.get("timings") or {},
-            "fetch_events": fetch_events,
-        }
+        input_data = task.input_data or {}
+        fetch_events = bool(input_data.get("fetch", input_data.get("fetch_events", True)))
+        await task_manager.update_task_progress(task.task_uuid, 5)
+
+        async def progress(value: int) -> None:
+            await task_manager.update_task_progress(task.task_uuid, value)
+
+        result = await run_situation(
+            fetch=fetch_events,
+            skip_ai=bool(input_data.get("skip_ai", False)),
+            ai_limit=int(input_data.get("ai_limit") or 50),
+            digest_weeks=int(input_data.get("digest_weeks") or 2),
+            progress=progress,
+        )
+        result["fetch_events"] = fetch_events
         async with get_database() as db:
             task_obj = await db.get(Task, task.id)
             if task_obj:

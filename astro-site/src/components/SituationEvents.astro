@@ -1,0 +1,82 @@
+---
+/**
+ * Active cross-notice events: one disease in one place, built from every
+ * authority notice that mentions both. Highest peer-reviewed risk leads.
+ */
+import { riskRank, type SituationEventRecord } from '../utils/international';
+import { formatDate } from '../utils/situation';
+import { translateUi } from '../utils/i18n';
+import { localizedRegionName } from '../utils/i18n';
+
+interface Props { events: SituationEventRecord[]; locale?: 'en' | 'zh' | 'fr'; limit?: number; }
+const { events, locale = 'en', limit = 12 } = Astro.props;
+const zh = locale === 'zh';
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : fr ? '/fr' : '';
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
+
+const active = events
+  .filter(event => event.status === 'active')
+  .sort((a, b) => riskRank(b.risk_level) - riskRank(a.risk_level) || b.last_published.localeCompare(a.last_published))
+  .slice(0, limit);
+
+const riskLabel: Record<string, [string, string, string]> = {
+  very_high: ['Very high', '极高', 'Très élevé'],
+  high: ['High', '高', 'Élevé'],
+  moderate: ['Moderate', '中', 'Modéré'],
+  low: ['Low', '低', 'Faible'],
+};
+const placeName = (codes: string[]) => codes.length
+  ? codes.map(code => localizedRegionName(locale, code.toLowerCase(), { en: code })).join(', ')
+  : pick('Multi-country / regional', '多国/区域', 'Multi-pays / régional');
+const diseaseName = (event: SituationEventRecord) => (zh ? event.disease_name_zh : null) || event.disease_name_en || event.disease_id;
+---
+
+{active.length > 0 && (
+  <section class="events" aria-labelledby="situation-events-heading">
+    <header>
+      <p class="eyebrow">{pick('Active events', '活跃事件', 'Événements actifs')}</p>
+      <h2 id="situation-events-heading">{pick('What authorities are tracking now', '权威机构正在跟踪的事件', 'Ce que suivent les autorités')}</h2>
+    </header>
+    <ul>
+      {active.map(event => (
+        <li class={`risk-${event.risk_level ?? 'none'}`}>
+          <div class="what">
+            {event.disease_slug ? <a href={`${prefix}/diseases/${event.disease_slug}/`}>{diseaseName(event)}</a> : <b>{diseaseName(event)}</b>}
+            <span>{placeName(event.country_codes)}</span>
+          </div>
+          <dl>
+            <div><dt>{pick('Risk', '风险', 'Risque')}</dt><dd>{event.risk_level ? pick(...riskLabel[event.risk_level]) : '—'}</dd></div>
+            <div><dt>{pick('Notices', '通报', 'Avis')}</dt><dd>{event.notice_count}</dd></div>
+            <div><dt>{pick('Latest', '最新', 'Dernier')}</dt><dd>{formatDate(event.last_published, locale)}</dd></div>
+            <div><dt>{pick('Since', '始于', 'Depuis')}</dt><dd>{formatDate(event.first_published, locale)}</dd></div>
+          </dl>
+          <p class="sources">{event.source_ids.join(' · ')}</p>
+        </li>
+      ))}
+    </ul>
+    <p class="note">{pick('Risk is the peer-reviewed AI assessment of the strongest notice in each event, not an agency classification.', '风险等级是 AI 对每个事件中最严重通报的同行评审判断，并非机构官方分级。', 'Le risque est l’évaluation relue par IA de l’avis le plus grave de chaque événement, non une classification officielle.')}</p>
+  </section>
+)}
+
+<style>
+  .events { display: grid; gap: .9rem; }
+  .eyebrow { color: rgb(var(--color-teal)); font-size: .66rem; font-weight: 800; letter-spacing: .13em; margin: 0 0 .35rem; text-transform: uppercase; }
+  h2 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: 1.35rem; margin: 0; }
+  ul { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); list-style: none; margin: 0; padding: 0; }
+  li { background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); border-left: 4px solid rgb(var(--border)); display: grid; gap: .55rem; padding: .75rem .85rem; }
+  li.risk-very_high { border-left-color: rgb(174 61 67); }
+  li.risk-high { border-left-color: rgb(206 110 60); }
+  li.risk-moderate { border-left-color: rgb(218 174 76); }
+  li.risk-low { border-left-color: rgb(var(--color-teal)); }
+  .what { display: grid; gap: .15rem; }
+  .what a, .what b { color: rgb(var(--text-strong)); font-size: .95rem; font-weight: 700; text-decoration: none; }
+  .what a:hover { color: rgb(var(--color-teal)); text-decoration: underline; }
+  .what span { color: rgb(var(--text-muted)); font-size: .78rem; }
+  dl { display: grid; gap: .4rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
+  dt { color: rgb(var(--text-faint)); font-size: .56rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+  dd { color: rgb(var(--text)); font-family: ui-monospace, monospace; font-size: .66rem; margin: .1rem 0 0; }
+  .sources { color: rgb(var(--text-faint)); font-family: ui-monospace, monospace; font-size: .6rem; margin: 0; }
+  .note { color: rgb(var(--text-faint)); font-size: .68rem; margin: 0; }
+  @media (max-width: 420px) { dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>

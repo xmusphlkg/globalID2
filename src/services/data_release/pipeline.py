@@ -400,41 +400,9 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             },
         )
         pages_deployed = True
-        # Subscriber mail is downstream of a verified production deployment.
-        # The dispatcher itself accepts analyst-reviewed signals only, is
-        # idempotent per report/signal, and skips cleanly when optional runtime
-        # configuration is absent. Secrets are child-environment values only;
-        # they never enter command arguments or workbook metadata.
-        alert_env_names = (
-            "SITUATION_ALERT_WORKER_URL",
-            "SITUATION_PUBLIC_REPORT_URL",
-            "SITUATION_ALERT_INGEST_TOKEN",
-            "SITUATION_ALERT_DISPATCH_STRICT",
-            "SITUATION_ALERT_TIMEOUT_SECONDS",
-        )
-        env_value = getattr(service, "_env_value", lambda _name, _default="": "")
-        await service._run_logged_command(
-            task.task_uuid,
-            title="Dispatch Reviewed Situation Alerts",
-            cmd=[
-                str(python_path),
-                "scripts/automation/dispatch_situation_alerts.py",
-                "--report",
-                "astro-site/dist/site-data/situation/v3/latest.json",
-            ],
-            cwd=runtime.root_dir,
-            env={
-                "CI": "1",
-                **{name: env_value(name) for name in alert_env_names},
-            },
-            metadata={
-                "event": "situation_alert_dispatch",
-                "release_job_id": job.job_id,
-                "release_id": release_identity["release_id"],
-            },
-            timeout_seconds=10 * 60,
-        )
-        situation_alert_dispatch_attempted = True
+        # The v3 subscriber-alert dispatcher read analyst-reviewed statistical
+        # signals; the notice-based Situation module publishes none, so no
+        # alert step runs after deployment.
     else:
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid,

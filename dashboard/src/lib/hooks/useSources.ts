@@ -171,27 +171,31 @@ export interface AutomationTriggerResult {
   reason?: string | null;
 }
 
+/** One international authority feed of the notice-based Situation module. */
 export interface SituationSourceAdapter {
   source_id: string;
-  health_key: string;
-  label: string;
-  source_kind: "official_event" | "respiratory_metric";
-  transport: string;
-  url: string;
-  stale_policy_hours: number;
-  automatic_publication: boolean;
-  analysis_source_system?: string | null;
-  contract: string[];
-  health: { status?: string; checked_at?: string; item_count?: number; normalized_observation_count?: number; normalized_series_count?: number; data_through?: string | null; error?: string; stale_after_hours?: number; from_history?: boolean };
-  usage?: { mode?: "official_event" | "numeric_series" | "context_only"; persisted?: Record<string, number>; in_latest_emerging?: number; used_in_composite_risk?: number; series_count?: number; analyzed_count?: number; rejected_count?: number; candidate_count?: number; rejection_reasons?: Record<string, number>; not_analyzed_reason?: string | null };
-  last_success_at?: string | null;
-  latest_snapshot_id?: string | null;
+  label_en: string | null;
+  label_zh: string | null;
+  agency_en: string | null;
+  homepage: string | null;
+  endpoint: string | null;
+  cadence?: { en?: string; zh?: string } | null;
+  redistribution: string | null;
+  license?: string | null;
+  stored_notices: number;
+  status: string;
+  last_checked_at: string | null;
+  last_success_at: string | null;
+  last_error: string | null;
+  history: Array<{ run_id: string; started_at: string; status: string; fetched_count: number; new_count: number; updated_count: number; error: string | null }>;
 }
+
+export type SituationRefreshMode = "full" | "no_fetch" | "metadata_only";
 
 export function useSituationSources() {
   return useQuery<SituationSourceAdapter[]>({
     queryKey: ["situation-sources"],
-    queryFn: () => apiFetch("/overview/events/sources"),
+    queryFn: () => apiFetch("/situation/sources"),
     staleTime: 15 * 1000,
     refetchInterval: 30 * 1000,
   });
@@ -200,8 +204,8 @@ export function useSituationSources() {
 export function useRefreshSituationSources() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (mode: "full" | "numeric_only") =>
-      apiFetch<{ task_uuid: string; status: string }>("/overview/events/sources/refresh", {
+    mutationFn: (mode: SituationRefreshMode) =>
+      apiFetch<{ task_uuid: string; status: string }>("/situation/refresh", {
         method: "POST",
         body: JSON.stringify({ mode }),
       }),

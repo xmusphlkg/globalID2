@@ -71,6 +71,8 @@ export default defineConfig({
         'echarts/renderers',
         'echarts-for-react/lib/core.js',
         'tslib',
+        // Disease report figures import marked while the island hydrates.
+        'marked',
       ],
       exclude: [
         // Let Vite resolve the JSX runtime per mode. Pre-bundling this module

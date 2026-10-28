@@ -73,7 +73,7 @@ from src.generation.site_data_writer import (
 )
 from src.knowledge.catalogue import should_generate_public_disease_page
 from src.ontology import load_disease_ontology
-from src.services.situation_v3.persistence import latest_report_v3, reports_v3
+from src.services.situation_notices.snapshot import latest_situation_snapshot
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "astro-site" / "src" / "data"
@@ -1297,20 +1297,11 @@ async def collect_site_export_context(
             limit=get_config().literature.public_article_limit,
         )
 
-    if incremental:
-        # The Situation Room refresh runs immediately before an incremental
-        # release and advances the database publication pointer. Reading the
-        # previous local snapshot here can therefore publish a stale
-        # `latest.json` and fail the release gate. Fetch the pointer-backed
-        # report even for incremental country exports; weekly/monthly archives
-        # remain unchanged to keep the incremental path bounded.
-        situation_latest = await latest_report_v3()
-        situation_weekly = []
-        situation_monthly = []
-    else:
-        situation_latest = await latest_report_v3()
-        situation_weekly = await reports_v3("weekly")
-        situation_monthly = await reports_v3("monthly")
+    # The notice-based Situation module exports its own static shards; the
+    # site-data export only needs its snapshot to link literature to events.
+    situation_latest = await latest_situation_snapshot()
+    situation_weekly: list = []
+    situation_monthly: list = []
     literature_export = attach_surveillance_evidence(
         literature_export,
         situation_latest,
@@ -1559,34 +1550,8 @@ def write_site_export_artifacts(
     write_pretty_json(output_dir / "about.json", about_snapshot)
     print("  ✓ about.json")
 
-    # Situation Room artifacts are generated from durable snapshots.  The
-    # public-site copy is compact; build-time pages retain readable JSON.
-    situation_public = bool(situation_latest and situation_latest.get("public_enabled"))
-    if situation_public:
-        # Canonical v3 paths. The legacy latest.json alias remains for one
-        # release cycle but intentionally carries the v3 contract unchanged.
-        write_pretty_json(output_dir / "situation" / "v3" / "latest.json", situation_latest)
-        write_compact_json(public_site_data_dir / "situation" / "v3" / "latest.json", situation_latest)
-        write_pretty_json(output_dir / "situation" / "latest.json", situation_latest)
-        write_compact_json(public_site_data_dir / "situation" / "latest.json", situation_latest)
-        for snapshot in situation_weekly:
-            iso_week = str((snapshot.get("report") or {}).get("period_key") or "")
-            if not iso_week:
-                continue
-            write_pretty_json(output_dir / "situation" / "v3" / "weekly" / f"{iso_week}.json", snapshot)
-            write_compact_json(public_site_data_dir / "situation" / "v3" / "weekly" / f"{iso_week}.json", snapshot)
-        for snapshot in situation_monthly:
-            month = str((snapshot.get("report") or {}).get("period_key") or "")
-            if not month:
-                continue
-            write_pretty_json(output_dir / "situation" / "v3" / "monthly" / f"{month}.json", snapshot)
-            write_compact_json(public_site_data_dir / "situation" / "v3" / "monthly" / f"{month}.json", snapshot)
-        print(f"  ✓ situation snapshots (latest + {len(situation_weekly)} weekly + {len(situation_monthly)} monthly)")
-    elif situation_latest:
-        # Dev preview only: this file is consumed at Astro build time and is
-        # never copied to public/site-data, indexed, or included in sitemaps.
-        write_pretty_json(output_dir / "situation" / "v3" / "shadow-latest.json", situation_latest)
-        print("  ✓ situation shadow preview (build-time only)")
+    # Situation artifacts are written by src.services.situation_notices.export
+    # under situation/international; nothing is written here any more.
     report_phase("metadata and situation JSON")
 
     # Reconcile stale artifacts only after every new artifact is safely on disk.
@@ -1618,41 +1583,11 @@ def write_site_export_artifacts(
         public_site_data_dir / "diseases",
         disease_json_names,
     )
-    if situation_public:
-        remove_stale_json_files(output_dir / "situation", {"latest.json"})
-        remove_stale_json_files(public_site_data_dir / "situation", {"latest.json"})
-        remove_stale_json_files(output_dir / "situation" / "v3", {"latest.json"})
-        remove_stale_json_files(public_site_data_dir / "situation" / "v3", {"latest.json"})
-        week_names = {f"{(snapshot.get('report') or {}).get('period_key')}.json" for snapshot in situation_weekly if (snapshot.get("report") or {}).get("period_key")}
-        month_names = {f"{(snapshot.get('report') or {}).get('period_key')}.json" for snapshot in situation_monthly if (snapshot.get("report") or {}).get("period_key")}
-        remove_stale_json_files(output_dir / "situation" / "v3" / "weekly", week_names)
-        remove_stale_json_files(public_site_data_dir / "situation" / "v3" / "weekly", week_names)
-        remove_stale_json_files(output_dir / "situation" / "v3" / "monthly", month_names)
-        remove_stale_json_files(public_site_data_dir / "situation" / "v3" / "monthly", month_names)
-        # v2 period artifacts are no longer canonical.
-        remove_stale_json_files(output_dir / "situation" / "weeks", set())
-        remove_stale_json_files(public_site_data_dir / "situation" / "weeks", set())
-        remove_stale_json_files(output_dir / "situation" / "months", set())
-        remove_stale_json_files(public_site_data_dir / "situation" / "months", set())
-    else:
-        remove_stale_json_files(
-            output_dir / "situation",
-            set(),
-        )
-        remove_stale_json_files(
-            output_dir / "situation" / "v3",
-            {"shadow-latest.json"} if situation_latest else set(),
-        )
-        remove_stale_json_files(public_site_data_dir / "situation", set())
-        remove_stale_json_files(public_site_data_dir / "situation" / "v3", set())
-        remove_stale_json_files(output_dir / "situation" / "weeks", set())
-        remove_stale_json_files(output_dir / "situation" / "months", set())
-        remove_stale_json_files(public_site_data_dir / "situation" / "weeks", set())
-        remove_stale_json_files(public_site_data_dir / "situation" / "months", set())
-        remove_stale_json_files(output_dir / "situation" / "v3" / "weekly", set())
-        remove_stale_json_files(output_dir / "situation" / "v3" / "monthly", set())
-        remove_stale_json_files(public_site_data_dir / "situation" / "v3" / "weekly", set())
-        remove_stale_json_files(public_site_data_dir / "situation" / "v3" / "monthly", set())
+    # Retire the legacy v2/v3 Situation artifacts. Only top-level JSON files
+    # are removed, so situation/international is never touched.
+    for legacy in ("", "v3", "v3/weekly", "v3/monthly", "weeks", "months"):
+        remove_stale_json_files(output_dir / "situation" / legacy, set())
+        remove_stale_json_files(public_site_data_dir / "situation" / legacy, set())
     _write_publish_hash_manifest(output_dir, context)
     report_phase("stale file cleanup and hashes")
 
@@ -1757,19 +1692,6 @@ def write_incremental_site_export_artifacts(
         generated_at=context["generated_at"],
     )
     write_pretty_json(output_dir / "about.json", about_snapshot)
-
-    # An incremental release still runs the Situation Room refresh first.
-    # Refresh both build-time and public latest snapshots so the generated
-    # artifact stays aligned with the database publication pointer; weekly
-    # and monthly archives remain unchanged on this bounded path.
-    situation_latest = context.get("situation_latest")
-    if situation_latest and situation_latest.get("public_enabled"):
-        write_pretty_json(output_dir / "situation" / "v3" / "latest.json", situation_latest)
-        write_compact_json(public_site_data_dir / "situation" / "v3" / "latest.json", situation_latest)
-        write_pretty_json(output_dir / "situation" / "latest.json", situation_latest)
-        write_compact_json(public_site_data_dir / "situation" / "latest.json", situation_latest)
-    elif situation_latest:
-        write_pretty_json(output_dir / "situation" / "v3" / "shadow-latest.json", situation_latest)
 
     write_literature_artifacts(
         context["literature_export"],

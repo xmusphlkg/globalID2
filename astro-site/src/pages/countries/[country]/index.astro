@@ -7,6 +7,12 @@ import CountryFlag from '../../../components/CountryFlag.astro';
 import CountryCard from '../../../components/CountryCard.astro';
 import DownloadPanel from '../../../components/DownloadPanel.astro';
 import PageAnchorNav from '../../../components/PageAnchorNav.astro';
+import InternationalNoticePanel from '../../../components/InternationalNoticePanel.astro';
+import { readInternationalForCountryPage, recentNotices } from '../../../utils/international';
+const countryNotices = recentNotices(
+  readInternationalForCountryPage((Astro.params as { country?: string }).country ?? ''),
+  8,
+);
 import EpidemicCurve from '../../../components/charts/EpidemicCurve';
 import DiseaseHeatmap from '../../../components/charts/DiseaseHeatmap';
 import ComparisonTable from '../../../components/charts/ComparisonTable';
@@ -414,9 +420,6 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
         <h2 class="figure-title">
           {zh ? '各疾病监测趋势' : fr ? 'Tendances de surveillance par maladie' : 'Surveillance trends by disease'}
         </h2>
-        <p class="figure-caption mt-2">
-          {zh ? '选择疾病和指标，调整时间范围后查看图表或数据表。页面下方提供完整数据下载。不同来源或报告频率的数据会分别标明。' : fr ? 'Choisissez une maladie et une mesure, ajustez la période, puis consultez le graphique ou le tableau. Le jeu de données complet est disponible plus bas. Les sources et fréquences différentes sont signalées séparément.' : 'Choose a disease and measure, adjust the time range, then view the chart or table. Download the full dataset below. Different sources and reporting frequencies are labeled separately.'}
-        </p>
       <div class="mt-5">
         {countryData?.disease_series ? (
           <EpidemicCurve
@@ -503,6 +506,10 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
         </div>
       </section>
     )}
+
+    <div id="international" class="scroll-mt-24">
+      <InternationalNoticePanel notices={countryNotices} locale={locale} />
+    </div>
 
     {countryDownload && (
       <div id="downloads" class="scroll-mt-24"><DownloadPanel

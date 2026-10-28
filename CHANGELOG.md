@@ -2,6 +2,65 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [0.15.0] - 2026-10-28
+
+### Added
+
+- Rebuilt the public Situation module on official authority notices. `/situation/` shows the current peer-reviewed weekly brief, active events, and a weekly notice timeline. Every brief point links to the notices it cites.
+- `/situation/weekly/[period]/` and `/situation/monthly/[period]/` keep their URLs and now hold weekly briefs (monthly pages group the briefs of a month). English, Chinese, and French routes are unchanged.
+- Control panel: the Events page reads the new `/api/v1/situation/*` endpoints (overview, notices with AI assessments and review notes, events, digests, source runs). It can queue a full, no-fetch, or metadata-only run and re-queue one notice for AI. The source-flow page shows per-feed run history.
+
+### Changed
+
+- Data releases, the `refresh_situation_sources` task, and the CLI share one runner (`src/services/situation_notices/runner.py`, `scripts/run_situation_notices.py`). The release gate validates the notice export and built pages.
+- Research Radar links literature to Situation events from the new tables.
+- Rewrote the methodology page, home page strip, header visibility, and sitemap to use the notice export.
+
+### Removed
+
+- Retired the statistical Situation Room (v2/v3 screen, history database, calibration, backtest, review API, alert dispatch, and the manual release workflow). Migration `0020_drop_legacy_situation` drops its 14 tables.
+
+### Validation
+
+- Python suite: 1,456 passed. Dashboard: `tsc` clean, 10 Vitest tests pass. Astro: style and i18n checks pass, 8 TS tests pass, production build 6,355 pages. Release gate passes on the new export.
+
+## [0.14.0] - 2026-10-28
+
+### Added
+
+- Notice database (migration `0019_situation_notices`): notices, mapped entities, AI assessments, events, weekly digests, and per-source run health.
+- Africa CDC adapter (official WordPress REST API: outbreak statements and Epidemic Intelligence Weekly Reports; French duplicates dropped) and PAHO adapter (IRIS DSpace search API, because www.paho.org rejects non-browser clients).
+- Peer-reviewed AI enrichment through the Model Center: an author model drafts Chinese/French titles, summaries, event type, risk level, and disease/country ids; a reviewer pass accepts, revises (one more round), or rejects. Guardrails restrict ids to the GIDS catalogue and drop digest points without citations. Each export records author, reviewer, and `review_mode` (`single_model` while only one route is configured).
+- Disease, country, and country-disease pages show authority notices; country pages show them without requiring a download entry; country-disease pages filter to the page disease.
+
+### Changed
+
+- Chart PNG exports print trilingual disease names and wrap long titles (up to six lines).
+
+### Fixed
+
+- Country abbreviations (DRC, UK, USA) were skipped by a length threshold.
+- SARS-CoV-2 no longer matches SARS (D003); hantavirus notices map to D102.
+
+## [0.13.7] - 2026-10-26
+
+### Fixed
+
+- Chart PNG downloads attach the download link to the document before clicking it. Browsers that ignore a detached anchor (Safari and iOS in particular) had saved nothing.
+- The surveillance explorer shares a configuration once. It no longer builds and renders the shared link twice for one click.
+
+### Changed
+
+- The QR attribution used by PNG export is imported only when an export starts, so it stays out of the initial chart JavaScript chunk.
+- Compare charts no longer offer a per-chart CSV button. Their data action opens the disease page's published-file dialog, so every data download goes through the same download dialog.
+- Removed the unused CSV helpers from the shared chart export module.
+
+### Validation
+
+- `astro check`: 0 errors, 0 warnings across 277 files; style boundaries and trilingual i18n checks pass.
+- Unit tests: chart, SEO, and performance-budget suites pass (56 + 27 + 10 tests).
+- Production build: 6,295 pages; largest JavaScript chunk 108,579 gzip bytes against a 350,000 byte cap; largest chart route 384,255 gzip bytes against a 395,000 byte cap; average page 17,083 gzip bytes.
+
 ## [0.13.5] - 2026-10-23
 
 ### Added

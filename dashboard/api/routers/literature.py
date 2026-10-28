@@ -41,7 +41,7 @@ from src.generation.site_data_literature import build_surveillance_evidence
 from src.services.literature_service import literature_service
 from src.services.literature_gap_service import literature_gap_service
 from src.services.literature_automation_service import literature_automation_service
-from src.services.situation_room import latest_snapshot
+from src.services.situation_notices.snapshot import latest_situation_snapshot as latest_snapshot
 
 
 router = APIRouter(prefix="/research-radar")

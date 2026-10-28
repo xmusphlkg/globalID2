@@ -3,9 +3,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import CompareWorkspace from '../components/charts/CompareWorkspace';
 import { downloadCatalogue } from '../lib/downloads-data';
 import { diseaseIndex } from '../lib/seo-page-data';
+import { toSeoSlug } from '../lib/seo';
 import { localizedDiseaseName } from '../utils/diseaseNames';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
+const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
 const countriesByDisease = new Map(
   (downloadCatalogue()?.diseases ?? []).map(entry => [entry.disease_id, entry.countries ?? []]),
 );
@@ -16,6 +18,7 @@ const options = diseaseIndex.flatMap(disease => {
   return [{
     id: disease.disease_id,
     slug: disease.slug,
+    href: `${prefix}/diseases/${toSeoSlug(disease.slug) || disease.slug}/#downloads`,
     en: disease.name_en,
     zh: disease.name_zh,
     fr: localizedDiseaseName({ disease_id: disease.disease_id, slug: disease.slug, name_en: disease.name_en, name_zh: disease.name_zh }, 'fr'),

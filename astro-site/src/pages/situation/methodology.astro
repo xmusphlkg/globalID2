@@ -1,49 +1,69 @@
 ---
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readInternationalLatest } from '../../utils/international';
 import { translateUi } from '../../utils/i18n';
 
-const situationPublic = existsSync(resolve('./src/data/situation/v3/latest.json'));
+const situationPublic = readInternationalLatest() !== null;
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 
-const methodologyFr: Record<string, string> = {
-  'One source-native identity': 'Une identité propre à la source',
-  'Publication-lag protection': 'Protection contre les retards de publication',
-  'Tiered, frequency-aware detectors': 'Détecteurs hiérarchisés et sensibles à la fréquence',
-  'Multiple testing and effect gates': 'Tests multiples et seuils d’effet',
-  'Calibrated, fail-closed publication': 'Publication calibrée et fermée en cas d’échec',
-  'Events, period reports, and revisions': 'Événements, rapports périodiques et révisions',
-  'Immutable publication': 'Publication immuable',
-};
-const methodologyBodyFr: Record<string, string> = {
-  'One source-native identity': 'Chaque combinaison exacte de maladie, source, indicateur, géographie normalisée et dimension apparaît une seule fois. Les alias géographiques restent auditables mais renvoient à une identité canonique ; les comptes, taux, pourcentages, admissions et positivités ne sont jamais additionnés entre définitions incompatibles.',
-  'Publication-lag protection': 'Les pays et agences publient selon des calendriers différents. GIDS calcule une borne commune par source et fréquence ; une période n’entre dans le modèle qu’après une maturité suffisante. Les observations provisoires restent visibles comme dernières données reçues mais sont exclues de l’analyse.',
-  'Tiered, frequency-aware detectors': 'Les comptes courants utilisent une régression quasi-Poisson robuste avec saisonnalité, tendance optionnelle et surdispersion. Les faibles comptes utilisent une queue exacte de Poisson ou une loi binomiale négative. CUSUM apporte seulement une preuve de persistance ; les taux ne sont modélisés que si numérateur et dénominateur sont disponibles.',
-  'Multiple testing and effect gates': 'Les valeurs p unilatérales sont corrigées par Benjamini–Hochberg au sein de familles définies par niveau de détection, type d’indicateur et fréquence. Les seuils d’alerte et d’anomalie forte exigent à la fois une signification statistique et un effet minimal adapté à la métrique.',
-  'Calibrated, fail-closed publication': 'La collecte, la modélisation, la correction FDR, les liens de preuve, la déduplication, la mise en file et la publication sont automatisées. Les candidats statistiques restent privés jusqu’à vérification indépendante ; le risque de santé publique n’apparaît qu’avec une preuve attribuable et une justification.',
-  'Events, period reports, and revisions': 'Les mises à jour officielles d’une même maladie et de géographies qui se chevauchent sont regroupées en chronologie stable avant la revue. Les rapports hebdomadaires et mensuels exigent que chaque membre quotidien de la période fermée existe et passe le contrôle de qualité.',
-  'Immutable publication': 'Pydantic est la source du contrat pour les schémas JSON, OpenAPI et TypeScript généré. Chaque analyse et décision de revue est immuable ; une révision ne devient publique qu’après validation et archivage réussis.',
-};
-
+// [heading en, zh, fr, body en, zh, fr]
 const sections = [
-  ['One source-native identity', '唯一来源原生 identity', 'Each exact disease, source, metric, normalized geography, and dimension identity appears once. Geography aliases are retained for audit but resolve to one canonical identity. Counts, rates, percentages, admissions, and positivity are never summed across incompatible definitions.', '每个精确疾病、来源、指标、规范化地理和维度 identity 仅出现一次。地理别名保留用于审计，但归并为一个规范 identity。病例数、率、百分比、住院和阳性率不会跨不兼容定义相加。'],
-  ['Publication-lag protection', '发布延迟保护', 'Countries and agencies publish on different schedules. For every source and cadence, GIDS derives a common analysis watermark from the latest periods available across eligible source identities. At least 80% of the active source cohort must reach the watermark, and a cadence-specific maturity interval must elapse before that period can enter the model. Newer provisional observations remain visible as latest received but are held out of analysis. Feeds beyond the configured delay warning are marked delayed and excluded from the current Benjamini–Hochberg family.', '不同国家和机构按不同节奏发布数据。GIDS 针对每个来源和频率，根据合格来源 identity 的最新周期计算共同分析水位线；至少 80% 的活跃来源群必须到达该水位线，且经过相应频率的成熟等待期后，该周期才可进入模型。更新但仍属暂定的数据会显示为最新收到，但不会进入分析。超过延迟预警线的来源会从当期 Benjamini–Hochberg 检验族中隔离。'],
-  ['Tiered, frequency-aware detectors', '分层且频率感知的检测器', 'Common count metrics use robust quasi-Poisson regression with seasonal harmonics, optional long-term trend, over-dispersion, and historical-outlier down-weighting. Low-expected-count series use an exact Poisson or moment-matched negative-binomial upper tail. CUSUM is supporting persistence evidence only. A labelled seasonal empirical fallback can preserve review evidence but always remains private. Percentages and rates enter formal anomaly modeling only when numerator and denominator are available.', '常见计数指标使用含季节谐波、可选长期趋势、过度离散和历史异常降权的稳健准泊松回归；低期望计数序列使用精确泊松或矩匹配负二项上尾概率。CUSUM 仅作为持续性辅助证据。明确标注的季节经验回退方法可保留复核证据，但始终保持非公开。百分比或率只有在分子和分母均可用时才进入正式异常模型。'],
-  ['Multiple testing and effect gates', '多重检验与效应门槛', 'Within each run, one-sided p values are adjusted with Benjamini–Hochberg inside detector-tier, metric-type, and cadence families. Alert requires q ≤ 0.05; strong requires q ≤ 0.01. Common counts require at least 20 current cases, +10 absolute, and +25%; rare counts require +100% relative growth. Rate metrics require an explicit metric-specific gate.', '每次运行中，单侧 p 值按检测分层、指标类型与频率组成检验族，并使用 Benjamini–Hochberg 校正。告警要求 q ≤ 0.05，强异常要求 q ≤ 0.01。常见计数需满足当前至少 20 例、绝对增加 10、相对增加 25%；稀有计数要求相对增长 100%；率值指标必须配置专属效应门槛。'],
-  ['Calibrated, fail-closed publication', '校准约束与失败关闭发布', 'Collection, modeling, FDR adjustment, evidence linking, deduplication, queueing, static builds, and deployment are automated. Statistical candidates remain private until independently verified. Rare-count and fallback candidates enter analyst review only when independently matched to an official event. Public-health risk appears only with attributable evidence and rationale.', '采集、建模、FDR 校正、证据关联、去重、队列分流、静态构建和部署均自动运行。统计候选在独立验证前保持非公开；稀有计数与回退模型候选只有独立匹配到官方事件才进入人工复核。公共卫生风险只有在存在可归因证据与理由时才显示。'],
-  ['Events, period reports, and revisions', '事件、期间报告与修订', 'Official updates for the same disease within 45 days and overlapping geographies resolve to a stable timeline before review state is applied. Weekly and monthly reports require every UTC daily member in the closed period to exist and pass its gate; missing or failed members block publication.', '同一疾病在 45 天内且地理集合相交的官方更新，会先解析到稳定时间线，再应用复核状态。周报和月报要求封闭周期内每个 UTC 日成员均存在且通过质量门，缺失或失败成员会阻止发布。'],
-  ['Immutable publication', '不可变发布', 'Pydantic is the contract source for JSON Schema, OpenAPI, and generated TypeScript. Every analysis run and review decision is immutable. A report must pass its quality gate and commit to the history store before the main publication pointer advances. Archive, contract, or build failure leaves the previous public version in place.', 'Pydantic 是 JSON Schema、OpenAPI 和生成 TypeScript 的契约源。每次分析运行和复核决定均不可变。报告必须通过质量门并先提交到历史库，主发布指针才能推进；归档、契约或构建失败时继续保留上一公开版本。'],
+  [
+    'Official sources only', '仅收录官方来源', 'Sources officielles uniquement',
+    'Every record is published by a public-health authority: WHO Disease Outbreak News, the WHO Weekly Epidemiological Record, WHO Western Pacific surveillance updates, the ECDC Communicable Disease Threats Report, Africa CDC outbreak statements and weekly intelligence reports, and PAHO surveillance updates. Each entry links back to the original.',
+    '每条记录均由公共卫生机构发布：世卫组织疾病暴发新闻、每周流行病学记录、西太平洋区域监测更新，欧洲疾控中心传染病威胁周报，非洲疾控中心疫情声明与流行病情报周报，以及泛美卫生组织监测更新。每条记录都回链原文。',
+    'Chaque enregistrement est publié par une autorité de santé publique : bulletins d’information sur les flambées de l’OMS, Relevé épidémiologique hebdomadaire, mises à jour de surveillance du Pacifique occidental, rapport hebdomadaire de l’ECDC, déclarations et rapports de l’Africa CDC, et mises à jour de l’OPS. Chaque entrée renvoie à l’original.',
+  ],
+  [
+    'Metadata, not republication', '只收元数据，不转载原文', 'Métadonnées, pas de republication',
+    'GIDS stores titles, dates, links and short attributed extracts. Long article bodies are never republished. Sources whose redistribution terms are not confirmed (Africa CDC, PAHO, WHO WER and WPRO) contribute metadata only.',
+    'GIDS 仅保存标题、日期、链接和简短的署名摘录，从不转载长篇正文。再分发条款尚未确认的来源（非洲疾控中心、泛美卫生组织、WHO WER 与 WPRO）只提供元数据。',
+    'GIDS conserve titres, dates, liens et courts extraits attribués. Les textes longs ne sont jamais republiés. Les sources dont les conditions de redistribution ne sont pas confirmées (Africa CDC, OPS, REH et WPRO) ne fournissent que des métadonnées.',
+  ],
+  [
+    'Normalized to GIDS keys', '规范化到本站标准键', 'Normalisation sur les clés GIDS',
+    'Each notice is mapped to GIDS disease ids, ISO 3166-1 country codes and an ISO week. Keyword matching proposes the mapping; the AI step may correct it, but only with ids that exist in the GIDS catalogue. Regions such as EU/EEA are never treated as countries.',
+    '每条通报都会映射到 GIDS 疾病 ID、ISO 3166-1 国家码和 ISO 周。先由关键词匹配给出候选，AI 步骤可以修正，但只能使用本站目录中存在的 ID。EU/EEA 这类区域不会被当作国家。',
+    'Chaque avis est rattaché aux identifiants de maladie GIDS, aux codes pays ISO 3166-1 et à une semaine ISO. La correspondance par mots-clés propose un rattachement ; l’IA peut le corriger, uniquement avec des identifiants du catalogue GIDS.',
+  ],
+  [
+    'AI peer review, published automatically', 'AI 同行评审后自动发布', 'Relecture par IA, publication automatique',
+    'An author model writes Chinese and French translations, a short summary, an event type and a risk judgement. A reviewer model audits the draft against the same input and accepts, requests one revision, or rejects it. Only accepted output is published; there is no human gate. When only one model route is available, the same model reviews its own draft and the output is labelled as single-model review.',
+    '作者模型生成中法文翻译、简短摘要、事件类型和风险判断；审稿模型对照同一输入独立审查，结论为通过、要求修改一轮或拒绝。只有通过的内容才会发布，全程没有人工环节。只有一条模型路由时，由同一模型审查自己的草稿，并标注为“单模型评审”。',
+    'Un modèle auteur rédige traductions, résumé, type d’événement et jugement de risque. Un modèle relecteur vérifie le brouillon sur la même entrée et l’accepte, demande une révision ou le rejette. Seul le contenu accepté est publié, sans intervention humaine. Avec une seule route de modèle, le même modèle relit son brouillon et le résultat est signalé comme relecture mono-modèle.',
+  ],
+  [
+    'Risk is an analyst judgement', '风险等级是分析判断', 'Le risque est un jugement d’analyste',
+    'Risk levels (low, moderate, high, very high) are the AI analyst’s reading of the facts in the notice, not a level the agency declared. A notice with no event facts carries no risk level. Treat risk as orientation, and read the original notice before acting.',
+    '风险等级（低、中、高、极高）是 AI 分析员根据通报事实作出的判断，并非机构正式宣布的等级。没有事件事实的通报不标注风险。请把风险等级当作参考，采取行动前请阅读原始通报。',
+    'Les niveaux de risque (faible, modéré, élevé, très élevé) reflètent la lecture par l’IA des faits de l’avis, et non un niveau déclaré par l’agence. Un avis sans fait d’événement n’a pas de niveau. Consultez l’avis original avant toute action.',
+  ],
+  [
+    'Events and weekly briefs', '事件聚合与周综述', 'Événements et synthèses hebdomadaires',
+    'Notices on the same disease and place are grouped into one event; a gap of more than 60 days starts a new one, and an event with no notice for 30 days is shown as quiet. Each week, a peer-reviewed brief summarises the enriched notices. Every point must cite the notices it rests on; a point that cites nothing is dropped.',
+    '同一疾病、同一地点的通报会聚合为一个事件；间隔超过 60 天视为新事件，30 天无新通报的事件显示为平静。每周会基于已富化的通报生成一份经同行评审的综述，每个要点都必须引用其依据的通报，没有引用的要点会被删除。',
+    'Les avis sur une même maladie et un même lieu forment un événement ; un écart de plus de 60 jours ouvre un nouvel événement, et un événement sans avis depuis 30 jours est affiché comme calme. Chaque semaine, une synthèse relue résume les avis ; chaque point doit citer ses avis sources, sinon il est supprimé.',
+  ],
+  [
+    'Limitations', '局限', 'Limites',
+    'Coverage follows what these authorities publish: countries that report little to international bodies appear rarely. AI translations and summaries can still contain errors that both author and reviewer missed. The original notice is always authoritative.',
+    '覆盖范围取决于这些机构发布了什么：很少向国际机构报告的国家出现得也少。AI 翻译和摘要仍可能存在作者与审稿模型都没发现的错误。一切以原始通报为准。',
+    'La couverture dépend de ce que publient ces autorités : les pays qui déclarent peu y apparaissent rarement. Les traductions et résumés IA peuvent contenir des erreurs non détectées. L’avis original fait toujours foi.',
+  ],
 ] as const;
 
 const seo: SeoDocument = {
   title: pick('Situation Room Methodology | GIDS', '全球态势室方法 | GIDS', 'Méthodologie de la salle de situation | GIDS'),
-  description: pick('The statistical model, evidence attribution, quality checks, period reports, revisions, and limitations used by GIDS Situation Room.', '了解 GIDS 全球态势室使用的统计模型、证据归因、质量检查、期间报告、修订与限制。', 'Modèle statistique, attribution des preuves, contrôles qualité, rapports périodiques, révisions et limites de la salle de situation GIDS.'),
+  description: pick(
+    'How GIDS collects official international public-health notices, maps them to diseases and countries, and publishes AI peer-reviewed summaries, events and weekly briefs.',
+    '了解 GIDS 如何收集国际公共卫生机构的官方通报，映射到疾病与国家，并发布经 AI 同行评审的摘要、事件与周综述。',
+    'Comment GIDS collecte les avis officiels internationaux, les rattache aux maladies et pays, et publie résumés, événements et synthèses relus par IA.',
+  ),
   canonicalPath: `${prefix}/situation/methodology/`,
   locale,
   alternatePaths: buildAlternatePaths(`${prefix}/situation/methodology/`, locale),
@@ -55,18 +75,18 @@ const seo: SeoDocument = {
   <article class="methodology">
     <header>
       <p class="eyebrow">{pick('Methods', '方法', 'Méthodes')}</p>
-      <h1>{pick('Signal screening methodology', '信号筛查方法', 'Méthodologie de filtrage des signaux')}</h1>
-      <p>{pick('Reproducible statistical screens for review priority. Not outbreak declarations or clinical guidance.', '用于确定复核优先级的可复现统计筛查；不等同于疫情定性或临床建议。', 'Filtres statistiques reproductibles pour hiérarchiser les revues. Ils ne constituent ni une déclaration d’épidémie ni un avis clinique.')}</p>
+      <h1>{pick('How the Situation Room works', '全球态势室如何运作', 'Fonctionnement de la salle de situation')}</h1>
+      <p>{pick('Official international notices, normalized and summarised by peer-reviewed AI. Not clinical guidance.', '官方国际通报，经规范化并由同行评审的 AI 生成摘要；不构成临床建议。', 'Avis internationaux officiels, normalisés et résumés par une IA relue. Ne constitue pas un avis clinique.')}</p>
     </header>
     <div class="methodology-grid">
-      {sections.map(([headingEn, headingZh, bodyEn, bodyZh], index) => (
+      {sections.map(([headingEn, headingZh, headingFr, bodyEn, bodyZh, bodyFr], index) => (
         <details open={index === 0}>
           <summary>
             <span>{String(index + 1).padStart(2, '0')}</span>
-            <h2>{pick(headingEn, headingZh, methodologyFr[headingEn])}</h2>
+            <h2>{pick(headingEn, headingZh, headingFr)}</h2>
             <b aria-hidden="true">+</b>
           </summary>
-          <p>{pick(bodyEn, bodyZh, methodologyBodyFr[headingEn])}</p>
+          <p>{pick(bodyEn, bodyZh, bodyFr)}</p>
         </details>
       ))}
     </div>

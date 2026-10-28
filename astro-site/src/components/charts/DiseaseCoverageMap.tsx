@@ -15,6 +15,8 @@ import ReactEChartsCore from '../../lib/echartsReact';
 import echarts from '../../lib/echartsMapCoverage';
 import featureIsoJson from '../../lib/data/world-feature-iso.json' with { type: 'json' };
 import { loadDiseaseDataset, type DiseaseDataset } from './diseaseDataset';
+import ChartResultActions from './ChartResultActions';
+import { pngFromCanvases } from './chartExport';
 
 type Lang = 'en' | 'zh' | 'fr';
 type Metric = 'coverage' | 'cases' | 'deaths';
@@ -144,6 +146,8 @@ export function buildLocationCoverage(dataset: DiseaseDataset, lang: Lang): Loca
 export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', height = 420 }: Props) {
   const lang = initialLanguage;
   const chartRef = useRef<any>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [mapReady, setMapReady] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
@@ -151,6 +155,11 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
   const [datasetFailed, setDatasetFailed] = useState(false);
   const [metric, setMetric] = useState<Metric>('coverage');
   const [resetToken, setResetToken] = useState(0);
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('map_metric');
+    if (requested === 'coverage' || requested === 'cases' || requested === 'deaths') setMetric(requested);
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -402,8 +411,14 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
 
   const zoomLabel = ui(lang, 'Map zoom', '地图缩放', 'Zoom de la carte');
 
+  const share = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('map_metric', activeMetric);
+    return url.toString();
+  };
+
   return (
-    <div className="disease-coverage-map">
+    <div className="disease-coverage-map panel-fullscreen" ref={shellRef}>
       <div className="disease-coverage-toolbar">
         <span className="site-control-pill" style={{ fontSize: '.7rem' }}>
           {ui(lang, `${drawn.length} locations`, `${drawn.length} 个报告国家/地区`, `${drawn.length} lieux`)}
@@ -440,8 +455,21 @@ export default function DiseaseCoverageMap({ dataUrl, initialLanguage = 'en', he
             </button>
           );
         })}
+        <ChartResultActions
+          lang={lang}
+          shellRef={shellRef}
+          onShare={share}
+          pngFilename="gids-disease-coverage.png"
+          getPng={() => frameRef.current ? pngFromCanvases(frameRef.current, markers.map((marker) => ({
+            x: marker.x,
+            y: marker.y,
+            color: locationColors.get(marker.code) ?? palette.supported,
+            radius: 6,
+          }))) : null}
+        />
       </div>
       <div
+        ref={frameRef}
         className="disease-coverage-frame"
         style={{
           position: 'relative',

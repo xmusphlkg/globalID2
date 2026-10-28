@@ -10,10 +10,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_PATHS = (
-    "configs/situation_room.v3.schema.json",
     "dashboard/openapi.json",
     "dashboard/src/generated/api.d.ts",
-    "astro-site/src/generated/api.d.ts",
 )
 
 

@@ -4,9 +4,7 @@ import CountryFlag from '../CountryFlag.astro';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedRegionName } from '../../utils/i18n';
 import { hasCountryDataSnapshot } from '../../lib/country-coverage';
-import { isSituationReportV3, type SituationReportV3 } from '../../utils/situation';
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readInternationalLatest, readSituationEvents } from '../../utils/international';
 import metaRaw from '../../data/meta.json';
 import diseasesRaw from '../../data/diseases/index.json';
 import reportsRaw from '../../data/reports/index.json';
@@ -46,10 +44,10 @@ const t = zh ? {
   methods: '来源与方法',
   review: '态势复核',
   attention: '当前关注',
-  reviewText: '统计监测信号与官方发布事件并列展示；信号用于筛查，不等同于疫情声明。',
-  events: '官方事件',
-  signals: '公开信号',
-  reviewed: '复核地区',
+  reviewText: '汇总世卫组织、欧洲疾控中心、非洲疾控中心与泛美卫生组织的官方通报，由 AI 生成多语言摘要与风险评估并经模型同行评审。',
+  events: '窗口内通报',
+  signals: '活跃事件',
+  reviewed: '响应来源',
   fullReview: '查看完整态势复核',
   explore: '开始探索',
   exploreTitle: '像使用数据目录一样进入公共卫生证据',
@@ -98,10 +96,10 @@ const t = zh ? {
   methods: 'Sources and methods',
   review: 'Situation review',
   attention: 'Current attention',
-  reviewText: 'Statistical surveillance signals are shown alongside independently published official events; signals are screening results, not outbreak declarations.',
-  events: 'Official events',
-  signals: 'Published signals',
-  reviewed: 'Jurisdictions reviewed',
+  reviewText: 'Official notices from WHO, ECDC, Africa CDC and PAHO, with AI-written multilingual summaries and risk assessments checked by model peer review.',
+  events: 'Notices in window',
+  signals: 'Active events',
+  reviewed: 'Sources responding',
   fullReview: 'Open the full situation review',
   explore: 'Start exploring',
   exploreTitle: 'Enter public health evidence like a data catalog',
@@ -137,7 +135,7 @@ if (fr) Object.assign(t, {
   situation: 'Voir la situation actuelle', countries: 'Parcourir les pays', downloads: 'Télécharger les données', release: 'Publication publique actuelle',
   observations: 'Séries de surveillance', reportedCases: 'Cas déclarés', jurisdictions: 'Pays et régions', diseases: 'Maladies suivies', sources: 'Sources officielles', through: 'Données jusqu’au',
   updated: 'Instantané généré', recentBoard: 'Périodes de déclaration les plus récentes', cadence: 'Fréquence de déclaration', sourceNote: 'La couverture, les définitions et les calendriers varient selon la source; une valeur manquante ne doit pas être interprétée comme zéro.',
-  methods: 'Sources et méthodes', review: 'Synthèse de situation', attention: 'Points d’attention', events: 'Événements officiels', signals: 'Signaux publiés', reviewed: 'Juridictions examinées', fullReview: 'Ouvrir la synthèse complète',
+  methods: 'Sources et méthodes', review: 'Synthèse de situation', attention: 'Points d’attention', reviewText: 'Avis officiels de l’OMS, de l’ECDC, de l’Africa CDC et de l’OPS, avec résumés multilingues et évaluations du risque rédigés par IA et vérifiés par relecture entre modèles.', events: 'Avis dans la fenêtre', signals: 'Événements actifs', reviewed: 'Sources disponibles', fullReview: 'Ouvrir la synthèse complète',
   explore: 'Commencer l’exploration', exploreTitle: 'Accéder aux preuves de santé publique comme à un catalogue de données', exploreText: 'Choisissez un pays, une maladie ou une étude, puis suivez les liens vers les sources, les tendances et les téléchargements.',
   countryPath: 'Explorer par lieu', countryPathText: 'Consultez la couverture, les sources, les maladies et la période de chaque pays ou région.', diseasePath: 'Explorer par maladie', diseasePathText: 'Comparez la couverture d’une même maladie entre les différentes sources.', downloadPath: 'Réutiliser directement', downloadPathText: 'Téléchargez les jeux de données publics et vérifiez les champs et limites avant citation.', researchPath: 'Relier la recherche', researchPathText: 'Interprétez les signaux de surveillance à la lumière des données publiées.', countryList: 'Pays les mieux couverts', common: 'Maladies courantes', viewAll: 'Tout voir', analysis: 'Analyses publiées', latest: 'Derniers rapports de surveillance', research: 'Parcourir les preuves', openReport: 'Ouvrir le rapport', unavailable: 'Indisponible', empty: 'Aucun rapport public disponible.', curveLabel: 'Grippe au Japon · grippe en Chine',
 });
@@ -163,12 +161,18 @@ for (const country of countries) {
     if (source?.label) sourceNames.add(source.label);
   }
 }
-const situationPath = resolve('./src/data/situation/v3/latest.json');
-const shadowPath = resolve('./src/data/situation/v3/shadow-latest.json');
-const readPath = existsSync(situationPath) ? situationPath : import.meta.env.DEV && existsSync(shadowPath) ? shadowPath : null;
-const rawSituation: unknown = readPath ? JSON.parse(readFileSync(readPath, 'utf-8')) : null;
-const situation: SituationReportV3 | null = isSituationReportV3(rawSituation) ? rawSituation : null;
-const dataThrough = situation?.data_currency.latest_data_through ?? meta.generated_at;
+// The Situation strip reads the notice-based export: notices in the window,
+// active disease x place events, and how many authority feeds responded.
+const international = readInternationalLatest();
+const situation = international && international.event_count > 0
+  ? {
+      asOf: international.window?.as_of ?? international.generated_at,
+      noticeCount: international.event_count,
+      activeEvents: readSituationEvents().filter(event => event.status === 'active').length,
+      sourcesOk: (international.sources ?? []).filter(source => source.status === 'ok').length,
+    }
+  : null;
+const dataThrough = meta.generated_at;
 const formatCadence = (value?: string) => {
   const key = String(value ?? '').trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
   const labels: Record<string, [string, string, string]> = {
@@ -334,14 +338,14 @@ const explorePaths = [
     <section class="situation-strip">
       <div class="page-wrap situation-grid">
         <div>
-          <p class="eyebrow">{t.review} · {formatDate(situation.report.as_of)}</p>
+          <p class="eyebrow">{t.review} · {formatDate(situation.asOf ?? undefined)}</p>
           <h2>{t.attention}</h2>
           <p>{t.reviewText}</p>
         </div>
         <dl>
-          <div><dt>{t.events}</dt><dd>{situation.summary.official_event_count ?? 0}</dd></div>
-          <div><dt>{t.signals}</dt><dd>{situation.summary.unique_signal_count ?? 0}</dd></div>
-          <div><dt>{t.reviewed}</dt><dd>{situation.coverage.jurisdiction_count}</dd></div>
+          <div><dt>{t.events}</dt><dd>{situation.noticeCount}</dd></div>
+          <div><dt>{t.signals}</dt><dd>{situation.activeEvents}</dd></div>
+          <div><dt>{t.reviewed}</dt><dd>{situation.sourcesOk}</dd></div>
         </dl>
         <a href={href('/situation/')}>{t.fullReview} <span aria-hidden="true">-&gt;</span></a>
       </div>

@@ -5,6 +5,9 @@ import CountryFlag from '../../components/CountryFlag.astro';
 import DownloadPanel from '../../components/DownloadPanel.astro';
 import PageAnchorNav from '../../components/PageAnchorNav.astro';
 import DiseaseResearchPanel from '../../components/research/DiseaseResearchPanel.astro';
+import InternationalNoticePanel from '../../components/InternationalNoticePanel.astro';
+import { readInternationalByDisease, recentNotices } from '../../utils/international';
+const diseaseNotices = recentNotices(readInternationalByDisease((Astro.props as { diseaseId?: string }).diseaseId ?? ''), 8);
 import CountrySeasonalityPicker from '../../components/charts/CountrySeasonalityPicker';
 import DiseaseCountryCurve from '../../components/charts/DiseaseCountryCurve';
 import DiseaseCoverageMap from '../../components/charts/DiseaseCoverageMap';
@@ -219,6 +222,16 @@ const reportingCountries = Object.keys(diseaseData?.country_series ?? {})
   })
   .sort((a, b) => a.nameEn.localeCompare(b.nameEn, 'en'));
 const countryCount = reportingCountries.length;
+// Most recently updated reporting jurisdictions: the local snapshots a visitor
+// of this disease page can actually cross-check an authority notice against.
+const snapshotContextCodes = (Object.entries(nationalCountrySeries) as Array<[string, any]>)
+  .map(([code, series]) => ({
+    code: code.toUpperCase(),
+    lastDate: Array.isArray(series?.dates) ? String(series.dates.at(-1) ?? '') : '',
+  }))
+  .sort((a, b) => b.lastDate.localeCompare(a.lastDate) || a.code.localeCompare(b.code))
+  .slice(0, 6)
+  .map((entry) => entry.code);
 const diseaseCountryRoutes = new Set(
   countryDiseaseCandidates().filter(candidate => candidate.slug === disease).map(candidate => candidate.code),
 );
@@ -336,7 +349,10 @@ const diseaseSeo = {
     { label: diseaseData?.name_en ?? disease, labelZh: diseaseData?.name_zh ?? diseaseData?.name_en ?? disease, labelFr: diseaseNameFr },
   ]}
 >
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+  <div
+    class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8"
+    data-disease-names={JSON.stringify({ en: diseaseNameEn, zh: diseaseNameZh, fr: diseaseNameFr })}
+  >
     {!diseaseData ? (
       <div class="card p-10 sm:p-12 text-center text-[rgb(var(--text-muted))]">
         {zh ? '未找到疾病数据。' : fr ? 'Données de maladie introuvables.' : 'Disease data not found.'} <a href={localeHref('/diseases/')} class="text-brand-400 hover:underline">{zh ? '← 返回疾病目录' : fr ? '← Retour au répertoire' : '← Back to directory'}</a>
@@ -539,6 +555,9 @@ const diseaseSeo = {
           { href: '#coverage', label: 'Coverage', labelZh: '覆盖范围', labelFr: 'Couverture' },
           ...(countryCount > 0 ? [{ href: '#seasonality', label: 'Seasonality', labelZh: '季节性', labelFr: 'Saisonnalité' }] : []),
           { href: '#research', label: 'Research', labelZh: '研究证据', labelFr: 'Recherche' },
+          ...(diseaseNotices.length > 0
+            ? [{ href: '#international', label: 'International notices', labelZh: '国际通报', labelFr: 'Avis internationaux' }]
+            : []),
           { href: '#downloads', label: 'Download & methods', labelZh: '下载与方法', labelFr: 'Téléchargement et méthodes' },
         ]} />
 
@@ -602,6 +621,10 @@ const diseaseSeo = {
         )}
 
         <div id="research" class="scroll-mt-24"><DiseaseResearchPanel diseaseId={diseaseId} locale={locale} /></div>
+
+        <div id="international" class="scroll-mt-24">
+          <InternationalNoticePanel notices={diseaseNotices} locale={locale} contextCodes={snapshotContextCodes} />
+        </div>
 
         {diseaseDownload && (
           <div id="downloads" class="scroll-mt-24"><DownloadPanel
