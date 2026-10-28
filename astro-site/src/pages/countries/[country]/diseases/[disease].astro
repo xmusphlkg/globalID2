@@ -4,6 +4,8 @@ import CountryFlag from '../../../../components/CountryFlag.astro';
 import DownloadPanel from '../../../../components/DownloadPanel.astro';
 import EpidemicCurve from '../../../../components/charts/EpidemicCurve';
 import DiseaseResearchPanel from '../../../../components/research/DiseaseResearchPanel.astro';
+import InternationalNoticePanel from '../../../../components/InternationalNoticePanel.astro';
+import { readInternationalForCountryPage, recentNotices } from '../../../../utils/international';
 import { buildChartSourceMeta } from '../../../../utils/chartMeta';
 import { countryDiseaseCandidates } from '../../../../lib/seo-page-data';
 import { downloadCatalogue } from '../../../../lib/downloads-data';
@@ -93,6 +95,14 @@ const countryDownload = (downloadCatalogue()?.countries ?? []).find(
   (entry) => String(entry.code ?? '').toLowerCase() === String(code).toLowerCase(),
 ) ?? null;
 const diseaseId = String(series.disease_id ?? '');
+// Only notices that name both this jurisdiction and this disease belong here.
+const countryDiseaseNotices = diseaseId
+  ? recentNotices(
+    readInternationalForCountryPage(String(code)).filter(notice =>
+      (notice.diseases ?? []).some(row => String(row.disease_id).toUpperCase() === diseaseId.toUpperCase())),
+    8,
+  )
+  : [];
 const countryDataUrl = `/site-data/countries/${String(code).toLowerCase()}.json`;
 const chartSourceMeta = buildChartSourceMeta(
   {
@@ -166,7 +176,11 @@ const seo = {
         <a class="mt-4 inline-flex font-semibold text-brand-500 hover:underline" href={localeHref(`/diseases/${slug}/`)}>{copy(`View global ${diseaseName} profile →`, `查看全球${diseaseName}画像 →`, `Voir le profil mondial de ${diseaseName} →`)}</a>
       </div>
     </section>
-    <section id="trends" class="figure-panel mt-6 scroll-mt-24">
+    <section
+      id="trends"
+      class="figure-panel mt-6 scroll-mt-24"
+      data-disease-names={JSON.stringify({ en: diseaseNameEn, zh: diseaseNameZh, fr: diseaseNameFr })}
+    >
       <h2 class="figure-title">{copy('Surveillance trend', '监测趋势', 'Tendance de surveillance')}</h2>
       <p class="figure-caption mt-2">{copy('This chart opens with this disease selected for this country. Reporting periods and source differences remain visible in the chart controls.', '图表已预选此国家和疾病；报告周期与来源差异会在图表中保留。', 'Le graphique est préconfiguré pour cette maladie et ce pays. Les périodes et différences de source restent indiquées.')}</p>
       <div class="mt-5">
@@ -182,6 +196,9 @@ const seo = {
       </div>
     </section>
     <div class="mt-6" id="research"><DiseaseResearchPanel diseaseId={diseaseId || slug} locale={locale} /></div>
+    <div class="mt-6" id="international">
+      <InternationalNoticePanel notices={countryDiseaseNotices} locale={locale} />
+    </div>
     {countryDownload && (
       <div id="downloads" class="mt-6 scroll-mt-24">
         <DownloadPanel

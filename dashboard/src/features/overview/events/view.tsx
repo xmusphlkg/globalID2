@@ -1,491 +1,370 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
-import {
-  Activity,
-  GitCompareArrows,
-  RefreshCw,
-  RotateCcw,
-  Search,
-  ShieldCheck,
-  X,
-} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ExternalLink, RefreshCw, RotateCcw, Search } from "lucide-react";
 
-import type { components } from "@/generated/api";
 import { apiFetch, apiFetchWithMeta } from "@/lib/api";
+import { useAppStore } from "@/stores/app-store";
 import { EmptyState, StatusBadge, WorkspacePage } from "@/shared/ui";
 
-type SituationReportV3 = components["schemas"]["SituationReportV3"];
-type SituationSignalV3 = components["schemas"]["SituationSignalV3"];
-type Tab = "overview" | "runs" | "signals" | "sources" | "events" | "reports" | "audit";
-type Tone = "success" | "danger" | "warning" | "info";
+type Tab = "overview" | "notices" | "events" | "digests" | "sources";
+type Tone = "neutral" | "info" | "success" | "warning" | "danger" | "primary";
 
-type RunSummary = {
-  run_id: string;
-  checked_at: string;
-  status: string;
-  method_version: string;
-  timings?: Record<string, number>;
-  coverage?: Record<string, unknown>;
-  quality_gate?: Record<string, unknown>;
-  ledger_summary?: Record<string, number>;
-  model_failures?: Record<string, number>;
+type Overview = {
+  prompt_versions: { notice: string; digest: string };
+  notice_total: number;
+  ai_status: Record<string, number>;
+  by_source: Record<string, number>;
+  risk_levels: Record<string, number>;
+  events: Record<string, number>;
+  latest_review_mode: "single_model" | "cross_model" | null;
+  latest_run: {
+    run_id: string;
+    started_at: string;
+    sources: { source_id: string; status: string; fetched_count: number; new_count: number; updated_count: number; error: string | null }[];
+  } | null;
+  latest_digest: { period_key: string; headline_en: string | null; headline_zh: string | null; notice_count: number } | null;
 };
 
-type OverviewResponse = {
-  schema_version: string;
-  publication: {
-    channel: string;
-    report_id?: string | null;
-    previous_report_id?: string | null;
-    published_at?: string | null;
-  };
-  report?: SituationReportV3 | null;
-  latest_run?: RunSummary | null;
-};
+type Entity = { entity_type: string; entity_id: string; name_en: string | null; name_zh: string | null; method: string; active: boolean };
 
-type RunRow = RunSummary & {
+type Assessment = {
   id: number;
-  input_hash: string;
-  config_hash: string;
-  error?: string | null;
+  status: string;
+  prompt_version: string;
+  title_zh: string | null;
+  summary_en: string | null;
+  summary_zh: string | null;
+  event_type: string | null;
+  risk_level: string | null;
+  risk_rationale: string | null;
+  author_model: string | null;
+  reviewer_model: string | null;
+  review_mode: string | null;
+  review_verdict: string | null;
+  review_rounds: number;
+  review_notes: string[];
+  created_at: string | null;
 };
 
-type SignalRow = {
-  id: number;
-  run_id: string;
-  signal_id: string;
-  status: string;
-  disease_id?: string | null;
-  country_code?: string | null;
-  canonical_geography_key?: string | null;
-  series_code?: string | null;
-  source_system?: string | null;
-  metric_type?: string | null;
-  cadence?: string | null;
-  raw_p_value?: number | null;
-  q_value?: number | null;
-  anomaly_state?: string | null;
-  review_priority?: string | null;
-  rejection_reason?: string | null;
-  payload: unknown;
-};
-
-type ReportRow = {
-  report_id: string;
-  report_kind: string;
-  period_key: string;
-  period_start: string;
-  period_end: string;
-  as_of: string;
-  revision: number;
-  method_version: string;
-  status: string;
-  quality_gate?: Record<string, unknown>;
-  coverage?: Record<string, unknown>;
-  summary?: Record<string, number>;
-  sources?: SituationReportV3["sources"];
-  run_ids?: string[];
+type Notice = {
+  notice_id: string;
+  source_id: string;
+  source_label: string | null;
+  record_type: string;
+  title_en: string;
+  title_zh: string | null;
+  url: string;
+  published_date: string;
+  iso_week_key: string;
+  ai_status: string;
+  ai_attempts: number;
+  ai_last_error: string | null;
+  risk_level: string | null;
+  event_type: string | null;
+  review_mode: string | null;
+  entities: Entity[];
+  assessments?: Assessment[];
 };
 
 type EventRow = {
-  cluster_id: string;
+  event_id: string;
   disease_id: string;
-  disease_name: string;
-  geographies?: Array<Record<string, string>>;
-  first_published_at: string;
-  last_published_at: string;
-  source_state: string;
-  review_state: string;
-  corrected_payload?: Record<string, unknown>;
-  updates?: Array<{ update_id: string; source: string; title: string; source_url: string; published_at: string }>;
+  country_codes: string[];
+  first_published: string;
+  last_published: string;
+  notice_count: number;
+  notice_ids: string[];
+  source_ids: string[];
+  risk_level: string | null;
+  status: string;
 };
 
-type AuditRow = {
-  decision_id: string;
-  target_type: string;
-  target_id: string;
-  action: string;
-  actor?: string | null;
-  note: string;
-  payload?: Record<string, unknown>;
-  created_at: string;
+type Digest = {
+  id: number;
+  period_key: string;
+  status: string;
+  headline_en: string | null;
+  headline_zh: string | null;
+  points: { text_en: string; text_zh: string | null; notice_ids: string[] }[];
+  notice_count: number;
+  review_mode: string | null;
+  review_verdict: string | null;
+  review_score: number | null;
+  review_notes: string[];
+  author_model: string | null;
+  reviewer_model: string | null;
+  created_at: string | null;
 };
 
-type CompareResponse = {
-  from_report: string;
-  to_report: string;
-  signals: { added: string[]; removed: string[]; changed: string[] };
-  coverage: { before: unknown; after: unknown };
-  sources: { before: unknown; after: unknown };
-  method: { before: unknown; after: unknown };
-  quality_gate: { before: unknown; after: unknown };
+type Source = {
+  source_id: string;
+  label_en: string | null;
+  label_zh: string | null;
+  homepage: string | null;
+  endpoint: string | null;
+  redistribution: string | null;
+  stored_notices: number;
+  status: string;
+  last_checked_at: string | null;
+  last_success_at: string | null;
+  last_error: string | null;
+  history: { run_id: string; started_at: string; status: string; fetched_count: number; new_count: number; updated_count: number }[];
 };
 
-type Decision = {
-  kind: "event" | "signal" | "rollback";
-  targetId: string;
-  title: string;
-  action: "publish" | "verify" | "reject" | "suppress" | "correct" | "merge" | "rollback";
-};
+const PAGE_SIZE = 50;
 
-const tabs: Array<{ id: Tab; label: string }> = [
-  { id: "overview", label: "Overview" },
-  { id: "runs", label: "Runs" },
-  { id: "signals", label: "Signals" },
-  { id: "sources", label: "Sources" },
-  { id: "events", label: "Events" },
-  { id: "reports", label: "Reports" },
-  { id: "audit", label: "Audit" },
-];
+const riskTone = (level: string | null | undefined): Tone =>
+  level === "very_high" || level === "high" ? "danger" : level === "moderate" ? "warning" : level === "low" ? "success" : "neutral";
 
-const pretty = (value?: string | null) => String(value ?? "unknown").replaceAll("_", " ");
-const when = (value?: string | null) => value ? new Date(value).toLocaleString() : "—";
-const fixed = (value?: number | null, digits = 3) => typeof value === "number" ? value.toFixed(digits) : "—";
-const tone = (status?: string | null): Tone => {
-  if (["passed", "fresh", "published", "completed", "strong"].includes(status || "")) return "success";
-  if (["failed", "gate_failed", "stale", "suppressed"].includes(status || "")) return "danger";
-  if (["alert", "partial", "degraded", "corrected", "merged"].includes(status || "")) return "warning";
-  return "info";
-};
+const aiTone = (status: string): Tone =>
+  status === "enriched" ? "success" : status === "failed" ? "danger" : status === "rejected" ? "warning" : "neutral";
 
-function isSignalPayload(value: unknown): value is SituationSignalV3 {
-  return Boolean(value && typeof value === "object" && "identity" in value && "anomaly" in value);
-}
+const fmt = (value: string | null | undefined) => (value ? new Date(value).toLocaleString() : "—");
 
-export default function EventsView() {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [overview, setOverview] = useState<OverviewResponse | null>(null);
-  const [runs, setRuns] = useState<RunRow[]>([]);
-  const [signals, setSignals] = useState<SignalRow[]>([]);
+export default function SituationControlView() {
+  const { lang } = useAppStore();
+  const zh = lang === "zh";
+  const t = (en: string, zhText: string) => (zh ? zhText : en);
+
+  const [tab, setTab] = useState<Tab>("overview");
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<EventRow[]>([]);
-  const [reports, setReports] = useState<ReportRow[]>([]);
-  const [audits, setAudits] = useState<AuditRow[]>([]);
-  const [page, setPage] = useState(1);
+  const [digests, setDigests] = useState<Digest[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
-  const [stateFilter, setStateFilter] = useState("");
+  const [aiFilter, setAiFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [detail, setDetail] = useState<Notice | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [decision, setDecision] = useState<Decision | null>(null);
-  const [decisionNote, setDecisionNote] = useState("");
-  const [decisionPayload, setDecisionPayload] = useState("");
-  const [compareLeft, setCompareLeft] = useState("");
-  const [compareRight, setCompareRight] = useState("");
-  const [comparison, setComparison] = useState<CompareResponse | null>(null);
-  const pageSize = 50;
-
-  const readUrlState = useCallback(() => {
-    const params = new URLSearchParams(window.location.search);
-    const requestedTab = params.get("tab") as Tab | null;
-    if (requestedTab && tabs.some(tab => tab.id === requestedTab)) setActiveTab(requestedTab);
-    setPage(Math.max(1, Number(params.get("page") || 1)));
-    setQuery(params.get("q") || "");
-    setStateFilter(params.get("state") || "");
-  }, []);
-
-  useEffect(() => {
-    readUrlState();
-    window.addEventListener("popstate", readUrlState);
-    return () => window.removeEventListener("popstate", readUrlState);
-  }, [readUrlState]);
-
-  const writeUrlState = useCallback((next: { tab?: Tab; page?: number; q?: string; state?: string }) => {
-    const params = new URLSearchParams(window.location.search);
-    if (next.tab) params.set("tab", next.tab);
-    if (next.page !== undefined) params.set("page", String(next.page));
-    if (next.q !== undefined) next.q ? params.set("q", next.q) : params.delete("q");
-    if (next.state !== undefined) next.state ? params.set("state", next.state) : params.delete("state");
-    window.history.pushState(null, "", `?${params.toString()}`);
-  }, []);
+  const [message, setMessage] = useState<string | null>(null);
 
   const loadOverview = useCallback(async () => {
-    const next = await apiFetch<OverviewResponse>("/situation/v3/overview");
-    setOverview(next);
+    setOverview(await apiFetch<Overview>("/situation/overview"));
   }, []);
 
   useEffect(() => {
-    void loadOverview().catch(cause => setError(cause instanceof Error ? cause.message : "Unable to load Situation v3"));
-    const timer = window.setInterval(() => void loadOverview(), 15_000);
+    void loadOverview().catch(cause => setError(cause instanceof Error ? cause.message : String(cause)));
+    const timer = window.setInterval(() => void loadOverview().catch(() => undefined), 20_000);
     return () => window.clearInterval(timer);
   }, [loadOverview]);
 
   const loadTab = useCallback(async () => {
     setError(null);
-    if (activeTab === "overview" || activeTab === "sources") return;
-    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
-    if (stateFilter) {
-      if (activeTab === "signals") params.set("state", stateFilter);
-      if (activeTab === "runs") params.set("status", stateFilter);
-      if (activeTab === "events") params.set("review_state", stateFilter);
-      if (activeTab === "reports") params.set("kind", stateFilter);
-      if (activeTab === "audit") params.set("target_type", stateFilter);
-    }
-    if (activeTab === "signals" && query.trim()) params.set("q", query.trim());
-    const endpoint = `/situation/v3/${activeTab}?${params.toString()}`;
     try {
-      if (activeTab === "runs") {
-        const result = await apiFetchWithMeta<RunRow[]>(endpoint); setRuns(result.data); setTotal(Number(result.headers.get("X-Total-Count") || result.data.length));
-      } else if (activeTab === "signals") {
-        const result = await apiFetchWithMeta<SignalRow[]>(endpoint); setSignals(result.data); setTotal(Number(result.headers.get("X-Total-Count") || result.data.length));
-      } else if (activeTab === "events") {
-        const result = await apiFetchWithMeta<EventRow[]>(endpoint); setEvents(result.data); setTotal(Number(result.headers.get("X-Total-Count") || result.data.length));
-      } else if (activeTab === "reports") {
-        const result = await apiFetchWithMeta<ReportRow[]>(endpoint); setReports(result.data); setTotal(Number(result.headers.get("X-Total-Count") || result.data.length));
-        setCompareLeft(current => current || result.data[1]?.report_id || result.data[0]?.report_id || "");
-        setCompareRight(current => current || result.data[0]?.report_id || "");
-      } else if (activeTab === "audit") {
-        const result = await apiFetchWithMeta<AuditRow[]>(endpoint); setAudits(result.data); setTotal(Number(result.headers.get("X-Total-Count") || result.data.length));
+      if (tab === "notices") {
+        const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) });
+        if (query.trim()) params.set("q", query.trim());
+        if (aiFilter) params.set("ai_status", aiFilter);
+        if (sourceFilter) params.set("source_id", sourceFilter);
+        const result = await apiFetchWithMeta<Notice[]>(`/situation/notices?${params.toString()}`);
+        setNotices(result.data);
+        setTotal(Number(result.headers.get("X-Total-Count") || result.data.length));
+      } else if (tab === "events") {
+        setEvents(await apiFetch<EventRow[]>("/situation/events?page_size=300"));
+      } else if (tab === "digests") {
+        setDigests(await apiFetch<Digest[]>("/situation/digests"));
+      } else if (tab === "sources") {
+        setSources(await apiFetch<Source[]>("/situation/sources"));
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : `Unable to load ${activeTab}`);
+      setError(cause instanceof Error ? cause.message : String(cause));
     }
-  }, [activeTab, page, query, stateFilter]);
+  }, [tab, page, query, aiFilter, sourceFilter]);
 
   useEffect(() => { void loadTab(); }, [loadTab]);
 
-  const chooseTab = (tab: Tab) => {
-    setActiveTab(tab); setPage(1); setQuery(""); setStateFilter(""); setTotal(0); setComparison(null);
-    writeUrlState({ tab, page: 1, q: "", state: "" });
-  };
-
-  const applyFilters = () => {
-    setPage(1);
-    writeUrlState({ page: 1, q: query, state: stateFilter });
-    void loadTab();
-  };
-
-  const queueRefresh = async () => {
-    setBusy(true); setError(null);
+  const queueRun = async (mode: "full" | "no_fetch" | "metadata_only") => {
+    setBusy(true); setError(null); setMessage(null);
     try {
-      await apiFetch("/overview/events/rebuild", { method: "POST" });
-      await loadOverview();
+      const result = await apiFetch<{ task_uuid: string; href: string }>("/situation/refresh", {
+        method: "POST",
+        body: JSON.stringify({ mode }),
+      });
+      setMessage(`${t("Queued task", "已排队任务")} ${result.task_uuid}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to queue Situation v3 refresh");
+      setError(cause instanceof Error ? cause.message : String(cause));
     } finally { setBusy(false); }
   };
 
-  const submitDecision = async () => {
-    if (!decision || decisionNote.trim().length < 3) return;
-    setBusy(true); setError(null);
+  const openDetail = async (noticeId: string) => {
     try {
-      let payload: Record<string, unknown> = {};
-      if (decisionPayload.trim()) {
-        if (decision.action === "merge") {
-          payload = { merged_into_cluster_id: decisionPayload.trim() };
-        } else {
-          const parsed: unknown = JSON.parse(decisionPayload);
-          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-            throw new Error("Decision payload must be a JSON object");
-          }
-          payload = parsed as Record<string, unknown>;
-        }
-      }
-      if (decision.kind === "rollback") {
-        await apiFetch("/situation/v3/publication/latest/rollback", {
-          method: "POST",
-          body: JSON.stringify({ report_id: decision.targetId, note: decisionNote.trim(), actor: "dashboard" }),
-        });
-      } else {
-        await apiFetch(`/situation/v3/review/${decision.kind}/${encodeURIComponent(decision.targetId)}`, {
-          method: "POST",
-          body: JSON.stringify({ action: decision.action, note: decisionNote.trim(), actor: "dashboard", payload }),
-        });
-      }
-      setDecision(null); setDecisionNote(""); setDecisionPayload("");
+      setDetail(await apiFetch<Notice>(`/situation/notices/${encodeURIComponent(noticeId)}/detail`));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  };
+
+  const requeue = async (noticeId: string) => {
+    setBusy(true);
+    try {
+      await apiFetch(`/situation/notices/${encodeURIComponent(noticeId)}/requeue`, { method: "POST" });
+      setMessage(t("Notice re-queued for AI on the next run", "该通报将在下一次运行时重新进入 AI 流程"));
+      setDetail(null);
       await Promise.all([loadOverview(), loadTab()]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to save review decision");
+      setError(cause instanceof Error ? cause.message : String(cause));
     } finally { setBusy(false); }
   };
 
-  const compareReports = async () => {
-    if (!compareLeft || !compareRight || compareLeft === compareRight) return;
-    setBusy(true); setError(null);
-    try {
-      const params = new URLSearchParams({ from_report: compareLeft, to_report: compareRight });
-      setComparison(await apiFetch<CompareResponse>(`/situation/v3/reports/compare?${params.toString()}`));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to compare reports");
-    } finally { setBusy(false); }
-  };
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "overview", label: t("Overview", "概览") },
+    { id: "notices", label: t("Notices", "通报") },
+    { id: "events", label: t("Events", "事件") },
+    { id: "digests", label: t("Weekly digests", "周综述") },
+    { id: "sources", label: t("Sources", "来源") },
+  ];
 
-  const duplicateIdentities = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const row of signals) {
-      if (!isSignalPayload(row.payload)) continue;
-      const identity = row.payload.identity;
-      const key = `${identity.series_code}|${identity.canonical_geography_key}|${identity.dimension_key}`;
-      counts.set(key, (counts.get(key) || 0) + 1);
-    }
-    return [...counts.values()].filter(count => count > 1).length;
-  }, [signals]);
-
-  const qDistribution = useMemo(() => ({
-    strong: signals.filter(row => typeof row.q_value === "number" && row.q_value <= 0.01).length,
-    alert: signals.filter(row => typeof row.q_value === "number" && row.q_value > 0.01 && row.q_value <= 0.05).length,
-    baseline: signals.filter(row => typeof row.q_value === "number" && row.q_value > 0.05).length,
-    unavailable: signals.filter(row => row.q_value == null).length,
-  }), [signals]);
-
-  const report = overview?.report;
-  const latestRun = overview?.latest_run;
+  const card = "rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background";
+  const muted = "text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle";
+  const strong = "text-tremor-content-strong dark:text-dark-tremor-content-strong";
+  const button = "inline-flex h-8 items-center gap-1.5 rounded-tremor-default border border-tremor-border px-3 text-sm font-medium hover:bg-tremor-background-subtle disabled:opacity-50 dark:border-dark-tremor-border dark:hover:bg-dark-tremor-background-subtle";
 
   return (
     <WorkspacePage
-      eyebrow="Situation Room v3"
-      title="Signals & publication"
-      description="Immutable analysis runs, one source-native signal identity, attributable risk semantics, period reports, and audited publication decisions."
-      actions={<button disabled={busy} onClick={() => void queueRefresh()} className="inline-flex h-9 items-center gap-2 rounded-md border border-[#D9D9D6] bg-white px-3 text-sm font-semibold text-[#374151] hover:bg-[#F7F7F5] disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />Queue refresh</button>}
+      eyebrow={t("Situation", "全球态势")}
+      title={t("International authority notices", "国际权威通报")}
+      description={t(
+        "WHO, ECDC, Africa CDC and PAHO notices with peer-reviewed AI enrichment. Publication is automatic once the reviewer model accepts.",
+        "世卫组织、欧洲疾控中心、非洲疾控中心与泛美卫生组织的通报，经 AI 同行评审后自动发布。",
+      )}
+      actions={<>
+        <button type="button" className={button} disabled={busy} onClick={() => void queueRun("full")}><RefreshCw className="h-4 w-4" />{t("Collect + AI + export", "抓取 + AI + 导出")}</button>
+        <button type="button" className={button} disabled={busy} onClick={() => void queueRun("no_fetch")}>{t("AI + export only", "仅 AI + 导出")}</button>
+        <button type="button" className={button} disabled={busy} onClick={() => void queueRun("metadata_only")}>{t("Collect without AI", "仅抓取（无 AI）")}</button>
+      </>}
     >
-      {error ? <p role="alert" className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
+      {error ? <p className="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">{error}</p> : null}
+      {message ? <p className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">{message}</p> : null}
 
-      <nav aria-label="Situation v3 workspaces" className="flex flex-wrap gap-1 border-b border-[#D9D9D6]">
-        {tabs.map(tab => <button key={tab.id} onClick={() => chooseTab(tab.id)} className={`border-b-2 px-3 py-2 text-sm font-semibold ${activeTab === tab.id ? "border-[#0F766E] text-[#0F766E]" : "border-transparent text-[#6B7280] hover:text-[#1D1D1F]"}`}>{tab.label}</button>)}
+      <nav className="flex flex-wrap gap-1 border-b border-tremor-border dark:border-dark-tremor-border" aria-label={t("Situation sections", "态势分区")}>
+        {tabs.map(item => (
+          <button
+            key={item.id}
+            type="button"
+            aria-current={tab === item.id ? "page" : undefined}
+            onClick={() => { setTab(item.id); setPage(1); }}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${tab === item.id ? "border-tremor-brand text-tremor-brand" : "border-transparent text-tremor-content-subtle hover:text-tremor-content-strong"}`}
+          >{item.label}</button>
+        ))}
       </nav>
 
-      {activeTab === "overview" ? <OverviewPanel overview={overview} /> : null}
-
-      {activeTab === "sources" ? <SourcesPanel report={report} /> : null}
-
-      {activeTab !== "overview" && activeTab !== "sources" ? (
-        <section className="app-panel overflow-hidden">
-          <div className="flex flex-col gap-3 border-b border-[#E5E5E2] p-4 lg:flex-row lg:items-end lg:justify-between">
-            <div><h2 className="text-base font-semibold capitalize text-[#1D1D1F]">{activeTab}</h2><p className="mt-1 text-xs text-[#6B7280]">Server-filtered results · {total} records</p></div>
-            <div className="flex flex-wrap items-end gap-2">
-              {activeTab === "signals" ? <label className="grid gap-1 text-xs text-[#6B7280]"><span>Search</span><div className="relative"><Search className="absolute left-2 top-2.5 h-3.5 w-3.5" /><input value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") applyFilters(); }} className="h-9 w-64 rounded-md border border-[#D9D9D6] pl-8 pr-2 text-sm" placeholder="Disease, series, geography" /></div></label> : null}
-              <label htmlFor="events-state-filter" className="grid gap-1 text-xs text-[#6B7280]"><span>Filter</span><select id="events-state-filter" name="events-state-filter" value={stateFilter} onChange={event => setStateFilter(event.target.value)} className="h-9 rounded-md border border-[#D9D9D6] bg-white px-2 text-sm" aria-describedby="events-filter-help"><option value="">All</option>{filterOptions(activeTab).map(option => <option key={option} value={option}>{pretty(option)}</option>)}</select><span id="events-filter-help" className="sr-only">Filter the current {pretty(activeTab)} view by status or type.</span></label>
-              <button onClick={applyFilters} className="h-9 rounded-md bg-[#1D1D1F] px-3 text-sm font-semibold text-white">Apply</button>
-            </div>
+      {tab === "overview" && (overview ? <div className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className={card}><p className={muted}>{t("Stored notices", "已入库通报")}</p><p className={`mt-1 text-2xl font-semibold ${strong}`}>{overview.notice_total}</p></div>
+          <div className={card}><p className={muted}>{t("AI enriched", "AI 已发布")}</p><p className={`mt-1 text-2xl font-semibold ${strong}`}>{overview.ai_status.enriched ?? 0}</p><p className={muted}>{t("pending", "待处理")} {overview.ai_status.pending ?? 0} · {t("failed", "失败")} {overview.ai_status.failed ?? 0} · {t("rejected", "拒绝")} {overview.ai_status.rejected ?? 0}</p></div>
+          <div className={card}><p className={muted}>{t("Events", "事件")}</p><p className={`mt-1 text-2xl font-semibold ${strong}`}>{overview.events.active ?? 0}</p><p className={muted}>{t("active", "活跃")} · {overview.events.quiet ?? 0} {t("quiet", "平静")}</p></div>
+          <div className={card}><p className={muted}>{t("Review mode", "评审模式")}</p><p className="mt-2"><StatusBadge tone={overview.latest_review_mode === "cross_model" ? "success" : "warning"}>{overview.latest_review_mode ?? "—"}</StatusBadge></p><p className={`mt-2 ${muted}`}>{overview.prompt_versions.notice} · {overview.prompt_versions.digest}</p></div>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className={card}>
+            <h2 className={`text-sm font-semibold ${strong}`}>{t("Latest collection run", "最近一次抓取")}</h2>
+            {overview.latest_run ? <>
+              <p className={`mt-1 ${muted}`}>{overview.latest_run.run_id} · {fmt(overview.latest_run.started_at)}</p>
+              <ul className="mt-3 space-y-1.5 text-sm">
+                {overview.latest_run.sources.map(row => <li key={row.source_id} className="flex items-center justify-between gap-2"><span className={strong}>{row.source_id}</span><span className="flex items-center gap-2"><span className={muted}>{row.fetched_count} · +{row.new_count} · ~{row.updated_count}</span><StatusBadge tone={row.status === "ok" ? "success" : row.status === "failed" ? "danger" : "neutral"}>{row.status}</StatusBadge></span></li>)}
+              </ul>
+            </> : <p className={`mt-2 ${muted}`}>{t("No run recorded yet", "尚无运行记录")}</p>}
           </div>
+          <div className={card}>
+            <h2 className={`text-sm font-semibold ${strong}`}>{t("Peer-reviewed risk levels", "同行评审风险等级")}</h2>
+            <ul className="mt-3 flex flex-wrap gap-2">{Object.entries(overview.risk_levels).map(([level, count]) => <li key={level}><StatusBadge tone={riskTone(level)}>{level} · {count}</StatusBadge></li>)}</ul>
+            <h2 className={`mt-4 text-sm font-semibold ${strong}`}>{t("Latest weekly digest", "最新周综述")}</h2>
+            {overview.latest_digest ? <p className="mt-1 text-sm">{overview.latest_digest.period_key} · {zh ? overview.latest_digest.headline_zh || overview.latest_digest.headline_en : overview.latest_digest.headline_en}</p> : <p className={`mt-1 ${muted}`}>{t("No digest published yet", "尚无已发布的周综述")}</p>}
+          </div>
+        </div>
+      </div> : <p className={muted}>{t("Loading…", "加载中…")}</p>)}
 
-          {activeTab === "runs" ? <RunsTable rows={runs} /> : null}
-          {activeTab === "signals" ? <SignalsTable rows={signals} distribution={qDistribution} duplicates={duplicateIdentities} onDecision={(next) => { setDecision(next); setDecisionNote(""); setDecisionPayload(""); }} /> : null}
-          {activeTab === "events" ? <EventsTable rows={events} onDecision={(next) => { setDecision(next); setDecisionNote(""); setDecisionPayload(""); }} /> : null}
-          {activeTab === "reports" ? <ReportsTable rows={reports} compareLeft={compareLeft} compareRight={compareRight} comparison={comparison} setCompareLeft={setCompareLeft} setCompareRight={setCompareRight} onCompare={() => void compareReports()} onRollback={row => { setDecision({ kind: "rollback", targetId: row.report_id, title: `${row.report_kind} ${row.period_key} r${row.revision}`, action: "rollback" }); setDecisionNote(""); setDecisionPayload(""); }} busy={busy} /> : null}
-          {activeTab === "audit" ? <AuditTable rows={audits} /> : null}
-          <Pagination page={page} pageSize={pageSize} total={total} onPage={next => { setPage(next); writeUrlState({ page: next }); }} />
-        </section>
-      ) : null}
+      {tab === "notices" && <div className="space-y-3">
+        <form className="flex flex-wrap items-center gap-2" onSubmit={event => { event.preventDefault(); setPage(1); void loadTab(); }}>
+          <label className="relative"><span className="sr-only">{t("Search titles", "搜索标题")}</span><Search className="absolute left-2 top-2 h-4 w-4 text-tremor-content-subtle" aria-hidden="true" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={t("Search titles", "搜索标题")} className="h-8 rounded-tremor-default border border-tremor-border bg-transparent pl-8 pr-2 text-sm dark:border-dark-tremor-border" /></label>
+          <label className="text-sm">{t("AI", "AI")} <select value={aiFilter} onChange={event => { setAiFilter(event.target.value); setPage(1); }} className="h-8 rounded-tremor-default border border-tremor-border bg-transparent px-2 text-sm dark:border-dark-tremor-border"><option value="">{t("all", "全部")}</option>{["enriched", "pending", "failed", "rejected"].map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+          <label className="text-sm">{t("Source", "来源")} <select value={sourceFilter} onChange={event => { setSourceFilter(event.target.value); setPage(1); }} className="h-8 rounded-tremor-default border border-tremor-border bg-transparent px-2 text-sm dark:border-dark-tremor-border"><option value="">{t("all", "全部")}</option>{Object.keys(overview?.by_source ?? {}).map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+          <button type="submit" className={button}>{t("Apply", "应用")}</button>
+          <span className={muted}>{total} {t("notices", "条")}</span>
+        </form>
+        {notices.length === 0 ? <EmptyState title={t("No notices match", "没有匹配的通报")} className="py-10" /> : <div className="overflow-x-auto rounded-tremor-default border border-tremor-border dark:border-dark-tremor-border">
+          <table className="min-w-full text-sm">
+            <thead className="bg-tremor-background-subtle text-left text-xs uppercase text-tremor-content-subtle dark:bg-dark-tremor-background-subtle"><tr><th className="px-3 py-2">{t("Date", "日期")}</th><th className="px-3 py-2">{t("Source", "来源")}</th><th className="px-3 py-2">{t("Title", "标题")}</th><th className="px-3 py-2">{t("Entities", "实体")}</th><th className="px-3 py-2">{t("Risk", "风险")}</th><th className="px-3 py-2">AI</th></tr></thead>
+            <tbody>{notices.map(row => <tr key={row.notice_id} className="border-t border-tremor-border align-top dark:border-dark-tremor-border">
+              <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{row.published_date}</td>
+              <td className="px-3 py-2 text-xs">{row.source_id}</td>
+              <td className="px-3 py-2"><button type="button" className={`text-left font-medium hover:underline ${strong}`} onClick={() => void openDetail(row.notice_id)}>{zh ? row.title_zh || row.title_en : row.title_en}</button></td>
+              <td className="px-3 py-2"><div className="flex flex-wrap gap-1">{row.entities.filter(e => e.active).map(e => <span key={`${e.entity_type}-${e.entity_id}`} className="rounded border border-tremor-border px-1.5 py-0.5 font-mono text-[10px] dark:border-dark-tremor-border">{e.entity_id}{e.method === "ai" ? "·ai" : ""}</span>)}</div></td>
+              <td className="px-3 py-2">{row.risk_level ? <StatusBadge tone={riskTone(row.risk_level)}>{row.risk_level}</StatusBadge> : "—"}</td>
+              <td className="px-3 py-2"><StatusBadge tone={aiTone(row.ai_status)}>{row.ai_status}</StatusBadge></td>
+            </tr>)}</tbody>
+          </table>
+        </div>}
+        <div className="flex items-center gap-2">
+          <button type="button" className={button} disabled={page <= 1} onClick={() => setPage(value => Math.max(1, value - 1))}>{t("Previous", "上一页")}</button>
+          <span className={muted}>{page} / {Math.max(1, Math.ceil(total / PAGE_SIZE))}</span>
+          <button type="button" className={button} disabled={page * PAGE_SIZE >= total} onClick={() => setPage(value => value + 1)}>{t("Next", "下一页")}</button>
+        </div>
+      </div>}
 
-      {decision ? <DecisionDialog decision={decision} note={decisionNote} payload={decisionPayload} busy={busy} setNote={setDecisionNote} setPayload={setDecisionPayload} onCancel={() => { setDecision(null); setDecisionNote(""); setDecisionPayload(""); }} onSubmit={() => void submitDecision()} /> : null}
+      {tab === "events" && (events.length === 0 ? <EmptyState title={t("No events yet", "尚无事件")} className="py-10" /> : <div className="overflow-x-auto rounded-tremor-default border border-tremor-border dark:border-dark-tremor-border">
+        <table className="min-w-full text-sm">
+          <thead className="bg-tremor-background-subtle text-left text-xs uppercase text-tremor-content-subtle dark:bg-dark-tremor-background-subtle"><tr><th className="px-3 py-2">{t("Event", "事件")}</th><th className="px-3 py-2">{t("Window", "时间")}</th><th className="px-3 py-2">{t("Notices", "通报")}</th><th className="px-3 py-2">{t("Sources", "来源")}</th><th className="px-3 py-2">{t("Risk", "风险")}</th><th className="px-3 py-2">{t("Status", "状态")}</th></tr></thead>
+          <tbody>{events.map(row => <tr key={row.event_id} className="border-t border-tremor-border dark:border-dark-tremor-border">
+            <td className="px-3 py-2 font-mono text-xs">{row.disease_id} · {row.country_codes.join(", ") || t("regional", "区域")}</td>
+            <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{row.first_published} → {row.last_published}</td>
+            <td className="px-3 py-2">{row.notice_count}</td>
+            <td className="px-3 py-2 text-xs">{row.source_ids.join(", ")}</td>
+            <td className="px-3 py-2">{row.risk_level ? <StatusBadge tone={riskTone(row.risk_level)}>{row.risk_level}</StatusBadge> : "—"}</td>
+            <td className="px-3 py-2"><StatusBadge tone={row.status === "active" ? "info" : "neutral"}>{row.status}</StatusBadge></td>
+          </tr>)}</tbody>
+        </table>
+      </div>)}
 
-      <p className="text-xs text-[#6B7280]">Live run status refreshes every 15 seconds. Latest run: <span className="font-mono">{latestRun?.run_id || "none"}</span>.</p>
+      {tab === "digests" && (digests.length === 0 ? <EmptyState title={t("No digests written yet", "尚未生成周综述")} description={t("A digest is written once a week has peer-reviewed notices.", "某一周有经过同行评审的通报后才会生成周综述。")} className="py-10" /> : <div className="space-y-3">
+        {digests.map(row => <article key={row.id} className={card}>
+          <div className="flex flex-wrap items-center justify-between gap-2"><h2 className={`text-sm font-semibold ${strong}`}>{row.period_key} · {zh ? row.headline_zh || row.headline_en : row.headline_en}</h2><span className="flex gap-1"><StatusBadge tone={row.status === "published" ? "success" : row.status === "rejected" ? "warning" : "neutral"}>{row.status}</StatusBadge><StatusBadge tone={row.review_mode === "cross_model" ? "success" : "warning"}>{row.review_mode ?? "—"}</StatusBadge></span></div>
+          <p className={`mt-1 ${muted}`}>{row.notice_count} {t("notices", "条通报")} · {row.author_model} → {row.reviewer_model} · {row.review_verdict} {row.review_score != null ? `(${row.review_score.toFixed(2)})` : ""} · {fmt(row.created_at)}</p>
+          <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm">{row.points.map((point, index) => <li key={index}>{zh ? point.text_zh || point.text_en : point.text_en} <span className="font-mono text-[10px] text-tremor-content-subtle">[{point.notice_ids.join(", ")}]</span></li>)}</ol>
+          {row.review_notes.length > 0 ? <details className="mt-2"><summary className={`cursor-pointer ${muted}`}>{t("Review notes", "评审意见")} ({row.review_notes.length})</summary><ul className={`mt-1 list-disc space-y-1 pl-5 ${muted}`}>{row.review_notes.map((note, index) => <li key={index}>{note}</li>)}</ul></details> : null}
+        </article>)}
+      </div>)}
+
+      {tab === "sources" && <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {sources.map(row => <article key={row.source_id} className={card}>
+          <div className="flex items-start justify-between gap-2"><div><p className={`text-sm font-semibold ${strong}`}>{zh ? row.label_zh || row.label_en : row.label_en}</p><p className={`mt-0.5 ${muted}`}>{row.source_id} · {row.redistribution}</p></div><StatusBadge tone={row.status === "ok" ? "success" : row.status === "failed" ? "danger" : "neutral"}>{row.status}</StatusBadge></div>
+          <p className={`mt-2 ${muted}`}>{t("Stored", "已入库")} {row.stored_notices} · {t("checked", "检查")} {fmt(row.last_checked_at)}</p>
+          <p className={muted}>{t("Last success", "最后成功")} {fmt(row.last_success_at)}</p>
+          {row.last_error ? <p className="mt-2 line-clamp-2 text-xs text-rose-700 dark:text-rose-300" title={row.last_error}>{row.last_error}</p> : null}
+          <ul className={`mt-2 space-y-0.5 font-mono ${muted}`}>{row.history.slice(0, 5).map(run => <li key={run.run_id}>{run.started_at.slice(0, 16)} {run.status} {run.fetched_count} +{run.new_count}</li>)}</ul>
+          {row.homepage ? <a href={row.homepage} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-tremor-brand hover:underline">{t("Official page", "官方页面")}<ExternalLink className="h-3 w-3" aria-hidden="true" /></a> : null}
+        </article>)}
+      </div>}
+
+      {detail ? <div role="dialog" aria-modal="true" aria-labelledby="situation-notice-detail" className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={() => setDetail(null)}>
+        <div className="h-full w-full max-w-2xl overflow-y-auto bg-tremor-background p-5 shadow-xl dark:bg-dark-tremor-background" onClick={event => event.stopPropagation()}>
+          <div className="flex items-start justify-between gap-3">
+            <h2 id="situation-notice-detail" className={`text-base font-semibold ${strong}`}>{detail.title_en}</h2>
+            <button type="button" className={button} onClick={() => setDetail(null)}>{t("Close", "关闭")}</button>
+          </div>
+          <p className={`mt-1 ${muted}`}>{detail.notice_id} · {detail.published_date} · {detail.record_type}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a href={detail.url} target="_blank" rel="noreferrer" className={button}>{t("Original notice", "原文")}<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" /></a>
+            <button type="button" className={button} disabled={busy} onClick={() => void requeue(detail.notice_id)}><RotateCcw className="h-3.5 w-3.5" />{t("Re-run AI", "重新跑 AI")}</button>
+          </div>
+          {detail.ai_last_error ? <p className="mt-3 text-xs text-rose-700 dark:text-rose-300">{detail.ai_last_error}</p> : null}
+          <h3 className={`mt-4 text-sm font-semibold ${strong}`}>{t("Entities", "实体")}</h3>
+          <ul className="mt-1 flex flex-wrap gap-1">{detail.entities.map(e => <li key={`${e.entity_type}-${e.entity_id}`} className={`rounded border px-1.5 py-0.5 font-mono text-[11px] ${e.active ? "border-tremor-border" : "border-dashed opacity-50"}`}>{e.entity_type}:{e.entity_id} · {e.method}{e.active ? "" : ` (${t("inactive", "已停用")})`}</li>)}</ul>
+          <h3 className={`mt-4 text-sm font-semibold ${strong}`}>{t("AI assessments", "AI 评估记录")}</h3>
+          {(detail.assessments ?? []).length === 0 ? <p className={`mt-1 ${muted}`}>{t("None yet", "暂无")}</p> : (detail.assessments ?? []).map(a => <section key={a.id} className={`mt-2 ${card}`}>
+            <div className="flex flex-wrap items-center gap-1"><StatusBadge tone={a.status === "published" ? "success" : a.status === "rejected" ? "warning" : "neutral"}>{a.status}</StatusBadge><StatusBadge tone={riskTone(a.risk_level)}>{a.risk_level ?? "no risk"}</StatusBadge><span className={muted}>{a.event_type} · {a.prompt_version} · {a.review_mode} · {a.review_verdict} · {t("rounds", "轮次")} {a.review_rounds}</span></div>
+            {a.title_zh ? <p className="mt-2 text-sm">{a.title_zh}</p> : null}
+            {(zh ? a.summary_zh || a.summary_en : a.summary_en) ? <p className={`mt-1 text-sm ${strong}`}>{zh ? a.summary_zh || a.summary_en : a.summary_en}</p> : null}
+            {a.risk_rationale ? <p className={`mt-1 ${muted}`}>{a.risk_rationale}</p> : null}
+            {a.review_notes.length > 0 ? <details className="mt-2"><summary className={`cursor-pointer ${muted}`}>{t("Review notes", "评审意见")} ({a.review_notes.length})</summary><ul className={`mt-1 list-disc space-y-1 pl-5 ${muted}`}>{a.review_notes.map((note, index) => <li key={index}>{note}</li>)}</ul></details> : null}
+          </section>)}
+        </div>
+      </div> : null}
     </WorkspacePage>
   );
 }
-
-function OverviewPanel({ overview }: { overview: OverviewResponse | null }) {
-  const report = overview?.report;
-  const run = overview?.latest_run;
-  const timings = run?.timings || {};
-  return <>
-    <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      <Metric label="Publication" value={overview?.publication.report_id || "No pointer"} detail={when(overview?.publication.published_at)} toneValue={report?.quality_gate.status} />
-      <Metric label="Unique signals" value={report?.summary.unique_signal_count ?? "—"} detail={`${report?.summary.strong_count ?? 0} strong · ${report?.summary.alert_count ?? 0} alerts`} />
-      <Metric label="Coverage" value={report ? `${report.coverage.modeled_series_count}/${report.coverage.evaluated_series_count}` : "—"} detail={`${report?.coverage.rejected_series_count ?? 0} rejected`} />
-      <Metric label="Data currency" value={report?.data_currency.latest_data_through || "—"} detail={`earliest ${report?.data_currency.earliest_data_through || "—"}`} />
-    </section>
-    <section className="app-panel p-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"><div><h2 className="flex items-center gap-2 text-base font-semibold"><Activity className="h-4 w-4" />Latest immutable run</h2><p className="mt-1 font-mono text-xs text-[#6B7280]">{run?.run_id || "No v3 run"}</p></div><StatusBadge tone={tone(run?.status)}>{pretty(run?.status)}</StatusBadge></div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <MetricMini label="DB read" value={`${fixed(timings.series_fetch_seconds, 2)}s`} />
-        <MetricMini label="Model" value={`${fixed(timings.model_seconds, 2)}s`} />
-        <MetricMini label="Acquisition" value={`${fixed(timings.source_acquisition_seconds, 2)}s`} />
-        <MetricMini label="Modeled" value={run?.ledger_summary?.modeled ?? "—"} />
-        <MetricMini label="Rejected" value={run?.ledger_summary?.rejected ?? "—"} />
-      </div>
-      <div className="mt-4 grid gap-3 lg:grid-cols-2"><JsonSummary title="Quality gate" value={run?.quality_gate} /><JsonSummary title="Model failures" value={run?.model_failures} /></div>
-    </section>
-    <section className="app-panel p-4"><h2 className="flex items-center gap-2 text-base font-semibold"><ShieldCheck className="h-4 w-4" />Automation and risk semantics</h2><p className="mt-2 text-sm text-[#4B5563]">Collection, modeling, evidence linking, deduplication, and candidate queueing are automatic. Calibration does not yet support unattended statistical publication, so candidates remain private until independently verified; rare-count and fallback candidates always require review. Public-health risk remains <b>not assessed</b> unless an official agency or audited expert assessment is attributable.</p><p className="mt-2 font-mono text-xs text-[#6B7280]">Method {report?.method.version || "—"} · config {report?.method.config_hash?.slice(0, 16) || "—"} · revision {report?.report.revision ?? "—"}</p></section>
-  </>;
-}
-
-function SourcesPanel({ report }: { report?: SituationReportV3 | null }) {
-  const sources = report?.sources || [];
-  const currency = report?.data_currency.by_source || [];
-  return <section className="grid gap-4 lg:grid-cols-2">
-    <div className="app-panel overflow-hidden"><div className="border-b border-[#E5E5E2] p-4"><h2 className="text-base font-semibold">Adapter health</h2><p className="mt-1 text-xs text-[#6B7280]">Timeout, retry, last success, and current item count remain source-specific.</p></div>{sources.length ? sources.map(source => <article key={source.source_id} className="border-b border-[#E5E5E2] p-4 last:border-b-0"><div className="flex items-center justify-between gap-2"><div><p className="font-semibold">{source.label}</p><p className="font-mono text-xs text-[#6B7280]">{source.source_id}</p></div><StatusBadge tone={tone(source.status)}>{pretty(source.status)}</StatusBadge></div><p className="mt-2 text-xs text-[#6B7280]">{source.item_count ?? 0} items · checked {when(source.checked_at)} · last success {when(source.last_success_at)}</p>{source.error ? <p className="mt-2 text-xs text-rose-700">{source.error}</p> : null}</article>) : <EmptyState title="No source status" description="Run a full Situation v3 acquisition." className="min-h-40" />}</div>
-    <div className="app-panel overflow-hidden"><div className="border-b border-[#E5E5E2] p-4"><h2 className="text-base font-semibold">Freshness by source and cadence</h2><p className="mt-1 text-xs text-[#6B7280]">No single maximum date can hide an older source.</p></div>{currency.length ? currency.map((slice, index) => <article key={`${slice.source_system}:${slice.cadence}:${index}`} className="grid gap-2 border-b border-[#E5E5E2] p-4 last:border-b-0 sm:grid-cols-[1fr_auto]"><div><p className="font-mono text-xs font-semibold">{slice.source_system}</p><p className="mt-1 text-xs text-[#6B7280]">{slice.cadence || "mixed"} · {slice.analyzed_series_count} series</p></div><div className="text-right"><StatusBadge tone={tone(slice.status)}>{pretty(slice.status)}</StatusBadge><p className="mt-1 text-xs text-[#6B7280]">{slice.earliest_data_through || "—"} → {slice.latest_data_through || "—"}</p></div></article>) : <EmptyState title="No currency slices" description="No eligible series in the latest report." className="min-h-40" />}</div>
-  </section>;
-}
-
-function RunsTable({ rows }: { rows: RunRow[] }) {
-  return rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[920px] text-left text-xs"><thead><tr className="border-b border-[#E5E5E2] text-[#6B7280]"><Th>Run</Th><Th>Status</Th><Th>Checked</Th><Th>Method</Th><Th>DB</Th><Th>Model</Th><Th>Modeled</Th><Th>Rejected</Th></tr></thead><tbody>{rows.map(row => <tr key={row.run_id} className="border-b border-[#E5E5E2]"><Td mono>{row.run_id}</Td><Td><StatusBadge tone={tone(row.status)}>{pretty(row.status)}</StatusBadge></Td><Td>{when(row.checked_at)}</Td><Td mono>{row.method_version}</Td><Td>{fixed(row.timings?.series_fetch_seconds, 2)}s</Td><Td>{fixed(row.timings?.model_seconds, 2)}s</Td><Td>{row.ledger_summary?.modeled ?? "—"}</Td><Td>{row.ledger_summary?.rejected ?? "—"}</Td></tr>)}</tbody></table></div> : <EmptyState title="No v3 runs" description="Immutable analysis runs will appear here." className="min-h-48" />;
-}
-
-function SignalsTable({ rows, distribution, duplicates, onDecision }: { rows: SignalRow[]; distribution: Record<string, number>; duplicates: number; onDecision: (decision: Decision) => void }) {
-  return <>
-    <div className="grid gap-2 border-b border-[#E5E5E2] p-4 sm:grid-cols-5"><MetricMini label="q ≤ .01" value={distribution.strong} /><MetricMini label=".01 < q ≤ .05" value={distribution.alert} /><MetricMini label="q > .05" value={distribution.baseline} /><MetricMini label="Not modeled" value={distribution.unavailable} /><MetricMini label="Duplicate identity" value={duplicates} /></div>
-    {rows.length ? <div className="overflow-x-auto"><table className="w-full min-w-[1320px] text-left text-xs"><thead><tr className="border-b border-[#E5E5E2] text-[#6B7280]"><Th>Signal / disease</Th><Th>Geography</Th><Th>Series</Th><Th>Status</Th><Th>Tier</Th><Th>p</Th><Th>q</Th><Th>Verification</Th><Th>Fit / rejection</Th><Th>Actions</Th></tr></thead><tbody>{rows.map(row => { const payload = isSignalPayload(row.payload) ? row.payload : null; return <tr key={`${row.run_id}:${row.signal_id}`} className="border-b border-[#E5E5E2]"><Td><p className="font-semibold">{payload?.identity.disease_name || row.disease_id || row.signal_id}</p><p className="font-mono text-[10px] text-[#6B7280]">{row.signal_id}</p></Td><Td mono>{row.canonical_geography_key || "—"}</Td><Td mono>{row.series_code || "—"}<br />{row.metric_type || "—"}</Td><Td><StatusBadge tone={tone(row.anomaly_state || row.status)}>{pretty(row.anomaly_state || row.status)}</StatusBadge></Td><Td>{pretty(payload?.anomaly.detector_tier)}</Td><Td mono>{fixed(row.raw_p_value, 5)}</Td><Td mono>{fixed(row.q_value, 5)}</Td><Td><StatusBadge tone={tone(payload?.assessment.verification_status)}>{pretty(payload?.assessment.verification_status)}</StatusBadge><p className="mt-1 text-[10px] text-[#6B7280]">{pretty(payload?.assessment.verification_basis)} · {pretty(payload?.assessment.temporal_relevance)}</p></Td><Td>{payload?.anomaly.fit_status ? pretty(payload.anomaly.fit_status) : pretty(row.rejection_reason)}</Td><Td>{payload ? <div className="flex gap-1">{(["verify", "reject", "suppress"] as const).map(action => <button key={action} onClick={() => onDecision({ kind: "signal", targetId: row.signal_id, title: `${payload.identity.disease_name} · ${row.signal_id}`, action })} className="h-7 rounded border border-[#D9D9D6] px-2 text-[10px] font-semibold capitalize">{action}</button>)}</div> : "—"}</Td></tr>; })}</tbody></table></div> : <EmptyState title="No signal ledger rows" description="Adjust the server filters or run v3 analysis." className="min-h-48" />}
-  </>;
-}
-
-function EventsTable({ rows, onDecision }: { rows: EventRow[]; onDecision: (decision: Decision) => void }) {
-  return rows.length ? <div>{rows.map(row => <article key={row.cluster_id} className="border-b border-[#E5E5E2] p-4 last:border-b-0"><div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{row.disease_name}</h3><StatusBadge tone={tone(row.review_state)}>{pretty(row.review_state)}</StatusBadge></div><p className="mt-1 text-xs text-[#6B7280]">{row.geographies?.map(place => place.name || place.code).join(" · ") || "No geography"} · {row.first_published_at} → {row.last_published_at}</p><p className="mt-1 font-mono text-[10px] text-[#6B7280]">{row.cluster_id}</p></div><div className="flex flex-wrap gap-2">{(["publish", "correct", "merge", "suppress"] as const).map(action => <button key={action} onClick={() => onDecision({ kind: "event", targetId: row.cluster_id, title: `${row.disease_name} · ${row.cluster_id}`, action })} className="h-8 rounded border border-[#D9D9D6] px-2 text-xs font-semibold capitalize">{action}</button>)}</div></div><ol className="mt-3 space-y-2 border-l-2 border-[#D9D9D6] pl-3">{row.updates?.map(update => <li key={update.update_id} className="grid gap-1 text-xs sm:grid-cols-[90px_1fr_auto]"><span className="text-[#6B7280]">{update.published_at}</span><a href={update.source_url} target="_blank" rel="noreferrer" className="font-semibold hover:underline">{update.title}</a><span className="text-[#6B7280]">{update.source}</span></li>)}</ol></article>)}</div> : <EmptyState title="No event clusters" description="Official updates will be clustered by disease, time, and overlapping geography." className="min-h-48" />;
-}
-
-function ReportsTable({ rows, compareLeft, compareRight, comparison, setCompareLeft, setCompareRight, onCompare, onRollback, busy }: { rows: ReportRow[]; compareLeft: string; compareRight: string; comparison: CompareResponse | null; setCompareLeft: (value: string) => void; setCompareRight: (value: string) => void; onCompare: () => void; onRollback: (row: ReportRow) => void; busy: boolean }) {
-  return <>
-    <div className="grid gap-2 border-b border-[#E5E5E2] p-4 lg:grid-cols-[1fr_1fr_auto]"><label htmlFor="report-compare-baseline" className="grid gap-1 text-xs font-medium text-[#6B7280]"><span>Baseline report</span><select id="report-compare-baseline" name="report-compare-baseline" value={compareLeft} onChange={event => setCompareLeft(event.target.value)} className="h-9 min-w-0 rounded border border-[#D9D9D6] bg-white px-2 font-mono text-xs">{rows.map(row => <option key={`left:${row.report_id}`} value={row.report_id}>{row.report_id}</option>)}</select></label><label htmlFor="report-compare-candidate" className="grid gap-1 text-xs font-medium text-[#6B7280]"><span>Candidate report</span><select id="report-compare-candidate" name="report-compare-candidate" value={compareRight} onChange={event => setCompareRight(event.target.value)} className="h-9 min-w-0 rounded border border-[#D9D9D6] bg-white px-2 font-mono text-xs">{rows.map(row => <option key={`right:${row.report_id}`} value={row.report_id}>{row.report_id}</option>)}</select></label><button disabled={busy || !compareLeft || !compareRight || compareLeft === compareRight} onClick={onCompare} className="mt-auto inline-flex h-9 items-center justify-center gap-2 rounded border border-[#D9D9D6] px-3 text-sm font-semibold disabled:opacity-40"><GitCompareArrows className="h-4 w-4" />Compare</button></div>
-    {comparison ? <div className="border-b border-[#E5E5E2] bg-[#F7F7F5] p-4"><p className="text-sm font-semibold">{comparison.signals.added.length} added · {comparison.signals.removed.length} removed · {comparison.signals.changed.length} changed</p><div className="mt-2 grid gap-2 lg:grid-cols-4"><JsonSummary title="Coverage" value={comparison.coverage} /><JsonSummary title="Sources" value={comparison.sources} /><JsonSummary title="Method" value={comparison.method} /><JsonSummary title="Quality gate" value={comparison.quality_gate} /></div></div> : null}
-    {rows.length ? rows.map(row => <article key={row.report_id} className="grid gap-3 border-b border-[#E5E5E2] p-4 last:border-b-0 lg:grid-cols-[1fr_auto]"><div><div className="flex flex-wrap items-center gap-2"><StatusBadge tone={tone(row.status)}>{pretty(row.status)}</StatusBadge><p className="font-semibold">{pretty(row.report_kind)} · {row.period_key} · r{row.revision}</p></div><p className="mt-1 text-xs text-[#6B7280]">{row.period_start} → {row.period_end} · {row.run_ids?.length || 0} member runs · {row.summary?.unique_signal_count || 0} unique signals</p><p className="mt-1 font-mono text-[10px] text-[#6B7280]">{row.report_id}</p></div><button disabled={busy || row.status !== "published"} onClick={() => onRollback(row)} className="inline-flex h-8 items-center gap-1 rounded border border-[#D9D9D6] px-2 text-xs font-semibold disabled:opacity-40"><RotateCcw className="h-3.5 w-3.5" />Rollback pointer</button></article>) : <EmptyState title="No reports" description="Gate-passed period reports will appear here." className="min-h-48" />}
-  </>;
-}
-
-function AuditTable({ rows }: { rows: AuditRow[] }) {
-  return rows.length ? <div>{rows.map(row => <article key={row.decision_id} className="grid gap-2 border-b border-[#E5E5E2] p-4 last:border-b-0 md:grid-cols-[150px_1fr_auto]"><div><StatusBadge tone="warning">{pretty(row.action)}</StatusBadge></div><div><p className="font-mono text-xs">{row.target_type} · {row.target_id}</p><p className="mt-1 text-sm text-[#4B5563]">{row.note}</p><p className="mt-1 font-mono text-[10px] text-[#6B7280]">{row.decision_id}</p></div><p className="text-xs text-[#6B7280]">{row.actor || "unknown"}<br />{when(row.created_at)}</p></article>)}</div> : <EmptyState title="No v3 audit decisions" description="Correction, suppression, merge, and rollback decisions are append-only." className="min-h-48" />;
-}
-
-function DecisionDialog({ decision, note, payload, busy, setNote, setPayload, onCancel, onSubmit }: { decision: Decision; note: string; payload: string; busy: boolean; setNote: (value: string) => void; setPayload: (value: string) => void; onCancel: () => void; onSubmit: () => void }) {
-  const requiresPayload = decision.action === "correct" || decision.action === "merge";
-  const supportsPayload = requiresPayload || decision.action === "verify";
-  const payloadLabel = decision.action === "merge" ? "Target cluster ID" : "Structured evidence (JSON)";
-  const payloadPlaceholder = decision.action === "merge"
-    ? "event-cluster:…"
-    : decision.action === "correct"
-      ? '{"disease_name":"…","geographies":[{"code":"…","name":"…"}]}'
-      : '{"risk_level":"high","risk_rationale":"…","evidence_url":"https://…"}';
-  return <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onCancel(); }}>
-    <section role="dialog" aria-modal="true" aria-labelledby="decision-title" className="w-full max-w-lg rounded-lg bg-white shadow-xl">
-      <header className="flex items-start justify-between border-b border-[#E5E5E2] p-4"><div><p className="text-xs font-semibold uppercase tracking-wide text-[#9A3412]">Confirm audited action</p><h2 id="decision-title" className="mt-1 text-lg font-semibold capitalize">{pretty(decision.action)}</h2></div><button onClick={onCancel} aria-label="Close decision form" className="rounded p-1 hover:bg-[#F3F4F6]"><X className="h-5 w-5" /></button></header>
-      <div className="space-y-4 p-4">
-        <dl className="grid gap-2 rounded border border-[#E5E5E2] bg-[#F7F7F5] p-3 text-sm"><div><dt className="text-xs uppercase text-[#6B7280]">Target</dt><dd className="mt-1 font-semibold">{decision.title}</dd></div><div><dt className="text-xs uppercase text-[#6B7280]">Action</dt><dd className="mt-1 capitalize">{pretty(decision.action)}</dd></div><div><dt className="text-xs uppercase text-[#6B7280]">Effect</dt><dd className="mt-1 text-[#4B5563]">{decision.kind === "rollback" ? "Advance the public pointer to this existing gate-passed immutable report; no report payload is overwritten." : "Store an append-only decision that the next analysis run applies without rewriting source facts."}</dd></div></dl>
-        {supportsPayload ? <label className="grid gap-1 text-sm font-semibold">{payloadLabel}{decision.action === "verify" ? <span className="font-normal text-[#6B7280]">Optional; omit to verify the signal without assigning public-health risk.</span> : null}<textarea required={requiresPayload} value={payload} onChange={event => setPayload(event.target.value)} rows={4} className="rounded border border-[#D9D9D6] p-2 font-mono text-xs font-normal" placeholder={payloadPlaceholder} /></label> : null}
-        <label className="grid gap-1 text-sm font-semibold">Audit note<textarea autoFocus required minLength={3} value={note} onChange={event => setNote(event.target.value)} rows={4} className="rounded border border-[#D9D9D6] p-2 font-normal" placeholder="Why is this decision being made?" /></label>
-        <p className="text-xs text-[#6B7280]">Actor: dashboard · this action will be retained in the v3 audit ledger.</p>
-      </div>
-      <footer className="flex justify-end gap-2 border-t border-[#E5E5E2] p-4"><button disabled={busy} onClick={onCancel} className="h-9 rounded border border-[#D9D9D6] px-3 text-sm font-semibold">Cancel</button><button disabled={busy || note.trim().length < 3 || (requiresPayload && !payload.trim())} onClick={onSubmit} className="h-9 rounded bg-[#9A3412] px-3 text-sm font-semibold text-white disabled:opacity-40">{busy ? "Saving…" : `Confirm ${pretty(decision.action)}`}</button></footer>
-    </section>
-  </div>;
-}
-
-function Pagination({ page, pageSize, total, onPage }: { page: number; pageSize: number; total: number; onPage: (page: number) => void }) {
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  return <footer className="flex items-center justify-between p-4 text-xs text-[#6B7280]"><span>Page {page} of {pages}</span><div className="flex gap-2"><button disabled={page <= 1} onClick={() => onPage(page - 1)} className="h-8 rounded border border-[#D9D9D6] px-3 disabled:opacity-40">Previous</button><button disabled={page >= pages} onClick={() => onPage(page + 1)} className="h-8 rounded border border-[#D9D9D6] px-3 disabled:opacity-40">Next</button></div></footer>;
-}
-
-function filterOptions(tab: Tab): string[] {
-  if (tab === "runs") return ["staged", "published", "completed_unchanged", "gate_failed"];
-  if (tab === "signals") return ["strong", "alert", "routine", "not_modeled"];
-  if (tab === "events") return ["unreviewed", "publish", "correct", "merge", "suppress"];
-  if (tab === "reports") return ["daily", "weekly", "monthly"];
-  if (tab === "audit") return ["event", "signal", "report", "publication"];
-  return [];
-}
-
-function Metric({ label, value, detail, toneValue }: { label: string; value: string | number; detail: string; toneValue?: string }) {
-  return <div className="app-panel p-4"><div className="flex items-center justify-between"><span className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">{label}</span>{toneValue ? <StatusBadge tone={tone(toneValue)}>{pretty(toneValue)}</StatusBadge> : null}</div><p className="mt-3 break-words text-xl font-semibold text-[#1D1D1F]">{value}</p><p className="mt-1 text-xs text-[#6B7280]">{detail}</p></div>;
-}
-
-function MetricMini({ label, value }: { label: string; value: string | number }) {
-  return <div className="rounded border border-[#E5E5E2] p-3"><p className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">{label}</p><p className="mt-1 text-lg font-semibold">{value}</p></div>;
-}
-
-function JsonSummary({ title, value }: { title: string; value: unknown }) {
-  return <details className="rounded border border-[#E5E5E2] p-3"><summary className="cursor-pointer text-xs font-semibold">{title}</summary><pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-[10px] text-[#4B5563]">{JSON.stringify(value ?? {}, null, 2)}</pre></details>;
-}
-
-function Th({ children }: { children: ReactNode }) { return <th className="px-3 py-2 font-semibold">{children}</th>; }
-function Td({ children, mono = false }: { children: ReactNode; mono?: boolean }) { return <td className={`px-3 py-2 align-top ${mono ? "font-mono text-[10px]" : ""}`}>{children}</td>; }

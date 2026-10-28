@@ -86,6 +86,28 @@ function readAttr(shell: HTMLElement | null | undefined, name: string) {
     || "";
 }
 
+/** The chart shell or any page ancestor can publish the disease's multi-language names. */
+function readNames(shell: HTMLElement | null | undefined) {
+  const raw = readAttr(shell, "data-disease-names");
+  if (!raw) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = raw.split("|");
+  }
+  // A bare array is read in English, Chinese, French order.
+  const source = Array.isArray(parsed)
+    ? { en: parsed[0], zh: parsed[1], fr: parsed[2] }
+    : (parsed as Record<string, unknown>);
+  const names: Partial<Record<"en" | "zh" | "fr", string>> = {};
+  for (const lang of ["en", "zh", "fr"] as const) {
+    const value = source?.[lang];
+    if (typeof value === "string" && value.trim()) names[lang] = value.trim();
+  }
+  return Object.keys(names).length ? names : undefined;
+}
+
 export default function ChartResultActions({
   lang,
   shellRef,
@@ -178,6 +200,7 @@ export default function ChartResultActions({
         source: readAttr(shell, "data-source-label"),
         coverage: readAttr(shell, "data-source-coverage"),
         updated: readAttr(shell, "data-source-updated"),
+        names: readNames(shell),
         url: window.location.href,
       });
       downloadDataUrl(pngFilename.endsWith(".png") ? pngFilename : `${pngFilename}.png`, card);

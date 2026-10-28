@@ -533,13 +533,15 @@ async def test_retry_reuses_completed_cloudflare_deploy_and_only_verifies():
     output = await pipeline.execute_release_task(Service(), task, runtime=runtime)
 
     assert "Deploy Cloudflare Pages" not in commands
-    assert "Dispatch Reviewed Situation Alerts" in commands
+    # Subscriber alerts relied on the retired v3 signal policy and are no
+    # longer dispatched by releases.
+    assert "Dispatch Reviewed Situation Alerts" not in commands
     assert output["pages_deployed"] is True
-    assert output["situation_alert_dispatch_attempted"] is True
+    assert output["situation_alert_dispatch_attempted"] is False
     completion = next(
         entry for entry in entries if entry["title"] == "Data Release Completed"
     )
-    assert "Reviewed Situation alert dispatch attempted: yes" in completion["content"]
+    assert "Reviewed Situation alert dispatch attempted: no" in completion["content"]
     assert "Reviewed Situation alerts dispatched:" not in completion["content"]
     assert any(entry["title"] == "Cloudflare Deploy Reused" for entry in entries)
 

@@ -59,13 +59,13 @@ def build_generate_site_data_command(
 
 
 def build_update_situation_room_command(*, python_path: Path) -> list[str]:
-    """Refresh external event metadata before static site data is exported."""
+    """Collect authority notices, run peer-reviewed AI, and export Situation data."""
 
-    return [str(python_path), "scripts/update_situation_room.py"]
+    return [str(python_path), "scripts/run_situation_notices.py"]
 
 
 def build_validate_situation_release_command(*, python_path: Path) -> list[str]:
-    """Validate built Situation HTML, JSON downloads, and sitemap gating."""
+    """Validate the built notice-based Situation pages and data."""
 
     return [str(python_path), "scripts/validate_situation_release.py"]
 

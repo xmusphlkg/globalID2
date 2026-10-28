@@ -14,9 +14,10 @@ const t = {
 };
 const palette = ['#0f766e', '#2563eb', '#c06127', '#9b4dcc'];
 
-function CompareResultChart({ id, title, option, lang, share, dataHref, register }: {
+function CompareResultChart({ id, title, names, option, lang, share, dataHref, register }: {
   id: string;
   title: string;
+  names?: Partial<Record<Lang, string>>;
   option: any;
   lang: Lang;
   share: () => string;
@@ -26,7 +27,7 @@ function CompareResultChart({ id, title, option, lang, share, dataHref, register
   const shell = useRef<HTMLElement>(null);
   const plot = useRef<HTMLDivElement>(null);
   return (
-    <section ref={shell} className="compare-chart panel-fullscreen" data-chart-title={title}>
+    <section ref={shell} className="compare-chart panel-fullscreen" data-chart-title={title} data-disease-names={names ? JSON.stringify(names) : undefined}>
       <div className="compare-chart-heading">
         <h3 className="figure-title">{title}</h3>
         <ChartResultActions
@@ -65,6 +66,11 @@ export default function CompareWorkspace({ diseases, language = 'en' }: { diseas
     const disease = diseases.find(item => item.id === id);
     if (!disease) return id;
     return language === 'zh' ? disease.zh : language === 'fr' ? disease.fr : disease.en;
+  };
+  const diseaseNames = (id: string) => {
+    const disease = diseases.find(item => item.id === id);
+    if (!disease) return undefined;
+    return { en: disease.en, zh: disease.zh, fr: disease.fr };
   };
   const placeName = (entry: DiseaseDatasetSeriesEntry) => language === 'zh' ? entry.name_zh : language === 'fr' ? entry.name_fr || entry.name_en : entry.name_en;
   const periodName = (value?: string | null) => {
@@ -154,6 +160,6 @@ export default function CompareWorkspace({ diseases, language = 'en' }: { diseas
     <div className="compare-results-heading"><div><p className="figure-kicker">{label.results}</p><h2 className="figure-title">{selected.map(diseaseName).join(' / ') || label.results}</h2></div><label className="chart-measure">{label.unit}<select aria-label={label.unit} value={unit} onChange={event => setUnit(event.target.value === 'rate' ? 'rate' : 'count')}><option value="count">{label.count}</option><option value="rate">{label.rate}</option></select></label></div>
     {unit === 'rate' && <p className="disease-trend-note">{label.missing}</p>}
     {loading && <div className="chart-loading-panel" role="status" aria-busy="true" style={{ height: 280 }} />}
-    {!loading && selected.length && countries.length >= 2 ? selected.map(id => <CompareResultChart key={id} id={id} title={diseaseName(id)} option={chartOption(id)} lang={language} share={share} dataHref={diseaseHref(id)} register={instance => { refs.current[id] = instance; }} />) : !loading ? <p className="disease-trend-empty compare-chart">{label.empty}</p> : null}
+    {!loading && selected.length && countries.length >= 2 ? selected.map(id => <CompareResultChart key={id} id={id} title={diseaseName(id)} names={diseaseNames(id)} option={chartOption(id)} lang={language} share={share} dataHref={diseaseHref(id)} register={instance => { refs.current[id] = instance; }} />) : !loading ? <p className="disease-trend-empty compare-chart">{label.empty}</p> : null}
   </div>;
 }

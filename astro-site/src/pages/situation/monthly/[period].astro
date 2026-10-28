@@ -1,36 +1,62 @@
 ---
-import SituationPeriodView from '../../../components/SituationPeriodView.astro';
-import { listSituationReports, loadSituationReport } from '../../../lib/situation-data';
+/**
+ * One calendar month: the peer-reviewed weekly briefs whose week starts in it.
+ * The URL scheme is unchanged from the previous Situation module.
+ */
+import ReportLayout from '../../../layouts/ReportLayout.astro';
+import SituationDigest from '../../../components/SituationDigest.astro';
+import { buildAlternatePaths, type SeoDocument } from '../../../lib/seo';
+import { digestHeadline, listDigestMonths, readMonthDigests, readWeekNotices } from '../../../utils/international';
+import { translateUi } from '../../../utils/i18n';
 
 export function getStaticPaths() {
-  const reports = listSituationReports('monthly');
-  return reports.map((report, index) => ({
-    params: { period: report.report.period_key },
-    props: {
-      reportPeriod: report.report.period_key,
-      locale: 'en',
-      previous: reports[index - 1]?.report.period_key,
-      next: reports[index + 1]?.report.period_key,
-    },
+  const months = [...listDigestMonths()].reverse();
+  return months.map((month, index) => ({
+    params: { period: month },
+    props: { reportPeriod: month, locale: 'en', previous: months[index - 1], next: months[index + 1] },
   }));
 }
-const { reportPeriod, previous: previousProp, next: nextProp, locale = 'en' } = Astro.props as { reportPeriod?: string; previous?: string; next?: string; locale?: 'en' | 'zh' | 'fr' };
-const period = reportPeriod ?? Astro.params.period;
-const prefix = locale === 'zh' ? '/zh' : locale === 'fr' ? '/fr' : '';
-const reports = listSituationReports('monthly');
-const reportIndex = reports.findIndex(item => item.report.period_key === period);
-const previous = previousProp ?? (reportIndex > 0 ? reports[reportIndex - 1]?.report.period_key : undefined);
-const next = nextProp ?? (reportIndex >= 0 ? reports[reportIndex + 1]?.report.period_key : undefined);
-const report = period ? loadSituationReport('monthly', period) : null;
-if (!report || !period) return Astro.redirect('/situation/monthly/', 302);
+
+const { reportPeriod, previous, next, locale = 'en' } = Astro.props as { reportPeriod?: string; previous?: string; next?: string; locale?: 'en' | 'zh' | 'fr' };
+const month = reportPeriod ?? String(Astro.params.period ?? '');
+const zh = locale === 'zh';
+const fr = locale === 'fr';
+const prefix = zh ? '/zh' : fr ? '/fr' : '';
+const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
+const digests = readMonthDigests(month);
+if (!digests.length) return Astro.redirect(`${prefix}/situation/monthly/`, 302);
+const title = pick(`Situation overview ${month}`, `${month} 态势汇总`, `Aperçu de la situation ${month}`);
+const description = digestHeadline(digests[0], locale);
+const canonicalPath = `${prefix}/situation/monthly/${month}/`;
+const seo: SeoDocument = {
+  title: `${title} | GIDS`,
+  description,
+  canonicalPath,
+  locale,
+  alternatePaths: buildAlternatePaths(canonicalPath, locale),
+  pageType: 'Report',
+  datePublished: digests.at(-1)?.generated_at ?? null,
+  dateModified: digests[0]?.generated_at ?? null,
+};
 ---
 
-<SituationPeriodView
-  report={report}
-  jsonPath={`/site-data/situation/v3/monthly/${period}.json`}
-  canonicalPath={`${prefix}/situation/monthly/${period}/`}
-  archivePath={`${prefix}/situation/monthly/`}
-  previousPath={previous ? `${prefix}/situation/monthly/${previous}/` : undefined}
-  nextPath={next ? `${prefix}/situation/monthly/${next}/` : undefined}
-  locale={locale}
-/>
+<ReportLayout title={title} description={description} initialLanguage={locale} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室', 'Salle de situation'), href: `${prefix}/situation/` }, { label: pick('Monthly overview', '每月汇总', 'Aperçu mensuel'), href: `${prefix}/situation/monthly/` }, { label: month }]}>
+  <div class="month max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav class="month-nav" aria-label={pick('Adjacent months', '相邻月份', 'Mois adjacents')}>
+      {previous ? <a href={`${prefix}/situation/monthly/${previous}/`}>← {previous}</a> : <span />}
+      <a href={`${prefix}/situation/monthly/`}>{pick('All months', '全部月份', 'Tous les mois')}</a>
+      {next ? <a href={`${prefix}/situation/monthly/${next}/`}>{next} →</a> : <span />}
+    </nav>
+    <h1>{title}</h1>
+    {digests.map(digest => (
+      <SituationDigest digest={digest} notices={readWeekNotices(digest.period_key)} locale={locale} periodHref={`${prefix}/situation/weekly/${digest.period_key}/`} />
+    ))}
+  </div>
+</ReportLayout>
+
+<style>
+  .month { display: grid; gap: 1.4rem; padding-block: 2rem 4rem; }
+  .month-nav { display: flex; justify-content: space-between; gap: .5rem; font-size: .75rem; font-weight: 700; }
+  .month-nav a { color: rgb(var(--color-teal)); text-decoration: none; }
+  h1 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: clamp(1.8rem, 5vw, 2.6rem); margin: 0; }
+</style>

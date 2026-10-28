@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.core.database import dispose_database, get_engine
-from src.core.situation_history_database import dispose_history_database
 from src.core.logging import get_logger
 from .deps import require_dashboard_api_key
 from .http import install_http_contract
@@ -26,8 +25,7 @@ from .routers import (
     release,
     reports,
     settings,
-    situation,
-    situation_v3,
+    situation_notices,
     sources,
     subscriptions,
     tasks,
@@ -67,7 +65,6 @@ async def lifespan(app: FastAPI):
         await runtime_registry.remove_heartbeat("api", instance_id)
         await runtime_registry.close()
         await control_plane_events.close()
-        await dispose_history_database()
         await dispose_database()
         logger.info("API shutting down")
 
@@ -132,8 +129,7 @@ def create_app() -> FastAPI:
     app.include_router(overview.router, prefix=prefix, tags=["Overview"])
     app.include_router(diseases.router, prefix=prefix, tags=["Diseases"])
     app.include_router(reports.router, prefix=prefix, tags=["Reports"])
-    app.include_router(situation.router, prefix=prefix, tags=["Situation Room"])
-    app.include_router(situation_v3.router, prefix=prefix, tags=["Situation Room v3"])
+    app.include_router(situation_notices.router, prefix=prefix, tags=["Situation"])
     app.include_router(tasks.router, prefix=prefix, tags=["Tasks"])
     app.include_router(ai.router, prefix=prefix, tags=["AI"])
     app.include_router(agent_runs.router, prefix=prefix, tags=["Agent Workflow"])

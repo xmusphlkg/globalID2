@@ -7,6 +7,12 @@ import CountryFlag from '../../../components/CountryFlag.astro';
 import CountryCard from '../../../components/CountryCard.astro';
 import DownloadPanel from '../../../components/DownloadPanel.astro';
 import PageAnchorNav from '../../../components/PageAnchorNav.astro';
+import InternationalNoticePanel from '../../../components/InternationalNoticePanel.astro';
+import { readInternationalForCountryPage, recentNotices } from '../../../utils/international';
+const countryNotices = recentNotices(
+  readInternationalForCountryPage((Astro.params as { country?: string }).country ?? ''),
+  8,
+);
 import EpidemicCurve from '../../../components/charts/EpidemicCurve';
 import DiseaseHeatmap from '../../../components/charts/DiseaseHeatmap';
 import ComparisonTable from '../../../components/charts/ComparisonTable';
@@ -500,6 +506,10 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
         </div>
       </section>
     )}
+
+    <div id="international" class="scroll-mt-24">
+      <InternationalNoticePanel notices={countryNotices} locale={locale} />
+    </div>
 
     {countryDownload && (
       <div id="downloads" class="scroll-mt-24"><DownloadPanel

@@ -18,8 +18,8 @@ const copy = createTranslator(currentLanguage);
 const languageOptions = LOCALES;
 const initialLocalePreference = currentLanguage === 'fr' ? 'fr' : currentLanguage;
 const languageMenuLabel = copy('Language', '语言', 'Langue');
-const situationVisible = existsSync(resolve('./src/data/situation/v3/latest.json'))
-  || ((import.meta.env.DEV || process.env.SITUATION_SHADOW_PREVIEW === 'true') && existsSync(resolve('./src/data/situation/shadow-latest.json')));
+// The Situation module is built on the international authority export.
+const situationVisible = existsSync(resolve('./src/data/situation/international/latest.json'));
 
 const primaryLinks = [
   ...(situationVisible ? [{ href: '/situation/', en: 'Situation', zh: '全球态势', fr: 'Situation' }] : []),

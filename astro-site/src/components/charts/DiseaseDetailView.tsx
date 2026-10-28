@@ -431,6 +431,15 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, lates
     bg: 'rgba(100,116,139,0.1)', text: '#94a3b8', border: 'rgba(100,116,139,0.25)'
   };
 
+  // Exports carry every published name so the strip reads in any language.
+  const exportNames = useMemo(() => {
+    let french = diseaseMeta.name_fr?.trim() ?? '';
+    if (!french) {
+      try { french = localizedDiseaseName(diseaseMeta, 'fr'); } catch { french = ''; }
+    }
+    return JSON.stringify({ en: diseaseMeta.name_en, zh: diseaseMeta.name_zh, fr: french });
+  }, [diseaseMeta]);
+
   // Compute aggregate stats
   const totalCases  = series?.total_cases ?? 0;
   const totalDeaths = series?.total_deaths ?? 0;
@@ -474,7 +483,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, lates
   }
 
   return (
-    <div style={{ background: bgPage, minHeight: '100vh' }}>
+    <div style={{ background: bgPage, minHeight: '100vh' }} data-disease-names={exportNames}>
       {/* ── Journal-style page wrapper ── */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
 

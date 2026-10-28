@@ -26,6 +26,131 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.15.0',
+    date: '2026-10-28',
+    titleEn: 'A new Situation page built on official notices',
+    titleZh: '基于官方通报的全新全球态势',
+    titleFr: 'Une nouvelle page Situation fondée sur les avis officiels',
+    summaryEn:
+      'The Situation page, weekly and monthly archives, and methodology now show peer-reviewed weekly briefs, active events, and a timeline of official notices. The earlier statistical screen is retired.',
+    summaryZh:
+      '全球态势页、周报与月报归档及方法说明改为展示经同行评审的周度综述、活跃事件和官方通报时间线，原有的统计筛查已下线。',
+    summaryFr:
+      'La page Situation, les archives hebdomadaires et mensuelles et la méthodologie présentent désormais des synthèses hebdomadaires relues, les événements actifs et une chronologie des avis officiels. L’ancien filtrage statistique est retiré.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveautés',
+        items: [
+          {
+            en: 'The Situation page opens with the current weekly brief. Every point links to the official notices it cites.',
+            zh: '全球态势页以本周综述开头，每条要点都链接到其引用的官方通报。',
+            fr: 'La page Situation s’ouvre sur la synthèse de la semaine ; chaque point renvoie aux avis officiels qu’il cite.',
+          },
+          {
+            en: 'Active events group notices on the same disease and place, with their highest assessed risk and contributing agencies.',
+            zh: '活跃事件将同一疾病、同一地点的通报归并，并显示最高评估风险与来源机构。',
+            fr: 'Les événements actifs regroupent les avis portant sur une même maladie et un même lieu, avec le risque évalué le plus élevé et les agences sources.',
+          },
+          {
+            en: 'Weekly and monthly archive pages keep their existing addresses and now hold the weekly briefs.',
+            zh: '周报与月报归档页沿用原有地址，现收录每周综述。',
+            fr: 'Les archives hebdomadaires et mensuelles conservent leurs adresses et contiennent désormais les synthèses hebdomadaires.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'The methodology page describes notice collection, peer-reviewed AI enrichment, event grouping, and their limits.',
+            zh: '方法说明改为介绍通报采集、经同行评审的 AI 富化、事件归并及其局限。',
+            fr: 'La méthodologie décrit la collecte des avis, l’enrichissement par IA relu par un second modèle, le regroupement en événements et leurs limites.',
+          },
+          {
+            en: 'The home page situation strip reports notices in the current window, active events, and available sources.',
+            zh: '首页态势栏显示当前窗口内的通报数、活跃事件数和可用来源数。',
+            fr: 'Le bandeau Situation de l’accueil indique les avis de la fenêtre courante, les événements actifs et les sources disponibles.',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.14.0',
+    date: '2026-10-28',
+    titleEn: 'Official authority notices with peer-reviewed AI',
+    titleZh: '国际权威通报与同行评审 AI',
+    titleFr: 'Avis des autorités internationales et IA relue',
+    summaryEn:
+      'GIDS now collects notices from WHO, ECDC, Africa CDC, and PAHO, maps them to its disease and country keys, and adds translated titles, summaries, and risk assessments checked by a second model review.',
+    summaryZh:
+      'GIDS 现采集世卫组织、欧洲疾控中心、非洲疾控中心与泛美卫生组织的通报，映射到本站疾病与国家键，并补充经第二轮模型审查的翻译标题、摘要和风险评估。',
+    summaryFr:
+      'GIDS collecte désormais les avis de l’OMS, de l’ECDC, de l’Africa CDC et de l’OPS, les relie à ses clés de maladie et de pays, et ajoute titres traduits, résumés et évaluations du risque vérifiés par une seconde relecture de modèle.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveautés',
+        items: [
+          {
+            en: 'Disease, country, and country-disease pages list the authority notices that name them.',
+            zh: '疾病页、国家页及国家×疾病页列出提及该条目的权威机构通报。',
+            fr: 'Les pages maladie, pays et pays × maladie listent les avis d’autorités qui les mentionnent.',
+          },
+          {
+            en: 'Africa CDC outbreak statements and weekly reports and PAHO surveillance updates join the WHO and ECDC feeds.',
+            zh: '新增非洲疾控中心疫情声明与周报、泛美卫生组织监测更新，与世卫组织、欧洲疾控中心来源并列。',
+            fr: 'Les déclarations et rapports hebdomadaires de l’Africa CDC et les mises à jour de surveillance de l’OPS rejoignent les flux de l’OMS et de l’ECDC.',
+          },
+          {
+            en: 'Each notice carries Chinese and French titles, a short summary, and a risk level. Every record states which model wrote it and which reviewed it.',
+            zh: '每条通报附有中文与法文标题、简短摘要和风险等级，并注明撰写模型与审稿模型。',
+            fr: 'Chaque avis comporte des titres chinois et français, un bref résumé et un niveau de risque ; chaque fiche indique le modèle rédacteur et le modèle relecteur.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Chart PNG exports print the disease name in English, Chinese, and French and wrap long titles instead of cutting them.',
+            zh: '图表 PNG 导出会同时印上中英法三种病名，长标题自动换行而非截断。',
+            fr: 'Les exports PNG des graphiques affichent le nom de la maladie en anglais, chinois et français et renvoient les titres longs à la ligne au lieu de les tronquer.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'Notices that use short names such as DRC, UK, or USA now match their country.',
+            zh: '使用 DRC、UK、USA 等简称的通报现在能匹配到对应国家。',
+            fr: 'Les avis utilisant des abréviations comme DRC, UK ou USA sont désormais rattachés à leur pays.',
+          },
+          {
+            en: 'SARS-CoV-2 bulletins are no longer tagged as SARS, and hantavirus notices now map to a disease.',
+            zh: 'SARS-CoV-2 公报不再被误标为 SARS；汉坦病毒通报现在能映射到疾病。',
+            fr: 'Les bulletins SARS-CoV-2 ne sont plus étiquetés SRAS, et les avis sur l’hantavirus sont rattachés à une maladie.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.13.7',
     date: '2026-10-26',
     titleEn: 'More reliable chart downloads',

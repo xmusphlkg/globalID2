@@ -100,11 +100,6 @@ const sourceChecks = [
     required: ['Titre français du rapport', 'Résumé français en attente.'],
     forbidden: ['const reportSummaryFr = document?.summary?.fr ?? reportSummaryEn'],
   },
-  {
-    path: 'src/components/public/PublicHome.astro',
-    required: ["if (locale === 'fr') Object.assign(copy", 'localizedDiseaseName(disease, \'fr\')'],
-    forbidden: [],
-  },
 ];
 for (const check of sourceChecks) {
   const content = readFileSync(resolve(check.path), 'utf8');
@@ -143,18 +138,6 @@ if (report50) {
     }
   }
 }
-for (const situationPath of ['src/data/situation/v3/latest.json', 'src/data/situation/v3/weekly/2026-W34.json']) {
-  const situation = readJsonIfPresent(situationPath);
-  if (!situation) continue;
-  const isDeterministicFixture = situation.method?.code_version === 'fixture'
-    || situation.quality_gate?.checks?.some((check) => check?.id === 'fixture');
-  if (isDeterministicFixture) continue;
-  for (const key of ['narrative', 'limitations']) {
-    if (!situation[key]?.fr) fail(`${situationPath} is missing ${key}.fr`);
-  }
-  if (!situation.coverage?.note?.fr) fail(`${situationPath} is missing coverage.note.fr`);
-}
-
 const visibleText = (html) => html
   .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
   .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')

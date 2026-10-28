@@ -51,7 +51,7 @@ export function sharedFingerprint() {
     digest.update(fileHash(path));
   }
   digest.update(JSON.stringify(routes.diseases ?? []));
-  digest.update(String(existsSync(resolve(siteRoot, 'src/data/situation/v3/latest.json'))));
+  digest.update(String(existsSync(resolve(siteRoot, 'src/data/situation/international/latest.json'))));
   for (const key of ['GLOBALID_SITE_URL', 'SITE_URL', 'PUBLIC_GIDS_MAINTENANCE_MESSAGE', 'SITUATION_SHADOW_PREVIEW']) {
     digest.update(`${key}=${process.env[key] ?? ''}\n`);
   }

@@ -22,7 +22,7 @@ from src.generation.site_data_literature import (
     write_literature_artifacts,
 )
 from src.literature.release_validation import assert_public_research_payload
-from src.services.situation_v3.persistence import latest_report_v3
+from src.services.situation_notices.snapshot import latest_situation_snapshot as latest_report_v3
 
 
 ROOT = Path(__file__).resolve().parents[2]

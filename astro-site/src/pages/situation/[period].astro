@@ -1,13 +1,12 @@
 ---
-import { listSituationReports } from '../../lib/situation-data';
+import { listDigestMonths, listDigestPeriods } from '../../utils/international';
 
+// Short links such as /situation/2026-W43/ resolve to the canonical period page.
 export function getStaticPaths() {
-  return (['weekly', 'monthly'] as const).flatMap(kind =>
-    listSituationReports(kind).map(report => ({
-      params: { period: report.report.period_key },
-      props: { target: `/situation/${kind}/${report.report.period_key}/` },
-    })),
-  );
+  return [
+    ...listDigestPeriods().map(period => ({ params: { period }, props: { target: `/situation/weekly/${period}/` } })),
+    ...listDigestMonths().map(period => ({ params: { period }, props: { target: `/situation/monthly/${period}/` } })),
+  ];
 }
 
 return Astro.redirect((Astro.props as { target: string }).target, 301);

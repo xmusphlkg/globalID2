@@ -40,7 +40,7 @@ from src.literature.normalization import (
 )
 from src.literature.pipeline import _global_country_catalogue
 from src.literature.repository import LiteratureRepository
-from src.services.situation_v3.persistence import latest_report_v3
+from src.services.situation_notices.snapshot import latest_situation_snapshot as latest_report_v3
 
 
 ROOT = Path(__file__).resolve().parents[2]
