@@ -458,7 +458,7 @@ async def write_weekly_digest(complete: Completer, period_key: str) -> str:
         rows = (
             await db.execute(
                 select(SituationNotice)
-                .options(selectinload(SituationNotice.assessments))
+                .options(selectinload(SituationNotice.assessments), selectinload(SituationNotice.entities))
                 .where(SituationNotice.iso_week_key == period_key, SituationNotice.ai_status == "enriched")
                 .order_by(SituationNotice.published_date.desc())
             )
@@ -466,7 +466,9 @@ async def write_weekly_digest(complete: Completer, period_key: str) -> str:
         notices = []
         for row in rows:
             assessment = next((a for a in row.assessments if a.status == "published"), None)
-            if assessment is None:
+            # Match the public export: a notice with no active disease or
+            # country is not published, so a brief must not cite it.
+            if assessment is None or not any(e.active for e in row.entities):
                 continue
             notices.append(
                 {
