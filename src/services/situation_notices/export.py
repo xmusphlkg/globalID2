@@ -225,7 +225,19 @@ async def export_site(
     )
 
     digest_dir = out / "digests"
-    digest_rows = [digest_record(row) for row in digests]
+    digest_rows = []
+    for row in digests:
+        record = digest_record(row)
+        # A digest may cite a notice the public export omits (no disease or
+        # country). Keep only exported citations so every public point links
+        # to a notice a reader can open; drop points left with none.
+        points = []
+        for point in record["points"]:
+            cited = [nid for nid in point.get("notice_ids") or [] if nid in exported_ids]
+            if cited:
+                points.append({**point, "notice_ids": cited})
+        if points:
+            digest_rows.append({**record, "points": points})
     for record in digest_rows:
         _write(digest_dir / f"{record['period_key']}.json", {"schema_version": SCHEMA_VERSION, **record})
     _write(
