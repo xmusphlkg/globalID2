@@ -59,6 +59,8 @@ const seo: SeoDocument = {
       {next ? <a href={`${prefix}/situation/weekly/${next}/`}>{next} →</a> : <span />}
     </nav>
 
+    <h1 class="week-title">{title}</h1>
+
     <SituationDigest digest={digest} notices={notices} locale={locale} />
 
     <section class="week-notices" aria-labelledby="week-notices-heading">
@@ -88,6 +90,7 @@ const seo: SeoDocument = {
 
 <style>
   .week { display: grid; gap: 1.4rem; padding-block: 2rem 4rem; }
+  .week-title { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.1; margin: 0; }
   .week-nav { display: flex; justify-content: space-between; gap: .5rem; font-size: .75rem; font-weight: 700; }
   .week-nav a { color: rgb(var(--color-teal)); text-decoration: none; }
   .week-notices h2 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: 1.2rem; margin: 0 0 .7rem; }

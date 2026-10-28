@@ -92,22 +92,16 @@ case "$TEST_TYPE" in
             "$PYTHON_BIN" -m pytest -q tests/test_crawlers.py --country "$COUNTRY" "${VERBOSE_ARGS[@]}"
         ;;
     situation)
-        run_test "Situation Room tests" \
+        run_test "Situation tests" \
             "$PYTHON_BIN" -m pytest -q \
-            tests/unit/test_situation_automation.py \
-            tests/unit/test_situation_alert_dispatch.py \
-            tests/unit/test_situation_v3.py \
-            tests/unit/test_situation_v3_backtest.py \
-            tests/unit/test_situation_v3_review_api.py \
-            tests/unit/test_situation_quality.py \
+            tests/unit/test_situation_notices_ai.py \
+            tests/unit/test_global_sources_regional.py \
             tests/e2e/test_situation_static_build.py \
             "${VERBOSE_ARGS[@]}"
         ;;
     automation)
         run_test "release automation tests" \
             "$PYTHON_BIN" -m pytest -q \
-            tests/unit/test_situation_automation.py \
-            tests/unit/test_situation_alert_dispatch.py \
             tests/unit/test_data_release_checks.py \
             tests/unit/test_data_release_pipeline.py \
             tests/unit/test_data_release_resilience.py \

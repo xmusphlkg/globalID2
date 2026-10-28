@@ -1,3 +1,5 @@
+"""Build the public site from a deterministic notice-based Situation export."""
+
 from __future__ import annotations
 
 import json
@@ -8,9 +10,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 ASTRO = ROOT / "astro-site"
-FIXTURE = ROOT / "tests" / "fixtures" / "situation" / "public_report_v3.json"
+EXPORT_DIR = ASTRO / "src" / "data" / "situation" / "international"
+SCHEMA = "gids.international_authority_events.v1"
 RESEARCH_SNAPSHOT_DRIFT = "Research Radar source data changed during the Astro build"
 PRERENDER_MODULE_DRIFT = "dist/.prerender/chunks/"
+PERIOD = "2026-W43"
 
 
 def _retryable_astro_build_drift(completed: subprocess.CompletedProcess[str]) -> bool:
@@ -35,8 +39,7 @@ def _run_astro_build() -> subprocess.CompletedProcess[str]:
             capture_output=True,
             text=True,
             # The French locale doubles the static route surface; keep this
-            # deterministic build budget above the production-sized snapshot
-            # render time on shared CI runners.
+            # deterministic build budget above production-sized render time.
             timeout=300,
         )
 
@@ -46,82 +49,119 @@ def _run_astro_build() -> subprocess.CompletedProcess[str]:
     return completed
 
 
-def test_fixture_snapshot_builds_latest_month_week_json_and_seo(tmp_path: Path) -> None:
-    snapshot = json.loads(FIXTURE.read_text(encoding="utf-8"))
-    # Keep the fixture signal synthetic while pointing its public disease link
-    # at a real generated route so the strict SEO output audit remains valid.
-    snapshot["signals"][0]["identity"].update({
-        "disease_name": "Influenza",
-        "disease_slug": "influenza",
-    })
-    weekly = json.loads(json.dumps(snapshot))
-    weekly["report"].update({
-        "report_id": "situation-v3-weekly-2026-W33-r1",
-        "kind": "weekly",
-        "period_key": "2026-W33",
-        "period_start": "2026-08-10",
-        "period_end": "2026-08-16",
-    })
-    weekly["signals"][0]["lifecycle"]["status"] = "persistent"
-    weekly["summary"].update({"new_count": 0, "persistent_count": 1})
-    monthly = json.loads(json.dumps(snapshot))
-    monthly["report"].update({
-        "report_id": "situation-v3-monthly-2026-08-r1",
-        "kind": "monthly",
-        "period_key": "2026-08",
-        "period_start": "2026-08-01",
-        "period_end": "2026-08-31",
-    })
-    targets = {
-        ASTRO / "src" / "data" / "situation" / "v3" / "latest.json": snapshot,
-        ASTRO / "src" / "data" / "situation" / "latest.json": snapshot,
-        ASTRO / "src" / "data" / "situation" / "v3" / "monthly" / "2026-08.json": monthly,
-        ASTRO / "src" / "data" / "situation" / "v3" / "weekly" / "2026-W33.json": weekly,
-        ASTRO / "public" / "site-data" / "situation" / "v3" / "latest.json": snapshot,
-        ASTRO / "public" / "site-data" / "situation" / "latest.json": snapshot,
-        ASTRO / "public" / "site-data" / "situation" / "v3" / "monthly" / "2026-08.json": monthly,
-        ASTRO / "public" / "site-data" / "situation" / "v3" / "weekly" / "2026-W33.json": weekly,
+def _notice() -> dict:
+    return {
+        "event_id": "who_don:e2e-1",
+        "source_id": "who_don",
+        "native_id": "e2e-1",
+        "record_type": "outbreak_notice",
+        "title_en": "Influenza - E2E fixture",
+        "title_zh": "流感 - 端到端测试",
+        "title_fr": "Grippe - test de bout en bout",
+        "summary_en": "Deterministic end-to-end fixture notice.",
+        "summary_zh": "确定性的端到端测试通报。",
+        "summary_fr": "Avis de test déterministe.",
+        "url": "https://www.who.int/emergencies/disease-outbreak-news/item/e2e-1",
+        "source_label_en": "WHO Disease Outbreak News",
+        "source_label_zh": "世卫组织疾病暴发新闻",
+        "agency_en": "World Health Organization",
+        "agency_zh": "世界卫生组织",
+        "language": "en",
+        "published_date": "2026-10-21",
+        "updated_at_source": "2026-10-21",
+        "iso_year": 2026,
+        "iso_week": 43,
+        "iso_week_key": PERIOD,
+        "diseases": [{"disease_id": "D038", "name_en": "Influenza", "name_zh": "流感", "slug": "influenza"}],
+        "countries": [{"code": "CN", "name_en": "China", "name_zh": "中国"}],
+        "retrieved_at": "2026-10-21T00:00:00+00:00",
+        "fingerprint": "e2e-fixture",
+        "event_type": "outbreak_update",
+        "risk_level": "low",
+        "risk_rationale": "Deterministic fixture.",
+        "ai": {
+            "author_model": "fixture",
+            "reviewer_model": "fixture",
+            "review_mode": "single_model",
+            "verdict": "accept",
+            "rounds": 1,
+            "prompt_version": "fixture",
+        },
     }
-    backups: dict[Path, bytes | None] = {}
+
+
+def _payloads() -> dict[Path, dict]:
+    notice = _notice()
+    shard = {"schema_version": SCHEMA, "event_count": 1, "events": [notice]}
+    digest = {
+        "schema_version": SCHEMA,
+        "period_key": PERIOD,
+        "headline_en": "E2E fixture weekly brief",
+        "headline_zh": "端到端测试周综述",
+        "headline_fr": "Synthèse hebdomadaire de test",
+        "points": [
+            {
+                "text_en": "Influenza notice from the fixture.",
+                "text_zh": "测试流感通报。",
+                "text_fr": "Avis de grippe de test.",
+                "notice_ids": [notice["event_id"]],
+            }
+        ],
+        "notice_count": 1,
+        "generated_at": "2026-10-26T00:00:00+00:00",
+        "ai": {"author_model": "fixture", "reviewer_model": "fixture", "review_mode": "single_model", "verdict": "accept", "score": 0.9, "prompt_version": "fixture"},
+    }
+    return {
+        EXPORT_DIR / "latest.json": {
+            "schema_version": SCHEMA,
+            "generated_at": "2026-10-26T00:00:00+00:00",
+            "window": {"since_days": 120, "since_date": "2026-06-28", "as_of": "2026-10-26"},
+            "event_count": 1,
+            "recent_event_count": 1,
+            "recent": [notice],
+            "iso_weeks": [{"iso_week_key": PERIOD, "iso_year": 2026, "iso_week": 43, "event_count": 1}],
+            "diseases": [{"disease_id": "D038", "name_en": "Influenza", "name_zh": "流感", "event_count": 1}],
+            "countries": [{"code": "CN", "name_en": "China", "name_zh": "中国", "event_count": 1}],
+            "sources": [],
+        },
+        EXPORT_DIR / "archive" / "2026.json": {**shard, "year": 2026},
+        EXPORT_DIR / "by-disease" / "D038.json": {**shard, "disease": notice["diseases"][0]},
+        EXPORT_DIR / "by-country" / "CN.json": {**shard, "country": notice["countries"][0]},
+        EXPORT_DIR / "events.json": {"schema_version": SCHEMA, "as_of": "2026-10-26", "events": []},
+        EXPORT_DIR / "digests" / "index.json": {
+            "schema_version": SCHEMA,
+            "periods": [{"period_key": PERIOD, "headline_en": digest["headline_en"], "headline_zh": digest["headline_zh"], "headline_fr": digest["headline_fr"]}],
+        },
+        EXPORT_DIR / "digests" / f"{PERIOD}.json": digest,
+    }
+
+
+def test_notice_export_builds_situation_weekly_monthly_and_sitemap(tmp_path: Path) -> None:
+    backup = tmp_path / "international-backup"
+    had_export = EXPORT_DIR.exists()
+    if had_export:
+        shutil.copytree(EXPORT_DIR, backup)
+        shutil.rmtree(EXPORT_DIR)
     try:
-        for path, payload in targets.items():
-            backups[path] = path.read_bytes() if path.exists() else None
+        for path, payload in _payloads().items():
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
         completed = _run_astro_build()
         assert completed.returncode == 0, completed.stdout + completed.stderr
 
-        latest = (ASTRO / "dist" / "situation" / "index.html").read_text(encoding="utf-8")
-        month = (ASTRO / "dist" / "situation" / "monthly" / "2026-08" / "index.html").read_text(encoding="utf-8")
-        week = (ASTRO / "dist" / "situation" / "weekly" / "2026-W33" / "index.html").read_text(encoding="utf-8")
-        redirects = (ASTRO / "dist" / "_redirects").read_text(encoding="utf-8")
-        sitemap = (ASTRO / "dist" / "sitemaps" / "situation.xml").read_text(encoding="utf-8")
-        home = (ASTRO / "dist" / "index.html").read_text(encoding="utf-8")
+        dist = ASTRO / "dist"
+        latest = (dist / "situation" / "index.html").read_text(encoding="utf-8")
+        week = (dist / "situation" / "weekly" / PERIOD / "index.html").read_text(encoding="utf-8")
+        sitemap = (dist / "sitemaps" / "situation.xml").read_text(encoding="utf-8")
 
-        assert "Search official surveillance records" in home
-        assert "Find signals" in home and "Trace sources" in home
-        assert "Current attention" in home
-        assert "Official events" in home and "Published signals" in home
-        assert "Open the full situation review" in home
         assert 'rel="canonical" href="https://globalinfectiousdisease.com/situation/"' in latest
-        assert 'hreflang="zh-CN"' in latest
-        assert '"@type":"Report"' in latest and '"@type":"Dataset"' in latest
-        assert "Monthly Infectious Disease Situation — 2026-08" in month
-        assert "Aug 1, 2026" in month and "Aug 31, 2026" in month
-        assert "revision</i> 1" in month
-        assert "2026-W33" in week
-        assert "/situation/2026-W33/  /situation/weekly/2026-W33/  301" in redirects
-        assert "https://globalinfectiousdisease.com/situation/monthly/2026-08/" in sitemap
-        assert "https://globalinfectiousdisease.com/situation/weekly/2026-W33/" in sitemap
-        assert (ASTRO / "dist" / "site-data" / "situation" / "latest.json").is_file()
-        assert (ASTRO / "dist" / "site-data" / "situation" / "v3" / "latest.json").is_file()
+        assert "E2E fixture weekly brief" in latest
+        assert PERIOD in week and "Influenza - E2E fixture" in week
+        assert (dist / "situation" / "monthly" / "2026-10" / "index.html").is_file()
+        assert (dist / "zh" / "situation" / "weekly" / PERIOD / "index.html").is_file()
+        assert (dist / "situation" / "methodology" / "index.html").is_file()
+        assert f"https://globalinfectiousdisease.com/situation/weekly/{PERIOD}/" in sitemap
     finally:
-        for path, content in backups.items():
-            if content is None:
-                path.unlink(missing_ok=True)
-            else:
-                path.write_bytes(content)
-        for directory in sorted({path.parent for path, content in backups.items() if content is None}, key=lambda item: len(item.parts), reverse=True):
-            if directory.exists() and not any(directory.iterdir()):
-                directory.rmdir()
-        shutil.rmtree(tmp_path, ignore_errors=True)
+        shutil.rmtree(EXPORT_DIR, ignore_errors=True)
+        if had_export:
+            shutil.copytree(backup, EXPORT_DIR)
