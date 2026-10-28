@@ -15937,7 +15937,8 @@ export interface operations {
         parameters: {
             query?: {
                 status?: string | null;
-                limit?: number;
+                page?: number;
+                page_size?: number;
             };
             header?: never;
             path?: never;
@@ -16021,7 +16022,8 @@ export interface operations {
             query?: {
                 status?: ("active" | "quiet") | null;
                 disease_id?: string | null;
-                limit?: number;
+                page?: number;
+                page_size?: number;
             };
             header?: never;
             path?: never;
