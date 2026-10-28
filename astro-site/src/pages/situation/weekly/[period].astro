@@ -5,7 +5,7 @@
  */
 import ReportLayout from '../../../layouts/ReportLayout.astro';
 import SituationDigest from '../../../components/SituationDigest.astro';
-import { buildAlternatePaths, type SeoDocument } from '../../../lib/seo';
+import { buildAlternatePaths, toSeoSlug, type SeoDocument } from '../../../lib/seo';
 import { formatDate } from '../../../utils/situation';
 import {
   digestHeadline,
@@ -77,7 +77,7 @@ const seo: SeoDocument = {
             {noticeSummary(notice, locale) && <p class="summary">{noticeSummary(notice, locale)}</p>}
             {(notice.diseases.length > 0 || notice.countries.length > 0) && (
               <p class="chips">
-                {notice.diseases.map(row => row.slug ? <a href={`${prefix}/diseases/${row.slug}/`}>{noticeEntityName(row, locale)}</a> : <span>{noticeEntityName(row, locale)}</span>)}
+                {notice.diseases.map(row => row.slug ? <a href={`${prefix}/diseases/${toSeoSlug(row.slug)}/`}>{noticeEntityName(row, locale)}</a> : <span>{noticeEntityName(row, locale)}</span>)}
                 {notice.countries.map(row => <span class="country">{noticeEntityName(row, locale) || row.code}</span>)}
               </p>
             )}

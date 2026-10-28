@@ -5,6 +5,7 @@
  */
 import { riskRank, type SituationEventRecord } from '../utils/international';
 import { formatDate } from '../utils/situation';
+import { toSeoSlug } from '../lib/seo';
 import { translateUi } from '../utils/i18n';
 import { localizedRegionName } from '../utils/i18n';
 
@@ -42,7 +43,7 @@ const diseaseName = (event: SituationEventRecord) => (zh ? event.disease_name_zh
       {active.map(event => (
         <li class={`risk-${event.risk_level ?? 'none'}`}>
           <div class="what">
-            {event.disease_slug ? <a href={`${prefix}/diseases/${event.disease_slug}/`}>{diseaseName(event)}</a> : <b>{diseaseName(event)}</b>}
+            {event.disease_slug ? <a href={`${prefix}/diseases/${toSeoSlug(event.disease_slug)}/`}>{diseaseName(event)}</a> : <b>{diseaseName(event)}</b>}
             <span>{placeName(event.country_codes)}</span>
           </div>
           <dl>

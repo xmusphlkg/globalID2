@@ -2,6 +2,7 @@
 import { hasCountryDataSnapshot } from '../lib/country-coverage';
 import metaRaw from '../data/meta.json';
 import { formatDate } from '../utils/situation';
+import { toSeoSlug } from '../lib/seo';
 import {
   groupNoticesByWeek,
   noticeEntityName,
@@ -33,7 +34,7 @@ const linkedCountries = new Set(
 
 function diseaseHref(notice: InternationalNotice, index: number): string | null {
   const row = (notice.diseases ?? [])[index];
-  return row?.slug ? `${prefix}/diseases/${row.slug}/` : null;
+  return row?.slug ? `${prefix}/diseases/${toSeoSlug(row.slug)}/` : null;
 }
 function countryHref(code: string | null | undefined): string | null {
   const normalized = String(code ?? '').toUpperCase();

@@ -269,7 +269,9 @@ const itemList = {
               <h3><a href={localeHref(signal.situation_url ?? '/situation/')}>{pick(signal.title, signal.title_zh ?? signal.title, `Événement officiel : ${signal.disease_name_fr ?? DISEASE_NAMES_FR_BY_ID[String(signal.disease_id ?? '').toUpperCase()] ?? 'maladie infectieuse'} — ${geography}`)}</a></h3>
               <p class="surveillance-research-meta"><span>{localizedDiseaseName({ disease_id: signal.disease_id, name_en: signal.disease_name_en, name_zh: signal.disease_name_zh, name_fr: signal.disease_name_fr }, locale)}</span> · {geography}</p>
               {linkedArticles.length > 0
-                ? <ol>{linkedArticles.map((article: any) => <li><a href={`${prefix}/research/articles/${article.slug}/`}><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></a></li>)}</ol>
+                ? <ol>{linkedArticles.map((article: any) => <li>{article.detail_available === false
+                  ? <div class="surveillance-research-nolink"><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></div>
+                  : <a href={`${prefix}/research/articles/${article.slug}/`}><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></a>}</li>)}</ol>
                 : <p class="surveillance-research-empty">{pick('No public Research Radar article currently meets this relationship threshold.', '目前没有公开的 Research Radar 文献达到此关联阈值。')}</p>}
             </article>;
           })}
