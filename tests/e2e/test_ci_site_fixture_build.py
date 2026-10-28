@@ -56,6 +56,5 @@ def test_missing_only_ci_fixture_supports_clean_build_and_performance_gate(
     assert (site / "dist" / "index.html").is_file()
     assert (site / "dist" / "research" / "index.html").is_file()
     assert (site / "dist" / "situation" / "index.html").is_file()
-    assert (
-        site / "dist" / "site-data" / "situation" / "v3" / "latest.json"
-    ).is_file()
+    assert (site / "dist" / "situation" / "methodology" / "index.html").is_file()
+    assert (site / "dist" / "situation" / "weekly" / "index.html").is_file()
