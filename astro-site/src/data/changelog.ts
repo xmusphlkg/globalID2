@@ -26,6 +26,57 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.16.0',
+    date: '2026-10-29',
+    titleEn: 'Situation becomes a map of individually reviewed alerts',
+    titleZh: '全球态势升级为经逐条评审的告警地图',
+    titleFr: 'Situation devient une carte d’alertes relues individuellement',
+    summaryEn:
+      'The Situation page now reads each official report in full and plots the individual alerts it states (disease, place, counts, and a verbatim quote), reviewed by two independent AI models before publishing. Outbreaks spanning several countries share one timeline; routine reports with nothing unusual stay out of the way by default.',
+    summaryZh:
+      '全球态势页现在会完整阅读每份官方报告，并标出其中陈述的每条告警（疾病、地点、数字与一句原文引述），发布前经两个独立 AI 模型评审。涉及多国的疫情共享同一条时间线；没有异常情况的常规报告默认不占据主要视图。',
+    summaryFr:
+      'La page Situation lit désormais chaque rapport officiel dans son intégralité et situe chaque alerte qu’il énonce (maladie, lieu, chiffres et une citation exacte), relue par deux modèles d’IA indépendants avant publication. Les épidémies touchant plusieurs pays partagent une même chronologie ; les rapports de routine sans fait notable restent en retrait par défaut.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveautés',
+        items: [
+          {
+            en: 'The Situation map plots each alert by disease and place, with the stated case and death counts, the date they were reported as of, and a link to the source report.',
+            zh: '态势地图按疾病与地点标出每条告警，附带报告所述病例数、死亡数、统计截止日期及原始报告链接。',
+            fr: 'La carte Situation situe chaque alerte par maladie et lieu, avec les cas et décès déclarés, la date de référence et un lien vers le rapport source.',
+          },
+          {
+            en: 'An outbreak touching several countries is shown as one timeline instead of separate, disconnected notices.',
+            zh: '涉及多个国家的同一次疫情，会以一条统一时间线呈现，而不是若干互不关联的通报。',
+            fr: 'Une épidémie touchant plusieurs pays apparaît sur une seule chronologie plutôt qu’en avis séparés et déconnectés.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Routine surveillance reports that describe nothing unusual are kept out of the main view by default, so the map stays focused on active alerts.',
+            zh: '未报告异常情况的常规监测报告默认不显示在主视图中，使地图聚焦于活跃告警。',
+            fr: 'Les rapports de surveillance de routine ne signalant rien d’inhabituel restent en retrait par défaut, pour que la carte reste centrée sur les alertes actives.',
+          },
+          {
+            en: 'Each alert quotes one verbatim sentence from its source report, so the claim can be checked against the original.',
+            zh: '每条告警都附带源报告中的一句原文引述，方便与原文核对。',
+            fr: 'Chaque alerte cite une phrase exacte de son rapport source, afin de pouvoir vérifier l’affirmation.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.15.0',
     date: '2026-10-28',
     titleEn: 'A new Situation page built on official notices',
