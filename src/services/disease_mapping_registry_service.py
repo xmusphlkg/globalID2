@@ -1253,18 +1253,21 @@ class DiseaseMappingRegistryService:
             notes=notes,
         )
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        # ``ai-peer-review`` is the actor used by the automatic two-model review.
+        ai_accepted = reviewer == "ai-peer-review"
         release = await self.create_release(
             db,
             release_code=f"DMR-AUTO-{timestamp}-{candidate_id}",
             created_by=reviewer,
             description=(
-                "Automatically published after human acceptance of mapping "
-                f"candidate {candidate_id}."
+                f"Automatically published after AI peer-review acceptance of mapping candidate {candidate_id}."
+                if ai_accepted
+                else f"Automatically published after human acceptance of mapping candidate {candidate_id}."
             ),
         )
         release.metadata_ = {
             **(release.metadata_ or {}),
-            "publication_trigger": "candidate_acceptance",
+            "publication_trigger": "ai_peer_review_acceptance" if ai_accepted else "candidate_acceptance",
             "accepted_candidate_id": candidate_id,
             "accepted_assertion_id": assertion.id,
         }

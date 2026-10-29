@@ -446,3 +446,42 @@ def test_peer_decide_reject_is_final_and_not_published() -> None:
     )
     assert not reviewed.published
     assert reviewed.status == "rejected"
+
+
+def test_exact_match_learning_suggestion_stores_the_disease_id_string() -> None:
+    from src.domain import DiseaseLearningSuggestion, StandardDisease
+
+    suggestion = DiseaseLearningSuggestion(id=7, country_code="DE", local_name="Measles", occurrence_count=3, status="pending")
+    standard = StandardDisease(
+        disease_id="D021", standard_name_en="Measles", standard_name_zh="麻疹",
+        category="test", source="test", metadata_={}, is_active=True,
+    )
+
+    class Result:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def scalars(self):
+            return self
+
+        def all(self):
+            return self.rows
+
+    class FakeDB:
+        calls = 0
+
+        async def execute(self, _statement):
+            FakeDB.calls += 1
+            return Result([suggestion] if FakeDB.calls == 1 else [standard])
+
+        async def commit(self):
+            return None
+
+    result = asyncio.run(
+        AIContentGovernanceService().review_learning_suggestions(FakeDB(), use_ai=False)
+    )
+
+    assert result["approved"] == 1
+    assert result["applied"][0]["target_disease_id"] == "D021"
+    assert suggestion.final_disease_id == "D021"
+    assert suggestion.status == "approved"

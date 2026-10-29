@@ -879,6 +879,12 @@ class AIContentGovernanceService:
                 counts["waiting"] += 1
                 applied.append({"summary_id": int(item_id), "decision": "wait", "reason": wait})
                 continue
+            if summary.generated_by != "literature-evidence-agent":
+                # Editor-written or other non-agent summaries are outside this
+                # automatic gate; leave them untouched.
+                counts["skipped"] = counts.get("skipped", 0) + 1
+                applied.append({"summary_id": int(item_id), "decision": "skip", "reason": "not an evidence-agent summary"})
+                continue
             missing = [field for field in SUMMARY_FIELDS if not _text(getattr(summary, field, None), limit=50)]
             if missing:
                 counts["archived"] += 1
@@ -1081,7 +1087,7 @@ class AIContentGovernanceService:
             item_id = str(suggestion.id)
             reviewed: ReviewedOutput | None = None
             if item_id in exact:
-                target: str | None = exact[item_id]
+                target: str | None = str(exact[item_id].payload.get("target_disease_id") or "") or None
                 reasons = ["Exact match against the active standard-disease catalogue."]
             elif not use_ai:
                 counts["deferred"] += 1
