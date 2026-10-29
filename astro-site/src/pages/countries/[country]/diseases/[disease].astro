@@ -5,7 +5,7 @@ import DownloadPanel from '../../../../components/DownloadPanel.astro';
 import EpidemicCurve from '../../../../components/charts/EpidemicCurve';
 import DiseaseResearchPanel from '../../../../components/research/DiseaseResearchPanel.astro';
 import InternationalNoticePanel from '../../../../components/InternationalNoticePanel.astro';
-import { readInternationalForCountryPage, recentNotices } from '../../../../utils/international';
+import { readAlertsForCountryPage, recentAlerts } from '../../../../utils/international';
 import { buildChartSourceMeta } from '../../../../utils/chartMeta';
 import { countryDiseaseCandidates } from '../../../../lib/seo-page-data';
 import { downloadCatalogue } from '../../../../lib/downloads-data';
@@ -97,9 +97,9 @@ const countryDownload = (downloadCatalogue()?.countries ?? []).find(
 const diseaseId = String(series.disease_id ?? '');
 // Only notices that name both this jurisdiction and this disease belong here.
 const countryDiseaseNotices = diseaseId
-  ? recentNotices(
-    readInternationalForCountryPage(String(code)).filter(notice =>
-      (notice.diseases ?? []).some(row => String(row.disease_id).toUpperCase() === diseaseId.toUpperCase())),
+  ? recentAlerts(
+    readAlertsForCountryPage(String(code)).filter(alert =>
+      String(alert.disease_id ?? '').toUpperCase() === diseaseId.toUpperCase()),
     8,
   )
   : [];
@@ -197,7 +197,7 @@ const seo = {
     </section>
     <div class="mt-6" id="research"><DiseaseResearchPanel diseaseId={diseaseId || slug} locale={locale} /></div>
     <div class="mt-6" id="international">
-      <InternationalNoticePanel notices={countryDiseaseNotices} locale={locale} />
+      <InternationalNoticePanel alerts={countryDiseaseNotices} locale={locale} />
     </div>
     {countryDownload && (
       <div id="downloads" class="mt-6 scroll-mt-24">

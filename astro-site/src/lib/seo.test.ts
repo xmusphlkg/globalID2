@@ -13,8 +13,20 @@ import {
   formatYearRange,
   isIndexableDisease,
   isIndexableResearchCollection,
+  normalizeDiseaseHref,
   toSeoSlug,
 } from './seo.ts';
+
+test('normalizes legacy disease slugs in research links and leaves other hrefs alone', () => {
+  assert.equal(
+    normalizeDiseaseHref('/diseases/respiratory-syncytial-virus-infection-(rsv)/'),
+    '/diseases/respiratory-syncytial-virus-infection-rsv/',
+  );
+  assert.equal(normalizeDiseaseHref('/diseases/measles/#downloads'), '/diseases/measles/#downloads');
+  assert.equal(normalizeDiseaseHref('/countries/jp/'), '/countries/jp/');
+  assert.equal(normalizeDiseaseHref(null), null);
+  assert.equal(normalizeDiseaseHref(undefined), null);
+});
 
 test('builds unique, descriptive country and disease snippets', () => {
   const country = buildCountryMetaDescription({

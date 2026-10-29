@@ -1,98 +1,49 @@
-"""Export the notice database into the static Situation site data.
+"""Export the alert database into the static Situation site data.
 
-The sharded notice files keep the layout of
-:mod:`src.services.global_sources.export_static`, so the existing disease and
-country panels keep working. Two files are added next to them:
+Layout under ``DEFAULT_OUTPUT_DIR`` (everything is rebuilt on each export):
 
-* ``events.json``: clustered disease x place events, newest first;
-* ``digests/<period>.json`` plus ``digests/index.json``: published weekly
-  briefs. Each point keeps the notice ids it cites.
+* ``map.json``: one point per outbreak x place (its latest alert) plus filter facets;
+* ``outbreaks/<id>.json``: the alert timeline of one outbreak;
+* ``by-country/<CC>.json`` and ``by-disease/<ID>.json``: alerts for entity pages;
+* ``monitoring.json``: periodic roundups that raised no map point (hidden by default);
+* ``weekly/<period>.json`` and ``weekly/index.json``: what changed that week, as numbers;
+* ``sources.json``: source registry joined with the latest run status.
 
-Only peer-reviewed AI output is exported. A notice without a published
-assessment still appears with its original English metadata.
+Only structured facts, one quoted sentence and the link are public. Full report
+text never leaves the database. A quote is published only for sources whose
+redistribution terms are cleared (``metadata_and_extract``).
 """
 
 from __future__ import annotations
 
 import json
+import shutil
+from collections import defaultdict
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from src.ai.peer_review import review_mode
 from src.core.database import get_db
-from src.domain import SituationDigest, SituationEvent, SituationNotice, SituationSourceRun
-from src.services.global_sources.catalogue import SOURCE_REGISTRY, compose_chinese_title, disease_catalogue, iso_week
-from src.services.global_sources.export_static import DEFAULT_OUTPUT_DIR, DEFAULT_RECENT_LIMIT, SCHEMA_VERSION, export_events
+from src.domain import SituationAlert, SituationExtraction, SituationNotice, SituationOutbreak, SituationSourceRun
+from src.services.global_sources.catalogue import (
+    ROOT,
+    SOURCE_REGISTRY,
+    country_row,
+    disease_catalogue,
+    iso_week,
+)
 
-from .ai import review_mode
 from .pipeline import utc_now
 
-
-def notice_record(row: SituationNotice) -> dict[str, Any]:
-    """One notice in the public shape, with only published AI fields."""
-
-    registry = SOURCE_REGISTRY.get(row.source_id, {})
-    assessment = next((a for a in row.assessments if a.status == "published"), None)
-    active = [e for e in row.entities if e.active]
-    slugs = {item["disease_id"]: item.get("slug") or "" for item in disease_catalogue()}
-    diseases = [
-        {"disease_id": e.entity_id, "name_en": e.name_en, "name_zh": e.name_zh, "slug": slugs.get(e.entity_id, "")}
-        for e in active
-        if e.entity_type == "disease"
-    ]
-    countries = [
-        {"code": e.entity_id, "name_en": e.name_en, "name_zh": e.name_zh}
-        for e in active
-        if e.entity_type == "country"
-    ]
-    keep_extract = row.redistribution != "metadata_only"
-    record = {
-        "event_id": row.notice_id,
-        "source_id": row.source_id,
-        "native_id": row.native_id,
-        "record_type": row.record_type,
-        "title_en": row.title_en,
-        "title_zh": (assessment.title_zh if assessment else None)
-        or compose_chinese_title(diseases, countries, row.source_id, row.published_date),
-        "title_fr": assessment.title_fr if assessment else None,
-        # AI summaries are written from metadata, so they are allowed even for
-        # metadata-only sources; the agency's own extract is not.
-        "summary_en": (assessment.summary_en if assessment else None) or (row.summary_en if keep_extract else None),
-        "summary_zh": assessment.summary_zh if assessment else None,
-        "summary_fr": assessment.summary_fr if assessment else None,
-        "url": row.url,
-        "source_label_en": (registry.get("label") or {}).get("en"),
-        "source_label_zh": (registry.get("label") or {}).get("zh"),
-        "agency_en": (registry.get("agency") or {}).get("en"),
-        "agency_zh": (registry.get("agency") or {}).get("zh"),
-        "language": row.language,
-        "published_date": row.published_date.isoformat(),
-        "updated_at_source": row.updated_at_source,
-        "diseases": diseases,
-        "countries": countries,
-        "retrieved_at": row.last_seen_at.isoformat() if row.last_seen_at else None,
-        "fingerprint": row.content_hash[:16],
-        "event_type": assessment.event_type if assessment else None,
-        "risk_level": assessment.risk_level if assessment else None,
-        "risk_rationale": assessment.risk_rationale if assessment else None,
-        "ai": (
-            {
-                "author_model": assessment.author_model,
-                "reviewer_model": assessment.reviewer_model,
-                "review_mode": review_mode(assessment.author_model, assessment.reviewer_model),
-                "verdict": assessment.review_verdict,
-                "rounds": assessment.review_rounds,
-                "prompt_version": assessment.prompt_version,
-            }
-            if assessment
-            else None
-        ),
-        **iso_week(row.published_date),
-    }
-    return record
+SCHEMA_VERSION = "gids.situation_alerts.v1"
+DEFAULT_OUTPUT_DIR = ROOT / "astro-site" / "src" / "data" / "situation" / "international"
+DEFAULT_SINCE_DAYS = 365
+QUOTE_TERMS = "metadata_and_extract"
+_OWNED = ("outbreaks", "by-country", "by-disease", "weekly")
 
 
 def _write(path: Path, payload: Any) -> None:
@@ -100,144 +51,308 @@ def _write(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def digest_record(row: SituationDigest) -> dict[str, Any]:
+def _source(source_id: str) -> dict[str, Any]:
+    registry = SOURCE_REGISTRY.get(source_id, {})
     return {
-        "period_key": row.period_key,
-        "headline_en": row.headline_en,
-        "headline_zh": row.headline_zh,
-        "headline_fr": row.headline_fr,
-        "points": row.points or [],
-        "notice_count": row.notice_count,
-        "generated_at": row.created_at.isoformat() if row.created_at else None,
-        "ai": {
-            "author_model": row.author_model,
-            "reviewer_model": row.reviewer_model,
-            "review_mode": review_mode(row.author_model, row.reviewer_model),
-            "verdict": row.review_verdict,
-            "score": row.review_score,
-            "prompt_version": row.prompt_version,
-        },
+        "source_id": source_id,
+        "source_label_en": (registry.get("label") or {}).get("en"),
+        "source_label_zh": (registry.get("label") or {}).get("zh"),
+        "agency_en": (registry.get("agency") or {}).get("en"),
+        "agency_zh": (registry.get("agency") or {}).get("zh"),
     }
+
+
+def _sort_key(record: dict[str, Any]) -> tuple[str, str]:
+    return (record["published_date"], record["alert_id"])
+
+
+def alert_record(
+    alert: SituationAlert,
+    notice: SituationNotice,
+    extraction: SituationExtraction | None,
+    diseases: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """One alert in the public shape; the quote is withheld where terms are unclear."""
+
+    disease = diseases.get(alert.disease_id or "", {})
+    country = country_row(alert.country_code)
+    quotable = notice.redistribution == QUOTE_TERMS
+    return {
+        "alert_id": alert.alert_id,
+        "outbreak_id": alert.outbreak_id,
+        "notice_id": notice.notice_id,
+        **_source(alert.source_id),
+        "title_en": notice.title_en,
+        "url": notice.url,
+        "disease_id": alert.disease_id,
+        "disease_slug": disease.get("slug") or None,
+        "disease_label": alert.disease_label,
+        "disease_name_en": disease.get("name_en") or alert.disease_label,
+        "disease_name_zh": disease.get("name_zh"),
+        "country_code": alert.country_code,
+        "country_name_en": country["name_en"],
+        "country_name_zh": country["name_zh"],
+        "admin_area": alert.admin_area,
+        "status": alert.status,
+        "cases": alert.cases,
+        "deaths": alert.deaths,
+        "count_basis": alert.count_basis,
+        "as_of": alert.as_of.isoformat() if alert.as_of else None,
+        "published_date": alert.published_date.isoformat(),
+        "quote": alert.quote if quotable else None,
+        "summary_en": alert.summary_en,
+        "summary_zh": alert.summary_zh,
+        "summary_fr": alert.summary_fr,
+        "ai": (
+            {
+                "review_mode": review_mode(extraction.author_model, extraction.reviewer_model),
+                "input_mode": extraction.input_mode,
+                "verdict": extraction.review_verdict,
+                "prompt_version": extraction.prompt_version,
+            }
+            if extraction
+            else None
+        ),
+    }
+
+
+def latest_per_place(records: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The newest alert of each outbreak x country x admin area: one map point each."""
+
+    newest: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+    for record in sorted(records, key=_sort_key):
+        key = (
+            record["outbreak_id"] or record["alert_id"],
+            record["country_code"],
+            record["admin_area"] or "",
+            record["disease_id"] or record["disease_label"],
+        )
+        newest[key] = record
+    return sorted(newest.values(), key=_sort_key, reverse=True)
+
+
+def facets(points: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Filter options with the number of points behind each."""
+
+    def tally(key: str, fields: tuple[str, ...]) -> list[dict[str, Any]]:
+        counts: dict[str, dict[str, Any]] = {}
+        for point in points:
+            value = point.get(key)
+            if not value:
+                continue
+            entry = counts.setdefault(value, {"id": value, **{name: point.get(name) for name in fields}, "count": 0})
+            entry["count"] += 1
+        return sorted(counts.values(), key=lambda item: (-item["count"], str(item["id"])))
+
+    return {
+        "diseases": tally("disease_id", ("disease_name_en", "disease_name_zh", "disease_slug")),
+        "countries": tally("country_code", ("country_name_en", "country_name_zh")),
+        "sources": tally("source_id", ("source_label_en", "source_label_zh")),
+    }
+
+
+def weekly_changes(
+    records: Iterable[dict[str, Any]], outbreaks: Iterable[dict[str, Any]]
+) -> dict[str, dict[str, Any]]:
+    """Per ISO week: new outbreaks, outbreaks with news, and places seen for the first time."""
+
+    weeks: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {"new_outbreaks": [], "updated_outbreaks": [], "new_places": 0, "alerts": 0}
+    )
+    first_seen: dict[tuple[str, str], str] = {}
+    for record in sorted(records, key=_sort_key):
+        week = iso_week(date.fromisoformat(record["published_date"]))["iso_week_key"]
+        weeks[week]["alerts"] += 1
+        place = (record["outbreak_id"] or record["alert_id"], record["country_code"])
+        if place not in first_seen:
+            first_seen[place] = week
+            weeks[week]["new_places"] += 1
+    for outbreak in outbreaks:
+        started = iso_week(date.fromisoformat(outbreak["first_published"]))["iso_week_key"]
+        weeks[started]["new_outbreaks"].append(outbreak["outbreak_id"])
+        for week in {
+            iso_week(date.fromisoformat(item["published_date"]))["iso_week_key"] for item in outbreak["alerts"]
+        } - {started}:
+            weeks[week]["updated_outbreaks"].append(outbreak["outbreak_id"])
+    return {key: weeks[key] for key in sorted(weeks, reverse=True)}
+
+
+def _outbreak_record(row: SituationOutbreak, alerts: list[dict[str, Any]], diseases: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    disease = diseases.get(row.disease_id or "", {})
+    ordered = sorted(alerts, key=_sort_key, reverse=True)
+    return {
+        "outbreak_id": row.outbreak_id,
+        "disease_id": row.disease_id,
+        "disease_slug": disease.get("slug") or None,
+        "disease_label": row.disease_label,
+        "disease_name_en": disease.get("name_en") or row.disease_label,
+        "disease_name_zh": disease.get("name_zh"),
+        "first_published": row.first_published.isoformat(),
+        "last_published": row.last_published.isoformat(),
+        "country_codes": row.country_codes or [],
+        "alert_count": len(ordered),
+        "notice_count": row.notice_count,
+        "source_ids": row.source_ids or [],
+        "status": row.status,
+        "alerts": ordered,
+    }
+
+
+def _shard(out: Path, folder: str, grouped: dict[str, list[dict[str, Any]]], head: dict[str, dict[str, Any]], as_of: str) -> None:
+    for key, rows in grouped.items():
+        rows.sort(key=_sort_key, reverse=True)
+        _write(
+            out / folder / f"{key}.json",
+            {"schema_version": SCHEMA_VERSION, "as_of": as_of, **head[key], "alert_count": len(rows), "alerts": rows},
+        )
 
 
 async def export_site(
     *,
     output_dir: Path | str = DEFAULT_OUTPUT_DIR,
-    since_days: int = 120,
-    recent_limit: int = DEFAULT_RECENT_LIMIT,
+    since_days: int = DEFAULT_SINCE_DAYS,
     as_of: date | None = None,
 ) -> dict[str, Any]:
     as_of = as_of or utc_now().date()
     since = as_of - timedelta(days=since_days)
     out = Path(output_dir)
+    diseases = {row["disease_id"]: row for row in disease_catalogue()}
+
     async with get_db() as db:
-        notices = (
+        alert_rows = (
             await db.execute(
-                select(SituationNotice)
-                .options(selectinload(SituationNotice.entities), selectinload(SituationNotice.assessments))
-                # A reviewer rejection means "not an infectious-disease event".
-                .where(SituationNotice.published_date >= since, SituationNotice.ai_status != "rejected")
-                .order_by(SituationNotice.published_date.desc(), SituationNotice.notice_id.desc())
+                select(SituationAlert)
+                .options(selectinload(SituationAlert.notice), selectinload(SituationAlert.extraction))
+                .where(SituationAlert.published_date >= since)
             )
         ).scalars().all()
-        records = [notice_record(row) for row in notices]
-        records = [r for r in records if r["diseases"] or r["countries"]]
-
+        outbreak_rows = (
+            await db.execute(select(SituationOutbreak).where(SituationOutbreak.last_published >= since))
+        ).scalars().all()
+        monitoring_rows = (
+            await db.execute(
+                select(SituationNotice, SituationExtraction)
+                .join(SituationExtraction, SituationExtraction.notice_id == SituationNotice.notice_id)
+                .where(
+                    SituationExtraction.status == "published",
+                    SituationExtraction.document_type == "monitoring_product",
+                    SituationNotice.published_date >= since,
+                )
+                .order_by(SituationNotice.published_date.desc())
+            )
+        ).all()
         latest_run = (
             await db.execute(select(SituationSourceRun.run_id).order_by(SituationSourceRun.started_at.desc()).limit(1))
         ).scalar_one_or_none()
-        sources = []
-        if latest_run:
-            for run in (
-                await db.execute(select(SituationSourceRun).where(SituationSourceRun.run_id == latest_run))
-            ).scalars():
-                registry = SOURCE_REGISTRY.get(run.source_id, {})
-                sources.append(
-                    {
-                        "source_id": run.source_id,
-                        "label_en": (registry.get("label") or {}).get("en"),
-                        "label_zh": (registry.get("label") or {}).get("zh"),
-                        "endpoint": registry.get("endpoint"),
-                        "homepage": registry.get("homepage"),
-                        "redistribution": registry.get("redistribution"),
-                        "status": run.status,
-                        "event_count": run.fetched_count,
-                        "undated_records": 0,
-                        "error": run.error,
-                    }
-                )
+        runs = (
+            (await db.execute(select(SituationSourceRun).where(SituationSourceRun.run_id == latest_run))).scalars().all()
+            if latest_run
+            else []
+        )
 
-        events = (
-            await db.execute(
-                select(SituationEvent)
-                .options(selectinload(SituationEvent.members))
-                .where(SituationEvent.last_published >= since)
-                .order_by(SituationEvent.last_published.desc())
-            )
-        ).scalars().all()
-        digests = (
-            await db.execute(
-                select(SituationDigest)
-                .where(SituationDigest.status == "published")
-                .order_by(SituationDigest.period_key.desc())
-            )
-        ).scalars().all()
+    records = [alert_record(row, row.notice, row.extraction, diseases) for row in alert_rows]
+    by_outbreak: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        if record["outbreak_id"]:
+            by_outbreak[record["outbreak_id"]].append(record)
+    outbreaks = [
+        _outbreak_record(row, by_outbreak.get(row.outbreak_id, []), diseases)
+        for row in sorted(outbreak_rows, key=lambda item: (item.last_published, item.outbreak_id), reverse=True)
+    ]
+    outbreaks = [item for item in outbreaks if item["alerts"]]
 
-    summary = export_events(
+    # Routine alerts are surveillance background: kept in shards, not on the map.
+    points = latest_per_place(record for record in records if record["status"] != "routine")
+    generated = utc_now().isoformat()
+    stamp = as_of.isoformat()
+
+    for folder in _OWNED:
+        shutil.rmtree(out / folder, ignore_errors=True)
+
+    _write(
+        out / "map.json",
         {
-            "generated_at": utc_now().isoformat(),
-            "since_days": since_days,
+            "schema_version": SCHEMA_VERSION,
+            "generated_at": generated,
+            "as_of": stamp,
             "since_date": since.isoformat(),
-            "as_of": as_of.isoformat(),
-            "sources": sources,
-            "events": records,
+            "point_count": len(points),
+            "points": points,
+            "facets": facets(points),
+            "outbreaks": [{k: v for k, v in item.items() if k != "alerts"} for item in outbreaks],
         },
-        output_dir=out,
-        recent_limit=recent_limit,
+    )
+    for item in outbreaks:
+        _write(out / "outbreaks" / f"{item['outbreak_id']}.json", {"schema_version": SCHEMA_VERSION, "as_of": stamp, **item})
+
+    by_country: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    by_disease: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        by_country[record["country_code"]].append(record)
+        if record["disease_id"]:
+            by_disease[record["disease_id"]].append(record)
+    _shard(out, "by-country", by_country, {code: {"country": country_row(code)} for code in by_country}, stamp)
+    _shard(
+        out,
+        "by-disease",
+        by_disease,
+        {key: {"disease": {k: diseases.get(key, {}).get(k) for k in ("disease_id", "name_en", "name_zh", "slug")}} for key in by_disease},
+        stamp,
     )
 
-    exported_ids = {r["event_id"] for r in records}
-    names = {item["disease_id"]: item for item in disease_catalogue()}
+    changes = weekly_changes(records, outbreaks)
+    for period, change in changes.items():
+        _write(out / "weekly" / f"{period}.json", {"schema_version": SCHEMA_VERSION, "period_key": period, **change})
     _write(
-        out / "events.json",
+        out / "weekly" / "index.json",
+        {"schema_version": SCHEMA_VERSION, "periods": [{"period_key": key, **value} for key, value in changes.items()]},
+    )
+
+    _write(
+        out / "monitoring.json",
         {
             "schema_version": SCHEMA_VERSION,
-            "as_of": as_of.isoformat(),
-            "events": [
+            "as_of": stamp,
+            "products": [
                 {
-                    "event_id": event.event_id,
-                    "disease_id": event.disease_id,
-                    "disease_name_en": (names.get(event.disease_id) or {}).get("name_en"),
-                    "disease_name_zh": (names.get(event.disease_id) or {}).get("name_zh"),
-                    "disease_slug": (names.get(event.disease_id) or {}).get("slug"),
-                    "country_codes": event.country_codes,
-                    "first_published": event.first_published.isoformat(),
-                    "last_published": event.last_published.isoformat(),
-                    "notice_count": event.notice_count,
-                    "notice_ids": [m.notice_id for m in event.members if m.notice_id in exported_ids],
-                    "source_ids": event.source_ids,
-                    "risk_level": event.risk_level,
-                    "status": event.status,
+                    "notice_id": notice.notice_id,
+                    **_source(notice.source_id),
+                    "title_en": notice.title_en,
+                    "url": notice.url,
+                    "published_date": notice.published_date.isoformat(),
+                    "alert_count": extraction.alert_count,
                 }
-                for event in events
+                for notice, extraction in monitoring_rows
+            ],
+        },
+    )
+    _write(
+        out / "sources.json",
+        {
+            "schema_version": SCHEMA_VERSION,
+            "generated_at": generated,
+            "sources": [
+                {
+                    **registry,
+                    **{
+                        key: getattr(next((run for run in runs if run.source_id == source_id), None), attr, None)
+                        for key, attr in (("status", "status"), ("fetched_count", "fetched_count"), ("error", "error"))
+                    },
+                }
+                for source_id, registry in SOURCE_REGISTRY.items()
             ],
         },
     )
 
-    digest_dir = out / "digests"
-    digest_rows = [digest_record(row) for row in digests]
-    for record in digest_rows:
-        _write(digest_dir / f"{record['period_key']}.json", {"schema_version": SCHEMA_VERSION, **record})
-    _write(
-        digest_dir / "index.json",
-        {
-            "schema_version": SCHEMA_VERSION,
-            "periods": [
-                {"period_key": r["period_key"], "headline_en": r["headline_en"], "headline_zh": r["headline_zh"], "headline_fr": r["headline_fr"]}
-                for r in digest_rows
-            ],
-        },
-    )
-    summary["situation_events"] = len(events)
-    summary["digests"] = len(digest_rows)
-    return summary
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "output_dir": str(out),
+        "alert_count": len(records),
+        "point_count": len(points),
+        "outbreak_count": len(outbreaks),
+        "monitoring_products": len(monitoring_rows),
+        "weeks": len(changes),
+    }
+
+
+__all__ = ["DEFAULT_OUTPUT_DIR", "SCHEMA_VERSION", "alert_record", "export_site", "facets", "latest_per_place", "weekly_changes"]

@@ -6,18 +6,26 @@ import test from 'node:test';
 
 import { buildSituationRedirectRules, renderRedirects } from './build-redirects.mjs';
 
-test('builds real 301 rules for every legacy weekly and monthly situation URL', () => {
+test('builds 301 rules for every published weekly digest and its month', () => {
   const fixtureRoot = mkdtempSync(join(tmpdir(), 'gids-redirects-'));
   try {
-    mkdirSync(join(fixtureRoot, 'weekly'));
-    mkdirSync(join(fixtureRoot, 'monthly'));
-    writeFileSync(join(fixtureRoot, 'weekly', '2026-W34.json'), '{}');
-    writeFileSync(join(fixtureRoot, 'monthly', '2026-08.json'), '{}');
+    mkdirSync(join(fixtureRoot, 'digests'));
+    writeFileSync(join(fixtureRoot, 'digests', 'index.json'), JSON.stringify({ periods: [{ period_key: '2026-W34' }, { period_key: 'bad' }] }));
     const rules = buildSituationRedirectRules(fixtureRoot);
-    assert.ok(rules.some(rule => /^\/situation\/\d{4}-W\d{2}\/\s+\/situation\/weekly\//.test(rule)));
-    assert.ok(rules.some(rule => /^\/situation\/\d{4}-\d{2}\/\s+\/situation\/monthly\//.test(rule)));
+    assert.ok(rules.includes('/situation/2026-W34/  /situation/weekly/2026-W34/  301'));
+    assert.ok(rules.includes('/situation/2026-08/  /situation/monthly/2026-08/  301'));
     assert.ok(rules.every(rule => rule.endsWith('  301')));
     assert.equal(rules.length, new Set(rules).size);
+    assert.equal(rules.length, 4);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('no digest index means no generated redirects', () => {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), 'gids-redirects-'));
+  try {
+    assert.deepEqual(buildSituationRedirectRules(fixtureRoot), []);
   } finally {
     rmSync(fixtureRoot, { recursive: true, force: true });
   }

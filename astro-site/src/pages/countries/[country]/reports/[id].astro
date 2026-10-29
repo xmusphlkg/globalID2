@@ -60,6 +60,19 @@ const countryDownload: any = (downloadCatalogue()?.countries ?? []).find(
 }
 
 const document = report?.report_document_v4 ?? report?.metadata?.report_document_v4 ?? report;
+// ReportV4Panel reads only these document keys. The full report also carries
+// evidence_index and a duplicated metadata copy, which would be serialized into
+// the island props.
+const panelReport = {
+  id: report?.id,
+  country_code: report?.country_code,
+  report_document_v4: Object.fromEntries(
+    ['metrics', 'death_reporting', 'data_quality', 'attention_ranking', 'risk_ranking',
+      'disease_directory', 'sections', 'key_findings', 'summary']
+      .filter(key => document?.[key] !== undefined)
+      .map(key => [key, document[key]]),
+  ),
+};
 const reportLanguage = locale;
 const countryNameEn = report?.country_name_en ?? report?.country_name ?? country?.toUpperCase();
 const countryNameZh = report?.country_name_local ?? report?.country_name ?? countryNameEn;
@@ -268,7 +281,7 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
 
         <ReportV4Panel
           client:visible
-          report={report}
+          report={panelReport}
           countryDataUrl={countryDataUrl}
           sparklineSeries={directoryTrendSeries}
           initialLanguage={locale}

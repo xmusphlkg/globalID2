@@ -2,6 +2,35 @@
 
 This file records release-level changes to the GIDS application and its data operations. Public-facing multilingual notes are also available in the website Changelog.
 
+## [Unreleased]
+
+## [0.16.0] - 2026-10-29
+
+### Added
+
+- A model route's deep-thinking switch is configurable from the control panel (`thinking_mode`: provider default, on, off) and shared by health probes and production calls, instead of being hard-coded for one provider.
+- Peer review draws its author and reviewer from a weighted pool of every active route (`ReviewRoutePool`) instead of one fixed pair, so review keeps running when a route cools down or fails, and load spreads toward routes with spare capacity and a better recent success rate. Knowledge and literature backlog drains share the same pool, with up to 192 reviews in flight and an automatic retry on other routes if failover ever puts both roles on one model.
+
+### Changed
+
+- Situation now reads each report in full and extracts alerts (one disease in one place, with stated counts, dates, one quoted sentence and a link) instead of enriching titles. Two models review every extraction; PDFs go to models that read files natively (with an OCR fallback for image-only pages) and as extracted text to the rest.
+- Alerts of one outbreak across several countries share one timeline. Periodic roundups with no unusual event become hidden monitoring products. Full text stays internal.
+- Export schema is `gids.situation_alerts.v1` (`map.json`, `outbreaks/`, `weekly/`, `monitoring.json`); the release gate validates it.
+- The control panel's Events page is rebuilt on the alert model: a reports tab (per-notice extraction, input mode, alert count) and an outbreaks tab replace the old notices/events/digests tabs. The AI model-call log is paginated and filterable by provider and result instead of showing only the latest 100 attempts.
+- A completion's token budget is no longer capped by agent code; only a limit set on the model route itself applies, so a long structured reply from a reasoning model is no longer cut off mid-object.
+- The dashboard services stop cleanly on a systemd restart or deploy: a `SIGTERM` stop no longer reports itself as a failure.
+
+### Removed
+
+- Title-based AI tables (assessments, events, digests, keyword entities) dropped in migration `0021_situation_alerts`; reports are re-read from their full text.
+- The standalone `scripts/export_international_news.py` exporter, `global_sources/export_static.py`, and the v3 docs and backtest file.
+
+### Validation
+
+- Python suite: 1,861 tests pass (1 unrelated e2e flake under concurrent load reproduced as a pass in isolation).
+- Dashboard: `tsc` clean, 10 Vitest tests pass; generated OpenAPI client refreshed to match the new routes.
+- Astro: style, i18n, and SEO checks pass; production build 6,932 pages.
+
 ## [0.15.0] - 2026-10-28
 
 ### Added

@@ -6,8 +6,8 @@ import DownloadPanel from '../../components/DownloadPanel.astro';
 import PageAnchorNav from '../../components/PageAnchorNav.astro';
 import DiseaseResearchPanel from '../../components/research/DiseaseResearchPanel.astro';
 import InternationalNoticePanel from '../../components/InternationalNoticePanel.astro';
-import { readInternationalByDisease, recentNotices } from '../../utils/international';
-const diseaseNotices = recentNotices(readInternationalByDisease((Astro.props as { diseaseId?: string }).diseaseId ?? ''), 8);
+import { readAlertsByDisease, recentAlerts } from '../../utils/international';
+const diseaseNotices = recentAlerts(readAlertsByDisease((Astro.props as { diseaseId?: string }).diseaseId ?? ''), 8);
 import CountrySeasonalityPicker from '../../components/charts/CountrySeasonalityPicker';
 import DiseaseCountryCurve from '../../components/charts/DiseaseCountryCurve';
 import DiseaseCoverageMap from '../../components/charts/DiseaseCoverageMap';
@@ -623,7 +623,7 @@ const diseaseSeo = {
         <div id="research" class="scroll-mt-24"><DiseaseResearchPanel diseaseId={diseaseId} locale={locale} /></div>
 
         <div id="international" class="scroll-mt-24">
-          <InternationalNoticePanel notices={diseaseNotices} locale={locale} contextCodes={snapshotContextCodes} />
+          <InternationalNoticePanel alerts={diseaseNotices} locale={locale} contextCodes={snapshotContextCodes} />
         </div>
 
         {diseaseDownload && (

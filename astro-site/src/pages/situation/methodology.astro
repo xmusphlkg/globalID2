@@ -1,68 +1,74 @@
 ---
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
-import { readInternationalLatest } from '../../utils/international';
+import { readSituationMap } from '../../utils/international';
 import { translateUi } from '../../utils/i18n';
 
-const situationPublic = readInternationalLatest() !== null;
+const situationPublic = readSituationMap() !== null;
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
 const fr = locale === 'fr';
-const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
+const prefix = zh ? '/zh' : fr ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 
 // [heading en, zh, fr, body en, zh, fr]
 const sections = [
   [
     'Official sources only', '仅收录官方来源', 'Sources officielles uniquement',
-    'Every record is published by a public-health authority: WHO Disease Outbreak News, the WHO Weekly Epidemiological Record, WHO Western Pacific surveillance updates, the ECDC Communicable Disease Threats Report, Africa CDC outbreak statements and weekly intelligence reports, and PAHO surveillance updates. Each entry links back to the original.',
-    '每条记录均由公共卫生机构发布：世卫组织疾病暴发新闻、每周流行病学记录、西太平洋区域监测更新，欧洲疾控中心传染病威胁周报，非洲疾控中心疫情声明与流行病情报周报，以及泛美卫生组织监测更新。每条记录都回链原文。',
-    'Chaque enregistrement est publié par une autorité de santé publique : bulletins d’information sur les flambées de l’OMS, Relevé épidémiologique hebdomadaire, mises à jour de surveillance du Pacifique occidental, rapport hebdomadaire de l’ECDC, déclarations et rapports de l’Africa CDC, et mises à jour de l’OPS. Chaque entrée renvoie à l’original.',
+    'Every report comes from a public-health authority: WHO Disease Outbreak News, the WHO Weekly Epidemiological Record, WHO Western Pacific surveillance updates, the ECDC Communicable Disease Threats Report, Africa CDC statements and weekly intelligence reports, and PAHO epidemiological alerts. News media are not used.',
+    '每份报告都来自公共卫生机构：世卫组织疾病暴发新闻、每周流行病学记录、西太平洋区域监测更新，欧洲疾控中心传染病威胁周报，非洲疾控中心声明与流行病情报周报，以及泛美卫生组织流行病学警报。不使用新闻媒体。',
+    'Chaque rapport provient d’une autorité de santé publique : bulletins de l’OMS sur les flambées, Relevé épidémiologique hebdomadaire, mises à jour du Pacifique occidental, rapport hebdomadaire de l’ECDC, déclarations et rapports de l’Africa CDC, alertes épidémiologiques de l’OPS. Les médias ne sont pas utilisés.',
   ],
   [
-    'Metadata, not republication', '只收元数据，不转载原文', 'Métadonnées, pas de republication',
-    'GIDS stores titles, dates, links and short attributed extracts. Long article bodies are never republished. Sources whose redistribution terms are not confirmed (Africa CDC, PAHO, WHO WER and WPRO) contribute metadata only.',
-    'GIDS 仅保存标题、日期、链接和简短的署名摘录，从不转载长篇正文。再分发条款尚未确认的来源（非洲疾控中心、泛美卫生组织、WHO WER 与 WPRO）只提供元数据。',
-    'GIDS conserve titres, dates, liens et courts extraits attribués. Les textes longs ne sont jamais republiés. Les sources dont les conditions de redistribution ne sont pas confirmées (Africa CDC, OPS, REH et WPRO) ne fournissent que des métadonnées.',
+    'Full reports are read internally', '完整报告只在内部阅读', 'Les rapports complets sont lus en interne',
+    'GIDS downloads each report in full, including tables, and keeps the text and the original file internally so the models read what the report says, not just its headline. The full text and the PDF are never republished.',
+    'GIDS 会下载每份报告的完整内容（含表格），文本和原始文件仅保存在内部，让模型读到报告正文而不只是标题。全文和 PDF 不会转载。',
+    'GIDS télécharge chaque rapport en entier, tableaux compris, et conserve texte et fichier d’origine en interne afin que les modèles lisent le contenu et pas seulement le titre. Le texte intégral et le PDF ne sont jamais republiés.',
   ],
   [
-    'Normalized to GIDS keys', '规范化到本站标准键', 'Normalisation sur les clés GIDS',
-    'Each notice is mapped to GIDS disease ids, ISO 3166-1 country codes and an ISO week. Keyword matching proposes the mapping; the AI step may correct it, but only with ids that exist in the GIDS catalogue. Regions such as EU/EEA are never treated as countries.',
-    '每条通报都会映射到 GIDS 疾病 ID、ISO 3166-1 国家码和 ISO 周。先由关键词匹配给出候选，AI 步骤可以修正，但只能使用本站目录中存在的 ID。EU/EEA 这类区域不会被当作国家。',
-    'Chaque avis est rattaché aux identifiants de maladie GIDS, aux codes pays ISO 3166-1 et à une semaine ISO. La correspondance par mots-clés propose un rattachement ; l’IA peut le corriger, uniquement avec des identifiants du catalogue GIDS.',
+    'What the map shows', '地图展示什么', 'Ce que montre la carte',
+    'A model turns each report into zero or more alerts. An alert is one disease in one place (a country, and a province or city when the report names one) with its status (new, ongoing, imported, ended, routine), the case and death counts and their date as the report states them, and one sentence quoted from the report. Counts the report does not state stay empty. A report on one outbreak in three countries gives three points that open onto the same timeline. A routine weekly roundup with nothing unusual gives no point and is listed under monitoring products.',
+    '模型把每份报告拆成零条或多条警报。一条警报是“某病在某地”（国家；报告写明省或城市时保留地名），带有状态（新发、持续、输入、结束、常规监测）、报告写明的病例数与死亡数及其对应日期，以及一句来自报告的原话。报告没写的数字保持为空。一份报告涉及同一疫情的三个国家，就得到三个点，点开是同一条时间线。没有异常的常规周报不产生地图点，归入“监测产品”。',
+    'Un modèle transforme chaque rapport en zéro, une ou plusieurs alertes. Une alerte est une maladie en un lieu (pays, plus province ou ville si le rapport la nomme), avec son statut (nouveau, en cours, importé, terminé, courant), les cas et décès et leur date tels que le rapport les donne, et une phrase citée du rapport. Les chiffres non donnés restent vides. Un rapport sur une flambée dans trois pays donne trois points qui ouvrent la même chronologie. Un point hebdomadaire courant sans événement inhabituel ne donne aucun point et figure parmi les produits de suivi.',
   ],
   [
-    'AI peer review, published automatically', 'AI 同行评审后自动发布', 'Relecture par IA, publication automatique',
-    'An author model writes Chinese and French translations, a short summary, an event type and a risk judgement. A reviewer model audits the draft against the same input and accepts, requests one revision, or rejects it. Only accepted output is published; there is no human gate. When only one model route is available, the same model reviews its own draft and the output is labelled as single-model review.',
-    '作者模型生成中法文翻译、简短摘要、事件类型和风险判断；审稿模型对照同一输入独立审查，结论为通过、要求修改一轮或拒绝。只有通过的内容才会发布，全程没有人工环节。只有一条模型路由时，由同一模型审查自己的草稿，并标注为“单模型评审”。',
-    'Un modèle auteur rédige traductions, résumé, type d’événement et jugement de risque. Un modèle relecteur vérifie le brouillon sur la même entrée et l’accepte, demande une révision ou le rejette. Seul le contenu accepté est publié, sans intervention humaine. Avec une seule route de modèle, le même modèle relit son brouillon et le résultat est signalé comme relecture mono-modèle.',
+    'Native file or extracted text', '原始文件或提取文本', 'Fichier d’origine ou texte extrait',
+    'Many models read a PDF directly and keep its tables and layout. For those models GIDS sends the original file. For models that only take text, or when a model rejects the file, GIDS sends the extracted text instead. Each alert records which of the two was used.',
+    '很多模型能直接读取 PDF，保留表格和版式。对这类模型，GIDS 直接发送原始文件；对只接收文本的模型，或模型拒绝文件时，改为发送提取后的文本。每条警报都会记录实际使用的是哪一种。',
+    'De nombreux modèles lisent directement un PDF et conservent tableaux et mise en page. Pour ceux-là GIDS envoie le fichier d’origine ; pour les modèles qui n’acceptent que du texte, ou si un modèle refuse le fichier, GIDS envoie le texte extrait. Chaque alerte indique le mode utilisé.',
   ],
   [
-    'Risk is an analyst judgement', '风险等级是分析判断', 'Le risque est un jugement d’analyste',
-    'Risk levels (low, moderate, high, very high) are the AI analyst’s reading of the facts in the notice, not a level the agency declared. A notice with no event facts carries no risk level. Treat risk as orientation, and read the original notice before acting.',
-    '风险等级（低、中、高、极高）是 AI 分析员根据通报事实作出的判断，并非机构正式宣布的等级。没有事件事实的通报不标注风险。请把风险等级当作参考，采取行动前请阅读原始通报。',
-    'Les niveaux de risque (faible, modéré, élevé, très élevé) reflètent la lecture par l’IA des faits de l’avis, et non un niveau déclaré par l’agence. Un avis sans fait d’événement n’a pas de niveau. Consultez l’avis original avant toute action.',
+    'Two-model peer review, published automatically', '两个模型互审，自动发布', 'Relecture par deux modèles, publication automatique',
+    'An author model drafts the alerts and an independent reviewer model audits them against the same report, then accepts, asks for a revision or rejects. Deterministic checks run first: disease ids and country codes must exist in the GIDS catalogue, the quoted sentence must appear word for word in the report, and every count must be a number that appears in it. Anything that fails a check is dropped. Only accepted output is published and there is no human gate. If only one model route exists, the same model reviews its own draft and the alert is labelled as single-model review.',
+    '作者模型起草警报，独立的审稿模型对照同一份报告审查，结论为通过、要求修改或拒绝。确定性检查先行：疾病 ID 和国家代码必须存在于 GIDS 目录，引用的句子必须逐字出现在报告里，每个数字都必须是报告中出现过的数字。未通过的内容会被丢弃。只有通过的结果才会发布，没有人工环节。只有一条模型路由时，由同一模型审查自己的草稿，并标注为“单模型评审”。',
+    'Un modèle auteur rédige les alertes et un modèle relecteur indépendant les vérifie sur le même rapport, puis accepte, demande une révision ou rejette. Des contrôles déterministes passent d’abord : identifiants de maladie et codes pays doivent exister dans le catalogue GIDS, la phrase citée doit figurer mot pour mot dans le rapport et chaque chiffre doit y apparaître. Ce qui échoue est écarté. Seul le contenu accepté est publié, sans intervention humaine. Avec une seule route, le même modèle relit son brouillon et l’alerte est signalée comme relecture mono-modèle.',
   ],
   [
-    'Events and weekly briefs', '事件聚合与周综述', 'Événements et synthèses hebdomadaires',
-    'Notices on the same disease and place are grouped into one event; a gap of more than 60 days starts a new one, and an event with no notice for 30 days is shown as quiet. Each week, a peer-reviewed brief summarises the enriched notices. Every point must cite the notices it rests on; a point that cites nothing is dropped.',
-    '同一疾病、同一地点的通报会聚合为一个事件；间隔超过 60 天视为新事件，30 天无新通报的事件显示为平静。每周会基于已富化的通报生成一份经同行评审的综述，每个要点都必须引用其依据的通报，没有引用的要点会被删除。',
-    'Les avis sur une même maladie et un même lieu forment un événement ; un écart de plus de 60 jours ouvre un nouvel événement, et un événement sans avis depuis 30 jours est affiché comme calme. Chaque semaine, une synthèse relue résume les avis ; chaque point doit citer ses avis sources, sinon il est supprimé.',
+    'What is public, and quotations', '公开什么，以及引文', 'Ce qui est public, et les citations',
+    'The public page keeps only structured facts, one quoted sentence and a link to the original report. A quotation is shown only for sources whose reuse terms are clear (WHO Disease Outbreak News and the ECDC threats report). For Africa CDC, PAHO, the WHO Weekly Epidemiological Record and WHO Western Pacific the quotation is withheld and the alert links to the original.',
+    '公开页面只保留结构化事实、一句引文和原文链接。只有转载条款明确的来源（世卫组织疾病暴发新闻、欧洲疾控中心威胁周报）才展示引文；非洲疾控中心、泛美卫生组织、WHO 每周流行病学记录和西太区的引文不公开，只给出原文链接。',
+    'La page publique ne garde que les faits structurés, une phrase citée et un lien vers le rapport. La citation n’est affichée que pour les sources aux conditions de réutilisation claires (bulletins de l’OMS et rapport de l’ECDC). Pour l’Africa CDC, l’OPS, le Relevé épidémiologique hebdomadaire et le Pacifique occidental, la citation est retenue et l’alerte renvoie à l’original.',
+  ],
+  [
+    'Colour means recency, not severity', '颜色表示新旧，不表示严重程度', 'La couleur indique la fraîcheur, pas la gravité',
+    'Points updated in the last 7 days come first and are drawn in the strongest colour; older points fade. No model assigns a risk level. Outbreaks group alerts of one disease that one report names together, or that fall in the same country within 60 days; an outbreak with no alert for 30 days is shown as quiet.',
+    '最近 7 天有更新的点排在前面，颜色最醒目，越旧越淡。模型不打风险等级。疫情把同一疾病的警报归在一起：同一份报告一并提到的，或同一国家 60 天内的；30 天没有新警报的疫情显示为平静。',
+    'Les points mis à jour dans les 7 derniers jours passent en premier avec la couleur la plus forte ; les plus anciens s’estompent. Aucun modèle n’attribue de niveau de risque. Une flambée regroupe les alertes d’une maladie citées ensemble par un rapport ou situées dans le même pays à moins de 60 jours ; sans alerte depuis 30 jours elle est affichée comme calme.',
   ],
   [
     'Limitations', '局限', 'Limites',
-    'Coverage follows what these authorities publish: countries that report little to international bodies appear rarely. AI translations and summaries can still contain errors that both author and reviewer missed. The original notice is always authoritative.',
-    '覆盖范围取决于这些机构发布了什么：很少向国际机构报告的国家出现得也少。AI 翻译和摘要仍可能存在作者与审稿模型都没发现的错误。一切以原始通报为准。',
-    'La couverture dépend de ce que publient ces autorités : les pays qui déclarent peu y apparaissent rarement. Les traductions et résumés IA peuvent contenir des erreurs non détectées. L’avis original fait toujours foi.',
+    'Coverage follows what these authorities publish: countries that report little to international bodies appear rarely. A reading can still contain an error that both models missed, and a long report can have places the models skipped. The original report is always authoritative. This is not clinical guidance.',
+    '覆盖范围取决于这些机构发布了什么：很少向国际机构报告的国家出现得也少。模型的阅读仍可能出现两个模型都没发现的错误，长报告里也可能漏掉个别地点。一切以原始报告为准。本页不构成临床建议。',
+    'La couverture dépend de ce que publient ces autorités : les pays qui déclarent peu y apparaissent rarement. Une lecture peut contenir une erreur que les deux modèles ont manquée, et un long rapport peut avoir des lieux omis. Le rapport original fait foi. Ne constitue pas un avis clinique.',
   ],
 ] as const;
 
 const seo: SeoDocument = {
   title: pick('Situation Room Methodology | GIDS', '全球态势室方法 | GIDS', 'Méthodologie de la salle de situation | GIDS'),
   description: pick(
-    'How GIDS collects official international public-health notices, maps them to diseases and countries, and publishes AI peer-reviewed summaries, events and weekly briefs.',
-    '了解 GIDS 如何收集国际公共卫生机构的官方通报，映射到疾病与国家，并发布经 AI 同行评审的摘要、事件与周综述。',
-    'Comment GIDS collecte les avis officiels internationaux, les rattache aux maladies et pays, et publie résumés, événements et synthèses relus par IA.',
+    'How GIDS reads official public-health reports in full, extracts disease-by-place alerts with two-model peer review, and publishes only structured facts, one quotation and a link.',
+    '了解 GIDS 如何完整阅读官方公共卫生报告，经两个模型互审抽取“某病在某地”的警报，并只公开结构化事实、一句引文和链接。',
+    'Comment GIDS lit en entier les rapports officiels, en extrait des alertes maladie-lieu par relecture croisée et ne publie que des faits structurés, une citation et un lien.',
   ),
   canonicalPath: `${prefix}/situation/methodology/`,
   locale,
@@ -76,7 +82,7 @@ const seo: SeoDocument = {
     <header>
       <p class="eyebrow">{pick('Methods', '方法', 'Méthodes')}</p>
       <h1>{pick('How the Situation Room works', '全球态势室如何运作', 'Fonctionnement de la salle de situation')}</h1>
-      <p>{pick('Official international notices, normalized and summarised by peer-reviewed AI. Not clinical guidance.', '官方国际通报，经规范化并由同行评审的 AI 生成摘要；不构成临床建议。', 'Avis internationaux officiels, normalisés et résumés par une IA relue. Ne constitue pas un avis clinique.')}</p>
+      <p>{pick('Official reports read in full, turned into disease-by-place alerts, reviewed by a second model. Not clinical guidance.', '完整阅读官方报告，抽取“某病在某地”的警报，并由第二个模型复核。不构成临床建议。', 'Rapports officiels lus en entier, transformés en alertes maladie-lieu, relus par un second modèle. Ne constitue pas un avis clinique.')}</p>
     </header>
     <div class="methodology-grid">
       {sections.map(([headingEn, headingZh, headingFr, bodyEn, bodyZh, bodyFr], index) => (

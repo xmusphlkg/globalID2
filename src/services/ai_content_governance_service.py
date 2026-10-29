@@ -7,17 +7,32 @@ version, model route, confidence, and reasons.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import hashlib
+import time
+import weakref
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Iterable, Mapping
+from typing import Any, Awaitable, Callable, Iterable, Mapping
 
-from sqlalchemy import select
+from sqlalchemy import Integer, String, all_, literal, select
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.ai.agents import WorkflowAgent
+from src.ai.peer_review import (
+    Completer,
+    ReviewedOutput,
+    build_author_prompt,
+    build_reviewer_prompt,
+    SameModelReviewError,
+    clean_enum,
+    peer_review,
+    reviewer_system,
+)
+from src.ai.peer_review_completer import ModelCenterCompleter, ReviewRoutePool
 from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
 from src.domain import (
@@ -37,6 +52,79 @@ from src.literature.enrichment import SUMMARY_FIELDS, source_fingerprint
 logger = get_logger(__name__)
 
 PROMPT_VERSION = "ai-content-governance.v1"
+REVIEW_CONCURRENCY = 192
+REVIEW_MAX_TOKENS = 4000
+
+
+class ReviewClaims:
+    """Row ids an overlapping drain run has already taken.
+
+    Lanes share one instance so two batches fetched at the same time never
+    review the same row twice. Ids stay claimed for the whole run: rows that were
+    deferred are retried by the next run instead of being re-fetched at once.
+    """
+
+    POOL_REFRESH_SECONDS = 15.0
+
+    def __init__(self) -> None:
+        self.ids: set[Any] = set()
+        self.lock = asyncio.Lock()
+        self._pool: ReviewRoutePool | None = None
+        self._pool_at = float("-inf")
+
+    async def route_pool(self) -> ReviewRoutePool:
+        """One pool for every lane, so failure rates and free permits are shared."""
+
+        async with self.lock:
+            now = time.monotonic()
+            if self._pool is None:
+                self._pool = await ReviewRoutePool.from_model_center(
+                    line="content_governance", max_tokens=REVIEW_MAX_TOKENS
+                )
+                self._pool_at = now
+            elif now - self._pool_at > self.POOL_REFRESH_SECONDS:
+                self._pool_at = now
+                try:
+                    await self._pool.refresh()
+                except Exception as exc:  # noqa: BLE001 - keep serving with the last known routes
+                    logger.warning("Review route pool refresh failed: {}", exc)
+            return self._pool
+
+
+SAME_MODEL_RETRIES = 3
+
+
+async def _decide_with_retry(
+    decide: Callable[[Completer, Any], Awaitable[ReviewedOutput]],
+    pool: ReviewRoutePool,
+    item: Any,
+) -> ReviewedOutput:
+    """Run one review; if failover put both roles on one model, redo it on other models."""
+
+    avoid: set[str] = set()
+    for attempt in range(SAME_MODEL_RETRIES + 1):
+        try:
+            return await decide(pool.completer(avoid), item)
+        except SameModelReviewError as exc:
+            if attempt >= SAME_MODEL_RETRIES:
+                raise
+            avoid.add(exc.model)
+    raise AssertionError("unreachable")
+
+
+_review_gates: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore]" = weakref.WeakKeyDictionary()
+
+
+def _review_gate() -> asyncio.Semaphore:
+    """One in-flight cap per event loop, shared by every concurrent review call."""
+
+    loop = asyncio.get_running_loop()
+    gate = _review_gates.get(loop)
+    if gate is None:
+        gate = _review_gates[loop] = asyncio.Semaphore(REVIEW_CONCURRENCY)
+    return gate
+
+
 GOVERNANCE_ACTOR = "ai-content-governance"
 _RECOVERABLE_KNOWLEDGE_MARKERS = (
     "connection error",
@@ -772,6 +860,398 @@ class AIContentGovernanceService:
         task.last_error = "Automatically requeued by AI content governance"
         return plan
 
+    async def _governance_completer(self, completer: Completer | None) -> Completer:
+        if completer is not None:
+            return completer
+        return await ModelCenterCompleter.from_model_center(line="content_governance", max_tokens=REVIEW_MAX_TOKENS)
+
+    async def _review_all(
+        self,
+        items: list[Any],
+        completer: Completer | None,
+        decide: Callable[[Completer, Any], Awaitable[ReviewedOutput]],
+        claims: ReviewClaims | None = None,
+    ) -> list[ReviewedOutput | Exception]:
+        """Review ``items`` with up to ``REVIEW_CONCURRENCY`` model calls in flight.
+
+        Every item gets its own author/reviewer pair from a shared route pool, which
+        shifts work away from routes that keep failing. Failures are returned in
+        place, not raised, so one bad item never discards its neighbours' reviews.
+        """
+
+        if not items:
+            return []
+        pool: ReviewRoutePool | None = None
+        if completer is not None:
+            pick: Callable[[], Completer] = lambda: completer  # noqa: E731
+        else:
+            try:
+                pool = (
+                    await claims.route_pool()
+                    if claims is not None
+                    else await ReviewRoutePool.from_model_center(line="content_governance", max_tokens=REVIEW_MAX_TOKENS)
+                )
+                pick = pool.completer
+            except Exception as exc:  # noqa: BLE001 - no routable model: every item stays queued
+                return [exc for _ in items]
+        gate = _review_gate()
+
+        async def one(item: Any) -> ReviewedOutput:
+            async with gate:
+                if pool is not None:
+                    return await _decide_with_retry(decide, pool, item)
+                return await decide(pick(), item)
+
+        results = await asyncio.gather(*(one(item) for item in items), return_exceptions=True)
+        for result in results:
+            if isinstance(result, BaseException) and not isinstance(result, Exception):
+                raise result
+        return list(results)
+
+    async def _peer_decide(
+        self,
+        completer: Completer,
+        *,
+        domain: str,
+        author_system: str,
+        task: dict[str, Any],
+        decisions: tuple[str, ...],
+        rules: list[str],
+        allowed_targets: set[str] | None = None,
+    ) -> ReviewedOutput:
+        """One item, one shared author/reviewer loop.  The payload is the decision."""
+
+        required_output: dict[str, Any] = {
+            "decision": "|".join(decisions),
+            "reasons": ["concise evidence-bound reasons"],
+        }
+        if allowed_targets is not None:
+            required_output["target_disease_id"] = "disease_id from allowed_standard_diseases for map, else null"
+
+        def sanitize(draft: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+            notes: list[str] = []
+            decision = clean_enum(draft.get("decision"), decisions)
+            if decision is None:
+                notes.append(f"guardrail: invalid decision {str(draft.get('decision'))[:40]}")
+            reasons = [
+                _text(reason, limit=400) for reason in (draft.get("reasons") or []) if _text(reason, limit=400)
+            ][:8]
+            clean: dict[str, Any] = {"decision": decision, "reasons": reasons}
+            if allowed_targets is not None:
+                target = str(draft.get("target_disease_id") or "").strip().upper() or None
+                if decision == "map" and target not in allowed_targets:
+                    notes.append(f"guardrail: map target {target} is not in the catalogue")
+                    clean["decision"] = None
+                clean["target_disease_id"] = target if clean["decision"] == "map" else None
+            return clean, notes
+
+        return await peer_review(
+            completer,
+            author_system=author_system,
+            reviewer_system=reviewer_system(domain),
+            author_prompt=lambda notes, previous: build_author_prompt(
+                prompt_version=PROMPT_VERSION,
+                task=task,
+                required_output=required_output,
+                rules=rules,
+                reviewer_notes=notes,
+                previous_draft=previous,
+            ),
+            reviewer_prompt=lambda draft: build_reviewer_prompt(
+                prompt_version=PROMPT_VERSION,
+                task=task,
+                draft=draft,
+                rules=["Audit the decision itself: is it the right outcome for this item given the rules?", *rules],
+            ),
+            sanitize=sanitize,
+            usable=lambda draft: bool(draft.get("decision")),
+        )
+
+    async def _decide_summary(self, model: Completer, pair: tuple[Any, Any]) -> ReviewedOutput:
+        summary, article = pair
+        return await self._peer_decide(
+            model,
+            domain="public-health literature summaries",
+            author_system=LITERATURE_SUMMARY_REVIEW_SYSTEM,
+            task={
+                "task": "Decide whether this evidence-agent summary is published.",
+                "item": self._literature_review_item(str(summary.id), summary, article),
+            },
+            decisions=("publish", "reject"),
+            rules=LITERATURE_SUMMARY_REVIEW_RULES,
+        )
+
+    async def _decide_article(self, model: Completer, article: Any) -> ReviewedOutput:
+        return await self._peer_decide(
+            model,
+            domain="infectious-disease Research Radar curation",
+            author_system=LITERATURE_ARTICLE_REVIEW_SYSTEM,
+            task={"task": "Decide whether this article is published in the Research Radar.", "item": self._literature_article_item(article)},
+            decisions=("publish", "exclude"),
+            rules=LITERATURE_ARTICLE_REVIEW_RULES,
+        )
+
+    def _summary_precheck(self, summary: Any, article: Any) -> tuple[str, str | None]:
+        """Deterministic gate before any model call: waiting, skipped, archive or review."""
+
+        wait = self._literature_dependency_wait(summary, article)
+        if wait:
+            return "waiting", wait
+        if summary.generated_by != "literature-evidence-agent":
+            return "skipped", "not an evidence-agent summary"
+        missing = [field for field in SUMMARY_FIELDS if not _text(getattr(summary, field, None), limit=50)]
+        if missing:
+            return "archive", "summary fields are missing: " + ", ".join(missing[:5])
+        return "review", None
+
+    def _archive_summary(self, summary: Any, reason: str | None) -> None:
+        summary.status = "archived"
+        summary.generation_metadata = self._metadata(summary.generation_metadata, "archive", None, (reason or "",))
+
+    def _apply_summary(self, summary: Any, reviewed: ReviewedOutput, publish: bool) -> None:
+        summary.status = "published" if publish else "archived"
+        summary.generation_metadata = self._metadata(summary.generation_metadata, "publish" if publish else "archive", reviewed)
+        summary.review_notes = _append_note(
+            summary.review_notes,
+            f"{'Published' if publish else 'Archived'} by {PROMPT_VERSION} ({reviewed.mode} peer review).",
+        )
+
+    def _apply_article(self, db: AsyncSession, article: Any, reviewed: ReviewedOutput, desired: str) -> None:
+        previous = article.publication_status
+        article.publication_status = desired
+        article.metadata_ = self._metadata(article.metadata_, desired, reviewed)
+        if previous != desired:
+            db.add(
+                LiteratureStatusEvent(
+                    article_id=article.article_id,
+                    event_type="publication_status_changed",
+                    previous_status=previous,
+                    current_status=desired,
+                    source=GOVERNANCE_ACTOR,
+                    effective_at=_now(),
+                    metadata_={"prompt_version": PROMPT_VERSION, "peer_review": reviewed.provenance(PROMPT_VERSION)},
+                )
+            )
+
+    def _article_review_query(self):
+        return (
+            select(LiteratureArticle)
+            .where(
+                LiteratureArticle.publication_status == "review",
+                LiteratureArticle.integrity_status == "current",
+                LiteratureArticle.peer_review_status == "peer_reviewed",
+            )
+            .order_by(LiteratureArticle.discovery_score.desc(), LiteratureArticle.updated_at.asc())
+        )
+
+    def _summary_review_query(self, after_id: int | None):
+        query = (
+            select(LiteratureSummary, LiteratureArticle)
+            .join(LiteratureArticle, LiteratureArticle.article_id == LiteratureSummary.article_id)
+            .where(LiteratureSummary.status == "review")
+        )
+        if after_id is not None:
+            # Backlog drains walk by id so waiting rows never block progress.
+            return query.where(LiteratureSummary.id > after_id).order_by(LiteratureSummary.id.asc())
+        return query.order_by(LiteratureSummary.quality_score.desc().nullslast(), LiteratureSummary.updated_at.asc())
+
+    async def _claim_stream_items(
+        self, db: AsyncSession, kind: str, limit: int, claims: ReviewClaims
+    ) -> tuple[int, list[tuple[Any, Any, Any]], int]:
+        """Claim up to ``limit`` rows; returns ``(fetched, items, archived)``.
+
+        ``items`` are ``(key, seen_updated_at, payload)`` ready for a model call.
+        Deterministic archives are applied here; waiting and skipped rows are
+        claimed so this run does not fetch them again.
+        """
+
+        if kind == "articles":
+            async with claims.lock:
+                query = self._article_review_query()
+                if claims.ids:
+                    query = query.where(LiteratureArticle.article_id != all_(literal(sorted(claims.ids), ARRAY(String))))
+                articles = (await db.execute(query.limit(limit))).scalars().all()
+                claims.ids.update(article.article_id for article in articles)
+            return len(articles), [(a.article_id, a.updated_at, a) for a in articles], 0
+
+        async with claims.lock:
+            query = self._summary_review_query(0)
+            if claims.ids:
+                query = query.where(LiteratureSummary.id != all_(literal(sorted(claims.ids), ARRAY(Integer))))
+            rows = (await db.execute(query.limit(limit))).all()
+            claims.ids.update(summary.id for summary, _article in rows)
+        items: list[tuple[Any, Any, Any]] = []
+        archived = 0
+        for summary, article in rows:
+            action, reason = self._summary_precheck(summary, article)
+            if action == "archive":
+                self._archive_summary(summary, reason)
+                archived += 1
+            elif action == "review":
+                items.append((summary.id, summary.updated_at, (summary, article)))
+        return len(rows), items, archived
+
+    async def _write_stream_results(
+        self, db: AsyncSession, kind: str, results: list[tuple[Any, Any, ReviewedOutput]]
+    ) -> dict[str, int]:
+        """Apply finished reviews to freshly loaded rows.
+
+        A row that left ``review`` or changed since it was claimed is left alone
+        (``stale``); the next run picks it up again.
+        """
+
+        counts = {"published": 0, "rejected": 0, "stale": 0}
+        keys = [key for key, _seen, _reviewed in results]
+        if kind == "articles":
+            found = (await db.execute(select(LiteratureArticle).where(LiteratureArticle.article_id.in_(keys)))).scalars().all()
+            rows: dict[Any, Any] = {row.article_id: row for row in found}
+        else:
+            found = (await db.execute(select(LiteratureSummary).where(LiteratureSummary.id.in_(keys)))).scalars().all()
+            rows = {row.id: row for row in found}
+        for key, seen, reviewed in results:
+            row = rows.get(key)
+            status = None if row is None else (row.publication_status if kind == "articles" else row.status)
+            if row is None or status != "review" or row.updated_at != seen:
+                counts["stale"] += 1
+                continue
+            publish = reviewed.published and reviewed.payload["decision"] == "publish"
+            if kind == "articles":
+                self._apply_article(db, row, reviewed, "published" if publish else "excluded")
+            else:
+                self._apply_summary(row, reviewed, publish)
+            counts["published" if publish else "rejected"] += 1
+        return counts
+
+    async def stream_review(
+        self,
+        kind: str,
+        *,
+        workers: int = 96,
+        fetch_size: int = 64,
+        commit_every: int = 25,
+        commit_seconds: float = 10.0,
+        stall_limit: int = 150,
+        pause_seconds: float = 300.0,
+        emit: Callable[[dict[str, Any]], None] | None = None,
+    ) -> dict[str, int]:
+        """Review a backlog with a fixed worker pool and no batch boundaries.
+
+        A feeder claims rows in short database sessions, ``workers`` tasks only
+        call models (one item each, taking the next as soon as one finishes), and
+        a single writer commits finished reviews in small groups. No worker holds a
+        database connection while it waits on a model. Rows that fail on the model
+        side stay in ``review`` for the next run.
+        """
+
+        from src.core import get_db
+
+        if kind not in {"articles", "summaries"}:
+            raise ValueError(f"unsupported stream kind: {kind}")
+        decide = self._decide_article if kind == "articles" else self._decide_summary
+        emit = emit or (lambda _record: None)
+        claims = ReviewClaims()
+        gate = _review_gate()
+        todo: asyncio.Queue[Any] = asyncio.Queue(maxsize=max(2, workers * 2))
+        finished: asyncio.Queue[Any] = asyncio.Queue()
+        totals = {"claimed": 0, "archived": 0, "published": 0, "rejected": 0, "deferred": 0, "stale": 0, "write_errors": 0}
+        state: dict[str, Any] = {"failures": 0, "route_error": None}
+        tick = object()
+
+        async def feeder() -> None:
+            stalls = 0
+            while True:
+                if state["failures"] >= stall_limit:
+                    stalls += 1
+                    emit({"event": "stalled", "stalls": stalls, "route_error": state["route_error"]})
+                    if stalls >= 3:
+                        return
+                    await asyncio.sleep(pause_seconds)
+                    state["failures"] = 0
+                async with get_db() as db:
+                    fetched, items, archived = await self._claim_stream_items(db, kind, fetch_size, claims)
+                if fetched == 0:
+                    return
+                totals["claimed"] += fetched
+                totals["archived"] += archived
+                for item in items:
+                    await todo.put(item)
+
+        async def worker() -> None:
+            while True:
+                item = await todo.get()
+                if item is None:
+                    return
+                key, seen, payload = item
+                try:
+                    async with gate:
+                        pool = await claims.route_pool()
+                        reviewed = await _decide_with_retry(decide, pool, payload)
+                except Exception as exc:  # noqa: BLE001 - model outage: the row stays in review
+                    state["failures"] += 1
+                    state["route_error"] = str(exc)[:500]
+                    await finished.put((key, seen, exc))
+                    continue
+                state["failures"] = 0
+                await finished.put((key, seen, reviewed))
+
+        async def flush(batch: list[tuple[Any, Any, Any]]) -> None:
+            reviewed_rows = [entry for entry in batch if not isinstance(entry[2], Exception)]
+            deferred = len(batch) - len(reviewed_rows)
+            totals["deferred"] += deferred
+            counts = {"published": 0, "rejected": 0, "stale": 0}
+            if reviewed_rows:
+                try:
+                    async with get_db() as db:
+                        counts = await self._write_stream_results(db, kind, reviewed_rows)
+                except Exception as exc:  # noqa: BLE001 - nothing was committed; rows stay in review
+                    totals["write_errors"] += len(reviewed_rows)
+                    emit({"event": "write_failed", "items": len(reviewed_rows), "error": str(exc)[:300]})
+                    return
+            for name, value in counts.items():
+                totals[name] += value
+            emit({
+                "event": "commit",
+                "written": len(reviewed_rows),
+                **counts,
+                "deferred": deferred,
+                "route_error": state["route_error"] if deferred else None,
+                "queued": todo.qsize(),
+                "totals": dict(totals),
+            })
+
+        async def writer() -> None:
+            pending: list[tuple[Any, Any, Any]] = []
+            first_at = 0.0
+            while True:
+                timeout = commit_seconds if not pending else max(0.01, commit_seconds - (time.monotonic() - first_at))
+                try:
+                    entry = await asyncio.wait_for(finished.get(), timeout=timeout)
+                except asyncio.TimeoutError:
+                    entry = tick
+                if entry is None:
+                    if pending:
+                        await flush(pending)
+                    return
+                if entry is not tick:
+                    if not pending:
+                        first_at = time.monotonic()
+                    pending.append(entry)
+                if pending and (len(pending) >= commit_every or time.monotonic() - first_at >= commit_seconds):
+                    batch, pending = pending, []
+                    await flush(batch)
+
+        writer_task = asyncio.create_task(writer())
+        worker_tasks = [asyncio.create_task(worker()) for _ in range(max(1, workers))]
+        try:
+            await feeder()
+        finally:
+            for _ in worker_tasks:
+                await todo.put(None)
+            await asyncio.gather(*worker_tasks)
+            await finished.put(None)
+            await writer_task
+        return totals
+
     async def review_literature_summaries(
         self,
         db: AsyncSession,
@@ -779,78 +1259,65 @@ class AIContentGovernanceService:
         limit: int = 20,
         dry_run: bool = False,
         use_ai: bool = True,
+        completer: Completer | None = None,
+        after_id: int | None = None,
+        claims: ReviewClaims | None = None,
     ) -> dict[str, Any]:
-        rows = (
-            await db.execute(
-                select(LiteratureSummary, LiteratureArticle)
-                .join(LiteratureArticle, LiteratureArticle.article_id == LiteratureSummary.article_id)
-                .where(LiteratureSummary.status == "review")
-                .order_by(LiteratureSummary.quality_score.desc().nullslast(), LiteratureSummary.updated_at.asc())
-                .limit(limit)
-            )
-        ).all()
-        items: list[dict[str, Any]] = []
-        deterministic: dict[str, str] = {}
-        for summary, article in rows:
-            item_id = f"{summary.id}"
-            reason = self._literature_static_blocker(summary, article)
-            if reason:
-                deterministic[item_id] = reason
-                continue
-            items.append(self._literature_review_item(item_id, summary, article))
-
-        model_decisions: list[ModelDecision] = []
-        route: dict[str, Any] = {}
-        route_error: str | None = None
-        if items and use_ai:
-            try:
-                payload, route = await _call_json_model(
-                    system=LITERATURE_SUMMARY_REVIEW_SYSTEM,
-                    user_payload={
-                        "prompt_version": PROMPT_VERSION,
-                        "task": "Review evidence-agent literature summaries for automatic publication.",
-                        "rules": LITERATURE_SUMMARY_REVIEW_RULES,
-                        "items": items,
-                        "required_output": {"decisions": [{"id": "string", "decision": "publish|hold|reject", "confidence": "0..1", "reasons": ["concise evidence-bound reasons"]}]},
-                    },
-                    max_tokens=5000,
-                )
-                model_decisions = _decisions(payload, {"publish", "hold", "reject"})
-            except Exception as exc:
-                route_error = str(exc)[:1000]
-
-        decision_by_id = {decision.item_id: decision for decision in model_decisions}
-        counts = {"published": 0, "held": 0, "rejected": 0, "deterministic_holds": len(deterministic)}
+        query = self._summary_review_query(after_id)
+        if claims is None:
+            rows = (await db.execute(query.limit(limit))).all()
+        else:
+            async with claims.lock:
+                if claims.ids:
+                    query = query.where(LiteratureSummary.id != all_(literal(sorted(claims.ids), ARRAY(Integer))))
+                rows = (await db.execute(query.limit(limit))).all()
+                claims.ids.update(summary.id for summary, _article in rows)
+        counts = {"published": 0, "archived": 0, "waiting": 0, "deferred": 0}
         applied: list[dict[str, Any]] = []
-        by_summary_id = {str(summary.id): (summary, article) for summary, article in rows}
-        for item_id, (summary, _article) in by_summary_id.items():
-            decision = decision_by_id.get(item_id)
-            if decision is None:
-                reason = deterministic.get(item_id, route_error or "model decision missing")
-                counts["held"] += 1
-                if not dry_run:
-                    summary.generation_metadata = self._metadata(summary.generation_metadata, "hold", 0.0, (reason,), route)
-                    summary.review_notes = _append_note(summary.review_notes, f"AI governance hold: {reason}")
-                applied.append({"summary_id": int(item_id), "decision": "hold", "reason": reason})
+        route_error: str | None = None
+        pending: list[tuple[Any, Any]] = []
+        for summary, article in rows:
+            item_id = str(summary.id)
+            action, reason = self._summary_precheck(summary, article)
+            if action == "waiting":
+                # A dependency, not a judgement: the item is re-reviewed when it clears.
+                counts["waiting"] += 1
+                applied.append({"summary_id": int(item_id), "decision": "wait", "reason": reason})
                 continue
-            if decision.decision == "publish" and decision.confidence >= 0.86:
-                counts["published"] += 1
+            if action == "skipped":
+                # Editor-written or other non-agent summaries are outside this
+                # automatic gate; leave them untouched.
+                counts["skipped"] = counts.get("skipped", 0) + 1
+                applied.append({"summary_id": int(item_id), "decision": "skip", "reason": reason})
+                continue
+            if action == "archive":
+                counts["archived"] += 1
                 if not dry_run:
-                    summary.status = "published"
-                    summary.generation_metadata = self._metadata(summary.generation_metadata, "publish", decision.confidence, decision.reasons, route)
-                    summary.review_notes = _append_note(summary.review_notes, f"Automatically published by {PROMPT_VERSION}.")
-            elif decision.decision == "reject" and decision.confidence >= 0.90:
-                counts["rejected"] += 1
-                if not dry_run:
-                    summary.status = "archived"
-                    summary.generation_metadata = self._metadata(summary.generation_metadata, "reject", decision.confidence, decision.reasons, route)
-                    summary.review_notes = _append_note(summary.review_notes, "Archived by AI governance review.")
-            else:
-                counts["held"] += 1
-                if not dry_run:
-                    summary.generation_metadata = self._metadata(summary.generation_metadata, "hold", decision.confidence, decision.reasons, route)
-                    summary.review_notes = _append_note(summary.review_notes, "Held by AI governance review.")
-            applied.append({"summary_id": int(item_id), "decision": decision.decision, "confidence": decision.confidence, "reasons": list(decision.reasons)})
+                    self._archive_summary(summary, reason)
+                applied.append({"summary_id": int(item_id), "decision": "archive", "reason": "missing fields"})
+                continue
+            if not use_ai:
+                counts["deferred"] += 1
+                continue
+            pending.append((summary, article))
+
+        results = await self._review_all(
+            pending,
+            completer,
+            self._decide_summary,
+            claims,
+        )
+        for (summary, article), reviewed in zip(pending, results):
+            item_id = str(summary.id)
+            if isinstance(reviewed, Exception):  # model outage: the item stays queued
+                route_error = str(reviewed)[:1000]
+                counts["deferred"] += 1
+                continue
+            publish = reviewed.published and reviewed.payload["decision"] == "publish"
+            counts["published" if publish else "archived"] += 1
+            if not dry_run:
+                self._apply_summary(summary, reviewed, publish)
+            applied.append({"summary_id": int(item_id), "decision": "publish" if publish else "archive", "review": reviewed.provenance(PROMPT_VERSION)})
         if not dry_run:
             await db.commit()
         return {"prompt_version": PROMPT_VERSION, "dry_run": dry_run, **counts, "reviewed": len(rows), "route_error": route_error, "applied": applied[:100]}
@@ -862,82 +1329,40 @@ class AIContentGovernanceService:
         limit: int = 20,
         dry_run: bool = False,
         use_ai: bool = True,
+        completer: Completer | None = None,
+        claims: ReviewClaims | None = None,
     ) -> dict[str, Any]:
-        articles = (
-            await db.execute(
-                select(LiteratureArticle)
-                .where(
-                    LiteratureArticle.publication_status == "review",
-                    LiteratureArticle.integrity_status == "current",
-                    LiteratureArticle.peer_review_status == "peer_reviewed",
-                )
-                .order_by(LiteratureArticle.discovery_score.desc(), LiteratureArticle.updated_at.asc())
-                .limit(limit)
-            )
-        ).scalars().all()
-        items = [self._literature_article_item(article) for article in articles]
-        route: dict[str, Any] = {}
-        route_error: str | None = None
-        model_decisions: list[ModelDecision] = []
-        if items and use_ai:
-            try:
-                payload, route = await _call_json_model(
-                    system=LITERATURE_ARTICLE_REVIEW_SYSTEM,
-                    user_payload={
-                        "prompt_version": PROMPT_VERSION,
-                        "task": "Classify Research Radar review articles for automatic publication or exclusion.",
-                        "rules": LITERATURE_ARTICLE_REVIEW_RULES,
-                        "items": items,
-                        "required_output": {"decisions": [{"id": "article_id", "decision": "publish|exclude|hold", "confidence": "0..1", "reasons": ["brief evidence-bound reasons"]}]},
-                    },
-                    max_tokens=5200,
-                )
-                model_decisions = _decisions(payload, {"publish", "exclude", "hold"})
-            except Exception as exc:
-                route_error = str(exc)[:1000]
-        by_id = {article.article_id: article for article in articles}
-        counts = {"published": 0, "excluded": 0, "held": 0}
+        query = self._article_review_query()
+        if claims is None:
+            articles = (await db.execute(query.limit(limit))).scalars().all()
+        else:
+            async with claims.lock:
+                if claims.ids:
+                    query = query.where(LiteratureArticle.article_id != all_(literal(sorted(claims.ids), ARRAY(String))))
+                articles = (await db.execute(query.limit(limit))).scalars().all()
+                claims.ids.update(article.article_id for article in articles)
+        counts = {"published": 0, "excluded": 0, "deferred": 0}
         applied: list[dict[str, Any]] = []
-        for decision in model_decisions:
-            article = by_id.get(decision.item_id)
-            if article is None:
+        route_error: str | None = None
+        results = await self._review_all(
+            list(articles) if use_ai else [],
+            completer,
+            self._decide_article,
+            claims,
+        )
+        for article, reviewed in zip(articles if use_ai else [], results):
+            if isinstance(reviewed, Exception):  # model outage: the item stays queued
+                route_error = str(reviewed)[:1000]
+                counts["deferred"] += 1
                 continue
-            if decision.decision == "publish" and decision.confidence >= 0.88:
-                desired = "published"
-                counts["published"] += 1
-            elif decision.decision == "exclude" and decision.confidence >= 0.92:
-                desired = "excluded"
-                counts["excluded"] += 1
-            else:
-                desired = "review"
-                counts["held"] += 1
+            desired = "published" if reviewed.published and reviewed.payload["decision"] == "publish" else "excluded"
+            counts[desired] += 1
             if not dry_run:
-                previous = article.publication_status
-                article.publication_status = desired
-                article.metadata_ = self._metadata(article.metadata_, desired, decision.confidence, decision.reasons, route)
-                if previous != desired:
-                    db.add(
-                        LiteratureStatusEvent(
-                            article_id=article.article_id,
-                            event_type="publication_status_changed",
-                            previous_status=previous,
-                            current_status=desired,
-                            source=GOVERNANCE_ACTOR,
-                            effective_at=_now(),
-                            metadata_={
-                                "prompt_version": PROMPT_VERSION,
-                                "confidence": decision.confidence,
-                                "reasons": list(decision.reasons),
-                                "route": route,
-                            },
-                        )
-                    )
-            applied.append({"article_id": decision.item_id, "decision": desired, "confidence": decision.confidence, "reasons": list(decision.reasons)})
-        missing = set(by_id) - {decision.item_id for decision in model_decisions}
-        counts["held"] += len(missing)
+                self._apply_article(db, article, reviewed, desired)
+            applied.append({"article_id": article.article_id, "decision": desired, "review": reviewed.provenance(PROMPT_VERSION)})
+        if not use_ai:
+            counts["deferred"] = len(articles)
         if not dry_run:
-            for article_id in missing:
-                by_id[article_id].metadata_ = self._metadata(by_id[article_id].metadata_, "hold", 0.0, (route_error or "model decision missing",), route)
             await db.commit()
         return {"prompt_version": PROMPT_VERSION, "dry_run": dry_run, **counts, "reviewed": len(articles), "route_error": route_error, "applied": applied[:100]}
 
@@ -948,6 +1373,7 @@ class AIContentGovernanceService:
         limit: int = 30,
         dry_run: bool = False,
         use_ai: bool = True,
+        completer: Completer | None = None,
     ) -> dict[str, Any]:
         sources = (
             await db.execute(
@@ -960,51 +1386,35 @@ class AIContentGovernanceService:
                 .limit(limit)
             )
         ).scalars().all()
-        items = [self._source_review_item(source) for source in sources]
-        model_decisions: list[ModelDecision] = []
-        route: dict[str, Any] = {}
-        route_error: str | None = None
-        if items and use_ai:
-            try:
-                payload, route = await _call_json_model(
-                    system=KNOWLEDGE_SOURCE_REVIEW_SYSTEM,
-                    user_payload={
-                        "prompt_version": PROMPT_VERSION,
-                        "task": "Classify source rows for disease-knowledge grounding.",
-                        "rules": KNOWLEDGE_SOURCE_REVIEW_RULES,
-                        "items": items,
-                        "required_output": {"decisions": [{"id": "string", "decision": "approve|reject|hold", "confidence": "0..1", "reasons": ["brief reasons"]}]},
-                    },
-                    max_tokens=4500,
-                )
-                model_decisions = _decisions(payload, {"approve", "reject", "hold"})
-            except Exception as exc:
-                route_error = str(exc)[:1000]
-        by_id = {str(source.id): source for source in sources}
-        counts = {"approved": 0, "rejected": 0, "held": 0}
+        counts = {"approved": 0, "rejected": 0, "deferred": 0}
         applied: list[dict[str, Any]] = []
-        for decision in model_decisions:
-            source = by_id.get(decision.item_id)
-            if source is None:
+        route_error: str | None = None
+        results = await self._review_all(
+            list(sources) if use_ai else [],
+            completer,
+            lambda model, source: self._peer_decide(
+                model,
+                domain="disease-knowledge source quality",
+                author_system=KNOWLEDGE_SOURCE_REVIEW_SYSTEM,
+                task={"task": "Decide whether this source row grounds public disease knowledge.", "item": self._source_review_item(source)},
+                decisions=("approve", "reject"),
+                rules=KNOWLEDGE_SOURCE_REVIEW_RULES,
+            ),
+        )
+        for source, reviewed in zip(sources if use_ai else [], results):
+            if isinstance(reviewed, Exception):  # model outage: the item stays queued
+                route_error = str(reviewed)[:1000]
+                counts["deferred"] += 1
                 continue
-            if decision.decision == "approve" and decision.confidence >= 0.84:
-                counts["approved"] += 1
-                status = "approved"
-            elif decision.decision == "reject" and decision.confidence >= 0.88:
-                counts["rejected"] += 1
-                status = "rejected"
-            else:
-                counts["held"] += 1
-                status = "requires_review"
+            status = "approved" if reviewed.published and reviewed.payload["decision"] == "approve" else "rejected"
+            counts[status] += 1
             if not dry_run:
                 source.review_status = status
-                source.metadata_ = self._metadata(source.metadata_, status, decision.confidence, decision.reasons, route)
-            applied.append({"source_id": int(decision.item_id), "decision": status, "confidence": decision.confidence, "reasons": list(decision.reasons)})
-        missing = set(by_id) - {decision.item_id for decision in model_decisions}
-        counts["held"] += len(missing)
+                source.metadata_ = self._metadata(source.metadata_, status, reviewed)
+            applied.append({"source_id": source.id, "decision": status, "review": reviewed.provenance(PROMPT_VERSION)})
+        if not use_ai:
+            counts["deferred"] = len(sources)
         if not dry_run:
-            for source_id in missing:
-                by_id[source_id].metadata_ = self._metadata(by_id[source_id].metadata_, "hold", 0.0, (route_error or "model decision missing",), route)
             await db.commit()
         return {"prompt_version": PROMPT_VERSION, "dry_run": dry_run, **counts, "reviewed": len(sources), "route_error": route_error, "applied": applied[:100]}
 
@@ -1015,11 +1425,13 @@ class AIContentGovernanceService:
         limit: int = 20,
         dry_run: bool = False,
         use_ai: bool = True,
+        completer: Completer | None = None,
     ) -> dict[str, Any]:
         suggestions = (
             await db.execute(
                 select(DiseaseLearningSuggestion)
-                .where(DiseaseLearningSuggestion.status.in_(("pending", "failed")))
+                # requires_review is the legacy human queue; it is drained here too.
+                .where(DiseaseLearningSuggestion.status.in_(("pending", "failed", "requires_review")))
                 .order_by(DiseaseLearningSuggestion.occurrence_count.desc(), DiseaseLearningSuggestion.updated_at.asc())
                 .limit(limit)
             )
@@ -1031,76 +1443,82 @@ class AIContentGovernanceService:
                 .order_by(StandardDisease.disease_id.asc())
             )
         ).scalars().all()
-        deterministic = self._deterministic_learning_decisions(suggestions, standards)
-        unresolved = [item for item in suggestions if str(item.id) not in deterministic]
-        route: dict[str, Any] = {}
-        route_error: str | None = None
-        model_decisions: list[ModelDecision] = []
-        if unresolved and use_ai:
-            try:
-                payload, route = await _call_json_model(
-                    system=LEARNING_SUGGESTION_REVIEW_SYSTEM,
-                    user_payload={
-                        "prompt_version": PROMPT_VERSION,
-                        "task": "Map unknown disease labels to the standard infectious-disease catalogue.",
-                        "rules": LEARNING_SUGGESTION_REVIEW_RULES,
-                        "allowed_standard_diseases": [
-                            {
-                                "disease_id": item.disease_id,
-                                "name_en": item.standard_name_en,
-                                "name_zh": item.standard_name_zh,
-                                "category": item.category,
-                                "icd_10": item.icd_10,
-                            }
-                            for item in standards
-                        ],
-                        "items": [self._learning_item(item) for item in unresolved],
-                        "required_output": {"decisions": [{"id": "string", "decision": "map|new_concept|unmapped|hold", "target_disease_id": "string|null", "confidence": "0..1", "reasons": ["brief reasons"]}]},
-                    },
-                    max_tokens=6000,
-                )
-                model_decisions = _decisions(payload, {"map", "new_concept", "unmapped", "hold"})
-            except Exception as exc:
-                route_error = str(exc)[:1000]
         allowed_ids = {item.disease_id for item in standards}
-        by_id = {str(item.id): item for item in suggestions}
-        counts = {"approved": 0, "requires_review": 0, "rejected": 0}
+        catalogue = [
+            {
+                "disease_id": item.disease_id,
+                "name_en": item.standard_name_en,
+                "name_zh": item.standard_name_zh,
+                "category": item.category,
+                "icd_10": item.icd_10,
+            }
+            for item in standards
+        ]
+        exact = self._deterministic_learning_decisions(suggestions, standards)
+        counts = {"approved": 0, "rejected": 0, "deferred": 0}
         applied: list[dict[str, Any]] = []
-        all_decisions = [*deterministic.values(), *model_decisions]
-        for decision in all_decisions:
-            suggestion = by_id.get(decision.item_id)
-            if suggestion is None:
+        route_error: str | None = None
+        to_review = [item for item in suggestions if str(item.id) not in exact] if use_ai else []
+        review_results = await self._review_all(
+            to_review,
+            completer,
+            lambda model, suggestion: self._peer_decide(
+                model,
+                domain="infectious-disease ontology mapping",
+                author_system=LEARNING_SUGGESTION_REVIEW_SYSTEM,
+                task={
+                    "task": "Map this unknown disease label to the standard catalogue.",
+                    "allowed_standard_diseases": catalogue,
+                    "item": self._learning_item(suggestion),
+                },
+                decisions=("map", "new_concept", "unmapped"),
+                rules=LEARNING_SUGGESTION_REVIEW_RULES,
+                allowed_targets=allowed_ids,
+            ),
+        )
+        review_by_id = {str(item.id): result for item, result in zip(to_review, review_results)}
+        for suggestion in suggestions:
+            item_id = str(suggestion.id)
+            reviewed: ReviewedOutput | None = None
+            if item_id in exact:
+                target: str | None = str(exact[item_id].payload.get("target_disease_id") or "") or None
+                reasons = ["Exact match against the active standard-disease catalogue."]
+            elif not use_ai:
+                counts["deferred"] += 1
                 continue
-            target = str(decision.payload.get("target_disease_id") or decision.payload.get("target_code") or "").strip().upper()
-            if decision.decision == "map" and target in allowed_ids and decision.confidence >= 0.90:
-                counts["approved"] += 1
-                status = "approved"
-                final_disease_id = target
-            elif decision.decision in {"new_concept", "hold"}:
-                counts["requires_review"] += 1
-                status = "requires_review"
-                final_disease_id = None
             else:
-                counts["rejected"] += 1
-                status = "rejected"
-                final_disease_id = None
+                outcome_or_error = review_by_id[item_id]
+                if isinstance(outcome_or_error, Exception):  # model outage: the item stays queued
+                    route_error = str(outcome_or_error)[:1000]
+                    counts["deferred"] += 1
+                    continue
+                reviewed = outcome_or_error
+                accepted_map = reviewed.published and reviewed.payload["decision"] == "map"
+                target = reviewed.payload.get("target_disease_id") if accepted_map else None
+                reasons = list(reviewed.payload.get("reasons") or [])
+            status = "approved" if target else "rejected"
+            counts[status] += 1
+            outcome = (reviewed.payload.get("decision") if reviewed else "map") or "unresolved"
             if not dry_run:
                 suggestion.status = status
-                suggestion.suggested_disease_id = final_disease_id or target or None
-                suggestion.final_disease_id = final_disease_id
-                suggestion.ai_confidence = decision.confidence
-                suggestion.ai_reasoning = "; ".join(decision.reasons)
+                suggestion.suggested_disease_id = target
+                suggestion.final_disease_id = target
+                suggestion.ai_confidence = reviewed.score if reviewed else 1.0
+                suggestion.ai_reasoning = "; ".join(reasons)[:4000] or None
                 suggestion.reviewed_by = GOVERNANCE_ACTOR
-                suggestion.review_notes = f"{PROMPT_VERSION}: {status}"
-            applied.append({"suggestion_id": int(decision.item_id), "decision": status, "target_disease_id": final_disease_id or target or None, "confidence": decision.confidence, "reasons": list(decision.reasons)})
-        missing = set(by_id) - {decision.item_id for decision in all_decisions}
-        counts["requires_review"] += len(missing)
+                suggestion.review_notes = (
+                    f"{PROMPT_VERSION}: {status} ({outcome}"
+                    + (f", {reviewed.mode} peer review, verdict {reviewed.verdict}" if reviewed else ", deterministic")
+                    + ")"
+                )
+            applied.append({
+                "suggestion_id": suggestion.id,
+                "decision": status,
+                "outcome": outcome,
+                "target_disease_id": target,
+                "review": reviewed.provenance(PROMPT_VERSION) if reviewed else None,
+            })
         if not dry_run:
-            for suggestion_id in missing:
-                suggestion = by_id[suggestion_id]
-                suggestion.status = "requires_review"
-                suggestion.reviewed_by = GOVERNANCE_ACTOR
-                suggestion.review_notes = f"{PROMPT_VERSION}: {route_error or 'model decision missing'}"
             await db.commit()
         return {"prompt_version": PROMPT_VERSION, "dry_run": dry_run, **counts, "reviewed": len(suggestions), "route_error": route_error, "applied": applied[:100]}
 
@@ -1138,29 +1556,41 @@ class AIContentGovernanceService:
         self,
         existing: Mapping[str, Any] | None,
         decision: str,
-        confidence: float,
-        reasons: Iterable[str],
-        route: Mapping[str, Any],
+        reviewed: ReviewedOutput | None,
+        reasons: Iterable[str] = (),
     ) -> dict[str, Any]:
+        """Audit record for one decision; ``reviewed`` is None for deterministic ones."""
+
         metadata = dict(existing or {})
-        metadata["ai_content_governance"] = {
+        record: dict[str, Any] = {
             "prompt_version": PROMPT_VERSION,
             "actor": GOVERNANCE_ACTOR,
             "decision": decision,
-            "confidence": confidence,
-            "reasons": list(reasons),
             "decided_at": _now().isoformat(),
-            "route": dict(route or {}),
         }
+        if reviewed is not None:
+            record["peer_review"] = reviewed.provenance(PROMPT_VERSION)
+            record["reasons"] = list(reviewed.payload.get("reasons") or [])
+        else:
+            record["peer_review"] = None
+            record["reasons"] = list(reasons)
+        metadata["ai_content_governance"] = record
         return metadata
+
+    def _literature_dependency_wait(self, summary: LiteratureSummary, article: LiteratureArticle) -> str | None:
+        """Conditions that are not a judgement on the summary: re-check when they clear."""
+
+        if article.publication_status != "published":
+            return "parent article is not published"
+        if str((summary.generation_metadata or {}).get("source_fingerprint") or "") != source_fingerprint(article):
+            return "summary source fingerprint is stale; regeneration pending"
+        return None
 
     def _literature_static_blocker(self, summary: LiteratureSummary, article: LiteratureArticle) -> str | None:
         if article.publication_status != "published":
             return "parent article is not published"
         if summary.generated_by != "literature-evidence-agent":
             return "summary was not produced by the evidence agent"
-        if float(summary.quality_score or 0.0) < 0.84:
-            return "summary quality is below AI governance review floor"
         if str((summary.generation_metadata or {}).get("source_fingerprint") or "") != source_fingerprint(article):
             return "summary source fingerprint is stale"
         missing = [field for field in SUMMARY_FIELDS if not _text(getattr(summary, field, None), limit=50)]

@@ -1,4 +1,4 @@
-"""Offline tests for the peer-reviewed AI flow of the notice-based Situation module."""
+"""Offline tests for the alert extraction flow of the Situation module."""
 
 from __future__ import annotations
 
@@ -7,227 +7,337 @@ from datetime import date
 
 import pytest
 
+from src.ai.attachments import Attachment
 from src.services.situation_notices.ai import (
     AIOutputError,
     Completion,
-    enrich_notice,
-    parse_json_object,
+    contains_number,
+    extract_alerts,
+    normalise,
     review_mode,
-    sanitize_digest_draft,
-    sanitize_notice_draft,
-    write_digest,
+    sanitize_extraction,
 )
-from src.services.situation_notices.pipeline import cluster_notices, content_hash
+
+DOCUMENT = """\
+## Summary
+As of 20 October 2026, a total of 9 704 confirmed cases, including 4,687 deaths
+(crude case fatality ratio: 48.3%), have been reported in the Democratic Republic of
+the Congo. On 6 October 2026, the Ministry of Health of Kenya reported the first
+laboratory-confirmed imported case of BVD. A total of nine cases including one death
+has been reported in Kenya. On 20 October 2026, Nigeria confirmed an imported case in
+Abuja. The out-
+break remains active.
+"""
 
 NOTICE = {
-    "notice_id": "who_don:2026-DON700",
+    "notice_id": "who_don:2026-DON622",
     "source_id": "who_don",
     "source_label_en": "WHO Disease Outbreak News",
     "record_type": "outbreak_notice",
-    "published_date": "2026-10-20",
-    "title_en": "Ebola disease - Kenya",
-    "summary_en": "WHO was notified of confirmed Ebola cases in Kenya.",
-    "diseases": [{"disease_id": "D050"}],
-    "countries": [{"code": "KE"}],
+    "published_date": "2026-10-23",
+    "title_en": "Ebola disease caused by Bundibugyo virus, DRC, Kenya and Nigeria",
 }
 DISEASES = [{"disease_id": "D050", "name_en": "Ebola"}, {"disease_id": "D038", "name_en": "Influenza"}]
-COUNTRIES = {"KE", "CD", "UG"}
+COUNTRIES = {"CD", "KE", "NG", "UG"}
+PUBLISHED = date(2026, 10, 23)
 
-GOOD_DRAFT = {
-    "title_zh": "埃博拉病 - 肯尼亚",
-    "title_fr": "Maladie à virus Ebola - Kenya",
-    "summary_en": "WHO was notified of confirmed Ebola cases in Kenya.",
-    "summary_zh": "世卫组织获悉肯尼亚出现埃博拉确诊病例。",
-    "summary_fr": "L'OMS a été notifiée de cas confirmés d'Ebola au Kenya.",
-    "event_type": "new_outbreak",
-    "risk_level": "high",
-    "risk_rationale": "Confirmed Ebola cases in a new country.",
-    "disease_ids": ["D050"],
-    "country_codes": ["KE"],
-}
+
+def _alert(**overrides) -> dict:
+    base = {
+        "disease_id": "D050",
+        "disease_label": "Bundibugyo virus disease",
+        "country_code": "CD",
+        "admin_area": None,
+        "status": "ongoing",
+        "cases": 9704,
+        "deaths": 4687,
+        "count_basis": "confirmed",
+        "as_of": "2026-10-20",
+        "quote": "As of 20 October 2026, a total of 9 704 confirmed cases, including 4,687 deaths",
+        "summary_en": "9704 confirmed cases and 4687 deaths in DRC.",
+        "summary_zh": "刚果（金）确诊9704例。",
+        "summary_fr": "9704 cas confirmés en RDC.",
+    }
+    base.update(overrides)
+    return base
+
+
+def _clean(*alerts, document_type="event_report", document=DOCUMENT):
+    return sanitize_extraction(
+        {"document_type": document_type, "alerts": list(alerts)},
+        document_text=document,
+        published=PUBLISHED,
+        allowed_disease_ids={"D050", "D038"},
+        allowed_country_codes=COUNTRIES,
+    )
+
+
+# --- sanitize_extraction ---
+
+
+def test_a_supported_alert_passes_untouched():
+    clean, notes = _clean(_alert())
+    assert notes == []
+    assert clean["document_type"] == "event_report"
+    (alert,) = clean["alerts"]
+    assert (alert["cases"], alert["deaths"], alert["as_of"]) == (9704, 4687, "2026-10-20")
+
+
+def test_quote_must_appear_in_the_document():
+    clean, notes = _clean(_alert(quote="Cases are rising fast across the whole country."))
+    assert clean["alerts"] == []
+    assert any("quote not found" in note for note in notes)
+
+
+def test_quote_matching_ignores_case_dashes_quotes_and_hyphenation():
+    quote = "The OUT‑BREAK remains active."  # non-breaking hyphen, upper case
+    clean, _ = _clean(_alert(quote=quote))
+    assert len(clean["alerts"]) == 1
+
+
+def test_missing_quote_drops_the_alert():
+    clean, notes = _clean(_alert(quote=None))
+    assert clean["alerts"] == []
+    assert notes
+
+
+@pytest.mark.parametrize("value", [9704, "9704", "9 704", "9,704", 9704.0])
+def test_number_forms_in_the_document_are_accepted(value):
+    clean, notes = _clean(_alert(cases=value))
+    assert clean["alerts"][0]["cases"] == 9704
+    assert not any("cases" in note for note in notes)
+
+
+def test_number_missing_from_the_document_is_cleared_but_alert_kept():
+    clean, notes = _clean(_alert(cases=12345, deaths=4687))
+    alert = clean["alerts"][0]
+    assert alert["cases"] is None and alert["deaths"] == 4687
+    assert any("cases=12345 not found" in note for note in notes)
+
+
+def test_number_inside_a_longer_number_does_not_count():
+    # 704 is only a substring of 9 704; it must not be accepted.
+    clean, _ = _clean(_alert(cases=704, deaths=None))
+    assert clean["alerts"][0]["cases"] is None
+
+
+def test_decimal_fragment_does_not_count_as_a_number():
+    # "48.3%" contains 3, but only as the decimal part.
+    clean, _ = _clean(_alert(cases=None, deaths=3, quote="A total of nine cases including one death"))
+    assert clean["alerts"][0]["deaths"] is None
+
+
+def test_non_numeric_counts_are_cleared():
+    clean, notes = _clean(_alert(cases="many", deaths=True))
+    alert = clean["alerts"][0]
+    assert alert["cases"] is None and alert["deaths"] is None
+    assert any("not a count" in note for note in notes)
+
+
+def test_count_basis_is_dropped_without_a_count():
+    clean, _ = _clean(_alert(cases=None, deaths=None, count_basis="confirmed"))
+    assert clean["alerts"][0]["count_basis"] is None
+
+
+def test_unknown_country_drops_the_alert():
+    clean, notes = _clean(_alert(country_code="EU"), _alert(country_code=""))
+    assert clean["alerts"] == []
+    assert sum("unknown country_code" in note for note in notes) == 2
+
+
+def test_country_code_is_case_insensitive():
+    clean, _ = _clean(_alert(country_code="cd"))
+    assert clean["alerts"][0]["country_code"] == "CD"
+
+
+def test_unknown_disease_id_is_cleared_but_the_label_survives():
+    clean, notes = _clean(_alert(disease_id="D999"))
+    assert clean["alerts"][0]["disease_id"] is None
+    assert clean["alerts"][0]["disease_label"] == "Bundibugyo virus disease"
+    assert any("D999" in note for note in notes)
+
+
+def test_invalid_status_drops_the_alert():
+    clean, notes = _clean(_alert(status="exploding"))
+    assert clean["alerts"] == []
+    assert any("invalid status" in note for note in notes)
+
+
+def test_alert_without_a_label_or_summary_is_dropped():
+    clean, _ = _clean(_alert(disease_label=""), _alert(country_code="KE", summary_en=None))
+    assert clean["alerts"] == []
+
+
+def test_duplicate_place_is_dropped_but_other_admin_areas_stay():
+    clean, notes = _clean(_alert(), _alert(), _alert(admin_area="Ituri"))
+    assert [a["admin_area"] for a in clean["alerts"]] == [None, "Ituri"]
+    assert any("duplicate" in note for note in notes)
+
+
+@pytest.mark.parametrize("as_of", ["2026-10-25", "2024-01-01", "not a date"])
+def test_as_of_outside_the_reporting_window_is_cleared(as_of):
+    clean, notes = _clean(_alert(as_of=as_of))
+    assert clean["alerts"][0]["as_of"] is None
+    assert any("as_of" in note for note in notes)
+
+
+def test_as_of_one_day_after_publication_is_tolerated():
+    clean, _ = _clean(_alert(as_of="2026-10-24"))
+    assert clean["alerts"][0]["as_of"] == "2026-10-24"
+
+
+def test_alert_count_is_capped():
+    # distinct admin areas keep each alert unique; the quote is shared.
+    alerts = [_alert(admin_area=f"Zone {i}", cases=None, deaths=None) for i in range(60)]
+    clean, notes = _clean(*alerts)
+    assert len(clean["alerts"]) == 40
+    assert any("first 40" in note for note in notes)
+
+
+def test_invalid_document_type_becomes_none():
+    clean, _ = _clean(document_type="novel")
+    assert clean["document_type"] is None
+
+
+# --- normalise / contains_number ---
+
+
+def test_normalise_joins_digit_groups_and_wrapped_words():
+    assert normalise("9 704 and 1,234,567") == "9704 and 1234567"
+    assert normalise("out-\nbreak") == "outbreak"
+
+
+def test_contains_number_respects_boundaries():
+    text = normalise("cases: 9 704, rate 48.3%")
+    assert contains_number(text, 9704)
+    assert not contains_number(text, 704)
+    assert not contains_number(text, 3)
+    assert contains_number(text, 48) is False
+
+
+# --- extract_alerts with a scripted two-model review ---
 
 
 class ScriptedCompleter:
-    """Replies from a per-role script and records every call."""
-
-    def __init__(self, author: list, reviewer: list, *, author_model="model-a", reviewer_model="model-b"):
+    def __init__(self, author, reviewer, *, author_model="model-a", reviewer_model="model-b", input_mode="text"):
         self.script = {"author": list(author), "reviewer": list(reviewer)}
         self.models = {"author": author_model, "reviewer": reviewer_model}
-        self.calls: list[tuple[str, str]] = []
+        self.input_mode = input_mode
+        self.calls: list[tuple[str, str, list]] = []
 
-    async def __call__(self, role: str, system: str, prompt: str) -> Completion:
-        self.calls.append((role, prompt))
+    async def __call__(self, role, system, prompt, *, attachments=None):
+        self.calls.append((role, prompt, list(attachments or [])))
         reply = self.script[role].pop(0)
         text = reply if isinstance(reply, str) else json.dumps(reply, ensure_ascii=False)
-        return Completion(text=text, model=self.models[role])
+        return Completion(text=text, model=self.models[role], input_mode=self.input_mode)
 
 
-def _review(verdict: str, *, issues=None, corrected=None, score=0.9) -> dict:
+def _draft(*alerts, document_type="event_report"):
+    return {"document_type": document_type, "alerts": list(alerts)}
+
+
+def _review(verdict, *, issues=None, corrected=None, score=0.9):
     return {"verdict": verdict, "score": score, "issues": issues or [], "corrected": corrected}
 
 
-@pytest.mark.asyncio
-async def test_accepted_draft_is_published_after_one_round():
-    completer = ScriptedCompleter([GOOD_DRAFT], [_review("accept")])
-    result = await enrich_notice(completer, NOTICE, allowed_diseases=DISEASES, allowed_country_codes=COUNTRIES)
-    assert result.status == "published"
-    assert result.rounds == 1
-    assert result.author_model == "model-a" and result.reviewer_model == "model-b"
-    assert result.payload["risk_level"] == "high"
-    assert [role for role, _ in completer.calls] == ["author", "reviewer"]
+ATTACHMENT = Attachment(name="don.txt", text=DOCUMENT, media_type="text/html")
 
 
-@pytest.mark.asyncio
-async def test_revise_sends_reviewer_notes_back_to_author():
-    weak = {**GOOD_DRAFT, "risk_level": "low"}
-    completer = ScriptedCompleter(
-        [weak, GOOD_DRAFT],
-        [_review("revise", issues=["risk understated for a new country"]), _review("accept")],
+async def _run(completer):
+    return await extract_alerts(
+        completer, NOTICE, ATTACHMENT, allowed_diseases=DISEASES, allowed_country_codes=COUNTRIES
     )
-    result = await enrich_notice(completer, NOTICE, allowed_diseases=DISEASES, allowed_country_codes=COUNTRIES)
+
+
+async def test_three_countries_become_three_published_alerts():
+    draft = _draft(
+        _alert(),
+        _alert(
+            country_code="KE",
+            status="imported",
+            cases=9,
+            deaths=1,
+            as_of="2026-10-20",
+            quote="A total of nine cases including one death\nhas been reported in Kenya.",
+        ),
+        _alert(
+            country_code="NG",
+            status="imported",
+            cases=None,
+            deaths=None,
+            count_basis=None,
+            as_of="2026-10-20",
+            quote="On 20 October 2026, Nigeria confirmed an imported case in Abuja.",
+        ),
+    )
+    completer = ScriptedCompleter([draft], [_review("accept")])
+    result = await _run(completer)
+    assert result.status == "published"
+    assert [a["country_code"] for a in result.payload["alerts"]] == ["CD", "KE", "NG"]
+    assert result.input_mode == "text"
+    # Both models receive the document as an attachment, not pasted into the prompt.
+    assert all(call[2] == [ATTACHMENT] for call in completer.calls)
+
+
+async def test_reviewer_revise_sends_notes_back_and_second_round_publishes():
+    bad = _draft(_alert(cases=1))  # 1 is not stated anywhere as a case count for DRC, but is "one death": still cleared below
+    good = _draft(_alert())
+    completer = ScriptedCompleter(
+        [bad, good],
+        [_review("revise", issues=["cases for DRC are wrong"]), _review("accept")],
+    )
+    result = await _run(completer)
     assert result.status == "published"
     assert result.rounds == 2
-    assert result.payload["risk_level"] == "high"
     second_author_prompt = json.loads(completer.calls[2][1])
-    assert second_author_prompt["peer_review_notes"] == ["risk understated for a new country"]
+    assert second_author_prompt["peer_review_notes"] == ["cases for DRC are wrong"]
 
 
-@pytest.mark.asyncio
-async def test_final_round_adopts_reviewer_correction_only_if_it_passes_guardrails():
-    weak = {**GOOD_DRAFT, "risk_level": "low"}
-    completer = ScriptedCompleter(
-        [weak, weak],
-        [_review("revise", issues=["x"]), _review("revise", issues=["y"], corrected=GOOD_DRAFT)],
-    )
-    result = await enrich_notice(completer, NOTICE, allowed_diseases=DISEASES, allowed_country_codes=COUNTRIES)
-    assert result.status == "published"
-    assert result.payload["risk_level"] == "high"
-    assert "reviewer correction adopted in final round" in result.notes
-
-
-@pytest.mark.asyncio
-async def test_unresolved_revision_is_rejected_not_published():
-    weak = {**GOOD_DRAFT, "risk_level": "low"}
-    completer = ScriptedCompleter([weak, weak], [_review("revise", issues=["x"]), _review("revise", issues=["y"])])
-    result = await enrich_notice(completer, NOTICE, allowed_diseases=DISEASES, allowed_country_codes=COUNTRIES)
-    assert result.status == "rejected"
-
-
-@pytest.mark.asyncio
 async def test_reviewer_reject_is_final():
-    completer = ScriptedCompleter([GOOD_DRAFT], [_review("reject", issues=["not an outbreak"])])
-    result = await enrich_notice(completer, NOTICE, allowed_diseases=DISEASES, allowed_country_codes=COUNTRIES)
+    completer = ScriptedCompleter([_draft(_alert())], [_review("reject", issues=["not about disease"])])
+    result = await _run(completer)
     assert result.status == "rejected"
     assert len(completer.calls) == 2
 
 
-@pytest.mark.asyncio
-async def test_same_model_for_both_roles_is_refused():
-    completer = ScriptedCompleter([GOOD_DRAFT], [_review("accept")], author_model="m", reviewer_model="m")
-    with pytest.raises(AIOutputError):
-        await enrich_notice(completer, NOTICE, allowed_diseases=DISEASES, allowed_country_codes=COUNTRIES)
-
-
-@pytest.mark.asyncio
-async def test_single_model_mode_publishes_and_is_labelled():
-    completer = ScriptedCompleter([GOOD_DRAFT], [_review("accept")], author_model="m", reviewer_model="m")
-    completer.single_model = True
-    result = await enrich_notice(completer, NOTICE, allowed_diseases=DISEASES, allowed_country_codes=COUNTRIES)
-    assert result.status == "published"
-    assert review_mode(result.author_model, result.reviewer_model) == "single_model"
-    assert review_mode("a", "b") == "cross_model"
-
-
-@pytest.mark.asyncio
-async def test_unparseable_reply_raises_so_the_notice_is_retried():
-    completer = ScriptedCompleter(["no json here"], [])
-    with pytest.raises(AIOutputError):
-        await enrich_notice(completer, NOTICE, allowed_diseases=DISEASES, allowed_country_codes=COUNTRIES)
-
-
-def test_guardrails_drop_invented_ids_and_regions():
-    draft = {**GOOD_DRAFT, "disease_ids": ["D050", "D999"], "country_codes": ["KE", "EU", "ke"]}
-    clean, notes = sanitize_notice_draft(draft, allowed_disease_ids={"D050"}, allowed_country_codes=COUNTRIES)
-    assert clean["disease_ids"] == ["D050"]
-    assert clean["country_codes"] == ["KE"]
-    assert any("D999" in note for note in notes)
-    assert any("EU" in note for note in notes)
-
-
-def test_guardrails_reject_invalid_enums():
-    clean, notes = sanitize_notice_draft(
-        {**GOOD_DRAFT, "risk_level": "catastrophic", "event_type": "alien"},
-        allowed_disease_ids={"D050"},
-        allowed_country_codes=COUNTRIES,
-    )
-    assert clean["risk_level"] is None
-    assert clean["event_type"] == "other"
-    assert "guardrail: invalid risk_level catastrophic" in notes
-
-
-def test_parse_json_object_accepts_fenced_reply():
-    assert parse_json_object('```json\n{"a": 1}\n```') == {"a": 1}
-
-
-def test_digest_points_without_valid_citations_are_dropped():
-    draft = {
-        "headline_en": "Ebola spreads in East Africa",
-        "points": [
-            {"text_en": "Ebola confirmed in Kenya.", "notice_ids": ["who_don:1"]},
-            {"text_en": "Invented claim.", "notice_ids": ["who_don:999"]},
-            {"text_en": "Claim with no citation."},
-        ],
-    }
-    clean, notes = sanitize_digest_draft(draft, allowed_notice_ids={"who_don:1"})
-    assert [p["text_en"] for p in clean["points"]] == ["Ebola confirmed in Kenya."]
-    assert len([n for n in notes if "uncited" in n]) == 2
-
-
-@pytest.mark.asyncio
-async def test_digest_is_published_only_when_points_survive():
-    notices = [{"notice_id": "who_don:1", "title_en": "Ebola disease - Kenya"}]
-    uncited = {"headline_en": "H", "points": [{"text_en": "x", "notice_ids": ["nope"]}]}
-    completer = ScriptedCompleter([uncited, uncited], [_review("accept"), _review("accept")])
-    result = await write_digest(completer, "2026-W43", notices)
+async def test_event_report_with_no_surviving_alerts_is_not_published():
+    hallucinated = _draft(_alert(quote="This sentence is not in the report at all."))
+    completer = ScriptedCompleter([hallucinated, hallucinated], [_review("accept"), _review("accept")])
+    result = await _run(completer)
     assert result.status == "rejected"
 
 
-def test_content_hash_ignores_fields_the_ai_does_not_read():
-    changed = {**NOTICE, "retrieved_at": "2026-10-28T00:00:00Z", "url": "https://example.org/other"}
-    assert content_hash(NOTICE) == content_hash(changed)
-    assert content_hash(NOTICE) != content_hash({**NOTICE, "title_en": "Ebola disease - Uganda"})
+async def test_monitoring_product_with_no_alerts_is_a_valid_empty_reading():
+    completer = ScriptedCompleter([_draft(document_type="monitoring_product")], [_review("accept")])
+    result = await _run(completer)
+    assert result.status == "published"
+    assert result.payload["alerts"] == []
 
 
-def _row(nid: str, day: date, diseases, countries, risk=None, source="who_don") -> dict:
-    return {
-        "notice_id": nid,
-        "source_id": source,
-        "published_date": day,
-        "disease_ids": diseases,
-        "country_codes": countries,
-        "risk_level": risk,
-    }
+async def test_same_model_for_both_roles_is_refused_unless_single_model_is_allowed():
+    from src.ai.peer_review import SameModelReviewError
+
+    strict = ScriptedCompleter([_draft(_alert())], [_review("accept")], author_model="m", reviewer_model="m")
+    with pytest.raises(SameModelReviewError):
+        await _run(strict)
+
+    lenient = ScriptedCompleter([_draft(_alert())], [_review("accept")], author_model="m", reviewer_model="m")
+    lenient.single_model = True
+    result = await _run(lenient)
+    assert result.status == "published"
+    assert review_mode(result.author_model, result.reviewer_model) == "single_model"
 
 
-def test_clustering_groups_by_disease_and_place_and_splits_on_gaps():
-    rows = [
-        _row("a", date(2026, 3, 1), ["D050"], ["KE"], "low"),
-        _row("b", date(2026, 10, 1), ["D050"], ["KE"], "moderate"),
-        _row("c", date(2026, 10, 20), ["D050"], ["KE"], "high", source="africa_cdc"),
-        _row("d", date(2026, 10, 21), ["D050"], [], None),
-        _row("e", date(2026, 10, 22), ["D050"], ["KE", "UG"], "moderate"),
-    ]
-    events = {e["event_id"]: e for e in cluster_notices(rows, as_of=date(2026, 10, 28))}
-    assert set(events) == {
-        "D050:KE:2026-03-01",
-        "D050:KE:2026-10-01",
-        "D050:*:2026-10-21",
-        "D050:UG:2026-10-22",
-    }
-    recent = events["D050:KE:2026-10-01"]
-    assert recent["notice_ids"] == ["b", "c", "e"]
-    assert recent["risk_level"] == "high"
-    assert recent["source_ids"] == ["africa_cdc", "who_don"]
-    assert recent["status"] == "active"
-    assert events["D050:KE:2026-03-01"]["status"] == "quiet"
-    assert events["D050:*:2026-10-21"]["country_codes"] == []
+async def test_unparseable_replies_in_every_round_raise_so_the_report_is_retried():
+    with pytest.raises(AIOutputError):
+        await _run(ScriptedCompleter(["no json here", '{"alerts": [ {"x": 1'], []))
+
+
+async def test_a_malformed_author_reply_costs_one_round_not_the_report():
+    completer = ScriptedCompleter(["{ truncated", _draft(_alert())], [_review("accept")])
+    result = await _run(completer)
+    assert result.status == "published"
+    assert result.rounds == 2
+    assert any("author" in note for note in result.notes)
+    retry_prompt = json.loads(completer.calls[1][1])
+    assert "not usable" in retry_prompt["peer_review_notes"][0]

@@ -37,7 +37,7 @@ class TaskType(str, PyEnum):
     EXPORT_DATA = "export_data"  # Data export task
     SEND_EMAIL = "send_email"  # Email sending task
     AGENT_WORKFLOW = "agent_workflow"  # General multi-expert agent workflow task
-    SYNC_SITUATION_HISTORY = "sync_situation_history"  # Reconcile the dedicated Situation history store
+    SYNC_SITUATION_HISTORY = "sync_situation_history"  # Retired; kept so historical task rows still load
     REFRESH_SITUATION_SOURCES = "refresh_situation_sources"  # Fetch Situation adapters and recalculate snapshots
     SYNC_LITERATURE = "sync_literature"  # Incremental Research Radar metadata synchronization
     ENRICH_LITERATURE = "enrich_literature"  # Generate review-only literature evidence summaries

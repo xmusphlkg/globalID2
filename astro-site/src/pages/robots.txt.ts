@@ -8,7 +8,6 @@ export const GET: APIRoute = ({ site }) => {
     'User-agent: *',
     'Allow: /',
     '',
-    `Host: ${siteUrl.host}`,
     `Sitemap: ${new URL('/sitemap.xml', siteUrl).toString()}`,
   ].join('\n');
 

@@ -1,5 +1,7 @@
 import asyncio
 import json
+
+import pytest
 from types import SimpleNamespace
 
 from src.domain import TaskStatus, TaskType
@@ -362,3 +364,321 @@ def test_learning_suggestion_exact_match_maps_without_model() -> None:
     assert decision.decision == "map"
     assert decision.confidence == 1.0
     assert decision.payload["target_disease_id"] == "D900"
+
+
+class _ScriptedCompleter:
+    """Offline two-model completer: replies are consumed per role in order."""
+
+    single_model = False
+
+    def __init__(self, author: list[dict], reviewer: list[dict]) -> None:
+        self.replies = {"author": list(author), "reviewer": list(reviewer)}
+        self.calls: list[str] = []
+
+    async def __call__(self, role, system, prompt):
+        from src.ai.peer_review import Completion
+
+        self.calls.append(role)
+        return Completion(text=json.dumps(self.replies[role].pop(0)), model=f"{role}-model")
+
+
+def test_peer_decide_publishes_accepted_decision() -> None:
+    completer = _ScriptedCompleter(
+        author=[{"decision": "publish", "reasons": ["faithful to abstract"]}],
+        reviewer=[{"verdict": "accept", "score": 0.9, "issues": []}],
+    )
+    reviewed = asyncio.run(
+        AIContentGovernanceService()._peer_decide(
+            completer,
+            domain="test",
+            author_system="sys",
+            task={"item": {"id": "1"}},
+            decisions=("publish", "reject"),
+            rules=[],
+        )
+    )
+    assert reviewed.published
+    assert reviewed.payload["decision"] == "publish"
+    assert reviewed.mode == "cross_model"
+    assert completer.calls == ["author", "reviewer"]
+
+
+def test_peer_decide_drops_map_target_outside_catalogue() -> None:
+    completer = _ScriptedCompleter(
+        author=[
+            {"decision": "map", "target_disease_id": "D999", "reasons": ["guess"]},
+            {"decision": "map", "target_disease_id": "D001", "reasons": ["exact meaning"]},
+        ],
+        reviewer=[
+            {"verdict": "accept", "score": 0.8, "issues": []},
+            {"verdict": "accept", "score": 0.9, "issues": []},
+        ],
+    )
+    reviewed = asyncio.run(
+        AIContentGovernanceService()._peer_decide(
+            completer,
+            domain="test",
+            author_system="sys",
+            task={"item": {"id": "1"}},
+            decisions=("map", "new_concept", "unmapped"),
+            rules=[],
+            allowed_targets={"D001"},
+        )
+    )
+    # Round 1 is unusable after the guardrail, so the author gets a second round.
+    assert reviewed.published
+    assert reviewed.payload == {"decision": "map", "reasons": ["exact meaning"], "target_disease_id": "D001"}
+    assert any("not in the catalogue" in note for note in reviewed.notes)
+
+
+def test_peer_decide_reject_is_final_and_not_published() -> None:
+    completer = _ScriptedCompleter(
+        author=[{"decision": "publish", "reasons": ["looks fine"]}],
+        reviewer=[{"verdict": "reject", "score": 0.1, "issues": ["summary invents a case count"]}],
+    )
+    reviewed = asyncio.run(
+        AIContentGovernanceService()._peer_decide(
+            completer,
+            domain="test",
+            author_system="sys",
+            task={"item": {"id": "1"}},
+            decisions=("publish", "reject"),
+            rules=[],
+        )
+    )
+    assert not reviewed.published
+    assert reviewed.status == "rejected"
+
+
+def test_exact_match_learning_suggestion_stores_the_disease_id_string() -> None:
+    from src.domain import DiseaseLearningSuggestion, StandardDisease
+
+    suggestion = DiseaseLearningSuggestion(id=7, country_code="DE", local_name="Measles", occurrence_count=3, status="pending")
+    standard = StandardDisease(
+        disease_id="D021", standard_name_en="Measles", standard_name_zh="麻疹",
+        category="test", source="test", metadata_={}, is_active=True,
+    )
+
+    class Result:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def scalars(self):
+            return self
+
+        def all(self):
+            return self.rows
+
+    class FakeDB:
+        calls = 0
+
+        async def execute(self, _statement):
+            FakeDB.calls += 1
+            return Result([suggestion] if FakeDB.calls == 1 else [standard])
+
+        async def commit(self):
+            return None
+
+    result = asyncio.run(
+        AIContentGovernanceService().review_learning_suggestions(FakeDB(), use_ai=False)
+    )
+
+    assert result["approved"] == 1
+    assert result["applied"][0]["target_disease_id"] == "D021"
+    assert suggestion.final_disease_id == "D021"
+    assert suggestion.status == "approved"
+
+
+def test_review_all_caps_in_flight_calls_and_keeps_failures_in_place() -> None:
+    from src.services import ai_content_governance_service as module
+
+    running = 0
+    peak = 0
+
+    async def decide(_completer, item):
+        nonlocal running, peak
+        running += 1
+        peak = max(peak, running)
+        await asyncio.sleep(0.01)
+        running -= 1
+        if item == 3:
+            raise RuntimeError("model outage")
+        return item
+
+    results = asyncio.run(
+        AIContentGovernanceService()._review_all(list(range(300)), object(), decide)
+    )
+
+    assert peak == module.REVIEW_CONCURRENCY == 192
+    assert results[3].args == ("model outage",)
+    assert [r for i, r in enumerate(results) if i != 3] == [i for i in range(300) if i != 3]
+
+
+def test_route_pool_shifts_work_away_from_failing_route_without_starving_it() -> None:
+    import random
+
+    from src.ai.peer_review_completer import ReviewRoutePool
+
+    pool = ReviewRoutePool({"p:a": 60, "p:b": 60, "p:c": 60}, line="t", max_tokens=100, rng=random.Random(1))
+    for _ in range(50):
+        pool.begin("p:c")
+        pool.finish("p:c", served_by=None)
+        pool.begin("p:a")
+        pool.finish("p:a", served_by="p:a")
+
+    assert pool.failure_rate("p:c") == 1.0
+    assert pool.weight("p:c") < pool.weight("p:a") / 10
+    assert pool.weight("p:c") > 0
+
+    picks = [pool.completer().preferences["author"][0] for _ in range(600)]
+    assert picks.count("p:c") < picks.count("p:a") / 5
+    reviewers = [pool.completer().preferences["reviewer"][0] for _ in range(600)]
+    assert reviewers.count("p:c") < reviewers.count("p:a") / 5
+    assert all(
+        (c := pool.completer()).preferences["author"][0] != c.preferences["reviewer"][0] for _ in range(200)
+    )
+
+
+def test_concurrent_review_calls_share_one_in_flight_cap() -> None:
+    from src.services import ai_content_governance_service as module
+
+    running = 0
+    peak = 0
+
+    async def decide(_completer, item):
+        nonlocal running, peak
+        running += 1
+        peak = max(peak, running)
+        await asyncio.sleep(0.01)
+        running -= 1
+        return item
+
+    async def run():
+        service = AIContentGovernanceService()
+        return await asyncio.gather(
+            *(service._review_all(list(range(150)), object(), decide) for _ in range(4))
+        )
+
+    results = asyncio.run(run())
+
+    assert peak == module.REVIEW_CONCURRENCY
+    assert all(r == list(range(150)) for r in results)
+
+
+def test_stream_review_refills_workers_immediately_and_defers_failures(monkeypatch) -> None:
+    import contextlib
+
+    import src.core as core
+    from src.ai.peer_review import ReviewedOutput
+    from src.services import ai_content_governance_service as module
+
+    service = AIContentGovernanceService()
+    pending = list(range(200))
+    running = 0
+    peak = 0
+    started_while_slow_running = 0
+    slow_running = False
+    written: list[int] = []
+
+    @contextlib.asynccontextmanager
+    async def fake_db():
+        yield object()
+
+    class FakePool:
+        def completer(self, avoid=()):
+            return object()
+
+    async def fake_route_pool(self):
+        return FakePool()
+
+    async def claim(db, kind, limit, claims):
+        taken, rest = pending[:limit], pending[limit:]
+        pending[:] = rest
+        return len(taken), [(i, None, i) for i in taken], 0
+
+    async def decide(model, item):
+        nonlocal running, peak, slow_running, started_while_slow_running
+        running += 1
+        peak = max(peak, running)
+        if slow_running:
+            started_while_slow_running += 1
+        try:
+            if item == 0:
+                slow_running = True
+                await asyncio.sleep(0.3)
+                slow_running = False
+            else:
+                await asyncio.sleep(0.005)
+            if item == 7:
+                raise RuntimeError("model outage")
+            return ReviewedOutput("published", {"decision": "publish"}, "a", "b", "accept", 1, [], 0.9, None)
+        finally:
+            running -= 1
+
+    async def write(db, kind, results):
+        written.extend(key for key, _seen, _reviewed in results)
+        return {"published": len(results), "rejected": 0, "stale": 0}
+
+    monkeypatch.setattr(core, "get_db", fake_db)
+    monkeypatch.setattr(module.ReviewClaims, "route_pool", fake_route_pool)
+    monkeypatch.setattr(service, "_claim_stream_items", claim)
+    monkeypatch.setattr(service, "_decide_article", decide)
+    monkeypatch.setattr(service, "_write_stream_results", write)
+
+    totals = asyncio.run(service.stream_review("articles", workers=8, fetch_size=16, commit_every=10, commit_seconds=0.05))
+
+    assert peak == 8
+    assert totals["claimed"] == 200
+    assert totals["deferred"] == 1 and 7 not in written
+    assert sorted(written) == [i for i in range(200) if i != 7]
+    # While one slow item was still running, the other workers kept pulling new items.
+    assert started_while_slow_running > 20
+
+
+def test_same_model_failure_is_retried_on_other_models_then_gives_up() -> None:
+    from src.ai.peer_review import SameModelReviewError
+    from src.services import ai_content_governance_service as module
+
+    class Pool:
+        def __init__(self):
+            self.avoids = []
+
+        def completer(self, avoid=()):
+            self.avoids.append(set(avoid))
+            return object()
+
+    pool = Pool()
+    calls = 0
+
+    async def decide(_model, item):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise SameModelReviewError("hy3")
+        return item
+
+    assert asyncio.run(module._decide_with_retry(decide, pool, "x")) == "x"
+    assert pool.avoids == [set(), {"hy3"}]
+
+    async def always_same(_model, _item):
+        raise SameModelReviewError("hy4-preview")
+
+    pool = Pool()
+    with pytest.raises(SameModelReviewError):
+        asyncio.run(module._decide_with_retry(always_same, pool, "x"))
+    assert len(pool.avoids) == module.SAME_MODEL_RETRIES + 1
+
+
+def test_route_pool_avoids_collapsed_model_while_two_others_remain() -> None:
+    import random
+
+    from src.ai.peer_review_completer import ReviewRoutePool
+
+    pool = ReviewRoutePool({"p:a": 10, "p:b": 10, "p:c": 10}, line="t", max_tokens=100, rng=random.Random(3))
+    for _ in range(100):
+        c = pool.completer({"a"})
+        assert "p:a" not in (c.preferences["author"][0], c.preferences["reviewer"][0])
+
+    two = ReviewRoutePool({"p:a": 10, "p:b": 10}, line="t", max_tokens=100, rng=random.Random(3))
+    c = two.completer({"a"})
+    assert {c.preferences["author"][0], c.preferences["reviewer"][0]} == {"p:a", "p:b"}

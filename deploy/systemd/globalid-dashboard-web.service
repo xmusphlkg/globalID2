@@ -14,4 +14,6 @@ EnvironmentFile=-__PROJECT_DIR__/.env
 ExecStart=__PROJECT_DIR__/scripts/run_dashboard_web_service.sh
 Restart=always
 RestartSec=5
+# Node exits 143 (128+SIGTERM) on a requested stop; that is not a failure.
+SuccessExitStatus=143
 TimeoutStopSec=20

@@ -1098,6 +1098,19 @@
     overflow: auto;
   }
 
+  .panel-fullscreen:fullscreen.disease-coverage-map,
+  .panel-fullscreen:fullscreen.coverage-map-shell {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+  }
+
+  .panel-fullscreen:fullscreen .disease-coverage-frame,
+  .panel-fullscreen:fullscreen .coverage-map-canvas {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
   .chart-shell-fullscreen {
     height: calc(100vh - 2rem);
     display: flex;

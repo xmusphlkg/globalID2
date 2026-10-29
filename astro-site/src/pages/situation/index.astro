@@ -1,25 +1,18 @@
 ---
 /**
- * Situation Room, built on official notices from international public-health
- * authorities (WHO, ECDC, Africa CDC, PAHO) with peer-reviewed AI enrichment.
- * The page renders only exported data; it disappears into a placeholder when
- * the notice export has not run yet.
+ * Situation map: one point is one disease in one place with recent news, read from
+ * official reports. The map is the main interface; filters, the place list and the
+ * alert timeline are one React island fed by the exported points.
  */
 import ReportLayout from '../../layouts/ReportLayout.astro';
-import SituationDigest from '../../components/SituationDigest.astro';
-import SituationEvents from '../../components/SituationEvents.astro';
-import SituationInternational from '../../components/SituationInternational.astro';
-import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
-import { formatDate } from '../../utils/situation';
-import {
-  digestHeadline,
-  listDigestPeriods,
-  readDigest,
-  readInternationalLatest,
-  readSituationEvents,
-  readWeekNotices,
-} from '../../utils/international';
+import SituationExplorer from '../../components/situation/SituationExplorer';
+import { buildAlternatePaths, toSeoSlug, type SeoDocument } from '../../lib/seo';
+import { countryDiseaseCandidates } from '../../lib/seo-page-data';
+import { formatDay, sourceLabel } from '../../components/situation/labels';
+import { readLocalSnapshot } from '../../utils/internationalSnapshot';
+import { readMonitoring, readSituationMap, readSources } from '../../utils/international';
 import { translateUi } from '../../utils/i18n';
+import type { MapPoint } from '../../utils/situationTypes';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
@@ -27,32 +20,54 @@ const fr = locale === 'fr';
 const prefix = zh ? '/zh' : fr ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 
-const latest = readInternationalLatest();
-const events = readSituationEvents();
-const periods = listDigestPeriods();
-const digest = periods[0] ? readDigest(periods[0]) : null;
-const digestNotices = digest ? readWeekNotices(digest.period_key) : [];
-const activeEvents = events.filter(event => event.status === 'active');
-const published = Boolean(latest && latest.event_count > 0);
+const map = readSituationMap();
+const sources = readSources();
+const monitoring = readMonitoring();
+const published = map !== null;
 
-const title = pick('Global Infectious Disease Situation Room', '全球传染病态势室', 'Salle de situation mondiale des maladies infectieuses');
-const description = digest
-  ? digestHeadline(digest, locale)
-  : pick(
-    'Official outbreak and surveillance notices from WHO, ECDC, Africa CDC and PAHO, mapped to GIDS diseases and countries and summarised by peer-reviewed AI.',
-    '汇集世卫组织、欧洲疾控中心、非洲疾控中心与泛美卫生组织的官方疫情与监测通报，映射到 GIDS 疾病与国家，并由同行评审的 AI 归纳。',
-    'Avis officiels d’épidémie et de surveillance de l’OMS, de l’ECDC, de l’Africa CDC et de l’OPS, rattachés aux maladies et pays GIDS et résumés par une IA relue par un pair.',
-  );
+// Country-disease pages that exist on this site, so the timeline links only to real curves.
+let curvePages = new Set<string>();
+try {
+  curvePages = new Set(countryDiseaseCandidates().map(item => `${item.code}:${toSeoSlug(item.slug)}`));
+} catch {
+  curvePages = new Set();
+}
+const withLocal = (point: MapPoint): MapPoint => {
+  if (!point.disease_id) return point;
+  const snapshot = readLocalSnapshot(point.country_code, point.disease_id);
+  if (!snapshot || snapshot.latestValue == null) return point;
+  const code = point.country_code.toLowerCase();
+  const slug = point.disease_slug ? toSeoSlug(point.disease_slug) : '';
+  return {
+    ...point,
+    local: {
+      value: snapshot.latestValue,
+      date: snapshot.latestDate,
+      countryHref: `${prefix}/countries/${code}/`,
+      curveHref: slug && curvePages.has(`${code}:${slug}`) ? `${prefix}/countries/${code}/diseases/${slug}/` : null,
+    },
+  };
+};
+const points: MapPoint[] = (map?.points ?? []).map(withLocal);
+const activeOutbreaks = (map?.outbreaks ?? []).filter(outbreak => outbreak.status === 'active').length;
+const sourcesOk = sources.filter(source => source.status === 'ok').length;
+
+const title = pick('Global Infectious Disease Situation Map', '全球传染病态势地图', 'Carte mondiale de la situation des maladies infectieuses');
+const description = pick(
+  'Where outbreaks are being reported now: one point per disease and place, read from full WHO, ECDC, Africa CDC and PAHO reports, with the counts, a quoted sentence and a link to each original.',
+  '哪里正在报告疫情：每个点是一种病在一个地方，信息取自世卫组织、欧洲疾控中心、非洲疾控中心和泛美卫生组织的完整报告，附病例数、报告原话和原文链接。',
+  'Où des flambées sont signalées aujourd’hui : un point par maladie et par lieu, lu dans les rapports complets de l’OMS, de l’ECDC, de l’Africa CDC et de l’OPS, avec les chiffres, une phrase citée et le lien vers l’original.',
+);
 const canonicalPath = `${prefix}/situation/`;
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
 const structuredData = published ? [{
   '@type': 'Dataset',
-  '@id': `${new URL(canonicalPath, siteOrigin)}#notices`,
+  '@id': `${new URL(canonicalPath, siteOrigin)}#alerts`,
   name: title,
   description,
-  dateModified: latest?.generated_at ?? undefined,
-  temporalCoverage: latest?.window?.since_date && latest?.window?.as_of ? `${latest.window.since_date}/${latest.window.as_of}` : undefined,
-  isBasedOn: (latest?.sources ?? []).map(source => source.homepage).filter(Boolean),
+  dateModified: map?.generated_at ?? undefined,
+  temporalCoverage: map?.since_date && map?.as_of ? `${map.since_date}/${map.as_of}` : undefined,
+  isBasedOn: sources.map(source => source.homepage).filter(Boolean),
 }] : [];
 const seo: SeoDocument = {
   title: `${title} | GIDS`,
@@ -62,66 +77,90 @@ const seo: SeoDocument = {
   alternatePaths: buildAlternatePaths(canonicalPath, locale),
   noindex: !published,
   pageType: 'Report',
-  datePublished: latest?.generated_at ?? null,
-  dateModified: latest?.generated_at ?? null,
+  datePublished: map?.generated_at ?? null,
+  dateModified: map?.generated_at ?? null,
 };
 ---
 
-<ReportLayout title={title} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: pick('Situation Room', '全球态势室', 'Salle de situation') }]}>
+<ReportLayout title={title} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: pick('Situation map', '态势地图', 'Carte de situation') }]}>
   <div class="situation-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    {published && latest ? <>
+    {published && map ? <>
       <header class="report-hero">
         <div>
-          <p class="eyebrow">{pick('Official international notices', '国际权威机构通报', 'Avis officiels internationaux')}</p>
+          <p class="eyebrow">{pick('Official reports, read in full', '官方报告，逐份通读', 'Rapports officiels, lus en entier')}</p>
           <h1>{title}</h1>
           <p>{pick(
-            'What WHO, ECDC, Africa CDC and PAHO have reported, grouped into events and summarised weekly. Each summary is drafted by one AI pass and audited by an independent review pass before it is published; every point links to the original notice.',
-            '汇总世卫组织、欧洲疾控中心、非洲疾控中心和泛美卫生组织的通报，按事件归并并每周综述。每段摘要先由 AI 起草，再经独立评审通过后发布；每条要点都链接到原始通报。',
-            'Ce que l’OMS, l’ECDC, l’Africa CDC et l’OPS ont signalé, regroupé en événements et résumé chaque semaine. Chaque résumé est rédigé par une IA puis relu indépendamment avant publication ; chaque point renvoie à l’avis d’origine.',
+            'Each point is one disease in one place that an official report mentioned recently. Click it for the alerts reported there, the counts and dates the report states, one sentence from the report and a link to the original. Colour shows how recent the news is, not how severe the event is.',
+            '每个点是官方报告近期提到的某种疾病在某个地点的情况。点开可看到该地的警报、报告写明的病例数和日期、一句报告原话以及原文链接。颜色表示消息新旧，不表示事件严重程度。',
+            'Chaque point est une maladie dans un lieu cité récemment par un rapport officiel. Ouvrez-le pour voir les alertes, les chiffres et dates indiqués, une phrase du rapport et le lien vers l’original. La couleur indique la fraîcheur, pas la gravité.',
           )}</p>
         </div>
         <dl>
-          <div><dt>{pick('Notices', '通报', 'Avis')}</dt><dd>{latest.event_count}</dd></div>
-          <div><dt>{pick('Active events', '活跃事件', 'Événements actifs')}</dt><dd>{activeEvents.length}</dd></div>
-          <div><dt>{pick('Sources', '来源', 'Sources')}</dt><dd>{(latest.sources ?? []).filter(source => source.status === 'ok').length} / {(latest.sources ?? []).length}</dd></div>
-          <div><dt>{pick('Updated', '更新于', 'Mis à jour')}</dt><dd>{formatDate(latest.generated_at, locale)}</dd></div>
+          <div><dt>{pick('Places with news', '有消息的地点', 'Lieux avec des nouvelles')}</dt><dd>{map.point_count}</dd></div>
+          <div><dt>{pick('Active outbreaks', '活跃疫情', 'Flambées actives')}</dt><dd>{activeOutbreaks}</dd></div>
+          <div><dt>{pick('Sources', '来源', 'Sources')}</dt><dd>{sourcesOk} / {sources.length}</dd></div>
+          <div><dt>{pick('Updated', '更新于', 'Mis à jour')}</dt><dd>{formatDay(map.generated_at, locale)}</dd></div>
         </dl>
       </header>
 
       <nav class="period-nav" aria-label={pick('Situation archives', '态势归档', 'Archives de situation')}>
-        <a href={`${prefix}/situation/weekly/`}>{pick('Weekly briefs', '每周综述', 'Synthèses hebdomadaires')}</a>
+        <a href={`${prefix}/situation/weekly/`}>{pick('Weekly changes', '每周变化', 'Changements hebdomadaires')}</a>
         <a href={`${prefix}/situation/monthly/`}>{pick('Monthly archive', '月度归档', 'Archive mensuelle')}</a>
-        <a href={`${prefix}/situation/methodology/`}>{pick('Methodology', '方法说明', 'Méthodologie')}</a>
+        <a href={`${prefix}/situation/methodology/`}>{pick('How this works', '方法说明', 'Méthodologie')}</a>
       </nav>
 
-      {digest && <SituationDigest digest={digest} notices={digestNotices} locale={locale} periodHref={`${prefix}/situation/weekly/${digest.period_key}/`} />}
+      <SituationExplorer client:load locale={locale} asOf={map.as_of} points={points} />
 
-      <SituationEvents events={activeEvents} locale={locale} />
-
-      <SituationInternational latest={latest} locale={locale} limit={30} />
-    </> : <section class="placeholder"><p class="eyebrow">{pick('Not yet published', '尚未发布', 'Pas encore publié')}</p><h1>{pick('No situation data is available yet', '暂无态势数据', 'Aucune donnée de situation n’est encore disponible')}</h1><p>{pick('This page appears once official authority notices have been collected and exported.', '采集并导出官方机构通报后，本页将显示内容。', 'Cette page apparaît une fois les avis officiels collectés et exportés.')}</p><a href={`${prefix}/diseases/`}>{pick('Browse disease datasets', '浏览疾病数据', 'Parcourir les données par maladie')}</a></section>}
+      <details class="monitoring">
+        <summary>{pick('Monitoring products', '监测产品', 'Produits de surveillance')} <small>{monitoring.length}</small></summary>
+        <p>{pick(
+          'Periodic roundups and routine bulletins that reported nothing unusual. They add no point to the map; the originals are listed here.',
+          '定期汇总和常规周报，未报告异常事件，因此不在地图上增加点；原文列在此处。',
+          'Synthèses périodiques et bulletins courants sans événement inhabituel. Ils n’ajoutent aucun point à la carte ; les originaux sont listés ici.',
+        )}</p>
+        {monitoring.length ? (
+          <ul>
+            {monitoring.map(product => (
+              <li>
+                <a href={product.url} target="_blank" rel="noopener noreferrer">{product.title_en}</a>
+                <span>{sourceLabel(product, locale)} · {formatDay(product.published_date, locale)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : <p class="empty">{pick('No monitoring product in this period.', '本期没有监测产品。', 'Aucun produit de surveillance sur cette période.')}</p>}
+      </details>
+    </> : <section class="placeholder"><p class="eyebrow">{pick('Not yet published', '尚未发布', 'Pas encore publié')}</p><h1>{pick('No situation data is available yet', '暂无态势数据', 'Aucune donnée de situation n’est encore disponible')}</h1><p>{pick('This page appears once official reports have been collected, read and exported.', '官方报告采集、解析并导出后，本页将显示内容。', 'Cette page apparaît une fois les rapports officiels collectés, lus et exportés.')}</p><a href={`${prefix}/diseases/`}>{pick('Browse disease datasets', '浏览疾病数据', 'Parcourir les données par maladie')}</a></section>}
   </div>
 </ReportLayout>
 
 <style>
-  .situation-page { display: grid; gap: 1.5rem; padding-bottom: 4rem; padding-top: 2rem; }
-  .report-hero { align-items: end; background: linear-gradient(135deg, rgb(9 37 55), rgb(15 62 72)); border: 1px solid rgb(18 70 83); display: grid; gap: 2rem; grid-template-columns: minmax(0, 1fr) minmax(19rem, .42fr); padding: clamp(1.3rem, 3vw, 2.2rem); position: relative; }
+  .situation-page { display: grid; gap: 1.25rem; padding-bottom: 4rem; padding-top: 2rem; }
+  .report-hero { align-items: end; background: linear-gradient(135deg, rgb(9 37 55), rgb(15 62 72)); border: 1px solid rgb(18 70 83); display: grid; gap: 2rem; grid-template-columns: minmax(0, 1fr) minmax(19rem, .42fr); padding: clamp(1.1rem, 3vw, 1.8rem); position: relative; }
   .report-hero::after { background: rgb(var(--color-accent)); bottom: 0; content: ''; height: 3px; left: 0; position: absolute; width: 9rem; }
   .report-hero > div { max-width: 55rem; }
   .eyebrow { color: rgb(var(--color-teal)); font-size: .67rem; font-weight: 800; letter-spacing: .13em; margin: 0 0 .35rem; text-transform: uppercase; }
-  h1 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.03; margin: 0; }
+  h1 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: clamp(1.8rem, 4.5vw, 2.7rem); line-height: 1.05; margin: 0; }
   .report-hero h1 { color: rgb(241 247 248); }
   .report-hero p { color: rgb(195 216 219); line-height: 1.65; margin: .7rem 0 0; }
   .report-hero dl { display: grid; gap: .6rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
   .report-hero dl div { border-left: 1px solid rgb(91 132 140); padding-left: .7rem; }
   .report-hero dt { color: rgb(158 190 195); font-size: .6rem; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
-  .report-hero dd { color: rgb(238 246 247); font-family: ui-monospace, monospace; font-size: .72rem; margin: .15rem 0 0; }
-  .period-nav { border-bottom: 1px solid rgb(var(--border)); display: flex; flex-wrap: wrap; gap: .5rem; margin-top: -1rem; padding-bottom: 1rem; }
+  .report-hero dd { color: rgb(238 246 247); font-family: ui-monospace, monospace; font-size: .8rem; margin: .15rem 0 0; }
+  .period-nav { display: flex; flex-wrap: wrap; gap: .5rem; }
   .period-nav a { border: 1px solid rgb(var(--border)); color: rgb(var(--color-teal)); font-size: .72rem; font-weight: 750; padding: .42rem .65rem; text-decoration: none; }
   .period-nav a:hover { background: rgb(var(--surface)); }
+  .monitoring { background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); padding: .8rem .9rem; }
+  .monitoring summary { color: rgb(var(--text-strong)); cursor: pointer; font-size: .9rem; font-weight: 700; }
+  .monitoring summary small { color: rgb(var(--text-faint)); font-weight: 500; margin-left: .4rem; }
+  .monitoring p { color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.55; margin: .5rem 0; }
+  .monitoring ul { display: grid; gap: .45rem; list-style: none; margin: 0; padding: 0; }
+  .monitoring li { display: grid; gap: .1rem; font-size: .8rem; }
+  .monitoring li a { color: rgb(var(--color-teal)); font-weight: 650; }
+  .monitoring li span { color: rgb(var(--text-faint)); font-size: .68rem; }
+  .monitoring .empty { color: rgb(var(--text-faint)); }
   .placeholder { background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); margin: 3rem auto; max-width: 48rem; padding: 2rem; text-align: center; }
   .placeholder p { color: rgb(var(--text-muted)); line-height: 1.65; }
   .placeholder a { color: rgb(var(--color-teal)); }
   @media (max-width: 900px) { .report-hero { grid-template-columns: 1fr; } }
-  @media (max-width: 600px) { .situation-page { padding-top: 1rem; } .report-hero { margin-inline: -.5rem; } .report-hero dl { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .situation-page { padding-top: 1rem; } }
 </style>

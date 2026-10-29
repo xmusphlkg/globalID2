@@ -4,6 +4,8 @@
 #
 #    pip-compile --output-file=requirements.txt --strip-extras requirements.in
 #
+aiosqlite==0.22.1
+    # via -r requirements.in
 alembic==1.19.0
     # via -r requirements.in
 annotated-doc==0.0.5

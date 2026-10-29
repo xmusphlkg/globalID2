@@ -31,6 +31,7 @@ import {
   type AIProviderItem,
   type AIRuntimeRoute,
   type ProviderModelDiscoveryResult,
+  type ThinkingMode,
   useAIModels,
   useAIModelCallLogs,
   useAIProviders,
@@ -316,7 +317,16 @@ export default function AIModelsPage() {
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
   const [activeView, setActiveView] = useState<WorkspaceView>("providers");
-  const { data: callLogs, isLoading: loadingCallLogs, error: callLogsError } = useAIModelCallLogs(activeView === "logs");
+  const [callLogProvider, setCallLogProvider] = useState("");
+  const [callLogStatus, setCallLogStatus] = useState("");
+  const [callLogPageNumber, setCallLogPageNumber] = useState(1);
+  const { data: callLogPage, isLoading: loadingCallLogs, error: callLogsError } = useAIModelCallLogs(activeView === "logs", {
+    page: callLogPageNumber,
+    providerKey: callLogProvider,
+    status: callLogStatus,
+  });
+  const callLogs = callLogPage?.items;
+  const callLogTotalPages = Math.max(1, callLogPage?.totalPages ?? 1);
   const [deletingProviderId, setDeletingProviderId] = useState<string | null>(null);
   const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
   const [discoveryResult, setDiscoveryResult] = useState<{ provider: AIProviderItem; result: ProviderModelDiscoveryResult } | null>(null);
@@ -346,6 +356,7 @@ export default function AIModelsPage() {
     temperature: "",
     max_tokens: "",
     runtime_max_concurrency: "",
+    thinking_mode: "default" as ThinkingMode,
     priority: 100,
     is_enabled: true,
     is_default: false,
@@ -375,7 +386,14 @@ export default function AIModelsPage() {
         callAgent: "调用方",
         callLatency: "耗时",
         callError: "错误",
-        callLogPrivacy: "为保护隐私，不保存提示词或模型回复。最多显示最近 100 条调用尝试。",
+        callLogPrivacy: "为保护隐私，不保存提示词或模型回复。每页 50 条调用尝试，可按提供商和结果筛选。",
+        callAllProviders: "全部提供商",
+        callAllResults: "全部结果",
+        callSuccess: "成功",
+        callFailed: "失败",
+        callPrev: "上一页",
+        callNext: "下一页",
+        callPageOf: "第 {page} / {pages} 页，共 {total} 条",
         defaults: "默认模型",
         searchPlaceholder: "搜索 provider、model、base url 或 route key",
         all: "全部",
@@ -434,6 +452,9 @@ export default function AIModelsPage() {
         modelConcurrency: "单模型并发上限",
         setConcurrency: "设置并发",
         modelConcurrencyHint: "留空使用默认值 1；可设置 1–64，实际并发仍受提供商准入和 worker 总上限约束。",
+        thinkingMode: "深度思考",
+        thinkingLabels: { default: "跟随供应商默认", enabled: "开启", disabled: "关闭" } as Record<ThinkingMode, string>,
+        thinkingHint: "通过 extra_body.thinking 发送，健康检查与线上调用使用同一设置。跟随供应商默认时不发送该参数；思考与正文共用 max_tokens，思考模型预算过小会导致正文为空。供应商不支持该参数时请保持默认。",
         modelEnabled: "启用该模型",
         defaultModel: "默认模型",
       }
@@ -460,7 +481,14 @@ export default function AIModelsPage() {
         callAgent: "Caller",
         callLatency: "Latency",
         callError: "Error",
-        callLogPrivacy: "Prompts and model responses are not stored. Showing up to the latest 100 attempts.",
+        callLogPrivacy: "Prompts and model responses are not stored. 50 attempts per page; filter by provider and result.",
+        callAllProviders: "All providers",
+        callAllResults: "All results",
+        callSuccess: "Success",
+        callFailed: "Failed",
+        callPrev: "Previous",
+        callNext: "Next",
+        callPageOf: "Page {page} of {pages}, {total} total",
         defaults: "Default Models",
         searchPlaceholder: "Search provider, model, base url, or route key",
         all: "All",
@@ -519,6 +547,9 @@ export default function AIModelsPage() {
         modelConcurrency: "Model concurrency limit",
         setConcurrency: "Set concurrency",
         modelConcurrencyHint: "Leave blank for the default of 1; set 1–64. Provider admission and the worker total limit still apply.",
+        thinkingMode: "Deep thinking",
+        thinkingLabels: { default: "Provider default", enabled: "On", disabled: "Off" } as Record<ThinkingMode, string>,
+        thinkingHint: "Sent as extra_body.thinking and shared by health probes and production calls. Provider default sends nothing. Reasoning and the answer share max_tokens, so a small budget can leave the answer empty on thinking models. Keep the default if the provider rejects this parameter.",
         modelEnabled: "Model is enabled",
         defaultModel: "Default model",
       };
@@ -643,6 +674,7 @@ export default function AIModelsPage() {
       temperature: "",
       max_tokens: "",
       runtime_max_concurrency: "",
+      thinking_mode: "default",
       priority: 100,
       is_enabled: true,
       is_default: false,
@@ -688,6 +720,7 @@ export default function AIModelsPage() {
       temperature: model.temperature == null ? "" : String(model.temperature),
       max_tokens: model.max_tokens == null ? "" : String(model.max_tokens),
       runtime_max_concurrency: model.runtime_max_concurrency == null ? "" : String(model.runtime_max_concurrency),
+      thinking_mode: model.thinking_mode ?? "default",
       priority: model.priority,
       is_enabled: model.is_enabled,
       is_default: model.is_default,
@@ -744,6 +777,7 @@ export default function AIModelsPage() {
       temperature: modelForm.temperature.trim() === "" ? null : Number(modelForm.temperature),
       max_tokens: modelForm.max_tokens.trim() === "" ? null : Number(modelForm.max_tokens),
       runtime_max_concurrency: modelForm.runtime_max_concurrency.trim() === "" ? null : Number(modelForm.runtime_max_concurrency),
+      thinking_mode: modelForm.thinking_mode,
       priority: Number(modelForm.priority) || 100,
       is_enabled: modelForm.is_enabled,
       is_default: modelForm.is_default,
@@ -1026,6 +1060,9 @@ export default function AIModelsPage() {
             </p>
             <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
               {copy.modelConcurrency}: {model.runtime_max_concurrency ?? 1}
+            </p>
+            <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              {copy.thinkingMode}: {copy.thinkingLabels[model.thinking_mode ?? "default"]}
             </p>
           </div>
         ),
@@ -1452,9 +1489,40 @@ export default function AIModelsPage() {
           <div id="model-center-logs-panel" role="tabpanel" className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.callLogs}</h2>
-              <StatusBadge tone="neutral">{callLogs?.length ?? 0}</StatusBadge>
+              <StatusBadge tone="neutral">{callLogPage?.total ?? 0}</StatusBadge>
             </div>
             <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy.callLogPrivacy}</p>
+            <div className="flex flex-wrap gap-2">
+              <select
+                aria-label={copy.callProvider}
+                className={inputClass}
+                value={callLogProvider}
+                onChange={(event) => {
+                  setCallLogProvider(event.target.value);
+                  setCallLogPageNumber(1);
+                }}
+              >
+                <option value="">{copy.callAllProviders}</option>
+                {(providers ?? []).map((provider) => (
+                  <option key={provider.provider_key} value={provider.provider_key}>
+                    {provider.display_name} ({provider.provider_key})
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label={copy.callStatus}
+                className={inputClass}
+                value={callLogStatus}
+                onChange={(event) => {
+                  setCallLogStatus(event.target.value);
+                  setCallLogPageNumber(1);
+                }}
+              >
+                <option value="">{copy.callAllResults}</option>
+                <option value="success">{copy.callSuccess}</option>
+                <option value="failed">{copy.callFailed}</option>
+              </select>
+            </div>
             {loadingCallLogs ? (
               <SkeletonRows />
             ) : callLogsError ? (
@@ -1487,6 +1555,24 @@ export default function AIModelsPage() {
             ) : (
               <EmptyState icon={<History className="h-10 w-10" />} title={copy.noCallLogs} />
             )}
+            {callLogPage ? (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  {copy.callPageOf
+                    .replace("{page}", String(callLogPageNumber))
+                    .replace("{pages}", String(callLogTotalPages))
+                    .replace("{total}", String(callLogPage.total))}
+                </p>
+                <div className="flex gap-2">
+                  <ActionButton disabled={callLogPageNumber <= 1} onClick={() => setCallLogPageNumber((page) => Math.max(1, page - 1))}>
+                    {copy.callPrev}
+                  </ActionButton>
+                  <ActionButton disabled={callLogPageNumber >= callLogTotalPages} onClick={() => setCallLogPageNumber((page) => Math.min(callLogTotalPages, page + 1))}>
+                    {copy.callNext}
+                  </ActionButton>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </section>
@@ -1587,10 +1673,18 @@ export default function AIModelsPage() {
                 <input type="number" className={inputClass} value={modelForm.max_tokens} onChange={(event) => setModelForm((prev) => ({ ...prev, max_tokens: event.target.value }))} />
               </Field>
               <Field label={copy.modelConcurrency}>
-                <input type="number" min={1} max={64} step={1} className={inputClass} value={modelForm.runtime_max_concurrency} placeholder="1" onChange={(event) => setModelForm((prev) => ({ ...prev, runtime_max_concurrency: event.target.value }))} />
+                <input type="number" min={1} max={512} step={1} className={inputClass} value={modelForm.runtime_max_concurrency} placeholder="1" onChange={(event) => setModelForm((prev) => ({ ...prev, runtime_max_concurrency: event.target.value }))} />
+              </Field>
+              <Field label={copy.thinkingMode}>
+                <select className={inputClass} value={modelForm.thinking_mode} onChange={(event) => setModelForm((prev) => ({ ...prev, thinking_mode: event.target.value as ThinkingMode }))}>
+                  {(Object.keys(copy.thinkingLabels) as ThinkingMode[]).map((mode) => (
+                    <option key={mode} value={mode}>{copy.thinkingLabels[mode]}</option>
+                  ))}
+                </select>
               </Field>
             </div>
             <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy.modelConcurrencyHint}</p>
+            <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy.thinkingHint}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong">
                 <input type="checkbox" checked={modelForm.is_enabled} onChange={(event) => setModelForm((prev) => ({ ...prev, is_enabled: event.target.checked }))} />

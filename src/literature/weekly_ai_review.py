@@ -48,7 +48,11 @@ AI_REVIEW_ISSUE_CODES = frozenset({
     "missing_french_gap",
     "french_mismatch",
     "content_too_large",
+    "peer_review_unresolved",
 })
+# Recorded by the runner when the two-model review rejects a brief; never offered to the models.
+_RUNNER_ONLY_CODES = frozenset({"peer_review_unresolved"})
+MODEL_ISSUE_CODES = AI_REVIEW_ISSUE_CODES - _RUNNER_ONLY_CODES
 _ALLOWED_RELATIONS = {
     "exact_disease_geography", "disease_context", "historical_context", "context", "candidate",
 }
@@ -56,6 +60,10 @@ _ALLOWED_RELATIONS = {
 
 class WeeklyAIReviewError(RuntimeError):
     """Stable error safe to include in task output."""
+
+
+class WeeklyAIReviewRejected(WeeklyAIReviewError):
+    """The peer review ran and did not accept a verdict: a judgement, not an outage."""
 
 
 class WeeklyBriefReviewAgent(BaseAgent):
@@ -378,56 +386,107 @@ def write_weekly_ai_review(
                 Path(temporary).unlink(missing_ok=True)
 
 
+WEEKLY_REVIEW_SYSTEM = (
+    f"Protocol {AI_REVIEW_PROTOCOL_VERSION}. Review only the supplied public JSON packet. "
+    "Do not use outside knowledge, browsing, retrieval, memory, hidden context, or unstated facts. "
+    "Check whether claims stay within cited findings, monitoring links are disclosed as non-causal, "
+    "gaps describe catalogue coverage only, and all supplied language meanings align. Return JSON only with "
+    "exact keys verdict and issue_codes. An empty evidence_gaps array is valid; missing_bilingual_gap "
+    "applies only when a present gap row lacks English or Chinese text. Never return reasoning."
+)
+
+
+def sanitize_weekly_verdict(draft: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Guardrail for both peer-review roles: allowlisted codes, consistent verdict."""
+
+    notes: list[str] = []
+    verdict = draft.get("verdict") if draft.get("verdict") in {"pass", "needs_editorial_review"} else None
+    if verdict is None:
+        notes.append(f"guardrail: invalid verdict {str(draft.get('verdict'))[:40]}")
+    raw_codes = draft.get("issue_codes") if isinstance(draft.get("issue_codes"), list) else []
+    codes: list[str] = []
+    for code in raw_codes[:_MAX_ISSUES]:
+        if isinstance(code, str) and code in MODEL_ISSUE_CODES and code not in codes:
+            codes.append(code)
+        else:
+            notes.append(f"guardrail: dropped unknown issue code {str(code)[:40]}")
+    if (verdict == "pass" and codes) or (verdict == "needs_editorial_review" and not codes):
+        notes.append("guardrail: verdict and issue_codes are inconsistent")
+        verdict = None
+    return {"verdict": verdict, "issue_codes": codes}, notes
+
+
 class WeeklyAIReviewRunner:
-    def __init__(self, agent: WeeklyBriefReviewAgent | None = None) -> None:
-        self.agent = agent
+    """Shared two-model peer review (:mod:`src.ai.peer_review`) of one public brief."""
+
+    def __init__(self, completer: Any | None = None) -> None:
+        self.completer = completer
 
     async def review(
         self, brief: dict[str, Any], *, preferred_models: list[str] | None = None,
-        timeout_seconds: int = 60, max_attempts: int = 2,
+        timeout_seconds: int = 120, max_attempts: int = 2,
     ) -> dict[str, Any]:
+        from src.ai.peer_review import build_author_prompt, build_reviewer_prompt, peer_review, reviewer_system
+
         packet = public_review_packet(brief)
         deterministic = deterministic_review_issues(packet)
         if deterministic:
-            return {"verdict": "needs_editorial_review", "issue_codes": deterministic, "model": None, "provider": None}
-        agent = self.agent or WeeklyBriefReviewAgent()
-        system = (
-            f"Protocol {AI_REVIEW_PROTOCOL_VERSION}. Review only the supplied public JSON packet. "
-            "Do not use outside knowledge, browsing, retrieval, memory, hidden context, or unstated facts. "
-            "Check whether claims stay within cited findings, monitoring links are disclosed as non-causal, "
-            "gaps describe catalogue coverage only, and all supplied language meanings align. Return JSON only with "
-            "exact keys verdict and issue_codes. An empty evidence_gaps array is valid; missing_bilingual_gap "
-            "applies only when a present gap row lacks English or Chinese text. Never return reasoning."
-        )
-        prompt = json.dumps({
+            return {
+                "verdict": "needs_editorial_review", "issue_codes": deterministic,
+                "model": None, "provider": None, "review_mode": None,
+            }
+        task = {
             "task": "Bounded public weekly-brief quality review",
-            "allowed_issue_codes": sorted(AI_REVIEW_ISSUE_CODES),
-            "output_schema": {"verdict": "pass|needs_editorial_review", "issue_codes": "allowlisted string[]"},
+            "allowed_issue_codes": sorted(MODEL_ISSUE_CODES),
             "packet": packet,
-        }, ensure_ascii=False, separators=(",", ":"))
-        attempts = max(1, min(int(max_attempts), 2))
-        per_attempt_timeout = max(1, int(timeout_seconds) // attempts)
+        }
         last_error: Exception | None = None
         try:
             async with asyncio.timeout(timeout_seconds):
-                for _ in range(attempts):
+                for _ in range(max(1, min(int(max_attempts), 2))):
                     try:
-                        response = await agent.process(
-                            prompt=prompt,
-                            system=system,
-                            preferred_models=preferred_models or [],
-                            timeout_seconds=per_attempt_timeout,
+                        if self.completer is None:
+                            from src.ai.peer_review_completer import ModelCenterCompleter
+
+                            self.completer = await ModelCenterCompleter.from_model_center(
+                                line="research_weekly_brief", max_tokens=600
+                            )
+                        reviewed = await peer_review(
+                            self.completer,
+                            author_system=WEEKLY_REVIEW_SYSTEM,
+                            reviewer_system=reviewer_system("public infectious-disease research weekly briefs"),
+                            author_prompt=lambda notes, previous: build_author_prompt(
+                                prompt_version=AI_REVIEW_PROTOCOL_VERSION,
+                                task=task,
+                                required_output={
+                                    "verdict": "pass|needs_editorial_review",
+                                    "issue_codes": "allowlisted string[]",
+                                },
+                                rules=["pass requires an empty issue_codes list; any problem needs at least one code."],
+                                reviewer_notes=notes,
+                                previous_draft=previous,
+                            ),
+                            reviewer_prompt=lambda draft: build_reviewer_prompt(
+                                prompt_version=AI_REVIEW_PROTOCOL_VERSION,
+                                task=task,
+                                draft=draft,
+                                rules=["Audit the verdict: a pass that misses a real issue, or a code the packet does not support, needs revise."],
+                            ),
+                            sanitize=sanitize_weekly_verdict,
+                            usable=lambda draft: draft.get("verdict") is not None,
                         )
-                        result = parse_ai_review_response(str(response.get("raw_response") or ""))
-                        conversation = agent.get_latest_conversation() or {}
-                        model = _text(conversation.get("model") or getattr(agent, "model", None), 160)
-                        provider = _text(conversation.get("provider") or getattr(agent, "provider", None), 80)
-                        if not model or not provider:
-                            raise WeeklyAIReviewError("ai_review_model_identity_missing")
+                        if not reviewed.published:
+                            raise WeeklyAIReviewRejected("ai_review_peer_review_rejected")
                         # Public artifacts disclose that Model Center performed
                         # the check without exposing internal route/provider ids.
-                        result.update({"model": "configured-review-model", "provider": "model-center"})
-                        return result
+                        return {
+                            **reviewed.payload,
+                            "model": "configured-review-model",
+                            "provider": "model-center",
+                            "review_mode": reviewed.mode,
+                        }
+                    except WeeklyAIReviewRejected:
+                        raise
                     except Exception as exc:  # bounded retry, then fail closed
                         last_error = exc
         except TimeoutError as exc:
@@ -451,9 +510,7 @@ async def review_weekly_brief_files(
 ) -> dict[str, Any]:
     """Review generated public brief files with bounded, idempotent writes."""
     # Local import avoids coupling the fingerprint/projector to model clients.
-    from .weekly_briefs import (
-        load_weekly_review_registry, project_weekly_editorial_review, weekly_brief_review_fingerprint,
-    )
+    from .weekly_briefs import weekly_brief_review_fingerprint
 
     selected = [week for week in (weeks or []) if _WEEK.fullmatch(str(week))]
     if not selected:
@@ -465,7 +522,7 @@ async def review_weekly_brief_files(
         except OSError as exc:
             raise WeeklyAIReviewError("weekly_brief_directory_unreadable") from exc
     existing = load_weekly_ai_review_registry(registry_path)
-    human = load_weekly_review_registry(human_registry_path) if human_registry_path else load_weekly_review_registry()
+    del human_registry_path  # kept for callers; human reviews no longer take precedence
     reviewer = runner or WeeklyAIReviewRunner()
     counts = {"selected": len(selected), "ai_reviewed": 0, "needs_editorial_review": 0, "skipped": 0, "failed": 0}
     outcomes: list[dict[str, Any]] = []
@@ -476,15 +533,8 @@ async def review_weekly_brief_files(
             if not isinstance(value, dict) or value.get("week") != week:
                 raise WeeklyAIReviewError("weekly_brief_invalid")
             fingerprint = weekly_brief_review_fingerprint(value)
-            human_row = human.get(week)
-            if (
-                isinstance(human_row, dict)
-                and human_row.get("brief_fingerprint") == fingerprint
-                and project_weekly_editorial_review(human_row.get("review")) is not None
-            ):
-                counts["skipped"] += 1
-                outcomes.append({"week": week, "status": "skipped", "reason": "human_review_precedence"})
-                continue
+            # Every brief goes through the shared peer review; a human registry
+            # entry no longer replaces it.
             existing_row = existing.get(week)
             if isinstance(existing_row, dict) and existing_row.get("brief_fingerprint") == fingerprint:
                 existing_review = existing_row.get("review")
@@ -507,9 +557,17 @@ async def review_weekly_brief_files(
                         ),
                     })
                     continue
-            verdict = await reviewer.review(
-                value, preferred_models=preferred_models, timeout_seconds=timeout_seconds, max_attempts=max_attempts,
-            )
+            try:
+                verdict = await reviewer.review(
+                    value, preferred_models=preferred_models, timeout_seconds=timeout_seconds, max_attempts=max_attempts,
+                )
+            except WeeklyAIReviewRejected:
+                # Held, not failed: saving it lets the recheck window throttle
+                # retries instead of re-running the review on every pass.
+                verdict = {
+                    "verdict": "needs_editorial_review", "issue_codes": ["peer_review_unresolved"],
+                    "model": "configured-review-model", "provider": "model-center", "review_mode": None,
+                }
             reviewed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
             record = {
                 "week": week,
@@ -521,6 +579,7 @@ async def review_weekly_brief_files(
                     "protocol_version": AI_REVIEW_PROTOCOL_VERSION,
                     "model": verdict.get("model"),
                     "provider": verdict.get("provider"),
+                    "review_mode": verdict.get("review_mode"),
                 },
             }
             if apply:
@@ -539,7 +598,7 @@ async def review_weekly_brief_files(
 
 __all__ = [
     "AI_REVIEW_ISSUE_CODES", "AI_REVIEW_PROTOCOL_VERSION", "WEEKLY_AI_REVIEW_REGISTRY_PATH",
-    "WeeklyAIReviewError", "WeeklyAIReviewRunner", "bound_weekly_ai_review",
+    "WeeklyAIReviewError", "WeeklyAIReviewRejected", "WeeklyAIReviewRunner", "bound_weekly_ai_review",
     "deterministic_review_issues", "load_weekly_ai_review_registry", "parse_ai_review_response",
     "project_weekly_ai_review", "public_review_packet", "write_weekly_ai_review",
     "review_weekly_brief_files",

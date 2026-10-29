@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import ReportLayout from '../../../layouts/ReportLayout.astro';
 import researchRoutes from '../../../data/research/routes.json';
 import { integrityAlertLabel, normalizeIntegrityAlerts } from '../../../lib/research-integrity';
-import { buildAlternatePaths, clampSeoDescription, clampSeoTitle } from '../../../lib/seo';
+import { buildAlternatePaths, clampSeoDescription, clampSeoTitle, normalizeDiseaseHref } from '../../../lib/seo';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../../utils/diseaseNames';
 import { localizedRegionName, translateUi } from '../../../utils/i18n';
 
@@ -295,8 +295,8 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
             </div>}
             <div class="surveillance-links">
               {relatedSurveillance.length > 0
-                ? relatedSurveillance.map((link: any) => <a href={localeHref(link.url)}><span>{pick(`${link.disease_name_en} · ${link.country_name_en}`, `${link.disease_name_zh ?? link.disease_name_en} · ${link.country_name_zh ?? link.country_name_en}`, `${diseaseNameFr(link)} · ${countryNameFr(link)}`)}</span><small>{pick('High-confidence geography · GIDS series available', '高置信度地理关联 · GIDS 有监测序列')}</small><i>→</i></a>)
-                : article.diseases.map((disease: any) => <a href={localeHref(`/diseases/${disease.slug}/`)}><span>{pick(disease.name_en, disease.name_zh ?? disease.name_en, diseaseNameFr(disease))}</span><small>{pick('View available GIDS surveillance', '查看可用的 GIDS 监测')}</small><i>→</i></a>)}
+                ? relatedSurveillance.map((link: any) => <a href={localeHref(normalizeDiseaseHref(link.url))}><span>{pick(`${link.disease_name_en} · ${link.country_name_en}`, `${link.disease_name_zh ?? link.disease_name_en} · ${link.country_name_zh ?? link.country_name_en}`, `${diseaseNameFr(link)} · ${countryNameFr(link)}`)}</span><small>{pick('High-confidence geography · GIDS series available', '高置信度地理关联 · GIDS 有监测序列')}</small><i>→</i></a>)
+                : article.diseases.map((disease: any) => <a href={localeHref(normalizeDiseaseHref(`/diseases/${disease.slug}/`))}><span>{pick(disease.name_en, disease.name_zh ?? disease.name_en, diseaseNameFr(disease))}</span><small>{pick('View available GIDS surveillance', '查看可用的 GIDS 监测')}</small><i>→</i></a>)}
             </div>
             <p class="evidence-disclaimer">{pick('Literature context does not validate, explain, or change a surveillance signal. Exact and contextual relationships are shown separately.', '文献背景不会验证、解释或改变监测信号；精确关系与背景关系会分开展示。')}</p>
           </section>

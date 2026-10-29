@@ -99,11 +99,11 @@
     },
     {
       "week": "2026-W42",
-      "brief_fingerprint": "b9acc0f3a51c871a4275144445a7b30611ab9b1787e6e46009a707a9f477b39d",
+      "brief_fingerprint": "427729ad007c6f4b45faf9df16cfa7fb76918b292a51cebd369ebf08f89a4e5b",
       "review": {
         "verdict": "pass",
         "issue_codes": [],
-        "reviewed_at": "2026-10-24T02:08:08+00:00",
+        "reviewed_at": "2026-10-21T01:32:56+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center"
@@ -111,26 +111,30 @@
     },
     {
       "week": "2026-W43",
-      "brief_fingerprint": "26f7eff0404d472b6889c39c280c8966725edc3be88493d42850856c0d19aace",
+      "brief_fingerprint": "5918761131805585359952ab74dc6b156e2f8de0be6185acc00be35d4662307f",
       "review": {
-        "verdict": "pass",
-        "issue_codes": [],
-        "reviewed_at": "2026-10-25T17:48:52+00:00",
+        "verdict": "needs_editorial_review",
+        "issue_codes": [
+          "peer_review_unresolved"
+        ],
+        "reviewed_at": "2026-10-29T14:36:28+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
-        "provider": "model-center"
+        "provider": "model-center",
+        "review_mode": null
       }
     },
     {
       "week": "2026-W44",
-      "brief_fingerprint": "db229244a3da723fae81c65567d567da6e11abca5fb7badecd27d79099aff6be",
+      "brief_fingerprint": "c797f92d69951ac20051bd89c911b133a704c04121e508c1d95eb17ee7ce70bc",
       "review": {
         "verdict": "pass",
         "issue_codes": [],
-        "reviewed_at": "2026-10-26T05:03:58+00:00",
+        "reviewed_at": "2026-10-29T11:48:04+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
-        "provider": "model-center"
+        "provider": "model-center",
+        "review_mode": "cross_model"
       }
     }
   ]

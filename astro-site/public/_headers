@@ -24,18 +24,31 @@
 /data/*
   Cache-Control: public, max-age=86400
 
-# Static assets
+# Static assets with stable names: cache for a week and refresh in the
+# background so a changed file reaches visitors without blocking a request.
 /logo-mark-128.png
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
 
-/scripts/analytics.js
-  Cache-Control: public, max-age=86400
+/logo.png
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/logo-1-256.webp
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/logo-2-256.webp
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/scripts/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /og-default.png
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
 
-# Security headers applied globally
+# Security headers applied globally. HSTS starts at one week without
+# includeSubDomains or preload because subscriptions.* is a separate service;
+# raise max-age once the rollout is confirmed.
 /*
+  Strict-Transport-Security: max-age=604800
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

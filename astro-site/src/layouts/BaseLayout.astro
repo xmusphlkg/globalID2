@@ -41,7 +41,7 @@ const pageTitle = seo?.title ?? (title === 'GIDS' ? title : `${title} | GIDS`);
 const pageDescription = seo?.description ?? description;
 const metaDescription = clampSeoDescription(pageDescription);
 const pageImage = seo?.image ?? image;
-const pageImageAlt = seo?.imageAlt ?? `${pageTitle} — GIDS`;
+const pageImageAlt = seo?.imageAlt ?? pageTitle;
 const shouldNoindex = seo?.noindex ?? noindex;
 const robotsContent = shouldNoindex
   ? 'noindex,nofollow'
@@ -84,7 +84,10 @@ const siteStructuredData: JsonLdNode[] = isLocalizedHomePage ? [
     name: 'Global Infectious Disease Surveillance',
     alternateName: 'GIDS',
     url: siteOrigin,
-    logo: new URL('/logo.png', siteOrigin).toString(),
+    logo: {
+      '@type': 'ImageObject',
+      url: new URL('/logo.png', siteOrigin).toString(),
+    },
     sameAs: ['https://github.com/xmusphlkg/globalID2'],
     publishingPrinciples: new URL('/about/#editorial-responsibility', siteOrigin).toString(),
   },

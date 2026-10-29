@@ -83,6 +83,7 @@ def normalize_wer_item(item: dict[str, Any]) -> dict[str, Any] | None:
         countries=countries,
         record_type="surveillance_update",
         keep_summary=False,
+        document_ref={"kind": "pdf_page", "page_url": url},
     )
 
 
@@ -222,6 +223,7 @@ def _normalize_wpro(soup: BeautifulSoup) -> list[dict[str, Any]]:
                 countries=countries,
                 record_type="surveillance_update",
                 keep_summary=False,
+                document_ref={"kind": "pdf_page", "page_url": url},
             )
         )
     events.sort(key=lambda row: row["published_date"] or "", reverse=True)

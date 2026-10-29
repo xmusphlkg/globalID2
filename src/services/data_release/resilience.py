@@ -17,13 +17,12 @@ AUTOMATIC_RELEASE_TRIGGERS = frozenset({"scheduled", "upstream_completion"})
 
 _EXTERNAL_RETRY_STAGES = frozenset(
     {
-        "refresh_situation_room",
+        "refresh_situation_notices",
         "raw_git_archive_publish",
         "github_direct_download_publish",
         "subscription_options_sync",
         "cloudflare_pages_deploy",
         "cloudflare_production_verification",
-        "situation_alert_dispatch",
     }
 )
 

@@ -19,7 +19,7 @@ from typing import Any, Mapping, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SITE_DIR = ROOT / "astro-site"
-SITUATION_FIXTURE = ROOT / "tests" / "fixtures" / "situation" / "public_report_v3.json"
+INTERNATIONAL_SCHEMA = "gids.international_authority_events.v1"
 
 
 class FixturePreparationError(RuntimeError):
@@ -38,7 +38,65 @@ def _write_missing(path: Path, payload: Any) -> bool:
     return True
 
 
-def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
+def situation_fixture_payloads() -> dict[str, Any]:
+    """A one-notice notice-based Situation export for clean-checkout builds."""
+
+    notice = {
+        "event_id": "who_don:ci-fixture-1",
+        "source_id": "who_don",
+        "native_id": "ci-fixture-1",
+        "record_type": "outbreak_notice",
+        "title_en": "Influenza - CI fixture",
+        "title_zh": "流感 - CI 测试",
+        "title_fr": "Grippe - données de test CI",
+        "summary_en": "Deterministic CI fixture notice.",
+        "summary_zh": "确定性的 CI 测试通报。",
+        "summary_fr": "Avis de test CI déterministe.",
+        "url": "https://www.who.int/emergencies/disease-outbreak-news/item/ci-fixture-1",
+        "source_label_en": "WHO Disease Outbreak News",
+        "source_label_zh": "世卫组织疾病暴发新闻",
+        "agency_en": "World Health Organization",
+        "agency_zh": "世界卫生组织",
+        "language": "en",
+        "published_date": "2000-01-03",
+        "updated_at_source": "2000-01-03",
+        "iso_year": 2000,
+        "iso_week": 1,
+        "iso_week_key": "2000-W01",
+        "diseases": [{"disease_id": "D038", "name_en": "Influenza", "name_zh": "流感", "slug": "influenza"}],
+        "countries": [{"code": "CN", "name_en": "China", "name_zh": "中国"}],
+        "retrieved_at": "2000-01-03T00:00:00+00:00",
+        "fingerprint": "ci-fixture",
+        "event_type": "outbreak_update",
+        "risk_level": "low",
+        "risk_rationale": "Deterministic CI fixture.",
+        "ai": None,
+    }
+    base = "src/data/situation/international"
+    latest = {
+        "schema_version": INTERNATIONAL_SCHEMA,
+        "generated_at": "2000-01-03T00:00:00+00:00",
+        "window": {"since_days": 120, "since_date": "1999-09-05", "as_of": "2000-01-03"},
+        "event_count": 1,
+        "recent_event_count": 1,
+        "recent": [notice],
+        "iso_weeks": [{"iso_week_key": "2000-W01", "iso_year": 2000, "iso_week": 1, "event_count": 1}],
+        "diseases": [{"disease_id": "D038", "name_en": "Influenza", "name_zh": "流感", "event_count": 1}],
+        "countries": [{"code": "CN", "name_en": "China", "name_zh": "中国", "event_count": 1}],
+        "sources": [],
+    }
+    shard = {"schema_version": INTERNATIONAL_SCHEMA, "event_count": 1, "events": [notice]}
+    return {
+        f"{base}/latest.json": latest,
+        f"{base}/archive/2000.json": {**shard, "year": 2000},
+        f"{base}/by-disease/D038.json": {**shard, "disease": notice["diseases"][0]},
+        f"{base}/by-country/CN.json": {**shard, "country": notice["countries"][0]},
+        f"{base}/events.json": {"schema_version": INTERNATIONAL_SCHEMA, "as_of": "2000-01-03", "events": []},
+        f"{base}/digests/index.json": {"schema_version": INTERNATIONAL_SCHEMA, "periods": []},
+    }
+
+
+def fixture_payloads() -> dict[str, Any]:
     sample_article = {
         "article_id": "ci-research-review-1",
         "slug": "ci-research-review",
@@ -447,11 +505,8 @@ def fixture_payloads(situation: Mapping[str, Any]) -> dict[str, Any]:
                 }
             },
         },
-        "src/data/situation/v3/latest.json": dict(situation),
-        "src/data/situation/latest.json": dict(situation),
-        "public/site-data/situation/v3/latest.json": dict(situation),
-        "public/site-data/situation/latest.json": dict(situation),
     }
+    payloads.update(situation_fixture_payloads())
     for disease_id, slug, name, name_fr in fixture_diseases:
         payloads[f"src/data/diseases/{disease_id.lower()}.json"] = {
             "disease_id": disease_id,
@@ -488,15 +543,9 @@ def prepare_fixture(
     site_dir = site_dir.resolve()
     if not (site_dir / "package.json").is_file():
         raise FixturePreparationError("astro_site_directory_required")
-    try:
-        situation = json.loads(SITUATION_FIXTURE.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise FixturePreparationError("situation_fixture_unreadable") from exc
-    if not isinstance(situation, dict):
-        raise FixturePreparationError("situation_fixture_object_required")
     created: list[str] = []
     preserved: list[str] = []
-    for relative, payload in fixture_payloads(situation).items():
+    for relative, payload in fixture_payloads().items():
         if _write_missing(site_dir / relative, payload):
             created.append(relative)
         else:

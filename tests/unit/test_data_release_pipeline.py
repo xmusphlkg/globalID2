@@ -160,7 +160,7 @@ async def test_pipeline_local_only_success_preserves_stage_order():
         def _generate_site_data_command(self, **_kwargs):
             return ["generate"]
 
-        def _update_situation_room_command(self, **_kwargs):
+        def _update_situation_notices_command(self, **_kwargs):
             return ["update-situation-room"]
 
         def _validate_situation_release_command(self, **_kwargs):
@@ -301,7 +301,7 @@ async def test_pipeline_passes_local_gates_before_remote_publication():
         def _generate_site_data_command(self, **_kwargs):
             return ["generate"]
 
-        def _update_situation_room_command(self, **_kwargs):
+        def _update_situation_notices_command(self, **_kwargs):
             return ["update"]
 
         def _validate_situation_release_command(self, **_kwargs):
@@ -484,7 +484,7 @@ async def test_retry_reuses_completed_cloudflare_deploy_and_only_verifies():
         def _generate_site_data_command(self, **_kwargs):
             return ["generate"]
 
-        def _update_situation_room_command(self, **_kwargs):
+        def _update_situation_notices_command(self, **_kwargs):
             return ["update"]
 
         def _validate_situation_release_command(self, **_kwargs):
@@ -537,11 +537,11 @@ async def test_retry_reuses_completed_cloudflare_deploy_and_only_verifies():
     # longer dispatched by releases.
     assert "Dispatch Reviewed Situation Alerts" not in commands
     assert output["pages_deployed"] is True
-    assert output["situation_alert_dispatch_attempted"] is False
+    assert "situation_alert_dispatch_attempted" not in output
     completion = next(
         entry for entry in entries if entry["title"] == "Data Release Completed"
     )
-    assert "Reviewed Situation alert dispatch attempted: no" in completion["content"]
+    assert "Situation alert dispatch" not in completion["content"]
     assert "Reviewed Situation alerts dispatched:" not in completion["content"]
     assert any(entry["title"] == "Cloudflare Deploy Reused" for entry in entries)
 

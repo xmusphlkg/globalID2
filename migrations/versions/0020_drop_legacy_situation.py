@@ -45,4 +45,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    raise RuntimeError("0020_drop_legacy_situation is irreversible; restore from a database backup instead")
+    # Dropped data cannot be recreated and no code reads these tables, so the
+    # downgrade only moves the revision pointer. Restore a database backup to
+    # recover the legacy rows. ``upgrade`` skips absent tables, so a
+    # downgrade/upgrade round trip stays safe.
+    return None

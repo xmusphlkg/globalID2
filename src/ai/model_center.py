@@ -38,6 +38,7 @@ _MODEL_FAILURE_STREAK_DECAY_INTERVAL = timedelta(minutes=30)
 _MODEL_RECOVERY_PROBE_INTERVAL_SECONDS = 300
 _DEFAULT_PROVIDER_ADMISSION_MAX_CONCURRENCY = 2
 _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY = 1
+_MODEL_CONCURRENCY_CEILING = 512
 _MODEL_TEST_MARKER = "globalid-model-test-ok"
 _PROVIDER_AUTHENTICATION_FAILURE_MESSAGE = (
     "Provider credentials were rejected. Update the credentials and run a provider "
@@ -593,6 +594,7 @@ def _runtime_admission_settings(route: Dict[str, Any]) -> Dict[str, Any]:
     model_maximum = _positive_int(
         model_params.get("runtime_max_concurrency"),
         _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY,
+        maximum=_MODEL_CONCURRENCY_CEILING,
     )
     model_minimum = min(
         model_maximum,
@@ -1489,6 +1491,7 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
             model_capacity = _positive_int(
                 model_params.get("runtime_max_concurrency"),
                 _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY,
+                maximum=_MODEL_CONCURRENCY_CEILING,
             )
             provider_auto_maxima[provider_id] = (
                 provider_auto_maxima.get(provider_id, 0) + model_capacity
@@ -1579,29 +1582,76 @@ def _test_max_tokens(route: Dict[str, Any]) -> int:
     return max(64, min(value, 1600))
 
 
-def route_completion_extra_body(route: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Use the same provider-specific request options for probes and workloads."""
+def _probe_max_tokens(route: Dict[str, Any], *, structured: bool) -> int:
+    """Completion budget for a health probe.
+
+    ``health_check_max_tokens`` lets reasoning models reserve room for thinking
+    without raising the production ``max_tokens``. Without it, probes keep the
+    conservative budget derived from the model's own ``max_tokens``.
+    """
     model_params = route.get("extra_params")
     model_params = model_params if isinstance(model_params, dict) else {}
-    configured = model_params.get("extra_body")
-    if isinstance(configured, dict):
-        return dict(configured)
+    configured = model_params.get("health_check_max_tokens")
+    if configured not in (None, ""):
+        try:
+            return max(64, min(int(configured), 8192))
+        except (TypeError, ValueError):
+            pass
+    base = _test_max_tokens(route)
+    return max(768, min(base, 1200)) if structured else base
 
-    # Tencent Hy3 and Hy4 enable deep thinking by default. Reasoning and final
-    # content share max_tokens, so routine workloads can exhaust their budget
-    # before an answer appears. Explicit model settings override this default.
-    provider_key = str(route.get("provider_key") or "").lower()
-    base_url = str(route.get("base_url") or "").lower()
-    if (
-        provider_key in {"tencent", "tencent_plan"}
-        and str(route.get("model_name") or "").lower() in {"hy3", "hy4-preview"}
-        and (
-            "tokenhub.tencentmaas.com" in base_url
-            or "api.lkeap.cloud.tencent.com/plan/v3" in base_url
-        )
-    ):
-        return {"thinking": {"type": "disabled"}}
-    return None
+
+THINKING_MODES = ("default", "enabled", "disabled")
+
+
+def route_completion_extra_body(route: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Return the model's explicitly configured provider request options.
+
+    Probes and production workloads share this one source so a route is
+    judged under the same options it is served with. No provider is special
+    cased: behaviour such as deep thinking is chosen per model in the console.
+    """
+    model_params = route.get("extra_params")
+    configured = model_params.get("extra_body") if isinstance(model_params, dict) else None
+    return dict(configured) if isinstance(configured, dict) and configured else None
+
+
+def get_thinking_mode(extra_params: Any) -> str:
+    """Read the console's thinking switch from a model's ``extra_params``.
+
+    ``default`` means nothing is sent and the provider's own default applies.
+    """
+    body = extra_params.get("extra_body") if isinstance(extra_params, dict) else None
+    thinking = body.get("thinking") if isinstance(body, dict) else None
+    mode = thinking.get("type") if isinstance(thinking, dict) else None
+    return mode if mode in ("enabled", "disabled") else "default"
+
+
+def with_thinking_mode(extra_params: Any, mode: str) -> Dict[str, Any]:
+    """Return a copy of ``extra_params`` with the thinking switch applied.
+
+    Only ``extra_body.thinking`` is touched; sibling ``extra_body`` keys and
+    unrelated parameters are preserved. Re-applying the current mode is a
+    no-op, so provider-specific values the switch cannot express survive an
+    unrelated save.
+    """
+    if mode not in THINKING_MODES:
+        raise ValueError(f"Unsupported thinking mode: {mode!r}")
+    params = dict(extra_params) if isinstance(extra_params, dict) else {}
+    if mode == get_thinking_mode(params):
+        return params
+
+    existing = params.get("extra_body")
+    body = dict(existing) if isinstance(existing, dict) else {}
+    if mode == "default":
+        body.pop("thinking", None)
+    else:
+        body["thinking"] = {"type": mode}
+    if body:
+        params["extra_body"] = body
+    else:
+        params.pop("extra_body", None)
+    return params
 
 
 def runtime_route_request_timeout_seconds(
@@ -1623,21 +1673,29 @@ def runtime_route_request_timeout_seconds(
         return default
 
 
-def runtime_route_completion_max_tokens(route: Dict[str, Any], agent_limit: int) -> int:
-    """Allow an explicit model budget for reasoning plus final answer tokens."""
+_REASONING_COMPLETION_CEILING = 16384
+
+
+def runtime_route_completion_max_tokens(route: Dict[str, Any], agent_limit: int | None = None) -> int | None:
+    """Completion budget for one request, or ``None`` to send no limit.
+
+    Callers no longer cap replies: the model decides when it is done, so a long
+    structured answer is never cut off mid-object.  Only a limit an operator set
+    on the route itself (``runtime_completion_max_tokens`` in the model's extra
+    params, or the model's ``max_tokens``) is honoured.  ``agent_limit`` is
+    accepted for old call sites and ignored.
+    """
+    del agent_limit
     model_params = route.get("extra_params")
     model_params = model_params if isinstance(model_params, dict) else {}
-    configured = model_params.get("runtime_completion_max_tokens")
-    if configured not in (None, ""):
+    for configured in (model_params.get("runtime_completion_max_tokens"), route.get("max_tokens")):
+        if configured in (None, ""):
+            continue
         try:
-            return max(64, min(16384, int(configured)))
+            return max(64, int(configured))
         except (TypeError, ValueError):
-            pass
-    route_limit = route.get("max_tokens")
-    try:
-        return min(agent_limit, int(route_limit)) if route_limit is not None else agent_limit
-    except (TypeError, ValueError):
-        return agent_limit
+            continue
+    return None
 
 
 def _response_preview(text: str, limit: int = 180) -> str:
@@ -1814,7 +1872,7 @@ async def _test_openai_compatible(
                     },
                     {"role": "user", "content": prompt},
                 ],
-                max_tokens=max(768, min(_test_max_tokens(route), 1200)) if structured else _test_max_tokens(route),
+                max_tokens=_probe_max_tokens(route, structured=structured),
                 temperature=0,
                 extra_body=route_completion_extra_body(route),
             )
@@ -1862,7 +1920,7 @@ async def _test_anthropic(
         model=model_name,
         system="You are validating an evidence-summarization model used by a public-health literature pipeline.",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=max(768, min(_test_max_tokens(route), 1200)) if structured else _test_max_tokens(route),
+        max_tokens=_probe_max_tokens(route, structured=structured),
         temperature=0,
     )
     text = "\n".join(

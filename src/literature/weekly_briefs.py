@@ -320,14 +320,13 @@ def enrich_weekly_briefs(
             "evidence_gaps": related_gaps,
             "methodology": methodology,
         }
+        # Publication rests on the shared two-model peer review. A legacy human
+        # editorial record is still shown in the byline but no longer gates
+        # or overrides the status.
         review = _bound_editorial_review(raw.get("_editorial_review"), projected_brief, now=now)
         fingerprint = weekly_brief_review_fingerprint(projected_brief)
-        ai_review = (
-            None
-            if review is not None
-            else bound_weekly_ai_review(
-                raw.get("_ai_review"), projected_brief, fingerprint=fingerprint, now=now,
-            )
+        ai_review = bound_weekly_ai_review(
+            raw.get("_ai_review"), projected_brief, fingerprint=fingerprint, now=now,
         )
         byline = {
             "name_en": "GIDS Research Radar automated compiler",
@@ -338,9 +337,7 @@ def enrich_weekly_briefs(
             byline["ai_review"] = ai_review
         projected_brief.update({
             "brief_status": (
-                "editorially_reviewed"
-                if review is not None
-                else "ai_reviewed"
+                "ai_reviewed"
                 if ai_review is not None
                 else "automatically_compiled_not_editorially_reviewed"
             ),

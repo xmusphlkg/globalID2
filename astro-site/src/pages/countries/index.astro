@@ -39,6 +39,17 @@ const metaCountries = (meta.countries ?? []) as Array<{
   date_range: { start: string | null; end: string | null };
 }>;
 const supportedJurisdictions = metaCountries.filter(hasCountryDataSnapshot);
+// The map island only needs identity, names, hierarchy and data availability;
+// serializing the full metadata would add hundreds of KB of island props.
+const mapCountries = metaCountries.map(country => ({
+  code: country.code,
+  name: country.name,
+  name_en: country.name_en,
+  name_zh: country.name_zh,
+  parent_code: country.parent_code ?? null,
+  location_type: country.location_type,
+  data_available: hasCountryDataSnapshot(country),
+}));
 const subdivisionCountries = supportedJurisdictions.filter(country => (
   country.location_type === 'subdivision' || Boolean(country.parent_code)
 ));
@@ -226,7 +237,7 @@ const frenchCountryName = (entry: { code: string; name_en: string; name_fr?: str
       <div class="coverage-map-frame">
         <CountriesMapView
           client:only="react"
-          metaCountries={metaCountries}
+          metaCountries={mapCountries}
           height={520}
           initialLanguage={locale}
         />

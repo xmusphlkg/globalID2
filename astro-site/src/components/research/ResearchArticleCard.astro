@@ -7,13 +7,13 @@ interface Props {
   index?: number;
   initialVisible?: number;
   locale?: 'en' | 'zh' | 'fr';
-  searchable?: boolean;
   focusDiseaseId?: string;
 }
+import { normalizeDiseaseHref } from '../../lib/seo';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedDynamicText, localizedRegionName, localizedResearchTopic, localizedStudyType } from '../../utils/i18n';
 
-const { article, compact = false, featured = false, stream = false, index, initialVisible, locale = 'en', searchable = true, focusDiseaseId } = Astro.props;
+const { article, compact = false, featured = false, stream = false, index, initialVisible, locale = 'en', focusDiseaseId } = Astro.props;
 const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
@@ -32,7 +32,6 @@ const isHistoricalBaseline = article.source_kind === 'historical_seed' || articl
 const diseaseText = (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase();
 const countryText = (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en} ${item.name_zh ?? ''} ${item.name_fr ?? ''}`).join(' ').toLowerCase();
 const topicText = (article.topics ?? []).map((item: any) => item.name).join(' ').toLowerCase();
-const filterText = `${article.title} ${article.journal ?? ''} ${article.why_it_matters_en ?? ''} ${article.why_it_matters_zh ?? ''} ${article.why_it_matters_fr ?? ''} ${Object.values(article.summary ?? {}).flatMap((summary: any) => Object.values(summary ?? {})).join(' ')} ${diseaseText} ${countryText} ${topicText}`.toLowerCase();
 const diseaseIds = (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase()).filter(Boolean);
 const countryCodes = (article.countries ?? []).map((item: any) => String(item.code ?? '').toLowerCase()).filter(Boolean);
 const topicSlugs = (article.topics ?? []).map((item: any) => String(item.name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')).filter(Boolean);
@@ -61,7 +60,7 @@ const openAccessUrl = article.open_access_status === 'open'
   : null;
 const surveillanceLink = (article.related_surveillance ?? [])[0] ?? null;
 const fallbackDisease = (article.diseases ?? [])[0] ?? null;
-const surveillanceUrl = surveillanceLink?.url ?? (fallbackDisease?.slug ? `/diseases/${fallbackDisease.slug}/` : null);
+const surveillanceUrl = normalizeDiseaseHref(surveillanceLink?.url ?? (fallbackDisease?.slug ? `/diseases/${fallbackDisease.slug}/` : null));
 const surveillanceLabelEn = surveillanceLink
   ? `${surveillanceLink.disease_name_en} surveillance`
   : fallbackDisease ? `${fallbackDisease.name_en} surveillance` : 'Related surveillance';
@@ -87,7 +86,6 @@ const whyItMattersFr = localizedDynamicText('fr', {
   hidden={initiallyHidden}
   data-research-card
   data-card-index={index}
-  data-search={searchable ? filterText : undefined}
   data-disease={diseaseText}
   data-disease-ids={diseaseIds.join(' ')}
   data-country={countryText}

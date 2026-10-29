@@ -658,6 +658,7 @@ class LiteratureAutomationService:
             "links_rejected": 0,
             "link_exceptions": 0,
             "summaries_published": 0,
+            "summaries_queued_for_peer_review": 0,
             "summaries_archived": 0,
             "summaries_deferred": 0,
             "summaries_restored": 0,
@@ -916,18 +917,18 @@ class LiteratureAutomationService:
                     article.publication_status = original_status
                     record_reason("summaries", decision)
                     if decision.action == "publish":
+                        # The deterministic gate no longer publishes: a passing
+                        # summary waits in ``review`` for the shared two-model
+                        # peer review run by AI content governance.
                         if summary.status != "published":
-                            counts["summaries_published"] += 1
+                            counts["summaries_queued_for_peer_review"] += 1
                         if not dry_run and summary.status != "published":
-                            summary.status = "published"
+                            summary.status = "review"
                             summary.generation_metadata = {
                                 **(summary.generation_metadata or {}),
-                                "publication_gate": "automated-quality-gate",
+                                "publication_gate": "awaiting-peer-review",
                                 "autopilot": _audit_payload(decision, at=at, config=config),
                             }
-                            summary.review_notes = (
-                                f"{summary.review_notes or ''} Automatically published by {POLICY_VERSION}."
-                            ).strip()
                     elif decision.action == "archive":
                         if summary.status != "archived":
                             counts["summaries_archived"] += 1
