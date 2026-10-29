@@ -56,11 +56,11 @@ def test_classifier_retries_only_allowlisted_transient_external_failures():
     dispatch = classify_release_failure(
         _command_error(
             "worker_transport_error:URLError",
-            stage="situation_alert_dispatch",
+            stage="refresh_situation_notices",
         )
     )
     assert dispatch.retryable is True
-    assert dispatch.stage == "situation_alert_dispatch"
+    assert dispatch.stage == "refresh_situation_notices"
 
     build_timeout = classify_release_failure(
         _command_error(

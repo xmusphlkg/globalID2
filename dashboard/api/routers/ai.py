@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -313,7 +313,6 @@ async def run_disease_duplicate_audit(body: DiseaseDuplicateAuditRequest):
                     "merge": 0,
                     "keep_separate": 0,
                     "add_standard_disease": 0,
-                    "needs_human_review": 0,
                 },
                 "recommendations": [],
                 "warnings": [

@@ -37,7 +37,6 @@ jobs:
       CI: "1"
       DATABASE_URL: postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid
       DATABASE_URL_SYNC: postgresql://globalid:globalid_dev_password@localhost:5432/globalid
-      SITUATION_HISTORY_DATABASE_URL: postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid_history
     steps:
       - uses: actions/checkout@v4
         with:

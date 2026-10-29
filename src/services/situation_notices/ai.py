@@ -20,9 +20,23 @@ offline.
 from __future__ import annotations
 
 import json
-import re
-from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Iterable
+from typing import Any
+
+# The loop and its types live in the shared module so every data line reviews
+# the same way; they are re-exported here for existing Situation imports.
+from src.ai.peer_review import (  # noqa: F401 - re-exported
+    MAX_ROUNDS,
+    VERDICTS,
+    AIOutputError,
+    Completer,
+    Completion,
+    ReviewedOutput,
+    clean_enum as _enum,
+    clean_text as _text,
+    parse_json_object,
+    peer_review,
+    review_mode,
+)
 
 NOTICE_PROMPT_VERSION = "situation-notice-enrich.v2"
 DIGEST_PROMPT_VERSION = "situation-weekly-digest.v1"
@@ -36,74 +50,8 @@ EVENT_TYPES = (
     "preparedness",
     "other",
 )
-VERDICTS = ("accept", "revise", "reject")
 TITLE_LIMIT = 300
 SUMMARY_LIMIT = 600
-MAX_ROUNDS = 2
-
-
-@dataclass(slots=True)
-class Completion:
-    text: str
-    model: str
-
-
-#: ``(role, system, prompt) -> Completion``.  ``role`` is ``author`` or
-#: ``reviewer``; the implementation must route the two roles to different models.
-Completer = Callable[[str, str, str], Awaitable[Completion]]
-
-
-@dataclass(slots=True)
-class ReviewedOutput:
-    status: str  # published | rejected
-    payload: dict[str, Any]
-    author_model: str | None
-    reviewer_model: str | None
-    verdict: str | None
-    rounds: int
-    notes: list[str] = field(default_factory=list)
-    score: float | None = None
-
-
-class AIOutputError(ValueError):
-    """A model reply that cannot be parsed as the required JSON object."""
-
-
-def review_mode(author_model: str | None, reviewer_model: str | None) -> str | None:
-    """``cross_model`` or ``single_model``: how independent the review really was."""
-
-    if not author_model or not reviewer_model:
-        return None
-    return "single_model" if author_model == reviewer_model else "cross_model"
-
-
-def parse_json_object(text: str) -> dict[str, Any]:
-    cleaned = str(text or "").strip()
-    if cleaned.startswith("```"):
-        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.I)
-        cleaned = re.sub(r"\s*```$", "", cleaned)
-    start, end = cleaned.find("{"), cleaned.rfind("}")
-    if start < 0 or end <= start:
-        raise AIOutputError("model reply did not contain a JSON object")
-    try:
-        payload = json.loads(cleaned[start : end + 1])
-    except json.JSONDecodeError as exc:
-        raise AIOutputError(f"model reply was not valid JSON: {exc}") from exc
-    if not isinstance(payload, dict):
-        raise AIOutputError("model reply must be a JSON object")
-    return payload
-
-
-def _text(value: Any, limit: int) -> str | None:
-    if not isinstance(value, str):
-        return None
-    cleaned = " ".join(value.split())
-    return cleaned[:limit] if cleaned else None
-
-
-def _enum(value: Any, allowed: Iterable[str]) -> str | None:
-    text = str(value or "").strip().lower().replace(" ", "_")
-    return text if text in allowed else None
 
 
 # --- notice enrichment ---
@@ -376,69 +324,7 @@ def _digest_draft_usable(draft: dict[str, Any]) -> bool:
     return bool(draft.get("headline_en") and draft.get("points"))
 
 
-# --- shared peer-review loop ---
-
-
-def _verdict(review: dict[str, Any]) -> tuple[str, list[str], float | None, dict[str, Any] | None]:
-    verdict = _enum(review.get("verdict"), VERDICTS) or "reject"
-    issues = [str(item)[:300] for item in review.get("issues") or [] if str(item).strip()]
-    try:
-        score = max(0.0, min(1.0, float(review.get("score"))))
-    except (TypeError, ValueError):
-        score = None
-    corrected = review.get("corrected") if isinstance(review.get("corrected"), dict) else None
-    return verdict, issues, score, corrected
-
-
-async def peer_review(
-    complete: Completer,
-    *,
-    author_system: str,
-    reviewer_system: str,
-    author_prompt: Callable[[list[str] | None, dict[str, Any] | None], str],
-    reviewer_prompt: Callable[[dict[str, Any]], str],
-    sanitize: Callable[[dict[str, Any]], tuple[dict[str, Any], list[str]]],
-    usable: Callable[[dict[str, Any]], bool],
-) -> ReviewedOutput:
-    """Draft, review, and (at most once) revise.  Publication needs ``accept``."""
-
-    notes: list[str] = []
-    reviewer_notes: list[str] | None = None
-    previous: dict[str, Any] | None = None
-    author_model: str | None = None
-    reviewer_model: str | None = None
-    draft: dict[str, Any] = {}
-    for round_number in range(1, MAX_ROUNDS + 1):
-        authored = await complete("author", author_system, author_prompt(reviewer_notes, previous))
-        author_model = authored.model
-        draft, dropped = sanitize(parse_json_object(authored.text))
-        notes.extend(dropped)
-
-        reviewed = await complete("reviewer", reviewer_system, reviewer_prompt(draft))
-        reviewer_model = reviewed.model
-        if reviewer_model and reviewer_model == author_model and not getattr(complete, "single_model", False):
-            raise AIOutputError(f"peer review needs two different models; both were {author_model}")
-        verdict, issues, score, corrected = _verdict(parse_json_object(reviewed.text))
-        notes.extend(f"round {round_number} reviewer: {issue}" for issue in issues)
-
-        if verdict == "accept" and usable(draft):
-            return ReviewedOutput("published", draft, author_model, reviewer_model, verdict, round_number, notes, score)
-        if verdict == "reject":
-            return ReviewedOutput("rejected", draft, author_model, reviewer_model, verdict, round_number, notes, score)
-        if verdict == "accept":
-            notes.append("guardrail: accepted draft was missing required fields")
-            verdict = "revise"
-        if corrected and round_number == MAX_ROUNDS:
-            # Last round: the reviewer's own correction stands in for a third
-            # author pass, but only if it survives the same guardrails.
-            fixed, dropped = sanitize(corrected)
-            notes.extend(dropped)
-            if usable(fixed):
-                notes.append("reviewer correction adopted in final round")
-                return ReviewedOutput("published", fixed, author_model, reviewer_model, "revise", round_number, notes, score)
-        reviewer_notes = issues or ["reviewer requested a revision without details; re-check every field"]
-        previous = corrected or draft
-    return ReviewedOutput("rejected", draft, author_model, reviewer_model, "revise", MAX_ROUNDS, notes, None)
+# --- entry points ---
 
 
 async def enrich_notice(

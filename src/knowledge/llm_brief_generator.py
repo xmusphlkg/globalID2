@@ -553,6 +553,20 @@ class AIDiseaseBriefGenerator:
             citation_failures=final_citation_failures,
         )
 
+        peer_review_record: dict[str, Any] | None = None
+        if not final_citation_failures and assessment.publishable:
+            # Shared two-model review: a different route audits the gated brief.
+            merged, assessment, peer_review_record, review_error = await self._peer_review_brief(
+                merged,
+                assessment,
+                author_model=trace_values.get("model"),
+                language=language,
+                target_sections=target_sections,
+                evidence_manifest=evidence_manifest,
+            )
+            if review_error:
+                repair_error = review_error
+
         interaction_metrics = self._interaction_metrics(agent)
         if final_citation_failures or not assessment.publishable:
             await self._invalidate_failed_completions(
@@ -601,7 +615,7 @@ class AIDiseaseBriefGenerator:
         }
         if assessment.publishable:
             merged["review_notes"] = (
-                "AI-generated, source-grounded brief; ready for human spot review."
+                "AI-generated, source-grounded brief; published after two-model peer review."
                 if assessment.display_mode == "full"
                 else "AI-generated partial brief; unsupported fields were omitted and remain queued for enrichment."
             )
@@ -1104,6 +1118,53 @@ class AIDiseaseBriefGenerator:
                 await invalidate(prompt=prompt, system=system)
             except Exception as exc:
                 logger.warning("Failed to evict rejected knowledge completion: {}", exc)
+
+    @staticmethod
+    async def _peer_review_brief(
+        payload: dict[str, Any],
+        assessment: Any,
+        *,
+        author_model: str | None,
+        language: str,
+        target_sections: list[str],
+        evidence_manifest: EvidenceManifest,
+    ) -> tuple[dict[str, Any], Any, dict[str, Any], str | None]:
+        """Run :func:`src.knowledge.peer_review.review_brief`; never publish an unreviewed brief."""
+
+        from src.knowledge import peer_review as brief_peer_review
+
+        fragments = evidence_manifest.to_dict(include_text=True).get("fragments") or []
+        try:
+            reviewed, final, final_assessment = await brief_peer_review.review_brief(
+                payload,
+                author_model=author_model,
+                language=language,
+                target_sections=target_sections,
+                evidence_fragments=fragments,
+            )
+        except Exception as exc:  # noqa: BLE001 - outage: the brief waits as a draft
+            logger.warning("Knowledge brief peer review unavailable: {}", exc)
+            blocked = {**payload, "status": "draft"}
+            blocked["metadata"] = {
+                **(payload.get("metadata") or {}),
+                "automation_state": "waiting_for_model_capacity",
+                "block_reason": "peer_review_unavailable",
+            }
+            # "agent completion failed" keeps governance on the transient-retry path.
+            return blocked, assessment, {"status": "error"}, f"peer review: agent completion failed: {exc}"
+
+        record = reviewed.provenance(brief_peer_review.BRIEF_REVIEW_PROMPT_VERSION)
+        result = final if reviewed.published else payload
+        result_assessment = (final_assessment or assessment) if reviewed.published else assessment
+        result["metadata"] = {**(result.get("metadata") or {}), "peer_review": record}
+        if not reviewed.published:
+            result["status"] = "draft"
+            result["metadata"].update(
+                {"automation_state": "repairing_remaining_sections", "block_reason": "peer_review_rejected"}
+            )
+            return result, result_assessment, record, None
+        result["status"] = "published"
+        return result, result_assessment, record, None
 
     @staticmethod
     def _promote_publishable_payload(

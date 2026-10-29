@@ -52,10 +52,29 @@ class FakeAgent:
         return {"model": self.model, "provider": self.provider}
 
 
-class SlowAgent(FakeAgent):
-    async def process(self, **kwargs):
+class FakeCompleter:
+    """Two-role completer: the author returns ``response``; the reviewer accepts."""
+
+    single_model = False
+
+    def __init__(self, response: str, reviewer: str = '{"verdict":"accept","score":0.9,"issues":[]}'):
+        self.response = response
+        self.reviewer = reviewer
+        self.calls = []
+
+    async def __call__(self, role, system, prompt):
+        from src.ai.peer_review import Completion
+
+        self.calls.append({"role": role, "system": system, "prompt": prompt})
+        if role == "author":
+            return Completion(text=self.response, model="author-model")
+        return Completion(text=self.reviewer, model="reviewer-model")
+
+
+class SlowCompleter(FakeCompleter):
+    async def __call__(self, role, system, prompt):
         await asyncio.sleep(0.1)
-        return await super().process(**kwargs)
+        return await super().__call__(role, system, prompt)
 
 
 def test_packet_allowlists_public_fields_and_treats_prompt_injection_as_data():
@@ -93,21 +112,42 @@ def test_single_json_fence_without_prose_is_accepted():
 
 @pytest.mark.asyncio
 async def test_runner_uses_bounded_packet_and_returns_no_reasoning():
-    agent = FakeAgent('{"verdict":"pass","issue_codes":[]}')
-    result = await WeeklyAIReviewRunner(agent).review(_brief(), max_attempts=2)
+    completer = FakeCompleter('{"verdict":"pass","issue_codes":[]}')
+    result = await WeeklyAIReviewRunner(completer).review(_brief(), max_attempts=2)
 
     assert result == {
-        "verdict": "pass", "issue_codes": [], "model": "configured-review-model", "provider": "model-center",
+        "verdict": "pass", "issue_codes": [], "model": "configured-review-model",
+        "provider": "model-center", "review_mode": "cross_model",
     }
-    assert len(agent.calls) == 1
-    assert "outside knowledge" in agent.calls[0]["system"]
-    assert "empty evidence_gaps array is valid" in agent.calls[0]["system"]
-    assert "private_note" not in agent.calls[0]["prompt"]
+    assert [call["role"] for call in completer.calls] == ["author", "reviewer"]
+    assert "outside knowledge" in completer.calls[0]["system"]
+    assert "empty evidence_gaps array is valid" in completer.calls[0]["system"]
+    assert "private_note" not in completer.calls[0]["prompt"]
+
+
+@pytest.mark.asyncio
+async def test_reviewer_rejection_fails_closed():
+    completer = FakeCompleter(
+        '{"verdict":"pass","issue_codes":[]}',
+        reviewer='{"verdict":"reject","score":0.1,"issues":["unsupported claim"]}',
+    )
+    with pytest.raises(WeeklyAIReviewError, match="ai_review_model_unavailable_or_invalid"):
+        await WeeklyAIReviewRunner(completer).review(_brief(), max_attempts=1)
+
+
+def test_weekly_guardrail_drops_unknown_codes_and_inconsistent_verdicts():
+    from src.literature.weekly_ai_review import sanitize_weekly_verdict
+
+    clean, notes = sanitize_weekly_verdict({"verdict": "pass", "issue_codes": ["invented_code"]})
+    assert clean == {"verdict": "pass", "issue_codes": []}
+    assert any("invented_code" in note for note in notes)
+    clean, _ = sanitize_weekly_verdict({"verdict": "pass", "issue_codes": ["unsupported_claim"]})
+    assert clean["verdict"] is None
 
 
 @pytest.mark.asyncio
 async def test_runner_enforces_one_overall_deadline_across_retries():
-    agent = SlowAgent('{"verdict":"pass","issue_codes":[]}')
+    agent = SlowCompleter('{"verdict":"pass","issue_codes":[]}')
 
     with pytest.raises(WeeklyAIReviewError, match="ai_review_model_unavailable_or_invalid"):
         await WeeklyAIReviewRunner(agent).review(
@@ -115,7 +155,7 @@ async def test_runner_enforces_one_overall_deadline_across_retries():
         )
 
 
-def test_content_bound_ai_review_is_distinct_and_human_review_has_precedence():
+def test_content_bound_ai_review_decides_status_even_with_a_legacy_human_record():
     raw = {
         "week": "2026-W33", "start_date": "2026-08-10", "end_date": "2026-08-16",
         "articles": [{
@@ -143,8 +183,10 @@ def test_content_bound_ai_review_is_distinct_and_human_review_has_precedence():
         "reviewed_at": "2026-08-16T09:00:00Z",
     }
     human = enrich_weekly_briefs([raw], surveillance_evidence=None, now=datetime(2026, 8, 17, tzinfo=timezone.utc))[0]
-    assert human["brief_status"] == "editorially_reviewed"
-    assert "ai_review" not in human["byline"]
+    # No human gate: the peer review decides; a legacy editor record is only shown.
+    assert human["brief_status"] == "ai_reviewed"
+    assert human["byline"]["ai_review"]["verdict"] == "pass"
+    assert human["byline"]["reviewer"]["name"] == "Dr Jane Public"
 
     raw.pop("_editorial_review")
     raw["articles"][0]["summary"]["en"]["main_findings"] = "Changed finding."
@@ -166,7 +208,7 @@ async def test_malformed_same_fingerprint_registry_is_re_reviewed(tmp_path):
             "review": {"verdict": "pass"},
         }],
     }), encoding="utf-8")
-    agent = FakeAgent('{"verdict":"pass","issue_codes":[]}')
+    agent = FakeCompleter('{"verdict":"pass","issue_codes":[]}')
 
     result = await review_weekly_brief_files(
         weekly_dir=weekly, registry_path=registry, weeks=["2026-W33"], apply=True,
@@ -174,7 +216,7 @@ async def test_malformed_same_fingerprint_registry_is_re_reviewed(tmp_path):
     )
 
     assert result["counts"]["ai_reviewed"] == 1
-    assert len(agent.calls) == 1
+    assert [call["role"] for call in agent.calls] == ["author", "reviewer"]
 
 
 @pytest.mark.asyncio
@@ -203,7 +245,7 @@ async def test_partial_failure_is_recoverable_and_does_not_erase_completed_week(
 
     recovered = await review_weekly_brief_files(
         weekly_dir=weekly, registry_path=registry, weeks=["2026-W33", "2026-W32"],
-        apply=True, runner=WeeklyAIReviewRunner(FakeAgent('{"verdict":"pass","issue_codes":[]}')),
+        apply=True, runner=WeeklyAIReviewRunner(FakeCompleter('{"verdict":"pass","issue_codes":[]}')),
     )
     assert recovered["counts"]["ai_reviewed"] == 1
     assert recovered["counts"]["skipped"] == 1
@@ -231,7 +273,7 @@ async def test_older_ai_hold_is_automatically_rechecked_and_cleared(tmp_path):
             },
         }],
     }), encoding="utf-8")
-    agent = FakeAgent('{"verdict":"pass","issue_codes":[]}')
+    agent = FakeCompleter('{"verdict":"pass","issue_codes":[]}')
 
     result = await review_weekly_brief_files(
         weekly_dir=weekly,

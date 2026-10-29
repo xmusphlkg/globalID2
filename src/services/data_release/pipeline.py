@@ -160,10 +160,10 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     await service._run_logged_command(
         task.task_uuid,
         title="Refresh Situation Room",
-        cmd=service._update_situation_room_command(python_path=python_path),
+        cmd=service._update_situation_notices_command(python_path=python_path),
         cwd=runtime.root_dir,
         env=git_env,
-        metadata={"event": "refresh_situation_room", "release_job_id": job.job_id},
+        metadata={"event": "refresh_situation_notices", "release_job_id": job.job_id},
         timeout_seconds=min(
             runtime.generate_timeout_seconds,
             SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS,
@@ -191,7 +191,6 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     downloads_published = False
     raw_archive_published = False
     pages_deployed = False
-    situation_alert_dispatch_attempted = False
     cloudflare_deployment = None
     # Complete every local, side-effect-free release gate before publishing to
     # remote repositories. A failed site build must never leave downloads and
@@ -434,7 +433,6 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         "raw_archive_branch": raw_archive_branch if raw_archive_cfg.enabled else None,
         "pages_deployed": pages_deployed,
         "subscription_options_synced": subscription_options_synced,
-        "situation_alert_dispatch_attempted": situation_alert_dispatch_attempted,
         "preflight": checks,
     }
 
@@ -457,8 +455,6 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             f"Site release: {release_identity['release_id']}\n"
             f"Production URL: {cloudflare_deployment.get('production_url') if cloudflare_deployment else '-'}\n"
             f"Subscription options synced: {'yes' if subscription_options_synced else 'no'}\n"
-            "Reviewed Situation alert dispatch attempted: "
-            f"{'yes' if situation_alert_dispatch_attempted else 'no'}\n"
             f"Download repo: {download_repo_url or '-'}"
         ),
         content_type="text",

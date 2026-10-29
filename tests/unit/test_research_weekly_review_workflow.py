@@ -58,7 +58,9 @@ def test_applied_review_is_bound_to_the_exact_brief_fingerprint(tmp_path):
         "_editorial_review": entry,
     }
     reviewed = enrich_weekly_briefs([raw], surveillance_evidence=None)[0]
-    assert reviewed["brief_status"] == "editorially_reviewed"
+    # A human record is still shown, but publication status rests on peer review only.
+    assert reviewed["brief_status"] == "automatically_compiled_not_editorially_reviewed"
+    assert reviewed["byline"]["reviewer"]["name"] == "Dr Jane Public"
 
     raw["articles"][0]["summary"]["en"]["main_findings"] = "Changed finding."
     changed = enrich_weekly_briefs([raw], surveillance_evidence=None)[0]

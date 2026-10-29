@@ -45,36 +45,6 @@ class DatabaseSettings(_BaseEnvSettings):
     max_overflow: int = Field(default=20, description="最大溢出连接数")
 
 
-class SituationHistoryDatabaseSettings(_BaseEnvSettings):
-    """Dedicated durable store for Situation Room revisions and audit data.
-
-    When ``url`` is empty, the connection details are inherited from the main
-    database and only the database name is replaced.  This keeps local and
-    self-hosted installs simple while still allowing an isolated cluster in
-    production.
-    """
-
-    enabled: bool = Field(
-        default=True,
-        validation_alias="SITUATION_HISTORY_DATABASE_ENABLED",
-        description="Enable the dedicated Situation Room history store",
-    )
-    url: str = Field(
-        default="",
-        validation_alias="SITUATION_HISTORY_DATABASE_URL",
-        description="Optional async URL for the Situation Room history database",
-    )
-    database_name: str = Field(
-        default="globalid_history",
-        validation_alias="SITUATION_HISTORY_DATABASE_NAME",
-        pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,62}$",
-        description="Database name used when URL is derived from the main database",
-    )
-    echo: bool = Field(default=False, description="Whether to log history database SQL")
-    pool_size: int = Field(default=5, ge=1, description="History database connection-pool size")
-    max_overflow: int = Field(default=5, ge=0, description="History database pool overflow")
-
-
 class RedisSettings(_BaseEnvSettings):
     """Redis配置"""
 
@@ -1011,9 +981,6 @@ class AppSettings(BaseSettings):
     
     # 子配置
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
-    situation_history_database: SituationHistoryDatabaseSettings = Field(
-        default_factory=SituationHistoryDatabaseSettings
-    )
     redis: RedisSettings = Field(default_factory=RedisSettings)
     qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
     ai: AISettings = Field(default_factory=AISettings)

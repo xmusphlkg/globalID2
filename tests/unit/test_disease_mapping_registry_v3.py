@@ -1,4 +1,5 @@
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 import smtplib
 
@@ -75,17 +76,111 @@ def test_model_route_outage_is_not_a_semantic_mapping_failure():
     assert not _is_all_model_routes_unavailable("Candidate validation failed")
 
 
-def test_multi_model_disagreement_never_becomes_direct_mapping():
-    result = DiseaseMappingAIService._reconcile_outputs(
-        [
-            {"candidates": [{"candidate_kind": "existing_concept", "target_code": "D026", "confidence_score": 0.9}]},
-            {"candidates": [{"candidate_kind": "existing_concept", "target_code": "D124", "confidence_score": 0.8}]},
-        ]
+def test_mapping_guardrails_drop_unknown_ids_and_cap_scope_without_definition():
+    standards = [_disease("D001", "Measles")]
+    clean, notes = DiseaseMappingAIService.sanitize_mapping_draft(
+        {
+            "candidates": [
+                {"candidate_kind": "existing_concept", "target_code": "D999", "confidence_score": 0.9},
+                {
+                    "candidate_kind": "existing_concept",
+                    "target_code": "d001",
+                    "mapping_relation": "exact",
+                    "comparability": "direct",
+                    "confidence_score": 0.95,
+                },
+                {"candidate_kind": "new_concept", "confidence_score": 0.5},
+            ]
+        },
+        allowed_ids={"D001"},
+        standards=standards,
+        relations=[],
+        has_definition=False,
     )
-    assert {item["target_code"] for item in result["candidates"]} == {"D026", "D124"}
-    assert all(item["mapping_relation"] == "ambiguous" for item in result["candidates"])
-    assert all(item["comparability"] == "unknown" for item in result["candidates"])
-    assert all(item["confidence_score"] <= 0.65 for item in result["candidates"])
+    assert [item["target_code"] for item in clean["candidates"]] == ["D001"]
+    assert clean["candidates"][0]["comparability"] == "conditional"
+    assert clean["candidates"][0]["confidence_score"] <= 0.75
+    assert any("D999" in note for note in notes)
+    assert any("new_concept" in note for note in notes)
+
+
+class _ScriptedCompleter:
+    """Offline completer: returns scripted author/reviewer replies in order."""
+
+    single_model = False
+
+    def __init__(self, author_replies, reviewer_replies):
+        self.replies = {"author": list(author_replies), "reviewer": list(reviewer_replies)}
+        self.prompts = {"author": [], "reviewer": []}
+
+    async def __call__(self, role, system, prompt):
+        from src.ai.peer_review import Completion
+
+        self.prompts[role].append(prompt)
+        reply = self.replies[role].pop(0)
+        return Completion(text=json.dumps(reply), model=f"{role}-model")
+
+
+def _category(**overrides) -> SourceDiseaseCategory:
+    values = dict(
+        id=7,
+        category_key="DE:rki:Masern",
+        country_code="DE",
+        source_id="rki",
+        source_code="Masern",
+        canonical_source_label="Masern",
+        normalized_label="masern",
+        source_definition=None,
+        source_definition_uri=None,
+        metadata_={},
+    )
+    values.update(overrides)
+    return SourceDiseaseCategory(**values)
+
+
+_MEASLES_DRAFT = {
+    "candidates": [
+        {
+            "candidate_kind": "existing_concept",
+            "target_code": "D001",
+            "mapping_relation": "exact",
+            "comparability": "conditional",
+            "confidence_score": 0.9,
+            "interpreted_name_en": "Measles",
+        }
+    ]
+}
+
+
+@pytest.mark.asyncio
+async def test_mapping_peer_review_accept_is_published_without_human_step():
+    completer = _ScriptedCompleter([_MEASLES_DRAFT], [{"verdict": "accept", "score": 0.9, "issues": []}])
+    standards = [_disease("D001", "Measles")]
+    reviewed = await DiseaseMappingAIService().review_category(
+        completer, _category(), standards, [], [], source_language="de"
+    )
+    assert reviewed.published
+    assert reviewed.mode == "cross_model"
+    assert reviewed.payload["candidates"][0]["target_code"] == "D001"
+
+
+@pytest.mark.asyncio
+async def test_mapping_reject_gets_a_retry_cycle_with_reasons_fed_back():
+    completer = _ScriptedCompleter(
+        [_MEASLES_DRAFT, _MEASLES_DRAFT],
+        [
+            {"verdict": "reject", "score": 0.2, "issues": ["Masern scope unclear"]},
+            {"verdict": "accept", "score": 0.85, "issues": []},
+        ],
+    )
+    standards = [_disease("D001", "Measles")]
+    reviewed = await DiseaseMappingAIService().review_category(
+        completer, _category(), standards, [], [], source_language="de"
+    )
+    assert reviewed.published
+    assert reviewed.rounds == 2
+    retry_prompt = json.loads(completer.prompts["author"][1])
+    assert any("Masern scope unclear" in note for note in retry_prompt["peer_review_notes"])
 
 
 def test_interpreted_name_guardrail_surfaces_exact_scope_concept():

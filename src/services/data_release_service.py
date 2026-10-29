@@ -36,7 +36,7 @@ from src.services.data_release.commands import (
     build_generate_site_data_command,
     build_publish_download_repo_command,
     build_publish_raw_archive_command,
-    build_update_situation_room_command,
+    build_update_situation_notices_command,
     build_validate_situation_release_command,
 )
 from src.services.data_release.process_runner import (
@@ -1089,9 +1089,9 @@ class DataReleaseService:
         tracked_generated_paths = await self._tracked_generated_paths()
 
         python_path = self._python_executable()
-        situation_room_check = (
+        situation_notices_check = (
             await self._run_capture(
-                [*self._update_situation_room_command(python_path=python_path), "--help"],
+                [*self._update_situation_notices_command(python_path=python_path), "--help"],
                 cwd=ROOT_DIR,
                 timeout=60,
             )
@@ -1119,8 +1119,8 @@ class DataReleaseService:
         blockers.extend(raw_archive["blockers"])
         if not python_path.exists():
             blockers.append(f"Python executable not found: {python_path}")
-        elif situation_room_check["returncode"] != 0:
-            output = str(situation_room_check.get("stdout") or "").strip()
+        elif situation_notices_check["returncode"] != 0:
+            output = str(situation_notices_check.get("stdout") or "").strip()
             detail = output.splitlines()[-1] if output else "command returned no diagnostic output"
             blockers.append(f"Situation Room refresh command is unavailable: {detail}")
         if job.include_cloudflare_deploy and wrangler_check["returncode"] != 0:
@@ -1461,8 +1461,8 @@ class DataReleaseService:
             incremental_site=incremental_site,
         )
 
-    def _update_situation_room_command(self, *, python_path: Path) -> list[str]:
-        return build_update_situation_room_command(python_path=python_path)
+    def _update_situation_notices_command(self, *, python_path: Path) -> list[str]:
+        return build_update_situation_notices_command(python_path=python_path)
 
     def _validate_situation_release_command(self, *, python_path: Path) -> list[str]:
         return build_validate_situation_release_command(python_path=python_path)

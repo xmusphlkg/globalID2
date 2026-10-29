@@ -362,3 +362,87 @@ def test_learning_suggestion_exact_match_maps_without_model() -> None:
     assert decision.decision == "map"
     assert decision.confidence == 1.0
     assert decision.payload["target_disease_id"] == "D900"
+
+
+class _ScriptedCompleter:
+    """Offline two-model completer: replies are consumed per role in order."""
+
+    single_model = False
+
+    def __init__(self, author: list[dict], reviewer: list[dict]) -> None:
+        self.replies = {"author": list(author), "reviewer": list(reviewer)}
+        self.calls: list[str] = []
+
+    async def __call__(self, role, system, prompt):
+        from src.ai.peer_review import Completion
+
+        self.calls.append(role)
+        return Completion(text=json.dumps(self.replies[role].pop(0)), model=f"{role}-model")
+
+
+def test_peer_decide_publishes_accepted_decision() -> None:
+    completer = _ScriptedCompleter(
+        author=[{"decision": "publish", "reasons": ["faithful to abstract"]}],
+        reviewer=[{"verdict": "accept", "score": 0.9, "issues": []}],
+    )
+    reviewed = asyncio.run(
+        AIContentGovernanceService()._peer_decide(
+            completer,
+            domain="test",
+            author_system="sys",
+            task={"item": {"id": "1"}},
+            decisions=("publish", "reject"),
+            rules=[],
+        )
+    )
+    assert reviewed.published
+    assert reviewed.payload["decision"] == "publish"
+    assert reviewed.mode == "cross_model"
+    assert completer.calls == ["author", "reviewer"]
+
+
+def test_peer_decide_drops_map_target_outside_catalogue() -> None:
+    completer = _ScriptedCompleter(
+        author=[
+            {"decision": "map", "target_disease_id": "D999", "reasons": ["guess"]},
+            {"decision": "map", "target_disease_id": "D001", "reasons": ["exact meaning"]},
+        ],
+        reviewer=[
+            {"verdict": "accept", "score": 0.8, "issues": []},
+            {"verdict": "accept", "score": 0.9, "issues": []},
+        ],
+    )
+    reviewed = asyncio.run(
+        AIContentGovernanceService()._peer_decide(
+            completer,
+            domain="test",
+            author_system="sys",
+            task={"item": {"id": "1"}},
+            decisions=("map", "new_concept", "unmapped"),
+            rules=[],
+            allowed_targets={"D001"},
+        )
+    )
+    # Round 1 is unusable after the guardrail, so the author gets a second round.
+    assert reviewed.published
+    assert reviewed.payload == {"decision": "map", "reasons": ["exact meaning"], "target_disease_id": "D001"}
+    assert any("not in the catalogue" in note for note in reviewed.notes)
+
+
+def test_peer_decide_reject_is_final_and_not_published() -> None:
+    completer = _ScriptedCompleter(
+        author=[{"decision": "publish", "reasons": ["looks fine"]}],
+        reviewer=[{"verdict": "reject", "score": 0.1, "issues": ["summary invents a case count"]}],
+    )
+    reviewed = asyncio.run(
+        AIContentGovernanceService()._peer_decide(
+            completer,
+            domain="test",
+            author_system="sys",
+            task={"item": {"id": "1"}},
+            decisions=("publish", "reject"),
+            rules=[],
+        )
+    )
+    assert not reviewed.published
+    assert reviewed.status == "rejected"

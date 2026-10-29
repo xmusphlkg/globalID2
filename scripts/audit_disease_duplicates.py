@@ -178,8 +178,7 @@ def print_ai_review(result: dict[str, object]) -> None:
             "Summary: "
             f"merge={summary.get('merge', 0)}, "
             f"keep_separate={summary.get('keep_separate', 0)}, "
-            f"add_standard_disease={summary.get('add_standard_disease', 0)}, "
-            f"needs_human_review={summary.get('needs_human_review', 0)}"
+            f"add_standard_disease={summary.get('add_standard_disease', 0)}"
         )
 
     recommendations = result.get("recommendations")
@@ -188,7 +187,7 @@ def print_ai_review(result: dict[str, object]) -> None:
             if not isinstance(item, dict):
                 continue
             finding = str(item.get("finding") or "").strip()
-            decision = str(item.get("decision") or "needs_human_review").strip()
+            decision = str(item.get("decision") or "keep_separate").strip()
             confidence = str(item.get("confidence") or "unknown").strip()
             canonical = str(item.get("canonical_id") or "").strip()
             rationale = str(item.get("rationale_zh") or item.get("rationale_en") or "").strip()

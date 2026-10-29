@@ -478,7 +478,7 @@ class MappingNotificationService:
         new_count = int(event_counts.get("new_source_category", 0))
         ready_count = int(event_counts.get("ai_mapping_suggestion_ready", 0))
         subject = (
-            f"[GIDS] 疾病映射每日摘要：{ready_count} 条候选可审核，"
+            f"[GIDS] 疾病映射每日摘要：{ready_count} 条 AI 互审结果，"
             f"{new_count} 个新来源项"
         )
         dashboard_url = os.getenv("MAPPING_REVIEW_DASHBOARD_URL", "").strip()
@@ -491,21 +491,20 @@ class MappingNotificationService:
             f"失败待重试 {int(status_counts.get('failed', 0))}；"
             f"处理中 {int(status_counts.get('processing', 0))}；"
             f"AI 已完成 {int(status_counts.get('completed', 0))}；"
-            f"待人工审核候选 {proposed_candidates}"
+            f"已通过互审的候选 {proposed_candidates}"
         )
         visible_rows = detail_rows[:30]
         text_lines = [
-            "GIDS 疾病映射审核摘要",
+            "GIDS 疾病映射互审摘要",
             "",
-            "这是一封定时汇总邮件，不需要逐条处理通知。",
-            f"本期事件：AI 候选已生成 {ready_count} 条；新来源项 {new_count} 个。",
+            "这是一封定时汇总邮件，仅供知悉，不需要人工处理。",
+            f"本期事件：AI 互审完成 {ready_count} 条；新来源项 {new_count} 个。",
             f"国家/地区分布：{country_summary}",
             f"当前队列：{current_summary}",
             "",
-            "建议操作：",
-            f"1. 打开 {review_location}",
-            "2. 优先查看高置信度候选和失败重试项。",
-            "3. 只有人工确认后再点击“接受并发布”；不确定的项目可以继续保留在隔离区。",
+            "说明：",
+            f"1. 详情见 {review_location}",
+            "2. 双模型互审 accept 的映射已自动发布；未通过的保持未映射，并会带上审核意见自动重试。",
             "",
             "本期明细（最多 30 条）：",
         ]
@@ -540,19 +539,19 @@ class MappingNotificationService:
         <div style="font-family:Arial,sans-serif;max-width:900px;color:#172033;line-height:1.55">
           <h1 style="font-size:22px">GIDS 疾病映射审核摘要</h1>
           <p style="background:#eef6ff;padding:12px;border-radius:8px">
-            这是一封定时汇总邮件，不需要逐条处理通知。
+            这是一封定时汇总邮件，仅供知悉，不需要人工处理。
           </p>
           <h2 style="font-size:17px">本期概览</h2>
           <ul>
-            <li>AI 候选已生成：<b>{ready_count}</b></li>
+            <li>AI 互审已完成：<b>{ready_count}</b></li>
             <li>新来源疾病项：<b>{new_count}</b></li>
             <li>当前队列：{html.escape(current_summary)}</li>
           </ul>
-          <h2 style="font-size:17px">应该怎么处理</h2>
+          <h2 style="font-size:17px">说明</h2>
           <ol>
             <li>{link_html}</li>
-            <li>优先检查高置信度候选和失败重试项。</li>
-            <li>人工确认后再“接受并发布”；不确定项继续留在隔离区。</li>
+            <li>映射由双模型互审决定：审核通过即自动发布，未通过的保持未映射。</li>
+            <li>失败重试项会自动重新排队，无需人工操作。</li>
           </ol>
           <h2 style="font-size:17px">国家/地区分布</h2>
           <table style="border-collapse:collapse;width:360px" border="1" cellpadding="6">

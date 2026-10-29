@@ -58,7 +58,7 @@ def build_generate_site_data_command(
     return command
 
 
-def build_update_situation_room_command(*, python_path: Path) -> list[str]:
+def build_update_situation_notices_command(*, python_path: Path) -> list[str]:
     """Collect authority notices, run peer-reviewed AI, and export Situation data."""
 
     return [str(python_path), "scripts/run_situation_notices.py"]

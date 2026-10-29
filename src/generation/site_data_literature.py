@@ -1151,71 +1151,13 @@ def _signal_geographies(item: dict[str, Any]) -> list[dict[str, str]]:
 def _situation_evidence_items(
     snapshot: dict[str, Any],
 ) -> list[tuple[str, dict[str, Any]]]:
-    """Project v3 signals/events into the stable literature-linking shape."""
+    """Project the notice-based Situation snapshot into the literature-linking shape."""
 
-    if snapshot.get("schema_version") != "situation_room.v3":
-        return [
-            (section, item)
-            for section in ("increasing", "emerging", "unusual")
-            for item in snapshot.get(section) or []
-        ]
-    output: list[tuple[str, dict[str, Any]]] = []
-    for signal in snapshot.get("signals") or []:
-        identity = signal.get("identity") or {}
-        observation = signal.get("observation") or {}
-        anomaly = signal.get("anomaly") or {}
-        assessment = signal.get("assessment") or {}
-        risk = assessment.get("public_health_risk") or {}
-        tags = set(signal.get("tags") or [])
-        section = "unusual" if "unusual" in tags else "increasing"
-        output.append(
-            (
-                section,
-                {
-                    "id": identity.get("signal_id"),
-                    "kind": "statistical_signal",
-                    "title": identity.get("disease_name"),
-                    "disease_id": identity.get("disease_id"),
-                    "disease_name": identity.get("disease_name"),
-                    "country_code": identity.get("country_code"),
-                    "country_name": identity.get("country_name"),
-                    "data_through": observation.get("data_through"),
-                    "source_label": identity.get("source_label") or identity.get("source_system"),
-                    "window": {
-                        "label": observation.get("window_label"),
-                        "current": observation.get("current"),
-                        "previous": observation.get("previous"),
-                        "absolute_change": observation.get("absolute_change"),
-                        "change_pct": observation.get("relative_change_pct"),
-                    },
-                    "risk": {
-                        "score": None,
-                        "level": risk.get("level") if risk.get("status") == "assessed" else None,
-                        "confidence": None,
-                    },
-                    "signal_level": anomaly.get("state"),
-                },
-            )
-        )
-    for event in snapshot.get("events") or []:
-        updates = event.get("updates") or []
-        latest = updates[-1] if updates else {}
-        output.append(
-            (
-                "emerging",
-                {
-                    "id": event.get("cluster_id"),
-                    "kind": "official_event",
-                    "title": latest.get("title") or event.get("disease_name"),
-                    "disease_id": event.get("disease_id"),
-                    "disease_name": event.get("disease_name"),
-                    "geographies": event.get("geographies") or [],
-                    "published_at": event.get("last_published_at"),
-                    "source": latest.get("source"),
-                },
-            )
-        )
-    return output
+    return [
+        (section, item)
+        for section in ("increasing", "emerging", "unusual")
+        for item in snapshot.get(section) or []
+    ]
 
 
 def build_surveillance_evidence(

@@ -130,7 +130,6 @@ The shipped example includes these categories:
 
 - application settings: `APP_ENV`, `APP_NAME`, `DEBUG`, `LOG_LEVEL`
 - runtime database: `DATABASE_URL`, `DATABASE_URL_SYNC`
-- Situation history database: `SITUATION_HISTORY_DATABASE_ENABLED`, `SITUATION_HISTORY_DATABASE_NAME`, `SITUATION_HISTORY_DATABASE_URL`
 - performance: `MAX_PARALLEL_TASKS`, `MAX_CRAWLER_CONCURRENT`, `TASK_WORKER_CONCURRENCY`, `TASK_WORKER_AI_CONCURRENCY`
 - AI bootstrap defaults: `DEFAULT_AI_PROVIDER`, `DEFAULT_MODEL`, `AI__MODEL_CHAIN_RAW`
 - paths: `DATA_DIR`, `LOG_DIR`, `CONFIG_DIR`
@@ -153,16 +152,6 @@ center. Environment model values only seed the model-center tables during first
 initialization or an explicit forced bootstrap. The worker deterministically
 rotates preferred model-center routes per disease/language and fail-closes when
 no model-center route is active, routable, and out of cooldown.
-
-Situation Room revisions, detector evidence, source checks, synchronization runs, and
-operator audit actions are retained in a dedicated database. When
-`SITUATION_HISTORY_DATABASE_URL` is blank, the service derives a connection from
-`DATABASE_URL` and replaces only the database name (default: `globalid_history`). Create
-the schema and reconcile existing snapshots idempotently with:
-
-```bash
-venv/bin/python scripts/init_situation_history_database.py --backfill
-```
 
 Situation Room v3.2 uses Pydantic as the canonical report contract, immutable
 analysis runs, history-first publication, joint weekly/monthly multi-horizon

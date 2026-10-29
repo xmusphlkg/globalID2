@@ -716,6 +716,21 @@ class LiteratureEnrichmentPipeline:
             from src.services.literature_automation_service import literature_automation_service
 
             automation = await literature_automation_service.reconcile()
+            # Summaries that passed the deterministic gate wait in ``review``;
+            # the shared two-model peer review decides publication.
+            from src.services.ai_content_governance_service import ai_content_governance_service
+
+            try:
+                async with get_db() as db:
+                    automation = {
+                        **(automation or {}),
+                        "peer_review": await ai_content_governance_service.review_literature_summaries(
+                            db, limit=max(20, len(articles) * len(languages))
+                        ),
+                    }
+            except Exception as exc:  # noqa: BLE001 - the queue is retried on the next run
+                logger.warning("Literature summary peer review failed: {}", exc)
+                automation = {**(automation or {}), "peer_review_error": str(exc)[:500]}
         return {
             **counts,
             "languages": languages,

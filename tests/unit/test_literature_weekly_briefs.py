@@ -74,7 +74,8 @@ def test_complete_explicit_human_review_is_allowlisted_and_publicly_attributed()
         },
     }], surveillance_evidence=None, now=datetime(2026, 8, 17, tzinfo=timezone.utc))[0]
 
-    assert result["brief_status"] == "editorially_reviewed"
+    # A human record is still shown in the byline but no longer sets the status.
+    assert result["brief_status"] == "automatically_compiled_not_editorially_reviewed"
     assert result["byline"]["reviewer"] == {
         "name": "Dr Jane Q. Public",
         "role": "Infectious disease editor",

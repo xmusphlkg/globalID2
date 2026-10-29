@@ -70,7 +70,6 @@ Create these Actions secrets for the build job:
 | Name | Required | Purpose |
 | --- | --- | --- |
 | `SITUATION_DATABASE_URL` | yes | Async PostgreSQL URL for normalized surveillance data |
-| `SITUATION_HISTORY_DATABASE_URL` | yes | Async PostgreSQL URL for immutable Situation runs, reports, reviews, and publication pointers |
 
 Use `postgresql+asyncpg://...` URLs and require TLS according to the database
 provider. The workflow never prints the values and never passes them as command
