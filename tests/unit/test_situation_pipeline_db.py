@@ -258,3 +258,32 @@ async def test_no_model_route_defers_the_batch_without_spending_attempts(db):
         rows = (await session.execute(select(SituationNotice))).scalars().all()
     assert {row.ai_status for row in rows} == {"pending"}
     assert {row.ai_attempts for row in rows} == {0}
+
+
+async def test_failover_onto_one_model_is_retried_on_another_pair(db):
+    from src.ai.peer_review_completer import ReviewRoutePool
+
+    class Collapsed(Scripted):
+        async def __call__(self, role, system, prompt, *, attachments=None):
+            reply = await super().__call__(role, system, prompt, attachments=attachments)
+            return Completion(text=reply.text, model="model-a", input_mode="text")
+
+    accept = {"verdict": "accept", "score": 0.9, "issues": [], "corrected": None}
+
+    class Pool(ReviewRoutePool):
+        def __init__(self):
+            super().__init__({"p:model-a": 1, "p:model-b": 1, "p:model-c": 1}, line="situation_notice", max_tokens=2400)
+            self.avoided: list[set] = []
+            self.pairs = [Collapsed([DRAFT], [accept]), Scripted([DRAFT], [accept])]
+
+        def completer(self, avoid=()):
+            self.avoided.append(set(avoid))
+            return self.pairs.pop(0)
+
+    await store_notices(_run(_event("2026-DON640", ref={"kind": "who_don", "slug": "2026-DON640"})), run_id="r1")
+    await fetch_pending_documents(fetch=_fetcher([]))
+
+    pool = Pool()
+    counts = await extract_pending(pool)
+    assert counts["published"] == 1 and counts["failed"] == 0
+    assert pool.avoided == [set(), {"model-a"}]
