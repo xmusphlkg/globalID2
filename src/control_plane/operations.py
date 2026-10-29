@@ -17,6 +17,7 @@ from src.services.automation_service import automation_service
 from src.services.crawl_task_service import crawl_task_service
 from src.services.data_release_service import data_release_service
 from src.services.literature_service import literature_service
+from src.services.situation_schedule_service import situation_schedule_service
 
 
 def _value(value: Any) -> str:
@@ -272,6 +273,7 @@ class ScheduleApplicationService:
         "ingestion": automation_service,
         "release": data_release_service,
         "literature": literature_service,
+        "situation": situation_schedule_service,
     }
 
     @staticmethod
@@ -344,6 +346,8 @@ class ScheduleApplicationService:
             result = await automation_service.trigger_job(job_id, manual=True)
         elif kind == "release":
             result = await data_release_service.trigger_job(job_id, manual=True, trigger="manual")
+        elif kind == "situation":
+            result = await situation_schedule_service.trigger_job(job_id, manual=True)
         elif job_id == literature_service.GAP_DISCOVERY_JOB_ID:
             result = await literature_service.trigger_gap_discovery(manual=True)
         elif job_id == literature_service.ENRICHMENT_JOB_ID:
@@ -657,6 +661,7 @@ class ScheduleRunQueryRepository:
             "ingestion": TaskType.CRAWL_DATA,
             "release": TaskType.EXPORT_DATA,
             "literature": TaskType.SYNC_LITERATURE,
+            "situation": TaskType.REFRESH_SITUATION_SOURCES,
         }[kind]
         if kind == "literature" and job_id == literature_service.GAP_DISCOVERY_JOB_ID:
             task_type = TaskType.DISCOVER_LITERATURE_GAPS
@@ -673,6 +678,7 @@ class ScheduleRunQueryRepository:
             "ingestion": "automation_job_id",
             "release": "release_job_id",
             "literature": "literature_job_id",
+            "situation": "situation_job_id",
         }[kind]
         matching: list[dict[str, Any]] = []
         for task in tasks:

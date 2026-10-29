@@ -634,6 +634,8 @@ async def _run_situation_sources_refresh(task: Task) -> Dict[str, Any]:
             skip_ai=bool(input_data.get("skip_ai", False)),
             ai_limit=int(input_data.get("ai_limit") or 30),
             document_limit=int(input_data.get("document_limit") or 40),
+            # Writes the database only; the data release exports what is stored.
+            export=bool(input_data.get("export", False)),
             progress=progress,
         )
         result["fetch_events"] = fetch_events
