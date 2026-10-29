@@ -472,6 +472,20 @@ class RawArchiveSettings(_BaseEnvSettings):
     git_timeout_seconds: int = Field(default=1800, ge=60, le=7200, description="单次 Git 网络操作超时秒数")
 
 
+class SituationSettings(_BaseEnvSettings):
+    """Scheduled Situation refresh: collect reports, read them and write alerts to the database."""
+
+    schedule_enabled: bool = Field(default=True, description="Run the Situation refresh on the scheduler")
+    interval_minutes: int = Field(default=180, ge=15, le=10080, description="Minutes between refreshes")
+    catch_up_interval_minutes: int = Field(
+        default=20, ge=5, le=240, description="Follow-up delay while reports are still waiting to be read"
+    )
+    poll_interval_seconds: int = Field(default=60, ge=5, le=600)
+    timezone: str = Field(default="UTC")
+    document_limit: int = Field(default=60, ge=1, le=500)
+    ai_limit: int = Field(default=30, ge=1, le=500)
+
+
 class LiteratureSettings(_BaseEnvSettings):
     """Research Radar source, classification, and scheduling settings."""
 
@@ -988,6 +1002,7 @@ class AppSettings(BaseSettings):
     data_release: DataReleaseSettings = Field(default_factory=DataReleaseSettings)
     raw_archive: RawArchiveSettings = Field(default_factory=RawArchiveSettings)
     literature: LiteratureSettings = Field(default_factory=LiteratureSettings)
+    situation: SituationSettings = Field(default_factory=SituationSettings)
     app: AppSettingsConfig = Field(default_factory=AppSettingsConfig)
     report: ReportSettings = Field(default_factory=ReportSettings)
     crawler: CrawlerSettings = Field(default_factory=CrawlerSettings)

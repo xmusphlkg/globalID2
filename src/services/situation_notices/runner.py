@@ -1,8 +1,8 @@
-"""One end-to-end Situation run, shared by the CLI, the task worker and releases.
+"""Situation runs: a scheduled refresh that writes the database, and a release export.
 
-collect reports -> store -> fetch full text -> peer-reviewed alert extraction ->
-outbreaks -> static export.  ``skip_ai`` keeps the run usable when no model
-route is available: reports and documents are still stored and exported.
+:func:`run_situation` collects reports, stores them, fetches full text and runs
+peer-reviewed alert extraction (the scheduler calls it with ``export=False``).
+:func:`export_situation` is the release step: it only reads the database.
 """
 
 from __future__ import annotations
@@ -42,6 +42,7 @@ async def run_situation(
     skip_ai: bool = False,
     require_cross_model: bool = False,
     fetch: bool = True,
+    export: bool = True,
     progress: Progress = _noop,
 ) -> dict[str, Any]:
     now = utc_now()
@@ -81,7 +82,20 @@ async def run_situation(
     await progress(75)
 
     summary["outbreaks"] = await rebuild_outbreaks(as_of=now.date())
-    summary["export"] = await export_site(output_dir=output_dir, as_of=now.date())
+    if export:
+        summary["export"] = await export_site(output_dir=output_dir, as_of=now.date())
     summary["finished_at"] = utc_now().isoformat()
     await progress(100)
     return summary
+
+
+async def export_situation(*, output_dir: Path | str = DEFAULT_OUTPUT_DIR) -> dict[str, Any]:
+    """Release step: publish what the database already holds; no feed requests, no model calls."""
+
+    now = utc_now()
+    return {
+        "started_at": now.isoformat(),
+        "outbreaks": await rebuild_outbreaks(as_of=now.date()),
+        "export": await export_site(output_dir=output_dir, as_of=now.date()),
+        "finished_at": utc_now().isoformat(),
+    }

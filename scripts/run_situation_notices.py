@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 
 from src.services.global_sources.collection import DEFAULT_SINCE_DAYS  # noqa: E402
 from src.services.situation_notices.export import DEFAULT_OUTPUT_DIR  # noqa: E402
-from src.services.situation_notices.runner import run_situation  # noqa: E402
+from src.services.situation_notices.runner import export_situation, run_situation  # noqa: E402
 
 
 def main() -> None:
@@ -38,7 +38,19 @@ def main() -> None:
         action="store_true",
         help="Refuse to run unless two distinct model routes are available",
     )
+    parser.add_argument(
+        "--export-only",
+        action="store_true",
+        help="Release step: rebuild outbreaks and export from the database; no feed requests, no model calls",
+    )
     args = parser.parse_args()
+
+    if args.export_only:
+        summary = asyncio.run(export_situation(output_dir=args.output_dir))
+        print(json.dumps(summary, ensure_ascii=False, indent=2, default=str))
+        if summary["export"]["alert_count"] == 0 and summary["export"]["monitoring_products"] == 0:
+            raise SystemExit(2)
+        return
 
     summary = asyncio.run(
         run_situation(

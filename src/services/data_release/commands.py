@@ -59,9 +59,9 @@ def build_generate_site_data_command(
 
 
 def build_update_situation_notices_command(*, python_path: Path) -> list[str]:
-    """Collect authority notices, run peer-reviewed AI, and export Situation data."""
+    """Export Situation data from the database; collection and AI run on their own schedule."""
 
-    return [str(python_path), "scripts/run_situation_notices.py"]
+    return [str(python_path), "scripts/run_situation_notices.py", "--export-only"]
 
 
 def build_validate_situation_release_command(*, python_path: Path) -> list[str]:
