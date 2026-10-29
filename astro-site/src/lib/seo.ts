@@ -31,6 +31,16 @@ export function toSeoSlug(value: unknown): string {
     .replace(/^-+|-+$/g, '');
 }
 
+/** Generated research data may still carry legacy disease slugs such as "...(rsv)"; disease pages use the normalized slug. */
+export function normalizeDiseaseHref(href: string): string;
+export function normalizeDiseaseHref(href: string | null | undefined): string | null;
+export function normalizeDiseaseHref(href: string | null | undefined): string | null {
+  if (!href) return null;
+  const match = /^\/diseases\/([^/]+)\/(.*)$/.exec(href);
+  if (!match) return href;
+  return `/diseases/${toSeoSlug(match[1])}/${match[2]}`;
+}
+
 export function yearFromDate(value: string | null | undefined): string | null {
   const match = normalizeSeoText(value).match(/^\d{4}/);
   return match?.[0] ?? null;

@@ -152,7 +152,7 @@ const structuredData = {
               data-topic-name-map={JSON.stringify(Object.fromEntries(Object.entries(RESEARCH_TOPIC_LABELS).map(([key, labels]) => [key, labels.fr])))}
             >
               {serverRenderedArticles.map((article: any, index: number) => (
-                <ResearchArticleCard article={article} index={index} initialVisible={initialVisibleArticles} locale={locale} searchable={false} />
+                <ResearchArticleCard article={article} index={index} initialVisible={initialVisibleArticles} locale={locale} />
               ))}
             </div>
             {articles.length > initialVisibleArticles && (
@@ -332,7 +332,8 @@ const structuredData = {
       : '';
     const surveillance = (article.related_surveillance ?? [])[0];
     const fallbackDisease = (article.diseases ?? [])[0];
-    const surveillancePath = surveillance?.url || (fallbackDisease?.slug ? `/diseases/${fallbackDisease.slug}/` : '');
+    const rawSurveillancePath = surveillance?.url || (fallbackDisease?.slug ? `/diseases/${fallbackDisease.slug}/` : '');
+    const surveillancePath = rawSurveillancePath.replace(/^\/diseases\/([^/]+)\//, (_match: string, slug: string) => `/diseases/${slug.toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}/`);
     const surveillanceUrl = surveillancePath && routePrefix && surveillancePath.startsWith('/') ? `${routePrefix}${surveillancePath}` : surveillancePath;
     if (openAccessUrl || surveillanceUrl) {
       const actions = make('div', 'research-card-actions');

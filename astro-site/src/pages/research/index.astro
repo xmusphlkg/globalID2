@@ -5,7 +5,7 @@ import ResearchHotspotCharts from '../../components/research/ResearchHotspotChar
 import researchData from '../../data/research/index.json';
 import researchHotspotsData from '../../data/research/hotspots.json';
 import { buildResearchFeedDefinitions, filterResearchFeedArticles, toResearchFeedSlug, type ResearchFeedScope } from '../../lib/research-feed';
-import { buildAlternatePaths } from '../../lib/seo';
+import { buildAlternatePaths, normalizeDiseaseHref } from '../../lib/seo';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID, localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedRegionName, localizedResearchFacet, localizedResearchTopic, localizedStudyType, RESEARCH_TOPIC_LABELS, STUDY_TYPE_LABELS, translateUi } from '../../utils/i18n';
 
@@ -189,7 +189,7 @@ const itemList = {
         <div class="directory-rows">
           <section>
             <h3>{pick('Diseases', '疾病')}</h3>
-            <ul>{topDiseaseHubs.map((facet: any) => <li><a href={localeHref(facet.url)}><span>{localizedDiseaseName(facet, locale)}</span><strong>{facet.count}</strong></a></li>)}</ul>
+            <ul>{topDiseaseHubs.map((facet: any) => <li><a href={localeHref(normalizeDiseaseHref(facet.url))}><span>{localizedDiseaseName(facet, locale)}</span><strong>{facet.count}</strong></a></li>)}</ul>
           </section>
           <section>
             <h3>{pick('Topics', '主题')}</h3>

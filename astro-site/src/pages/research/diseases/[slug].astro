@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
 import researchData from '../../../data/research/index.json';
+import { normalizeDiseaseHref } from '../../../lib/seo';
 import { localizedDiseaseName } from '../../../utils/diseaseNames';
 
 export function getStaticPaths() {
@@ -50,7 +51,7 @@ const descriptionFr = `Une vue ciblée des recherches publiées sur ${diseaseNam
   <section slot="context" class="card evidence-timeline">
     <div class="timeline-heading">
       <div><p class="academic-kicker">{zh ? '证据时间线' : fr ? 'Chronologie des preuves' : 'Evidence timeline'}</p><h2>{zh ? '文献发表时间线' : fr ? 'Chronologie des publications' : 'Publication timeline'}</h2></div>
-      <a href={`${prefix}/diseases/${facet.slug}/`}>{zh ? '查看疾病监测 →' : fr ? 'Ouvrir la surveillance →' : 'Open disease surveillance →'}</a>
+      <a href={`${prefix}${normalizeDiseaseHref(`/diseases/${facet.slug}/`)}`}>{zh ? '查看疾病监测 →' : fr ? 'Ouvrir la surveillance →' : 'Open disease surveillance →'}</a>
     </div>
     <div class="timeline-overview"><p class="timeline-intro">{zh ? '按月展示已收录文献的发表数量，便于识别研究活动的时间分布。' : fr ? 'Nombre mensuel de publications du catalogue, pour situer l’activité de recherche dans le temps.' : 'Monthly publication counts from the catalogue show how research activity changes over time.'}</p>{peakPublication && <span>{zh ? `近 ${timeline.length} 个发表月份 · 峰值 ${peakPublication.month}（${peakPublication.publications} 篇）` : fr ? `${timeline.length} mois publiés · pic ${peakPublication.month} (${peakPublication.publications})` : `${timeline.length} publication months · peak ${peakPublication.month} (${peakPublication.publications})`}</span>}</div>
     {timeline.length > 0 ? <div class="timeline-table" role="table" aria-label="Monthly publication volume">
