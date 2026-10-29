@@ -145,3 +145,24 @@ def test_unlisted_disease_groups_by_label():
     (outbreak,) = cluster_alerts(rows, as_of=AS_OF)
     assert outbreak["disease_id"] is None
     assert outbreak["disease_label"] == "Nipah virus"
+
+
+def test_a_roundup_naming_many_countries_does_not_make_one_outbreak():
+    rows = [
+        {**_alert(str(i), "ecdc_cdtr:w42", date(2026, 10, 16), cc, disease="D128"), "document_type": "monitoring_product"}
+        for i, cc in enumerate(["DE", "IT", "FR"])
+    ]
+    assert len(cluster_alerts(rows, as_of=AS_OF)) == 3
+
+
+def test_an_ended_place_does_not_join_a_later_outbreak_through_a_roundup():
+    rows = [
+        _alert("ug-1", "who_don:600", date(2026, 6, 1), "UG"),
+        _alert("ug-end", "who_don:601", date(2026, 7, 20), "UG", status="ended"),
+        {**_alert("ug-wer", "who_wer:1", date(2026, 8, 1), "UG", status="ended"), "document_type": "monitoring_product"},
+        {**_alert("cd-wer", "who_wer:1", date(2026, 8, 1), "CD"), "document_type": "monitoring_product"},
+    ]
+    outbreaks = cluster_alerts(rows, as_of=AS_OF)
+    by_alert = {aid: o["outbreak_id"] for o in outbreaks for aid in o["alert_ids"]}
+    assert by_alert["ug-1"] == by_alert["ug-end"]
+    assert by_alert["cd-wer"] != by_alert["ug-1"]

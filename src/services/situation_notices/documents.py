@@ -12,8 +12,10 @@ any other exception is transient and the caller retries with backoff.
 from __future__ import annotations
 
 import hashlib
+import io
 import re
 import threading
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -82,16 +84,23 @@ def pdf_to_text(data: bytes) -> tuple[str, int]:
 
     pdf = pypdfium2.PdfDocument(data)
     try:
-        pages = []
-        for index in range(len(pdf)):
-            page = pdf[index]
-            try:
-                pages.append(page.get_textpage().get_text_range().strip())
-            finally:
-                page.close()
+        pages = _page_texts(pdf)
         return "\n\n".join(page for page in pages if page), len(pages)
     finally:
         pdf.close()
+
+
+def _page_texts(pdf: Any) -> list[str]:
+    """Text of every page of an open pdfium document, in order."""
+
+    pages = []
+    for index in range(len(pdf)):
+        page = pdf[index]
+        try:
+            pages.append(page.get_textpage().get_text_range().strip())
+        finally:
+            page.close()
+    return pages
 
 
 _OCR_LOCK = threading.Lock()
@@ -189,12 +198,69 @@ def pdf_link(markup: str, base_url: str) -> str | None:
     return None
 
 
+_RUNNING_HEADER = re.compile(
+    r"(?:^\s*(\d{1,4})\s+(?:WEEKLY EPIDEMIOLOGICAL RECORD|RELEV[ÉE] [ÉE]PID[ÉE]MIOLOGIQUE HEBDOMADAIRE)"
+    r"|(?:WEEKLY EPIDEMIOLOGICAL RECORD|RELEV[ÉE] [ÉE]PID[ÉE]MIOLOGIQUE HEBDOMADAIRE)[^\n]{0,60}?\d{4}\s+(\d{1,4})\b)",
+    re.I | re.M,
+)
+
+
+def printed_page_offset(pages: list[str]) -> int | None:
+    """``printed page - PDF index`` for a journal issue, from its running headers.
+
+    Headers are missing or garbled on some pages, so the offset most pages agree
+    on wins; fewer than two agreeing pages means it cannot be trusted.
+    """
+
+    votes: Counter[int] = Counter()
+    for index, text in enumerate(pages):
+        # Older issues print the page in a running header, newer ones in the footer.
+        match = _RUNNING_HEADER.search(text[:300]) or _RUNNING_HEADER.search(text[-300:])
+        if match:
+            votes[int(match.group(1) or match.group(2)) - index] += 1
+    if not votes:
+        return None
+    offset, count = votes.most_common(1)[0]
+    return offset if count >= 2 else None
+
+
+def _article_pages(data: bytes, page_range: Any) -> bytes:
+    """The PDF cut down to one article's printed pages; the whole file when that is not possible."""
+
+    if not (isinstance(page_range, list) and len(page_range) == 2):
+        return data
+    import pypdfium2
+
+    source = pypdfium2.PdfDocument(data)
+    try:
+        offset = printed_page_offset(_page_texts(source))
+        if offset is None:
+            return data
+        first = max(0, int(page_range[0]) - offset)
+        last = min(len(source) - 1, int(page_range[1]) - offset)
+        if first > last or (first == 0 and last == len(source) - 1):
+            return data
+        article = pypdfium2.PdfDocument.new()
+        try:
+            article.import_pages(source, list(range(first, last + 1)))
+            buffer = io.BytesIO()
+            article.save(buffer)
+            return buffer.getvalue()
+        finally:
+            article.close()
+    finally:
+        source.close()
+
+
 def _pdf_page(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
     page = fetch(_https(ref.get("page_url")), client=client)
     link = pdf_link(page.text, str(page.url))
     if link is None:
         raise DocumentUnavailable("no PDF link on the report page")
-    return _pdf_document(fetch(link, client=client, timeout=DOWNLOAD_TIMEOUT).content)
+    data = fetch(link, client=client, timeout=DOWNLOAD_TIMEOUT).content
+    if data.startswith(b"%PDF") and ref.get("pages"):
+        data = _article_pages(data, ref.get("pages"))
+    return _pdf_document(data)
 
 
 def _embedded(payload: dict[str, Any], key: str) -> list[dict[str, Any]]:

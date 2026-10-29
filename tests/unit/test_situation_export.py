@@ -87,12 +87,14 @@ def test_public_record_has_facts_quote_and_link_but_no_document_text():
     assert SECRET_BODY not in json.dumps(alert_record(_alert(), notice, _extraction(), DISEASES), ensure_ascii=False)
 
 
-def test_quote_is_withheld_for_sources_without_cleared_terms():
-    for terms in ("metadata_only", "blocked", ""):
+def test_quote_is_published_for_every_source_except_blocked_ones():
+    for terms in ("metadata_and_extract", "metadata_only", ""):
         record = alert_record(_alert(), _notice(redistribution=terms), _extraction(), DISEASES)
-        assert record["quote"] is None
-        # Structured facts and the link stay public.
-        assert record["cases"] == 9 and record["url"]
+        assert record["quote"]
+    blocked = alert_record(_alert(), _notice(redistribution="blocked"), _extraction(), DISEASES)
+    assert blocked["quote"] is None
+    # Structured facts and the link stay public either way.
+    assert blocked["cases"] == 9 and blocked["url"]
 
 
 def test_unlisted_disease_falls_back_to_the_reports_label():
@@ -157,3 +159,12 @@ def test_weekly_changes_counts_new_updated_and_first_seen_places():
     assert weeks["2026-W41"]["new_outbreaks"] == ["OB-1"] and weeks["2026-W41"]["new_places"] == 1
     assert weeks["2026-W42"]["updated_outbreaks"] == ["OB-1"]
     assert weeks["2026-W42"]["new_places"] == 1 and weeks["2026-W42"]["alerts"] == 2
+
+
+def test_map_point_prefers_the_recent_alert_with_counts_over_a_newer_empty_statement():
+    with_counts = {**_rec("who-ke", "2026-10-23"), "cases": 9, "deaths": 1, "quote": "nine cases"}
+    empty = {**_rec("acdc-ke", "2026-10-27"), "cases": None, "deaths": None, "quote": None}
+    (point,) = latest_per_place([with_counts, empty])
+    assert point["alert_id"] == "who-ke"
+    assert point["place_updated"] == "2026-10-27"
+    assert point["place_alert_count"] == 2

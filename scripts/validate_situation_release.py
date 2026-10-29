@@ -5,7 +5,7 @@ File-only checks (no database), against ``gids.situation_alerts.v1``:
 
 * ``map.json`` exists with the expected schema version, in every export file;
 * every map point links to an http(s) authority URL;
-* a quote is present exactly where the source's redistribution terms allow it;
+* every point carries a quote, except for sources whose terms are ``blocked``;
 * no field carries full report text (``text``, ``document``, ``full_text``...);
 * every map outbreak has a timeline file, and every point's alert is on it;
 * the built ``/situation/`` page exists in every locale.
@@ -21,7 +21,6 @@ from typing import Any, Iterator
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_VERSION = "gids.situation_alerts.v1"
-QUOTE_TERMS = "metadata_and_extract"
 QUOTE_LIMIT = 600
 DATA = ROOT / "astro-site" / "src" / "data" / "situation" / "international"
 DIST = ROOT / "astro-site" / "dist"
@@ -85,11 +84,11 @@ def validate(data_dir: Path = DATA, site_dir: Path = DIST) -> dict:
     quote_problems: list[str] = []
     for point in points:
         quote = point.get("quote")
-        quotable = sources.get(str(point.get("source_id"))) == QUOTE_TERMS
+        quotable = sources.get(str(point.get("source_id"))) != "blocked"
         if quotable and not (isinstance(quote, str) and quote.strip()):
             quote_problems.append(f"{point.get('alert_id')}: quote missing")
         elif not quotable and quote:
-            quote_problems.append(f"{point.get('alert_id')}: quote published without cleared terms")
+            quote_problems.append(f"{point.get('alert_id')}: quote published for a blocked source")
         elif isinstance(quote, str) and len(quote) > QUOTE_LIMIT:
             quote_problems.append(f"{point.get('alert_id')}: quote longer than {QUOTE_LIMIT}")
     check("quotes", not quote_problems, "; ".join(quote_problems[:5]))

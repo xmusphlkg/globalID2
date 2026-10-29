@@ -42,7 +42,9 @@ from .pipeline import utc_now
 SCHEMA_VERSION = "gids.situation_alerts.v1"
 DEFAULT_OUTPUT_DIR = ROOT / "astro-site" / "src" / "data" / "situation" / "international"
 DEFAULT_SINCE_DAYS = 365
-QUOTE_TERMS = "metadata_and_extract"
+#: One short sentence with a link to the original is published for every source
+#: except one whose terms forbid any reuse.
+NO_QUOTE_TERMS = "blocked"
 _OWNED = ("outbreaks", "by-country", "by-disease", "weekly")
 
 
@@ -72,11 +74,11 @@ def alert_record(
     extraction: SituationExtraction | None,
     diseases: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
-    """One alert in the public shape; the quote is withheld where terms are unclear."""
+    """One alert in the public shape: structured facts, one quoted sentence and the link."""
 
     disease = diseases.get(alert.disease_id or "", {})
     country = country_row(alert.country_code)
-    quotable = notice.redistribution == QUOTE_TERMS
+    quotable = notice.redistribution != NO_QUOTE_TERMS
     return {
         "alert_id": alert.alert_id,
         "outbreak_id": alert.outbreak_id,
@@ -116,19 +118,46 @@ def alert_record(
     }
 
 
-def latest_per_place(records: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    """The newest alert of each outbreak x country x admin area: one map point each."""
+#: A place's figures may come from an alert this much older than its latest news.
+FIGURE_WINDOW_DAYS = 30
 
-    newest: dict[tuple[str, str, str, str], dict[str, Any]] = {}
-    for record in sorted(records, key=_sort_key):
+
+def _informative(record: dict[str, Any]) -> tuple[bool, bool]:
+    return (record.get("cases") is not None or record.get("deaths") is not None, bool(record.get("quote")))
+
+
+def latest_per_place(records: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One map point per outbreak x country x admin area.
+
+    The point shows the most informative recent alert of that place (counts and
+    a public quote beat a press release that states neither), so a later
+    statement without numbers never hides the report that has them.
+    ``place_updated`` is the date of the place's newest alert, whatever it said.
+    """
+
+    groups: dict[tuple[str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
         key = (
             record["outbreak_id"] or record["alert_id"],
             record["country_code"],
             record["admin_area"] or "",
             record["disease_id"] or record["disease_label"],
         )
-        newest[key] = record
-    return sorted(newest.values(), key=_sort_key, reverse=True)
+        groups[key].append(record)
+
+    points = []
+    for rows in groups.values():
+        rows.sort(key=_sort_key, reverse=True)
+        newest = rows[0]
+        newest_day = date.fromisoformat(newest["published_date"])
+        recent = [
+            row for row in rows
+            if (newest_day - date.fromisoformat(row["published_date"])).days <= FIGURE_WINDOW_DAYS
+        ]
+        # Stable: ties keep the newest first.
+        best = max(recent, key=_informative)
+        points.append({**best, "place_updated": newest["published_date"], "place_alert_count": len(rows)})
+    return sorted(points, key=lambda p: (p["place_updated"], p["alert_id"]), reverse=True)
 
 
 def facets(points: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:

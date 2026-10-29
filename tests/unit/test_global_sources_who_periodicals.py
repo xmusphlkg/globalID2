@@ -110,3 +110,11 @@ def test_wer_payload_keeps_only_usable_records():
     rows = normalize_wer_payload({"value": [WER_ARTICLE, {"Id": "x"}]})
     assert len(rows) == 1
     assert rows[0]["url"].endswith("who-wer10140-285-289")
+
+
+def test_wer_document_ref_carries_the_article_page_range():
+    from src.services.global_sources.who_periodicals import _wer_pages
+
+    assert _wer_pages("https://www.who.int/publications/i/item/who-wer10139-261-268") == {"pages": [261, 268]}
+    assert _wer_pages("https://www.who.int/publications/i/item/who-wer10139") == {}
+    assert _wer_pages("https://x/who-wer-900-100") == {}

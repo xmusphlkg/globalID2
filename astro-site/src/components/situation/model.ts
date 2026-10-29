@@ -12,7 +12,8 @@ export interface Filters {
   window: WindowKey;
 }
 
-export const EMPTY_FILTERS: Filters = { disease: '', country: '', source: '', window: 'all' };
+/** The map opens on the last 30 days; a year of points buries what is new. */
+export const DEFAULT_FILTERS: Filters = { disease: '', country: '', source: '', window: '30' };
 
 const DAY_MS = 86_400_000;
 

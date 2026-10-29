@@ -131,3 +131,13 @@ def test_load_original_rejects_path_traversal_and_blank_names(tmp_path, name):
 
 def test_load_original_of_a_missing_file_is_none(tmp_path):
     assert load_original("nope.pdf", directory=tmp_path) is None
+
+
+def test_printed_page_offset_reads_footer_page_numbers():
+    pages = [f"body text\n{252 + i} WEEKLY EPIDEMIOLOGICAL RECORD, NO. 39, 02 October 2026" for i in range(5)]
+    assert docs.printed_page_offset(pages) == 252
+
+
+def test_printed_page_offset_needs_two_agreeing_pages():
+    assert docs.printed_page_offset(["no header here", "nor here"]) is None
+    assert docs.printed_page_offset(["252 WEEKLY EPIDEMIOLOGICAL RECORD, NO. 39"]) is None

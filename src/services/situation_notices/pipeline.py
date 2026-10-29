@@ -516,14 +516,22 @@ def cluster_alerts(alerts: Iterable[dict[str, Any]], *, as_of: date) -> list[dic
         first_in_notice: dict[str, int] = {}
         latest_in_country: dict[str, int] = {}
         for index, row in enumerate(rows):
-            if row["notice_id"] in first_in_notice:
-                union(first_in_notice[row["notice_id"]], index)
-            else:
-                first_in_notice[row["notice_id"]] = index
+            # Only a report about one event ties its countries together; a
+            # periodic roundup lists many unrelated national situations.
+            if row.get("document_type", "event_report") == "event_report":
+                if row["notice_id"] in first_in_notice:
+                    union(first_in_notice[row["notice_id"]], index)
+                else:
+                    first_in_notice[row["notice_id"]] = index
+            # An ended alert is the last word for that place: a later alert there
+            # starts a new outbreak, and an ended place never joins a live one.
             earlier = latest_in_country.get(row["country_code"])
             if earlier is not None and (row["published_date"] - rows[earlier]["published_date"]).days <= OUTBREAK_GAP_DAYS:
                 union(earlier, index)
-            latest_in_country[row["country_code"]] = index
+            if row["status"] == "ended":
+                latest_in_country.pop(row["country_code"], None)
+            else:
+                latest_in_country[row["country_code"]] = index
 
         groups: dict[int, list[dict[str, Any]]] = defaultdict(list)
         for index, row in enumerate(rows):
@@ -564,7 +572,11 @@ async def rebuild_outbreaks(*, since_days: int = 365, as_of: date | None = None)
     since = as_of - timedelta(days=since_days)
     async with get_db() as db:
         rows = (
-            await db.execute(select(SituationAlert).where(SituationAlert.published_date >= since))
+            await db.execute(
+                select(SituationAlert)
+                .options(selectinload(SituationAlert.extraction))
+                .where(SituationAlert.published_date >= since)
+            )
         ).scalars().all()
         clusters = cluster_alerts(
             (
@@ -577,6 +589,7 @@ async def rebuild_outbreaks(*, since_days: int = 365, as_of: date | None = None)
                     "disease_label": row.disease_label,
                     "country_code": row.country_code,
                     "status": row.status,
+                    "document_type": (row.extraction.document_type if row.extraction else None) or "other",
                 }
                 for row in rows
             ),
