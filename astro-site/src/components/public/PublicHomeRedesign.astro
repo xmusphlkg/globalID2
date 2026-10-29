@@ -4,7 +4,7 @@ import CountryFlag from '../CountryFlag.astro';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedRegionName } from '../../utils/i18n';
 import { hasCountryDataSnapshot } from '../../lib/country-coverage';
-import { readInternationalLatest, readSituationEvents } from '../../utils/international';
+import { readSituationMap } from '../../utils/international';
 import metaRaw from '../../data/meta.json';
 import diseasesRaw from '../../data/diseases/index.json';
 import reportsRaw from '../../data/reports/index.json';
@@ -44,11 +44,11 @@ const t = zh ? {
   methods: '来源与方法',
   review: '态势复核',
   attention: '当前关注',
-  reviewText: '汇总世卫组织、欧洲疾控中心、非洲疾控中心与泛美卫生组织的官方通报，由 AI 生成多语言摘要与风险评估并经模型同行评审。',
-  events: '窗口内通报',
-  signals: '活跃事件',
-  reviewed: '响应来源',
-  fullReview: '查看完整态势复核',
+  reviewText: '读取世卫组织、欧洲疾控中心、非洲疾控中心与泛美卫生组织的完整官方报告，抽取“某病在某地”的警报并标在地图上，经两个模型互审后发布。',
+  events: '有新消息的地点',
+  signals: '活跃疫情',
+  reviewed: '贡献来源',
+  fullReview: '打开态势地图',
   explore: '开始探索',
   exploreTitle: '像使用数据目录一样进入公共卫生证据',
   exploreText: '从国家、疾病或研究进入数据，沿着来源、趋势与下载继续查证。',
@@ -96,11 +96,11 @@ const t = zh ? {
   methods: 'Sources and methods',
   review: 'Situation review',
   attention: 'Current attention',
-  reviewText: 'Official notices from WHO, ECDC, Africa CDC and PAHO, with AI-written multilingual summaries and risk assessments checked by model peer review.',
-  events: 'Notices in window',
-  signals: 'Active events',
-  reviewed: 'Sources responding',
-  fullReview: 'Open the full situation review',
+  reviewText: 'Full official reports from WHO, ECDC, Africa CDC and PAHO are read and turned into disease-in-place alerts on a map, published after two-model peer review.',
+  events: 'Places with news',
+  signals: 'Active outbreaks',
+  reviewed: 'Contributing sources',
+  fullReview: 'Open the situation map',
   explore: 'Start exploring',
   exploreTitle: 'Enter public health evidence like a data catalog',
   exploreText: 'Start with a country, disease, or study, then follow the source, trend, and download links to check the evidence.',
@@ -135,7 +135,7 @@ if (fr) Object.assign(t, {
   situation: 'Voir la situation actuelle', countries: 'Parcourir les pays', downloads: 'Télécharger les données', release: 'Publication publique actuelle',
   observations: 'Séries de surveillance', reportedCases: 'Cas déclarés', jurisdictions: 'Pays et régions', diseases: 'Maladies suivies', sources: 'Sources officielles', through: 'Données jusqu’au',
   updated: 'Instantané généré', recentBoard: 'Périodes de déclaration les plus récentes', cadence: 'Fréquence de déclaration', sourceNote: 'La couverture, les définitions et les calendriers varient selon la source; une valeur manquante ne doit pas être interprétée comme zéro.',
-  methods: 'Sources et méthodes', review: 'Synthèse de situation', attention: 'Points d’attention', reviewText: 'Avis officiels de l’OMS, de l’ECDC, de l’Africa CDC et de l’OPS, avec résumés multilingues et évaluations du risque rédigés par IA et vérifiés par relecture entre modèles.', events: 'Avis dans la fenêtre', signals: 'Événements actifs', reviewed: 'Sources disponibles', fullReview: 'Ouvrir la synthèse complète',
+  methods: 'Sources et méthodes', review: 'Synthèse de situation', attention: 'Points d’attention', reviewText: 'Les rapports officiels complets de l’OMS, de l’ECDC, de l’Africa CDC et de l’OPS sont lus et transformés en alertes « maladie en un lieu » sur une carte, publiées après relecture croisée par deux modèles.', events: 'Lieux avec des nouvelles', signals: 'Flambées actives', reviewed: 'Sources contributrices', fullReview: 'Ouvrir la carte de situation',
   explore: 'Commencer l’exploration', exploreTitle: 'Accéder aux preuves de santé publique comme à un catalogue de données', exploreText: 'Choisissez un pays, une maladie ou une étude, puis suivez les liens vers les sources, les tendances et les téléchargements.',
   countryPath: 'Explorer par lieu', countryPathText: 'Consultez la couverture, les sources, les maladies et la période de chaque pays ou région.', diseasePath: 'Explorer par maladie', diseasePathText: 'Comparez la couverture d’une même maladie entre les différentes sources.', downloadPath: 'Réutiliser directement', downloadPathText: 'Téléchargez les jeux de données publics et vérifiez les champs et limites avant citation.', researchPath: 'Relier la recherche', researchPathText: 'Interprétez les signaux de surveillance à la lumière des données publiées.', countryList: 'Pays les mieux couverts', common: 'Maladies courantes', viewAll: 'Tout voir', analysis: 'Analyses publiées', latest: 'Derniers rapports de surveillance', research: 'Parcourir les preuves', openReport: 'Ouvrir le rapport', unavailable: 'Indisponible', empty: 'Aucun rapport public disponible.', curveLabel: 'Grippe au Japon · grippe en Chine',
 });
@@ -161,15 +161,15 @@ for (const country of countries) {
     if (source?.label) sourceNames.add(source.label);
   }
 }
-// The Situation strip reads the notice-based export: notices in the window,
-// active disease x place events, and how many authority feeds responded.
-const international = readInternationalLatest();
-const situation = international && international.event_count > 0
+// The Situation strip reads the alert export: places with news, active
+// outbreaks, and how many authorities contributed.
+const situationMap = readSituationMap();
+const situation = situationMap && situationMap.point_count > 0
   ? {
-      asOf: international.window?.as_of ?? international.generated_at,
-      noticeCount: international.event_count,
-      activeEvents: readSituationEvents().filter(event => event.status === 'active').length,
-      sourcesOk: (international.sources ?? []).filter(source => source.status === 'ok').length,
+      asOf: situationMap.as_of ?? situationMap.generated_at,
+      noticeCount: situationMap.point_count,
+      activeEvents: situationMap.outbreaks.filter(outbreak => outbreak.status === 'active').length,
+      sourcesOk: situationMap.facets.sources.length,
     }
   : null;
 const dataThrough = meta.generated_at;

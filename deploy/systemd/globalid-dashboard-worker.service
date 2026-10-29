@@ -19,6 +19,8 @@ RestartSec=10
 # Exit 75 means another healthy worker currently owns the Redis singleton
 # lease. Do not turn that expected ownership race into a restart storm.
 RestartPreventExitStatus=75
+# A SIGTERM stop can surface as exit 143 (128+SIGTERM); do not alert on it.
+SuccessExitStatus=143
 # Contain an accidental unbounded ORM/JSON allocation inside the worker
 # cgroup. A 39 GB host still needs room for Postgres and the API. The soft
 # limit used to be 8 GB, which throttled a normal site export while RAM was

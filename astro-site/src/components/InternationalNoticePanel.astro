@@ -1,46 +1,49 @@
 ---
 /**
- * Authority notices already mapped onto one GIDS disease or jurisdiction.
- *
- * Rendered from the sharded international export, so every entry shares the
- * page's own disease id / ISO country key instead of being a free-text feed.
+ * Alerts already mapped onto one GIDS disease or jurisdiction: one disease in
+ * one place as one official report states it, with the report's own numbers,
+ * a quotation only where the source allows one, and a link to the original.
  */
-import { noticeEntityName, noticeSummary, noticeTitle, type InternationalNotice } from '../utils/international';
+import type { Locale, SituationAlertRecord } from '../utils/situationTypes';
 import { noticeSnapshotBadges } from '../utils/internationalSnapshot';
+import { alertSummary, countryName, countsLine, diseaseName, formatDay, sourceLabel, STATUS_LABELS } from './situation/labels';
 
 interface Props {
-  notices: InternationalNotice[];
-  locale: 'en' | 'zh' | 'fr';
+  alerts: SituationAlertRecord[];
+  locale: Locale;
   limit?: number;
-  /** Jurisdictions the host page is about, cross-referenced when a notice does not name them. */
+  /** Jurisdictions the host page is about, cross-referenced when an alert does not name them. */
   contextCodes?: string[];
 }
 
-const { notices, locale, limit = 8, contextCodes = [] } = Astro.props;
+const { alerts, locale, limit = 8, contextCodes = [] } = Astro.props;
 
 const COPY = {
   en: {
-    heading: 'International authority notices',
-    lead: 'WHO and ECDC notices that reference this entry, newest first.',
-    empty: 'No authority notice references this entry in the current window.',
-    unavailable: 'source unavailable this run',
+    heading: 'Official outbreak alerts',
+    lead: 'Disease-in-place alerts read from WHO, ECDC, Africa CDC and PAHO reports, newest first.',
   },
   zh: {
-    heading: '国际权威机构通报',
-    lead: '引用该条目的世卫组织与欧洲疾控中心通报，按时间倒序。',
-    empty: '当前时间窗内暂无提及该条目的权威机构通报。',
-    unavailable: '本轮该来源不可用',
+    heading: '官方疫情警报',
+    lead: '从世卫组织、欧洲疾控中心、非洲疾控中心和泛美卫生组织报告中读取的“某病在某地”警报，按时间倒序。',
   },
   fr: {
-    heading: 'Avis des autorités internationales',
-    lead: 'Avis OMS et ECDC citant cette entrée, du plus récent au plus ancien.',
-    empty: "Aucun avis d'autorité ne cite cette entrée dans la fenêtre courante.",
-    unavailable: 'source indisponible lors de cette exécution',
+    heading: 'Alertes officielles de flambée',
+    lead: 'Alertes « maladie en un lieu » lues dans les rapports de l’OMS, de l’ECDC, de l’Africa CDC et de l’OPS, du plus récent au plus ancien.',
   },
 } as const;
 
 const copy = COPY[locale];
-const rows = notices.slice(0, limit);
+const rows = alerts.slice(0, limit);
+const badgesFor = (alert: SituationAlertRecord) =>
+  noticeSnapshotBadges(
+    {
+      countries: [{ code: alert.country_code, name_en: alert.country_name_en, name_zh: alert.country_name_zh }],
+      diseases: alert.disease_id ? [{ disease_id: alert.disease_id }] : [],
+    },
+    locale,
+    { contextCodes },
+  );
 
 // Only pages that render a row ship the panel CSS, so the stylesheet is
 // inlined next to the markup rather than living in a static style block
@@ -123,6 +126,8 @@ const PANEL_CSS = `  .intl-panel {
     color: var(--accent-strong, #115e59);
     background: rgba(15, 118, 110, 0.06);
   }
+  .intl-panel-counts { margin: 0.35rem 0 0; font-size: 0.8rem; font-weight: 600; color: var(--text-body, #334155); }
+  .intl-panel-quote { margin: 0.4rem 0 0; padding-left: 0.6rem; border-left: 2px solid rgba(15, 118, 110, 0.45); font-size: 0.8rem; font-style: italic; color: var(--text-muted, #64748b); }
 `;
 ---
 
@@ -136,36 +141,22 @@ const PANEL_CSS = `  .intl-panel {
         </h2>
         <p class="intl-panel-lead">{copy.lead}</p>
         <ul class="intl-panel-list">
-          {rows.map((notice) => (
+          {rows.map((alert) => (
             <li class="intl-panel-item">
-              <a class="intl-panel-title" href={notice.url} target="_blank" rel="noopener noreferrer">
-                {noticeTitle(notice, locale)}
+              <a class="intl-panel-title" href={alert.url} target="_blank" rel="noopener noreferrer">
+                {diseaseName(alert, locale)} · {alert.admin_area ? `${alert.admin_area}, ` : ''}{countryName(alert, locale)}
               </a>
               <p class="intl-panel-meta">
-                {notice.published_date && <span class="intl-panel-date">{notice.published_date}</span>}
-                <span class="intl-panel-source">
-                  {noticeEntityName(
-                    { name_en: notice.source_label_en, name_zh: notice.source_label_zh },
-                    locale,
-                  ) || notice.source_id}
-                </span>
+                <span class="intl-panel-date">{formatDay(alert.published_date, locale)}</span>
+                <span class="intl-panel-source">{sourceLabel(alert, locale)}</span>
+                <span>{STATUS_LABELS[alert.status][locale]}</span>
               </p>
-              {noticeSummary(notice, locale) && <p class="intl-panel-summary">{noticeSummary(notice, locale)}</p>}
-              {(notice.countries.length > 0 || notice.diseases.length > 0) && (
-                <p class="intl-panel-chips">
-                  {notice.countries.map((country) => (
-                    <span class="intl-panel-chip">{noticeEntityName(country, locale) || country.code}</span>
-                  ))}
-                  {notice.diseases.map((disease) => (
-                    <span class="intl-panel-chip">
-                      {noticeEntityName(disease, locale) || disease.disease_id}
-                    </span>
-                  ))}
-                </p>
-              )}
-              {noticeSnapshotBadges(notice, locale, { contextCodes }).length > 0 && (
+              {countsLine(alert, locale) && <p class="intl-panel-counts">{countsLine(alert, locale)}</p>}
+              {alertSummary(alert, locale) && <p class="intl-panel-summary">{alertSummary(alert, locale)}</p>}
+              {alert.quote && <blockquote class="intl-panel-quote">{alert.quote}</blockquote>}
+              {badgesFor(alert).length > 0 && (
                 <p class="intl-panel-snapshot">
-                  {noticeSnapshotBadges(notice, locale, { contextCodes }).map((badge) => (
+                  {badgesFor(alert).map((badge) => (
                     <span class="intl-snapshot-badge">{badge}</span>
                   ))}
                 </p>

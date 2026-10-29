@@ -24,7 +24,6 @@ from src.domain import (  # noqa: E402
     DiseaseSeriesObservation,
     DiseaseSurveillanceSeries,
     SituationNotice,
-    SituationNoticeEntity,
     StandardDisease,
 )
 
@@ -190,19 +189,6 @@ async def seed_database() -> dict[str, Any]:
             .values(situation_notice_values())
             .on_conflict_do_nothing(index_elements=["notice_id"])
         )
-        for entity_type, entity_id, name in (("disease", CI_DISEASE_ID, "Influenza"), ("country", "US", "United States")):
-            await db.execute(
-                pg_insert(SituationNoticeEntity.__table__)
-                .values(
-                    notice_id=CI_NOTICE_ID,
-                    entity_type=entity_type,
-                    entity_id=entity_id,
-                    name_en=name,
-                    method="rule",
-                    active=True,
-                )
-                .on_conflict_do_nothing(constraint="uq_situation_notice_entity")
-            )
 
     return {
         "status": "seeded",

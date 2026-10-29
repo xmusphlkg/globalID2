@@ -53,12 +53,11 @@ def normalize_item(item: dict[str, Any]) -> dict[str, Any] | None:
     published = parse_date(item.get("PublicationDate") or item.get("PublicationDateAndTime"))
     if not native_id or not title or not url or not published:
         return None
-    # Countries only ever come from the headline: DON items carry no country field.
-    haystack = f"{title}"
-    diseases = match_diseases(haystack)
-    countries = match_countries(haystack)
-    if not diseases and not countries:
-        return None
+    # Headline matches are only hints: every DON item is an outbreak report and
+    # is read in full later, so an unmatched headline is not a reason to drop it.
+    diseases = match_diseases(title)
+    countries = match_countries(title)
+    slug = str(item.get("UrlName") or item.get("DonId") or "").strip().strip("/")
     return build_event(
         source_id=SOURCE_ID,
         native_id=native_id,
@@ -71,6 +70,7 @@ def normalize_item(item: dict[str, Any]) -> dict[str, Any] | None:
         summary_en=str(item.get("Summary") or ""),
         updated_at_source=(parse_date(item.get("LastModified")) or published).isoformat(),
         keep_summary=True,
+        document_ref={"kind": "who_don", "slug": slug},
     )
 
 

@@ -19,6 +19,8 @@ EnvironmentFile=-__PROJECT_DIR__/.env
 ExecStart=__PROJECT_DIR__/scripts/run_dashboard_api_service.sh
 Restart=on-failure
 RestartSec=10
+# A SIGTERM stop can surface as exit 143 (128+SIGTERM); do not alert on it.
+SuccessExitStatus=143
 # Give the process up to 30 s to finish in-flight requests before hard-kill.
 TimeoutStopSec=30
 

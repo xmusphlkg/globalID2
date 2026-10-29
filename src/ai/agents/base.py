@@ -15,6 +15,15 @@ from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
 
 from src.core import get_cache, get_config, get_logger, RateLimiter
+from src.ai.attachments import (
+    NATIVE_INPUT,
+    TEXT_INPUT,
+    as_native_content,
+    as_text,
+    looks_like_file_rejection,
+    note_native_rejection,
+    route_accepts_native_files,
+)
 from src.ai.model_center import (
     acquire_runtime_route_admission,
     clear_route_rate_limit,
@@ -30,7 +39,6 @@ from src.ai.model_center import (
     record_route_runtime_failure,
     record_route_runtime_success,
     record_model_call_log,
-    route_completion_extra_body,
     mark_route_rate_limited,
     mark_route_unavailable,
     runtime_route_admission_score,
@@ -39,6 +47,13 @@ from src.ai.model_center import (
 )
 
 logger = get_logger(__name__)
+
+#: Anthropic's API refuses a request without ``max_tokens``; this is its ceiling stand-in for "no limit".
+ANTHROPIC_UNCAPPED_MAX_TOKENS = 64000
+
+
+class NoModelAvailable(Exception):
+    """No route was even tried: a platform-wide condition, not a fault of the request."""
 
 
 class BaseAgent(ABC):
@@ -475,6 +490,7 @@ class BaseAgent(ABC):
                 key.startswith("routing_")
                 or key.startswith("rate_limit_")
                 or key.startswith("runtime_")
+                or key.startswith("health_check_")
             ):
                 continue
             sanitized[key] = value
@@ -759,6 +775,10 @@ class BaseAgent(ABC):
             if isinstance(preferred_models_raw, list)
             else None
         )
+        if kwargs.get("attachments"):
+            # The cache key covers prompt and system only, so a different
+            # document under the same prompt would hit a stale answer.
+            use_cache = False
 
         # 检查缓存
         if use_cache and self.config.ai.enable_cache:
@@ -920,8 +940,11 @@ class BaseAgent(ABC):
                     else:
                         # Determine which provider to use for this model
                         provider = self.get_provider_for_model(self.model)
+                        legacy_kwargs = dict(kwargs)
+                        legacy_attachments = legacy_kwargs.pop("attachments", None) or []
+                        self._last_input_mode = TEXT_INPUT if legacy_attachments else None
                         request = self._complete_with_provider(
-                            provider, prompt, system, **kwargs
+                            provider, as_text(prompt, legacy_attachments), system, **legacy_kwargs
                         )
                     # Runtime-route admission is intentional local
                     # backpressure.  Its wait is outside the provider request
@@ -1248,6 +1271,10 @@ class BaseAgent(ABC):
             )
 
         logger.error(f"All models failed for agent '{self.name}': {last_error}")
+        if not attempted_models:
+            raise NoModelAvailable(
+                f"Agent completion failed: no model route could take the request for agent '{self.name}' (all cooling down, rate limited or removed)"
+            )
         raise Exception(
             f"Agent completion failed after trying models {attempted_models}: {last_error}"
         )
@@ -1307,12 +1334,49 @@ class BaseAgent(ABC):
         system: Optional[str] = None,
         **kwargs,
     ) -> Tuple[str, Dict[str, int]]:
-        """Issue the provider request after Model Center admission succeeds."""
+        """Choose native file or extracted text for attachments, then send.
+
+        A native request the provider rejects as a file problem is repeated once
+        as text, and the route stays on text for a while.
+        """
+        attachments = list(kwargs.pop("attachments", None) or [])
+        style = str(route.get("api_style") or "openai_compatible").lower()
+        self._last_input_mode = None
+        if attachments:
+            native = any(item.native_capable for item in attachments) and route_accepts_native_files(route)
+            if native:
+                try:
+                    result = await self._send_runtime_route_request(
+                        route, as_native_content(style, prompt, attachments), system, **kwargs
+                    )
+                    self._last_input_mode = NATIVE_INPUT
+                    return result
+                except Exception as exc:
+                    if not looks_like_file_rejection(exc):
+                        raise
+                    note_native_rejection(route)
+                    logger.warning(
+                        "Route '{}' rejected a native file; retrying as extracted text: {}",
+                        route.get("model_key"),
+                        str(exc)[:200],
+                    )
+            prompt = as_text(prompt, attachments)
+            self._last_input_mode = TEXT_INPUT
+        return await self._send_runtime_route_request(route, prompt, system, **kwargs)
+
+    async def _send_runtime_route_request(
+        self,
+        route: Dict[str, Any],
+        content: Any,
+        system: Optional[str] = None,
+        **kwargs,
+    ) -> Tuple[str, Dict[str, int]]:
+        """Issue the provider request; ``content`` is a string or provider content blocks."""
         style = str(route.get("api_style") or "openai_compatible").lower()
         model_name = str(route.get("model_name") or self.model)
         route_temperature = route.get("temperature")
         temperature = self.temperature if route_temperature is None else float(route_temperature)
-        max_tokens = runtime_route_completion_max_tokens(route, self.max_tokens)
+        max_tokens = runtime_route_completion_max_tokens(route)
         sanitized_kwargs = self._sanitize_completion_params(dict(kwargs))
 
         if style == "anthropic":
@@ -1320,9 +1384,10 @@ class BaseAgent(ABC):
             response = await client.messages.create(
                 model=model_name,
                 system=system or "",
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "user", "content": content}],
                 temperature=temperature,
-                max_tokens=max_tokens,
+                # The Anthropic API cannot omit the limit; this is its ceiling, not a cap on answers.
+                max_tokens=max_tokens or ANTHROPIC_UNCAPPED_MAX_TOKENS,
                 **sanitized_kwargs,
             )
 
@@ -1344,29 +1409,25 @@ class BaseAgent(ABC):
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": prompt})
+        messages.append({"role": "user", "content": content})
 
         extra_params = dict(route.get("extra_params") or {})
         for reserved in ("model", "messages", "temperature", "max_tokens"):
             extra_params.pop(reserved, None)
         extra_params.update(sanitized_kwargs)
         extra_params = self._sanitize_completion_params(extra_params)
-        if "extra_body" not in extra_params:
-            extra_body = route_completion_extra_body(route)
-            if extra_body is not None:
-                extra_params["extra_body"] = extra_body
 
         request_payload = {
             "model": model_name,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            **({"max_tokens": max_tokens} if max_tokens else {}),
             **extra_params,
         }
         response = await self._safe_openai_completion_create(client, request_payload)
 
         return self._extract_openai_compatible_response(response)
-    
+
     async def _complete_with_provider(
         self, 
         provider: str,
@@ -1406,7 +1467,6 @@ class BaseAgent(ABC):
             "model": model,
             "messages": messages,
             "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
             **self._sanitize_completion_params(dict(kwargs)),
         }
         response = await self._safe_openai_completion_create(client, request_payload)
@@ -1429,7 +1489,7 @@ class BaseAgent(ABC):
             system=system or "",
             messages=[{"role": "user", "content": prompt}],
             temperature=self.temperature,
-            max_tokens=self.max_tokens,
+            max_tokens=ANTHROPIC_UNCAPPED_MAX_TOKENS,
             **kwargs
         )
         

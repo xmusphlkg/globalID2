@@ -131,8 +131,34 @@ async def test_reviewer_rejection_fails_closed():
         '{"verdict":"pass","issue_codes":[]}',
         reviewer='{"verdict":"reject","score":0.1,"issues":["unsupported claim"]}',
     )
-    with pytest.raises(WeeklyAIReviewError, match="ai_review_model_unavailable_or_invalid"):
-        await WeeklyAIReviewRunner(completer).review(_brief(), max_attempts=1)
+    with pytest.raises(WeeklyAIReviewError, match="ai_review_peer_review_rejected"):
+        await WeeklyAIReviewRunner(completer).review(_brief(), max_attempts=2)
+    # A rejection is a judgement: it is not retried within the run.
+    assert [call["role"] for call in completer.calls] == ["author", "reviewer"]
+
+
+@pytest.mark.asyncio
+async def test_rejected_brief_is_held_and_not_re_reviewed_until_recheck_window(tmp_path):
+    weekly = tmp_path / "weekly"
+    weekly.mkdir()
+    (weekly / "2026-W33.json").write_text(json.dumps(_brief()), encoding="utf-8")
+    registry = tmp_path / "reviews.json"
+    rejecting = FakeCompleter(
+        '{"verdict":"pass","issue_codes":[]}',
+        reviewer='{"verdict":"reject","score":0.1,"issues":["unsupported claim"]}',
+    )
+    kwargs = dict(weekly_dir=weekly, registry_path=registry, weeks=["2026-W33"], apply=True)
+
+    first = await review_weekly_brief_files(runner=WeeklyAIReviewRunner(rejecting), **kwargs)
+    assert first["counts"]["failed"] == 0
+    assert first["counts"]["needs_editorial_review"] == 1
+    stored = json.loads(registry.read_text(encoding="utf-8"))["reviews"][0]["review"]
+    assert stored["issue_codes"] == ["peer_review_unresolved"]
+
+    again = FakeCompleter('{"verdict":"pass","issue_codes":[]}')
+    second = await review_weekly_brief_files(runner=WeeklyAIReviewRunner(again), **kwargs)
+    assert second["counts"]["skipped"] == 1
+    assert again.calls == []
 
 
 def test_weekly_guardrail_drops_unknown_codes_and_inconsistent_verdicts():

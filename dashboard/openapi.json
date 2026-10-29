@@ -7427,7 +7427,7 @@
           "runtime_max_concurrency": {
             "anyOf": [
               {
-                "maximum": 64.0,
+                "maximum": 512.0,
                 "minimum": 1.0,
                 "type": "integer"
               },
@@ -7447,6 +7447,22 @@
               }
             ],
             "title": "Temperature"
+          },
+          "thinking_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "default",
+                  "enabled",
+                  "disabled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking Mode"
           }
         },
         "required": [
@@ -7689,6 +7705,16 @@
               }
             ],
             "title": "Temperature"
+          },
+          "thinking_mode": {
+            "default": "default",
+            "enum": [
+              "default",
+              "enabled",
+              "disabled"
+            ],
+            "title": "Thinking Mode",
+            "type": "string"
           }
         },
         "required": [
@@ -7802,7 +7828,7 @@
           "runtime_max_concurrency": {
             "anyOf": [
               {
-                "maximum": 64.0,
+                "maximum": 512.0,
                 "minimum": 1.0,
                 "type": "integer"
               },
@@ -7822,6 +7848,22 @@
               }
             ],
             "title": "Temperature"
+          },
+          "thinking_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "default",
+                  "enabled",
+                  "disabled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking Mode"
           }
         },
         "title": "ModelUpdateRequest",
@@ -8739,13 +8781,8 @@
       "RefreshRequest": {
         "properties": {
           "ai_limit": {
-            "default": 100,
+            "default": 30,
             "title": "Ai Limit",
-            "type": "integer"
-          },
-          "digest_weeks": {
-            "default": 2,
-            "title": "Digest Weeks",
             "type": "integer"
           },
           "mode": {
@@ -24715,167 +24752,26 @@
         ]
       }
     },
-    "/api/v1/situation/digests": {
+    "/api/v1/situation/alerts": {
       "get": {
-        "operationId": "list_digests_api_v1_situation_digests_get",
+        "operationId": "list_alerts_api_v1_situation_alerts_get",
         "parameters": [
           {
             "in": "query",
-            "name": "status",
+            "name": "country_code",
             "required": false,
             "schema": {
               "anyOf": [
                 {
+                  "maxLength": 2,
+                  "minLength": 2,
                   "type": "string"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "title": "Status"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "required": false,
-            "schema": {
-              "default": 1,
-              "minimum": 1,
-              "title": "Page",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page_size",
-            "required": false,
-            "schema": {
-              "default": 52,
-              "maximum": 520,
-              "minimum": 1,
-              "title": "Page Size",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "data": {
-                      "items": {
-                        "additionalProperties": true,
-                        "type": "object"
-                      },
-                      "title": "Response List Digests Api V1 Situation Digests Get",
-                      "type": "array"
-                    },
-                    "meta": {
-                      "$ref": "#/components/schemas/ResponseMeta"
-                    }
-                  },
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "400": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description": "Problem detail"
-          },
-          "401": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description": "Problem detail"
-          },
-          "404": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description": "Problem detail"
-          },
-          "409": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description": "Problem detail"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "500": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetail"
-                }
-              }
-            },
-            "description": "Problem detail"
-          }
-        },
-        "summary": "List Digests",
-        "tags": [
-          "Situation"
-        ]
-      }
-    },
-    "/api/v1/situation/events": {
-      "get": {
-        "operationId": "list_events_api_v1_situation_events_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "status",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "enum": [
-                    "active",
-                    "quiet"
-                  ],
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Status"
+              "title": "Country Code"
             }
           },
           {
@@ -24896,6 +24792,54 @@
           },
           {
             "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "outbreak_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outbreak Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Id"
+            }
+          },
+          {
+            "in": "query",
             "name": "page",
             "required": false,
             "schema": {
@@ -24910,8 +24854,8 @@
             "name": "page_size",
             "required": false,
             "schema": {
-              "default": 200,
-              "maximum": 1000,
+              "default": 100,
+              "maximum": 500,
               "minimum": 1,
               "title": "Page Size",
               "type": "integer"
@@ -24929,7 +24873,7 @@
                         "additionalProperties": true,
                         "type": "object"
                       },
-                      "title": "Response List Events Api V1 Situation Events Get",
+                      "title": "Response List Alerts Api V1 Situation Alerts Get",
                       "type": "array"
                     },
                     "meta": {
@@ -25007,7 +24951,7 @@
             "description": "Problem detail"
           }
         },
-        "summary": "List Events",
+        "summary": "List Alerts",
         "tags": [
           "Situation"
         ]
@@ -25047,38 +24991,6 @@
                 }
               ],
               "title": "Ai Status"
-            }
-          },
-          {
-            "in": "query",
-            "name": "disease_id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Disease Id"
-            }
-          },
-          {
-            "in": "query",
-            "name": "country_code",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Country Code"
             }
           },
           {
@@ -25341,7 +25253,7 @@
     },
     "/api/v1/situation/notices/{notice_id}/requeue": {
       "post": {
-        "description": "Send one notice back through peer-reviewed AI on the next run.",
+        "description": "Send one report back through document fetch and peer-reviewed extraction on the next run.",
         "operationId": "requeue_notice_api_v1_situation_notices__notice_id__requeue_post",
         "parameters": [
           {
@@ -25441,6 +25353,165 @@
           }
         },
         "summary": "Requeue Notice",
+        "tags": [
+          "Situation"
+        ]
+      }
+    },
+    "/api/v1/situation/outbreaks": {
+      "get": {
+        "operationId": "list_outbreaks_api_v1_situation_outbreaks_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "quiet"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "disease_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Disease Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": true,
+                        "type": "object"
+                      },
+                      "title": "Response List Outbreaks Api V1 Situation Outbreaks Get",
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "List Outbreaks",
         "tags": [
           "Situation"
         ]

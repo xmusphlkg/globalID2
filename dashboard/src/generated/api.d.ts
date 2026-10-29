@@ -1864,32 +1864,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/situation/digests": {
+    "/api/v1/situation/alerts": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List Digests */
-        get: operations["list_digests_api_v1_situation_digests_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/situation/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Events */
-        get: operations["list_events_api_v1_situation_events_get"];
+        /** List Alerts */
+        get: operations["list_alerts_api_v1_situation_alerts_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1943,9 +1926,26 @@ export interface paths {
         put?: never;
         /**
          * Requeue Notice
-         * @description Send one notice back through peer-reviewed AI on the next run.
+         * @description Send one report back through document fetch and peer-reviewed extraction on the next run.
          */
         post: operations["requeue_notice_api_v1_situation_notices__notice_id__requeue_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/situation/outbreaks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Outbreaks */
+        get: operations["list_outbreaks_api_v1_situation_outbreaks_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4927,6 +4927,8 @@ export interface components {
             runtime_max_concurrency?: number | null;
             /** Temperature */
             temperature?: number | null;
+            /** Thinking Mode */
+            thinking_mode?: ("default" | "enabled" | "disabled") | null;
         };
         /** ModelOut */
         ModelOut: {
@@ -5022,6 +5024,12 @@ export interface components {
             runtime_timeout_count: number;
             /** Temperature */
             temperature?: number | null;
+            /**
+             * Thinking Mode
+             * @default default
+             * @enum {string}
+             */
+            thinking_mode: "default" | "enabled" | "disabled";
         };
         /** ModelUpdateRequest */
         ModelUpdateRequest: {
@@ -5047,6 +5055,8 @@ export interface components {
             runtime_max_concurrency?: number | null;
             /** Temperature */
             temperature?: number | null;
+            /** Thinking Mode */
+            thinking_mode?: ("default" | "enabled" | "disabled") | null;
         };
         /** MonthlyComparisonPoint */
         MonthlyComparisonPoint: {
@@ -5437,14 +5447,9 @@ export interface components {
         RefreshRequest: {
             /**
              * Ai Limit
-             * @default 100
+             * @default 30
              */
             ai_limit: number;
-            /**
-             * Digest Weeks
-             * @default 2
-             */
-            digest_weeks: number;
             /**
              * Mode
              * @default full
@@ -15933,95 +15938,14 @@ export interface operations {
             };
         };
     };
-    list_digests_api_v1_situation_digests_get: {
+    list_alerts_api_v1_situation_alerts_get: {
         parameters: {
             query?: {
-                status?: string | null;
-                page?: number;
-                page_size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** Response List Digests Api V1 Situation Digests Get */
-                        data: {
-                            [key: string]: unknown;
-                        }[];
-                        meta: components["schemas"]["ResponseMeta"];
-                    };
-                };
-            };
-            /** @description Problem detail */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
-                };
-            };
-            /** @description Problem detail */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
-                };
-            };
-            /** @description Problem detail */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
-                };
-            };
-            /** @description Problem detail */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Problem detail */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetail"];
-                };
-            };
-        };
-    };
-    list_events_api_v1_situation_events_get: {
-        parameters: {
-            query?: {
-                status?: ("active" | "quiet") | null;
+                country_code?: string | null;
                 disease_id?: string | null;
+                status?: string | null;
+                outbreak_id?: string | null;
+                source_id?: string | null;
                 page?: number;
                 page_size?: number;
             };
@@ -16038,7 +15962,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        /** Response List Events Api V1 Situation Events Get */
+                        /** Response List Alerts Api V1 Situation Alerts Get */
                         data: {
                             [key: string]: unknown;
                         }[];
@@ -16107,8 +16031,6 @@ export interface operations {
             query?: {
                 source_id?: string | null;
                 ai_status?: string | null;
-                disease_id?: string | null;
-                country_code?: string | null;
                 week?: string | null;
                 q?: string | null;
                 page?: number;
@@ -16295,6 +16217,91 @@ export interface operations {
                         data: {
                             [key: string]: unknown;
                         };
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    list_outbreaks_api_v1_situation_outbreaks_get: {
+        parameters: {
+            query?: {
+                status?: ("active" | "quiet") | null;
+                disease_id?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Response List Outbreaks Api V1 Situation Outbreaks Get */
+                        data: {
+                            [key: string]: unknown;
+                        }[];
                         meta: components["schemas"]["ResponseMeta"];
                     };
                 };

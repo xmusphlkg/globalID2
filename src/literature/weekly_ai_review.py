@@ -48,7 +48,11 @@ AI_REVIEW_ISSUE_CODES = frozenset({
     "missing_french_gap",
     "french_mismatch",
     "content_too_large",
+    "peer_review_unresolved",
 })
+# Recorded by the runner when the two-model review rejects a brief; never offered to the models.
+_RUNNER_ONLY_CODES = frozenset({"peer_review_unresolved"})
+MODEL_ISSUE_CODES = AI_REVIEW_ISSUE_CODES - _RUNNER_ONLY_CODES
 _ALLOWED_RELATIONS = {
     "exact_disease_geography", "disease_context", "historical_context", "context", "candidate",
 }
@@ -56,6 +60,10 @@ _ALLOWED_RELATIONS = {
 
 class WeeklyAIReviewError(RuntimeError):
     """Stable error safe to include in task output."""
+
+
+class WeeklyAIReviewRejected(WeeklyAIReviewError):
+    """The peer review ran and did not accept a verdict: a judgement, not an outage."""
 
 
 class WeeklyBriefReviewAgent(BaseAgent):
@@ -398,7 +406,7 @@ def sanitize_weekly_verdict(draft: dict[str, Any]) -> tuple[dict[str, Any], list
     raw_codes = draft.get("issue_codes") if isinstance(draft.get("issue_codes"), list) else []
     codes: list[str] = []
     for code in raw_codes[:_MAX_ISSUES]:
-        if isinstance(code, str) and code in AI_REVIEW_ISSUE_CODES and code not in codes:
+        if isinstance(code, str) and code in MODEL_ISSUE_CODES and code not in codes:
             codes.append(code)
         else:
             notes.append(f"guardrail: dropped unknown issue code {str(code)[:40]}")
@@ -429,7 +437,7 @@ class WeeklyAIReviewRunner:
             }
         task = {
             "task": "Bounded public weekly-brief quality review",
-            "allowed_issue_codes": sorted(AI_REVIEW_ISSUE_CODES),
+            "allowed_issue_codes": sorted(MODEL_ISSUE_CODES),
             "packet": packet,
         }
         last_error: Exception | None = None
@@ -468,7 +476,7 @@ class WeeklyAIReviewRunner:
                             usable=lambda draft: draft.get("verdict") is not None,
                         )
                         if not reviewed.published:
-                            raise WeeklyAIReviewError("ai_review_peer_review_rejected")
+                            raise WeeklyAIReviewRejected("ai_review_peer_review_rejected")
                         # Public artifacts disclose that Model Center performed
                         # the check without exposing internal route/provider ids.
                         return {
@@ -477,6 +485,8 @@ class WeeklyAIReviewRunner:
                             "provider": "model-center",
                             "review_mode": reviewed.mode,
                         }
+                    except WeeklyAIReviewRejected:
+                        raise
                     except Exception as exc:  # bounded retry, then fail closed
                         last_error = exc
         except TimeoutError as exc:
@@ -547,9 +557,17 @@ async def review_weekly_brief_files(
                         ),
                     })
                     continue
-            verdict = await reviewer.review(
-                value, preferred_models=preferred_models, timeout_seconds=timeout_seconds, max_attempts=max_attempts,
-            )
+            try:
+                verdict = await reviewer.review(
+                    value, preferred_models=preferred_models, timeout_seconds=timeout_seconds, max_attempts=max_attempts,
+                )
+            except WeeklyAIReviewRejected:
+                # Held, not failed: saving it lets the recheck window throttle
+                # retries instead of re-running the review on every pass.
+                verdict = {
+                    "verdict": "needs_editorial_review", "issue_codes": ["peer_review_unresolved"],
+                    "model": "configured-review-model", "provider": "model-center", "review_mode": None,
+                }
             reviewed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
             record = {
                 "week": week,
@@ -580,7 +598,7 @@ async def review_weekly_brief_files(
 
 __all__ = [
     "AI_REVIEW_ISSUE_CODES", "AI_REVIEW_PROTOCOL_VERSION", "WEEKLY_AI_REVIEW_REGISTRY_PATH",
-    "WeeklyAIReviewError", "WeeklyAIReviewRunner", "bound_weekly_ai_review",
+    "WeeklyAIReviewError", "WeeklyAIReviewRejected", "WeeklyAIReviewRunner", "bound_weekly_ai_review",
     "deterministic_review_issues", "load_weekly_ai_review_registry", "parse_ai_review_response",
     "project_weekly_ai_review", "public_review_packet", "write_weekly_ai_review",
     "review_weekly_brief_files",

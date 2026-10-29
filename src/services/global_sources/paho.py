@@ -75,6 +75,7 @@ def normalize_object(entry: dict[str, Any]) -> dict[str, Any] | None:
         record_type="surveillance_update" if "regional update" in title.lower() else "outbreak_notice",
         updated_at_source=(parse_date(item.get("lastModified")) or published).isoformat(),
         keep_summary=False,
+        document_ref={"kind": "dspace", "handle": handle},
     )
 
 

@@ -57,12 +57,11 @@ from .disease_ontology import (
 )
 from .public_series import CountryPublishState, PublicDiseaseSeries
 from .situation_notices import (
-    SituationAIAssessment,
-    SituationDigest,
-    SituationEvent,
-    SituationEventNotice,
+    SituationAlert,
+    SituationDocument,
+    SituationExtraction,
     SituationNotice,
-    SituationNoticeEntity,
+    SituationOutbreak,
     SituationSourceRun,
 )
 from .literature import (
@@ -139,12 +138,11 @@ __all__ = [
     "DiseaseSurveillanceSeries",
     "PublicDiseaseSeries",
     "CountryPublishState",
-    "SituationAIAssessment",
-    "SituationDigest",
-    "SituationEvent",
-    "SituationEventNotice",
+    "SituationAlert",
+    "SituationDocument",
+    "SituationExtraction",
     "SituationNotice",
-    "SituationNoticeEntity",
+    "SituationOutbreak",
     "SituationSourceRun",
     "LiteratureArticle",
     "LiteratureCountryLink",

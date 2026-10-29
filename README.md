@@ -153,27 +153,25 @@ initialization or an explicit forced bootstrap. The worker deterministically
 rotates preferred model-center routes per disease/language and fail-closes when
 no model-center route is active, routable, and out of cooldown.
 
-Situation Room v3.2 uses Pydantic as the canonical report contract, immutable
-analysis runs, history-first publication, joint weekly/monthly multi-horizon
-Gamma-Poisson prediction, and BH FDR control. Automatic publication is
-fail-closed by cadence/source group and remains disabled until both simulation
-and locked real-event calibration are registered. The normal operational
+The Situation module reads official reports (WHO Disease Outbreak News, ECDC
+CDTR, Africa CDC, PAHO and others) in full and extracts alerts: one disease in
+one place, with the counts and dates the report states and one sentence quoted
+from it. Two independent models read each document (the original PDF when the
+model route accepts files, extracted text otherwise), and an alert is public
+only after the reviewer accepts it. Full text stays internal; the public export
+carries structured facts, the quote and the link. The normal operational
 sequence is:
 
 ```bash
 venv/bin/alembic upgrade head
-venv/bin/python scripts/update_situation_room.py
+venv/bin/python scripts/run_situation_notices.py
 venv/bin/python scripts/generate_site_data.py
 cd astro-site && npm run build:astro
 cd .. && venv/bin/python scripts/validate_situation_release.py --site-dir astro-site/dist
 ```
 
-Regenerate the JSON Schema, OpenAPI document, and both generated TypeScript
-clients with `venv/bin/python scripts/export_situation_v3_contracts.py`. Run the
-deterministic calibration suite with
-`venv/bin/python scripts/backtest_situation_v3.py`. See
-[`docs/SITUATION_ROOM_V3.md`](docs/SITUATION_ROOM_V3.md) for the data model,
-publication invariants, routes, and operational checks.
+See [`docs/SITUATION_AUTOMATION.md`](docs/SITUATION_AUTOMATION.md) for the
+pipeline stages, export layout and release checks.
 
 The Python configuration layer also supports provider-specific credentials such as:
 

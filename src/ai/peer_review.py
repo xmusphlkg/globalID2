@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Iterable
+from typing import Any, Awaitable, Callable, Iterable, Sequence
 
 VERDICTS = ("accept", "revise", "reject")
 MAX_ROUNDS = 2
@@ -36,11 +36,22 @@ MAX_ROUNDS = 2
 class Completion:
     text: str
     model: str
+    #: ``native_file`` or ``text`` when the call carried documents; else ``None``.
+    input_mode: str | None = None
 
 
 #: ``(role, system, prompt) -> Completion``.  ``role`` is ``author`` or
 #: ``reviewer``; the implementation must route the two roles to different models.
-Completer = Callable[[str, str, str], Awaitable[Completion]]
+#: A completer used with documents also accepts ``attachments=[...]``.
+Completer = Callable[..., Awaitable[Completion]]
+
+
+async def _call(
+    complete: Completer, role: str, system: str, prompt: str, attachments: Sequence[Any] | None
+) -> Completion:
+    if attachments:
+        return await complete(role, system, prompt, attachments=attachments)
+    return await complete(role, system, prompt)
 
 
 @dataclass(slots=True)
@@ -53,6 +64,8 @@ class ReviewedOutput:
     rounds: int
     notes: list[str] = field(default_factory=list)
     score: float | None = None
+    #: How documents reached the author model: ``native_file``, ``text`` or ``None``.
+    input_mode: str | None = None
 
     @property
     def published(self) -> bool:
@@ -75,6 +88,7 @@ class ReviewedOutput:
             "reviewer_model": self.reviewer_model,
             "rounds": self.rounds,
             "score": self.score,
+            "input_mode": self.input_mode,
             "notes": self.notes[:40],
         }
 
@@ -84,6 +98,14 @@ PROTOCOL_VERSION = "gids-peer-review.v1"
 
 class AIOutputError(ValueError):
     """A model reply that cannot be parsed as the required JSON object."""
+
+
+class SameModelReviewError(AIOutputError):
+    """Failover left author and reviewer on one model; ``model`` is that model."""
+
+    def __init__(self, model: str) -> None:
+        super().__init__(f"peer review needs two different models; both were {model}")
+        self.model = model
 
 
 def review_mode(author_model: str | None, reviewer_model: str | None) -> str | None:
@@ -166,6 +188,7 @@ async def peer_review(
     max_rounds: int = MAX_ROUNDS,
     retry_rounds: int = 0,
     initial_draft: Completion | None = None,
+    attachments: Sequence[Any] | None = None,
 ) -> ReviewedOutput:
     """Draft, review, revise.  Publication needs ``accept`` (or an adopted correction).
 
@@ -175,6 +198,9 @@ async def peer_review(
     ``initial_draft`` stands in for the first author call when a line already
     has its own drafting pipeline (knowledge briefs, literature summaries);
     ``Completion.model`` must name the model that wrote it.
+
+    ``attachments`` are documents both models read alongside the prompt; the
+    completer decides per model whether the original file or its text travels.
     """
 
     first = await _review_cycle(
@@ -190,6 +216,7 @@ async def peer_review(
         seed_previous=None,
         round_offset=0,
         initial_draft=initial_draft,
+        attachments=attachments,
     )
     if first.published or retry_rounds <= 0:
         return first
@@ -206,6 +233,7 @@ async def peer_review(
         seed_notes=["retry after failed review: " + note for note in feedback][:30],
         seed_previous=first.payload or None,
         round_offset=first.rounds,
+        attachments=attachments,
     )
     second.notes = first.notes + ["retry cycle started"] + second.notes
     return second
@@ -225,34 +253,52 @@ async def _review_cycle(
     seed_previous: dict[str, Any] | None,
     round_offset: int,
     initial_draft: Completion | None = None,
+    attachments: Sequence[Any] | None = None,
 ) -> ReviewedOutput:
     notes: list[str] = []
+    input_mode: str | None = None
     reviewer_notes = seed_notes
     previous = seed_previous
     author_model: str | None = None
     reviewer_model: str | None = None
     draft: dict[str, Any] = {}
+    parsed_any = False
     for step in range(1, max_rounds + 1):
         round_number = round_offset + step
         if step == 1 and initial_draft is not None:
             authored = initial_draft
         else:
-            authored = await complete("author", author_system, author_prompt(reviewer_notes, previous))
+            authored = await _call(complete, "author", author_system, author_prompt(reviewer_notes, previous), attachments)
         author_model = authored.model
-        draft, dropped = sanitize(parse_json_object(authored.text))
+        input_mode = authored.input_mode or input_mode
+        try:
+            parsed = parse_json_object(authored.text)
+        except AIOutputError as exc:
+            # A long reply can be cut off or malformed: that costs one round, not the report.
+            notes.append(f"round {round_number} author: {exc}")
+            reviewer_notes = [f"Your previous reply was not usable ({exc}). Reply with one complete JSON object only."]
+            continue
+        parsed_any = True
+        draft, dropped = sanitize(parsed)
         notes.extend(dropped)
 
-        reviewed = await complete("reviewer", reviewer_system, reviewer_prompt(draft))
+        reviewed = await _call(complete, "reviewer", reviewer_system, reviewer_prompt(draft), attachments)
         reviewer_model = reviewed.model
         if reviewer_model and reviewer_model == author_model and not getattr(complete, "single_model", False):
-            raise AIOutputError(f"peer review needs two different models; both were {author_model}")
-        verdict, issues, score, corrected = _verdict(parse_json_object(reviewed.text))
+            raise SameModelReviewError(author_model)
+        try:
+            verdict, issues, score, corrected = _verdict(parse_json_object(reviewed.text))
+        except AIOutputError as exc:
+            notes.append(f"round {round_number} reviewer: {exc}")
+            reviewer_notes = ["The reviewer's reply was unreadable; re-check every field and resend the draft."]
+            previous = draft
+            continue
         notes.extend(f"round {round_number} reviewer: {issue}" for issue in issues)
 
         if verdict == "accept" and usable(draft):
-            return ReviewedOutput("published", draft, author_model, reviewer_model, verdict, round_number, notes, score)
+            return ReviewedOutput("published", draft, author_model, reviewer_model, verdict, round_number, notes, score, input_mode)
         if verdict == "reject":
-            return ReviewedOutput("rejected", draft, author_model, reviewer_model, verdict, round_number, notes, score)
+            return ReviewedOutput("rejected", draft, author_model, reviewer_model, verdict, round_number, notes, score, input_mode)
         if verdict == "accept":
             notes.append("guardrail: accepted draft was missing required fields")
             verdict = "revise"
@@ -263,11 +309,14 @@ async def _review_cycle(
             notes.extend(dropped)
             if usable(fixed):
                 notes.append("reviewer correction adopted in final round")
-                return ReviewedOutput("published", fixed, author_model, reviewer_model, "revise", round_number, notes, score)
+                return ReviewedOutput("published", fixed, author_model, reviewer_model, "revise", round_number, notes, score, input_mode)
         reviewer_notes = issues or ["reviewer requested a revision without details; re-check every field"]
         previous = corrected or draft
+    if not parsed_any:
+        # No round produced a readable draft: an error to retry later, not a verdict.
+        raise AIOutputError("; ".join(notes[-2:]) or "model replies were not valid JSON")
     return ReviewedOutput(
-        "rejected", draft, author_model, reviewer_model, "revise", round_offset + max_rounds, notes, None
+        "rejected", draft, author_model, reviewer_model, "revise", round_offset + max_rounds, notes, None, input_mode
     )
 
 

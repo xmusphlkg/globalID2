@@ -1,11 +1,11 @@
 ---
-import { listDigestMonths, listDigestPeriods } from '../../utils/international';
+import { listMonths, listWeeks } from '../../utils/international';
 
 // Short links such as /situation/2026-W43/ resolve to the canonical period page.
 export function getStaticPaths() {
   return [
-    ...listDigestPeriods().map(period => ({ params: { period }, props: { target: `/situation/weekly/${period}/` } })),
-    ...listDigestMonths().map(period => ({ params: { period }, props: { target: `/situation/monthly/${period}/` } })),
+    ...listWeeks().map(week => ({ params: { period: week.period_key }, props: { target: `/situation/weekly/${week.period_key}/` } })),
+    ...listMonths().map(period => ({ params: { period }, props: { target: `/situation/monthly/${period}/` } })),
   ];
 }
 

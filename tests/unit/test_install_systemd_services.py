@@ -59,3 +59,14 @@ def test_installer_manifest_and_dry_run_include_every_systemd_template(
     rendered_units = {path.name for path in output_dir.iterdir()}
     assert rendered_units == template_units
     assert (output_dir / "globalid-notify-failure@.service").is_file()
+
+
+def test_long_running_services_treat_sigterm_exit_as_success() -> None:
+    for name in (
+        "globalid-dashboard-api.service",
+        "globalid-dashboard-web.service",
+        "globalid-dashboard-worker.service",
+        "globalid-dashboard-scheduler.service",
+    ):
+        text = (TEMPLATE_DIR / name).read_text(encoding="utf-8")
+        assert re.search(r"^SuccessExitStatus=143$", text, re.MULTILINE), name

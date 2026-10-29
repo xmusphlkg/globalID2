@@ -1,5 +1,5 @@
-"""Notice-based Situation module.
+"""Alert-based Situation module.
 
-Pipeline: collect authority notices -> store -> peer-reviewed AI enrichment ->
-event clustering -> peer-reviewed weekly digest -> static export.
+Pipeline: collect authority reports -> store -> fetch full text -> two-model
+alert extraction (native file or extracted text) -> outbreaks -> static export.
 """

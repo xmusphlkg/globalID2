@@ -17,5 +17,7 @@ EnvironmentFile=-__PROJECT_DIR__/.env
 ExecStart=__PROJECT_DIR__/scripts/run_dashboard_scheduler_service.sh
 Restart=on-failure
 RestartSec=10
+# A SIGTERM stop can surface as exit 143 (128+SIGTERM); do not alert on it.
+SuccessExitStatus=143
 TimeoutStopSec=60
 KillMode=mixed

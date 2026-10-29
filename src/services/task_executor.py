@@ -618,7 +618,7 @@ async def _run_export(task: Task) -> Dict[str, Any]:
 
 
 async def _run_situation_sources_refresh(task: Task) -> Dict[str, Any]:
-    """Collect authority notices, run peer-reviewed AI enrichment, and export."""
+    """Collect official reports, read them in full, extract alerts, and export."""
     from src.services.situation_notices.runner import run_situation
 
     async with task_lifecycle(task, exit_on_cancel=False):
@@ -632,8 +632,8 @@ async def _run_situation_sources_refresh(task: Task) -> Dict[str, Any]:
         result = await run_situation(
             fetch=fetch_events,
             skip_ai=bool(input_data.get("skip_ai", False)),
-            ai_limit=int(input_data.get("ai_limit") or 50),
-            digest_weeks=int(input_data.get("digest_weeks") or 2),
+            ai_limit=int(input_data.get("ai_limit") or 30),
+            document_limit=int(input_data.get("document_limit") or 40),
             progress=progress,
         )
         result["fetch_events"] = fetch_events

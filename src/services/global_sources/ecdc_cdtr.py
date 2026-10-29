@@ -59,6 +59,7 @@ def normalize_items(xml_text: str) -> list[dict[str, Any]]:
                 record_type="weekly_threat_report",
                 summary_en=clean_html_fragment(_text(node.find("description"))),
                 keep_summary=True,
+                document_ref={"kind": "pdf_page", "page_url": link},
             )
         )
     return events

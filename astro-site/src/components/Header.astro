@@ -19,7 +19,7 @@ const languageOptions = LOCALES;
 const initialLocalePreference = currentLanguage === 'fr' ? 'fr' : currentLanguage;
 const languageMenuLabel = copy('Language', '语言', 'Langue');
 // The Situation module is built on the international authority export.
-const situationVisible = existsSync(resolve('./src/data/situation/international/latest.json'));
+const situationVisible = existsSync(resolve('./src/data/situation/international/map.json'));
 
 const primaryLinks = [
   ...(situationVisible ? [{ href: '/situation/', en: 'Situation', zh: '全球态势', fr: 'Situation' }] : []),

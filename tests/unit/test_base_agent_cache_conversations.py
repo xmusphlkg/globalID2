@@ -213,8 +213,12 @@ def _stub_persisted_runtime_health(monkeypatch):
     async def _failure(*_args, **_kwargs):
         return {"recorded": True}
 
+    async def _call_log(*_args, **_kwargs):
+        return None
+
     monkeypatch.setattr("src.ai.agents.base.record_route_runtime_success", _success)
     monkeypatch.setattr("src.ai.agents.base.record_route_runtime_failure", _failure)
+    monkeypatch.setattr("src.ai.agents.base.record_model_call_log", _call_log)
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 from uuid import uuid4
 
@@ -25,7 +25,9 @@ from src.ai.model_center import (
     get_provider_rate_limit_state,
     get_provider_runtime_health_state,
     get_runtime_routes,
+    get_thinking_mode,
     mask_api_key,
+    with_thinking_mode,
 )
 from src.control_plane.runtime import runtime_registry
 from src.core.db_schema import ensure_task_type_enum_schema
@@ -615,6 +617,9 @@ class ProviderOut(BaseModel):
     runtime_last_error: Optional[str] = None
 
 
+ThinkingMode = Literal["default", "enabled", "disabled"]
+
+
 class ModelCreateRequest(BaseModel):
     provider_key: str = Field(..., min_length=2, max_length=120)
     model_name: str = Field(..., min_length=1, max_length=120)
@@ -624,7 +629,8 @@ class ModelCreateRequest(BaseModel):
     api_style: Optional[str] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
-    runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=64)
+    runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=512)
+    thinking_mode: Optional[ThinkingMode] = None
     extra_params: Dict[str, Any] = Field(default_factory=dict)
     is_enabled: bool = True
     is_default: bool = False
@@ -637,7 +643,8 @@ class ModelUpdateRequest(BaseModel):
     api_style: Optional[str] = None
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
-    runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=64)
+    runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=512)
+    thinking_mode: Optional[ThinkingMode] = None
     extra_params: Optional[Dict[str, Any]] = None
     is_enabled: Optional[bool] = None
     is_default: Optional[bool] = None
@@ -657,6 +664,7 @@ class ModelOut(BaseModel):
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
     runtime_max_concurrency: Optional[int] = None
+    thinking_mode: ThinkingMode = "default"
     extra_params: Dict[str, Any] = {}
     is_enabled: bool
     is_default: bool
@@ -1048,6 +1056,8 @@ async def create_model(body: ModelCreateRequest, db: AsyncSession = Depends(get_
     extra_params = dict(body.extra_params)
     if body.runtime_max_concurrency is not None:
         extra_params["runtime_max_concurrency"] = body.runtime_max_concurrency
+    if body.thinking_mode is not None:
+        extra_params = with_thinking_mode(extra_params, body.thinking_mode)
     model = AIModelConfig(
         provider_id=provider.id,
         model_key=model_key,
@@ -1101,13 +1111,19 @@ async def update_model(model_key: str, body: ModelUpdateRequest, db: AsyncSessio
         model.temperature = body.temperature
     if body.max_tokens is not None:
         model.max_tokens = body.max_tokens
-    if body.extra_params is not None or "runtime_max_concurrency" in body.model_fields_set:
+    if (
+        body.extra_params is not None
+        or body.thinking_mode is not None
+        or "runtime_max_concurrency" in body.model_fields_set
+    ):
         extra_params = dict(body.extra_params if body.extra_params is not None else (model.extra_params or {}))
         if "runtime_max_concurrency" in body.model_fields_set:
             if body.runtime_max_concurrency is None:
                 extra_params.pop("runtime_max_concurrency", None)
             else:
                 extra_params["runtime_max_concurrency"] = body.runtime_max_concurrency
+        if body.thinking_mode is not None:
+            extra_params = with_thinking_mode(extra_params, body.thinking_mode)
         model.extra_params = extra_params
     if body.is_enabled is not None:
         model.is_enabled = body.is_enabled
@@ -1204,6 +1220,7 @@ async def list_ai_model_call_logs(
         query = query.where(AIModelCallLog.model_key == model_key)
     if status:
         query = query.where(AIModelCallLog.status == status)
+    total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar_one()
     rows = (
         await db.execute(
             query.order_by(desc(AIModelCallLog.created_at), desc(AIModelCallLog.id))
@@ -1211,6 +1228,7 @@ async def list_ai_model_call_logs(
             .limit(page_size)
         )
     ).scalars().all()
+    response.headers["X-Total-Count"] = str(total)
     response.headers["X-Limit"] = str(page_size)
     response.headers["X-Offset"] = str((page - 1) * page_size)
     return [
@@ -1520,6 +1538,7 @@ def _model_to_out(model: AIModelConfig) -> ModelOut:
         temperature=model.temperature,
         max_tokens=model.max_tokens,
         runtime_max_concurrency=(model.extra_params or {}).get("runtime_max_concurrency"),
+        thinking_mode=get_thinking_mode(model.extra_params),
         extra_params=model.extra_params or {},
         is_enabled=model.is_enabled,
         is_default=model.is_default,

@@ -53,6 +53,7 @@ def build_event(
     summary_en: str | None = None,
     updated_at_source: str | None = None,
     keep_summary: bool = True,
+    document_ref: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one normalized international-authority event.
 
@@ -95,6 +96,8 @@ def build_event(
             for row in countries
         ],
         "retrieved_at": utc_now().isoformat(),
+        #: Where the full report lives; see ``situation_notices.documents``.
+        "document_ref": document_ref or {},
     }
     if published:
         event.update(iso_week(published))

@@ -81,6 +81,11 @@ def normalize_item(item: dict[str, Any], *, kind: str) -> dict[str, Any] | None:
         record_type="outbreak_statement" if kind == "news" else "weekly_threat_report",
         updated_at_source=(modified or published).isoformat(),
         keep_summary=False,
+        document_ref=(
+            {"kind": "wp_rest", "endpoint": NEWS_URL, "id": int(native_id)}
+            if kind == "news"
+            else {"kind": "pdf_page", "page_url": url}
+        ),
     )
 
 

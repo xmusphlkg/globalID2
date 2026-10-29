@@ -1,7 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Lang } from './i18n';
-import type { InternationalNotice } from './international';
+
+interface SnapshotSubject {
+  countries: Array<{ code: string; name_en: string | null; name_zh: string | null }>;
+  diseases: Array<{ disease_id: string }>;
+}
 
 /**
  * Cross-signal between an authority notice and the local surveillance snapshot
@@ -156,7 +160,7 @@ function isRecent(date: string | null): boolean {
 }
 
 export function noticeSnapshotBadges(
-  notice: Pick<InternationalNotice, 'countries' | 'diseases'>,
+  notice: SnapshotSubject,
   locale: Lang = 'en',
   options: { contextCodes?: string[]; limit?: number } = {},
 ): string[] {

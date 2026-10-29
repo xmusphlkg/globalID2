@@ -22,6 +22,8 @@ from src.core import get_config, get_logger
 
 logger = get_logger(__name__)
 ALERT_COOLDOWN_SECONDS = 15 * 60
+# Pauses between delivery attempts: three attempts in total.
+RETRY_DELAYS_SECONDS = (2.0, 5.0)
 
 
 def _state_dir() -> Path:
@@ -29,6 +31,49 @@ def _state_dir() -> Path:
     path = Path(runtime_dir) if runtime_dir else Path(tempfile.gettempdir()) / "globalid-notify"
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def _is_transient(exc: Exception) -> bool:
+    """Connection-level failures are worth retrying; auth and recipient errors are not."""
+    if isinstance(exc, (smtplib.SMTPServerDisconnected, smtplib.SMTPConnectError)):
+        return True
+    # SMTPException subclasses OSError, so exclude it explicitly.
+    return isinstance(exc, OSError) and not isinstance(exc, smtplib.SMTPException)
+
+
+def _deliver_once(automation, message: EmailMessage, recipients: list[str]) -> bool:
+    """One SMTP session. Returns True when at least one recipient accepted the message."""
+    server = None
+    delivered = False
+    try:
+        if automation.smtp_use_tls:
+            server = smtplib.SMTP(automation.smtp_host, automation.smtp_port, timeout=20)
+            server.ehlo()
+            server.starttls(context=ssl.create_default_context())
+            server.ehlo()
+        else:
+            server = smtplib.SMTP_SSL(
+                automation.smtp_host,
+                automation.smtp_port,
+                timeout=20,
+                context=ssl.create_default_context(),
+            )
+        server.login(automation.smtp_username, automation.smtp_password)
+        refused = server.send_message(message)
+        delivered = len(refused) < len(recipients)
+        return delivered
+    finally:
+        if server is not None:
+            try:
+                server.quit()
+            except Exception as exc:
+                if delivered:
+                    logger.warning(
+                        "SMTP accepted failure email, but connection close failed: {}",
+                        type(exc).__name__,
+                    )
+                else:
+                    server.close()
 
 
 def send_failure_alert(service_name: str) -> bool:
@@ -58,16 +103,12 @@ def send_failure_alert(service_name: str) -> bool:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
         now = time.time()
         try:
-            previous_attempt = float(sent_path.read_text().strip())
+            previous_send = float(sent_path.read_text().strip())
         except (OSError, ValueError):
-            previous_attempt = 0.0
-        if now - previous_attempt < ALERT_COOLDOWN_SECONDS:
+            previous_send = 0.0
+        if now - previous_send < ALERT_COOLDOWN_SECONDS:
             logger.info("Failure email for {} suppressed by the 15-minute cooldown", service_name)
             return True
-
-        # Reserve the window before network I/O so rapid restart loops cannot
-        # flood either the SMTP provider or the admin inbox when SMTP is down.
-        sent_path.write_text(f"{now:.3f}\n")
 
         message = EmailMessage()
         message["From"] = automation.smtp_from_email
@@ -79,45 +120,30 @@ def send_failure_alert(service_name: str) -> bool:
             "Inspect the service journal and restore the underlying dependency or process."
         )
 
-        server = None
-        delivered = False
-        try:
-            if automation.smtp_use_tls:
-                server = smtplib.SMTP(
-                    automation.smtp_host, automation.smtp_port, timeout=20
-                )
-                server.ehlo()
-                server.starttls(context=ssl.create_default_context())
-                server.ehlo()
-            else:
-                server = smtplib.SMTP_SSL(
-                    automation.smtp_host,
-                    automation.smtp_port,
-                    timeout=20,
-                    context=ssl.create_default_context(),
-                )
-            server.login(automation.smtp_username, automation.smtp_password)
-            refused = server.send_message(message)
-            delivered = len(refused) < len(recipients)
-            if not delivered:
+        attempts = len(RETRY_DELAYS_SECONDS) + 1
+        for attempt in range(1, attempts + 1):
+            try:
+                if _deliver_once(automation, message, recipients):
+                    break
                 logger.error("SMTP server refused all administrators for {}", service_name)
                 return False
-        except Exception as exc:
-            logger.error("Failure email delivery failed for {}: {}", service_name, type(exc).__name__)
-            return False
-        finally:
-            if server is not None:
-                try:
-                    server.quit()
-                except Exception as exc:
-                    if delivered:
-                        logger.warning(
-                            "SMTP accepted failure email for {}, but connection close failed: {}",
-                            service_name,
-                            type(exc).__name__,
-                        )
-                    else:
-                        server.close()
+            except Exception as exc:
+                retry = attempt < attempts and _is_transient(exc)
+                logger.error(
+                    "Failure email delivery failed for {} (attempt {}/{}): {}{}",
+                    service_name,
+                    attempt,
+                    attempts,
+                    type(exc).__name__,
+                    ", retrying" if retry else "",
+                )
+                if not retry:
+                    return False
+                time.sleep(RETRY_DELAYS_SECONDS[attempt - 1])
+
+        # Only a delivered alert starts the cooldown; a failed send must not
+        # suppress the next one.
+        sent_path.write_text(f"{time.time():.3f}\n")
 
     logger.warning(
         "Failure email sent for {} to {} administrator(s)", service_name, len(recipients)

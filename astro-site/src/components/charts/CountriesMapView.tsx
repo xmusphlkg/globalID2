@@ -20,6 +20,10 @@ import {
 const MAP_NAME = 'world-countries-lnglat';
 const LOCAL_WORLD_MAP_URL = '/data/world.json';
 
+// Fit the world minus Antarctica to whatever size the frame has, so the map
+// fills it in both the inline and full-screen layouts without cropping land.
+const DEFAULT_BOUNDS: [[number, number], [number, number]] = [[-180, 84], [180, -58]];
+
 type MarkerStatus = CoverageStatus | 'Unsupported';
 type MarkerKind = 'country' | 'subdivision';
 
@@ -191,6 +195,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
   const containerRef = useRef<HTMLDivElement>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [mapReady, setMapReady] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [worldGeoJson, setWorldGeoJson] = useState<any>(null);
   const [dotPositions, setDotPositions] = useState<DotPos[]>([]);
   const [hovered, setHovered] = useState<DotPos | null>(null);
@@ -279,6 +284,18 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
     return () => observer.disconnect();
   }, [computePositions]);
 
+  useEffect(() => {
+    const changed = () => {
+      setIsFullscreen(document.fullscreenElement === shellRef.current);
+      setTimeout(() => {
+        chartRef.current?.getEchartsInstance?.()?.resize();
+        computePositions();
+      }, 120);
+    };
+    document.addEventListener('fullscreenchange', changed);
+    return () => document.removeEventListener('fullscreenchange', changed);
+  }, [computePositions]);
+
   const palette = theme === 'light' ? {
     mapBg: 'linear-gradient(180deg, #eef4fa 0%, #dde8f2 100%)', areaColor: '#fbfdff', areaBorder: '#b6c8d8', areaHover: '#e4edf5',
     supported: '#138a70', supportedBorder: '#0d6d8c', planned: '#3aa66f', unsupported: '#8497aa', tooltipBg: '#fff', tooltipBorder: '#c7d7e6', text: '#17304d', muted: '#657b92',
@@ -288,7 +305,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
   };
   const option = useMemo(() => mapReady ? ({
     backgroundColor: 'transparent',
-    geo: { map: MAP_NAME, roam: true, scaleLimit: { min: 0.7, max: 8 }, silent: true, itemStyle: { areaColor: palette.areaColor, borderColor: palette.areaBorder, borderWidth: 0.5 }, emphasis: { itemStyle: { areaColor: palette.areaHover }, label: { show: false } } },
+    geo: { map: MAP_NAME, roam: true, boundingCoords: DEFAULT_BOUNDS, left: 0, right: 0, top: 0, bottom: 0, scaleLimit: { min: 0.7, max: 8 }, silent: true, itemStyle: { areaColor: palette.areaColor, borderColor: palette.areaBorder, borderWidth: 0.5 }, emphasis: { itemStyle: { areaColor: palette.areaHover }, label: { show: false } } },
     // The interactive HTML dots below are the single source of marker pixels.
     // Keeping an invisible scatter series gives ECharts a geo coordinate layer
     // to roam without doubling each marker visually.
@@ -296,13 +313,13 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
   }) : {}, [mapReady, displayedMarkers, palette]);
   const handleEvents = useMemo(() => ({ finished: () => setTimeout(computePositions, 80), georoam: () => setTimeout(computePositions, 30) }), [computePositions]);
   const zoom = (factor: number) => chartRef.current?.getEchartsInstance?.()?.dispatchAction({ type: 'geoRoam', geoIndex: 0, zoom: factor });
-  const resetZoom = () => chartRef.current?.getEchartsInstance?.()?.setOption({ geo: { zoom: 1, center: [0, 0] } });
+  const resetZoom = () => chartRef.current?.getEchartsInstance?.()?.setOption(option, { notMerge: true });
 
   if (!mapReady) return <div style={{ height }} className="flex items-center justify-center text-sm text-[rgb(var(--text-muted))]">{initialLanguage === 'zh' ? '正在加载地图…' : initialLanguage === 'fr' ? 'Chargement de la carte…' : 'Loading map…'}</div>;
   const lang = initialLanguage;
   const markerColor = (marker: DotPos) => marker.status === 'Unsupported' ? palette.unsupported : marker.status === 'Scheduled' ? palette.planned : palette.supported;
   return (
-    <div ref={shellRef} className="panel-fullscreen">
+    <div ref={shellRef} className="panel-fullscreen coverage-map-shell">
     <div className="chart-result-row">
       <ChartResultActions
         lang={lang}
@@ -317,7 +334,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450, ini
         }))) : null}
       />
     </div>
-    <div ref={containerRef} className="coverage-map-canvas" style={{ position: 'relative', height, overflow: 'hidden', background: palette.mapBg }}>
+    <div ref={containerRef} className="coverage-map-canvas" style={{ position: 'relative', height: isFullscreen ? undefined : height, overflow: 'hidden', background: palette.mapBg }}>
       <ReactEChartsCore ref={chartRef} echarts={echarts} option={option} style={{ height: '100%', width: '100%' }} onEvents={handleEvents} notMerge />
       <div className="coverage-map-controls" role="group" aria-label={initialLanguage === 'zh' ? '地图缩放' : 'Map zoom'}>
         <button type="button" onClick={() => zoom(1.25)} aria-label={initialLanguage === 'zh' ? '放大地图' : 'Zoom in'}>+</button>

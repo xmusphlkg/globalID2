@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchWithMeta } from "@/lib/api";
 
 export interface AIProviderItem {
   id: number;
@@ -36,6 +36,8 @@ export interface AIProviderItem {
   runtime_model_inflight: number;
 }
 
+export type ThinkingMode = "default" | "enabled" | "disabled";
+
 export interface AIModelItem {
   id: number;
   provider_id: number;
@@ -49,6 +51,7 @@ export interface AIModelItem {
   temperature: number | null;
   max_tokens: number | null;
   runtime_max_concurrency: number | null;
+  thinking_mode: ThinkingMode;
   extra_params: Record<string, unknown>;
   is_enabled: boolean;
   is_default: boolean;
@@ -174,6 +177,7 @@ export interface ModelPayload {
   temperature?: number | null;
   max_tokens?: number | null;
   runtime_max_concurrency?: number | null;
+  thinking_mode?: ThinkingMode;
   extra_params?: Record<string, unknown>;
   is_enabled?: boolean;
   is_default?: boolean;
@@ -187,6 +191,7 @@ export interface ModelUpdatePayload {
   temperature?: number | null;
   max_tokens?: number | null;
   runtime_max_concurrency?: number | null;
+  thinking_mode?: ThinkingMode;
   extra_params?: Record<string, unknown>;
   is_enabled?: boolean;
   is_default?: boolean;
@@ -235,10 +240,40 @@ export function useAIRuntimeRoutes() {
   });
 }
 
-export function useAIModelCallLogs(enabled = true) {
-  return useQuery<AIModelCallLogItem[]>({
-    queryKey: ["ai-model-call-logs"],
-    queryFn: () => apiFetch("/ai/models/call-logs?page=1&page_size=100"),
+export interface AIModelCallLogFilters {
+  page: number;
+  providerKey: string;
+  status: string;
+}
+
+export interface AIModelCallLogPage {
+  items: AIModelCallLogItem[];
+  total: number;
+  totalPages: number;
+}
+
+const CALL_LOG_PAGE_SIZE = 50;
+
+export function useAIModelCallLogs(
+  enabled = true,
+  filters: AIModelCallLogFilters = { page: 1, providerKey: "", status: "" },
+) {
+  return useQuery<AIModelCallLogPage>({
+    queryKey: ["ai-model-call-logs", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: String(filters.page),
+        page_size: String(CALL_LOG_PAGE_SIZE),
+      });
+      if (filters.providerKey) params.set("provider_key", filters.providerKey);
+      if (filters.status) params.set("status", filters.status);
+      const { data, meta } = await apiFetchWithMeta<AIModelCallLogItem[]>(`/ai/models/call-logs?${params}`);
+      return {
+        items: data,
+        total: meta.pagination?.total ?? data.length,
+        totalPages: meta.pagination?.total_pages ?? 1,
+      };
+    },
     enabled,
     staleTime: 5 * 1000,
     refetchInterval: enabled ? 15 * 1000 : false,
