@@ -6,7 +6,7 @@ import type { ComponentType } from 'react';
 import './situation.css';
 import type { Locale, MapPoint, OutbreakFile, SituationAlertRecord } from '../../utils/situationTypes.ts';
 import {
-  EMPTY_FILTERS,
+  DEFAULT_FILTERS,
   RECENCY_COLORS,
   filterPoints,
   placeLabel,
@@ -117,7 +117,7 @@ function AlertItem({ alert, selected, locale }: { alert: SituationAlertRecord; s
 
 export default function SituationExplorer({ locale, asOf, points }: Props) {
   const copy = COPY[locale];
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [outbreaks, setOutbreaks] = useState<Record<string, Remote>>({});
   const [Canvas, setCanvas] = useState<ComponentType<CanvasProps> | null>(null);
@@ -176,7 +176,7 @@ export default function SituationExplorer({ locale, asOf, points }: Props) {
     const target = points.find(point => point.outbreak_id === outbreakId && point.country_code === countryCode);
     if (target) setSelectedId(target.alert_id);
   };
-  const filtersActive = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
+  const filtersActive = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS);
   const windows: Array<[WindowKey, string]> = [['all', copy.winAll], ['7', copy.win7], ['30', copy.win30], ['90', copy.win90]];
 
   return (
@@ -194,7 +194,7 @@ export default function SituationExplorer({ locale, asOf, points }: Props) {
             ))}
           </select>
         </label>
-        <button type="button" className="sit-reset" disabled={!filtersActive} onClick={() => setFilters(EMPTY_FILTERS)}>
+        <button type="button" className="sit-reset" disabled={!filtersActive} onClick={() => setFilters(DEFAULT_FILTERS)}>
           {copy.reset}
         </button>
         <div className="sit-legend">

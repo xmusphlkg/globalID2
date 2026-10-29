@@ -83,8 +83,25 @@ def normalize_wer_item(item: dict[str, Any]) -> dict[str, Any] | None:
         countries=countries,
         record_type="surveillance_update",
         keep_summary=False,
-        document_ref={"kind": "pdf_page", "page_url": url},
+        document_ref={"kind": "pdf_page", "page_url": url, **_wer_pages(url)},
     )
+
+
+_WER_RANGE = re.compile(r"-(\d{1,4})-(\d{1,4})/?$")
+
+
+def _wer_pages(url: str) -> dict[str, list[int]]:
+    """Printed page range of one WER article, read from its slug (``who-wer10139-261-268``).
+
+    A WER landing page may serve the whole issue; the range lets the reader keep
+    only this article so another article's tables never land under its title.
+    """
+
+    match = _WER_RANGE.search(url)
+    if not match:
+        return {}
+    first, last = int(match.group(1)), int(match.group(2))
+    return {"pages": [first, last]} if 0 < first <= last <= first + 200 else {}
 
 
 def normalize_wer_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
