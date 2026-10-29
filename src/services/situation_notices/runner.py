@@ -60,19 +60,24 @@ async def run_situation(
 
     summary["review_mode"] = None
     if not skip_ai:
-        from .models import ModelCenterCompleter
+        from src.ai.peer_review import AIOutputError
+        from src.ai.peer_review_completer import ReviewRoutePool
 
         try:
-            completer = await ModelCenterCompleter.from_model_center(
-                allow_single_model=not require_cross_model
-            )
+            # A pool picks each report's author/reviewer by load and keeps failover
+            # off the other role's model, so a rate-limited reviewer cannot collapse
+            # both roles onto one model.
+            pool = await ReviewRoutePool.from_model_center(line="situation_notice")
+            routes = len(pool._capacity)
+            if require_cross_model and routes < 2:
+                raise AIOutputError(f"peer review needs at least two active model routes; found {routes}")
         except Exception as exc:  # noqa: BLE001 - no model must not block the export
             logger.warning("Situation AI unavailable, exporting what is already extracted: {}", exc)
             summary["ai_error"] = f"{type(exc).__name__}: {exc}"
         else:
-            summary["review_mode"] = completer.review_mode
+            summary["review_mode"] = "cross_model" if routes >= 2 else "single_model"
             summary["requeued_stale_prompts"] = await requeue_stale_prompts()
-            summary["extraction"] = await extract_pending(completer, limit=ai_limit)
+            summary["extraction"] = await extract_pending(pool, limit=ai_limit)
     await progress(75)
 
     summary["outbreaks"] = await rebuild_outbreaks(as_of=now.date())

@@ -28,6 +28,8 @@ from sqlalchemy.orm import selectinload
 
 from src.ai.attachments import PDF, Attachment
 from src.ai.agents.base import NoModelAvailable
+from src.ai.peer_review import SameModelReviewError
+from src.ai.peer_review_completer import ReviewRoutePool
 from src.core import get_logger
 from src.core.database import get_db
 from src.domain import (
@@ -53,6 +55,7 @@ OUTBREAK_GAP_DAYS = 60
 OUTBREAK_QUIET_DAYS = 30
 MAX_DOCUMENT_ATTEMPTS = 4
 MAX_AI_ATTEMPTS = 4
+SAME_MODEL_RETRIES = 3
 #: Reports downloaded at once; the HTTP client additionally caps each host.
 DOWNLOAD_WORKERS = 6
 
@@ -360,7 +363,23 @@ async def requeue_stale_prompts() -> int:
     return requeued
 
 
-async def extract_pending(complete: Completer, *, limit: int = 30) -> dict[str, int]:
+async def _extract_with_retry(complete: Completer | ReviewRoutePool, *args: Any, **kwargs: Any) -> Any:
+    """With a route pool, redo a review that failover collapsed onto one model."""
+
+    if not isinstance(complete, ReviewRoutePool):
+        return await extract_alerts(complete, *args, **kwargs)
+    avoid: set[str] = set()
+    for attempt in range(SAME_MODEL_RETRIES + 1):
+        try:
+            return await extract_alerts(complete.completer(avoid), *args, **kwargs)
+        except SameModelReviewError as exc:
+            if attempt >= SAME_MODEL_RETRIES:
+                raise
+            avoid.add(exc.model)
+    raise AssertionError("unreachable")
+
+
+async def extract_pending(complete: Completer | ReviewRoutePool, *, limit: int = 30) -> dict[str, int]:
     """Peer-review every due report; one failing report never stops the batch."""
 
     counts = {"published": 0, "rejected": 0, "failed": 0, "unchanged": 0}
@@ -404,7 +423,7 @@ async def extract_pending(complete: Completer, *, limit: int = 30) -> dict[str, 
                 counts["unchanged"] += 1
                 continue
             try:
-                result = await extract_alerts(
+                result = await _extract_with_retry(
                     complete,
                     _notice_payload(row),
                     _attachment(row),
