@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Iterable, Mapping
 
-from sqlalchemy import Integer, String, all_, literal, select
+from sqlalchemy import Integer, String, all_, func, literal, select
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1072,10 +1072,12 @@ class AIContentGovernanceService:
                     query = query.where(LiteratureArticle.article_id != all_(literal(sorted(claims.ids), ARRAY(String))))
                 articles = (await db.execute(query.limit(limit))).scalars().all()
                 claims.ids.update(article.article_id for article in articles)
-            return len(articles), [(a.article_id, a.updated_at, a) for a in articles], 0
+            return len(articles), [(a.article_id, self._article_fingerprint(a), a) for a in articles], 0
 
         async with claims.lock:
-            query = self._summary_review_query(0)
+            # Summaries under an unpublished parent cannot be reviewed yet; leaving them
+            # out keeps passes short and lets them be picked up once the parent clears.
+            query = self._summary_review_query(0).where(LiteratureArticle.publication_status == "published")
             if claims.ids:
                 query = query.where(LiteratureSummary.id != all_(literal(sorted(claims.ids), ARRAY(Integer))))
             rows = (await db.execute(query.limit(limit))).all()
@@ -1088,16 +1090,38 @@ class AIContentGovernanceService:
                 self._archive_summary(summary, reason)
                 archived += 1
             elif action == "review":
-                items.append((summary.id, summary.updated_at, (summary, article)))
+                items.append((summary.id, self._summary_fingerprint(summary), (summary, article)))
         return len(rows), items, archived
+
+    @staticmethod
+    def _fingerprint(value: Any) -> str:
+        return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, ensure_ascii=False).encode("utf-8")).hexdigest()
+
+    def _article_fingerprint(self, article: Any) -> str:
+        """Hash of what the reviewers read, so unrelated row touches do not void a review."""
+
+        return self._fingerprint({
+            "item": self._literature_article_item(article),
+            "locked": bool((article.metadata_ or {}).get("editorial_locked")),
+        })
+
+    def _summary_fingerprint(self, summary: Any) -> str:
+        return self._fingerprint({
+            "fields": {field: getattr(summary, field, None) for field in SUMMARY_FIELDS},
+            "quality": summary.quality_score,
+            "evidence_map": summary.evidence_map,
+            "source": (summary.generation_metadata or {}).get("source_fingerprint"),
+        })
 
     async def _write_stream_results(
         self, db: AsyncSession, kind: str, results: list[tuple[Any, Any, ReviewedOutput]]
     ) -> dict[str, int]:
         """Apply finished reviews to freshly loaded rows.
 
-        A row that left ``review`` or changed since it was claimed is left alone
-        (``stale``); the next run picks it up again.
+        A row that left ``review`` or whose reviewed content changed since it was
+        claimed is left alone (``stale``); the next run picks it up again. The
+        Research Radar autopilot re-stamps ``updated_at`` on every waiting row each
+        cycle, so content is compared by fingerprint rather than by timestamp.
         """
 
         counts = {"published": 0, "rejected": 0, "stale": 0}
@@ -1111,7 +1135,8 @@ class AIContentGovernanceService:
         for key, seen, reviewed in results:
             row = rows.get(key)
             status = None if row is None else (row.publication_status if kind == "articles" else row.status)
-            if row is None or status != "review" or row.updated_at != seen:
+            current = None if row is None else (self._article_fingerprint(row) if kind == "articles" else self._summary_fingerprint(row))
+            if row is None or status != "review" or current != seen:
                 counts["stale"] += 1
                 continue
             publish = reviewed.published and reviewed.payload["decision"] == "publish"
@@ -1121,6 +1146,33 @@ class AIContentGovernanceService:
                 self._apply_summary(row, reviewed, publish)
             counts["published" if publish else "rejected"] += 1
         return counts
+
+    async def backlog_counts(self, db: AsyncSession) -> dict[str, int]:
+        """Rows each review line still has to decide; the idle scheduler picks work from this."""
+
+        articles = await db.scalar(select(func.count()).select_from(self._article_review_query().order_by(None).subquery()))
+        summaries = await db.scalar(
+            select(func.count(LiteratureSummary.id))
+            .join(LiteratureArticle, LiteratureArticle.article_id == LiteratureSummary.article_id)
+            .where(LiteratureSummary.status == "review", LiteratureArticle.publication_status == "published")
+        )
+        sources = await db.scalar(
+            select(func.count(DiseaseKnowledgeSource.id)).where(
+                DiseaseKnowledgeSource.review_status == "requires_review",
+                DiseaseKnowledgeSource.status == "active",
+            )
+        )
+        learning = await db.scalar(
+            select(func.count(DiseaseLearningSuggestion.id)).where(
+                DiseaseLearningSuggestion.status.in_(("pending", "failed", "requires_review"))
+            )
+        )
+        return {
+            "articles": int(articles or 0),
+            "summaries": int(summaries or 0),
+            "knowledge_sources": int(sources or 0),
+            "learning_suggestions": int(learning or 0),
+        }
 
     async def stream_review(
         self,
@@ -1133,6 +1185,8 @@ class AIContentGovernanceService:
         stall_limit: int = 150,
         pause_seconds: float = 300.0,
         emit: Callable[[dict[str, Any]], None] | None = None,
+        claims: ReviewClaims | None = None,
+        max_claims: int | None = None,
     ) -> dict[str, int]:
         """Review a backlog with a fixed worker pool and no batch boundaries.
 
@@ -1141,6 +1195,10 @@ class AIContentGovernanceService:
         a single writer commits finished reviews in small groups. No worker holds a
         database connection while it waits on a model. Rows that fail on the model
         side stay in ``review`` for the next run.
+
+        ``max_claims`` ends the run after that many rows so a caller can work in
+        slices; pass the same ``claims`` to every slice so rows deferred earlier are
+        not re-fetched until a pass finishes (``totals["exhausted"] == 1``).
         """
 
         from src.core import get_db
@@ -1149,11 +1207,11 @@ class AIContentGovernanceService:
             raise ValueError(f"unsupported stream kind: {kind}")
         decide = self._decide_article if kind == "articles" else self._decide_summary
         emit = emit or (lambda _record: None)
-        claims = ReviewClaims()
+        claims = claims or ReviewClaims()
         gate = _review_gate()
         todo: asyncio.Queue[Any] = asyncio.Queue(maxsize=max(2, workers * 2))
         finished: asyncio.Queue[Any] = asyncio.Queue()
-        totals = {"claimed": 0, "archived": 0, "published": 0, "rejected": 0, "deferred": 0, "stale": 0, "write_errors": 0}
+        totals = {"claimed": 0, "archived": 0, "published": 0, "rejected": 0, "deferred": 0, "stale": 0, "write_errors": 0, "exhausted": 0}
         state: dict[str, Any] = {"failures": 0, "route_error": None}
         tick = object()
 
@@ -1167,9 +1225,13 @@ class AIContentGovernanceService:
                         return
                     await asyncio.sleep(pause_seconds)
                     state["failures"] = 0
+                size = fetch_size if max_claims is None else min(fetch_size, max_claims - totals["claimed"])
+                if size <= 0:
+                    return
                 async with get_db() as db:
-                    fetched, items, archived = await self._claim_stream_items(db, kind, fetch_size, claims)
+                    fetched, items, archived = await self._claim_stream_items(db, kind, size, claims)
                 if fetched == 0:
+                    totals["exhausted"] = 1
                     return
                 totals["claimed"] += fetched
                 totals["archived"] += archived

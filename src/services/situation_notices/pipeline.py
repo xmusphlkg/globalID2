@@ -23,7 +23,7 @@ from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable, Iterable
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import selectinload
 
 from src.ai.attachments import PDF, Attachment
@@ -478,6 +478,34 @@ async def extract_pending(complete: Completer | ReviewRoutePool, *, limit: int =
             row.ai_last_error = None
             row.ai_next_attempt_at = None
     return counts
+
+
+async def backlog_counts() -> dict[str, int]:
+    """Reports waiting for a body download or a model reading right now."""
+
+    now = utc_now()
+    async with get_db() as db:
+        documents = await db.scalar(
+            select(func.count())
+            .select_from(SituationDocument)
+            .where(
+                SituationDocument.status.in_(("pending", "failed")),
+                SituationDocument.attempts < MAX_DOCUMENT_ATTEMPTS,
+                _is_due(SituationDocument.next_attempt_at, now),
+            )
+        )
+        extractions = await db.scalar(
+            select(func.count())
+            .select_from(SituationNotice)
+            .join(SituationDocument, SituationDocument.notice_id == SituationNotice.notice_id)
+            .where(
+                SituationNotice.ai_status.in_(("pending", "failed")),
+                SituationNotice.ai_attempts < MAX_AI_ATTEMPTS,
+                _is_due(SituationNotice.ai_next_attempt_at, now),
+                SituationDocument.status == "ready",
+            )
+        )
+    return {"documents": int(documents or 0), "extractions": int(extractions or 0)}
 
 
 # --- 4. outbreaks ---
