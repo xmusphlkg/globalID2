@@ -1,0 +1,6 @@
+{
+  "country_code": "LV",
+  "source_geo_code": "LV",
+  "responses": "../ECDC/responses.json",
+  "window_start": 2020
+}

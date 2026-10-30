@@ -1000,13 +1000,23 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
                         fallback_url, data=form, timeout=self.timeout, verify=False
                     )
                     response.raise_for_status()
-                    break
                 except requests.RequestException as exc:
+                    response = None
                     last_error = exc
                     logger.warning(
                         f"[KR-KDCA] SSL fallback failed for dportal AJAX | "
                         f"year={year} url={fallback_url} error={exc}"
                     )
+                    continue
+                # The fallback bypasses BaseCrawler.post; retain these exact
+                # bytes too, before JSON decoding and outside transport retry.
+                from src.services.ingestion.capture import capture_sync, is_capturing
+                if is_capturing():
+                    response._content = capture_sync(
+                        response.content, response.url or fallback_url,
+                        response.headers.get("content-type", ""),
+                    )
+                break
             if response is None:
                 raise RuntimeError(
                     f"KR dportal stats request failed for year={year}: {last_error}"
@@ -1120,6 +1130,9 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
             }
             time.sleep(self.delay)
             response = self.session.get(url, params=query, timeout=self.timeout)
+            from src.services.ingestion.capture import capture_sync, is_capturing
+            if is_capturing():
+                response._content = capture_sync(response.content, url, response.headers.get("content-type", ""))
             response_text = response.text.strip()
             if response.status_code in {401, 403} or response_text == "Unauthorized":
                 raise RuntimeError(

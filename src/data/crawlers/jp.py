@@ -697,6 +697,8 @@ class JapanIDWRCrawler(BaseCrawler):
         first_data_row = header_row_idx if header_row_idx is not None else total_row_idx
         for candidate in rows[first_data_row + 1 :]:
             area = _norm_text(candidate[header_start_idx]) if header_start_idx < len(candidate) else ""
+            if area == "Total No.":
+                area = "総数"
             if not area or area in {"累計", "Prefecture", "都道府県"}:
                 continue
             if (

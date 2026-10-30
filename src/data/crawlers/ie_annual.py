@@ -14,12 +14,14 @@ import io
 import os
 import re
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from urllib.parse import urljoin, urlsplit
 
 import pdfplumber
+from bs4 import BeautifulSoup
 
 from src.core import get_logger
 
@@ -31,7 +33,7 @@ logger = get_logger(__name__)
 DEFAULT_ANNUAL_SOURCE_NAME = "Ireland HPSC Annual Infectious Disease Statistics"
 DEFAULT_ANNUAL_SOURCE_SCOPE = "hpsc_annual"
 DEFAULT_ANNUAL_INDEX_URL = (
-    "https://www.hpsc.ie/notifiablediseases/annualidstatistics/"
+    "https://www.hpsc.ie/p/notifiablediseases/annualidstatistics-2"
 )
 DEFAULT_ANNUAL_START_YEAR = 2004
 DEFAULT_ANNUAL_END_YEAR = 2020
@@ -305,6 +307,58 @@ class IrelandHPSCAnnualCrawler(BaseCrawler):
         self.save_raw = save_raw
         self.raw_dir = Path(raw_dir) if raw_dir else Path("data/raw/ie/annual")
 
+    def discover_reports(self) -> Tuple[IEAnnualReportSpec, ...]:
+        """Resolve reviewed report windows from HPSC's current official catalogue.
+
+        Report filenames changed during HPSC's 2026 website migration. Match
+        the published title's complete year window, retaining our independently
+        reviewed selection of years inside that window.
+        """
+        artifacts = getattr(self, "replay_artifacts", None)
+        if artifacts is not None and not any(
+            artifact.source_url == DEFAULT_ANNUAL_INDEX_URL for artifact in artifacts
+        ):
+            # Pre-migration captures contain PDFs at the original catalogue URLs.
+            return ANNUAL_REPORTS
+        response = self.get(DEFAULT_ANNUAL_INDEX_URL)
+        links: Dict[Tuple[int, int], set[str]] = {}
+        for anchor in BeautifulSoup(response.content, "html.parser").select("a[href]"):
+            title = _text(anchor.get_text(" ", strip=True))
+            match = re.search(
+                r"Annual Infectious Disease Notifications in Ireland\s+"
+                r"(20\d{2})\s*[-–—]\s*(20\d{2})\b", title, re.I
+            )
+            if not match:
+                continue
+            url = urljoin(response.url, str(anchor["href"]))
+            parsed = urlsplit(url)
+            if (
+                parsed.scheme != "https"
+                or parsed.hostname not in {"www.hpsc.ie", "file.hpsc.ie"}
+                or parsed.username or parsed.password
+                or not parsed.path.lower().endswith(".pdf")
+            ):
+                raise IEContractError("HPSC annual catalogue contains an untrusted PDF URL")
+            window = (int(match[1]), int(match[2]))
+            links.setdefault(window, set()).add(url)
+        reports = []
+        for report in ANNUAL_REPORTS:
+            window = tuple(map(int, report.report_id.rsplit("_", 2)[-2:]))
+            candidates = links.get(window, set())
+            if len(candidates) != 1:
+                raise IEContractError(
+                    f"HPSC annual catalogue must identify exactly one report for {window}; "
+                    f"found {len(candidates)}"
+                )
+            reports.append(replace(report, url=next(iter(candidates))))
+        return tuple(reports)
+
+    def fetch_report(self, report: IEAnnualReportSpec) -> bytes:
+        content = self.get(report.url).content
+        if not content.startswith(b"%PDF"):
+            raise IEContractError(f"HPSC annual report {report.report_id} is not a PDF")
+        return content
+
     def _archive_pdf(self, report: IEAnnualReportSpec, content: bytes) -> str:
         if not self.save_raw:
             return ""
@@ -376,12 +430,11 @@ class IrelandHPSCAnnualCrawler(BaseCrawler):
 
         fetched: List[Dict[str, str]] = []
         covered: set[int] = set()
-        for spec in ANNUAL_REPORTS:
+        for spec in self.discover_reports():
             selected = tuple(year for year in spec.years if year in requested)
             if not selected:
                 continue
-            response = self.get(spec.url)
-            content = response.content
+            content = self.fetch_report(spec)
             artifact = self._archive_pdf(spec, content)
             selected_spec = IEAnnualReportSpec(spec.report_id, spec.url, selected)
             fetched.extend(

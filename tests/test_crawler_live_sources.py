@@ -20,7 +20,7 @@ from src.data.crawlers.hk import HongKongCHPCrawler
 from src.data.crawlers.jp import JapanIDWRCrawler
 from src.data.crawlers.kr import KoreaKDCAOpenAPICrawler
 from src.data.crawlers.nz import NewZealandPHFCrawler
-from src.data.crawlers.tw import TaiwanNIDSSCrawler
+from src.data.crawlers.tw import TaiwanNIDSSCrawler, normalize_monthly_exports
 from src.data.crawlers.us import DEFAULT_CSV_API_URL, USNNDSSCrawler
 
 
@@ -70,9 +70,13 @@ def test_tw_live_index_and_one_csv_are_parseable(tmp_path) -> None:
     diseases = crawler.fetch_disease_index()
     assert diseases
     candidates = sorted(diseases, key=lambda disease: disease.code != "061")
-    csv_text = next((crawler._download_csv_text(disease) for disease in candidates[:10]), None)
-    assert csv_text
-    assert crawler._parse_csv_rows(csv_text)
+    disease = candidates[0]
+    csv_text = crawler._download_csv_text(disease)
+    if csv_text is not None:
+        assert crawler._parse_csv_rows(csv_text)
+    else:
+        exports = crawler.fetch_monthly_exports(disease)
+        assert normalize_monthly_exports(exports, disease=disease)
 
 
 def test_hk_live_current_or_previous_year_csv_is_parseable(tmp_path) -> None:

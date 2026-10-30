@@ -1,0 +1,122 @@
+[
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "Januar"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 1,
+    "fordeltPaa": "Januar"
+  },
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "Februar"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 2,
+    "fordeltPaa": "Februar"
+  },
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "Mars"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 3,
+    "fordeltPaa": "Mars"
+  },
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "April"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 4,
+    "fordeltPaa": "April"
+  },
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "Mai"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 5,
+    "fordeltPaa": "Mai"
+  },
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "Juni"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 6,
+    "fordeltPaa": "Juni"
+  },
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "Juli"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 7,
+    "fordeltPaa": "Juli"
+  },
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "August"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 8,
+    "fordeltPaa": "August"
+  },
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "September"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 9,
+    "fordeltPaa": "September"
+  },
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "Oktober"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 10,
+    "fordeltPaa": "Oktober"
+  },
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "November"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 11,
+    "fordeltPaa": "November"
+  },
+  {
+    "tekst": "Difteri",
+    "antall": 0,
+    "fordeltPaa": "Desember"
+  },
+  {
+    "tekst": "Kikhoste",
+    "antall": 12,
+    "fordeltPaa": "Desember"
+  }
+]

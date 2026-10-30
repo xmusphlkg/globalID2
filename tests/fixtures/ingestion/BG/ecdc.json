@@ -1,0 +1,6 @@
+{
+  "country_code": "BG",
+  "source_geo_code": "BG",
+  "responses": "../ECDC/responses.json",
+  "window_start": 2020
+}

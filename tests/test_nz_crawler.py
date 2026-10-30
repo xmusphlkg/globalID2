@@ -152,6 +152,7 @@ def test_dhb_annual_rows_fall_back_when_raw_github_fails(monkeypatch):
 
     class Response:
         text = payload
+        content = payload.encode("utf-8")
 
     def fake_get(url, **kwargs):
         del kwargs

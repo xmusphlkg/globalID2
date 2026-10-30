@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import requests
+import pytest
 
 from src.core.source_scopes import (
     canonical_data_source_label,
@@ -232,6 +233,87 @@ def test_tw_nidss_csv_download_uses_twca_bundle_on_ssl_chain_error(
     assert calls[1]["verify"] == str(bundle)
     assert all(call["verify"] is not False for call in calls)
     assert crawler._tls_fallback._verify_by_host["od.cdc.gov.tw"] == str(bundle)
+
+
+def test_tw_failed_http_fallback_does_not_pin_later_downloads(monkeypatch):
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler
+
+    crawler = TaiwanNIDSSCrawler()
+    calls = []
+    response = requests.Response()
+    response.status_code = 200
+    response._content = b"valid source"
+
+    def request(method, url, **kwargs):
+        calls.append(url)
+        if len(calls) == 1:
+            raise requests.exceptions.SSLError("unexpected eof while reading")
+        if len(calls) == 2:
+            raise requests.ConnectionError("HTTP disconnected")
+        assert kwargs["verify"] is True
+        return response
+
+    monkeypatch.setattr(crawler.session, "request", request)
+    url = "https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv"
+    with pytest.raises(requests.ConnectionError):
+        crawler._get_csv_response(url)
+    assert not crawler._http_fallback_hosts
+    assert crawler._get_csv_response(url) is response
+    assert [url.split(":")[0] for url in calls] == ["https", "http", "https"]
+
+
+def test_tw_cached_http_failure_retries_verified_https(monkeypatch):
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler
+
+    crawler = TaiwanNIDSSCrawler()
+    crawler._http_fallback_hosts.add("od.cdc.gov.tw")
+    calls = []
+    response = requests.Response()
+    response.status_code = 200
+    response._content = b"valid source"
+
+    def request(method, url, **kwargs):
+        calls.append(url)
+        if url.startswith("http:"):
+            raise requests.ConnectionError("HTTP disconnected")
+        assert kwargs["verify"] is True
+        return response
+
+    monkeypatch.setattr(crawler.session, "request", request)
+    assert crawler._get_csv_response("https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv") is response
+    assert not crawler._http_fallback_hosts
+    assert len(calls) == 2
+
+
+@pytest.mark.parametrize("message", [
+    "certificate verify failed: hostname mismatch",
+    "certificate verify failed: certificate has expired",
+    "TLS protocol version unsupported",
+])
+def test_tw_does_not_downgrade_certificate_or_other_ssl_errors(monkeypatch, message):
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler
+
+    crawler = TaiwanNIDSSCrawler()
+    calls = []
+
+    def request(method, url, **kwargs):
+        calls.append(url)
+        assert kwargs["verify"] is True
+        raise requests.exceptions.SSLError(message)
+
+    monkeypatch.setattr(crawler.session, "request", request)
+    with pytest.raises(requests.exceptions.SSLError):
+        crawler._get_csv_response("https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv")
+    assert len(calls) == 1 and calls[0].startswith("https:")
+
+
+def test_tw_csv_retry_budget_is_not_multiplied_by_session_adapter():
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler
+
+    crawler = TaiwanNIDSSCrawler()
+    for scheme in ("https", "http"):
+        adapter = crawler.session.get_adapter(f"{scheme}://od.cdc.gov.tw/eic/Age_County_Gender_061.csv")
+        assert adapter.max_retries.total == 0
 
 
 def test_tw_nidss_crawl_continues_when_one_disease_fails(tmp_path, monkeypatch):

@@ -2,5 +2,5 @@ from .base import ProvinceSourceConfig
 
 ADAPTER = ProvinceSourceConfig(
     "CN-SN", "Shaanxi, China", "陕西省", "610000",
-    "https://sxwjw.shaanxi.gov.cn/", "narrative_only",
+    "https://www.sxcdc.com/newstyle/pub_newschannel.asp?chid=100470", "table_or_attachment",
 )

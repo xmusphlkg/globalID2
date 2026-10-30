@@ -272,7 +272,7 @@ def test_ie_registry_mapping_and_permission_gate_are_complete() -> None:
     assert sum(item.get("mapping_relation") == "unmapped" for item in source_series) == 9
 
     bootstrap = get_country_bootstrap_config("IE")
-    assert bootstrap["public_release_enabled"] is True
+    assert bootstrap["public_release_enabled"] is False
     assert bootstrap["public_source_systems"] == ["SRC_IE_ECDC_ATLAS"]
     assert bootstrap["public_legacy_enabled"] is False
     assert bootstrap["crawler_config"]["reuse_status"] == (

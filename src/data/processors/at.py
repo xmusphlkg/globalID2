@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import io
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -83,8 +84,10 @@ class ATMonthlyUpdater:
     def _load_rows(self, path: Path) -> List[Dict[str, str]]:
         if not path.exists():
             return []
-        with path.open("r", encoding="utf-8-sig", newline="") as handle:
-            return [{key: _text(value) for key, value in row.items()} for row in csv.DictReader(handle) if _parse_date(row) and _parse_cases(row) is not None]
+        return self.parse_source_csv(path.read_bytes())
+
+    def parse_source_csv(self, payload: bytes, **kwargs) -> List[Dict[str, str]]:
+        return [{key: _text(value) for key, value in row.items()} for row in csv.DictReader(io.StringIO(payload.decode("utf-8-sig"))) if _parse_date(row) and _parse_cases(row) is not None]
 
     def refresh_source(self, *, source: str = DEFAULT_SCOPE, run_external: bool = False, force: bool = False, months: Optional[Sequence[tuple[int, int]]] = None, save_raw: bool = False, raw_dir: Optional[Path] = None, **kwargs) -> ATUpdateFetchResult:
         del run_external, kwargs

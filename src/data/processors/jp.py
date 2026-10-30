@@ -157,46 +157,48 @@ class JPWeeklyUpdater:
                 f"JP crawler output not found: {csv_path}. "
                 "Please run the JP crawler in globalID2 first."
             )
-        rows: List[Dict[str, str]] = []
         with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
-            reader = csv.DictReader(handle)
-            for row in reader:
-                area = _norm_text(row.get("Reporting Area", ""))
-                if not area:
-                    continue
+            return self.normalize_standardized_rows(csv.DictReader(handle), source_name=csv_path.name)
 
-                disease = _norm_text(row.get("Disease", ""))
-                year = _parse_int(row.get("Current MMWR Year", ""))
-                week = _parse_int(row.get("MMWR WEEK", ""))
-                cases = _parse_int(row.get("Current week", ""))
+    def normalize_standardized_rows(self, source_rows, *, source_name):
+        """Normalize collected standardized rows without filesystem or HTTP I/O."""
+        rows = []
+        for row in source_rows:
+            area = _norm_text(row.get("Reporting Area", ""))
+            if not area:
+                continue
 
-                if not disease or year is None or week is None or cases is None:
-                    continue
-                if week <= 0 or week > 53:
-                    continue
+            disease = _norm_text(row.get("Disease", ""))
+            year = _parse_int(row.get("Current MMWR Year", ""))
+            week = _parse_int(row.get("MMWR WEEK", ""))
+            cases = _parse_int(row.get("Current week", ""))
 
-                rows.append(
-                    {
-                        "ReportingArea": area,
-                        "Geography": "JP:national" if area == "総数" else f"JP:prefecture:{area}",
-                        "GeographyKey": _norm_text(row.get("GeographyKey")) or (
-                            "country:JP:national" if area == "総数" else f"country:JP:source-region:{area}"
-                        ),
-                        "MMWRYear": str(year),
-                        "MMWRWeek": str(week),
-                        "RawDiseaseLabel": disease,
-                        "SurveillanceType": _norm_text(row.get("SurveillanceType", "")),
-                        "Cases": str(max(0, cases)),
-                        "CurrentWeekFlag": _norm_text(row.get("Current week, flag", "")),
-                        "Source": self.source_name,
-                        # The JIHS endpoint is the IDWR preliminary/rapid table;
-                        # delayed reports and discarded cases revise prior weeks.
-                        "DatasetStatus": "provisional",
-                        "IsProvisional": "true",
-                        "__source_file": csv_path.name,
-                    }
-                )
+            if not disease or year is None or week is None or cases is None:
+                continue
+            if week <= 0 or week > 53:
+                continue
 
+            rows.append(
+                {
+                    "ReportingArea": area,
+                    "Geography": "JP:national" if area == "総数" else f"JP:prefecture:{area}",
+                    "GeographyKey": _norm_text(row.get("GeographyKey")) or (
+                        "country:JP:national" if area == "総数" else f"country:JP:source-region:{area}"
+                    ),
+                    "MMWRYear": str(year),
+                    "MMWRWeek": str(week),
+                    "RawDiseaseLabel": disease,
+                    "SurveillanceType": _norm_text(row.get("SurveillanceType", "")),
+                    "Cases": str(max(0, cases)),
+                    "CurrentWeekFlag": _norm_text(row.get("Current week, flag", "")),
+                    "Source": self.source_name,
+                    # The JIHS endpoint is the IDWR preliminary/rapid table;
+                    # delayed reports and discarded cases revise prior weeks.
+                    "DatasetStatus": "provisional",
+                    "IsProvisional": "true",
+                    "__source_file": source_name,
+                }
+            )
         rows.sort(key=lambda r: (r["MMWRYear"], r["MMWRWeek"], r["RawDiseaseLabel"]))
         return rows
 

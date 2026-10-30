@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import json
+
 from src.data.crawlers.au import AustraliaNINDSSCrawler
 
 
 class _Response:
+    @property
+    def content(self):
+        return json.dumps(self.json()).encode()
+
     def raise_for_status(self) -> None:
         return None
 

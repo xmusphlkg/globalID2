@@ -1,0 +1,6 @@
+{
+  "country_code": "HU",
+  "source_geo_code": "HU",
+  "responses": "../ECDC/responses.json",
+  "window_start": 2020
+}

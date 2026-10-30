@@ -1,0 +1,60 @@
+{
+  "rows": [
+    {
+      "Date": "2026-03-01",
+      "RawDiseaseLabel": "COVID-19",
+      "Cases": "5",
+      "CumulativeTotal": "5",
+      "Rate": "1.0",
+      "Year": "2026",
+      "Month": "3",
+      "Source": "NZ PHF Science Monthly Notifiable Disease Surveillance",
+      "DatasetStatus": "provisional",
+      "IsProvisional": "true",
+      "RevisionSemantics": "authoritative_revision",
+      "AuthoritativeRevision": "true",
+      "SourceDiseaseCode": "SER_NZ_COVID19_MONTHLY"
+    },
+    {
+      "Date": "2026-03-01",
+      "RawDiseaseLabel": "Campylobacteriosis",
+      "Cases": "0",
+      "CumulativeTotal": "0",
+      "Rate": "0.0",
+      "Year": "2026",
+      "Month": "3",
+      "Source": "NZ PHF Science Monthly Notifiable Disease Surveillance",
+      "DatasetStatus": "provisional",
+      "IsProvisional": "true",
+      "RevisionSemantics": "authoritative_revision",
+      "AuthoritativeRevision": "true",
+      "SourceDiseaseCode": "SER_NZ_CAMPYLOBACTERIOSIS_MONTHLY"
+    }
+  ],
+  "observations": [
+    {
+      "time": "2026-03-01T00:00:00+00:00",
+      "series_code": "SER_NZ_COVID19_MONTHLY",
+      "geography_key": "country:NZ:national",
+      "dimension_key": "all",
+      "value": 5.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-03-01T00:00:00+00:00",
+      "series_code": "SER_NZ_CAMPYLOBACTERIOSIS_MONTHLY",
+      "geography_key": "country:NZ:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ]
+}

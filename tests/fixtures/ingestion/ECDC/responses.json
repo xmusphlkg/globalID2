@@ -1,0 +1,3586 @@
+[
+  {
+    "endpoint": "GetHealthTopicsForDataset",
+    "params": {
+      "datasetId": 27
+    },
+    "payload": {
+      "HealthTopics": [
+        {
+          "Code": "ANTH",
+          "Label": "Anthrax",
+          "Id": 1
+        },
+        {
+          "Code": "ARENA",
+          "Label": "Arenavirus infection",
+          "Id": 2
+        },
+        {
+          "Code": "BOTU",
+          "Label": "Botulism",
+          "Id": 3
+        },
+        {
+          "Code": "BRUC",
+          "Label": "Brucellosis",
+          "Id": 4
+        },
+        {
+          "Code": "CAMP",
+          "Label": "Campylobacteriosis",
+          "Id": 5
+        },
+        {
+          "Code": "CCHF",
+          "Label": "Crimean-Congo haemorrhagic fever",
+          "Id": 6
+        },
+        {
+          "Code": "CHIK",
+          "Label": "Chikungunya virus disease",
+          "Id": 7
+        },
+        {
+          "Code": "CHLAM",
+          "Label": "Chlamydia infection",
+          "Id": 8
+        },
+        {
+          "Code": "CHOL",
+          "Label": "Cholera",
+          "Id": 9
+        },
+        {
+          "Code": "CONSYPH",
+          "Label": "Syphilis, congenital",
+          "Id": 10
+        },
+        {
+          "Code": "CRYP",
+          "Label": "Cryptosporidiosis",
+          "Id": 11
+        },
+        {
+          "Code": "DENGUE",
+          "Label": "Dengue",
+          "Id": 12
+        },
+        {
+          "Code": "DIPH",
+          "Label": "Diphtheria",
+          "Id": 13
+        },
+        {
+          "Code": "ECHI",
+          "Label": "Echinococcosis",
+          "Id": 14
+        },
+        {
+          "Code": "FILO",
+          "Label": "Ebola and Marburg virus disease",
+          "Id": 15
+        },
+        {
+          "Code": "GIAR",
+          "Label": "Giardiasis",
+          "Id": 16
+        },
+        {
+          "Code": "GONO",
+          "Label": "Gonorrhoea",
+          "Id": 17
+        },
+        {
+          "Code": "HAEINF",
+          "Label": "Invasive Haemophilus influenzae disease",
+          "Id": 18
+        },
+        {
+          "Code": "HANTA",
+          "Label": "Hantavirus infection",
+          "Id": 19
+        },
+        {
+          "Code": "HEPA",
+          "Label": "Hepatitis A",
+          "Id": 20
+        },
+        {
+          "Code": "HEPC",
+          "Label": "Hepatitis C",
+          "Id": 21
+        },
+        {
+          "Code": "HIVAIDS",
+          "Label": "HIV infection",
+          "Id": 22
+        },
+        {
+          "Code": "LEGI",
+          "Label": "Legionnaires' disease",
+          "Id": 23
+        },
+        {
+          "Code": "LEPT",
+          "Label": "Leptospirosis",
+          "Id": 24
+        },
+        {
+          "Code": "LGV",
+          "Label": "Chlamydia infection, lymphogranuloma venereum",
+          "Id": 25
+        },
+        {
+          "Code": "LIST",
+          "Label": "Listeriosis",
+          "Id": 26
+        },
+        {
+          "Code": "LYMENEURO",
+          "Label": "Lyme Neuroborreliosis",
+          "Id": 27
+        },
+        {
+          "Code": "MALA",
+          "Label": "Malaria",
+          "Id": 28
+        },
+        {
+          "Code": "MEAS",
+          "Label": "Measles",
+          "Id": 29
+        },
+        {
+          "Code": "MENI",
+          "Label": "Invasive meningococcal disease",
+          "Id": 30
+        },
+        {
+          "Code": "TETA",
+          "Label": "Tetanus",
+          "Id": 31
+        },
+        {
+          "Code": "PERT",
+          "Label": "Pertussis",
+          "Id": 32
+        },
+        {
+          "Code": "PLAG",
+          "Label": "Plague",
+          "Id": 33
+        },
+        {
+          "Code": "PNEU",
+          "Label": "Invasive pneumococcal disease",
+          "Id": 34
+        },
+        {
+          "Code": "QFEV",
+          "Label": "Q fever",
+          "Id": 35
+        },
+        {
+          "Code": "RABI",
+          "Label": "Rabies",
+          "Id": 36
+        },
+        {
+          "Code": "RIFT",
+          "Label": "Rift valley fever",
+          "Id": 37
+        },
+        {
+          "Code": "RUBE",
+          "Label": "Rubella",
+          "Id": 38
+        },
+        {
+          "Code": "SALM",
+          "Label": "Salmonellosis",
+          "Id": 39
+        },
+        {
+          "Code": "SHIG",
+          "Label": "Shigellosis",
+          "Id": 40
+        },
+        {
+          "Code": "SYPH",
+          "Label": "Syphilis",
+          "Id": 41
+        },
+        {
+          "Code": "TBE",
+          "Label": "Tick-borne encephalitis",
+          "Id": 42
+        },
+        {
+          "Code": "MUMP",
+          "Label": "Mumps",
+          "Id": 43
+        },
+        {
+          "Code": "TOXO",
+          "Label": "Toxoplasmosis, congenital",
+          "Id": 44
+        },
+        {
+          "Code": "TRIC",
+          "Label": "Trichinellosis",
+          "Id": 45
+        },
+        {
+          "Code": "TUBE",
+          "Label": "Tuberculosis",
+          "Id": 46
+        },
+        {
+          "Code": "TULA",
+          "Label": "Tularaemia",
+          "Id": 47
+        },
+        {
+          "Code": "VCJD",
+          "Label": "Creutzfeldt-Jakob disease, variant",
+          "Id": 48
+        },
+        {
+          "Code": "VHFOTH",
+          "Label": "Other Viral Haemorrhagic fevers",
+          "Id": 49
+        },
+        {
+          "Code": "STEC",
+          "Label": "STEC/VTEC infection",
+          "Id": 50
+        },
+        {
+          "Code": "WNF",
+          "Label": "West Nile virus infection",
+          "Id": 51
+        },
+        {
+          "Code": "YELF",
+          "Label": "Yellow fever",
+          "Id": 52
+        },
+        {
+          "Code": "YERS",
+          "Label": "Yersiniosis",
+          "Id": 53
+        },
+        {
+          "Code": "ZIKA",
+          "Label": "Zika virus infection",
+          "Id": 54
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 1,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 100,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 100,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 2,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 101,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 101,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 3,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 102,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 102,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 4,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 103,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 103,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 5,
+      "measurePopulation": "Disease surveillance|Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 104,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 104,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 6,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 105,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 105,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 7,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 106,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 106,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 8,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 107,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 107,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 9,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 108,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 108,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 10,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 109,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 109,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 11,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 110,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 110,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 12,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 111,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 111,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 13,
+      "measurePopulation": "C. diphtheriae cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 112,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 112,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 13,
+      "measurePopulation": "C. ulcerans cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 113,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 113,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 14,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 114,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 114,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 15,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 115,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 115,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 16,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 116,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 116,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 17,
+      "measurePopulation": "Disease surveillance|Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 117,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 117,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 18,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 118,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 118,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 19,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 119,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 119,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 20,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 120,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 120,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 21,
+      "measurePopulation": "All cases (for countries reporting both acute and chronic cases)"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 121,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 121,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 22,
+      "measurePopulation": "HIV infection|Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 122,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 122,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 22,
+      "measurePopulation": "AIDS|Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 123,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 123,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 23,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 124,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 124,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 24,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 125,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 125,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 25,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 126,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 126,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 26,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 127,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 127,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 27,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 128,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 128,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 28,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 129,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 129,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 29,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 130,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 130,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 30,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 131,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 131,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 31,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 132,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 132,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 32,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 133,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 133,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 33,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 134,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 134,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 34,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 135,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 135,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 35,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 136,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 136,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 36,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 137,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 137,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 37,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 138,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 138,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 38,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 139,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 139,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 39,
+      "measurePopulation": "Disease surveillance|Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 140,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 140,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 40,
+      "measurePopulation": "Disease surveillance|Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 141,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 141,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 41,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 142,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 142,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 42,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 143,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 143,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 43,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 144,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 144,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 44,
+      "measurePopulation": "Confirmed cases - Age  below 1"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 145,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 145,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 45,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 146,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 146,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 46,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 147,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 147,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 47,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 148,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 148,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 48,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 149,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 149,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 49,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 150,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 150,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 50,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 151,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 151,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 51,
+      "measurePopulation": "All cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 152,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 152,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 52,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 153,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 153,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 53,
+      "measurePopulation": "Confirmed cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 154,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 154,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
+    "params": {
+      "datasetId": 27,
+      "healthtopicId": 54,
+      "measurePopulation": "Reported cases"
+    },
+    "payload": {
+      "Measures": [
+        {
+          "Id": 155,
+          "Code": "FIXTURE.COUNT",
+          "Unit": "N",
+          "Label": "Number of cases",
+          "IsDefault": true,
+          "ResolutionList": {
+            "Resolutions": [
+              {
+                "GeoLevelNumber": 2,
+                "TimeUnitCode": "Y"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "endpoint": "GetMeasureResultsForTimeUnitAndGeoRegion",
+    "params": {
+      "measureId": 155,
+      "timeUnit": "Y",
+      "geoCode": "__GEO__"
+    },
+    "payload": {
+      "MeasureResults": [
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2020",
+          "YValue": 0
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2021",
+          "YValue": 4
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2022",
+          "YValue": null
+        },
+        {
+          "GeoCountry": "__GEO__",
+          "TimeCode": "2026",
+          "YValue": 5
+        }
+      ]
+    }
+  }
+]

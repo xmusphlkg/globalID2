@@ -209,42 +209,56 @@ class USNNDSSCrawler(BaseCrawler):
                 if len(page) < SOCRATA_PAGE_SIZE:
                     break
                 offset += SOCRATA_PAGE_SIZE
-            for source_row in table_rows:
-                area = _normalize_text(source_row.get("reporting_area") or source_row.get(" Reporting Area"))
-                if area.upper() not in NNDSS_REPORTING_AREAS - {"U.S. RESIDENTS", "US RESIDENTS", "TOTAL"}:
-                    # Archive tables also contain national/region aggregates
-                    # and New York City. The current ingestion contract only
-                    # admits state and territory subdivisions from this feed.
-                    continue
-                year_value = source_row.get("mmwr_year") or source_row.get("mmwr_year_1") or year
-                week_value = source_row.get("mmwr_week")
-                if not area or not week_value:
-                    continue
-                for disease, field_name, display_name in disease_fields:
-                    if field_name not in source_row:
-                        continue
-                    row: Dict[str, object] = {
-                        "Reporting Area": area,
-                        "Current MMWR Year": year_value,
-                        "MMWR WEEK": week_value,
-                        "Label": disease,
-                        "Current week": source_row.get(field_name),
-                        "ArchiveTableID": view_id,
-                        "ArchiveTableTitle": str(resource.get("name") or ""),
-                        "ArchiveRowSignature": hashlib.sha256(
-                            json.dumps(source_row, sort_keys=True, ensure_ascii=False).encode("utf-8")
-                        ).hexdigest()[:20],
-                    }
-                    flag_field = next((field for label, field in pairs if label.strip().casefold() == (display_name + ", flag").casefold()), None)
-                    if flag_field:
-                        row["Current week, flag"] = source_row.get(flag_field)
-                    archive_rows.append(row)
+            archive_rows.extend(self.parse_archive_table(resource, table_rows, year))
             refs.append(f"https://data.cdc.gov/d/{view_id}")
 
         if not archive_rows:
             raise RuntimeError(f"[US-NNDSS] CDC archive tables for {year} contained no usable rows")
         logger.info(f"[US-NNDSS] Archive year fetched | year={year} rows={len(archive_rows)} tables={len(refs)}")
         return archive_rows, " | ".join(refs)
+
+    @staticmethod
+    def parse_archive_table(resource, table_rows, year):
+        """Parse one archived CDC table without I/O."""
+        rows = []
+        view_id = str(resource.get("id") or "")
+        pairs = list(zip(resource.get("columns_name") or [], resource.get("columns_field_name") or []))
+        disease_fields = []
+        for label, field_name in pairs:
+            normalized = str(label).strip()
+            if re.search(r",?\s*Current week\s*$", normalized, re.I) and not re.search(r"flag\s*$", normalized, re.I):
+                disease_fields.append((re.sub(r",?\s*Current week\s*$", "", normalized, flags=re.I).strip(" ,"), field_name, normalized))
+        for source_row in table_rows:
+            area = _normalize_text(source_row.get("reporting_area") or source_row.get(" Reporting Area"))
+            if area.upper() not in NNDSS_REPORTING_AREAS - {"U.S. RESIDENTS", "US RESIDENTS", "TOTAL"}:
+                # Archive tables also contain national/region aggregates
+                # and New York City. The current ingestion contract only
+                # admits state and territory subdivisions from this feed.
+                continue
+            year_value = source_row.get("mmwr_year") or source_row.get("mmwr_year_1") or year
+            week_value = source_row.get("mmwr_week")
+            if not area or not week_value:
+                continue
+            for disease, field_name, display_name in disease_fields:
+                if field_name not in source_row:
+                    continue
+                row: Dict[str, object] = {
+                    "Reporting Area": area,
+                    "Current MMWR Year": year_value,
+                    "MMWR WEEK": week_value,
+                    "Label": disease,
+                    "Current week": source_row.get(field_name),
+                    "ArchiveTableID": view_id,
+                    "ArchiveTableTitle": str(resource.get("name") or ""),
+                    "ArchiveRowSignature": hashlib.sha256(
+                        json.dumps(source_row, sort_keys=True, ensure_ascii=False).encode("utf-8")
+                    ).hexdigest()[:20],
+                }
+                flag_field = next((field for label, field in pairs if label.strip().casefold() == (display_name + ", flag").casefold()), None)
+                if flag_field:
+                    row["Current week, flag"] = source_row.get(flag_field)
+                rows.append(row)
+        return rows
 
     # ── BaseCrawler abstract method stubs ─────────────────────────────────────
     # US data flows through fetch_raw_pages() → processors/us.py, not the

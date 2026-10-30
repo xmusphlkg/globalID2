@@ -1,0 +1,126 @@
+{
+  "closed": [
+    {
+      "time": "2026-06-01T00:00:00+00:00",
+      "series_code": "SER_NO_FHI_108_MONTHLY",
+      "geography_key": "country:NO:source-area:norway-national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-06-01T00:00:00+00:00",
+      "series_code": "SER_NO_FHI_101_MONTHLY",
+      "geography_key": "country:NO:source-area:norway-national",
+      "dimension_key": "all",
+      "value": 6.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-07-01T00:00:00+00:00",
+      "series_code": "SER_NO_FHI_108_MONTHLY",
+      "geography_key": "country:NO:source-area:norway-national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-07-01T00:00:00+00:00",
+      "series_code": "SER_NO_FHI_101_MONTHLY",
+      "geography_key": "country:NO:source-area:norway-national",
+      "dimension_key": "all",
+      "value": 7.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ],
+  "provisional": [
+    {
+      "time": "2026-06-01T00:00:00+00:00",
+      "series_code": "SER_NO_FHI_108_MONTHLY",
+      "geography_key": "country:NO:source-area:norway-national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-06-01T00:00:00+00:00",
+      "series_code": "SER_NO_FHI_101_MONTHLY",
+      "geography_key": "country:NO:source-area:norway-national",
+      "dimension_key": "all",
+      "value": 6.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-07-01T00:00:00+00:00",
+      "series_code": "SER_NO_FHI_108_MONTHLY",
+      "geography_key": "country:NO:source-area:norway-national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-07-01T00:00:00+00:00",
+      "series_code": "SER_NO_FHI_101_MONTHLY",
+      "geography_key": "country:NO:source-area:norway-national",
+      "dimension_key": "all",
+      "value": 7.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-08-01T00:00:00+00:00",
+      "series_code": "SER_NO_FHI_108_MONTHLY",
+      "geography_key": "country:NO:source-area:norway-national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-08-01T00:00:00+00:00",
+      "series_code": "SER_NO_FHI_101_MONTHLY",
+      "geography_key": "country:NO:source-area:norway-national",
+      "dimension_key": "all",
+      "value": 8.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ]
+}

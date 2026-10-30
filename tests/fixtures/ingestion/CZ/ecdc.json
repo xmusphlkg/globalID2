@@ -1,0 +1,6 @@
+{
+  "country_code": "CZ",
+  "source_geo_code": "CZ",
+  "responses": "../ECDC/responses.json",
+  "window_start": 2020
+}

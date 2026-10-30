@@ -1,0 +1,44 @@
+[
+  {
+    "time": "2025-02-01 00:00:00+00:00",
+    "series_code": "SER_CN_HEPATITIS_A",
+    "geography_key": "country:CN:national",
+    "dimension_key": "all",
+    "value": 0.0,
+    "suppressed": false,
+    "quality_status": "raw",
+    "metadata": {
+      "source_id": "SRC_CN_CDC",
+      "local_code": "Hepatitis A",
+      "local_label": "甲型肝炎",
+      "measure": "case_notifications",
+      "frequency": "monthly",
+      "rollup_policy": "no_auto_rollup",
+      "population_scope": null,
+      "authoritative_revision": false,
+      "missing_value_status": null,
+      "allow_equal_quality_overwrite": true
+    }
+  },
+  {
+    "time": "2025-02-01 00:00:00+00:00",
+    "series_code": "SER_CN_HEPATITIS_C_UNSPECIFIED_COURSE",
+    "geography_key": "country:CN:national",
+    "dimension_key": "all",
+    "value": 4.0,
+    "suppressed": false,
+    "quality_status": "raw",
+    "metadata": {
+      "source_id": "SRC_CN_CDC",
+      "local_code": "Hepatitis C",
+      "local_label": "丙型肝炎",
+      "measure": "case_notifications",
+      "frequency": "monthly",
+      "rollup_policy": "no_auto_rollup",
+      "population_scope": null,
+      "authoritative_revision": false,
+      "missing_value_status": null,
+      "allow_equal_quality_overwrite": true
+    }
+  }
+]

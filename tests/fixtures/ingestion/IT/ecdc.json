@@ -1,0 +1,6 @@
+{
+  "country_code": "IT",
+  "source_geo_code": "IT",
+  "responses": "../ECDC/responses.json",
+  "window_start": 2020
+}

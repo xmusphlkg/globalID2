@@ -1,0 +1,6 @@
+{
+  "country_code": "MT",
+  "source_geo_code": "MT",
+  "responses": "../ECDC/responses.json",
+  "window_start": 2020
+}

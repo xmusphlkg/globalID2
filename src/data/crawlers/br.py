@@ -538,7 +538,8 @@ class BrazilSINANCrawler(BaseCrawler):
                     payload = response.read()
                     if not payload:
                         raise OSError("DATASUS returned an empty response")
-                    return payload
+                    from src.services.ingestion.capture import capture_sync
+                    return capture_sync(payload, url)
             except (HTTPError, URLError, OSError, TimeoutError) as exc:
                 last_error = exc
             except Exception as exc:  # pragma: no cover - defensive; keep behavior unchanged for unknown transport errors
@@ -757,9 +758,10 @@ class BrazilSINANCrawler(BaseCrawler):
         *,
         months: Optional[Set[Tuple[int, int]]] = None,
         working_dir: Optional[Path] = None,
+        collected_path: Optional[Path] = None,
     ) -> List[Dict[str, str]]:
         """Download, decompress, and aggregate one SINAN file to monthly rows."""
-        cached_metrics = self._load_cached_metrics(sinan_file, months=months)
+        cached_metrics = self._load_cached_metrics(sinan_file, months=months) if collected_path is None else None
         if cached_metrics is not None:
             cached_counts, cached_persons_examined = cached_metrics
             logger.info(
@@ -770,7 +772,9 @@ class BrazilSINANCrawler(BaseCrawler):
             monthly_persons_examined = defaultdict(int, cached_persons_examined)
         else:
             local_raw_dir = self.raw_dir / sinan_file.dataset_status / str(sinan_file.year)
-            if self.save_raw:
+            if collected_path is not None:
+                dbc_path = collected_path
+            elif self.save_raw:
                 dbc_path = self._download_file(sinan_file, local_raw_dir)
             else:
                 download_cache_dir = (
@@ -806,12 +810,13 @@ class BrazilSINANCrawler(BaseCrawler):
                 if dbf_path.exists():
                     dbf_path.unlink()
 
-            self._write_cached_counts(
-                sinan_file,
-                monthly_counts,
-                months=months,
-                persons_examined=monthly_persons_examined,
-            )
+            if collected_path is None:
+                self._write_cached_counts(
+                    sinan_file,
+                    monthly_counts,
+                    months=months,
+                    persons_examined=monthly_persons_examined,
+                )
 
         rows: List[Dict[str, str]] = []
         for year, month in sorted(monthly_counts):
@@ -845,6 +850,7 @@ class BrazilSINANCrawler(BaseCrawler):
         prefixes: Optional[List[str]] = None,
         write_csv: bool = True,
         file_index: Optional[List[SINANFile]] = None,
+        collected_files: Optional[Dict[str, Path]] = None,
     ) -> BRFetchSummary:
         target_months = (
             set(months) if months is not None else _last_n_months(self.refresh_recent_months)
@@ -889,6 +895,7 @@ class BrazilSINANCrawler(BaseCrawler):
                         item,
                         months=target_months,
                         working_dir=working_dir,
+                        **({"collected_path": collected_files[item.url]} if collected_files is not None else {}),
                     ): item.filename
                     for item in candidate_files
                 }

@@ -12,6 +12,7 @@ pages.
 from __future__ import annotations
 
 import csv
+import io
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -407,9 +408,14 @@ class SEMonthlyUpdater:
     def _load_rows(self, csv_path: Path) -> List[Dict[str, str]]:
         if not csv_path.exists():
             raise FileNotFoundError(f"SE crawler output not found: {csv_path}")
+        return self.parse_source_csv(csv_path.read_bytes(), source_file=csv_path.name)
+
+    def parse_source_csv(self, payload: bytes, *, source_file: str | None = None) -> List[Dict[str, str]]:
+        """Normalize an immutable source snapshot without filesystem reads."""
+        csv_path = Path(source_file or self.output_csv.name)
 
         rows: List[Dict[str, str]] = []
-        with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
+        with io.StringIO(payload.decode("utf-8-sig"), newline="") as handle:
             for row in csv.DictReader(handle):
                 disease = _norm_text(row.get("RawDiseaseLabel") or row.get("Disease"))
                 report_date = _parse_date(row)
@@ -461,6 +467,7 @@ class SEMonthlyUpdater:
 
         rows.sort(key=lambda item: (item["Date"], item["GeographyKey"], item["RawDiseaseLabel"], item["DiseaseCode"]))
         return rows
+
 
     @staticmethod
     def _latest_row_date(rows: List[Dict[str, str]]) -> Optional[date]:

@@ -223,9 +223,11 @@ class IEWeeklyUpdater:
         output_csv: Path = DEFAULT_OUTPUT_CSV,
         refresh_recent_weeks: int = DEFAULT_REFRESH_RECENT_WEEKS,
         full_history_start_year: int = DEFAULT_HISTORY_START[0],
+        crawler_type=None,
     ) -> None:
         self.source_name = source_name
         self.output_csv = Path(output_csv)
+        self.crawler_type = crawler_type or IrelandHPSCWeeklyCrawler
         self.refresh_recent_weeks = max(1, min(104, int(refresh_recent_weeks)))
         self.full_history_start_year = max(
             DEFAULT_HISTORY_START[0], int(full_history_start_year)
@@ -316,7 +318,7 @@ class IEWeeklyUpdater:
             DEFAULT_HISTORY_START[0], int(start_year or self.full_history_start_year)
         )
         actual_raw_dir = Path(raw_dir) if raw_dir else ROOT / "data/raw/ie"
-        crawler = IrelandHPSCWeeklyCrawler(
+        crawler = self.crawler_type(
             save_raw=save_raw,
             raw_dir=actual_raw_dir,
         )

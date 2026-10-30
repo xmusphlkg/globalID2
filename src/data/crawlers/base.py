@@ -101,11 +101,14 @@ class BaseCrawler(ABC):
         Returns:
             ``requests.Response`` object.
         """
+        from src.services.ingestion.capture import assert_source_access, capture_sync
+        assert_source_access()
         time.sleep(self.delay)
         
         try:
             response = self.session.get(url, timeout=self.timeout, **kwargs)
             response.raise_for_status()
+            response._content = capture_sync(response.content, response.url, response.headers.get("content-type", ""))
             logger.debug(f"GET {url} - Status: {response.status_code}")
             return response
         except requests.RequestException as e:
@@ -123,11 +126,14 @@ class BaseCrawler(ABC):
         Returns:
             ``requests.Response`` object.
         """
+        from src.services.ingestion.capture import assert_source_access, capture_sync
+        assert_source_access()
         time.sleep(self.delay)
         
         try:
             response = self.session.post(url, timeout=self.timeout, **kwargs)
             response.raise_for_status()
+            response._content = capture_sync(response.content, response.url, response.headers.get("content-type", ""))
             logger.debug(f"POST {url} - Status: {response.status_code}")
             return response
         except requests.RequestException as e:

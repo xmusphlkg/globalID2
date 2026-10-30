@@ -942,6 +942,130 @@ for _subdivision_code, _subdivision in SUBDIVISION_REGISTRY.items():
     }
 
 
+_BR_STATE_NAMES_EN: dict[str, str] = {
+    "RO": "Rondônia",
+    "AC": "Acre",
+    "AM": "Amazonas",
+    "RR": "Roraima",
+    "PA": "Pará",
+    "AP": "Amapá",
+    "TO": "Tocantins",
+    "MA": "Maranhão",
+    "PI": "Piauí",
+    "CE": "Ceará",
+    "RN": "Rio Grande do Norte",
+    "PB": "Paraíba",
+    "PE": "Pernambuco",
+    "AL": "Alagoas",
+    "SE": "Sergipe",
+    "BA": "Bahia",
+    "MG": "Minas Gerais",
+    "ES": "Espírito Santo",
+    "RJ": "Rio de Janeiro",
+    "SP": "São Paulo",
+    "PR": "Paraná",
+    "SC": "Santa Catarina",
+    "RS": "Rio Grande do Sul",
+    "MS": "Mato Grosso do Sul",
+    "MT": "Mato Grosso",
+    "GO": "Goiás",
+    "DF": "Distrito Federal",
+}
+
+
+@lru_cache(maxsize=1)
+def _ensure_code_subdivisions_registered() -> None:
+    """Register CN province and BR state subdivisions declared in Python code.
+
+    The JSON subdivision registry covers most subnational jurisdictions, but CN
+    provinces and BR states live in adapter modules (mirroring the hardcoded
+    AU/CA-ON precedent). Registration is lazy so it never runs while
+    ``src.data.crawlers.br`` is mid-import (that module imports this one).
+    """
+    from src.data.crawlers.cn_province_adapters import province_adapter_registry
+
+    for _code, _adapter in province_adapter_registry().items():
+        if _code not in COUNTRY_OVERRIDES:
+            COUNTRY_OVERRIDES[_code] = {
+                "name": _adapter.name_en,
+                "name_en": _adapter.name_en,
+                "name_local": _adapter.name_zh,
+                "language": "zh-CN",
+                "timezone": _adapter.timezone,
+            }
+        if _code not in COUNTRY_NAMES_ZH:
+            COUNTRY_NAMES_ZH[_code] = _adapter.name_zh
+        if _code not in COUNTRY_BOOTSTRAP_CONFIGS:
+            COUNTRY_BOOTSTRAP_CONFIGS[_code] = {
+                "parent_country_code": "CN",
+                "location_type": "subdivision",
+                "iso_subdivision_code": _code,
+                "adcode": _adapter.adcode,
+                "data_source_url": _adapter.index_url or None,
+                "data_source_type": "mixed",
+                "crawler_config": {
+                    "sources": ["cn_province_datacenter", "cn_province_monthly_report"],
+                    "cadence": "mixed_annual_monthly",
+                    "geography_key": f"country:{_code}:national",
+                    "parent_geography_key": "country:CN:national",
+                    "index_url": _adapter.index_url,
+                    "parser": _adapter.parser,
+                },
+                "parser_config": {"primary": _adapter.parser},
+                "disease_mapping_rules": {
+                    "strategy": "source_series_registry",
+                    "fallback": "quarantine_unmapped",
+                },
+                "report_config": {"default_type": "MONTHLY", "lang": "zh-CN"},
+                "notes": (
+                    "Chinese provincial notifiable-disease observations; "
+                    "independent from CN national facts."
+                ),
+            }
+
+    from src.data.processors.br_subdivisions import STATE_CODES as _br_states
+
+    for _abbrev in _br_states.values():
+        _code = f"BR-{_abbrev}"
+        _name = _BR_STATE_NAMES_EN.get(_abbrev, _abbrev)
+        if _code not in COUNTRY_OVERRIDES:
+            COUNTRY_OVERRIDES[_code] = {
+                "name": f"{_name}, Brazil",
+                "name_en": f"{_name}, Brazil",
+                "name_local": _name,
+                "language": "pt-BR",
+                "timezone": "America/Sao_Paulo",
+            }
+        if _code not in COUNTRY_NAMES_ZH:
+            COUNTRY_NAMES_ZH[_code] = f"巴西{_name}"
+        if _code not in COUNTRY_BOOTSTRAP_CONFIGS:
+            COUNTRY_BOOTSTRAP_CONFIGS[_code] = {
+                "parent_country_code": "BR",
+                "location_type": "subdivision",
+                "iso_subdivision_code": _code,
+                "data_source_url": (
+                    "http://siab.datasus.gov.br/DATASUS/index.php?acao=41&area=0901&item=1"
+                ),
+                "data_source_type": "ftp_dbc",
+                "crawler_config": {
+                    "sources": ["sinan_datasus"],
+                    "cadence": "monthly",
+                    "geography_key": f"country:{_code}:national",
+                    "parent_geography_key": "country:BR:national",
+                },
+                "parser_config": {"primary": "br_sinan_datasus_dbc_monthly"},
+                "disease_mapping_rules": {
+                    "strategy": "db_first",
+                    "fallback": "learning_suggestions",
+                },
+                "report_config": {"default_type": "MONTHLY", "lang": "pt-BR"},
+                "notes": (
+                    f"{_name} residence-based SINAN/DATASUS monthly notification "
+                    "counts linked to parent Brazil."
+                ),
+            }
+
+
 def _deep_merge_dict(base: dict, overlay: dict) -> dict:
     """Recursively merge overlay into base and return a new dict."""
     merged = dict(base)
@@ -983,6 +1107,7 @@ def get_country_profile(code: str) -> CountryProfile:
     normalized = (code or "").strip().upper()
     if not normalized:
         raise ValueError("country code is required")
+    _ensure_code_subdivisions_registered()
 
     iso_name_en = normalized
     source = "fallback"
@@ -1032,6 +1157,9 @@ def get_country_bootstrap_config(code: str) -> dict:
     """
     normalized = (code or "").strip().upper()
     fallback = COUNTRY_BOOTSTRAP_CONFIGS.get(normalized, {})
+    if normalized.startswith(("CN-", "BR-")):
+        _ensure_code_subdivisions_registered()
+        fallback = COUNTRY_BOOTSTRAP_CONFIGS.get(normalized, fallback)
     registry = _load_country_bootstrap_registry()
     default_cfg = registry.get("_DEFAULT", {})
     country_cfg = registry.get(normalized, {})
@@ -1105,7 +1233,9 @@ def _merge_ecdc_baseline_config(code: str, config: dict) -> dict:
                 },
             }
         )
-    merged["public_release_enabled"] = True
+    # The independent ECDC adapter must not open Ireland's country-level gate.
+    # Its observations remain available internally while public release is off.
+    merged["public_release_enabled"] = code != "IE"
     merged["ecdc_baseline"] = {
         "source_id": f"SRC_{code}_ECDC_ATLAS",
         "dataset_id": 27,
@@ -1119,8 +1249,8 @@ def _merge_ecdc_baseline_config(code: str, config: dict) -> dict:
         ),
     }
     if code in {"AT", "IE"}:
-        # These national adapters remain permission-gated. Public export is
-        # enabled only for the independently licensed ECDC source facts.
+        # National adapters remain permission-gated. Austria's public export
+        # uses ECDC facts only; Ireland's country-level gate remains closed.
         merged["public_source_systems"] = [f"SRC_{code}_ECDC_ATLAS"]
         merged["public_legacy_enabled"] = False
     return merged
@@ -1138,6 +1268,7 @@ def get_standard_country_codes() -> list[str]:
         for code in registry.keys()
         if code and code != "_DEFAULT"
     }
+    _ensure_code_subdivisions_registered()
     codes = (
         set(COUNTRY_OVERRIDES.keys())
         | set(COUNTRY_BOOTSTRAP_CONFIGS.keys())

@@ -1,0 +1,894 @@
+{
+  "year_min": 1924,
+  "year_max": 2024,
+  "descriptions": [
+    {
+      "code": 86,
+      "name": "Acquired Immune Deficiency Syndrome",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 177,
+      "name": "Acute Flaccid Paralysis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 2,
+      "name": "Amoebiasis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 251,
+      "name": "Anaplasmosis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 6,
+      "name": "Anthrax",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 9,
+      "name": "Babesiosis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 13,
+      "name": "Botulism",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 15,
+      "name": "Brucellosis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 16,
+      "name": "Campylobacteriosis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 20,
+      "name": "Chickenpox",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 138,
+      "name": "Chlamydia",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 21,
+      "name": "Cholera",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 211,
+      "name": "Clostridium difficile Associated Diarrhea",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 107,
+      "name": "Congenital Rubella Syndrome",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 178,
+      "name": "Creutzfeldt-Jakob Disease",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 176,
+      "name": "Cryptosporidiosis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 179,
+      "name": "Cyclosporiasis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 32,
+      "name": "Diphtheria",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 170,
+      "name": "Dysentery - Type Unspecified",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 157,
+      "name": "Food Poisoning",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 43,
+      "name": "Giardiasis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 45,
+      "name": "Gonorrhea",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 153,
+      "name": "Group A Streptococcal Disease, Invasive",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 136,
+      "name": "Group B Streptococcal Disease of the Newborn",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 242,
+      "name": "Haemophilus influenzae Disease, non-b, Invasive",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 142,
+      "name": "Haemophilus influenzae Disease, type b, Invasive",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 180,
+      "name": "Hantavirus Pulmonary Syndrome",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 48,
+      "name": "Hepatitis A",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 49,
+      "name": "Hepatitis B",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 173,
+      "name": "Hepatitis C",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 51,
+      "name": "Hepatitis, non-A, non-B",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 52,
+      "name": "Hepatitis, Unspecified",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 128,
+      "name": "Human Immunodeficiency Virus Infection",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 958,
+      "name": "Influenza, Epidemic",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 58,
+      "name": "Influenza, Laboratory Confirmed",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 61,
+      "name": "Legionellosis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 64,
+      "name": "Leprosy",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 66,
+      "name": "Listeriosis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 144,
+      "name": "Lyme Disease",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 69,
+      "name": "Malaria",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 70,
+      "name": "Measles",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 72,
+      "name": "Meningitis, Other Bacterial",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 151,
+      "name": "Meningitis, Pneumococcal",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 73,
+      "name": "Meningitis, Viral",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 74,
+      "name": "Meningococcal Disease, Invasive",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 78,
+      "name": "Mumps",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 257,
+      "name": "Mpox",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 220,
+      "name": "Norovirus Infection",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 221,
+      "name": "Paralytic Shellfish Poisoning",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 83,
+      "name": "Paratyphoid",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 85,
+      "name": "Pertussis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 89,
+      "name": "Plague",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 182,
+      "name": "Pneumococcal Disease, Invasive",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 94,
+      "name": "Poliomyelitis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 252,
+      "name": "Powassan Virus Disease",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 98,
+      "name": "Rabies",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 106,
+      "name": "Rubella",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 108,
+      "name": "Salmonellosis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 115,
+      "name": "Scarlet Fever and Streptococcal Sore Throat",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 199,
+      "name": "Severe Acute Respiratory Syndrome",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 258,
+      "name": "Shiga toxin producing Escherichia coli infection",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 111,
+      "name": "Shigellosis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 112,
+      "name": "Smallpox",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 117,
+      "name": "Syphilis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 174,
+      "name": "Syphilis, Congenital",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 120,
+      "name": "Tetanus",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 123,
+      "name": "Trichinosis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 119,
+      "name": "Tuberculosis",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 127,
+      "name": "Tularemia",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 161,
+      "name": "Typhoid and Paratyphoid",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 129,
+      "name": "Typhoid Fever",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 141,
+      "name": "Viral Haemorrhagic Fever",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 196,
+      "name": "West Nile Virus Infection",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    },
+    {
+      "code": 134,
+      "name": "Yellow Fever",
+      "limitation": "Official disease-specific reporting coverage.",
+      "tableyears": [
+        1924,
+        2024
+      ],
+      "table": {
+        "MB": "1"
+      }
+    }
+  ]
+}

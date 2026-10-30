@@ -1,0 +1,6 @@
+{
+  "country_code": "GB",
+  "source_geo_code": "UK",
+  "responses": "../ECDC/responses.json",
+  "window_start": 2020
+}

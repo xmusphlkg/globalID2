@@ -212,6 +212,34 @@ def test_raw_grid_rejects_a_missing_annual_slot() -> None:
         )
 
 
+@pytest.mark.parametrize("count", [None, 0, 12])
+def test_raw_grid_coalesces_identical_source_records(count) -> None:
+    payload = _grid()
+    original = next(row for row in payload["records"] if row["d"] == 128)
+    original.update({"t": count, "g": 5})
+    payload["records"].extend([dict(original), dict(original)])
+
+    rows = CanadaCNDSSNationalCrawler._rows_from_payload(
+        payload, first_year=2023, last_year=2023
+    )
+
+    assert [(row["SourceDiseaseCode"], row["Cases"]) for row in rows] == (
+        [] if count is None else [("128", str(count))]
+    )
+
+
+@pytest.mark.parametrize("change", [{"t": 0}, {"r": 0.0}, {"g": 5}, {"extra": None}])
+def test_raw_grid_rejects_duplicate_slots_with_any_source_difference(change) -> None:
+    payload = _grid()
+    original = next(row for row in payload["records"] if row["d"] == 128)
+    payload["records"].append({**original, **change})
+
+    with pytest.raises(CNDSSContractError, match="Duplicate CNDSS annual slot"):
+        CanadaCNDSSNationalCrawler._rows_from_payload(
+            payload, first_year=2023, last_year=2023
+        )
+
+
 def test_authoritative_csv_write_removes_withdrawn_cells(tmp_path: Path) -> None:
     output = tmp_path / "cndss.csv"
     with output.open("w", encoding="utf-8", newline="") as handle:

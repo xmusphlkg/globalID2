@@ -1,0 +1,742 @@
+{
+  "baseline_commit": "d1549f0101ee1b908d420375e7fce46682c90b59",
+  "countries": {
+    "US": 101,
+    "US-CA": 102,
+    "US-AL": 103,
+    "CN": 201,
+    "JP": 301,
+    "JP-01": 302,
+    "JP-13": 303,
+    "AU": 401,
+    "AU-ACT": 402,
+    "AU-NSW": 403,
+    "AU-VIC": 404,
+    "AU-QLD": 405,
+    "AU-SA": 406,
+    "AU-WA": 407,
+    "AU-TAS": 408,
+    "AU-NT": 409,
+    "NZ": 501,
+    "TW": 502,
+    "HK": 503,
+    "FI": 504,
+    "SE": 505,
+    "SE-AB": 506,
+    "AT": 507,
+    "CA-ON": 508,
+    "CA": 509,
+    "CN-BJ": 202
+  },
+  "mappings": {
+    "US": {
+      "SRC_US_NNDSS": {
+        "Hep A": 7007,
+        "HIV diagnoses among persons aged 13 years and older": 7999
+      },
+      "SRC_US_NHSS": {
+        "HIV diagnoses among persons aged 13 years and older": 7001,
+        "Hep A": 7998
+      }
+    },
+    "CN": {
+      "*": {
+        "甲型肝炎": 7007,
+        "乙型肝炎": 7008,
+        "丙型肝炎": 7009
+      }
+    },
+    "JP": {
+      "*": {
+        "AIDS": 7001
+      }
+    },
+    "AU": {
+      "*": {
+        "Hepatitis (NEC)": 7044
+      }
+    },
+    "NZ": {
+      "*": {
+        "COVID-19": 7100,
+        "Campylobacteriosis": 7101
+      }
+    },
+    "TW": {
+      "*": {
+        "後天免疫缺乏症候群": 7001
+      }
+    },
+    "HK": {
+      "*": {
+        "Paratyphoid fever": 7110
+      }
+    },
+    "FI": {
+      "*": {
+        "Tuberculosis, total": 7120,
+        "Pulmonary tuberculosis": 7121
+      }
+    },
+    "SE": {
+      "*": {
+        "Gonorré": 7130
+      }
+    },
+    "AT": {
+      "*": {
+        "Masern": 7140
+      }
+    },
+    "CA-ON": {
+      "*": {
+        "Measles": 7140,
+        "Mumps": 7141
+      }
+    }
+  },
+  "expected": {
+    "US": [
+      {
+        "time": "2025-01-04T12:00:00+00:00",
+        "disease_id": 7007,
+        "country_id": 101,
+        "cases": 2,
+        "deaths": null
+      },
+      {
+        "time": "2023-12-31T12:00:00+00:00",
+        "disease_id": 7001,
+        "country_id": 101,
+        "cases": 38831,
+        "deaths": null
+      },
+      {
+        "time": "2024-12-31T12:00:00+00:00",
+        "disease_id": 7001,
+        "country_id": 101,
+        "cases": 38434,
+        "deaths": null
+      }
+    ],
+    "US-CA": [],
+    "US-AL": [],
+    "CN": [
+      {
+        "time": "2025-02-01T00:00:00+00:00",
+        "disease_id": 7007,
+        "country_id": 201,
+        "cases": 0,
+        "deaths": 0
+      },
+      {
+        "time": "2025-02-01T00:00:00+00:00",
+        "disease_id": 7008,
+        "country_id": 201,
+        "cases": null,
+        "deaths": 0
+      },
+      {
+        "time": "2025-02-01T00:00:00+00:00",
+        "disease_id": 7009,
+        "country_id": 201,
+        "cases": 4,
+        "deaths": 0
+      }
+    ],
+    "JP": [
+      {
+        "time": "2025-03-23T00:00:00+00:00",
+        "disease_id": 7001,
+        "country_id": 301,
+        "cases": 2,
+        "deaths": null
+      }
+    ],
+    "JP-01": [],
+    "JP-13": [],
+    "NZ": [
+      {
+        "time": "2026-03-01T00:00:00+00:00",
+        "disease_id": 7100,
+        "country_id": 501,
+        "cases": 5,
+        "deaths": null
+      },
+      {
+        "time": "2026-03-01T00:00:00+00:00",
+        "disease_id": 7101,
+        "country_id": 501,
+        "cases": 0,
+        "deaths": null
+      }
+    ],
+    "TW": [
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 7001,
+        "country_id": 502,
+        "cases": 5,
+        "deaths": null
+      },
+      {
+        "time": "2026-02-01T00:00:00+00:00",
+        "disease_id": 7001,
+        "country_id": 502,
+        "cases": 0,
+        "deaths": null
+      }
+    ],
+    "HK": [
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 7110,
+        "country_id": 503,
+        "cases": 1,
+        "deaths": null
+      },
+      {
+        "time": "2026-02-01T00:00:00+00:00",
+        "disease_id": 7110,
+        "country_id": 503,
+        "cases": 0,
+        "deaths": null
+      }
+    ],
+    "FI": [
+      {
+        "time": "2026-07-01T00:00:00+00:00",
+        "disease_id": 7120,
+        "country_id": 504,
+        "cases": 3,
+        "deaths": null
+      },
+      {
+        "time": "2026-07-01T00:00:00+00:00",
+        "disease_id": 7121,
+        "country_id": 504,
+        "cases": 0,
+        "deaths": null
+      }
+    ],
+    "SE": [
+      {
+        "time": "2025-01-01T00:00:00+00:00",
+        "disease_id": 7130,
+        "country_id": 505,
+        "cases": 431,
+        "deaths": null
+      },
+      {
+        "time": "2025-02-01T00:00:00+00:00",
+        "disease_id": 7130,
+        "country_id": 505,
+        "cases": 398,
+        "deaths": null
+      },
+      {
+        "time": "2025-03-01T00:00:00+00:00",
+        "disease_id": 7130,
+        "country_id": 505,
+        "cases": 405,
+        "deaths": null
+      }
+    ],
+    "SE-AB": [],
+    "AT": [],
+    "CA-ON-file": [
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 7140,
+        "country_id": 508,
+        "cases": 2,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 7141,
+        "country_id": 508,
+        "cases": 1,
+        "deaths": null
+      },
+      {
+        "time": "2026-02-01T00:00:00+00:00",
+        "disease_id": 7140,
+        "country_id": 508,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-02-01T00:00:00+00:00",
+        "disease_id": 7141,
+        "country_id": 508,
+        "cases": 0,
+        "deaths": null
+      }
+    ],
+    "AU": [
+      {
+        "time": "2026-03-01T00:00:00+00:00",
+        "disease_id": 7044,
+        "country_id": 401,
+        "cases": 39,
+        "deaths": null
+      }
+    ],
+    "AU-ACT": [
+      {
+        "time": "2026-03-01T00:00:00+00:00",
+        "disease_id": 7044,
+        "country_id": 402,
+        "cases": 0,
+        "deaths": null
+      }
+    ],
+    "AU-NSW": [
+      {
+        "time": "2026-03-01T00:00:00+00:00",
+        "disease_id": 7044,
+        "country_id": 403,
+        "cases": 12,
+        "deaths": null
+      }
+    ],
+    "AU-VIC": [
+      {
+        "time": "2026-03-01T00:00:00+00:00",
+        "disease_id": 7044,
+        "country_id": 404,
+        "cases": 2,
+        "deaths": null
+      }
+    ],
+    "AU-QLD": [
+      {
+        "time": "2026-03-01T00:00:00+00:00",
+        "disease_id": 7044,
+        "country_id": 405,
+        "cases": 3,
+        "deaths": null
+      }
+    ],
+    "AU-SA": [
+      {
+        "time": "2026-03-01T00:00:00+00:00",
+        "disease_id": 7044,
+        "country_id": 406,
+        "cases": 4,
+        "deaths": null
+      }
+    ],
+    "AU-WA": [
+      {
+        "time": "2026-03-01T00:00:00+00:00",
+        "disease_id": 7044,
+        "country_id": 407,
+        "cases": 5,
+        "deaths": null
+      }
+    ],
+    "AU-TAS": [
+      {
+        "time": "2026-03-01T00:00:00+00:00",
+        "disease_id": 7044,
+        "country_id": 408,
+        "cases": 6,
+        "deaths": null
+      }
+    ],
+    "AU-NT": [
+      {
+        "time": "2026-03-01T00:00:00+00:00",
+        "disease_id": 7044,
+        "country_id": 409,
+        "cases": 7,
+        "deaths": null
+      }
+    ]
+  },
+  "edge_rows": [
+    {
+      "Date": "2026-01-01",
+      "RawDiseaseLabel": "Mapped zero",
+      "Cases": "0",
+      "Deaths": "99"
+    },
+    {
+      "Date": "2026-01-01",
+      "RawDiseaseLabel": "Mapped empty",
+      "Cases": "",
+      "Deaths": "99"
+    },
+    {
+      "Date": "2026-01-01",
+      "RawDiseaseLabel": "Mapped null",
+      "Cases": null,
+      "Deaths": "99"
+    },
+    {
+      "Date": "2026-01-01",
+      "RawDiseaseLabel": "Mapped cases",
+      "Cases": "7",
+      "Deaths": "99"
+    },
+    {
+      "Date": "2026-01-01",
+      "RawDiseaseLabel": "Unmapped disease",
+      "Cases": "999",
+      "Deaths": "99"
+    },
+    {
+      "Date": "invalid",
+      "RawDiseaseLabel": "Mapped cases",
+      "Cases": "1000",
+      "Deaths": "99"
+    }
+  ],
+  "edge_mapping": {
+    "Mapped zero": 9001,
+    "Mapped empty": 9002,
+    "Mapped null": 9003,
+    "Mapped cases": 9004
+  },
+  "edge_expected": {
+    "AU": [
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9001,
+        "country_id": 401,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9002,
+        "country_id": 401,
+        "cases": null,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9003,
+        "country_id": 401,
+        "cases": null,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 401,
+        "cases": 7,
+        "deaths": null
+      }
+    ],
+    "NZ": [
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9001,
+        "country_id": 501,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9002,
+        "country_id": 501,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9003,
+        "country_id": 501,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 501,
+        "cases": 7,
+        "deaths": null
+      }
+    ],
+    "TW": [
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9001,
+        "country_id": 502,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9002,
+        "country_id": 502,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9003,
+        "country_id": 502,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 502,
+        "cases": 7,
+        "deaths": null
+      }
+    ],
+    "HK": [
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9001,
+        "country_id": 503,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9002,
+        "country_id": 503,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9003,
+        "country_id": 503,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 503,
+        "cases": 7,
+        "deaths": null
+      }
+    ],
+    "FI": [
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9001,
+        "country_id": 504,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 504,
+        "cases": 7,
+        "deaths": null
+      }
+    ],
+    "SE": [
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9001,
+        "country_id": 505,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2026-01-01T00:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 505,
+        "cases": 7,
+        "deaths": null
+      }
+    ],
+    "AT": []
+  },
+  "us_policy": {
+    "rows": [
+      {
+        "Date": "2025-01-03",
+        "RawDiseaseLabel": "Mapped cases",
+        "Cases": "7",
+        "Source": "US CDC NNDSS",
+        "Frequency": "weekly"
+      },
+      {
+        "Date": "2025-01-04",
+        "RawDiseaseLabel": "Mapped zero",
+        "Cases": "0",
+        "Source": "US CDC NNDSS",
+        "Frequency": "weekly"
+      },
+      {
+        "Date": "2025-01-11",
+        "RawDiseaseLabel": "Mapped cases",
+        "Cases": "8",
+        "Source": "US CDC NNDSS",
+        "Frequency": "weekly"
+      },
+      {
+        "Date": "2025-01-11",
+        "RawDiseaseLabel": "Mapped cases",
+        "Cases": "999",
+        "Source": "US CDC NNDSS",
+        "Frequency": "weekly"
+      },
+      {
+        "Date": "2025-01-18",
+        "RawDiseaseLabel": "Mapped empty",
+        "Cases": "",
+        "Source": "US CDC NNDSS",
+        "Frequency": "weekly"
+      },
+      {
+        "Date": "2025-01-25",
+        "RawDiseaseLabel": "Mapped null",
+        "Cases": null,
+        "Source": "US CDC NNDSS",
+        "Frequency": "weekly"
+      },
+      {
+        "Date": "2025-02-01",
+        "RawDiseaseLabel": "Unmapped disease",
+        "Cases": "999",
+        "Source": "US CDC NNDSS",
+        "Frequency": "weekly"
+      },
+      {
+        "Date": "2023-12-31",
+        "RawDiseaseLabel": "Mapped cases",
+        "Cases": "12",
+        "Source": "US CDC NHSS",
+        "Frequency": "annual"
+      }
+    ],
+    "incremental_expected": [
+      {
+        "time": "2025-01-04T12:00:00+00:00",
+        "disease_id": 9001,
+        "country_id": 101,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2025-01-11T12:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 101,
+        "cases": 8,
+        "deaths": null
+      },
+      {
+        "time": "2023-12-31T12:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 101,
+        "cases": 12,
+        "deaths": null
+      }
+    ],
+    "force_expected": [
+      {
+        "time": "2025-01-03T12:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 101,
+        "cases": 7,
+        "deaths": null
+      },
+      {
+        "time": "2025-01-04T12:00:00+00:00",
+        "disease_id": 9001,
+        "country_id": 101,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2025-01-11T12:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 101,
+        "cases": 8,
+        "deaths": null
+      },
+      {
+        "time": "2023-12-31T12:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 101,
+        "cases": 12,
+        "deaths": null
+      }
+    ],
+    "revised_expected": [
+      {
+        "time": "2025-01-04T12:00:00+00:00",
+        "disease_id": 9001,
+        "country_id": 101,
+        "cases": 0,
+        "deaths": null
+      },
+      {
+        "time": "2025-01-11T12:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 101,
+        "cases": 10,
+        "deaths": null
+      },
+      {
+        "time": "2023-12-31T12:00:00+00:00",
+        "disease_id": 9004,
+        "country_id": 101,
+        "cases": 12,
+        "deaths": null
+      }
+    ]
+  },
+  "cn_edges_expected": [
+    {
+      "time": "2025-02-01T00:00:00+00:00",
+      "disease_id": 7007,
+      "country_id": 201,
+      "cases": 0,
+      "deaths": 0
+    },
+    {
+      "time": "2025-02-01T00:00:00+00:00",
+      "disease_id": 7008,
+      "country_id": 201,
+      "cases": null,
+      "deaths": null
+    },
+    {
+      "time": "2025-02-01T00:00:00+00:00",
+      "disease_id": 7009,
+      "country_id": 201,
+      "cases": 4,
+      "deaths": 2
+    }
+  ],
+  "jp_edges_expected": [
+    {
+      "time": "2025-03-23T00:00:00+00:00",
+      "disease_id": 7001,
+      "country_id": 301,
+      "cases": 2,
+      "deaths": null
+    },
+    {
+      "time": "2025-03-30T00:00:00+00:00",
+      "disease_id": 7001,
+      "country_id": 301,
+      "cases": 0,
+      "deaths": null
+    }
+  ],
+  "jp_incremental_expected": [
+    {
+      "time": "2025-03-30T00:00:00+00:00",
+      "disease_id": 7001,
+      "country_id": 301,
+      "cases": 0,
+      "deaths": null
+    }
+  ]
+}

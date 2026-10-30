@@ -17,9 +17,10 @@ needed fields as attributes or keys.  ``metadata`` is read from either the
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
-from typing import Any, Callable, Iterable, Sequence
+from typing import Any
 
 _MISSING = object()
 
@@ -82,8 +83,10 @@ def observation_key(row: Any) -> tuple:
 
 def observation_fingerprint(row: Any) -> tuple:
     """Everything the contract compares for one observation."""
-    return observation_key(row) + tuple(_get(row, f) for f in OBSERVATION_VALUE_FIELDS) + (
-        _metadata(row).get("missing_value_status"),
+    return (
+        observation_key(row)
+        + tuple(_get(row, f) for f in OBSERVATION_VALUE_FIELDS)
+        + (_metadata(row).get("missing_value_status"),)
     )
 
 
@@ -103,29 +106,53 @@ def record_fingerprint(row: Any) -> tuple:
 class Diff:
     """The difference between two row sets.
 
-    ``changed`` maps a natural key to ``(actual_fingerprint,
-    expected_fingerprint)``.  ``only_actual``/``only_expected`` hold natural
-    keys present on exactly one side.
+    ``changed`` holds ``(key, actual_fingerprint, expected_fingerprint)``.
+    A duplicate key's value is a tuple of all its fingerprints. Duplicates on
+    either side fail the contract, even when both sides contain identical rows.
+    ``only_actual``/``only_expected`` hold keys present on exactly one side.
     """
 
     only_actual: list = field(default_factory=list)
     only_expected: list = field(default_factory=list)
     changed: list = field(default_factory=list)
+    duplicate_actual: list = field(default_factory=list)
+    duplicate_expected: list = field(default_factory=list)
 
     @property
     def is_empty(self) -> bool:
-        return not (self.only_actual or self.only_expected or self.changed)
+        return not (
+            self.only_actual
+            or self.only_expected
+            or self.changed
+            or self.duplicate_actual
+            or self.duplicate_expected
+        )
 
     def __bool__(self) -> bool:
         return not self.is_empty
 
     def render(self, kind: str = "row") -> str:
         lines: list[str] = []
+        for side, duplicates in (
+            ("actual", self.duplicate_actual),
+            ("expected", self.duplicate_expected),
+        ):
+            if duplicates:
+                lines.append(
+                    f"{len(duplicates)} duplicate {kind} natural key(s) in {side}:"
+                )
+                for key, fingerprints in duplicates:
+                    lines.append(f"  ! {key}: {len(fingerprints)} rows")
+                    lines.extend(f"      {row}" for row in fingerprints)
         if self.only_actual:
-            lines.append(f"{len(self.only_actual)} {kind}(s) in actual but not expected:")
+            lines.append(
+                f"{len(self.only_actual)} {kind}(s) in actual but not expected:"
+            )
             lines.extend(f"  + {key}" for key in self.only_actual)
         if self.only_expected:
-            lines.append(f"{len(self.only_expected)} {kind}(s) in expected but not actual:")
+            lines.append(
+                f"{len(self.only_expected)} {kind}(s) in expected but not actual:"
+            )
             lines.extend(f"  - {key}" for key in self.only_expected)
         if self.changed:
             lines.append(f"{len(self.changed)} {kind}(s) differ:")
@@ -143,20 +170,44 @@ def _diff(
     key_fn: Callable[[Any], tuple],
     fingerprint_fn: Callable[[Any], tuple],
 ) -> Diff:
-    by_actual = {key_fn(row): fingerprint_fn(row) for row in actual}
-    by_expected = {key_fn(row): fingerprint_fn(row) for row in expected}
-    only_actual = sorted(set(by_actual) - set(by_expected))
-    only_expected = sorted(set(by_expected) - set(by_actual))
+    def index(rows):
+        grouped: dict[tuple, list[tuple]] = {}
+        for row in rows:
+            grouped.setdefault(key_fn(row), []).append(fingerprint_fn(row))
+        return {key: sorted(values, key=repr) for key, values in grouped.items()}
+
+    def value(rows):
+        return rows[0] if len(rows) == 1 else tuple(rows)
+
+    by_actual, by_expected = index(actual), index(expected)
+    only_actual = sorted(set(by_actual) - set(by_expected), key=repr)
+    only_expected = sorted(set(by_expected) - set(by_actual), key=repr)
     changed = [
-        (key, by_actual[key], by_expected[key])
-        for key in sorted(set(by_actual) & set(by_expected))
+        (key, value(by_actual[key]), value(by_expected[key]))
+        for key in sorted(set(by_actual) & set(by_expected), key=repr)
         if by_actual[key] != by_expected[key]
     ]
-    return Diff(only_actual, only_expected, changed)
+
+    def duplicates(index):
+        return [
+            (key, tuple(index[key]))
+            for key in sorted(index, key=repr)
+            if len(index[key]) > 1
+        ]
+
+    return Diff(
+        only_actual,
+        only_expected,
+        changed,
+        duplicates(by_actual),
+        duplicates(by_expected),
+    )
 
 
 def diff_observations(actual: Iterable[Any], expected: Iterable[Any]) -> Diff:
-    return _diff(actual, expected, key_fn=observation_key, fingerprint_fn=observation_fingerprint)
+    return _diff(
+        actual, expected, key_fn=observation_key, fingerprint_fn=observation_fingerprint
+    )
 
 
 def diff_records(actual: Iterable[Any], expected: Iterable[Any]) -> Diff:
@@ -181,8 +232,8 @@ __all__ = [
     "assert_records_match",
     "diff_observations",
     "diff_records",
-    "observation_key",
     "observation_fingerprint",
-    "record_key",
+    "observation_key",
     "record_fingerprint",
+    "record_key",
 ]

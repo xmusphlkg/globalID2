@@ -1,0 +1,90 @@
+{
+  "rows": [
+    {
+      "Disease": "Tuberculosis, total",
+      "DiseaseCode": "700",
+      "ReportingGroupSID": "101",
+      "Year": "2026",
+      "Month": "7",
+      "Date": "2026-07-01",
+      "Cases": "3",
+      "PeriodType": "monthly",
+      "Geography": "All areas",
+      "GeographyKey": "country:FI:national",
+      "Age": "All ages",
+      "Sex": "All sexes",
+      "Measure": "Cases",
+      "PopulationScope": "all",
+      "DatasetStatus": "closed_revisable",
+      "IsProvisional": "false",
+      "RevisionSemantics": "authoritative_revision",
+      "AuthoritativeRevision": "true",
+      "Dimensions": "{}",
+      "Source": "Finland THL Infectious Diseases Register",
+      "SourceURL": "https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases",
+      "QueryURL": "https://example.org/query.csv",
+      "RetrievedAt": "2026-08-07T09:00:00Z",
+      "SourceUpdatedAt": "Fri, 07 Aug 2026 08:00:00 GMT",
+      "RawSHA256": "320d8e567c556d81b9bc648e7b9c69519ebf8adb57e03b5f578ebde8ece9f994",
+      "DimensionsSHA256": "841d0fd1c1735d1fcddd8a953356ad701f43fa12489a2bcd4bd91bdf859e07d9",
+      "License": "CC BY 4.0",
+      "RawDiseaseLabel": "Tuberculosis, total"
+    },
+    {
+      "Disease": "Pulmonary tuberculosis",
+      "DiseaseCode": "720",
+      "ReportingGroupSID": "102",
+      "Year": "2026",
+      "Month": "7",
+      "Date": "2026-07-01",
+      "Cases": "0",
+      "PeriodType": "monthly",
+      "Geography": "All areas",
+      "GeographyKey": "country:FI:national",
+      "Age": "All ages",
+      "Sex": "All sexes",
+      "Measure": "Cases",
+      "PopulationScope": "all",
+      "DatasetStatus": "closed_revisable",
+      "IsProvisional": "false",
+      "RevisionSemantics": "authoritative_revision",
+      "AuthoritativeRevision": "true",
+      "Dimensions": "{}",
+      "Source": "Finland THL Infectious Diseases Register",
+      "SourceURL": "https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases",
+      "QueryURL": "https://example.org/query.csv",
+      "RetrievedAt": "2026-08-07T09:00:00Z",
+      "SourceUpdatedAt": "Fri, 07 Aug 2026 08:00:00 GMT",
+      "RawSHA256": "320d8e567c556d81b9bc648e7b9c69519ebf8adb57e03b5f578ebde8ece9f994",
+      "DimensionsSHA256": "841d0fd1c1735d1fcddd8a953356ad701f43fa12489a2bcd4bd91bdf859e07d9",
+      "License": "CC BY 4.0",
+      "RawDiseaseLabel": "Pulmonary tuberculosis"
+    }
+  ],
+  "observations": [
+    {
+      "time": "2026-07-01T00:00:00+00:00",
+      "series_code": "SER_FI_THL_TTR_700",
+      "geography_key": "country:FI:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "raw",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-07-01T00:00:00+00:00",
+      "series_code": "SER_FI_THL_TTR_720_UNMAPPED",
+      "geography_key": "country:FI:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "raw",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ]
+}

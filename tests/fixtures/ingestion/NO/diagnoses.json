@@ -1,0 +1,21 @@
+[
+  {
+    "id": 1,
+    "nr": 1,
+    "beskrivelse": "Vaksinesykdommer",
+    "fra": "100",
+    "til": "199",
+    "diagnoseListe": [
+      {
+        "id": 9,
+        "verdi": "108",
+        "beskrivelse": "Difteri"
+      },
+      {
+        "id": 24,
+        "verdi": "101",
+        "beskrivelse": "Kikhoste"
+      }
+    ]
+  }
+]

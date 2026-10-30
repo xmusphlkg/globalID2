@@ -1,17 +1,4 @@
-"""Stage and publish-dirty recording for the data-line ingestion pipeline.
-
-Every ``CRAWL_DATA`` execution leaves one ``RunStage`` per stage (``collect`` /
-``organize`` / ``store``) and, after a successful store, a ``publish_dirty``
-row so the next ``EXPORT_DATA`` recomputes only that scope.
-
-Until a country switches to the three-stage contract its legacy ``_execute_*``
-handler still does all three steps inside ``collect``, so the fused recorder
-marks ``collect`` with the run outcome (``metrics.fused=true``) and records
-``organize``/``store`` as ``skipped``.  Stage-write failures are logged with
-the exact ``collection stage write failed`` message and swallowed so they never
-change the handler's success or failure (plan section 5 exemption for fused
-countries).
-"""
+"""Durable collect, organize and store stages with transactional publish markers."""
 
 from __future__ import annotations
 
@@ -22,12 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import get_db
-from src.core.logging import get_logger
 from src.domain import PublishDirty, RunStage
-
-logger = get_logger(__name__)
-
-_STAGE_WRITE_FAILED = "collection stage write failed"
 
 
 def _now() -> datetime:
@@ -80,67 +62,59 @@ async def record_stage(
     )
 
 
-async def record_fused_outcome(
-    *,
-    task_uuid: str,
-    started_at: datetime,
-    outcome: str,
-    error: Optional[str] = None,
-    line: str = "surveillance",
-    scope_key: Optional[str] = None,
-) -> bool:
-    """Record the three stages (and optional dirty mark) of a fused run.
+__all__ = ["next_attempt", "record_stage"]
 
-    ``outcome`` is ``completed`` or ``failed``.  ``collect`` carries the
-    outcome with ``metrics.fused=true``; ``organize`` and ``store`` are
-    ``skipped``.  When ``scope_key`` is given a ``publish_dirty`` row is added
-    in the same transaction so a stored scope is not lost to a stage failure.
 
-    Returns ``False`` after logging if any write fails; the caller swallows it.
+async def mark_dirty(db: AsyncSession, *, line: str, scope_key: str, task_uuid: str) -> None:
+    """Participate in the formal-row transaction; never commit independently."""
+    db.add(PublishDirty(line=line, scope_key=scope_key, source_task_uuid=task_uuid, marked_at=_now()))
+
+
+class StageRun:
+    """Durable three-stage lifecycle, including stages not reached after failure.
+
+    Terminal transitions update the existing row. A retry allocates one new
+    attempt at start and preserves every preceding attempt.
     """
 
-    try:
+    def __init__(self, task_uuid: str, line: str, attempt: int):
+        self.task_uuid, self.line, self.attempt = task_uuid, line, attempt
+        self.current: str | None = None
+
+    @classmethod
+    async def start(cls, task_uuid: str, line: str) -> "StageRun":
         async with get_db() as db:
             attempt = await next_attempt(db, task_uuid)
-            finished_at = _now()
-            await record_stage(
-                db,
-                task_uuid=task_uuid,
-                stage="collect",
-                status=outcome,
-                attempt=attempt,
-                started_at=started_at,
-                finished_at=finished_at,
-                metrics={"fused": True},
-                error=error,
-            )
-            for stage in ("organize", "store"):
-                await record_stage(
-                    db,
-                    task_uuid=task_uuid,
-                    stage=stage,
-                    status="skipped",
-                    attempt=attempt,
-                    started_at=started_at,
-                    finished_at=finished_at,
-                )
-            if scope_key is not None and outcome == "completed":
-                db.add(
-                    PublishDirty(
-                        line=line,
-                        scope_key=scope_key,
-                        source_task_uuid=task_uuid,
-                        marked_at=finished_at,
-                    )
-                )
-        return True
-    except Exception:
-        logger.exception(_STAGE_WRITE_FAILED)
-        return False
+            for stage in ("collect", "organize", "store"):
+                await record_stage(db, task_uuid=task_uuid, stage=stage, status="skipped", attempt=attempt, started_at=_now())
+        return cls(task_uuid, line, attempt)
+
+    async def transition(self, stage: str, *, metrics: dict | None = None) -> None:
+        from .capture import _current
+        if _current.get():
+            _current.get().stage = stage
+        if self.current:
+            await self.finish(metrics=None)
+        from sqlalchemy import update
+        async with get_db() as db:
+            await db.execute(update(RunStage).where(RunStage.task_uuid == self.task_uuid, RunStage.attempt == self.attempt, RunStage.stage == stage).values(status="running", started_at=_now(), finished_at=None, metrics=metrics or {}))
+        self.current = stage
+
+    async def finish(self, *, metrics: dict | None = None, error: str | None = None) -> None:
+        if not self.current:
+            return
+        from sqlalchemy import update
+        async with get_db() as db:
+            row = (await db.execute(select(RunStage).where(RunStage.task_uuid == self.task_uuid, RunStage.attempt == self.attempt, RunStage.stage == self.current))).scalar_one()
+            row.status = "failed" if error else "completed"
+            row.finished_at = _now()
+            row.error = error
+            if metrics:
+                row.metrics = {**(row.metrics or {}), **metrics}
+        self.current = None
+
+    async def mark_dirty(self, db: AsyncSession, scope_key: str) -> None:
+        await mark_dirty(db, line=self.line, scope_key=scope_key, task_uuid=self.task_uuid)
 
 
-__all__ = [
-    "next_attempt",
-    "record_stage",
-    "record_fused_outcome",
-]
+__all__ += ["StageRun", "mark_dirty"]

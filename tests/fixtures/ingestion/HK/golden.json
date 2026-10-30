@@ -1,0 +1,58 @@
+{
+  "rows": [
+    {
+      "Date": "2026-01-01",
+      "RawDiseaseLabel": "Paratyphoid fever",
+      "DiseaseCode": "",
+      "Year": "2026",
+      "Month": "1",
+      "Cases": "1",
+      "AnnualTotal": "1",
+      "RecordType": "cases",
+      "Source": "Hong Kong, China CHP Notifiable Infectious Diseases",
+      "SourceURL": "https://www.chp.gov.hk/files/misc/nid2026en.csv",
+      "DatasetStatus": "provisional",
+      "IsProvisional": "true"
+    },
+    {
+      "Date": "2026-02-01",
+      "RawDiseaseLabel": "Paratyphoid fever",
+      "DiseaseCode": "",
+      "Year": "2026",
+      "Month": "2",
+      "Cases": "0",
+      "AnnualTotal": "1",
+      "RecordType": "cases",
+      "Source": "Hong Kong, China CHP Notifiable Infectious Diseases",
+      "SourceURL": "https://www.chp.gov.hk/files/misc/nid2026en.csv",
+      "DatasetStatus": "provisional",
+      "IsProvisional": "true"
+    }
+  ],
+  "observations": [
+    {
+      "time": "2026-01-01T00:00:00+00:00",
+      "series_code": "SER_HK_PARATYPHOID_MONTHLY",
+      "geography_key": "country:HK:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-02-01T00:00:00+00:00",
+      "series_code": "SER_HK_PARATYPHOID_MONTHLY",
+      "geography_key": "country:HK:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ]
+}

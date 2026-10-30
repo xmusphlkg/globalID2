@@ -371,7 +371,8 @@ def test_kr_crawl_service_accepts_task_history_start_year(tmp_path):
 
     updater = KRMonthlyUpdater(output_csv=tmp_path / "korea_national_monthly.csv")
 
-    assert CrawlService._kr_history_start_year(DummyTask(), updater) == 2005
+    from src.services.ingestion.planning import history_start_year
+    assert history_start_year(DummyTask(), updater) == 2005
 
 
 def test_kr_download_source_from_parent_directory_year_is_respected(tmp_path):

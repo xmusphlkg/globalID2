@@ -1,0 +1,39 @@
+{
+  "rows": [
+    {
+      "Date": "2026-03-01",
+      "RawDiseaseLabel": "Hepatitis (NEC)",
+      "DiseaseFull": "Hepatitis (NEC)",
+      "Cases": "4",
+      "Group": "state_territory_total",
+      "Incidence": "",
+      "Population": "",
+      "Source": "Australia NINDSS (location aggregated)",
+      "DatasetStatus": "closed_revisable",
+      "IsProvisional": "false",
+      "RevisionSemantics": "authoritative_revision",
+      "AuthoritativeRevision": "true",
+      "JurisdictionCode": "AU-SA",
+      "ParentCountryCode": "AU",
+      "LocationType": "subdivision",
+      "ReportingArea": "South Australia",
+      "Geocode": "AU-SA",
+      "GeographyKey": "country:AU-SA:national",
+      "__source_file": "source.csv"
+    }
+  ],
+  "observations": [
+    {
+      "time": "2026-03-01T00:00:00+00:00",
+      "series_code": "SER_AU_VIRAL_HEPATITIS_NEC",
+      "geography_key": "country:AU-SA:national",
+      "dimension_key": "all",
+      "value": 4.0,
+      "suppressed": false,
+      "quality_status": "raw",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ]
+}
