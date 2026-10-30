@@ -1850,6 +1850,8 @@ def _test_timeout_seconds(route: Dict[str, Any]) -> float:
 async def _test_openai_compatible(
     route: Dict[str, Any], model_name: str, *, structured: bool = False
 ) -> Dict[str, Any]:
+    from src.ai.work_queue import require_dispatcher
+    require_dispatcher()
     base_urls = _openai_base_url_candidates(str(route.get("base_url") or ""))
 
     last_error: Optional[Exception] = None
@@ -1910,6 +1912,8 @@ async def _test_openai_compatible(
 async def _test_anthropic(
     route: Dict[str, Any], model_name: str, *, structured: bool = False
 ) -> Dict[str, Any]:
+    from src.ai.work_queue import require_dispatcher
+    require_dispatcher()
     prompt = _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT
     client = AsyncAnthropic(
         api_key=route.get("api_key"),
@@ -1939,6 +1943,8 @@ async def test_route_connection(
     route: Dict[str, Any], *, structured: bool = False
 ) -> Dict[str, Any]:
     """Test one model route with a connection or structured-workload probe."""
+    from src.ai.work_queue import require_dispatcher
+    require_dispatcher()
     style = str(route.get("api_style") or "openai_compatible").lower()
     model_name = str(route.get("model_name") or "")
 

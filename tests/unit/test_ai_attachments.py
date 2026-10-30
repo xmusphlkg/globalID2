@@ -136,7 +136,6 @@ class _Agent(BaseAgent):
 
 @pytest.fixture
 def agent(monkeypatch):
-    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
     instance = _Agent(name="attach-test", model="m", provider="p")
     instance.sent = []
     return instance
@@ -201,3 +200,14 @@ async def test_calls_without_attachments_are_untouched(agent, monkeypatch):
     await agent._complete_with_admitted_runtime_route(_route(api_style="anthropic"), "ask", None)
     assert agent.sent == ["ask"]
     assert agent._last_input_mode is None
+
+
+@pytest.fixture(autouse=True)
+def dispatcher_transport_context():
+    """These tests exercise provider internals, never a business caller."""
+    from src.ai.work_queue import _DISPATCHING
+    token = _DISPATCHING.set(True)
+    try:
+        yield
+    finally:
+        _DISPATCHING.reset(token)

@@ -27,6 +27,7 @@ from src.services._lifecycle import safe_exception_summary
 from src.control_plane.events import control_plane_events
 from src.control_plane.runtime import runtime_registry
 from src.core.task_manager import task_manager
+from src.ai.work_queue import AIWorkDispatcher, waiting_parent_uuids
 
 logger = get_logger(__name__)
 
@@ -71,16 +72,26 @@ KNOWLEDGE_SERIAL_TASK_TYPES = {
     TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
 }
 RELEASE_EXCLUSIVE_TASK_TYPES = {TaskType.EXPORT_DATA}
+# File generation and the final public projection read the same live formal
+# tables. Keep every collection writer outside that interval. This is a data
+# consistency gate, independent of normal/AI slot accounting: ai_waiting
+# parents remain RUNNING until their final store transaction has finished.
+COLLECTION_STORE_TASK_TYPES = {
+    TaskType.CRAWL_DATA,
+    TaskType.PROCESS_DATA,
+    TaskType.SYNC_LITERATURE,
+    TaskType.REFRESH_SITUATION_SOURCES,
+    TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
+    TaskType.UPDATE_DISEASE_KNOWLEDGE,
+}
 RELEASE_SHARED_BLOCKED_TASK_TYPES = (
-    AI_TASK_TYPES
-    | KNOWLEDGE_SOURCE_TASK_TYPES
-    | {TaskType.SYNC_LITERATURE}
+    AI_TASK_TYPES | KNOWLEDGE_SOURCE_TASK_TYPES | COLLECTION_STORE_TASK_TYPES
 )
 # These operations persist their checkpoints and are designed to be resumed.
 # On a controlled worker restart, returning them to QUEUED is preferable to
 # waiting for a long model timeout or treating the deployment as a failure.
 GRACEFUL_REQUEUE_TASK_TYPES = (
-    AI_TASK_TYPES | KNOWLEDGE_SOURCE_TASK_TYPES | {TaskType.SYNC_LITERATURE}
+    AI_TASK_TYPES | KNOWLEDGE_SOURCE_TASK_TYPES | {TaskType.SYNC_LITERATURE, TaskType.REFRESH_SITUATION_SOURCES}
 )
 
 ModelRouteLoader = Callable[[], Awaitable[list[dict[str, Any]]]]
@@ -91,12 +102,12 @@ def _release_memory_blocked_task_types(
     *,
     release_waiting: bool = False,
 ) -> set[TaskType]:
-    """Keep memory-heavy release export and literature/AI work from overlapping."""
+    """Serialize publication with source stores and memory-heavy model work."""
     active = set(active_task_types)
     blocked: set[TaskType] = set()
     if release_waiting or active & RELEASE_EXCLUSIVE_TASK_TYPES:
         blocked.update(RELEASE_SHARED_BLOCKED_TASK_TYPES)
-    if active & RELEASE_SHARED_BLOCKED_TASK_TYPES:
+    if active & (RELEASE_SHARED_BLOCKED_TASK_TYPES | RELEASE_EXCLUSIVE_TASK_TYPES):
         blocked.update(RELEASE_EXCLUSIVE_TASK_TYPES)
     return blocked
 
@@ -344,6 +355,7 @@ async def _claim_next_task_uuid(
         }
         task.metadata_ = metadata
         task.status = TaskStatus.RUNNING
+        task.input_data = {**(task.input_data or {}), "ai_waiting": False}
         task.last_error = None
         await db.commit()
         return task.task_uuid, task.task_type
@@ -430,31 +442,6 @@ async def _recover_stale_tasks(
             pass
 
 
-async def _probe_degraded_model_routes(stop_event: asyncio.Event) -> None:
-    """Give excluded model routes a bounded path back into production."""
-    from src.ai.model_center import probe_degraded_model_routes
-
-    while not stop_event.is_set():
-        try:
-            results = await probe_degraded_model_routes(limit=2)
-            if results:
-                recovered = sum(1 for result in results if result.get("success"))
-                logger.info(
-                    "Model Center recovery probes completed (attempted={}, recovered={})",
-                    len(results),
-                    recovered,
-                )
-        except Exception as exc:
-            logger.warning("Model Center recovery probe sweep failed: {}", exc)
-        try:
-            await asyncio.wait_for(
-                stop_event.wait(),
-                timeout=MODEL_ROUTE_RECOVERY_SCAN_SECONDS,
-            )
-        except asyncio.TimeoutError:
-            pass
-
-
 async def _resume_knowledge_repairs_after_model_recovery() -> None:
     """Delegate one bounded terminal-repair wake-up to AI governance."""
     from src.services.ai_content_governance_service import ai_content_governance_service
@@ -522,6 +509,9 @@ async def run_worker() -> None:
     await ai_concurrency.refresh(force=True)
 
     stop_event = asyncio.Event()
+    ai_stop_event = asyncio.Event()
+    model_dispatcher = AIWorkDispatcher()
+    model_dispatch_loop = asyncio.create_task(model_dispatcher.run(ai_stop_event), name="worker-model-dispatch")
     lease_lost = asyncio.Event()
     loop = asyncio.get_running_loop()
 
@@ -548,10 +538,6 @@ async def run_worker() -> None:
     recovery_sweep = asyncio.create_task(
         _recover_stale_tasks(stop_event, instance_id),
         name="control-plane-worker-task-recovery",
-    )
-    model_route_recovery_sweep = asyncio.create_task(
-        _probe_degraded_model_routes(stop_event),
-        name="model-center-route-recovery",
     )
     await control_plane_events.publish("runtime.started", resource_type="runtime", resource_id=instance_id)
 
@@ -631,21 +617,16 @@ async def run_worker() -> None:
                 len(active_tasks),
                 SHUTDOWN_GRACE_SECONDS,
             )
-        while not stop_event.is_set() and len(active_tasks) < MAX_CONCURRENT_TASKS + ai_concurrency.capacity:
-            active_ai_tasks = sum(
-                1 for task_type in active_task_types.values() if task_type in AI_TASK_TYPES
-            )
-            active_non_ai_tasks = len(active_task_types) - active_ai_tasks
-            active_source_tasks = sum(
-                1
-                for task_type in active_task_types.values()
-                if task_type in KNOWLEDGE_SOURCE_TASK_TYPES
-            )
+        while not stop_event.is_set():
+            waiting = waiting_parent_uuids()
+            executing_types = [task_type for task, task_type in active_task_types.items()
+                               if active_task_uuids.get(task) not in waiting]
+            # Task slots cover CPU/database orchestration. Individual model calls
+            # use independent permits held only by the model dispatch coroutine.
+            if len(executing_types) >= MAX_CONCURRENT_TASKS:
+                break
+            active_source_tasks = sum(t in KNOWLEDGE_SOURCE_TASK_TYPES for t in executing_types)
             blocked_task_types: set[TaskType] = set()
-            if active_ai_tasks >= ai_concurrency.capacity:
-                blocked_task_types.update(AI_TASK_TYPES)
-            if active_non_ai_tasks >= MAX_CONCURRENT_TASKS:
-                blocked_task_types.update(set(TaskType) - AI_TASK_TYPES)
             if active_source_tasks >= MAX_CONCURRENT_KNOWLEDGE_SOURCE_TASKS:
                 blocked_task_types.update(KNOWLEDGE_SOURCE_TASK_TYPES)
             claimed = await _claim_next_task_uuid(
@@ -716,9 +697,9 @@ async def run_worker() -> None:
             pass
 
     stop_event.set()
+    ai_stop_event.set()
+    await model_dispatch_loop
     await recovery_sweep
-    model_route_recovery_sweep.cancel()
-    await asyncio.gather(model_route_recovery_sweep, return_exceptions=True)
     await asyncio.to_thread(runtime_guard.stop)
     await control_plane_events.publish("runtime.stopped", resource_type="runtime", resource_id=instance_id)
     task_manager.set_broadcast_hook(None)

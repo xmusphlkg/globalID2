@@ -165,7 +165,7 @@ def test_release_export_and_literature_ai_tasks_do_not_overlap():
         TaskType.SYNC_LITERATURE,
         TaskType.UPDATE_DISEASE_KNOWLEDGE,
     }
-    assert task_worker._release_memory_blocked_task_types([TaskType.CRAWL_DATA]) == set()
+    assert task_worker._release_memory_blocked_task_types([TaskType.CRAWL_DATA]) == {TaskType.EXPORT_DATA}
 
 
 def test_knowledge_task_disease_id_uses_single_task_resource():

@@ -9,11 +9,11 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Coroutine, Dict, Optional
+from typing import Any, Dict
 
 from sqlalchemy import select
 
-from src.core import get_database, get_logger, init_app
+from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
 from src.domain import (
     AgentWorkflowRun,
@@ -28,6 +28,7 @@ from src.domain import (
     TaskType,
 )
 from src.services._lifecycle import task_lifecycle
+from src.services.exceptions import TaskCancelledError
 
 logger = get_logger(__name__)
 
@@ -41,6 +42,7 @@ RECOVERABLE_IDEMPOTENT_TASK_TYPES = frozenset(
         TaskType.DISCOVER_LITERATURE_GAPS,
         TaskType.UPDATE_DISEASE_KNOWLEDGE,
         TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
+        TaskType.REFRESH_SITUATION_SOURCES,
     }
 )
 
@@ -201,7 +203,8 @@ async def recover_interrupted_tasks_on_startup(
 
             retry_count = int(getattr(task, "retry_count", 0) or 0)
             max_retries = int(getattr(task, "max_retries", 3) or 0)
-            if task.task_type in RECOVERABLE_IDEMPOTENT_TASK_TYPES and retry_count < max_retries:
+            replayable_ai_parent = bool((task.input_data or {}).get("ai_waiting")) and task.task_type != TaskType.CRAWL_DATA
+            if (task.task_type in RECOVERABLE_IDEMPOTENT_TASK_TYPES or replayable_ai_parent) and retry_count < max_retries:
                 task.status = TaskStatus.QUEUED
                 task.retry_count = retry_count + 1
                 task.started_at = None
@@ -510,13 +513,14 @@ async def _run_crawl(task: Task) -> Dict[str, Any]:
                 include_current_month=include_current_month,
                 revision_window_months=revision_window_months,
             )
-        except Exception as exc:
+        except BaseException as exc:
             try:
                 await service.fail_current_run(
                     country_code=country_code,
                     source=source,
                     started_after=execution_started,
                     error=exc,
+                    status="cancelled" if isinstance(exc, (asyncio.CancelledError, KeyboardInterrupt, TaskCancelledError)) else "failed",
                 )
             except Exception as audit_exc:
                 logger.warning(
@@ -630,12 +634,14 @@ async def _run_situation_sources_refresh(task: Task) -> Dict[str, Any]:
             await task_manager.update_task_progress(task.task_uuid, value)
 
         result = await run_situation(
+            since_days=int(input_data.get("since_days") or 120),
+            don_limit=int(input_data.get("don_limit") or 200),
+            require_cross_model=bool(input_data.get("require_cross_model", False)),
             fetch=fetch_events,
             skip_ai=bool(input_data.get("skip_ai", False)),
             ai_limit=int(input_data.get("ai_limit") or 30),
             document_limit=int(input_data.get("document_limit") or 40),
-            # Writes the database only; the data release exports what is stored.
-            export=bool(input_data.get("export", False)),
+            task_uuid=task.task_uuid,
             progress=progress,
         )
         result["fetch_events"] = fetch_events
@@ -672,6 +678,9 @@ async def _run_literature_enrichment(task: Task) -> Dict[str, Any]:
             if task_obj:
                 task_obj.output_data = result
                 await db.commit()
+        if int(result.get("failed") or 0):
+            from src.ai.work_queue import AIWorkFailed
+            raise AIWorkFailed(f"Literature enrichment failed for {result['failed']} article(s)")
         return result
 
 
@@ -696,7 +705,21 @@ async def _run_agent_workflow(task: Task) -> Dict[str, Any]:
     from src.services.agent_workflow_service import agent_workflow_service
 
     async with task_lifecycle(task, exit_on_cancel=False):
-        result = await agent_workflow_service.execute(task)
+        if (task.input_data or {}).get("operation"):
+            operation = task.input_data["operation"]
+            arguments = task.input_data.get("arguments") or {}
+            if operation == "knowledge_reconcile":
+                from src.services.knowledge_automation_service import knowledge_automation_service
+                value = await knowledge_automation_service.reconcile_once()
+            elif operation == "literature_reconcile":
+                from src.services.literature_automation_service import literature_automation_service
+                value = await literature_automation_service.reconcile(**arguments)
+            else:
+                from src.services.model_operations import execute_model_operation
+                value = await execute_model_operation(operation, arguments)
+            result = {"result": value}
+        else:
+            result = await agent_workflow_service.execute(task)
 
         async with get_database() as db:
             task_obj = await db.get(Task, task.id)
@@ -712,9 +735,13 @@ async def _run_agent_workflow(task: Task) -> Dict[str, Any]:
 async def _run_disease_knowledge(task: Task) -> Dict[str, Any]:
     """Execute an UPDATE_DISEASE_KNOWLEDGE task using the knowledge service."""
     from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService
+    from pathlib import Path
 
     async with task_lifecycle(task, exit_on_cancel=False):
-        service = DiseaseKnowledgeUpdateService()
+        disease_csv_path = (task.input_data or {}).get("disease_csv_path")
+        service = DiseaseKnowledgeUpdateService(
+            **({"disease_csv_path": Path(disease_csv_path)} if disease_csv_path else {})
+        )
         result = await service.execute_task(task)
 
         async with get_database() as db:
