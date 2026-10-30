@@ -12,7 +12,7 @@ on:
       - "scripts/export_dashboard_openapi.py"
       - ".github/workflows/control-center.yml"
   push:
-    branches: [master, development]
+    branches: [master]
 
 jobs:
   contract-and-ui:
