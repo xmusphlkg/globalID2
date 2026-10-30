@@ -75,6 +75,7 @@ from .literature import (
     LiteratureSummary,
     LiteratureTopicLink,
 )
+from .collection import PublishDirty, RunStage, SourceArtifact
 
 __all__ = [
     # Base classes
@@ -153,4 +154,7 @@ __all__ = [
     "LiteratureStatusEvent",
     "LiteratureSummary",
     "LiteratureTopicLink",
+    "PublishDirty",
+    "RunStage",
+    "SourceArtifact",
 ]
