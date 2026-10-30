@@ -2,7 +2,8 @@
 /**
  * Situation map: one point is one disease in one place with recent news, read from
  * official reports. The map is the main interface; filters, the place list and the
- * alert timeline are one React island fed by the exported points.
+ * alert timeline are one React island. The island receives map markers only;
+ * quotes and summaries load with the outbreak timeline.
  */
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import SituationExplorer from '../../components/situation/SituationExplorer';

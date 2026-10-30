@@ -2,7 +2,9 @@
 
 Layout under ``DEFAULT_OUTPUT_DIR`` (everything is rebuilt on each export):
 
-* ``map.json``: one point per outbreak x place (its latest alert) plus filter facets;
+* ``map.json``: one marker per outbreak x place (labels, status, date) plus filter facets.
+  Quotes, summaries and review metadata stay on the outbreak timeline, which the
+  map page loads when a place is opened;
 * ``outbreaks/<id>.json``: the alert timeline of one outbreak;
 * ``by-country/<CC>.json`` and ``by-disease/<ID>.json``: alerts for entity pages;
 * ``monitoring.json``: periodic roundups that raised no map point (hidden by default);
@@ -160,6 +162,41 @@ def latest_per_place(records: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(points, key=lambda p: (p["place_updated"], p["alert_id"]), reverse=True)
 
 
+# Fields the map, filters and place list render. Prose stays on the outbreak file.
+_MARKER_FIELDS = (
+    "alert_id",
+    "outbreak_id",
+    "source_id",
+    "source_label_en",
+    "source_label_zh",
+    "disease_id",
+    "disease_slug",
+    "disease_label",
+    "disease_name_en",
+    "disease_name_zh",
+    "country_code",
+    "country_name_en",
+    "country_name_zh",
+    "admin_area",
+    "status",
+    "published_date",
+)
+
+
+def map_marker(point: dict[str, Any]) -> dict[str, Any]:
+    """Drop quote, summaries and review metadata from a map point.
+
+    Those fields are unique per alert and were serialized into every locale's
+    situation page. The outbreak timeline already serves them on demand.
+    """
+
+    return {
+        key: point.get(key)
+        for key in _MARKER_FIELDS
+        if point.get(key) is not None
+    }
+
+
 def facets(points: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     """Filter options with the number of points behind each."""
 
@@ -291,7 +328,10 @@ async def export_site(
     outbreaks = [item for item in outbreaks if item["alerts"]]
 
     # Routine alerts are surveillance background: kept in shards, not on the map.
-    points = latest_per_place(record for record in records if record["status"] != "routine")
+    points = [
+        map_marker(point)
+        for point in latest_per_place(record for record in records if record["status"] != "routine")
+    ]
     generated = utc_now().isoformat()
     stamp = as_of.isoformat()
 
@@ -384,4 +424,13 @@ async def export_site(
     }
 
 
-__all__ = ["DEFAULT_OUTPUT_DIR", "SCHEMA_VERSION", "alert_record", "export_site", "facets", "latest_per_place", "weekly_changes"]
+__all__ = [
+    "DEFAULT_OUTPUT_DIR",
+    "SCHEMA_VERSION",
+    "alert_record",
+    "export_site",
+    "facets",
+    "latest_per_place",
+    "map_marker",
+    "weekly_changes",
+]

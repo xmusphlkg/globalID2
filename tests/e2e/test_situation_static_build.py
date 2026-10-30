@@ -129,7 +129,29 @@ def _payloads() -> dict[Path, dict]:
             "as_of": "2026-10-26",
             "since_date": "2025-10-26",
             "point_count": 2,
-            "points": alerts,
+            "points": [
+                {
+                    key: alert[key]
+                    for key in (
+                        "alert_id",
+                        "outbreak_id",
+                        "source_id",
+                        "source_label_en",
+                        "source_label_zh",
+                        "disease_id",
+                        "disease_slug",
+                        "disease_label",
+                        "disease_name_en",
+                        "disease_name_zh",
+                        "country_code",
+                        "country_name_en",
+                        "country_name_zh",
+                        "status",
+                        "published_date",
+                    )
+                }
+                for alert in alerts
+            ],
             "facets": facets,
             "outbreaks": [outbreak],
         },

@@ -186,9 +186,15 @@ async def test_don_report_becomes_one_outbreak_with_three_places(db, tmp_path):
     assert (summary["alert_count"], summary["point_count"], summary["outbreak_count"]) == (3, 3, 1)
     map_json = json.loads((tmp_path / "map.json").read_text(encoding="utf-8"))
     by_country = {p["country_code"]: p for p in map_json["points"]}
-    assert by_country["CD"]["cases"] == 9704 and by_country["CD"]["deaths"] == 4687
-    assert by_country["KE"]["quote"].endswith("reported in Kenya.")  # who_don terms allow quotes
-    assert by_country["NG"]["url"].startswith("https://www.who.int/")
+    assert "quote" not in by_country["KE"]
+    assert "summary_en" not in by_country["KE"]
+    assert by_country["KE"]["country_name_en"]
+    outbreak = json.loads((tmp_path / "outbreaks" / f"{by_country['KE']['outbreak_id']}.json").read_text(encoding="utf-8"))
+    kenya = next(alert for alert in outbreak["alerts"] if alert["country_code"] == "KE")
+    assert kenya["quote"].endswith("reported in Kenya.")  # who_don terms allow quotes
+    assert kenya["url"].startswith("https://www.who.int/")
+    congo = next(alert for alert in outbreak["alerts"] if alert["country_code"] == "CD")
+    assert congo["cases"] == 9704 and congo["deaths"] == 4687
     published = "".join(path.read_text(encoding="utf-8") for path in tmp_path.rglob("*.json"))
     assert "SECRET-FULL-TEXT-MARKER" not in published
 

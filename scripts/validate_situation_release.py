@@ -4,8 +4,9 @@
 File-only checks (no database), against ``gids.situation_alerts.v1``:
 
 * ``map.json`` exists with the expected schema version, in every export file;
-* every map point links to an http(s) authority URL;
-* every point carries a quote, except for sources whose terms are ``blocked``;
+* every map point links to an outbreak timeline by alert id;
+* map points are markers: they carry no quote, summary or review metadata;
+* every outbreak alert carries a quote, except for sources whose terms are ``blocked``;
 * no field carries full report text (``text``, ``document``, ``full_text``...);
 * every map outbreak has a timeline file, and every point's alert is on it;
 * the built ``/situation/`` page exists in every locale.
@@ -26,6 +27,7 @@ DATA = ROOT / "astro-site" / "src" / "data" / "situation" / "international"
 DIST = ROOT / "astro-site" / "dist"
 LOCALE_PREFIXES = ("", "zh/", "fr/")
 FORBIDDEN_KEYS = {"text", "document", "full_text", "body", "content", "raw_text"}
+MARKER_PROSE_KEYS = {"quote", "summary_en", "summary_zh", "summary_fr", "ai"}
 
 
 def _read(path: Path) -> dict | None:
@@ -74,23 +76,33 @@ def validate(data_dir: Path = DATA, site_dir: Path = DIST) -> dict:
     check("schema_version", not bad_schema, ", ".join(bad_schema[:5]))
 
     check("points_present", len(points) > 0, f"{len(points)} map points")
-    bad_urls = [str(p.get("alert_id")) for p in points if not _is_url(p.get("url"))]
-    check("point_urls", not bad_urls, ", ".join(bad_urls[:5]))
+    prose_on_map = [
+        str(point.get("alert_id"))
+        for point in points
+        if MARKER_PROSE_KEYS.intersection(point)
+    ]
+    check("map_markers", not prose_on_map, ", ".join(prose_on_map[:5]))
 
     sources = {
         str(row.get("source_id")): row.get("redistribution")
         for row in (payloads.get(data_dir / "sources.json") or {}).get("sources") or []
     }
     quote_problems: list[str] = []
-    for point in points:
-        quote = point.get("quote")
-        quotable = sources.get(str(point.get("source_id"))) != "blocked"
-        if quotable and not (isinstance(quote, str) and quote.strip()):
-            quote_problems.append(f"{point.get('alert_id')}: quote missing")
-        elif not quotable and quote:
-            quote_problems.append(f"{point.get('alert_id')}: quote published for a blocked source")
-        elif isinstance(quote, str) and len(quote) > QUOTE_LIMIT:
-            quote_problems.append(f"{point.get('alert_id')}: quote longer than {QUOTE_LIMIT}")
+    for payload in payloads.values():
+        if not payload or payload.get("outbreak_id") is None or "alerts" not in payload:
+            continue
+        for alert in payload.get("alerts") or []:
+            quote = alert.get("quote")
+            alert_id = alert.get("alert_id")
+            if not _is_url(alert.get("url")):
+                quote_problems.append(f"{alert_id}: missing authority URL")
+            quotable = sources.get(str(alert.get("source_id"))) != "blocked"
+            if quotable and not (isinstance(quote, str) and quote.strip()):
+                quote_problems.append(f"{alert_id}: quote missing")
+            elif not quotable and quote:
+                quote_problems.append(f"{alert_id}: quote published for a blocked source")
+            elif isinstance(quote, str) and len(quote) > QUOTE_LIMIT:
+                quote_problems.append(f"{alert_id}: quote longer than {QUOTE_LIMIT}")
     check("quotes", not quote_problems, "; ".join(quote_problems[:5]))
 
     leaked = sorted(

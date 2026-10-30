@@ -11,16 +11,17 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   // alone is about 62KB gzip.
   maxRouteCompressedAssetsBytes: 395_000,
   maxOrdinaryRouteCompressedAssetsBytes: 300_000,
-  // Raised from 100KB (2026-08-23) for the Research Radar graph page, then
-  // from 115KB on 2026-10-30. The situation map island serializes every
-  // exported point into the page. That release measured
-  // /zh/situation/index.html at 128,703 gzip bytes for 349 points.
-  maxPageHtmlGzipBytes: 140_000,
+  // Raised from 100KB (2026-08-23): the multilingual Research Radar graph page
+  // carries enough static graph metadata to sit just over the old cap.
+  // Situation map pages stay inside this cap by embedding markers only.
+  // Embedding full alert prose measured /zh/situation/index.html at 128,703
+  // gzip bytes on 2026-10-30 and is not the generated shape.
+  maxPageHtmlGzipBytes: 115_000,
   maxAverageHtmlBytes: 105_000,
   // Use both a fixed site floor and a compressed per-page ceiling. The 18.7KB
   // baseline includes the complete en/zh/fr catalogue and deterministic CI
   // fixture while the independent
-  // 140KB page cap and route-asset caps continue to catch local regressions.
+  // 115KB page cap and route-asset caps continue to catch local regressions.
   // Release builds stamp each page with a unique release id, source commit,
   // deployment branch, and build timestamp.  Keep enough headroom for those
   // bounded metadata values while preserving the same underlying page budget.
