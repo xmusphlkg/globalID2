@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import json
 import re
 import threading
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -60,6 +62,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DISEASE_CSV = ROOT / "configs" / "standard_diseases.csv"
 KNOWLEDGE_PIPELINE_VERSION = 3
 SOURCE_REFRESH_TTL_DAYS = 30
+_KNOWLEDGE_STAGE_RUN: ContextVar[Any] = ContextVar("knowledge_stage_run", default=None)
 
 SOURCE_GROUPS = {
     "who": ["who", "who_don"],
@@ -113,6 +116,33 @@ def _evidence_entity_aliases(disease: dict[str, Any]) -> list[str]:
 
 class KnowledgeEvidenceInsufficientError(RuntimeError):
     """Raised when automatic source enrichment cannot produce publishable knowledge."""
+
+
+def _knowledge_snapshot(
+    sources: list[DiseaseKnowledgeSource],
+    briefs: list[DiseaseKnowledgeBrief],
+    inherited_sources: list[dict[str, Any]],
+) -> str:
+    """Detect concurrent refresh/repair before writing a model result."""
+    return json.dumps(
+        {
+            "sources": [source_to_dict(row) for row in sources],
+            "briefs": [
+                {attr.key: getattr(row, attr.key) for attr in DiseaseKnowledgeBrief.__mapper__.column_attrs}
+                for row in briefs
+            ],
+            "inherited_sources": inherited_sources,
+        },
+        sort_keys=True, default=str,
+    )
+
+
+def _raise_if_model_work_failed() -> None:
+    from src.ai.work_queue import AIWorkFailed, current_parent
+
+    parent = current_parent()
+    if parent is not None and parent.failures:
+        raise AIWorkFailed("Knowledge model work failed: " + "; ".join(parent.failures))
 
 
 def load_standard_diseases(path: Path = DEFAULT_DISEASE_CSV) -> list[dict[str, Any]]:
@@ -1874,11 +1904,11 @@ async def _generate_brief_result(
     sources: list[dict[str, Any]],
     language: str,
 ) -> dict[str, Any]:
-    return await generator.generate_with_trace(
-        disease=disease,
-        sources=sources,
-        language=language,
+    result = await generator.generate_with_trace(
+        disease=disease, sources=sources, language=language,
     )
+    _raise_if_model_work_failed()
+    return result
 
 
 async def _translate_brief_result(
@@ -1892,13 +1922,15 @@ async def _translate_brief_result(
     translate = getattr(generator, "translate_from_payload_with_trace", None)
     if not callable(translate):
         raise AttributeError("Generator does not support grounded translation")
-    return await translate(
+    result = await translate(
         disease=disease,
         english_payload=english_payload,
         sources=sources,
         target_sections=target_sections,
         language="zh",
     )
+    _raise_if_model_work_failed()
+    return result
 
 
 def _translation_source_usable(
@@ -3266,6 +3298,179 @@ class DiseaseKnowledgeUpdateService:
             "sources": source_dicts,
         }
 
+    @property
+    def _stage_run(self):
+        # A service instance may execute multiple tasks concurrently.
+        return _KNOWLEDGE_STAGE_RUN.get()
+
+    async def _store_source_refresh(
+        self,
+        *,
+        disease: dict[str, Any],
+        disease_payload: dict[str, Any],
+        target_sections: list[str],
+        publication_evidence_sections: list[str],
+        fetch_report: SourceFetchReport,
+        enabled_sources: list[str],
+        task_uuid: str | None,
+    ) -> dict[str, Any]:
+        """Persist candidates and publication eligibility in one store transaction."""
+        candidates = fetch_report.candidates
+        if getattr(self, "_stage_run", None):
+            await self._stage_run.transition("store", metrics={"step": "sources"})
+        async with get_database() as db:
+            await _acquire_disease_knowledge_lock(db, disease["disease_id"])
+            legacy_source_recovery = await _restore_sources_demoted_by_refresh_miss(
+                db, disease_id=disease["disease_id"],
+            )
+            for candidate in candidates:
+                await _upsert_source(db, candidate)
+            source_qualification = await _qualify_pending_sources(db, disease["disease_id"])
+            source_reconciliation = await _reconcile_source_refresh(
+                db, disease["disease_id"], candidates, enabled_sources,
+            )
+            existing_brief_rows = list(
+                (await db.execute(
+                    select(DiseaseKnowledgeBrief)
+                    .where(DiseaseKnowledgeBrief.disease_id == disease["disease_id"])
+                    .order_by(DiseaseKnowledgeBrief.language.asc())
+                )).scalars().all()
+            )
+            source_rows = await _existing_sources(db, disease["disease_id"])
+            source_dicts = [source_to_dict(row) for row in source_rows]
+            profile_schema = resolve_knowledge_profile_schema(disease_payload)
+            profile_schema_signature = knowledge_profile_schema_signature(disease_payload)
+            direct_packet = prepare_evidence_packet(
+                source_dicts,
+                profile_schema,
+                target_sections=publication_evidence_sections,
+                entity_aliases=disease_payload["evidence_entity_aliases"],
+                **_knowledge_evidence_limits(),
+                allowed_source_types=AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES,
+            )
+            direct_evidence_quality = direct_packet.assessment
+            inherited_sources = await _related_parent_sources(db, disease_payload)
+            generation_packet = prepare_evidence_packet(
+                [*direct_packet.sources, *inherited_sources],
+                profile_schema,
+                target_sections=publication_evidence_sections,
+                entity_aliases=disease_payload["evidence_entity_aliases"],
+                **_knowledge_evidence_limits(),
+                allowed_source_types=AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES,
+            )
+            evidence_quality = generation_packet.assessment
+            evidence_gate = _evidence_gate_result(generation_packet)
+            source_packet_manifest_id = generation_packet.manifest.manifest_id
+
+            source_gap = evidence_gate["state"] != "ready_for_generation"
+            source_discovery_result = {
+                "source_gap": source_gap,
+                "adapter_outcomes": fetch_report.adapter_outcomes,
+            }
+            source_discovery_state = _source_discovery_state(source_discovery_result)
+            source_publication_blocked = _source_gap_blocks_publication(
+                source_discovery_result
+            )
+            retained_profiles = 0
+            if source_publication_blocked:
+                reason = str(evidence_gate.get("reason") or "insufficient_source_evidence")
+                coverage = evidence_gate.get("coverage") or {}
+                active_source_ids = _active_approved_source_ids(source_rows)
+                source_records = _source_records_by_id(source_rows)
+                for brief in existing_brief_rows:
+                    retention = _restore_brief_with_retained_evidence(
+                        brief,
+                        disease,
+                        active_source_ids,
+                        source_records,
+                    )
+                    if retention.eligible:
+                        retained_profiles += 1
+                        continue
+                    brief.status = "draft"
+                    brief.metadata_ = {
+                        **_brief_metadata(brief),
+                        "automation_state": "awaiting_evidence",
+                        "block_reason": reason,
+                        "evidence_policy_version": EVIDENCE_POLICY_VERSION,
+                        "source_strategy_version": KNOWLEDGE_SOURCE_STRATEGY_VERSION,
+                        "source_packet_manifest_id": source_packet_manifest_id,
+                        "source_coverage": coverage,
+                        "profile_schema_signature": profile_schema_signature,
+                    }
+                await db.flush()
+            await _log_task(
+                task_uuid,
+                entry_type="warning" if source_gap else "success",
+                title=(
+                    "Knowledge Sources Need Enrichment"
+                    if source_gap
+                    else "Knowledge Sources Refreshed"
+                ),
+                content=(
+                    f"Refreshed {len(source_dicts)} direct source row(s) for "
+                    f"{disease['disease_id']} without invoking the AI brief generator."
+                ),
+                metadata={
+                    "disease_id": disease["disease_id"],
+                    "source_count": len(source_dicts),
+                    "source_qualification": source_qualification,
+                    "legacy_source_recovery": legacy_source_recovery,
+                    "source_reconciliation": source_reconciliation,
+                    "inherited_source_count": len(inherited_sources),
+                    "source_packet_manifest_id": source_packet_manifest_id,
+                    "source_gap": source_gap,
+                    "source_discovery_state": source_discovery_state,
+                    "source_publication_blocked": source_publication_blocked,
+                    "retained_profiles": retained_profiles,
+                    "evidence_gate": evidence_gate,
+                    "evidence_quality": evidence_quality.to_dict(),
+                    "direct_evidence_quality": direct_evidence_quality.to_dict(),
+                    "adapter_outcomes": fetch_report.adapter_outcomes,
+                    "adapter_durations": fetch_report.adapter_durations,
+                    "evidence_limits": _knowledge_evidence_limits(),
+                    "evidence_policy_version": EVIDENCE_POLICY_VERSION,
+                    "source_strategy_version": KNOWLEDGE_SOURCE_STRATEGY_VERSION,
+                    "profile_schema_signature": profile_schema_signature,
+                    "workflow_stage": "knowledge_sources_refreshed",
+                },
+                success=not source_gap,
+            )
+            if getattr(self, "_stage_run", None):
+                await self._stage_run.mark_dirty(db, "sources")
+            from src.services.ingestion.capture import _current
+            if _current.get():
+                _current.get().verify()
+            await db.commit()
+            if task_uuid:
+                await task_manager.update_task_progress(task_uuid, 100)
+            return {
+                "disease_id": disease["disease_id"],
+                "knowledge_profile_type": disease["knowledge_profile_type"],
+                "target_sections": target_sections,
+                "evidence_target_sections": publication_evidence_sections,
+                "fetched_sources": len(candidates),
+                "total_sources": len(source_dicts),
+                "inherited_source_count": len(inherited_sources),
+                "evidence_quality": evidence_quality.to_dict(),
+                "direct_evidence_quality": direct_evidence_quality.to_dict(),
+                "adapter_outcomes": fetch_report.adapter_outcomes,
+                "adapter_durations": fetch_report.adapter_durations,
+                "source_packet_manifest_id": source_packet_manifest_id,
+                "source_gap": source_gap,
+                "source_discovery_state": source_discovery_state,
+                "source_publication_blocked": source_publication_blocked,
+                "retained_profiles": retained_profiles,
+                "evidence_gate": evidence_gate,
+                "evidence_policy_version": EVIDENCE_POLICY_VERSION,
+                "source_strategy_version": KNOWLEDGE_SOURCE_STRATEGY_VERSION,
+                "profile_schema_signature": profile_schema_signature,
+                "uncovered_sections": list(
+                    generation_packet.coverage.missing_required_sections
+                ),
+                "source_only": True,
+            }
+
     async def update_disease(
         self,
         disease_id: str,
@@ -3287,6 +3492,10 @@ class DiseaseKnowledgeUpdateService:
         if exclusion_reason:
             archived_profiles = 0
             if not dry_run:
+                if self._stage_run:
+                    if self._stage_run.current != "organize":
+                        await self._stage_run.transition("organize", metrics={"step": "non_public"})
+                    await self._stage_run.transition("store", metrics={"step": "archive"})
                 async with get_database() as db:
                     await _acquire_disease_knowledge_lock(db, disease["disease_id"])
                     archived_profiles = await _archive_non_public_disease_briefs(
@@ -3294,6 +3503,8 @@ class DiseaseKnowledgeUpdateService:
                         disease["disease_id"],
                         exclusion_reason,
                     )
+                    if archived_profiles and getattr(self, "_stage_run", None):
+                        await self._stage_run.mark_dirty(db, disease["disease_id"])
                     await db.commit()
             await _log_task(
                 task_uuid,
@@ -3375,32 +3586,41 @@ class DiseaseKnowledgeUpdateService:
                 "evidence_target_sections": target_sections,
                 "evidence_entity_aliases": _evidence_entity_aliases(disease),
             }
-            fetch_report = await _fetch_sources_for_update(
-                self.fetcher,
-                disease_payload,
-                enabled_sources=enabled_sources,
-                target_sections=target_sections,
-            )
-            candidates = fetch_report.candidates
-            source_dicts = [
-                {
-                    "id": idx + 1,
-                    "disease_id": c.disease_id,
-                    "source_type": c.source_type,
-                    "source_name": c.source_name,
-                    "url": c.url,
-                    "resolved_url": getattr(c, "resolved_url", None) or c.url,
-                    "title": c.title,
-                    "license": c.license,
-                    "status": c.status,
-                    "review_status": c.review_status,
-                    "raw_excerpt": c.raw_excerpt,
-                    "content_text": getattr(c, "content_text", None),
-                    "content_sections": getattr(c, "content_sections", None) or [],
-                    "metadata": c.metadata or {},
-                }
-                for idx, c in enumerate(candidates)
-            ]
+            fetch_report = SourceFetchReport(candidates=[], adapter_outcomes={}, adapter_durations={})
+            candidates = []
+            if source_only:
+                fetch_report = await _fetch_sources_for_update(
+                    self.fetcher,
+                    disease_payload,
+                    enabled_sources=enabled_sources,
+                    target_sections=target_sections,
+                )
+                candidates = fetch_report.candidates
+                source_dicts = [
+                    {
+                        "id": idx + 1,
+                        "disease_id": c.disease_id,
+                        "source_type": c.source_type,
+                        "source_name": c.source_name,
+                        "url": c.url,
+                        "resolved_url": getattr(c, "resolved_url", None) or c.url,
+                        "title": c.title,
+                        "license": c.license,
+                        "status": c.status,
+                        "review_status": c.review_status,
+                        "raw_excerpt": c.raw_excerpt,
+                        "content_text": getattr(c, "content_text", None),
+                        "content_sections": getattr(c, "content_sections", None) or [],
+                        "metadata": c.metadata or {},
+                    }
+                    for idx, c in enumerate(candidates)
+                ]
+            else:
+                async with get_database() as db:
+                    source_dicts = [source_to_dict(row) for row in await _existing_sources(db, disease["disease_id"])]
+                    source_dicts.extend(await _related_parent_sources(db, disease_payload))
+            if self._stage_run and self._stage_run.current != "organize":
+                await self._stage_run.transition("organize", metrics={"step": "evidence" if source_only else "brief"})
             profile_schema = resolve_knowledge_profile_schema(disease_payload)
             profile_schema_signature = knowledge_profile_schema_signature(disease_payload)
             evidence_packet = prepare_evidence_packet(
@@ -3429,7 +3649,7 @@ class DiseaseKnowledgeUpdateService:
             if not evidence_quality.sufficient:
                 reason = _evidence_block_reason(source_dicts)
                 raise KnowledgeEvidenceInsufficientError(
-                    f"{disease['disease_id']} source enrichment exhausted: {reason}. "
+                    f"{disease['disease_id']} stored evidence insufficient: {reason}. "
                     "No disease brief was generated."
                 )
             # Generate languages sequentially so process-wide model cooldowns
@@ -3490,559 +3710,397 @@ class DiseaseKnowledgeUpdateService:
                 "sources": source_dicts,
             }
 
-        async with get_database() as db:
-            await _acquire_disease_knowledge_lock(db, disease["disease_id"])
-            legacy_source_recovery = await _restore_sources_demoted_by_refresh_miss(
-                db,
-                disease_id=disease["disease_id"],
-            )
-            existing = await _existing_sources(db, disease["disease_id"])
-            source_qualification = await _qualify_pending_sources(
-                db,
-                disease["disease_id"],
-            )
-            if source_qualification["rejected"]:
-                existing = await _existing_sources(db, disease["disease_id"])
-            existing_source_dicts = [source_to_dict(row) for row in existing]
-            existing_has_public_sources = _has_approved_public_sources(existing_source_dicts)
-            source_refresh_required = _sources_need_refresh(existing)
-            existing_brief_rows = list(
-                (
-                    await db.execute(
-                        select(DiseaseKnowledgeBrief)
-                        .where(DiseaseKnowledgeBrief.disease_id == disease["disease_id"])
-                        .order_by(DiseaseKnowledgeBrief.language.asc())
-                    )
-                ).scalars().all()
-            )
-            existing_briefs_by_language = {
-                brief.language: brief for brief in existing_brief_rows
-            }
-            ordered_sections = [
-                "brief",
-                *disease["profile_schema"]["required_fields"],
-                *disease["profile_schema"]["optional_fields"],
-            ]
-            target_sections_by_language = _resolve_repair_sections_by_language(
-                existing_brief_rows,
-                disease,
-                ordered_sections=ordered_sections,
-                force=force,
-                target_languages=target_languages,
-                requested_sections_by_language=requested_sections_by_language,
-            )
-            normalized_repair_reasons = _normalize_repair_reasons_by_language(
-                repair_reasons_by_language
-            )
-            target_set = {
-                field
-                for fields in target_sections_by_language.values()
-                for field in fields
-            }
-            target_sections = [field for field in ordered_sections if field in target_set]
-            publication_evidence_sections = _publication_evidence_sections(
-                resolve_knowledge_profile_schema(disease)
-            )
+        publication_evidence_sections = _publication_evidence_sections(
+            resolve_knowledge_profile_schema(disease)
+        )
+        if source_only:
             disease_payload = {
                 **disease,
-                # Source discovery and publication validation always cover the
-                # complete required profile.  ``target_sections`` later narrows
-                # only the prose being rewritten, never the evidence contract.
                 "target_sections": publication_evidence_sections,
                 "evidence_target_sections": publication_evidence_sections,
-                "repair_target_sections": target_sections,
                 "evidence_entity_aliases": _evidence_entity_aliases(disease),
             }
-            source_refresh_reusable = (
-                bool(source_refreshed_task_uuid)
-                and not source_only
-                and not force
-                and existing_has_public_sources
+            fetch_report = await _fetch_sources_for_update(
+                self.fetcher, disease_payload, enabled_sources=enabled_sources,
+                target_sections=publication_evidence_sections,
             )
-            candidates = []
-            fetch_report = SourceFetchReport(
-                candidates=[],
-                adapter_outcomes={},
-                adapter_durations={},
-            )
-            source_reconciliation = {
-                "refreshed_source_count": 0,
-                "retained_source_count": 0,
-            }
-            if (
-                force
-                or source_only
-                or not existing
-                or not existing_has_public_sources
-                or (target_sections and not source_refresh_reusable)
-                or (source_refresh_required and not source_refresh_reusable)
-            ):
-                fetch_report = await _fetch_sources_for_update(
-                    self.fetcher,
-                    disease_payload,
-                    enabled_sources=enabled_sources,
-                    target_sections=publication_evidence_sections,
-                )
-                candidates = fetch_report.candidates
-                for candidate in candidates:
-                    await _upsert_source(db, candidate)
-                qualification_update = await _qualify_pending_sources(
-                    db,
-                    disease["disease_id"],
-                )
-                source_qualification = {
-                    "rejected": source_qualification["rejected"]
-                    + qualification_update["rejected"],
-                    "retained_for_ai_review": qualification_update[
-                        "retained_for_ai_review"
-                    ],
-                }
-                source_reconciliation = await _reconcile_source_refresh(
-                    db,
-                    disease["disease_id"],
-                    candidates,
-                    enabled_sources,
-                )
-                await _log_task(
-                    task_uuid,
-                    entry_type="info",
-                    title="Source Fetch Completed",
-                    content=(
-                        f"Fetched {len(candidates)} candidate source(s) for {disease['disease_id']} "
-                        f"from {', '.join(enabled_sources)}"
-                    ),
-                    metadata={
-                        "disease_id": disease["disease_id"],
-                        "fetched_sources": len(candidates),
-                        "source_groups": enabled_sources,
-                        "adapter_outcomes": fetch_report.adapter_outcomes,
-                        "adapter_durations": fetch_report.adapter_durations,
-                        "target_sections": publication_evidence_sections,
-                        "repair_target_sections": target_sections,
-                        "source_only": source_only,
-                        "source_qualification": source_qualification,
-                        "legacy_source_recovery": legacy_source_recovery,
-                        "source_reconciliation": source_reconciliation,
-                        "workflow_stage": "source_fetch_completed",
-                    },
-                )
-            else:
-                await _log_task(
-                    task_uuid,
-                    entry_type="info",
-                    title="Source Reuse",
-                    content=(
-                        f"Reusing {len(existing)} existing source row(s) for {disease['disease_id']} "
-                        "because force refresh is disabled."
-                    ),
-                    metadata={
-                        "disease_id": disease["disease_id"],
-                        "reused_sources": len(existing),
-                        "source_refreshed_task_uuid": source_refreshed_task_uuid,
-                        "legacy_source_recovery": legacy_source_recovery,
-                        "workflow_stage": "source_reuse",
-                    },
-                )
-
+            if getattr(self, "_stage_run", None):
+                await self._stage_run.transition("organize", metrics={"step": "evidence"})
             await _raise_if_cancelled(task_uuid)
-            if task_uuid:
-                await task_manager.update_task_progress(task_uuid, 40)
+            return await self._store_source_refresh(
+                disease=disease, disease_payload=disease_payload,
+                target_sections=publication_evidence_sections,
+                publication_evidence_sections=publication_evidence_sections,
+                fetch_report=fetch_report, enabled_sources=enabled_sources, task_uuid=task_uuid,
+            )
 
+        if self._stage_run and self._stage_run.current != "organize":
+            await self._stage_run.transition("organize", metrics={"step": "brief"})
+        # Read a detached snapshot. No session or advisory lock survives model waiting.
+        async with get_database() as db:
             source_rows = await _existing_sources(db, disease["disease_id"])
             source_dicts = [source_to_dict(row) for row in source_rows]
-            brief_rows = []
-            profile_schema = resolve_knowledge_profile_schema(disease_payload)
-            profile_schema_signature = knowledge_profile_schema_signature(disease_payload)
-            direct_packet = prepare_evidence_packet(
-                source_dicts,
-                profile_schema,
-                target_sections=publication_evidence_sections,
-                entity_aliases=disease_payload["evidence_entity_aliases"],
-                **_knowledge_evidence_limits(),
-                allowed_source_types=AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES,
+            inherited_sources = await _related_parent_sources(db, disease)
+            existing_brief_rows = list(
+                (await db.execute(
+                    select(DiseaseKnowledgeBrief)
+                    .where(DiseaseKnowledgeBrief.disease_id == disease["disease_id"])
+                    .order_by(DiseaseKnowledgeBrief.language.asc())
+                )).scalars().all()
             )
-            direct_evidence_quality = direct_packet.assessment
-            inherited_sources = await _related_parent_sources(db, disease_payload)
-            generation_packet = prepare_evidence_packet(
-                [*direct_packet.sources, *inherited_sources],
-                profile_schema,
-                target_sections=publication_evidence_sections,
-                entity_aliases=disease_payload["evidence_entity_aliases"],
-                **_knowledge_evidence_limits(),
-                allowed_source_types=AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES,
-            )
-            evidence_quality = generation_packet.assessment
-            evidence_gate = _evidence_gate_result(generation_packet)
-            registry_definition_only = _is_registry_definition_only_packet(
-                generation_packet
-            )
-            generation_sources = list(generation_packet.sources)
-            source_packet_manifest_id = generation_packet.manifest.manifest_id
+            snapshot = _knowledge_snapshot(source_rows, existing_brief_rows, inherited_sources)
 
-            if source_only:
-                source_gap = evidence_gate["state"] != "ready_for_generation"
-                source_discovery_result = {
-                    "source_gap": source_gap,
-                    "adapter_outcomes": fetch_report.adapter_outcomes,
-                }
-                source_discovery_state = _source_discovery_state(source_discovery_result)
-                source_publication_blocked = _source_gap_blocks_publication(
-                    source_discovery_result
-                )
-                retained_profiles = 0
-                if source_publication_blocked:
-                    reason = str(evidence_gate.get("reason") or "insufficient_source_evidence")
-                    coverage = evidence_gate.get("coverage") or {}
-                    active_source_ids = _active_approved_source_ids(source_rows)
-                    source_records = _source_records_by_id(source_rows)
-                    for brief in existing_brief_rows:
-                        retention = _restore_brief_with_retained_evidence(
-                            brief,
-                            disease,
-                            active_source_ids,
-                            source_records,
-                        )
-                        if retention.eligible:
-                            retained_profiles += 1
-                            continue
-                        brief.status = "draft"
-                        brief.metadata_ = {
-                            **_brief_metadata(brief),
-                            "automation_state": "awaiting_evidence",
-                            "block_reason": reason,
-                            "evidence_policy_version": EVIDENCE_POLICY_VERSION,
-                            "source_strategy_version": KNOWLEDGE_SOURCE_STRATEGY_VERSION,
-                            "source_packet_manifest_id": source_packet_manifest_id,
-                            "source_coverage": coverage,
-                            "profile_schema_signature": profile_schema_signature,
-                        }
-                    await db.flush()
-                await _log_task(
-                    task_uuid,
-                    entry_type="warning" if source_gap else "success",
-                    title=(
-                        "Knowledge Sources Need Enrichment"
-                        if source_gap
-                        else "Knowledge Sources Refreshed"
-                    ),
-                    content=(
-                        f"Refreshed {len(source_dicts)} direct source row(s) for "
-                        f"{disease['disease_id']} without invoking the AI brief generator."
-                    ),
-                    metadata={
-                        "disease_id": disease["disease_id"],
-                        "source_count": len(source_dicts),
-                        "inherited_source_count": len(inherited_sources),
-                        "source_packet_manifest_id": source_packet_manifest_id,
-                        "source_gap": source_gap,
-                        "source_discovery_state": source_discovery_state,
-                        "source_publication_blocked": source_publication_blocked,
-                        "retained_profiles": retained_profiles,
-                        "evidence_gate": evidence_gate,
-                        "evidence_quality": evidence_quality.to_dict(),
-                        "direct_evidence_quality": direct_evidence_quality.to_dict(),
-                        "adapter_outcomes": fetch_report.adapter_outcomes,
-                        "adapter_durations": fetch_report.adapter_durations,
-                        "evidence_limits": _knowledge_evidence_limits(),
-                        "evidence_policy_version": EVIDENCE_POLICY_VERSION,
-                        "source_strategy_version": KNOWLEDGE_SOURCE_STRATEGY_VERSION,
-                        "profile_schema_signature": profile_schema_signature,
-                        "workflow_stage": "knowledge_sources_refreshed",
-                    },
-                    success=not source_gap,
-                )
-                await db.commit()
-                if task_uuid:
-                    await task_manager.update_task_progress(task_uuid, 100)
-                return {
-                    "disease_id": disease["disease_id"],
-                    "knowledge_profile_type": disease["knowledge_profile_type"],
-                    "target_sections": target_sections,
-                    "evidence_target_sections": publication_evidence_sections,
-                    "fetched_sources": len(candidates),
-                    "total_sources": len(source_dicts),
-                    "inherited_source_count": len(inherited_sources),
-                    "evidence_quality": evidence_quality.to_dict(),
-                    "direct_evidence_quality": direct_evidence_quality.to_dict(),
-                    "adapter_outcomes": fetch_report.adapter_outcomes,
-                    "adapter_durations": fetch_report.adapter_durations,
-                    "source_packet_manifest_id": source_packet_manifest_id,
-                    "source_gap": source_gap,
-                    "source_discovery_state": source_discovery_state,
-                    "source_publication_blocked": source_publication_blocked,
-                    "retained_profiles": retained_profiles,
-                    "evidence_gate": evidence_gate,
-                    "evidence_policy_version": EVIDENCE_POLICY_VERSION,
-                    "source_strategy_version": KNOWLEDGE_SOURCE_STRATEGY_VERSION,
-                    "profile_schema_signature": profile_schema_signature,
-                    "uncovered_sections": list(
-                        generation_packet.coverage.missing_required_sections
-                    ),
-                    "source_only": True,
-                }
+        existing_briefs_by_language = {
+            brief.language: brief for brief in existing_brief_rows
+        }
+        ordered_sections = [
+            "brief",
+            *disease["profile_schema"]["required_fields"],
+            *disease["profile_schema"]["optional_fields"],
+        ]
+        target_sections_by_language = _resolve_repair_sections_by_language(
+            existing_brief_rows,
+            disease,
+            ordered_sections=ordered_sections,
+            force=force,
+            target_languages=target_languages,
+            requested_sections_by_language=requested_sections_by_language,
+        )
+        normalized_repair_reasons = _normalize_repair_reasons_by_language(
+            repair_reasons_by_language
+        )
+        target_set = {
+            field
+            for fields in target_sections_by_language.values()
+            for field in fields
+        }
+        target_sections = [field for field in ordered_sections if field in target_set]
+        publication_evidence_sections = _publication_evidence_sections(
+            resolve_knowledge_profile_schema(disease)
+        )
+        disease_payload = {
+            **disease,
+            # Source discovery and publication validation always cover the
+            # complete required profile.  ``target_sections`` later narrows
+            # only the prose being rewritten, never the evidence contract.
+            "target_sections": publication_evidence_sections,
+            "evidence_target_sections": publication_evidence_sections,
+            "repair_target_sections": target_sections,
+            "evidence_entity_aliases": _evidence_entity_aliases(disease),
+        }
+        candidates = []
+        fetch_report = SourceFetchReport(candidates=[], adapter_outcomes={}, adapter_durations={})
+        brief_rows = []
+        await _raise_if_cancelled(task_uuid)
+        if task_uuid:
+            await task_manager.update_task_progress(task_uuid, 40)
+        profile_schema = resolve_knowledge_profile_schema(disease_payload)
+        profile_schema_signature = knowledge_profile_schema_signature(disease_payload)
+        direct_packet = prepare_evidence_packet(
+            source_dicts,
+            profile_schema,
+            target_sections=publication_evidence_sections,
+            entity_aliases=disease_payload["evidence_entity_aliases"],
+            **_knowledge_evidence_limits(),
+            allowed_source_types=AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES,
+        )
+        direct_evidence_quality = direct_packet.assessment
+        generation_packet = prepare_evidence_packet(
+            [*direct_packet.sources, *inherited_sources],
+            profile_schema,
+            target_sections=publication_evidence_sections,
+            entity_aliases=disease_payload["evidence_entity_aliases"],
+            **_knowledge_evidence_limits(),
+            allowed_source_types=AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES,
+        )
+        evidence_quality = generation_packet.assessment
+        evidence_gate = _evidence_gate_result(generation_packet)
+        registry_definition_only = _is_registry_definition_only_packet(
+            generation_packet
+        )
+        generation_sources = list(generation_packet.sources)
+        source_packet_manifest_id = generation_packet.manifest.manifest_id
 
-            if evidence_gate["state"] != "ready_for_generation":
-                reason = str(evidence_gate["reason"] or "insufficient_source_evidence")
-                await _log_task(
-                    task_uuid,
-                    entry_type="error",
-                    title="Knowledge Evidence Blocked",
-                    content=(
-                        f"Automatic source enrichment for {disease['disease_id']} did not produce "
-                        f"usable evidence ({reason}). No disease brief was generated or persisted."
-                    ),
-                    metadata={
-                        "disease_id": disease["disease_id"],
-                        "source_count": len(source_dicts),
-                        "reason": reason,
-                        "evidence_gate": evidence_gate,
-                        "workflow_stage": "knowledge_evidence_blocked",
-                    },
-                    success=False,
-                )
-                raise KnowledgeEvidenceInsufficientError(
-                    f"{disease['disease_id']} source enrichment exhausted: {reason}. "
-                    f"Missing required sections: {', '.join(generation_packet.coverage.missing_required_sections) or 'none'}. "
-                    "No disease brief was generated or persisted."
-                )
-
-            if task_uuid:
-                await task_manager.update_task_progress(task_uuid, 55)
-
-            brief_languages = ("en", "zh")
-            if refresh_existing_on_source_change:
-                for language in ("en", "zh"):
-                    existing_brief = existing_briefs_by_language.get(language)
-                    if existing_brief is None:
-                        continue
-                    previous_packet_id = _brief_metadata(existing_brief).get(
-                        "source_packet_manifest_id"
-                    )
-                    if previous_packet_id != source_packet_manifest_id:
-                        target_sections_by_language[language] = list(ordered_sections)
-            # Registry evidence can publish the entity definition and a short
-            # lead only. Optional legacy sections are cleared by
-            # _merge_repair_payload during a semantic contract migration.
-            target_sections_by_language = _registry_definition_target_sections(
-                target_sections_by_language,
-                registry_definition_only=registry_definition_only,
-            )
-            target_set = {
-                field
-                for fields in target_sections_by_language.values()
-                for field in fields
-            }
-            target_sections = [field for field in ordered_sections if field in target_set]
-            disease_payload = {
-                **disease_payload,
-                "target_sections": target_sections,
-                "evidence_target_sections": publication_evidence_sections,
-                "_evidence_packet_prepared": True,
-            }
-
-            for language in brief_languages:
-                language_targets = target_sections_by_language[language]
-                await _log_task(
-                    task_uuid,
-                    entry_type="info",
-                    title=(
-                        f"Generating {language.upper()} Brief"
-                        if language_targets
-                        else f"Keeping {language.upper()} Brief Locked"
-                    ),
-                    content=(
-                        f"Target sections for {language.upper()}: "
-                        f"{', '.join(language_targets) if language_targets else 'none; existing profile is retained'}. "
-                        f"Evidence includes {len(source_dicts)} direct and {len(inherited_sources)} scoped parent source row(s)."
-                    ),
-                    metadata={
-                        "disease_id": disease["disease_id"],
-                        "language": language,
-                        "source_count": len(source_dicts),
-                        "inherited_source_count": len(inherited_sources),
-                        "target_sections": language_targets,
-                        "repair_reasons": normalized_repair_reasons.get(language, []),
-                        "workflow_stage": f"brief_generation_{language}",
-                    },
-                )
-
-            generation_languages = [
-                language for language in brief_languages if target_sections_by_language[language]
-            ]
-            results_by_language: dict[str, dict[str, Any]] = {}
-            for language in generation_languages:
-                language_targets = target_sections_by_language[language]
-                if language == "zh" and _model_center_route_failure(results_by_language.get("en")):
-                    skipped = _skipped_language_after_route_failure(
-                        disease=disease_payload,
-                        language=language,
-                        target_sections=language_targets,
-                        upstream_language="en",
-                    )
-                    results_by_language[language] = skipped
-                    continue
-                if (
-                    language == "zh"
-                    and ai_config.knowledge_translate_zh_from_en
-                    and callable(getattr(generator, "translate_from_payload_with_trace", None))
-                ):
-                    english_result = results_by_language.get("en")
-                    if english_result is None and "en" not in generation_languages:
-                        existing_en = existing_briefs_by_language.get("en")
-                        if existing_en is not None:
-                            english_result = _locked_existing_brief_result(
-                                existing_en,
-                                disease_payload,
-                            )
-                    if _translation_source_usable(
-                        english_result,
-                        target_sections=language_targets,
-                    ):
-                        translated = await _translate_brief_result(
-                            generator,
-                            disease={
-                                **disease_payload,
-                                "target_sections": language_targets,
-                                "repair_context": normalized_repair_reasons.get(language, []),
-                            },
-                            english_payload=english_result["payload"],
-                            sources=generation_sources,
-                            target_sections=language_targets,
-                        )
-                        translation_trace = (
-                            translated.get("trace")
-                            if isinstance(translated.get("trace"), dict)
-                            else {}
-                        )
-                        translated_payload = (
-                            translated.get("payload")
-                            if isinstance(translated.get("payload"), dict)
-                            else {}
-                        )
-                        if (
-                            not translation_trace.get("error")
-                            and not translation_trace.get("citation_failures")
-                            and str(translated_payload.get("status") or "").strip().lower()
-                            == "published"
-                        ):
-                            results_by_language[language] = translated
-                            continue
-                        await _log_task(
-                            task_uuid,
-                            entry_type="warning",
-                            title="ZH Translation Fallback",
-                            content=(
-                                "Grounded EN-to-ZH translation did not pass validation; "
-                                "falling back to full evidence generation."
-                            ),
-                            metadata={
-                                "disease_id": disease["disease_id"],
-                                "language": language,
-                                "target_sections": language_targets,
-                                "trace_error": translation_trace.get("error"),
-                                "citation_failures": translation_trace.get("citation_failures"),
-                                "workflow_stage": "brief_generation_zh_translation_fallback",
-                            },
-                            success=False,
-                        )
-                generated = await _generate_brief_result(
-                    generator,
-                    disease={
-                        **disease_payload,
-                        "target_sections": language_targets,
-                        "repair_context": normalized_repair_reasons.get(language, []),
-                    },
-                    sources=generation_sources,
-                    language=language,
-                )
-                results_by_language[language] = generated
-            for language in brief_languages:
-                if language not in results_by_language:
-                    existing_brief = existing_briefs_by_language.get(language)
-                    if existing_brief is not None:
-                        results_by_language[language] = _locked_existing_brief_result(
-                            existing_brief, disease_payload
-                        )
-            generated_results = [
-                results_by_language[language]
-                for language in brief_languages
-                if language in results_by_language
-            ]
-
-            for result in generated_results:
-                language = str(result.get("payload", {}).get("language") or "")
-                result["payload"] = _merge_repair_payload(
-                    result["payload"],
-                    existing_briefs_by_language.get(language),
-                    target_sections_by_language[language],
-                    disease_payload,
-                )
-
-            generation_failures = [
-                *_generated_profile_failures(
-                    generated_results,
-                    target_sections_by_language=target_sections_by_language,
-                    allow_progressive_drafts=bool(requested_sections_by_language),
+        if evidence_gate["state"] != "ready_for_generation":
+            reason = str(evidence_gate["reason"] or "insufficient_source_evidence")
+            await _log_task(
+                task_uuid,
+                entry_type="error",
+                title="Knowledge Evidence Blocked",
+                content=(
+                    f"Stored sources for {disease['disease_id']} lack usable evidence ({reason}). "
+                    "Run REFRESH_DISEASE_KNOWLEDGE_SOURCES before retrying the brief task."
                 ),
-                *_bilingual_alignment_failures(generated_results),
-            ]
-            if generation_failures:
-                for result in generated_results:
-                    payload = result.get("payload") if isinstance(result.get("payload"), dict) else {}
-                    trace = result.get("trace") if isinstance(result.get("trace"), dict) else {}
-                    language = str(payload.get("language") or trace.get("language") or "unknown").strip().lower()
+                metadata={
+                    "disease_id": disease["disease_id"],
+                    "source_count": len(source_dicts),
+                    "reason": reason,
+                    "evidence_gate": evidence_gate,
+                    "workflow_stage": "knowledge_evidence_blocked",
+                },
+                success=False,
+            )
+            raise KnowledgeEvidenceInsufficientError(
+                f"{disease['disease_id']} stored evidence insufficient: {reason}. "
+                f"Missing required sections: {', '.join(generation_packet.coverage.missing_required_sections) or 'none'}. "
+                "Run REFRESH_DISEASE_KNOWLEDGE_SOURCES before retrying. No brief was persisted."
+            )
+
+        if task_uuid:
+            await task_manager.update_task_progress(task_uuid, 55)
+
+        brief_languages = ("en", "zh")
+        if refresh_existing_on_source_change:
+            for language in ("en", "zh"):
+                existing_brief = existing_briefs_by_language.get(language)
+                if existing_brief is None:
+                    continue
+                previous_packet_id = _brief_metadata(existing_brief).get(
+                    "source_packet_manifest_id"
+                )
+                if previous_packet_id != source_packet_manifest_id:
+                    target_sections_by_language[language] = list(ordered_sections)
+        # Registry evidence can publish the entity definition and a short
+        # lead only. Optional legacy sections are cleared by
+        # _merge_repair_payload during a semantic contract migration.
+        target_sections_by_language = _registry_definition_target_sections(
+            target_sections_by_language,
+            registry_definition_only=registry_definition_only,
+        )
+        target_set = {
+            field
+            for fields in target_sections_by_language.values()
+            for field in fields
+        }
+        target_sections = [field for field in ordered_sections if field in target_set]
+        disease_payload = {
+            **disease_payload,
+            "target_sections": target_sections,
+            "evidence_target_sections": publication_evidence_sections,
+            "_evidence_packet_prepared": True,
+        }
+
+        for language in brief_languages:
+            language_targets = target_sections_by_language[language]
+            await _log_task(
+                task_uuid,
+                entry_type="info",
+                title=(
+                    f"Generating {language.upper()} Brief"
+                    if language_targets
+                    else f"Keeping {language.upper()} Brief Locked"
+                ),
+                content=(
+                    f"Target sections for {language.upper()}: "
+                    f"{', '.join(language_targets) if language_targets else 'none; existing profile is retained'}. "
+                    f"Evidence includes {len(source_dicts)} direct and {len(inherited_sources)} scoped parent source row(s)."
+                ),
+                metadata={
+                    "disease_id": disease["disease_id"],
+                    "language": language,
+                    "source_count": len(source_dicts),
+                    "inherited_source_count": len(inherited_sources),
+                    "target_sections": language_targets,
+                    "repair_reasons": normalized_repair_reasons.get(language, []),
+                    "workflow_stage": f"brief_generation_{language}",
+                },
+            )
+
+        generation_languages = [
+            language for language in brief_languages if target_sections_by_language[language]
+        ]
+        results_by_language: dict[str, dict[str, Any]] = {}
+        for language in generation_languages:
+            language_targets = target_sections_by_language[language]
+            if language == "zh" and _model_center_route_failure(results_by_language.get("en")):
+                skipped = _skipped_language_after_route_failure(
+                    disease=disease_payload,
+                    language=language,
+                    target_sections=language_targets,
+                    upstream_language="en",
+                )
+                results_by_language[language] = skipped
+                continue
+            if (
+                language == "zh"
+                and ai_config.knowledge_translate_zh_from_en
+                and callable(getattr(generator, "translate_from_payload_with_trace", None))
+            ):
+                english_result = results_by_language.get("en")
+                if english_result is None and "en" not in generation_languages:
+                    existing_en = existing_briefs_by_language.get("en")
+                    if existing_en is not None:
+                        english_result = _locked_existing_brief_result(
+                            existing_en,
+                            disease_payload,
+                        )
+                if _translation_source_usable(
+                    english_result,
+                    target_sections=language_targets,
+                ):
+                    translated = await _translate_brief_result(
+                        generator,
+                        disease={
+                            **disease_payload,
+                            "target_sections": language_targets,
+                            "repair_context": normalized_repair_reasons.get(language, []),
+                        },
+                        english_payload=english_result["payload"],
+                        sources=generation_sources,
+                        target_sections=language_targets,
+                    )
+                    translation_trace = (
+                        translated.get("trace")
+                        if isinstance(translated.get("trace"), dict)
+                        else {}
+                    )
+                    translated_payload = (
+                        translated.get("payload")
+                        if isinstance(translated.get("payload"), dict)
+                        else {}
+                    )
+                    if (
+                        not translation_trace.get("error")
+                        and not translation_trace.get("citation_failures")
+                        and str(translated_payload.get("status") or "").strip().lower()
+                        == "published"
+                    ):
+                        results_by_language[language] = translated
+                        continue
                     await _log_task(
                         task_uuid,
                         entry_type="warning",
-                        title=f"{language.upper()} Brief Attempt Rejected",
+                        title="ZH Translation Fallback",
                         content=(
-                            "The generated attempt was not persisted because the publication gate "
-                            "found an unsupported, incomplete, or invalid target field."
+                            "Grounded EN-to-ZH translation did not pass validation; "
+                            "falling back to full evidence generation."
                         ),
                         metadata={
                             "disease_id": disease["disease_id"],
                             "language": language,
-                            "target_sections": target_sections_by_language.get(language, []),
-                            "trace_error": trace.get("error"),
-                            "citation_failures": trace.get("citation_failures") or [],
-                            "quality_repair": (payload.get("metadata") or {}).get("quality_repair"),
-                            "workflow_stage": f"brief_generation_{language}_rejected",
+                            "target_sections": language_targets,
+                            "trace_error": translation_trace.get("error"),
+                            "citation_failures": translation_trace.get("citation_failures"),
+                            "workflow_stage": "brief_generation_zh_translation_fallback",
                         },
                         success=False,
-                        prompt=trace.get("prompt") if isinstance(trace.get("prompt"), str) else None,
-                        response=trace.get("response") if isinstance(trace.get("response"), str) else None,
-                        model_used=trace.get("model") if isinstance(trace.get("model"), str) else None,
-                        tokens_used=_total_tokens_from_usage(trace.get("token_usage")),
-                        duration=(
-                            float(trace.get("duration"))
-                            if trace.get("duration") is not None
-                            else None
-                        ),
                     )
+            generated = await _generate_brief_result(
+                generator,
+                disease={
+                    **disease_payload,
+                    "target_sections": language_targets,
+                    "repair_context": normalized_repair_reasons.get(language, []),
+                },
+                sources=generation_sources,
+                language=language,
+            )
+            results_by_language[language] = generated
+        for language in brief_languages:
+            if language not in results_by_language:
+                existing_brief = existing_briefs_by_language.get(language)
+                if existing_brief is not None:
+                    results_by_language[language] = _locked_existing_brief_result(
+                        existing_brief, disease_payload
+                    )
+        generated_results = [
+            results_by_language[language]
+            for language in brief_languages
+            if language in results_by_language
+        ]
+
+        for result in generated_results:
+            language = str(result.get("payload", {}).get("language") or "")
+            result["payload"] = _merge_repair_payload(
+                result["payload"],
+                existing_briefs_by_language.get(language),
+                target_sections_by_language[language],
+                disease_payload,
+            )
+
+        generation_failures = [
+            *_generated_profile_failures(
+                generated_results,
+                target_sections_by_language=target_sections_by_language,
+                allow_progressive_drafts=bool(requested_sections_by_language),
+            ),
+            *_bilingual_alignment_failures(generated_results),
+        ]
+        if generation_failures:
+            for result in generated_results:
+                payload = result.get("payload") if isinstance(result.get("payload"), dict) else {}
+                trace = result.get("trace") if isinstance(result.get("trace"), dict) else {}
+                language = str(payload.get("language") or trace.get("language") or "unknown").strip().lower()
                 await _log_task(
                     task_uuid,
-                    entry_type="error",
-                    title="Knowledge Generation Blocked",
+                    entry_type="warning",
+                    title=f"{language.upper()} Brief Attempt Rejected",
                     content=(
-                        "Generated profiles did not pass the publication gate. "
-                        "No disease brief was generated or persisted.\n"
-                        + "\n".join(generation_failures)
+                        "The generated attempt was not persisted because the publication gate "
+                        "found an unsupported, incomplete, or invalid target field."
                     ),
                     metadata={
                         "disease_id": disease["disease_id"],
-                        "failures": generation_failures,
-                        "workflow_stage": "knowledge_generation_blocked",
+                        "language": language,
+                        "target_sections": target_sections_by_language.get(language, []),
+                        "trace_error": trace.get("error"),
+                        "citation_failures": trace.get("citation_failures") or [],
+                        "quality_repair": (payload.get("metadata") or {}).get("quality_repair"),
+                        "workflow_stage": f"brief_generation_{language}_rejected",
                     },
                     success=False,
+                    prompt=trace.get("prompt") if isinstance(trace.get("prompt"), str) else None,
+                    response=trace.get("response") if isinstance(trace.get("response"), str) else None,
+                    model_used=trace.get("model") if isinstance(trace.get("model"), str) else None,
+                    tokens_used=_total_tokens_from_usage(trace.get("token_usage")),
+                    duration=(
+                        float(trace.get("duration"))
+                        if trace.get("duration") is not None
+                        else None
+                    ),
                 )
+            await _log_task(
+                task_uuid,
+                entry_type="error",
+                title="Knowledge Generation Blocked",
+                content=(
+                    "Generated profiles did not pass the publication gate. "
+                    "No disease brief was generated or persisted.\n"
+                    + "\n".join(generation_failures)
+                ),
+                metadata={
+                    "disease_id": disease["disease_id"],
+                    "failures": generation_failures,
+                    "workflow_stage": "knowledge_generation_blocked",
+                },
+                success=False,
+            )
+            raise KnowledgeEvidenceInsufficientError(
+                f"{disease['disease_id']} generation did not pass the publication gate: "
+                + " | ".join(generation_failures)
+            )
+
+        if task_uuid:
+            await task_manager.update_task_progress(task_uuid, 80)
+
+        _raise_if_model_work_failed()
+        if getattr(self, "_stage_run", None):
+            await self._stage_run.transition("store", metrics={"step": "briefs"})
+        async with get_database() as db:
+            await _acquire_disease_knowledge_lock(db, disease["disease_id"])
+            current_sources = await _existing_sources(db, disease["disease_id"])
+            current_briefs = list((await db.execute(
+                select(DiseaseKnowledgeBrief)
+                .where(DiseaseKnowledgeBrief.disease_id == disease["disease_id"])
+                .order_by(DiseaseKnowledgeBrief.language.asc())
+            )).scalars().all())
+            current_inherited = await _related_parent_sources(db, disease)
+            if snapshot != _knowledge_snapshot(current_sources, current_briefs, current_inherited):
                 raise KnowledgeEvidenceInsufficientError(
-                    f"{disease['disease_id']} generation did not pass the publication gate: "
-                    + " | ".join(generation_failures)
+                    "Knowledge sources or briefs changed during generation; retry using the latest stored evidence."
                 )
-
-            if task_uuid:
-                await task_manager.update_task_progress(task_uuid, 80)
-
+            if getattr(self, "_stage_run", None):
+                await self._stage_run.mark_dirty(db, disease["disease_id"])
             for result in generated_results:
                 await _raise_if_cancelled(task_uuid)
                 payload = result["payload"]
@@ -4114,6 +4172,9 @@ class DiseaseKnowledgeUpdateService:
                 },
             )
 
+            from src.services.ingestion.capture import _current
+            if _current.get():
+                _current.get().verify()
             await db.commit()
 
         brief_statuses = {brief.language: brief.status for brief in brief_rows}
@@ -4157,7 +4218,34 @@ class DiseaseKnowledgeUpdateService:
             "blocked_languages": blocked_languages,
         }
 
+    async def _with_collection_stages(self, task: Task, execute, *, source_only=False) -> dict[str, Any]:
+        from src.services.ingestion.capture import capture_sources
+        from src.services.ingestion.stages import StageRun
+
+        run = await StageRun.start(task.task_uuid, "knowledge")
+        token = _KNOWLEDGE_STAGE_RUN.set(run)
+        try:
+            with capture_sources(task.task_uuid, run.attempt, "knowledge") as capture:
+                # StageRun creates all three rows once. Briefs have no collect step.
+                await run.transition(
+                    "collect" if source_only else "organize",
+                    metrics={"source_only": source_only, "step": "sources" if source_only else "brief"},
+                )
+                result = await execute(task)
+                capture.verify()
+                _raise_if_model_work_failed()
+                await run.finish()
+                return result
+        except BaseException as exc:
+            await run.finish(error=str(exc) or type(exc).__name__)
+            raise
+        finally:
+            _KNOWLEDGE_STAGE_RUN.reset(token)
+
     async def execute_task(self, task: Task) -> dict[str, Any]:
+        return await self._with_collection_stages(task, self._execute_task)
+
+    async def _execute_task(self, task: Task) -> dict[str, Any]:
         """Execute a task created by the dashboard or CLI."""
         inp = dict(task.input_data or {})
         disease_id = str(inp.get("disease_id") or inp.get("disease") or "").strip()
@@ -4173,7 +4261,12 @@ class DiseaseKnowledgeUpdateService:
             source_groups = [source_groups]
         force = bool(inp.get("force", False))
         generator_mode = str(inp.get("generator", "auto"))
-        source_only = bool(inp.get("source_only", False))
+        if inp.get("source_only"):
+            raise ValueError(
+                "Source collection requires REFRESH_DISEASE_KNOWLEDGE_SOURCES; "
+                "UPDATE_DISEASE_KNOWLEDGE only reads stored sources."
+            )
+        source_only = False
         automatic_repair = bool(
             inp.get("targeted_repair") or "auto_repair" in (task.tags or [])
         )
@@ -4206,35 +4299,6 @@ class DiseaseKnowledgeUpdateService:
                 "skip_reason": "superseded_by_newer_published_profile",
                 "source_refreshed_task_uuid": inp.get("source_refreshed_task_uuid"),
             }
-        if (
-            automatic_repair
-            and not source_only
-            and not inp.get("source_refreshed_task_uuid")
-        ):
-            # Legacy queued model repairs have no source certificate.  Execute
-            # their source-first stage in place so they cannot publish against
-            # an old, partial repair scope.
-            task.input_data = {
-                **inp,
-                "source_only": True,
-                "enqueue_ai_after_source_refresh": True,
-                "source_first_staged_from": TaskType.UPDATE_DISEASE_KNOWLEDGE.value,
-            }
-            task.tags = sorted({*(task.tags or []), "knowledge", "source_refresh", "source_first"})
-            await _log_task(
-                task.task_uuid,
-                entry_type="info",
-                title="Knowledge Repair Staged As Source Refresh",
-                content=(
-                    "Automatic model repair had no current source certificate and was "
-                    "staged as a source refresh before generation."
-                ),
-                metadata={
-                    "disease_id": disease_id,
-                    "workflow_stage": "knowledge_source_first_runtime_stage",
-                },
-            )
-            return await self.execute_source_refresh_task(task)
         refresh_existing_on_source_change = inp.get("refresh_existing_on_source_change")
         target_languages = inp.get("repair_languages") or inp.get("languages")
         if isinstance(target_languages, str):
@@ -4268,6 +4332,9 @@ class DiseaseKnowledgeUpdateService:
         )
 
     async def execute_source_refresh_task(self, task: Task) -> dict[str, Any]:
+        return await self._with_collection_stages(task, self._execute_source_refresh_task, source_only=True)
+
+    async def _execute_source_refresh_task(self, task: Task) -> dict[str, Any]:
         """Execute a source-only task created by the dashboard or scheduler."""
         inp = dict(task.input_data or {})
         inp["source_only"] = True

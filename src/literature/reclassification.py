@@ -136,6 +136,14 @@ async def reclassify_existing_literature(
             if not dry_run:
                 await repository.replace_classification(article, classification)
 
+        if not dry_run and articles:
+            from src.services.ingestion.manual_runs import record_manual_store
+            await record_manual_store(
+                db, line="literature", scope_keys=["*"],
+                operation="reclassify_literature",
+                metrics={"examined": len(articles), "changed": changed},
+            )
+
     signal_links = await reconcile_automatic_signal_links(dry_run=dry_run)
     return {
         "dry_run": dry_run,
@@ -322,6 +330,15 @@ async def reconcile_automatic_signal_links(*, dry_run: bool = False) -> dict[str
                     "components": components,
                 }
                 article.metadata_ = metadata
+
+        if not dry_run and (changed or strongest_confirmed):
+            from src.services.ingestion.manual_runs import record_manual_store
+            await record_manual_store(
+                db, line="literature", scope_keys=["*"],
+                operation="reconcile_literature_signal_links",
+                metrics={"changed": changed, "upgraded": upgraded,
+                         "downgraded": downgraded},
+            )
 
     return {
         "dry_run": dry_run,

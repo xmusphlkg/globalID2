@@ -33,18 +33,18 @@ def test_metadata_backfill_apply_lock_rejects_concurrent_writer(tmp_path) -> Non
 def test_autopilot_cli_requires_explicit_apply(monkeypatch, capsys) -> None:
     calls: list[dict[str, bool]] = []
 
-    async def fake_run(*, dry_run: bool, export: bool) -> dict:
-        calls.append({"dry_run": dry_run, "export": export})
+    async def fake_run(*, dry_run: bool) -> dict:
+        calls.append({"dry_run": dry_run})
         return {"dry_run": dry_run}
 
     monkeypatch.setattr(run_literature_autopilot, "run", fake_run)
 
     assert run_literature_autopilot.main([]) == 0
-    assert calls == [{"dry_run": True, "export": True}]
+    assert calls == [{"dry_run": True}]
     assert json.loads(capsys.readouterr().out) == {"dry_run": True}
 
-    assert run_literature_autopilot.main(["--apply", "--no-export"]) == 0
-    assert calls[-1] == {"dry_run": False, "export": False}
+    assert run_literature_autopilot.main(["--apply"]) == 0
+    assert calls[-1] == {"dry_run": False}
 
 
 def test_autopilot_cli_passes_only_explicit_resource_overrides(monkeypatch, capsys) -> None:
@@ -63,7 +63,6 @@ def test_autopilot_cli_passes_only_explicit_resource_overrides(monkeypatch, caps
     ]) == 0
     assert calls == [{
         "dry_run": True,
-        "export": True,
         "batch_size": 250,
         "statement_timeout_seconds": 180,
         "lock_timeout_seconds": 10,
@@ -147,7 +146,6 @@ def test_governance_cli_is_read_only_by_default_and_requires_exact_plan_hash(
     assert report["plan"]["projected_actionable_backlog"] == 439
     assert calls == [{
         "dry_run": True,
-        "export": False,
         "policy_overrides": {"autopilot_article_min_score": 0.6},
         "diagnostics": True,
     }]
@@ -171,7 +169,7 @@ def test_governance_cli_applies_only_confirmed_bounded_plan(monkeypatch, capsys)
 
     async def fake_reconcile(**kwargs):
         calls.append(kwargs)
-        return dict(preview)
+        return dict(preview) if kwargs.get("dry_run") else {"status": "queued", "task_uuid": "worker-task"}
 
     monkeypatch.setattr(govern_literature_backlog, "audit_current_backlog", fake_audit)
     monkeypatch.setattr(
@@ -184,14 +182,16 @@ def test_governance_cli_applies_only_confirmed_bounded_plan(monkeypatch, capsys)
         "--article-min-score", "0.60",
         "--apply",
         "--confirm-plan-sha256", digest,
-        "--no-export",
     ]) == 0
     report = json.loads(capsys.readouterr().out)
-    assert report["applied"] is True
+    assert report["applied"] is False
+    assert report["queued"] is True
     assert "published_article_ids" not in report["result"]
     assert calls[-1] == {
         "dry_run": False,
-        "export": False,
         "policy_overrides": {"autopilot_article_min_score": 0.6},
         "diagnostics": True,
+        "expected_plan_sha256": digest,
+        "max_projected_backlog": 500,
+        "max_changes": 5000,
     }

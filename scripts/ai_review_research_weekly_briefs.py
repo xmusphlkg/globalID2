@@ -16,7 +16,6 @@ from src.core.config import get_config  # noqa: E402
 from src.literature.weekly_ai_review import (  # noqa: E402
     WEEKLY_AI_REVIEW_REGISTRY_PATH,
     WEEKLY_BRIEF_DIR,
-    review_weekly_brief_files,
 )
 
 
@@ -34,16 +33,13 @@ async def _run(args: argparse.Namespace) -> dict:
     cfg = get_config().literature
     if not cfg.weekly_ai_review_enabled:
         return {"ok": True, "status": "disabled", "reason": "weekly_ai_review_disabled"}
-    result = await review_weekly_brief_files(
-        weekly_dir=args.weekly_dir,
-        registry_path=args.registry,
-        weeks=args.week,
-        limit=args.limit or cfg.weekly_ai_review_batch_size,
-        timeout_seconds=cfg.weekly_ai_review_timeout_seconds,
-        max_attempts=cfg.weekly_ai_review_max_attempts,
-        recheck_after_hours=cfg.weekly_ai_review_recheck_hours,
-        apply=args.apply,
-    )
+    from src.services.model_operations import run_worker_operation
+    result = await run_worker_operation("weekly_ai_review", {
+        "weekly_dir": str(args.weekly_dir), "registry_path": str(args.registry),
+        "weeks": args.week, "limit": args.limit or cfg.weekly_ai_review_batch_size,
+        "timeout_seconds": cfg.weekly_ai_review_timeout_seconds,
+        "max_attempts": cfg.weekly_ai_review_max_attempts,
+        "recheck_after_hours": cfg.weekly_ai_review_recheck_hours, "apply": args.apply})
     return {"ok": result["counts"]["failed"] == 0, "status": "applied" if args.apply else "dry_run", **result}
 
 

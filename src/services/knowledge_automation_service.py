@@ -258,6 +258,32 @@ class KnowledgeAutomationService:
                 pass
 
     async def reconcile_once(self) -> dict[str, Any]:
+        """Scheduler entry: enqueue maintenance; only a worker mutates profiles."""
+        from src.ai.work_queue import current_parent
+        from src.services.model_operations import enqueue_model_operation
+        from src.domain import TaskPriority
+        parent = current_parent()
+        if parent is None:
+            task = await enqueue_model_operation("knowledge_reconcile", {}, priority=TaskPriority.LOW)
+            self._state.last_task_uuid = task.task_uuid
+            self._state.last_status = "queued"
+            self._state.next_run_at = datetime.now(timezone.utc) + timedelta(seconds=self._config().knowledge_automation_interval_seconds)
+            await schedule_state_repository.save(self.JOB_KIND, self.JOB_ID, self._state)
+            return {"status": "queued", "task_uuid": task.task_uuid}
+        from src.services.ingestion.stages import StageRun
+        stages = await StageRun.start(parent.task_uuid, "knowledge")
+        try:
+            await stages.transition("collect", metrics={"input": "stored_profiles"})
+            await stages.transition("organize", metrics={"operation": "reconcile"})
+            await stages.transition("store")
+            result = await self._reconcile_in_worker()
+            await stages.finish(metrics=result)
+            return result
+        except BaseException as exc:
+            await stages.finish(error=str(exc) or type(exc).__name__)
+            raise
+
+    async def _reconcile_in_worker(self) -> dict[str, Any]:
         """Top up true content gaps first, then older evidence-policy profiles."""
 
         cfg = self._config()
@@ -465,6 +491,23 @@ class KnowledgeAutomationService:
                                 requested_by=self.JOB_ID,
                                 initiated_via=self.JOB_ID,
                             )
+
+                    changed = (
+                        int(source_gap_invalidation.get("updated_brief_count", 0))
+                        + int(source_gap_invalidation.get("archived_profile_count", 0))
+                        + int(source_gap_invalidation.get("retained_brief_count", 0))
+                        + int(retained_profile_recovery.get("restored_source_count", 0))
+                        + int(retained_profile_recovery.get("restored_profile_count", 0))
+                        + int(retained_profile_recovery.get("archived_profile_count", 0))
+                        + int(transport_profile_recovery.get("restored_brief_count", 0))
+                    )
+                    if changed:
+                        from src.ai.work_queue import current_parent
+                        from src.services.ingestion.stages import mark_dirty
+                        parent = current_parent()
+                        if parent is None:
+                            raise RuntimeError("Knowledge reconciliation requires a worker parent")
+                        await mark_dirty(db, line="knowledge", scope_key="sources", task_uuid=parent.task_uuid)
 
                 created = [*(primary.get("created_tasks") or [])]
                 if secondary:

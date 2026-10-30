@@ -25,11 +25,6 @@ from src.domain import Task, TaskStatus
 from src.services.ai_content_governance_service import ReviewClaims, ai_content_governance_service as governance
 from src.services.situation_notices.pipeline import (
     backlog_counts as situation_backlog_counts,
-    extract_pending,
-    fetch_pending_documents,
-    rebuild_outbreaks,
-    requeue_stale_prompts,
-    utc_now,
 )
 
 logger = get_logger(__name__)
@@ -102,74 +97,28 @@ async def _load_backlog_counts() -> dict[str, int]:
     return counts
 
 
-def stream_lane(name: str, kind: str) -> Lane:
-    """Research Radar articles or summaries through the shared worker-pool review."""
-
+def _queued_lane(name: str, operation: str, options) -> Lane:
     async def work(lane: Lane, slice_size: int, workers: int) -> SliceResult:
-        if lane.claims is None:
-            lane.claims = ReviewClaims()
-        signals: dict[str, Any] = {"stalled": False, "route_error": None}
-
-        def emit(record: dict[str, Any]) -> None:
-            if record.get("event") == "stalled":
-                signals["stalled"] = True
-            if record.get("route_error"):
-                signals["route_error"] = record["route_error"]
-
-        totals = await governance.stream_review(
-            kind,
-            workers=workers,
-            fetch_size=min(64, slice_size),
-            stall_limit=max(8, workers),
-            pause_seconds=1.0,
-            emit=emit,
-            claims=lane.claims,
-            max_claims=slice_size,
-        )
-        finalised = totals["published"] + totals["rejected"] + totals["archived"]
-        outage = None
-        if signals["stalled"] or (totals["deferred"] and not finalised):
-            outage = signals["route_error"] or "model calls failed"
-        return SliceResult(finalised, totals["deferred"], bool(totals["exhausted"]), outage, dict(totals))
-
+        from src.services.model_operations import enqueue_model_operation
+        from src.domain import TaskPriority
+        task = await enqueue_model_operation(operation, options(slice_size, workers), priority=TaskPriority.LOW)
+        return SliceResult(0, 1, True, None, {"queued_task_uuid": task.task_uuid})
     return Lane(name, work)
+
+
+def stream_lane(name: str, kind: str) -> Lane:
+    return _queued_lane(name, "governance_stream", lambda size, workers: {
+        "kind": kind, "workers": workers, "fetch_size": min(64, size),
+        "max_claims": size, "stall_limit": max(8, workers), "pause_seconds": 1.0})
 
 
 def simple_lane(name: str, method: str) -> Lane:
-    """Knowledge sources and learning suggestions: decided rows leave the queue, so one call per slice."""
-
-    async def work(lane: Lane, slice_size: int, workers: int) -> SliceResult:
-        async with get_database() as db:
-            result = await getattr(governance, method)(db, limit=min(slice_size, 64))
-        finalised = int(result.get("approved", 0)) + int(result.get("rejected", 0))
-        deferred = int(result.get("deferred", 0))
-        outage = (result.get("route_error") or "model calls failed") if deferred and not finalised else None
-        return SliceResult(finalised, deferred, True, outage, {k: v for k, v in result.items() if k != "applied"})
-
-    return Lane(name, work)
+    return _queued_lane(name, "governance_simple", lambda size, workers: {"method": method, "limit": min(size, 64)})
 
 
 def situation_lane() -> Lane:
-    """Download pending report bodies, have the models read them, regroup outbreaks.
-
-    The static export is left to the release pipeline, which already runs it.
-    """
-
-    async def work(lane: Lane, slice_size: int, workers: int) -> SliceResult:
-        from src.ai.peer_review_completer import ReviewRoutePool
-
-        documents = await fetch_pending_documents(limit=SITUATION_DOCUMENTS_PER_SLICE)
-        pool = await ReviewRoutePool.from_model_center(line="situation_notice")
-        await requeue_stale_prompts()
-        extraction = await extract_pending(pool, limit=SITUATION_REPORTS_PER_SLICE)
-        if extraction["published"]:
-            await rebuild_outbreaks(as_of=utc_now().date())
-        finalised = documents["ready"] + extraction["published"] + extraction["rejected"]
-        deferred = extraction.get("deferred", 0)
-        outage = "no model route available" if deferred and not finalised else None
-        return SliceResult(finalised, deferred, True, outage, {"documents": documents, "extraction": extraction})
-
-    return Lane(name="situation", work=work)
+    return _queued_lane("situation", "idle_situation", lambda size, workers: {
+        "document_limit": SITUATION_DOCUMENTS_PER_SLICE, "ai_limit": SITUATION_REPORTS_PER_SLICE})
 
 
 def default_lanes() -> list[Lane]:

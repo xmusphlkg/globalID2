@@ -43,6 +43,7 @@ from .normalization import (
     apply_unpaywall,
     normalize_biorxiv,
     normalize_crossref,
+    normalize_doi,
     normalize_elsevier,
     normalize_europe_pmc,
     normalize_official_guidance,
@@ -376,6 +377,12 @@ class LiteraturePipeline:
         since, resume_after = await self._resolve_start(now, task)
         run_uuid = str(uuid.uuid4())
         await self._create_run(run_uuid, since, now, task=task)
+        from src.services.ingestion.stages import StageRun
+        stages = await StageRun.start(task.task_uuid if task else run_uuid, "literature")
+        await stages.transition("collect", metrics={"step": "crossref"})
+        from src.services.ingestion.capture import capture_sources
+        capture = capture_sources(stages.task_uuid, stages.attempt, "literature")
+        source_capture = capture.__enter__()
         try:
             await self._supersede_earlier_running_runs(run_uuid, task)
             journals_payload = _load_json(ROOT / self.config.journals_path)
@@ -632,6 +639,20 @@ class LiteraturePipeline:
                     now=now,
                 )
                 rss_records = rss_result.records
+            # Resolve identifiers for follow-up metadata requests without
+            # creating normalized business candidates during collection.
+            source_payloads = [*raw_records, *pubmed_core_records, *rss_records, *springer_records, *elsevier_records, *preprint_records, *controlled_crossref_records, *controlled_europe_pmc_records, *controlled_pubmed_records, *official_guidance_records]
+            handles = []
+            for index, payload in enumerate(source_payloads):
+                identifiers = {str(item.get("idtype") or "").lower(): item.get("value") for item in payload.get("articleids", []) if isinstance(item, dict)}
+                doi = normalize_doi(payload.get("DOI") or payload.get("doi") or identifiers.get("doi"))
+                pmid = str(payload.get("pmid") or payload.get("uid") or identifiers.get("pubmed") or "") or None
+                handles.append(ArticleCandidate(article_id=f"request-{index}", slug=f"request-{index}", title="", doi=doi, pmid=pmid))
+            enrichment_counts = await self._enrich_candidates(handles)
+            enrichment_degraded = bool(enrichment_counts["enrichment_errors"])
+            source_capture.verify()
+            await stages.finish(metrics={"artifact_count": len(source_capture.writer.artifacts), "step": "pubmed_fallback" if source_result is None and pubmed_core_result is not None else "crossref"})
+            await stages.transition("organize", metrics={"step": "classify"})
             source_candidates = [
                 *[candidate for item in raw_records if (candidate := normalize_crossref(item))],
                 *[candidate for item in pubmed_core_records if (candidate := normalize_pubmed(item))],
@@ -666,8 +687,14 @@ class LiteraturePipeline:
                 if await task_manager.is_cancel_requested(task.task_uuid):
                     raise RuntimeError("Literature synchronization cancelled")
 
-            enrichment_counts = await self._enrich_candidates(candidates)
-            enrichment_degraded = bool(enrichment_counts["enrichment_errors"])
+            # Apply retained provider responses without any network access.
+            by_doi = {handle.doi: handle.source_payload for handle in handles if handle.doi}
+            by_pmid = {handle.pmid: handle.source_payload for handle in handles if handle.pmid}
+            for candidate in candidates:
+                enrichment = {**by_pmid.get(candidate.pmid, {}), **by_doi.get(candidate.doi, {})}
+                for provider, apply in (("europe_pmc", apply_europe_pmc), ("pubmed_efetch", apply_pubmed_abstract), ("unpaywall", apply_unpaywall), ("openalex", apply_openalex)):
+                    if provider in enrichment:
+                        apply(candidate, enrichment[provider])
             if task:
                 await task_manager.update_task_progress(task.task_uuid, 55)
 
@@ -745,6 +772,7 @@ class LiteraturePipeline:
                     0.25,
                 )
             )
+            await stages.transition("store", metrics={"step": "persist_batch"})
             for offset in range(0, len(classified_candidates), batch_size):
                 batch = tuple(classified_candidates[offset : offset + batch_size])
 
@@ -764,6 +792,7 @@ class LiteraturePipeline:
                             batch_counts["updated"] += int(not was_inserted)
                             if was_inserted:
                                 inserted_article_ids.append(candidate.article_id)
+                        await stages.mark_dirty(db, "*")
                     return batch_counts
 
                 batch_counts = await _retry_postgres_deadlock(
@@ -981,12 +1010,14 @@ class LiteraturePipeline:
                 counts=counts,
                 checkpoint=checkpoint,
                 through_indexed_at=through_indexed_at,
+                publish_task_uuid=stages.task_uuid,
                 source=(
                     self._source_label(crossref=False, pubmed_fallback=True)
                     if source_result is None and pubmed_core_result is not None
                     else None
                 ),
             )
+            await stages.finish(metrics={"inserted": inserted, "updated": updated})
             if task:
                 await task_manager.update_task_progress(task.task_uuid, 100)
             return {
@@ -1000,9 +1031,12 @@ class LiteraturePipeline:
                 "inserted_article_ids": inserted_article_ids,
                 "automation": automation,
             }
-        except Exception as exc:
+        except BaseException as exc:
+            await stages.finish(error=str(exc) or type(exc).__name__)
             await self._finish_run(run_uuid, "failed", error=type(exc).__name__ or "Exception")
             raise
+        finally:
+            capture.__exit__(None, None, None)
 
     async def _enrich_candidates(self, candidates: list[ArticleCandidate]) -> dict[str, Any]:
         """Apply optional enrichers independently without blocking core ingestion."""
@@ -1278,6 +1312,7 @@ class LiteraturePipeline:
         through_indexed_at: datetime | None = None,
         error: str | None = None,
         source: str | None = None,
+        publish_task_uuid: str | None = None,
     ) -> None:
         async with get_db() as db:
             run = (
@@ -1303,6 +1338,9 @@ class LiteraturePipeline:
                 }
             run.counts = counts or {}
             run.error = error
+            if status == "completed" and publish_task_uuid:
+                from src.services.ingestion.stages import mark_dirty
+                await mark_dirty(db, line="literature", scope_key="*", task_uuid=publish_task_uuid)
             await db.commit()
 
     def _source_label(self, *, crossref: bool = True, pubmed_fallback: bool = False) -> str:

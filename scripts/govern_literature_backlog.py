@@ -37,7 +37,6 @@ def _parser() -> argparse.ArgumentParser:
         "--confirm-plan-sha256",
         help="Required with --apply and must match the plan hash printed by a fresh dry run",
     )
-    parser.add_argument("--no-export", action="store_true")
     return parser
 
 
@@ -52,7 +51,6 @@ async def _run(args: argparse.Namespace) -> tuple[int, dict]:
     audit = await audit_current_backlog()
     preview = await literature_automation_service.reconcile(
         dry_run=True,
-        export=False,
         policy_overrides=overrides,
         diagnostics=True,
     )
@@ -77,14 +75,16 @@ async def _run(args: argparse.Namespace) -> tuple[int, dict]:
         return 2, result
     applied = await literature_automation_service.reconcile(
         dry_run=False,
-        export=not args.no_export,
         policy_overrides=overrides,
         diagnostics=True,
+        expected_plan_sha256=args.confirm_plan_sha256,
+        max_projected_backlog=args.max_projected_backlog,
+        max_changes=args.max_changes,
     )
     # Article identifiers are useful to internal reconciliation but do not
     # belong in an operator-facing aggregate governance report.
     applied.pop("published_article_ids", None)
-    result.update({"read_only": False, "applied": True, "result": applied})
+    result.update({"read_only": False, "applied": applied.get("status") != "queued", "queued": applied.get("status") == "queued", "result": applied})
     return 0, result
 
 

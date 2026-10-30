@@ -689,7 +689,7 @@ class LiteratureEnrichmentPipeline:
                             canonical_fields=canonical_fields if language in TRANSLATION_LANGUAGES else None,
                             use_cache=not (force or language in context[article.article_id]["existing_languages"]),
                         )
-                        await self._store(article.article_id, language=language, result=result)
+                        await self._store(article.article_id, language=language, result=result, task_uuid=task.task_uuid)
                         if language == "en":
                             canonical_fields = dict(result.fields)
                         async with counts_lock:
@@ -699,7 +699,7 @@ class LiteratureEnrichmentPipeline:
                         if language == "en":
                             canonical_fields = None
                         logger.warning("Literature enrichment failed for {}/{}: {}", article.article_id, language, exc)
-                        await self._store_failure(article, language=language, error=exc)
+                        await self._store_failure(article, language=language, error=exc, task_uuid=task.task_uuid)
                         async with counts_lock:
                             counts["failed"] += 1
                             language_counts[language]["failed"] += 1
@@ -992,7 +992,7 @@ class LiteratureEnrichmentPipeline:
             and attempts < self.config.ai_max_quality_attempts
         )
 
-    async def _store(self, article_id: str, *, language: str, result: EnrichmentResult) -> None:
+    async def _store(self, article_id: str, *, language: str, result: EnrichmentResult, task_uuid: str) -> None:
         async with get_db() as db:
             summary = (
                 await db.execute(
@@ -1055,9 +1055,11 @@ class LiteratureEnrichmentPipeline:
                 }
             summary.generated_at = datetime.now(timezone.utc)
             summary.review_notes = result.review_notes
+            from src.services.ingestion.stages import mark_dirty
+            await mark_dirty(db, line="literature", scope_key="*", task_uuid=task_uuid)
             await db.commit()
 
-    async def _store_failure(self, article: LiteratureArticle, *, language: str, error: Exception) -> None:
+    async def _store_failure(self, article: LiteratureArticle, *, language: str, error: Exception, task_uuid: str) -> None:
         async with get_db() as db:
             summary = (
                 await db.execute(
@@ -1109,6 +1111,8 @@ class LiteratureEnrichmentPipeline:
                 f"{summary.review_notes or ''} Generation failed for {language}: {str(error)[:240]}"
             ).strip()
             summary.generated_at = datetime.now(timezone.utc)
+            from src.services.ingestion.stages import mark_dirty
+            await mark_dirty(db, line="literature", scope_key="*", task_uuid=task_uuid)
             await db.commit()
 
 

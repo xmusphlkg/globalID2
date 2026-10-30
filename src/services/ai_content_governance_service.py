@@ -17,7 +17,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Iterable, Mapping
 
-from sqlalchemy import Integer, String, all_, func, literal, select
+from sqlalchemy import Integer, String, all_, func, inspect as sa_inspect, literal, select
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,6 +55,46 @@ logger = get_logger(__name__)
 PROMPT_VERSION = "ai-content-governance.v1"
 REVIEW_CONCURRENCY = 192
 REVIEW_MAX_TOKENS = 4000
+
+
+async def _release_review_connection(db: AsyncSession, pending: list[Any]) -> dict[int, Any]:
+    """Finish the snapshot transaction before waiting for durable model work.
+
+    The configured sessions retain loaded values on commit. Deterministic
+    decisions made by prechecks are independent completed review items and may
+    commit here; model decisions are applied later after a freshness check.
+    """
+    snapshots = {id(row): getattr(row, "updated_at", None) for row in pending}
+    if pending:
+        await db.commit()
+    return snapshots
+
+
+async def _mark_review_dirty(db: AsyncSession, *, line: str, scope_key: str) -> None:
+    from src.ai.work_queue import current_parent
+    from src.services.ingestion.stages import mark_dirty
+    parent = current_parent()
+    if parent is not None:
+        await mark_dirty(db, line=line, scope_key=scope_key, task_uuid=parent.task_uuid)
+
+
+def _review_stamp(value):
+    if isinstance(value, datetime):
+        return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+    return value
+
+
+async def _reload_review_input(db: AsyncSession, row: Any, snapshots: dict[int, Any]) -> bool:
+    """Lock and reread a review target so a late answer cannot overwrite changes."""
+    state = sa_inspect(row, raiseerr=False)
+    if state is None:  # Non-ORM protocol objects used by deterministic adapters.
+        return True
+    before = snapshots.get(id(row))
+    try:
+        await db.refresh(row, with_for_update=True)
+    except InvalidRequestError:
+        return False  # Another transaction removed the target while it waited.
+    return before is None or _review_stamp(row.updated_at) == _review_stamp(before)
 
 
 class ReviewClaims:
@@ -1306,12 +1347,19 @@ class AIContentGovernanceService:
         worker_tasks = [asyncio.create_task(worker()) for _ in range(max(1, workers))]
         try:
             await feeder()
-        finally:
             for _ in worker_tasks:
                 await todo.put(None)
             await asyncio.gather(*worker_tasks)
             await finished.put(None)
             await writer_task
+        except BaseException:
+            # A bounded todo queue may be full while every worker waits on a
+            # model. Draining it during cancellation keeps issuing work and can
+            # prevent the worker from relinquishing its singleton lease.
+            for child in (*worker_tasks, writer_task):
+                child.cancel()
+            await asyncio.gather(*worker_tasks, writer_task, return_exceptions=True)
+            raise
         return totals
 
     async def review_literature_summaries(
@@ -1363,6 +1411,10 @@ class AIContentGovernanceService:
                 continue
             pending.append((summary, article))
 
+        if not dry_run and counts["archived"]:
+            await _mark_review_dirty(db, line="literature", scope_key="*")
+        model_changed = False
+        snapshots = await _release_review_connection(db, [row for pair in pending for row in pair])
         results = await self._review_all(
             pending,
             completer,
@@ -1375,12 +1427,21 @@ class AIContentGovernanceService:
                 route_error = str(reviewed)[:1000]
                 counts["deferred"] += 1
                 continue
+            if not await _reload_review_input(db, article, snapshots) or not await _reload_review_input(db, summary, snapshots):
+                counts["deferred"] += 1
+                continue
+            if self._summary_precheck(summary, article)[0] != "review":
+                counts["deferred"] += 1
+                continue
             publish = reviewed.published and reviewed.payload["decision"] == "publish"
             counts["published" if publish else "archived"] += 1
             if not dry_run:
                 self._apply_summary(summary, reviewed, publish)
+                model_changed = True
             applied.append({"summary_id": int(item_id), "decision": "publish" if publish else "archive", "review": reviewed.provenance(PROMPT_VERSION)})
         if not dry_run:
+            if model_changed:
+                await _mark_review_dirty(db, line="literature", scope_key="*")
             await db.commit()
         return {"prompt_version": PROMPT_VERSION, "dry_run": dry_run, **counts, "reviewed": len(rows), "route_error": route_error, "applied": applied[:100]}
 
@@ -1406,6 +1467,7 @@ class AIContentGovernanceService:
         counts = {"published": 0, "excluded": 0, "deferred": 0}
         applied: list[dict[str, Any]] = []
         route_error: str | None = None
+        snapshots = await _release_review_connection(db, list(articles) if use_ai else [])
         results = await self._review_all(
             list(articles) if use_ai else [],
             completer,
@@ -1417,6 +1479,9 @@ class AIContentGovernanceService:
                 route_error = str(reviewed)[:1000]
                 counts["deferred"] += 1
                 continue
+            if not await _reload_review_input(db, article, snapshots) or article.publication_status != "review":
+                counts["deferred"] += 1
+                continue
             desired = "published" if reviewed.published and reviewed.payload["decision"] == "publish" else "excluded"
             counts[desired] += 1
             if not dry_run:
@@ -1425,6 +1490,8 @@ class AIContentGovernanceService:
         if not use_ai:
             counts["deferred"] = len(articles)
         if not dry_run:
+            if counts["published"] or counts["excluded"]:
+                await _mark_review_dirty(db, line="literature", scope_key="*")
             await db.commit()
         return {"prompt_version": PROMPT_VERSION, "dry_run": dry_run, **counts, "reviewed": len(articles), "route_error": route_error, "applied": applied[:100]}
 
@@ -1450,7 +1517,9 @@ class AIContentGovernanceService:
         ).scalars().all()
         counts = {"approved": 0, "rejected": 0, "deferred": 0}
         applied: list[dict[str, Any]] = []
+        changed_scopes: set[str] = set()
         route_error: str | None = None
+        snapshots = await _release_review_connection(db, list(sources) if use_ai else [])
         results = await self._review_all(
             list(sources) if use_ai else [],
             completer,
@@ -1468,15 +1537,21 @@ class AIContentGovernanceService:
                 route_error = str(reviewed)[:1000]
                 counts["deferred"] += 1
                 continue
+            if not await _reload_review_input(db, source, snapshots) or source.review_status != "requires_review" or source.status != "active":
+                counts["deferred"] += 1
+                continue
             status = "approved" if reviewed.published and reviewed.payload["decision"] == "approve" else "rejected"
             counts[status] += 1
             if not dry_run:
                 source.review_status = status
+                changed_scopes.add(source.disease_id)
                 source.metadata_ = self._metadata(source.metadata_, status, reviewed)
             applied.append({"source_id": source.id, "decision": status, "review": reviewed.provenance(PROMPT_VERSION)})
         if not use_ai:
             counts["deferred"] = len(sources)
         if not dry_run:
+            for scope_key in sorted(changed_scopes):
+                await _mark_review_dirty(db, line="knowledge", scope_key=scope_key)
             await db.commit()
         return {"prompt_version": PROMPT_VERSION, "dry_run": dry_run, **counts, "reviewed": len(sources), "route_error": route_error, "applied": applied[:100]}
 
@@ -1521,6 +1596,7 @@ class AIContentGovernanceService:
         applied: list[dict[str, Any]] = []
         route_error: str | None = None
         to_review = [item for item in suggestions if str(item.id) not in exact] if use_ai else []
+        snapshots = await _release_review_connection(db, list(suggestions) if use_ai else [])
         review_results = await self._review_all(
             to_review,
             completer,
@@ -1558,6 +1634,9 @@ class AIContentGovernanceService:
                 accepted_map = reviewed.published and reviewed.payload["decision"] == "map"
                 target = reviewed.payload.get("target_disease_id") if accepted_map else None
                 reasons = list(reviewed.payload.get("reasons") or [])
+            if use_ai and (not await _reload_review_input(db, suggestion, snapshots) or suggestion.status not in {"pending", "failed", "requires_review"}):
+                counts["deferred"] += 1
+                continue
             status = "approved" if target else "rejected"
             counts[status] += 1
             outcome = (reviewed.payload.get("decision") if reviewed else "map") or "unresolved"

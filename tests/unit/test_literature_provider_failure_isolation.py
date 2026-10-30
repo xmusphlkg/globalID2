@@ -16,6 +16,26 @@ from src.literature.types import ArticleCandidate, Classification
 from src.services import _lifecycle as lifecycle_module
 
 
+@pytest.fixture(autouse=True)
+def isolate_stage_persistence(monkeypatch):
+    # These tests isolate provider failure policy; durable stage transactions
+    # are exercised separately against SQLite in test_collection_stages.
+    class Stages:
+        @classmethod
+        async def start(cls, task_uuid, *_args):
+            result = cls()
+            result.task_uuid = task_uuid
+            result.attempt = 1
+            return result
+        async def transition(self, *_args, **_kwargs):
+            pass
+        async def finish(self, **_kwargs):
+            pass
+        async def mark_dirty(self, *_args):
+            pass
+    monkeypatch.setattr("src.services.ingestion.stages.StageRun", Stages)
+
+
 def _candidate() -> ArticleCandidate:
     return ArticleCandidate(
         article_id="lit_provider_failure",

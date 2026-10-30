@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any
 
 import httpx
@@ -54,6 +55,8 @@ class LiteratureHttpClient:
         for attempt in range(attempts):
             response: httpx.Response | None = None
             try:
+                from src.services.ingestion.capture import assert_source_access
+                assert_source_access()
                 response = await client.get(
                     url,
                     params=params,
@@ -64,7 +67,9 @@ class LiteratureHttpClient:
                 declared_size = int(response.headers.get("Content-Length") or 0)
                 if declared_size > self.max_response_bytes or len(response.content) > self.max_response_bytes:
                     raise ValueError("Literature API response exceeds the configured size limit")
-                payload = response.json()
+                from src.services.ingestion.capture import capture_async
+                raw = await capture_async(response.content, str(response.url), response.headers.get("Content-Type", ""))
+                payload = json.loads(raw)
                 if not isinstance(payload, dict):
                     raise ValueError("Literature API returned a non-object JSON payload")
                 return payload
@@ -99,6 +104,8 @@ class LiteratureHttpClient:
         for attempt in range(attempts):
             response: httpx.Response | None = None
             try:
+                from src.services.ingestion.capture import assert_source_access
+                assert_source_access()
                 response = await client.get(
                     url,
                     params=params,
@@ -109,7 +116,9 @@ class LiteratureHttpClient:
                 declared_size = int(response.headers.get("Content-Length") or 0)
                 if declared_size > self.max_response_bytes or len(response.content) > self.max_response_bytes:
                     raise ValueError("Literature API response exceeds the configured size limit")
-                return response.text
+                from src.services.ingestion.capture import capture_async
+                raw = await capture_async(response.content, str(response.url), response.headers.get("Content-Type", ""))
+                return raw.decode(response.encoding or "utf-8")
             except (httpx.HTTPError, ValueError) as exc:
                 last_error = exc
                 status_code = response.status_code if response is not None else None

@@ -10,6 +10,7 @@ review.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from contextvars import copy_context
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -455,7 +456,7 @@ class DiseaseKnowledgeFetcher:
             # WHO, PubMed and Wikipedia requests can overlap.
             executor = ThreadPoolExecutor(max_workers=min(4, len(selected)))
             futures = {
-                executor.submit(run_one, key, adapter): key
+                executor.submit(copy_context().run, run_one, key, adapter): key
                     for key, adapter in selected
             }
             adapter_timeout_seconds = (
@@ -989,8 +990,12 @@ class DiseaseKnowledgeFetcher:
                 if not isinstance(item, dict):
                     continue
                 title = item.get("Title") or item.get("title")
-                item_url = item.get("ItemDefaultUrl") or item.get("Url") or ""
-                if item_url and item_url.startswith("/"):
+                item_url = str(item.get("ItemDefaultUrl") or item.get("Url") or "").strip()
+                if item_url.startswith("/"):
+                    # The OData API returns a notice slug (for example
+                    # /2024-DON526), not a path relative to the WHO homepage.
+                    if "/disease-outbreak-news/item/" not in item_url:
+                        item_url = f"/emergencies/disease-outbreak-news/item/{item_url.lstrip('/')}"
                     item_url = f"https://www.who.int{item_url}"
                 page_title: str | None = None
                 page_excerpt: str | None = None
@@ -1424,7 +1429,14 @@ class DiseaseKnowledgeFetcher:
             query_terms,
             target_sections,
         ):
-            for item in self._duckduckgo_search(query, max_results=max_results):
+            errors_before = getattr(self._adapter_request_state, "error_count", 0)
+            search_results = self._duckduckgo_search(query, max_results=max_results)
+            if getattr(self._adapter_request_state, "error_count", 0) > errors_before:
+                # Repeating every alias against the same unavailable search
+                # provider can exhaust the adapter deadline and discard the
+                # Crossref candidates already fetched successfully.
+                break
+            for item in search_results:
                 url = item["url"]
                 if url in seen_urls:
                     continue
@@ -1493,6 +1505,7 @@ class DiseaseKnowledgeFetcher:
         candidates: list[SourceCandidate] = []
         seen_urls: set[str] = set()
         for query in query_terms[:2]:
+            errors_before = getattr(self._adapter_request_state, "error_count", 0)
             response = self._get(
                 "https://api.crossref.org/works",
                 params={
@@ -1502,6 +1515,10 @@ class DiseaseKnowledgeFetcher:
                 },
             )
             if response is None or response.status_code != 200:
+                if response is None or getattr(self._adapter_request_state, "error_count", 0) > errors_before:
+                    # Leave time for the independent web-search provider.
+                    # Repeating an alias cannot repair a transport failure.
+                    break
                 continue
             try:
                 payload = response.json()
@@ -1597,6 +1614,11 @@ class DiseaseKnowledgeFetcher:
     def _duckduckgo_search(self, query: str, *, max_results: int) -> list[dict[str, str]]:
         response = self._get(self.WEB_SEARCH_ENDPOINT, params={"q": query})
         if response is None or response.status_code != 200:
+            if response is not None and response.status_code not in {429, 500, 502, 503, 504}:
+                # _get already counts transport and retryable HTTP failures.
+                # Challenge/denial responses must also stop this provider's
+                # remaining queries, while an ordinary empty search may retry.
+                self._record_request_error()
             return []
         soup = BeautifulSoup(response.text, "html.parser")
         results: list[dict[str, str]] = []
@@ -1775,6 +1797,8 @@ class DiseaseKnowledgeFetcher:
         return DiseaseKnowledgeFetcher._unique_strings(hints)
 
     def _get(self, url: str, params: dict[str, str] | None = None) -> requests.Response | None:
+        from src.services.ingestion.capture import assert_source_access
+        assert_source_access()
         cache_key = Request("GET", url, params=params).prepare().url or url
         with self._response_cache_lock:
             cached = self._response_cache.get(cache_key)
@@ -1809,6 +1833,9 @@ class DiseaseKnowledgeFetcher:
             if response.status_code in {429, 500, 502, 503, 504}:
                 self._record_request_error()
 
+            from src.services.ingestion.capture import capture_sync, is_capturing
+            if is_capturing():
+                response._content = capture_sync(response.content, str(response.url or cache_key), response.headers.get("Content-Type", ""))
             with self._response_cache_lock:
                 self._response_cache[cache_key] = response
             return response

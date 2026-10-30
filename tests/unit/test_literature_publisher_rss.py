@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from src.core.config import LiteratureSettings
+from src.domain.collection import RunStage, PublishDirty, SourceArtifact
 from src.domain import (
     Base,
     Country,
@@ -416,6 +417,9 @@ async def test_pipeline_routes_rss_through_shared_dedup_classification_and_revie
         poolclass=StaticPool,
     )
     Base.metadata.create_all(engine, tables=[
+        RunStage.__table__,
+        PublishDirty.__table__,
+        SourceArtifact.__table__,
         Country.__table__,
         StandardDisease.__table__,
         LiteratureArticle.__table__,
@@ -460,6 +464,8 @@ async def test_pipeline_routes_rss_through_shared_dedup_classification_and_revie
     )
     database = _DatabaseFactory(engine)
     monkeypatch.setattr("src.literature.pipeline.get_db", database)
+    monkeypatch.setattr("src.services.ingestion.stages.get_db", database)
+    monkeypatch.setattr("src.services.ingestion.artifacts.get_db", database)
     monkeypatch.setattr("src.literature.pipeline.CrossrefClient", _PipelineCrossrefClient)
     monkeypatch.setattr("src.literature.pipeline.PublisherRssClient", _PipelineRssClient)
 

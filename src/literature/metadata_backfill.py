@@ -22,6 +22,7 @@ from .clients import OpenAlexClient, UnpaywallClient
 from .normalization import apply_openalex, apply_unpaywall, normalize_doi
 from .payloads import SOURCE_PAYLOAD_SCHEMA_VERSION, compact_source_payload
 from .reclassification import candidate_from_stored_article
+from .transactions import commit_literature_change
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CHECKPOINT_PATH = ROOT / "data/cache/literature_metadata_backfill.json"
@@ -201,6 +202,7 @@ async def backfill_existing_literature_metadata(
     openalex_client: Any | None = None,
     unpaywall_client: Any | None = None,
     now: datetime | None = None,
+    task_uuid: str | None = None,
 ) -> dict[str, Any]:
     """Fetch bounded metadata batches while preserving all editorial state.
 
@@ -459,6 +461,7 @@ async def backfill_existing_literature_metadata(
                 if not provider_failed:
                     provider_stats["not_found"] += max(0, len(dois) - len(results))
 
+            changed_article_ids: list[str] = []
             for article in articles:
                 candidate = candidate_from_stored_article(article)
                 before = _backfill_projection(candidate)
@@ -481,8 +484,17 @@ async def backfill_existing_literature_metadata(
                 stats["unchanged"] += int(not changed)
                 if apply and changed:
                     _apply_candidate_projection(article, candidate)
+                    changed_article_ids.append(article.article_id)
 
-            if apply:
+            if apply and changed_article_ids:
+                stats["source_task_uuid"] = await commit_literature_change(
+                    db,
+                    operation="metadata_backfill",
+                    task_uuid=task_uuid,
+                    details={"run_id": stats["run_id"], "article_ids": changed_article_ids},
+                )
+            elif apply:
+                # Release the read transaction at every batch boundary as before.
                 await db.commit()
             for provider in active_providers:
                 if provider_succeeded.get(provider):
