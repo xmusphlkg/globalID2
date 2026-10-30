@@ -3492,10 +3492,17 @@ class DiseaseKnowledgeUpdateService:
         if exclusion_reason:
             archived_profiles = 0
             if not dry_run:
-                if self._stage_run:
-                    if self._stage_run.current != "organize":
-                        await self._stage_run.transition("organize", metrics={"step": "non_public"})
-                    await self._stage_run.transition("store", metrics={"step": "archive"})
+                run = self._stage_run
+                if run:
+                    # Collect already started for a brief. Record that this pass
+                    # only saw the registry exclusion, then archive in store.
+                    if run.current == "collect":
+                        await run.finish(
+                            metrics={"step": "registry", "source_only": bool(source_only)}
+                        )
+                    if run.current != "organize":
+                        await run.transition("organize", metrics={"step": "non_public"})
+                    await run.transition("store", metrics={"step": "archive"})
                 async with get_database() as db:
                     await _acquire_disease_knowledge_lock(db, disease["disease_id"])
                     archived_profiles = await _archive_non_public_disease_briefs(
@@ -3634,6 +3641,7 @@ class DiseaseKnowledgeUpdateService:
             source_dicts = list(evidence_packet.sources)
             evidence_quality = evidence_packet.assessment
             if source_only:
+                await self._advance_dry_run_to_store()
                 return {
                     "disease_id": disease["disease_id"],
                     "knowledge_profile_type": disease["knowledge_profile_type"],
@@ -3684,6 +3692,7 @@ class DiseaseKnowledgeUpdateService:
                     **(brief.get("metadata") or {}),
                     "evidence_quality": evidence_quality.to_dict(),
                 }
+            await self._advance_dry_run_to_store()
             return {
                 "disease_id": disease["disease_id"],
                 "knowledge_profile_type": disease["knowledge_profile_type"],
@@ -3734,9 +3743,7 @@ class DiseaseKnowledgeUpdateService:
                 fetch_report=fetch_report, enabled_sources=enabled_sources, task_uuid=task_uuid,
             )
 
-        if self._stage_run and self._stage_run.current != "organize":
-            await self._stage_run.transition("organize", metrics={"step": "brief"})
-        # Read a detached snapshot. No session or advisory lock survives model waiting.
+        # Collect only reads rows already stored. The session closes before organize.
         async with get_database() as db:
             source_rows = await _existing_sources(db, disease["disease_id"])
             source_dicts = [source_to_dict(row) for row in source_rows]
@@ -3749,6 +3756,8 @@ class DiseaseKnowledgeUpdateService:
                 )).scalars().all()
             )
             snapshot = _knowledge_snapshot(source_rows, existing_brief_rows, inherited_sources)
+        if self._stage_run and self._stage_run.current != "organize":
+            await self._stage_run.transition("organize", metrics={"step": "brief"})
 
         existing_briefs_by_language = {
             brief.language: brief for brief in existing_brief_rows
@@ -4226,10 +4235,13 @@ class DiseaseKnowledgeUpdateService:
         token = _KNOWLEDGE_STAGE_RUN.set(run)
         try:
             with capture_sources(task.task_uuid, run.attempt, "knowledge") as capture:
-                # StageRun creates all three rows once. Briefs have no collect step.
+                # Both tasks start at collect. A brief only reads stored sources.
                 await run.transition(
-                    "collect" if source_only else "organize",
-                    metrics={"source_only": source_only, "step": "sources" if source_only else "brief"},
+                    "collect",
+                    metrics={
+                        "source_only": source_only,
+                        "step": "sources" if source_only else "stored_sources",
+                    },
                 )
                 result = await execute(task)
                 capture.verify()
@@ -4244,6 +4256,36 @@ class DiseaseKnowledgeUpdateService:
 
     async def execute_task(self, task: Task) -> dict[str, Any]:
         return await self._with_collection_stages(task, self._execute_task)
+
+    async def _advance_dry_run_to_store(self) -> None:
+        """Record a completed store stage for a preview that writes nothing."""
+        run = self._stage_run
+        if run is None or run.current != "organize":
+            return
+        await run.transition(
+            "store",
+            metrics={"step": "dry_run", "dry_run": True, "brief_written": False},
+        )
+
+    async def _complete_superseded_brief_stages(self) -> None:
+        """Close collect, organize, and store when no brief is written.
+
+        Only while collect is still current. A later stage means this repair
+        already entered model or store work, and this path must not add a
+        publish_dirty row.
+        """
+        run = self._stage_run
+        if run is None or run.current != "collect":
+            return
+        metrics = {
+            "step": "superseded",
+            "skip_reason": "superseded_by_newer_published_profile",
+            "source_only": False,
+            "brief_written": False,
+        }
+        await run.finish(metrics=metrics)
+        await run.transition("organize", metrics=metrics)
+        await run.transition("store", metrics=metrics)
 
     async def _execute_task(self, task: Task) -> dict[str, Any]:
         """Execute a task created by the dashboard or CLI."""
@@ -4293,6 +4335,7 @@ class DiseaseKnowledgeUpdateService:
                 },
             )
             await task_manager.update_task_progress(task.task_uuid, 100)
+            await self._complete_superseded_brief_stages()
             return {
                 "disease_id": disease_id,
                 "skipped": True,

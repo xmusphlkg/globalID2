@@ -135,15 +135,22 @@ async def harness(tmp_path, monkeypatch):
 
 
 def assert_stages(rows, *, attempts=(1,), failed=None, source_only=False):
+    del source_only  # Briefs and source refreshes both complete collect.
     assert len(rows) == 3 * len(attempts)
     for attempt in attempts:
         current = {row.stage: row for row in rows if row.attempt == attempt}
         assert set(current) == {"collect", "organize", "store"}
-        assert current["collect"].status == ("completed" if source_only else "skipped")
+        if failed == "collect":
+            assert current["collect"].status == "failed"
+            assert current["organize"].status == current["store"].status == "skipped"
+            continue
+        assert current["collect"].status == "completed"
         if failed:
             assert current[failed].status == "failed"
             if failed == "organize":
                 assert current["store"].status == "skipped"
+            else:
+                assert current["organize"].status == "completed"
         else:
             assert current["organize"].status == current["store"].status == "completed"
 
@@ -217,7 +224,7 @@ async def test_update_task_rejects_source_only_payload(harness):
     with pytest.raises(ValueError, match="REFRESH_DISEASE_KNOWLEDGE_SOURCES"):
         await harness.service.execute_task(task(source_only=True))
     assert harness.fetches == 0
-    assert_stages(await harness.rows(RunStage), failed="organize")
+    assert_stages(await harness.rows(RunStage), failed="collect")
 
 
 @pytest.mark.parametrize("swallow_failure", [False, True])
@@ -287,6 +294,7 @@ async def test_concurrent_tasks_on_one_service_keep_their_stage_run(harness, mon
             both_entered.set()
         await both_entered.wait()
         assert h.service._stage_run.task_uuid == current_task.task_uuid
+        await h.service._stage_run.transition("organize")
         await h.service._stage_run.transition("store")
         return {}
 
@@ -329,8 +337,36 @@ async def test_non_public_archival_is_store_and_marks_dirty(harness, monkeypatch
     assert result["archived_profile_count"] == 1
     assert (await h.rows(DiseaseKnowledgeBrief))[0].status == "archived"
     assert [row.scope_key for row in await h.rows(PublishDirty)] == ["D999"]
-    assert_stages(await h.rows(RunStage))
+    rows = await h.rows(RunStage)
+    assert_stages(rows)
+    collect = next(row for row in rows if row.stage == "collect")
+    assert collect.metrics["step"] == "registry"
+    assert collect.metrics["source_only"] is False
     assert not h.fetches and not h.models
+
+
+async def test_superseded_repair_completes_stages_without_model_or_dirty(harness, monkeypatch):
+    h = harness
+    h.observe = True
+
+    async def superseded(*_args, **_kwargs):
+        assert h.service._stage_run.current == "collect"
+        return True
+
+    monkeypatch.setattr(knowledge, "_automatic_model_repair_is_superseded", superseded)
+    result = await h.service.execute_task(
+        task(targeted_repair=True, source_refreshed_task_uuid="certificate")
+    )
+    assert result["skip_reason"] == "superseded_by_newer_published_profile"
+    assert h.fetches == 0 and not h.models and not h.writes
+    assert not await h.rows(PublishDirty)
+    assert not await h.rows(DiseaseKnowledgeBrief)
+    rows = await h.rows(RunStage)
+    assert_stages(rows)
+    assert {row.metrics["skip_reason"] for row in rows} == {
+        "superseded_by_newer_published_profile"
+    }
+    assert all(row.metrics["brief_written"] is False for row in rows)
 
 
 async def test_source_fetch_failure_leaves_three_rows_and_no_formal_changes(harness, monkeypatch):
