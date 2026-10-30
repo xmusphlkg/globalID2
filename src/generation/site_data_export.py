@@ -7,7 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from src.core.config import get_config
-from src.core.country_library import expand_country_scopes
+from src.core.country_library import expand_country_scopes, get_standard_country_codes
 from src.core.data_share import (
     derive_github_raw_base_url,
     get_data_share_repo_branch,
@@ -296,10 +296,6 @@ def _unchanged_published_country_result(
 
 
 async def _fetch_publish_states(session) -> dict[str, dict] | None:
-    if not await has_table(session, "country_publish_state"):
-        return None
-    if not await has_table(session, "public_disease_series"):
-        return None
     from sqlalchemy import select
 
     from src.domain.public_series import CountryPublishState
@@ -370,7 +366,7 @@ async def _published_country_codes_by_disease(session) -> dict[str, set[str]]:
 
     rows = (
         await session.execute(
-            select(PublicDiseaseSeries.disease_id, PublicDiseaseSeries.country_code)
+            select(PublicDiseaseSeries.disease_id, PublicDiseaseSeries.country_code).distinct()
         )
     ).all()
     grouped: dict[str, set[str]] = defaultdict(set)
@@ -649,12 +645,16 @@ def _merge_incremental_disease_snapshot(
     """Replace changed country slices while retaining the existing snapshot."""
 
     merged = dict(existing)
+    allowed_codes = set(jurisdiction_codes) if jurisdiction_codes is not None else None
     country_series = {
         str(code): dict(series)
         for code, series in (existing.get("country_series") or {}).items()
-        if isinstance(series, dict)
+        if isinstance(series, dict) and (allowed_codes is None or str(code) in allowed_codes)
     }
     for country_code, country_data in updated_country_data.items():
+        if allowed_codes is not None and country_code not in allowed_codes:
+            country_series.pop(country_code, None)
+            continue
         series = (country_data.get("disease_series") or {}).get(disease_id)
         if series:
             country_series[country_code] = series
@@ -676,22 +676,9 @@ def _merge_incremental_disease_snapshot(
 
 
 async def ensure_site_export_database_ready() -> None:
-    """Create missing tables, seed countries, and restore WPP denominators."""
+    """Validate migrated site-export schema without importing or seeding data."""
     country_count = await _ensure_site_export_database_ready()
     print(f"  ✓ database schema ready ({country_count} countries)")
-    # Country rebuilds can recreate country IDs after population was imported,
-    # leaving a valid table with no denominator rows for some countries.  Site
-    # generation is already a schema-preparation boundary, so repair the
-    # idempotent WPP reference data here before calculating crude incidence.
-    from scripts.import_wpp_population import ensure_wpp_population
-
-    population_result = await ensure_wpp_population()
-    print(
-        "  ✓ WPP population ready "
-        f"({population_result['mapped_countries']} countries, "
-        f"{population_result['mapped_rows']} country-years, "
-        f"{population_result['year_min']}-{population_result['year_max']})"
-    )
 
 
 async def collect_site_export_context(
@@ -704,8 +691,24 @@ async def collect_site_export_context(
     incremental_site: bool = False,
 ) -> dict:
     """Read and project all database-backed data without writing artifacts."""
+    # Validate before readiness helpers can auto-create missing tables. A site
+    # export must never hide an unapplied control-plane migration.
+    async with get_db() as session:
+        missing_publication_tables = [
+            name for name in ("country_publish_state", "public_disease_series")
+            if not await has_table(session, name)
+        ]
+        if missing_publication_tables:
+            raise RuntimeError(
+                "Site export requires the migrated publication schema; missing "
+                + ", ".join(missing_publication_tables)
+                + ". Apply database migrations before exporting."
+            )
     await ensure_site_export_database_ready()
-    incremental_codes = set(expand_country_scopes(incremental_country_codes or ()))
+    incremental_codes = {
+        str(code).strip().upper() for code in incremental_country_codes or ()
+        if str(code).strip()
+    }
     incremental = bool(incremental_codes) or incremental_site
     if incremental and recorded_at_as_of is not None:
         raise ValueError(
@@ -800,17 +803,26 @@ async def collect_site_export_context(
         country_name_zh_by_code = {c["code"]: c["name_zh"] for c in countries_simple}
         country_download_entries: list[dict] = []
         disease_download_entries: list[dict] = []
+        available_country_codes = {country["code"] for country in countries}
+        # A parent scope includes only subdivisions present in this database.
+        # A migrated database need not have seeded every registered subdivision.
+        missing_incremental_codes = incremental_codes - available_country_codes
+        registered_codes = set(get_standard_country_codes())
+        missing_incremental_codes = {
+            code for code in missing_incremental_codes
+            if not (
+                "-" in code and code.split("-", 1)[0] in incremental_codes
+                and code in registered_codes
+            )
+        }
         incremental_codes = set(expand_country_scopes(
-            incremental_codes, available_codes=(country["code"] for country in countries)
-        ))
+            incremental_codes, available_codes=available_country_codes
+        )) & available_country_codes
         countries_to_refresh = (
             [country for country in countries if country["code"] in incremental_codes]
             if incremental
             else countries
         )
-        missing_incremental_codes = incremental_codes - {
-            country["code"] for country in countries_to_refresh
-        }
         if missing_incremental_codes:
             raise RuntimeError(
                 "Incremental site export requested unknown country scope(s): "
@@ -820,8 +832,14 @@ async def collect_site_export_context(
         publish_states = None
         publish_coverage = None
         curve_refresh_codes: set[str] | None = None
-        if recorded_at_as_of is None:
+        import os
+        if recorded_at_as_of is None and os.environ.get("GLOBALID_RELEASE_FROM_OBSERVATIONS") != "1":
             publish_states = await _fetch_publish_states(session)
+            if publish_states is not None:
+                publish_states = {
+                    code: state for code, state in publish_states.items()
+                    if code in available_country_codes
+                } or None
         use_publish_read = publish_states is not None
         if use_publish_read:
             assert publish_states is not None
@@ -917,7 +935,7 @@ async def collect_site_export_context(
                     raise
         fresh_results_by_code = {result["code"]: result for result in country_results}
         existing_country_summaries: dict[str, dict] = {}
-        if curve_refresh_codes is not None:
+        if (output_dir / "meta.json").is_file():
             existing_meta = _read_json_file(output_dir / "meta.json", {})
             if isinstance(existing_meta, dict):
                 existing_country_summaries = {
@@ -925,10 +943,23 @@ async def collect_site_export_context(
                     for item in (existing_meta.get("countries") or [])
                     if isinstance(item, dict) and item.get("code")
                 }
+        retired_country_codes = set(existing_country_summaries) - available_country_codes
         for country in countries:
             code = country["code"]
             result = fresh_results_by_code.get(code)
-            if result is None and curve_refresh_codes is not None:
+            reusable_summary = existing_country_summaries.get(code)
+            cached_projection_exists = (
+                (public_site_data_dir / "countries" / f"{code.lower()}.json").is_file()
+                and (public_site_data_dir / "countries" / f"{code.lower()}-source-series.json").is_file()
+            )
+            if result is None and (
+                curve_refresh_codes is not None
+                or (
+                    incremental and reusable_summary is not None
+                    and cached_projection_exists
+                    and (output_dir / "countries" / f"{code.lower()}.json").is_file()
+                )
+            ):
                 result = _unchanged_published_country_result(
                     country,
                     summary=existing_country_summaries.get(code),
@@ -958,6 +989,11 @@ async def collect_site_export_context(
                     "source_records": [],
                     "country_data": country_data,
                     "source_info": country_source_info,
+                    "unchanged_curve": bool(incremental and cached_projection_exists),
+                    "record_count": sum(
+                        len(series.get("dates") or [])
+                        for series in (country_data.get("disease_series") or {}).values()
+                    ),
                 }
             code = result["code"]
             records = result["records"]
@@ -1060,8 +1096,10 @@ async def collect_site_export_context(
             all_source_records_by_country
         )
         affected_disease_ids: set[str] = set()
-        if curve_refresh_codes:
-            for code in curve_refresh_codes:
+        affected_country_codes = set(incremental_codes if incremental else curve_refresh_codes or ())
+        affected_country_codes.update(retired_country_codes)
+        if affected_country_codes:
+            for code in affected_country_codes:
                 fresh = fresh_results_by_code.get(code) or {}
                 affected_disease_ids.update(
                     (fresh.get("country_data") or {}).get("disease_series") or {}
@@ -1072,12 +1110,30 @@ async def collect_site_export_context(
                 )
                 if isinstance(previous, dict):
                     affected_disease_ids.update(previous.get("disease_series") or {})
+        if (incremental or retired_country_codes) and publish_coverage is None:
+            publish_coverage = await _published_country_codes_by_disease(session) or None
+        if publish_coverage is not None:
+            for did, country_codes in publish_coverage.items():
+                if country_codes & retired_country_codes:
+                    affected_disease_ids.add(did)
+                country_codes.intersection_update(available_country_codes)
+        if incremental and publish_coverage is not None:
+            for country_codes in publish_coverage.values():
+                country_codes.difference_update(incremental_codes)
+            for code, result in fresh_results_by_code.items():
+                for did in result["country_data"].get("disease_series") or {}:
+                    publish_coverage.setdefault(did, set()).add(code)
         changed_disease_ids: set[str] = set(affected_disease_ids)
         refreshed_country_data = {
             code: result["country_data"]
             for code, result in fresh_results_by_code.items()
             if not result.get("unchanged_curve")
         }
+        # Explicit removals invalidate affected disease/download slices even
+        # when no active country was marked dirty. Never recollect a retired scope.
+        refreshed_country_data.update({
+            code: {"disease_series": {}} for code in retired_country_codes
+        })
         jurisdiction_codes = [str(country.get("code") or "") for country in countries]
 
         for country_export in country_exports:
@@ -1117,11 +1173,25 @@ async def collect_site_export_context(
         # ── Per-disease files ──
         for disease in diseases:
             did = disease["disease_id"]
-            if curve_refresh_codes is not None and did not in affected_disease_ids:
+            reusable_disease = (
+                (incremental or curve_refresh_codes is not None)
+                and did not in affected_disease_ids
+                and (output_dir / "diseases" / f"{did.lower()}.json").is_file()
+                and (public_site_data_dir / "diseases" / f"{did.lower()}.json").is_file()
+            )
+            if reusable_disease:
+                if publish_coverage is None:
+                    # The migrated publication table can be empty before its
+                    # first successful release. Existing snapshots retain
+                    # coverage without recomputing browser projections.
+                    previous = _read_json_file(output_dir / "diseases" / f"{did.lower()}.json", {})
+                    cached_country_series = {code: {} for code in previous.get("country_series") or {}}
+                else:
+                    cached_country_series = {code: {} for code in publish_coverage.get(did, ())}
                 disease_exports.append(
                     {
                         "disease_id": did,
-                        "disease_data": {"disease_id": did, "country_series": {}},
+                        "disease_data": {"disease_id": did, "country_series": cached_country_series},
                         "site_data": {},
                         "unchanged_curve": True,
                     }
@@ -1260,15 +1330,10 @@ async def collect_site_export_context(
         # The projected country and disease snapshots are now complete. Drop
         # the raw row dictionaries before report/literature enrichment and file
         # generation so the export does not keep both representations alive.
-        if use_publish_read:
-            country_record_counts = {
-                item["code"]: int(item.get("record_count") or 0)
-                for item in country_exports
-            }
-        else:
-            country_record_counts = {
-                code: len(records) for code, records in all_records_by_country.items()
-            }
+        country_record_counts = {
+            item["code"]: int(item.get("record_count") or 0)
+            for item in country_exports
+        }
         all_records_by_country.clear()
         all_source_records_by_country.clear()
         records_by_disease_by_country.clear()
@@ -1289,7 +1354,7 @@ async def collect_site_export_context(
             surveillance_coverage={
                 item["disease_id"]: (
                     set((publish_coverage or {}).get(item["disease_id"], ()))
-                    if use_publish_read
+                    if publish_coverage is not None
                     else set((item["disease_data"].get("country_series") or {}).keys())
                 )
                 for item in disease_exports
@@ -1330,6 +1395,7 @@ async def collect_site_export_context(
         "situation_weekly": situation_weekly,
         "incremental": incremental,
         "incremental_country_codes": sorted(incremental_codes),
+        "retired_country_codes": sorted(retired_country_codes),
         "changed_disease_ids": sorted(changed_disease_ids),
         "publish_hashes": (
             {
@@ -1390,9 +1456,6 @@ def write_site_export_artifacts(
     report_details = context["report_details"]
     reports = context["reports"]
     literature_export = context.get("literature_export") or {}
-    situation_latest = context.get("situation_latest")
-    situation_monthly = context.get("situation_monthly") or []
-    situation_weekly = context.get("situation_weekly") or []
 
     prepare_site_output_dirs(output_dir, public_site_data_dir)
     write_compact_json(public_site_data_dir / "site-status.json", {"generated_at": generated_at})
@@ -1453,14 +1516,14 @@ def write_site_export_artifacts(
         knowledge_completeness_values.append(
             float(disease_knowledge_payload.get("knowledge_completeness") or 0.0)
         )
+        write_pretty_json(
+            output_dir / "disease-knowledge" / f"{did.lower()}.json",
+            disease_knowledge_payload,
+        )
         if limit_curves and did not in changed_disease_set:
             continue
         write_pretty_json(
             output_dir / "diseases" / f"{did.lower()}.json", disease_data
-        )
-        write_pretty_json(
-            output_dir / "disease-knowledge" / f"{did.lower()}.json",
-            disease_knowledge_payload,
         )
         write_compact_json(
             public_site_data_dir / "diseases" / f"{did.lower()}.json",
@@ -1646,13 +1709,23 @@ def write_incremental_site_export_artifacts(
             output_dir / "diseases" / f"{disease_id.lower()}.json",
             disease_data,
         )
-        write_pretty_json(
-            output_dir / "disease-knowledge" / f"{disease_id.lower()}.json",
-            build_disease_knowledge_fields(
-                context["diseases_by_id"][disease_id],
-                context["disease_knowledge_briefs"].get(disease_id),
-            ),
+    # These small knowledge payloads are independent of surveillance curves.
+    # Content-aware writes also remove withdrawn content without rewriting curves.
+    knowledge_names = set()
+    knowledge_modes: dict[str, int] = defaultdict(int)
+    knowledge_completeness = []
+    for disease in context["diseases"]:
+        disease_id = disease["disease_id"]
+        knowledge_names.add(f"{disease_id.lower()}.json")
+        knowledge_payload = build_disease_knowledge_fields(
+            disease, context["disease_knowledge_briefs"].get(disease_id),
         )
+        knowledge_modes[str(knowledge_payload.get("knowledge_display_mode") or "blocked")] += 1
+        knowledge_completeness.append(float(knowledge_payload.get("knowledge_completeness") or 0.0))
+        write_pretty_json(
+            output_dir / "disease-knowledge" / f"{disease_id.lower()}.json", knowledge_payload,
+        )
+    remove_stale_json_files(output_dir / "disease-knowledge", knowledge_names)
 
     for disease_id, disease_export in diseases_by_id.items():
         site_path = public_site_data_dir / "diseases" / f"{disease_id.lower()}.json"
@@ -1677,6 +1750,11 @@ def write_incremental_site_export_artifacts(
             "total_diseases": len(context["diseases"]),
             "total_reports": len(context["reports"]),
             "countries": context["countries_simple"],
+            "knowledge_quality": {
+                "display_modes": dict(sorted(knowledge_modes.items())),
+                "average_completeness": round(sum(knowledge_completeness) / len(knowledge_completeness), 3) if knowledge_completeness else 0.0,
+                "schema_version": 3,
+            },
         }
     )
     write_pretty_json(output_dir / "meta.json", existing_meta)
@@ -1698,6 +1776,12 @@ def write_incremental_site_export_artifacts(
         output_dir,
         public_site_data_dir=public_site_data_dir,
     )
+    # Reconcile explicit withdrawals only after replacement artifacts succeed.
+    # Ordinary unchanged scopes remain untouched.
+    for code in context.get("retired_country_codes") or ():
+        (output_dir / "countries" / f"{code.lower()}.json").unlink(missing_ok=True)
+        (public_site_data_dir / "countries" / f"{code.lower()}.json").unlink(missing_ok=True)
+        (public_site_data_dir / "countries" / f"{code.lower()}-source-series.json").unlink(missing_ok=True)
     _write_publish_hash_manifest(output_dir, context)
 
     print(
@@ -1722,28 +1806,14 @@ async def export(
 ) -> None:
     """Package and write one complete or scoped incremental export."""
     collect_started = time.perf_counter()
-    try:
-        context = await collect_site_export_context(
-            output_dir,
-            allow_empty_export,
-            incremental_country_codes,
-            public_site_data_dir=public_site_data_dir,
-            recorded_at_as_of=recorded_at_as_of,
-            incremental_site=incremental_site,
-        )
-    except RuntimeError as exc:
-        if not (incremental_site or incremental_country_codes) or not str(exc).startswith(
-            ("Incremental site export requires", "Incremental site export is missing")
-        ):
-            raise
-        print(f"  Existing incremental snapshot unavailable ({exc}); rebuilding all site data", flush=True)
-        context = await collect_site_export_context(
-            output_dir,
-            allow_empty_export,
-            None,
-            public_site_data_dir=public_site_data_dir,
-            recorded_at_as_of=recorded_at_as_of,
-        )
+    context = await collect_site_export_context(
+        output_dir,
+        allow_empty_export,
+        incremental_country_codes,
+        public_site_data_dir=public_site_data_dir,
+        recorded_at_as_of=recorded_at_as_of,
+        incremental_site=incremental_site,
+    )
     print(
         "  Phase timing: database reads and projections "
         f"{time.perf_counter() - collect_started:.1f}s",

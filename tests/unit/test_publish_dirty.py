@@ -13,11 +13,12 @@ from sqlalchemy.pool import StaticPool
 
 pytest.importorskip("aiosqlite")
 
-from src.core import database as database_module  # noqa: E402
-from src.domain import Base, PublishDirty, RunStage  # noqa: E402
-from src.services.ingestion import stages as stages_module  # noqa: E402
+from src.core import database as database_module
+from src.domain import Base, Country, PublishDirty, RunStage
+from src.services.ingestion import stages as stages_module
+from tests.unit.publication_sqlite import create_publication_tables
 
-TABLES = [RunStage.__table__, PublishDirty.__table__]
+TABLES = [Country.__table__, RunStage.__table__, PublishDirty.__table__]
 
 STARTED = datetime(2026, 10, 30, 12, 0, 0, tzinfo=timezone.utc)
 
@@ -25,10 +26,13 @@ STARTED = datetime(2026, 10, 30, 12, 0, 0, tzinfo=timezone.utc)
 @pytest_asyncio.fixture
 async def db(monkeypatch):
     engine = create_async_engine(
-        "sqlite+aiosqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False}
+        "sqlite+aiosqlite://",
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
     )
     async with engine.begin() as conn:
         await conn.run_sync(lambda sync: Base.metadata.create_all(sync, tables=TABLES))
+        await conn.run_sync(create_publication_tables)
     maker = async_sessionmaker(engine, expire_on_commit=False)
     monkeypatch.setattr(database_module, "_engine", engine)
     monkeypatch.setattr(database_module, "_session_maker", maker)
@@ -40,8 +44,12 @@ async def _pending(db) -> list[PublishDirty]:
     async with db() as session:
         return list(
             (
-                await session.execute(select(PublishDirty).where(PublishDirty.published_at.is_(None)))
-            ).scalars().all()
+                await session.execute(
+                    select(PublishDirty).where(PublishDirty.published_at.is_(None))
+                )
+            )
+            .scalars()
+            .all()
         )
 
 
@@ -50,17 +58,11 @@ async def _all_dirty(db) -> list[PublishDirty]:
         return list((await session.execute(select(PublishDirty))).scalars().all())
 
 
-async def test_failed_store_leaves_no_dirty_row(db):
-    assert await stages_module.record_fused_outcome(
-        task_uuid="t1", started_at=STARTED, outcome="failed", scope_key="US"
-    )
-    assert await _all_dirty(db) == []
-
-
 async def test_successful_store_marks_scope_dirty(db):
-    assert await stages_module.record_fused_outcome(
-        task_uuid="t2", started_at=STARTED, outcome="completed", scope_key="US"
-    )
+    async with database_module.get_db() as session:
+        await stages_module.mark_dirty(
+            session, task_uuid="t2", line="surveillance", scope_key="US"
+        )
 
     dirty = await _all_dirty(db)
     assert len(dirty) == 1
@@ -71,33 +73,18 @@ async def test_successful_store_marks_scope_dirty(db):
     assert dirty[0].published_at is None
     pending = await _pending(db)
     assert len(pending) == 1
-    assert (pending[0].line, pending[0].scope_key, pending[0].source_task_uuid) == ("surveillance", "US", "t2")
-
-
-async def test_store_rollback_leaves_no_dirty_row(db, monkeypatch):
-    original = stages_module.record_stage
-
-    async def failing_store(db, *, stage, **kwargs):
-        if stage == "store":
-            raise RuntimeError("store exploded")
-        return await original(db, stage=stage, **kwargs)
-
-    monkeypatch.setattr(stages_module, "record_stage", failing_store)
-
-    assert (
-        await stages_module.record_fused_outcome(
-            task_uuid="t3", started_at=STARTED, outcome="completed", scope_key="US"
-        )
-        is False
+    assert (pending[0].line, pending[0].scope_key, pending[0].source_task_uuid) == (
+        "surveillance",
+        "US",
+        "t2",
     )
-
-    async with db() as session:
-        assert (await session.execute(select(RunStage))).scalars().all() == []
-    assert await _all_dirty(db) == []
 
 
 async def test_published_dirty_row_is_not_seen_again(db):
-    await stages_module.record_fused_outcome(task_uuid="t4", started_at=STARTED, outcome="completed", scope_key="US")
+    async with database_module.get_db() as session:
+        await stages_module.mark_dirty(
+            session, task_uuid="t4", line="surveillance", scope_key="US"
+        )
     assert len(await _pending(db)) == 1
 
     # Release side writes back only after production release is verified.
@@ -108,3 +95,61 @@ async def test_published_dirty_row_is_not_seen_again(db):
         await session.commit()
 
     assert await _pending(db) == []
+
+
+async def test_store_transaction_rollback_also_discards_dirty(db):
+    with pytest.raises(RuntimeError, match="formal rows failed"):
+        async with database_module.get_db() as session:
+            await stages_module.mark_dirty(
+                session, line="literature", scope_key="*", task_uuid="rollback"
+            )
+            await session.flush()
+            raise RuntimeError("formal rows failed")
+    assert await _pending(db) == []
+
+
+async def test_release_acknowledges_only_selected_ids_and_is_atomic(db, monkeypatch):
+    from src.services.data_release import projection
+
+    async with database_module.get_db() as session:
+        await stages_module.mark_dirty(
+            session, line="surveillance", scope_key="US", task_uuid="collection-1"
+        )
+        await stages_module.mark_dirty(
+            session, line="surveillance", scope_key="JP", task_uuid="collection-2"
+        )
+    selected = (await _pending(db))[0].id
+    calls = []
+
+    async def context():
+        return {"countries_by_code": {"US": {}, "JP": {}}}
+
+    async def publish(session, code, context, *, force):
+        calls.append((code, force))
+        if len(calls) == 1:
+            raise RuntimeError("projection failed")
+
+    monkeypatch.setattr(projection, "_load_publish_context", context)
+    monkeypatch.setattr(projection, "_publish_country", publish)
+    with pytest.raises(RuntimeError, match="projection failed"):
+        async with database_module.get_db() as session:
+            await projection.commit_release_projection(
+                session,
+                task_uuid="release-1",
+                country_codes=["US"],
+                full=False,
+                dirty_ids=[selected],
+            )
+    assert len(await _pending(db)) == 2
+    async with database_module.get_db() as session:
+        await projection.commit_release_projection(
+            session,
+            task_uuid="release-2",
+            country_codes=["US"],
+            full=False,
+            dirty_ids=[selected],
+        )
+    pending = await _pending(db)
+    assert [row.scope_key for row in pending] == ["JP"]
+    assert calls[:2] == [("US", True), ("US", True)]
+    assert all(code == "US" or code.startswith("US-") for code, _ in calls)

@@ -105,6 +105,7 @@ async def apply_rows(rows_by_code):
     from src.core.database import dispose_database, get_db
     from src.data.processors.au import AUMonthlyUpdater
     from src.services.crawl_service import CrawlService
+    from src.services.ingestion.manual_runs import record_manual_store
 
     results = {}
     try:
@@ -135,6 +136,11 @@ async def apply_rows(rows_by_code):
                     "upserted": result.inserted_or_updated,
                     "unmapped": result.skipped_unmapped,
                 }
+                audit = await record_manual_store(
+                    db, line="surveillance", scope_keys=[code],
+                    operation="update_au_subdivisions", metrics=results[code],
+                )
+                results[code]["task_uuid"] = audit.task_uuid
             print(json.dumps({code: results[code]}), flush=True)
     finally:
         await dispose_database()

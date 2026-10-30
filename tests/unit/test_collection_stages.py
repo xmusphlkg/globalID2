@@ -1,4 +1,4 @@
-"""Collection stage recording: attempt semantics and fused-write failure tolerance."""
+"""Collection stage recording preserves attempts and propagates storage failures."""
 
 from __future__ import annotations
 
@@ -48,22 +48,6 @@ async def _rows(db, task_uuid: str) -> list[RunStage]:
         )
 
 
-async def test_retry_produces_new_attempt_and_keeps_old_rows(db):
-    assert await stages_module.record_fused_outcome(task_uuid="t1", started_at=STARTED, outcome="completed")
-    assert await stages_module.record_fused_outcome(task_uuid="t1", started_at=STARTED, outcome="completed")
-
-    rows = await _rows(db, "t1")
-    assert {r.attempt for r in rows} == {1, 2}
-
-    first = [r for r in rows if r.attempt == 1]
-    assert {(r.stage, r.status) for r in first} == {
-        ("collect", "completed"),
-        ("organize", "skipped"),
-        ("store", "skipped"),
-    }
-    assert all(r.metrics.get("fused") for r in first if r.stage == "collect")
-
-
 class _BrokenDB:
     async def __aenter__(self):
         raise RuntimeError("db down")
@@ -72,9 +56,31 @@ class _BrokenDB:
         return False
 
 
-async def test_fused_write_failure_does_not_raise(db, monkeypatch):
+async def test_stage_write_failure_is_fatal(db, monkeypatch):
     monkeypatch.setattr(stages_module, "get_db", lambda: _BrokenDB())
 
-    result = await stages_module.record_fused_outcome(task_uuid="t2", started_at=STARTED, outcome="completed")
-    assert result is False
+    with pytest.raises(RuntimeError, match="db down"):
+        await stages_module.StageRun.start("t2", "surveillance")
     assert await _rows(db, "t2") == []
+
+
+async def test_three_stage_terminal_updates_and_retry_preserve_history(db):
+    for expected_attempt in (1, 2):
+        run = await stages_module.StageRun.start("three-stage", "literature")
+        assert run.attempt == expected_attempt
+        for stage in ("collect", "organize", "store"):
+            await run.transition(stage)
+        await run.finish(metrics={"rows": 4})
+    rows = await _rows(db, "three-stage")
+    assert len(rows) == 6
+    assert all(row.status == "completed" for row in rows)
+    assert all(not row.metrics.get("fused") for row in rows)
+
+
+async def test_three_stage_failure_keeps_unreached_stages_visible(db):
+    run = await stages_module.StageRun.start("failed-run", "situation")
+    await run.transition("collect")
+    await run.transition("organize")
+    await run.finish(error="extraction failed")
+    rows = await _rows(db, "failed-run")
+    assert {row.stage: row.status for row in rows} == {"collect": "completed", "organize": "failed", "store": "skipped"}

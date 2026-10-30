@@ -1064,10 +1064,10 @@ def build_direct_download_files(
     projection_code = _projection_code_sha256()
     country_fingerprints: dict[str, str] = {}
     disease_fingerprints: dict[str, str] = {}
-    selected_country_codes = {str(code).strip().upper() for code in changed_country_codes or ()}
-    selected_disease_ids = {str(disease_id).strip() for disease_id in changed_disease_ids or ()}
-    requested_country_codes = set(selected_country_codes)
-    requested_disease_ids = set(selected_disease_ids)
+    requested_country_codes = {str(code).strip().upper() for code in changed_country_codes or ()}
+    requested_disease_ids = {str(disease_id).strip() for disease_id in changed_disease_ids or ()}
+    selected_country_codes: set[str] = set()
+    selected_disease_ids: set[str] = set()
     fingerprint_started = time.perf_counter()
     for index, item in enumerate(country_exports, start=1):
         code = str(item["code"]).upper()
@@ -1093,7 +1093,7 @@ def build_direct_download_files(
                 )
             continue
         available = _entry_files_available(existing, output_dir, "countries", path_id)
-        if changed_country_codes is None or not available:
+        if changed_country_codes is None or code in requested_country_codes or not available:
             fingerprint = _input_sha256(
                 {"country_data": item["country_data"], "source_info": item["source_info"]},
                 projection_code=projection_code,
@@ -1131,7 +1131,7 @@ def build_direct_download_files(
                 )
             continue
         available = _entry_files_available(existing, output_dir, "diseases", path_id)
-        if changed_disease_ids is None or not available:
+        if changed_disease_ids is None or disease_id in requested_disease_ids or not available:
             country_codes = (item["disease_data"].get("country_series") or {}).keys()
             fingerprint = _input_sha256(
                 {
@@ -1270,11 +1270,7 @@ def build_direct_download_files(
         path_id = country_export["code"].lower()
         result = processed_country_results.get(path_id)
         if result is None:
-            entry = existing_manifest.get("countries") or []
-            existing_entry = next(
-                (item for item in entry if item.get("id") == path_id),
-                None,
-            )
+            existing_entry = existing_country_entries.get(path_id)
             if existing_entry is None:
                 raise RuntimeError(
                     f"Incremental download manifest is missing country {path_id}"
@@ -1304,14 +1300,7 @@ def build_direct_download_files(
         disease_id = disease_export["disease_id"]
         result = processed_disease_results.get(disease_id)
         if result is None:
-            existing_entry = next(
-                (
-                    item
-                    for item in (existing_manifest.get("diseases") or [])
-                    if item.get("disease_id") == disease_id
-                ),
-                None,
-            )
+            existing_entry = existing_disease_entries.get(disease_id)
             if existing_entry is None:
                 raise RuntimeError(
                     f"Incremental download manifest is missing disease {disease_id}"

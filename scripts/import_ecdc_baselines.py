@@ -86,6 +86,7 @@ async def run(*, apply: bool, countries: tuple[str, ...]) -> None:
         return
 
     results: list[tuple[str, int, int]] = []
+    from src.services.ingestion.manual_runs import record_manual_store
     async with get_database() as db:
         await ensure_standard_country_rows(db, countries)
         for updater, rows in prepared:
@@ -110,6 +111,12 @@ async def run(*, apply: bool, countries: tuple[str, ...]) -> None:
                 deleted,
                 int(outcome.inserted_or_updated),
             ))
+        await record_manual_store(
+            db, line="surveillance", scope_keys=[code for code, _, _ in results],
+            operation="import_ecdc_baselines",
+            metrics={"replaced": sum(row[1] for row in results),
+                     "upserted": sum(row[2] for row in results)},
+        )
         await db.commit()
     for code, deleted, upserted in results:
         print(f"Applied: {code} replaced={deleted} upserted={upserted}")

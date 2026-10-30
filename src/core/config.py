@@ -823,10 +823,6 @@ class LiteratureSettings(_BaseEnvSettings):
     autopilot_auto_reject_weak_links: bool = Field(default=True)
     autopilot_auto_exclude_incomplete: bool = Field(default=True)
     autopilot_auto_exclude_preprints: bool = Field(default=True)
-    autopilot_export_on_change: bool = Field(
-        default=True,
-        description="Refresh local public Research Radar artifacts after an automated decision",
-    )
 
     @property
     def ai_enrichment_languages(self) -> list[str]:

@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import signal  # Re-exported for compatibility with existing diagnostics/tests.
+import subprocess
 import sys
 from typing import Any, Optional
 from types import SimpleNamespace
@@ -22,9 +23,10 @@ from src.core.data_share import (
     get_data_share_repo_branch,
     get_data_share_repo_url,
 )
-from src.core.country_library import expand_country_scopes
+from src.core.country_library import expand_country_scopes, get_country_bootstrap_config
 from src.core.task_manager import task_manager
 from src.domain import Country, DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
+from src.domain.collection import PublishDirty
 from src.services.data_release import checks as release_checks
 from src.services.data_release import pipeline as release_pipeline
 from src.services.data_release.public_changelog import (
@@ -632,6 +634,7 @@ class DataReleaseService:
         manual: bool,
         trigger: str,
         trigger_task_uuid: Optional[str] = None,
+        full: bool = False,
     ) -> dict[str, Any]:
         async with self._lock:
             job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
@@ -651,6 +654,7 @@ class DataReleaseService:
                     manual=manual,
                     trigger=trigger,
                     trigger_task_uuid=trigger_task_uuid,
+                    full=full,
                 )
                 state.last_finished_at = datetime.now(ZoneInfo(tz_name))
                 state.last_task_uuid = result["task_uuid"]
@@ -822,6 +826,7 @@ class DataReleaseService:
         manual: bool,
         trigger: str,
         trigger_task_uuid: Optional[str],
+        full: bool = False,
     ) -> dict[str, Any]:
         branch = self._download_repo_branch(job)
         project_name = self._cloudflare_project_name(job.cloudflare_project_name)
@@ -829,76 +834,38 @@ class DataReleaseService:
         download_url_base = self._download_repo_raw_base(job)
         raw_archive = self._raw_archive_runtime()
         incremental_country_codes: list[str] = []
-        available_country_codes: list[str] = []
-        incremental_site = False
+        dirty_ids: list[int] = []
+        # An empty incremental run never becomes a full country rebuild.
+        incremental_site = not full
+        marked_before = datetime.now(ZoneInfo("UTC")).isoformat()
         async with get_database() as db:
-            if trigger_task_uuid:
-                trigger_task = await db.execute(
-                    select(Task).where(Task.task_uuid == trigger_task_uuid)
-                )
-                trigger_task = trigger_task.scalar_one_or_none()
-                incremental_site = bool(
-                    trigger_task
-                    and trigger_task.task_type in LITERATURE_RELEASE_TASK_TYPES
-                    and (ASTRO_DIR / "src" / "data" / "meta.json").is_file()
-                    and (DIRECT_DOWNLOAD_DIR / "manifest.json").is_file()
-                )
-                trigger_input = dict(
-                    (trigger_task.input_data if trigger_task else None) or {}
-                )
-                trigger_country = str(
-                    trigger_input.get("country")
-                    or trigger_input.get("country_code")
-                    or ""
-                ).strip().upper()
-                if trigger_country:
-                    incremental_country_codes = [trigger_country]
-            elif manual:
-                # A manual control-panel refresh should still be incremental
-                # when it follows one or more completed country crawls. If no
-                # crawl happened since the last release, keep the safe full
-                # refresh behavior for code/configuration changes.
-                latest_release = (
-                    await db.execute(
-                        select(Task.completed_at)
-                        .where(
-                            Task.task_type == TaskType.EXPORT_DATA,
-                            Task.status == TaskStatus.COMPLETED,
-                            Task.completed_at.is_not(None),
-                        )
-                        .order_by(Task.completed_at.desc())
-                        .limit(1)
+            dirty = [] if full else list((await db.execute(select(PublishDirty).where(PublishDirty.published_at.is_(None)).order_by(PublishDirty.id))).scalars().all())
+            if not full:
+                scopes = sorted({row.scope_key for row in dirty if row.line == "surveillance"})
+                known = list((await db.execute(select(Country.code, Country.is_active))).all()) if scopes else []
+                known_codes = {str(code).strip().upper() for code, _active in known}
+                unknown = sorted(set(scopes) - known_codes)
+                if unknown:
+                    raise ValueError(
+                        "Unpublished surveillance scopes have no country configuration: "
+                        + ", ".join(unknown)
                     )
-                ).scalar_one_or_none()
-                crawl_query = select(Task).where(
-                    Task.task_type == TaskType.CRAWL_DATA,
-                    Task.status == TaskStatus.COMPLETED,
-                )
-                if latest_release is not None:
-                    crawl_query = crawl_query.where(
-                        Task.completed_at > latest_release
-                    )
-                crawl_tasks = (
-                    await db.execute(
-                        crawl_query.order_by(Task.completed_at.asc())
-                    )
-                ).scalars().all()
-                for crawl_task in crawl_tasks:
-                    crawl_input = dict(crawl_task.input_data or {})
-                    country = str(
-                        crawl_input.get("country")
-                        or crawl_input.get("country_code")
-                        or ""
-                    ).strip().upper()
-                    if country and country not in incremental_country_codes:
-                        incremental_country_codes.append(country)
-            if incremental_country_codes:
-                available_country_codes = list(
-                    (await db.execute(select(Country.code))).scalars().all()
-                )
-        incremental_country_codes = expand_country_scopes(
-            incremental_country_codes, available_codes=available_country_codes
-        )
+                available_codes = {
+                    str(code).strip().upper() for code, active in known
+                    if active and get_country_bootstrap_config(code).get("public_release_enabled", True) is not False
+                }
+                publishable_scopes = [scope for scope in scopes if scope in available_codes]
+                incremental_country_codes = [
+                    code for code in expand_country_scopes(publishable_scopes, available_codes=available_codes)
+                    if code in available_codes
+                ]
+                # Disabled countries retain their pending marker until their
+                # publication policy permits export. They do not block other
+                # scopes, and must never be acknowledged by this release.
+                dirty_ids = [
+                    row.id for row in dirty
+                    if row.line != "surveillance" or row.scope_key in available_codes
+                ]
         description_parts = [
             f"Refresh and generate site data, then build Astro site for release job {job.job_id}.",
             (
@@ -933,6 +900,9 @@ class DataReleaseService:
             "manual_trigger": manual,
             "incremental_country_codes": incremental_country_codes,
             "incremental_site": incremental_site,
+            "full": full,
+            "publish_dirty_ids": dirty_ids,
+            "publish_dirty_before": marked_before if full else None,
             "trigger_task_uuid": trigger_task_uuid,
             "generated_paths": list(GENERATED_DATA_PATHS),
             "raw_archive_enabled": raw_archive.enabled,
@@ -1358,7 +1328,7 @@ class DataReleaseService:
 
     async def _current_git_branch(self) -> str:
         result = await self._run_capture(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
             cwd=ROOT_DIR,
         )
         branch = result["stdout"].strip() if result["returncode"] == 0 else ""
@@ -1761,14 +1731,20 @@ class DataReleaseService:
         branch = os.getenv("DATA_RELEASE_GIT_BRANCH", "").strip()
         if branch:
             return branch
-        head = ROOT_DIR / ".git" / "HEAD"
         try:
-            content = head.read_text(encoding="utf-8").strip()
-        except Exception:
-            return "master"
-        if content.startswith("ref: "):
-            return content.rsplit("/", 1)[-1]
-        return "master"
+            # In a linked worktree .git is a gitdir pointer file. Ask Git to
+            # resolve it; reading .git/HEAD also truncated names with slashes.
+            result = subprocess.run(
+                ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
+                cwd=ROOT_DIR,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=5,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return "detached"
+        return result.stdout.strip() if result.returncode == 0 and result.stdout.strip() else "detached"
 
 
 data_release_service = DataReleaseService()

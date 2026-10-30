@@ -1,4 +1,4 @@
-"""Refresh the public disease-series read model for one or more countries.
+"""Build and commit public disease-series rows within a verified site release.
 
 The row builder is pure. Database refresh reuses the site export projection,
 then replaces that country's published rows in one transaction.
@@ -6,20 +6,19 @@ then replaces that country's published rows in one transaction.
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import math
 import time
 from collections import Counter
+from collections.abc import Iterable
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from sqlalchemy import delete, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from src.core.country_library import expand_country_scopes
 from src.core.database import get_db
 from src.core.logging import get_logger
 from src.domain.public_series import CountryPublishState, PublicDiseaseSeries
@@ -40,9 +39,7 @@ from src.ontology import load_disease_ontology
 logger = get_logger(__name__)
 
 PROJECTION_VERSION = "public-series-v1"
-_EMPTY_COUNTRY_HASH = hashlib.sha256(
-    f"{PROJECTION_VERSION}\n".encode("utf-8")
-).hexdigest()
+_EMPTY_COUNTRY_HASH = hashlib.sha256(f"{PROJECTION_VERSION}\n".encode()).hexdigest()
 
 
 def _as_utc(value: datetime | None) -> datetime | None:
@@ -59,7 +56,7 @@ def _stored_count(value: Any) -> int | None:
     number = float(value)
     if not math.isfinite(number):
         return None
-    return int(round(number))
+    return round(number)
 
 
 def _stored_rate(value: Any) -> float | None:
@@ -100,7 +97,9 @@ def _source_series_code(series: dict) -> str | None:
 def series_content_hash(payload: dict) -> str:
     """Hash the stored curve, not display names or generation timestamps."""
 
-    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    encoded = json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
@@ -194,9 +193,7 @@ def _catalogue_context() -> dict:
     catalogue = load_standard_diseases(csv_path)
     catalogue_ids = {disease["disease_id"] for disease in catalogue}
     diseases = [
-        disease
-        for disease in catalogue
-        if should_generate_public_disease_page(disease)
+        disease for disease in catalogue if should_generate_public_disease_page(disease)
     ]
     enrich_diseases_with_ontology(diseases, load_disease_ontology())
     return {
@@ -214,16 +211,22 @@ async def _load_publish_context() -> dict:
         ) and await has_table(session, "disease_series_observations")
         context["country_briefs"] = await fetch_country_briefs(session)
         countries = await fetch_countries(session)
-        context["countries_by_code"] = {country["code"]: country for country in countries}
+        context["countries_by_code"] = {
+            country["code"]: country for country in countries
+        }
         context["country_name_by_code"] = {
-            country["code"]: country.get("name_en") or country.get("name") or country["code"]
+            country["code"]: country.get("name_en")
+            or country.get("name")
+            or country["code"]
             for country in countries
         }
         context["country_name_zh_by_code"] = {
             country["code"]: country.get("name_local") or country.get("name")
             for country in countries
         }
-        present = await session.execute(text("SELECT disease_id FROM standard_diseases"))
+        present = await session.execute(
+            text("SELECT disease_id FROM standard_diseases")
+        )
         context["stored_disease_ids"] = {row[0] for row in present}
     return context
 
@@ -251,15 +254,22 @@ async def _replace_country_rows(
     stored_disease_ids: set[str],
 ) -> None:
     missing = sorted(
-        {row["disease_id"] for row in rows if row["disease_id"] not in stored_disease_ids}
+        {
+            row["disease_id"]
+            for row in rows
+            if row["disease_id"] not in stored_disease_ids
+        }
     )
     if missing:
         raise RuntimeError(
-            "Projected diseases are missing from standard_diseases: " + ", ".join(missing)
+            "Projected diseases are missing from standard_diseases: "
+            + ", ".join(missing)
         )
     now = datetime.now(timezone.utc)
     await session.execute(
-        delete(PublicDiseaseSeries).where(PublicDiseaseSeries.country_code == country_code)
+        delete(PublicDiseaseSeries).where(
+            PublicDiseaseSeries.country_code == country_code
+        )
     )
     if rows:
         for row in rows:
@@ -300,10 +310,16 @@ async def _replace_country_rows(
     )
 
 
-async def _publish_country(session, country_code: str, context: dict, *, force: bool) -> dict:
+async def _publish_country(
+    session, country_code: str, context: dict, *, force: bool
+) -> dict:
     country = context["countries_by_code"].get(country_code)
     if country is None:
-        return {"country_code": country_code, "status": "skipped", "reason": "not_public"}
+        return {
+            "country_code": country_code,
+            "status": "skipped",
+            "reason": "not_public",
+        }
     if not force:
         current = await session.scalar(
             select(CountryPublishState.projection_version).where(
@@ -311,7 +327,11 @@ async def _publish_country(session, country_code: str, context: dict, *, force: 
             )
         )
         if current == PROJECTION_VERSION:
-            return {"country_code": country_code, "status": "skipped", "reason": "current"}
+            return {
+                "country_code": country_code,
+                "status": "skipped",
+                "reason": "current",
+            }
 
     started = time.perf_counter()
     collected = await _collect_country_export(
@@ -327,7 +347,9 @@ async def _publish_country(session, country_code: str, context: dict, *, force: 
     )
     high_water = await _source_high_water(session, country_code)
     rows = []
-    for disease_id, series in sorted((collected["country_data"].get("disease_series") or {}).items()):
+    for disease_id, series in sorted(
+        (collected["country_data"].get("disease_series") or {}).items()
+    ):
         row = build_public_series_row(
             country_code,
             disease_id,
@@ -348,11 +370,8 @@ async def _publish_country(session, country_code: str, context: dict, *, force: 
     collected.clear()
     elapsed = time.perf_counter() - started
     logger.info(
-        "Public series {} series={} points={} in {:.1f}s",
-        country_code,
-        len(rows),
-        sum(row["point_count"] for row in rows),
-        elapsed,
+        f"Public series {country_code} series={len(rows)} "
+        f"points={sum(row['point_count'] for row in rows)} in {elapsed:.1f}s"
     )
     return {
         "country_code": country_code,
@@ -360,61 +379,4 @@ async def _publish_country(session, country_code: str, context: dict, *, force: 
         "series_count": len(rows),
         "point_count": sum(row["point_count"] for row in rows),
         "elapsed_seconds": round(elapsed, 3),
-    }
-
-
-async def refresh_public_disease_series(
-    country_codes: Iterable[str] | None = None,
-    *,
-    jobs: int = 2,
-    force: bool = False,
-) -> dict:
-    """Project and replace published curves for the requested countries.
-
-    A parent code includes its known subdivisions. Countries already published
-    at ``PROJECTION_VERSION`` are left untouched unless ``force`` is set.
-    """
-
-    started = time.perf_counter()
-    context = await _load_publish_context()
-    requested_source = (
-        context["countries_by_code"] if country_codes is None else country_codes
-    )
-    requested = [
-        str(code).strip().upper()
-        for code in requested_source
-        if str(code).strip()
-    ]
-    expanded = expand_country_scopes(
-        requested,
-        available_codes=context["countries_by_code"],
-    )
-    worker_count = max(1, int(jobs))
-    semaphore = asyncio.Semaphore(worker_count)
-
-    async def _one(code: str) -> dict:
-        async with semaphore:
-            try:
-                async with get_db() as session:
-                    return await _publish_country(session, code, context, force=force)
-            except Exception as exc:
-                logger.exception("Public series publish failed for {}", code)
-                return {
-                    "country_code": code,
-                    "status": "failed",
-                    "error": f"{type(exc).__name__}: {exc}",
-                }
-
-    outcomes = await asyncio.gather(*(_one(code) for code in expanded))
-    failed = [item for item in outcomes if item["status"] == "failed"]
-    refreshed = [item for item in outcomes if item["status"] == "refreshed"]
-    skipped = [item for item in outcomes if item["status"] == "skipped"]
-    return {
-        "requested": requested,
-        "jurisdictions": expanded,
-        "refreshed": len(refreshed),
-        "skipped": len(skipped),
-        "failed": failed,
-        "series_rows": sum(item.get("series_count") or 0 for item in refreshed),
-        "elapsed_seconds": round(time.perf_counter() - started, 3),
     }

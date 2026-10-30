@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -34,6 +35,26 @@ class ReleaseVerificationError(RuntimeError):
     """Cloudflare production verification failure with stage context."""
 
     release_stage = "cloudflare_production_verification"
+
+
+def _built_site_digest(directory: Path) -> str:
+    """Hash deployable files, excluding release.json which carries this digest."""
+    files = sorted(
+        path
+        for path in directory.rglob("*")
+        if path.is_file() and path != directory / "release.json"
+    )
+    if not files:
+        raise RuntimeError(
+            "Cloudflare deployment requires a nonempty Astro dist directory"
+        )
+    digest = hashlib.sha256()
+    for path in files:
+        digest.update(path.relative_to(directory).as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        with path.open("rb") as stream:
+            digest.update(hashlib.file_digest(stream, "sha256").digest())
+    return digest.hexdigest()
 
 
 @dataclass(frozen=True)
@@ -81,12 +102,58 @@ async def _run_repository_publications(
     return completed
 
 
-async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipelineRuntime) -> dict[str, Any]:
+async def execute_release_task(
+    service: Any, task: Any, *, runtime: ReleasePipelineRuntime
+) -> dict[str, Any]:
+    """Restore generated artifacts if build, deployment, or verification fails."""
+    import shutil
+    import tempfile
+
+    paths = [
+        runtime.astro_dir / "src" / "data",
+        runtime.astro_dir / "public" / "site-data",
+        runtime.astro_dir / "dist",
+        runtime.root_dir / "exports" / "site-downloads",
+    ]
+    # Snapshots may exceed 18 GiB; /tmp can be a RAM-backed filesystem whose
+    # usage is charged against the worker's memory limit. Keep independent
+    # copies on the same ignored export volume as the generated packages.
+    backup_root = runtime.root_dir / "exports" / "release-backups"
+    await asyncio.to_thread(backup_root.mkdir, parents=True, exist_ok=True)
+    temporary = tempfile.TemporaryDirectory(prefix="globalid-release-", dir=backup_root)
+    try:
+        backups = []
+        for index, path in enumerate(paths):
+            backup = Path(temporary.name) / str(index)
+            existed = path.exists()
+            if existed:
+                await asyncio.to_thread(shutil.copytree, path, backup)
+            backups.append((path, backup, existed))
+        try:
+            return await _execute_release_task(service, task, runtime=runtime)
+        except BaseException:
+            for path, backup, existed in backups:
+                if path.exists():
+                    await asyncio.to_thread(shutil.rmtree, path)
+                if existed:
+                    await asyncio.to_thread(shutil.move, str(backup), str(path))
+            raise
+    finally:
+        # TemporaryDirectory.__exit__ would recursively delete gigabytes on
+        # the scheduling loop and stall the AI dispatcher and task heartbeat.
+        await asyncio.to_thread(temporary.cleanup)
+
+
+async def _execute_release_task(
+    service: Any, task: Any, *, runtime: ReleasePipelineRuntime
+) -> dict[str, Any]:
     input_data = dict(task.input_data or {})
     job_id = str(input_data.get("release_job_id") or "").strip()
     if not job_id:
         raise RuntimeError("Release task is missing release_job_id")
-    job = next((item for item in await service.load_jobs() if item.job_id == job_id), None)
+    job = next(
+        (item for item in await service.load_jobs() if item.job_id == job_id), None
+    )
     if job is None:
         raise RuntimeError(f"Release job not found: {job_id}")
 
@@ -135,11 +202,16 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         )
 
     await runtime.task_manager.update_task_progress(task.task_uuid, 5)
-    raw_archive_cfg = getattr(service, "_raw_archive_runtime", lambda: runtime.get_config().raw_archive)()
+    raw_archive_cfg = getattr(
+        service, "_raw_archive_runtime", lambda: runtime.get_config().raw_archive
+    )()
     raw_archive_branch = str(
-        getattr(raw_archive_cfg, "branch", runtime.raw_archive_branch) or runtime.raw_archive_branch
+        getattr(raw_archive_cfg, "branch", runtime.raw_archive_branch)
+        or runtime.raw_archive_branch
     )
-    literature_only = bool(input_data.get("incremental_site")) and not input_data.get("incremental_country_codes")
+    literature_only = bool(input_data.get("incremental_site")) and not input_data.get(
+        "incremental_country_codes"
+    )
     if not raw_archive_cfg.enabled or literature_only:
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid,
@@ -147,7 +219,8 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             title="Raw Crawler Archive Skipped",
             content=(
                 "Literature-triggered incremental release; raw crawler archives publish on the full release path."
-                if literature_only else "RAW_ARCHIVE__ENABLED is disabled for this run."
+                if literature_only
+                else "RAW_ARCHIVE__ENABLED is disabled for this run."
             ),
             content_type="text",
             metadata={
@@ -159,7 +232,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
 
     await service._run_logged_command(
         task.task_uuid,
-        title="Refresh Situation Room",
+        title="Export Situation",
         cmd=service._update_situation_notices_command(python_path=python_path),
         cwd=runtime.root_dir,
         env=git_env,
@@ -171,6 +244,10 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     )
     await runtime.task_manager.update_task_progress(task.task_uuid, 22)
 
+    # EXPORT_DATA holds the worker's collection-store exclusion until task
+    # completion, covering both this read and commit_release_projection after
+    # production verification. Waiting AI parents retain RUNNING until their
+    # store completes, so their eventual writes cannot enter this interval.
     generate_cmd = service._generate_site_data_command(
         python_path=python_path,
         download_url_base=download_url_base,
@@ -182,7 +259,11 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         title="Generate Site Data",
         cmd=generate_cmd,
         cwd=runtime.root_dir,
-        env={**git_env, "PYTHONUNBUFFERED": "1"},
+        env={
+            **git_env,
+            "PYTHONUNBUFFERED": "1",
+            "GLOBALID_RELEASE_FROM_OBSERVATIONS": "1",
+        },
         metadata={"event": "generate_site_data", "release_job_id": job.job_id},
         timeout_seconds=runtime.generate_timeout_seconds,
     )
@@ -225,6 +306,16 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         metadata={"event": "situation_release_gate", "release_job_id": job.job_id},
         timeout_seconds=120,
     )
+    if job.include_cloudflare_deploy:
+        # The public manifest identifies these exact bytes as well as the
+        # source revision. A retry may rebuild different facts at the same
+        # revision and must not verify an earlier production manifest.
+        release_identity = {
+            **release_identity,
+            "build_digest": await asyncio.to_thread(
+                _built_site_digest, runtime.astro_dir / "dist"
+            ),
+        }
     release_manifest = service._write_site_release_manifest(release_identity)
     await runtime.task_manager.add_workbook_entry(
         task.task_uuid,
@@ -262,7 +353,8 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
                         "release_job_id": job.job_id,
                         "branch": raw_archive_branch,
                     },
-                    timeout_seconds=float(raw_archive_cfg.git_timeout_seconds) + 60 * 60,
+                    timeout_seconds=float(raw_archive_cfg.git_timeout_seconds)
+                    + 60 * 60,
                 ),
             )
         )
@@ -298,7 +390,8 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             title="Direct Download Publish Skipped",
             content=(
                 "Literature-triggered release: existing GitHub download files remain published."
-                if literature_only else "The validated CSV/JSON/XLSX partitions remain local for this run."
+                if literature_only
+                else "The validated CSV/JSON/XLSX partitions remain local for this run."
             ),
             content_type="text",
             metadata={
@@ -307,9 +400,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             },
         )
 
-    completed_publications = await _run_repository_publications(
-        repository_publications
-    )
+    completed_publications = await _run_repository_publications(repository_publications)
     raw_archive_published = "raw_archive" in completed_publications
     downloads_published = "direct_downloads" in completed_publications
 
@@ -324,15 +415,20 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     if job.include_cloudflare_deploy:
         if not deployment_branch:
             raise RuntimeError("Cloudflare production branch could not be resolved.")
+        artifact_digest = release_identity["build_digest"]
         deploy_checkpoint = dict(release_checkpoints.get("cloudflare_deploy") or {})
-        if deploy_checkpoint.get("release_id") == release_identity["release_id"]:
+        if (
+            deploy_checkpoint.get("release_id") == release_identity["release_id"]
+            and deploy_checkpoint.get("artifact_digest") == artifact_digest
+        ):
             await runtime.task_manager.add_workbook_entry(
                 task.task_uuid,
                 entry_type="info",
                 title="Cloudflare Deploy Reused",
                 content=(
                     "The prior attempt completed the Cloudflare deploy command for "
-                    f"{release_identity['release_id']}; retrying verification only."
+                    f"{release_identity['release_id']} with identical build content; "
+                    "retrying verification only."
                 ),
                 content_type="text",
                 metadata={
@@ -367,8 +463,9 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
                 timeout_seconds=runtime.cloudflare_deploy_timeout_seconds,
             )
             # This checkpoint is committed before production verification.  A
-            # transient fetch failure can therefore retry verification without
-            # creating a second Pages deployment.
+            # transient fetch failure can retry verification if the rebuilt
+            # bytes still match. Facts may change between worker attempts, so
+            # release_id alone must never authorize reusing an older deploy.
             await service._record_release_checkpoint(
                 task.task_uuid,
                 "cloudflare_deploy",
@@ -376,6 +473,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
                     "release_id": release_identity["release_id"],
                     "source_commit": release_identity["source_commit"],
                     "deployment_branch": deployment_branch,
+                    "artifact_digest": artifact_digest,
                 },
             )
         try:
@@ -411,6 +509,23 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
             content_type="text",
             metadata={"event": "cloudflare_skip", "release_job_id": job.job_id},
         )
+
+    # Only consume the selected rows after production verification. Concurrent
+    # collections outside the worker (for example maintenance imports) have
+    # different IDs and remain pending for the next release.
+    if pages_deployed:
+        from .projection import commit_release_projection
+
+        async with runtime.get_database() as db:
+            await commit_release_projection(
+                db,
+                task_uuid=task.task_uuid,
+                country_codes=input_data.get("incremental_country_codes") or [],
+                full=bool(input_data.get("full")),
+                dirty_ids=input_data.get("publish_dirty_ids") or [],
+                marked_before=input_data.get("publish_dirty_before"),
+            )
+            await db.commit()
 
     await runtime.task_manager.update_task_progress(task.task_uuid, 100)
 

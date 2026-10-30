@@ -9,17 +9,17 @@ from __future__ import annotations
 
 import asyncio
 import json
-from pathlib import Path
 import tempfile
-from typing import Any, Awaitable, Callable, Optional
+from collections.abc import Awaitable, Callable
+from pathlib import Path
+from typing import Any
 from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
 
-
 Capture = Callable[..., Awaitable[dict[str, Any]]]
 JsonFetch = Callable[[str], Awaitable[dict[str, Any]]]
-LatestDeployment = Callable[..., Awaitable[Optional[dict[str, Any]]]]
+LatestDeployment = Callable[..., Awaitable[dict[str, Any] | None]]
 
 
 def is_github_ssh_repo_url(repo_url: str, prefixes: tuple[str, ...]) -> bool:
@@ -40,7 +40,9 @@ def build_git_env(
         "-o",
         "StrictHostKeyChecking=accept-new",
     ]
-    if use_github_ssh_over_443 and is_github_ssh_repo_url(repo_url, github_ssh_prefixes):
+    if use_github_ssh_over_443 and is_github_ssh_repo_url(
+        repo_url, github_ssh_prefixes
+    ):
         ssh_parts.extend(["-o", "Hostname=ssh.github.com", "-p", "443"])
     return {
         "GIT_TERMINAL_PROMPT": "0",
@@ -88,7 +90,9 @@ async def raw_archive_check(
         env=git_env,
         timeout=40,
     )
-    if read["returncode"] != 0 and is_github_ssh_repo_url(repo_url, github_ssh_prefixes):
+    if read["returncode"] != 0 and is_github_ssh_repo_url(
+        repo_url, github_ssh_prefixes
+    ):
         fallback_env = build_git_env(
             repo_url,
             github_ssh_prefixes=github_ssh_prefixes,
@@ -221,7 +225,7 @@ async def download_repo_check(
         return {"payload": payload, "blockers": blockers}
 
     read_check: dict[str, Any] = {"returncode": 127, "stdout": "read check did not run"}
-    fallback_read_output: Optional[str] = None
+    fallback_read_output: str | None = None
     for attempt in range(1, 4):
         read_check = await run_capture(
             ["git", "ls-remote", repo_url, "HEAD"],
@@ -229,7 +233,9 @@ async def download_repo_check(
             env=git_env,
             timeout=40,
         )
-        if read_check["returncode"] != 0 and is_github_ssh_repo_url(repo_url, github_ssh_prefixes):
+        if read_check["returncode"] != 0 and is_github_ssh_repo_url(
+            repo_url, github_ssh_prefixes
+        ):
             fallback_env = build_git_env(
                 repo_url,
                 github_ssh_prefixes=github_ssh_prefixes,
@@ -273,13 +279,18 @@ async def download_repo_check(
 
     with tempfile.TemporaryDirectory(prefix="globalid-data-release-check-") as temp_dir:
         temp_path = Path(temp_dir)
-        init_check = await run_capture(["git", "init"], cwd=temp_path, env=git_env, timeout=40)
+        init_check = await run_capture(
+            ["git", "init"], cwd=temp_path, env=git_env, timeout=40
+        )
         if init_check["returncode"] != 0:
             payload["write_check_output"] = init_check["stdout"]
             blockers.append("Download-data repo write check failed.")
             return {"payload": payload, "blockers": blockers}
         remote_add_check = await run_capture(
-            ["git", "remote", "add", "origin", repo_url], cwd=temp_path, env=git_env, timeout=40
+            ["git", "remote", "add", "origin", repo_url],
+            cwd=temp_path,
+            env=git_env,
+            timeout=40,
         )
         if remote_add_check["returncode"] != 0:
             payload["write_check_output"] = remote_add_check["stdout"]
@@ -287,8 +298,14 @@ async def download_repo_check(
             return {"payload": payload, "blockers": blockers}
         commit_check = await run_capture(
             [
-                "git", "-c", "user.name=GlobalID Data Release", "-c",
-                "user.email=noreply@globalid.local", "commit", "--allow-empty", "-m",
+                "git",
+                "-c",
+                "user.name=GlobalID Data Release",
+                "-c",
+                "user.email=noreply@globalid.local",
+                "commit",
+                "--allow-empty",
+                "-m",
                 "chore: permission check",
             ],
             cwd=temp_path,
@@ -301,24 +318,42 @@ async def download_repo_check(
             return {"payload": payload, "blockers": blockers}
 
         probe_branch = f"__globalid_write_probe__/{branch or 'main'}"
-        write_check: dict[str, Any] = {"returncode": 127, "stdout": "write check did not run"}
+        write_check: dict[str, Any] = {
+            "returncode": 127,
+            "stdout": "write check did not run",
+        }
         for attempt in range(1, 3):
             write_check = await run_capture(
-                ["git", "push", "--dry-run", "origin", f"HEAD:refs/heads/{probe_branch}"],
+                [
+                    "git",
+                    "push",
+                    "--dry-run",
+                    "origin",
+                    f"HEAD:refs/heads/{probe_branch}",
+                ],
                 cwd=temp_path,
                 env=git_env,
                 timeout=40,
             )
             if write_check["returncode"] == 0:
                 break
-            if is_github_ssh_repo_url(repo_url, github_ssh_prefixes) and ssh_transport == "default":
+            if (
+                is_github_ssh_repo_url(repo_url, github_ssh_prefixes)
+                and ssh_transport == "default"
+            ):
                 fallback_env = build_git_env(
                     repo_url,
                     github_ssh_prefixes=github_ssh_prefixes,
                     use_github_ssh_over_443=True,
                 )
                 fallback_write = await run_capture(
-                    ["git", "push", "--dry-run", "origin", f"HEAD:refs/heads/{probe_branch}"],
+                    [
+                        "git",
+                        "push",
+                        "--dry-run",
+                        "origin",
+                        f"HEAD:refs/heads/{probe_branch}",
+                    ],
                     cwd=temp_path,
                     env=fallback_env,
                     timeout=40,
@@ -329,8 +364,10 @@ async def download_repo_check(
                     ssh_transport = "github-ssh-over-443"
                     break
                 write_check["stdout"] = (
-                    "Primary SSH (port 22) failed:\n" + (write_check.get("stdout") or "")
-                    + "\n\nSSH-over-443 fallback failed:\n" + (fallback_write.get("stdout") or "")
+                    "Primary SSH (port 22) failed:\n"
+                    + (write_check.get("stdout") or "")
+                    + "\n\nSSH-over-443 fallback failed:\n"
+                    + (fallback_write.get("stdout") or "")
                 ).strip()
             if attempt < 2:
                 await asyncio.sleep(min(5, attempt * 2))
@@ -345,10 +382,13 @@ async def download_repo_check(
 async def cloudflare_api_json(url: str, *, token: str) -> dict[str, Any]:
     request = urlrequest.Request(
         url,
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
         method="GET",
     )
-    last_exc: Optional[Exception] = None
+    last_exc: Exception | None = None
 
     def fetch() -> dict[str, Any]:
         with urlrequest.urlopen(request, timeout=20) as response:
@@ -391,7 +431,7 @@ async def cloudflare_latest_deployment(
     environment: str,
     account_id: str,
     api_json: JsonFetch,
-) -> Optional[dict[str, Any]]:
+) -> dict[str, Any] | None:
     query = urlparse.urlencode({"env": environment, "per_page": 1})
     url = (
         "https://api.cloudflare.com/client/v4/accounts/"
@@ -400,7 +440,9 @@ async def cloudflare_latest_deployment(
     body = await api_json(url)
     if not body.get("success"):
         messages = body.get("errors") or body.get("messages") or []
-        raise RuntimeError(f"Cloudflare deployment lookup failed: {json.dumps(messages, ensure_ascii=False)}")
+        raise RuntimeError(
+            f"Cloudflare deployment lookup failed: {json.dumps(messages, ensure_ascii=False)}"
+        )
     deployments = body.get("result") or []
     if not deployments:
         return None
@@ -408,7 +450,7 @@ async def cloudflare_latest_deployment(
 
 
 def cloudflare_deployment_matches(
-    deployment: Optional[dict[str, Any]], identity: dict[str, Any]
+    deployment: dict[str, Any] | None, identity: dict[str, Any]
 ) -> bool:
     if not deployment:
         return False
@@ -501,24 +543,37 @@ async def verify_cloudflare_production_release(
     fetch_public_json: JsonFetch,
 ) -> dict[str, Any]:
     if not subdomain:
-        raise RuntimeError("Cloudflare production subdomain is missing; release cannot be verified.")
+        raise RuntimeError(
+            "Cloudflare production subdomain is missing; release cannot be verified."
+        )
     production_url = f"https://{subdomain}"
-    manifest_url = (
-        f"{production_url}/release.json?"
-        + urlparse.urlencode({"release": release_identity["release_id"]})
+    manifest_url = f"{production_url}/release.json?" + urlparse.urlencode(
+        {
+            "release": release_identity["release_id"],
+            "build": release_identity.get("build_digest", ""),
+        }
     )
-    last_deployment: Optional[dict[str, Any]] = None
-    last_manifest: Optional[dict[str, Any]] = None
-    last_error: Optional[Exception] = None
+    last_deployment: dict[str, Any] | None = None
+    last_manifest: dict[str, Any] | None = None
+    last_error: Exception | None = None
     for attempt in range(1, 9):
         try:
-            last_deployment = await latest_deployment(project_name, environment="production")
+            last_deployment = await latest_deployment(
+                project_name, environment="production"
+            )
             last_manifest = await fetch_public_json(manifest_url)
-            deployment_matches = cloudflare_deployment_matches(last_deployment, release_identity)
+            deployment_matches = cloudflare_deployment_matches(
+                last_deployment, release_identity
+            )
             manifest_matches = (
                 last_manifest.get("release_id") == release_identity["release_id"]
-                and last_manifest.get("deployment_branch") == release_identity["deployment_branch"]
-                and last_manifest.get("source_commit") == release_identity["source_commit"]
+                and last_manifest.get("deployment_branch")
+                == release_identity["deployment_branch"]
+                and last_manifest.get("source_commit")
+                == release_identity["source_commit"]
+                and bool(release_identity.get("build_digest"))
+                and last_manifest.get("build_digest")
+                == release_identity["build_digest"]
             )
             if deployment_matches and manifest_matches:
                 return {
@@ -528,7 +583,12 @@ async def verify_cloudflare_production_release(
                     "deployment": last_deployment,
                     "release": last_manifest,
                 }
-        except (RuntimeError, urlerror.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        except (
+            RuntimeError,
+            urlerror.URLError,
+            TimeoutError,
+            json.JSONDecodeError,
+        ) as exc:
             last_error = exc
         if attempt < 8:
             await asyncio.sleep(min(8, attempt))

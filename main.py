@@ -5,7 +5,6 @@ GlobalID V2 Main Entry Point
 """
 import asyncio
 import sys
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -15,7 +14,7 @@ from sqlalchemy import select
 
 from src.core import get_database, get_logger, init_app
 from src.core.task_manager import task_manager
-from src.domain import Country, Disease, ReportType, TaskType, TaskPriority, TaskStatus, Task
+from src.domain import Country, TaskType, TaskPriority, TaskStatus
 
 app = typer.Typer(help="GlobalID V2 - Global Infectious Disease Monitoring System")
 console = Console()
@@ -61,21 +60,18 @@ def crawl(
         await init_app()
         country_code = country.upper()
 
-        task = await task_manager.create_task(
-            task_type=TaskType.CRAWL_DATA,
-            task_name=f"Crawl {country_code} Data ({source})",
-            priority=TaskPriority.HIGH if force else TaskPriority.NORMAL,
-            description=f"Source: {source}, Force: {'Yes' if force else 'No'}, Process: {'Yes' if process else 'No'}",
-            input_data={
-                "country": country_code, "country_code": country_code,
-                "source": source, "force": force,
-                "process": process, "save_raw": save_raw,
-                "fill_missing": fill_missing,
-                **({"start_year": start_year} if start_year is not None else {}),
-                **({"source_file": source_file} if source_file else {}),
-                **({"source_dir": source_dir} if source_dir else {}),
-            },
-        )
+        from src.services.crawl_task_service import crawl_task_service
+        from src.core.source_scopes import validate_iceland_crawl_options
+        from src.services.model_operations import wait_task_output
+        validate_iceland_crawl_options(country_code=country_code, source=source, fill_missing=fill_missing, start_year=start_year)
+        queued = await crawl_task_service.enqueue_crawl_task(
+            country_code=country_code, source=source, force=force, process=process,
+            save_raw=save_raw, fill_missing=fill_missing,
+            priority="high" if force else "normal",
+            metadata={**({"start_year": start_year} if start_year is not None else {}),
+                      **({"source_file": source_file} if source_file else {}),
+                      **({"source_dir": source_dir} if source_dir else {})})
+        task = queued.task
 
         console.print(f"[bold blue]🚀 Starting intelligent data crawl for {country_code}...[/bold blue]")
         console.print(f"[dim]Task UUID: {task.task_uuid}[/dim]")
@@ -88,8 +84,7 @@ def crawl(
             content_type="text",
         )
 
-        from src.services.task_executor import execute_task
-        output = await execute_task(task.task_uuid)
+        output = await wait_task_output(task.task_uuid)
 
         if output.get("new_reports", 0) == 0:
             console.print("[yellow]✓ No new data to crawl[/yellow]")
@@ -128,7 +123,8 @@ def generate_report(
             task_type=TaskType.GENERATE_REPORT,
             task_name=f"Generate {report_type.upper()} Report for {country_code}",
             description=f"Review: {'Yes' if enable_review else 'No'}, Email: {'Yes' if send_email else 'No'}",
-            priority=TaskPriority.NORMAL,
+            priority=TaskPriority.HIGH,
+            status=TaskStatus.QUEUED,
             input_data={
                 "country": country_code, "country_code": country_code,
                 "report_type": report_type,
@@ -153,8 +149,8 @@ def generate_report(
             content_type="text",
         )
 
-        from src.services.task_executor import execute_task
-        output = await execute_task(task.task_uuid)
+        from src.services.model_operations import wait_task_output
+        output = await wait_task_output(task.task_uuid)
 
         if output:
             prefix = "Reused approved" if output.get("reused") else "Generated"
@@ -370,7 +366,6 @@ def run(
             
             # 2. 生成报告（基于爬取到的数据时间范围）
             console.print("\n[cyan]Step 2: Generating report[/cyan]")
-            await ensure_available_models_checked_async()
             await _generate(period_start, period_end)
             
             console.print("\n[green]✓ Pipeline completed![/green]")
@@ -392,69 +387,25 @@ def run(
         return None, None
     
     async def _crawl():
-        """爬取新数据、处理并保存到数据库，返回数据时间范围"""
-        from src.data.processors import DataProcessor
-        
-        crawler = ChinaCDCCrawler()
-        # First try normal crawl
-        results = await crawler.crawl(source="all", force=False)
-        
-        # If no new data found, force crawl for pipeline testing
-        if not results:
-            console.print("   No new data found, using force mode for testing...")
-            results = await crawler.crawl(source="all", force=True)
-        
-        console.print(f"  Fetched {len(results)} results")
-        
-        # 处理数据并保存到数据库
-        if results:
-            processor = DataProcessor(
-                output_dir=Path("data/processed") / "cn",
-                country_code="cn"
-            )
-            
-            processed = await processor.process_crawler_results(
-                results,
-                save_to_file=True,
-                save_raw=True,
-                crawl_run_id=None,  # No need for crawl run tracking in auto mode
-                raw_dir=Path("data/raw/cn"),
-            )
-            console.print(f"  Processed {len(processed)} datasets with {sum(len(df) for df in processed)} total records")
-        
-        # 提取数据时间范围
-        dates = [r.date for r in results if r.date]
-        if dates:
-            min_date = min(dates)
-            max_date = max(dates)
-            return min_date, max_date
-        return None, None
-    
+        from src.services.crawl_task_service import crawl_task_service
+        from src.services.model_operations import wait_task_output
+        queued = await crawl_task_service.enqueue_crawl_task(country_code="CN", source="all", fill_missing=False)
+        console.print(f"  Collection task: {queued.task.task_uuid}")
+        await wait_task_output(queued.task.task_uuid)
+        return await _get_latest_data_period()
+
     async def _generate(period_start=None, period_end=None):
-        """生成报告，如果没有指定时间范围，则使用最近90天"""
-        async with get_database() as db:
-            country_query = select(Country).where(Country.code == "CN")
-            country_result = await db.execute(country_query)
-            country = country_result.scalar_one()
+        from src.services.model_operations import wait_task_output
+        task = await task_manager.create_task(
+            task_type=TaskType.GENERATE_REPORT, task_name="Generate CN weekly report",
+            priority=TaskPriority.HIGH, status=TaskStatus.QUEUED,
+            input_data={"country_code": "CN", "report_type": "weekly", "days": 90,
+                        "period_start": period_start.isoformat() if period_start else None,
+                        "period_end": period_end.isoformat() if period_end else None})
+        console.print(f"  Report task: {task.task_uuid}")
+        output = await wait_task_output(task.task_uuid)
+        console.print(f"  Report generated: {output.get('report_id')}")
 
-            # 如果没有指定时间范围，使用最近90天的数据
-            if period_start is None or period_end is None:
-                period_end = datetime.now(timezone.utc)
-                period_start = period_end - timedelta(days=90)
-                console.print(f"  Using default time range: last 90 days")
-            else:
-                console.print(f"  Using data time range: {period_start.date()} to {period_end.date()}")
-
-            generator = ReportGenerator()
-            report = await generator.generate(
-                country_id=country.id,
-                report_type=ReportType.WEEKLY,
-                period_start=period_start,
-                period_end=period_end,
-            )
-
-            console.print(f"  Report generated: {report.id}")
-    
     asyncio.run(_run())
 
 

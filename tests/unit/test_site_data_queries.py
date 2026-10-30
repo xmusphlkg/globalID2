@@ -121,6 +121,17 @@ async def test_fetch_countries_includes_sweden_after_public_release_approval() -
 
 
 @pytest.mark.asyncio
+async def test_ecdc_source_does_not_reopen_ireland_country_release_gate() -> None:
+    session = FakeSession(FakeRows([
+        mapped_row(code="IE", name="Ireland", name_en="Ireland"),
+        mapped_row(code="AT", name="Austria", name_en="Austria"),
+        mapped_row(code="US", name="United States", name_en="United States"),
+    ]))
+    countries = await site_data_queries.fetch_countries(session)
+    assert [country["code"] for country in countries] == ["AT", "US"]
+
+
+@pytest.mark.asyncio
 async def test_has_population_table_delegates_to_parameterized_table_check() -> None:
     session = FakeSession(FakeRows([(True,)]))
 

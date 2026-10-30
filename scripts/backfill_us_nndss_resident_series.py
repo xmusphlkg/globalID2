@@ -1206,6 +1206,15 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
                 ),
             }
         )
+        if applied["inserted"]:
+            from src.services.ingestion.manual_runs import record_manual_store
+            audit = await record_manual_store(
+                db, line="surveillance", scope_keys=["US"],
+                operation="backfill_us_nndss_resident_series", metrics=applied,
+                input_data={"migration_run_id": migration_run_id,
+                            "migration_key": migration_key},
+            )
+            result["task_uuid"] = audit.task_uuid
         return result
 
 
