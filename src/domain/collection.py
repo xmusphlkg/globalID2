@@ -24,13 +24,19 @@ STAGE_NAMES = ("collect", "organize", "store")
 STAGE_STATUSES = ("running", "completed", "failed", "skipped")
 LINES = ("surveillance", "literature", "situation", "knowledge")
 
+# BigInt on PostgreSQL (BIGSERIAL) but plain INTEGER on SQLite, where only an
+# exact ``INTEGER PRIMARY KEY`` auto-increments.  The migration keeps BIGSERIAL
+# for production; this variant lets the same model run under the in-memory
+# SQLite used by tests.
+BIG_PK = Integer().with_variant(BigInteger, "postgresql")
+
 
 class RunStage(Base):
     """One stage of one execution attempt of one task."""
 
     __tablename__ = "run_stages"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BIG_PK, primary_key=True, autoincrement=True)
     task_uuid: Mapped[str] = mapped_column(String(36), nullable=False)
     stage: Mapped[str] = mapped_column(String(32), nullable=False)
     attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
@@ -53,7 +59,7 @@ class SourceArtifact(Base):
 
     __tablename__ = "source_artifacts"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BIG_PK, primary_key=True, autoincrement=True)
     task_uuid: Mapped[str] = mapped_column(String(36), nullable=False)
     attempt: Mapped[int] = mapped_column(Integer, nullable=False)
     stage: Mapped[str] = mapped_column(String(32), nullable=False, default="collect")
@@ -73,7 +79,7 @@ class PublishDirty(Base):
 
     __tablename__ = "publish_dirty"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BIG_PK, primary_key=True, autoincrement=True)
     line: Mapped[str] = mapped_column(String(32), nullable=False)
     scope_key: Mapped[str] = mapped_column(String(64), nullable=False)
     source_task_uuid: Mapped[str] = mapped_column(String(36), nullable=False)
