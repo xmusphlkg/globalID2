@@ -15,6 +15,10 @@ from .http import install_http_contract
 
 from .routers import (
     ai,
+    collection,
+    knowledge_sources,
+    models,
+    publish,
     agent_runs,
     countries,
     diseases,
@@ -124,6 +128,9 @@ def create_app() -> FastAPI:
 
     # Mount routers
     prefix = "/api/v1"
+    app.include_router(collection.router, prefix=prefix, tags=["Collection"])
+    app.include_router(models.router, prefix=prefix, tags=["Models"])
+    app.include_router(publish.router, prefix=prefix, tags=["Publish"])
     app.include_router(countries.router, prefix=prefix, tags=["Countries"])
     app.include_router(mappings.router, prefix=prefix, tags=["Disease Mapping Registry v3"])
     app.include_router(overview.router, prefix=prefix, tags=["Overview"])
@@ -131,6 +138,7 @@ def create_app() -> FastAPI:
     app.include_router(reports.router, prefix=prefix, tags=["Reports"])
     app.include_router(situation_notices.router, prefix=prefix, tags=["Situation"])
     app.include_router(tasks.router, prefix=prefix, tags=["Tasks"])
+    app.include_router(knowledge_sources.router, prefix=prefix, tags=["Knowledge Sources"])
     app.include_router(ai.router, prefix=prefix, tags=["AI"])
     app.include_router(agent_runs.router, prefix=prefix, tags=["Agent Workflow"])
     app.include_router(quality.router, prefix=prefix, tags=["Quality"])

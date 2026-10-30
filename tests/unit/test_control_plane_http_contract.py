@@ -130,7 +130,7 @@ def test_openapi_contains_new_control_plane_resources_and_no_websocket() -> None
     assert {"page", "page_size"}.issubset(task_parameters)
     assert {"limit", "offset"}.isdisjoint(task_parameters)
 
-    for methods in schema["paths"].values():
+    for path, methods in schema["paths"].items():
         for operation in methods.values():
             if not isinstance(operation, dict):
                 continue
@@ -139,7 +139,8 @@ def test_openapi_contains_new_control_plane_resources_and_no_websocket() -> None
                 for parameter in operation.get("parameters", [])
                 if isinstance(parameter, dict)
             }
-            assert {"limit", "offset", "country_id"}.isdisjoint(parameter_names)
+            forbidden = {"offset", "country_id"} if path == "/api/v1/models/queue" else {"limit", "offset", "country_id"}
+            assert forbidden.isdisjoint(parameter_names)
 
 
 def test_schedule_ids_are_stable_and_typed() -> None:

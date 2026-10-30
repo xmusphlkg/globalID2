@@ -98,7 +98,6 @@ class LiteratureDashboardOut(BaseModel):
 
 class LiteratureAutomationRequest(BaseModel):
     dry_run: bool = False
-    export: bool = True
 
 
 class LiteratureEnrichmentRequest(BaseModel):

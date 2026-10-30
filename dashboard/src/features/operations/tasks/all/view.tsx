@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
+import Link from "next/link";
+import { WorkspacePage } from "@/shared/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Activity,
@@ -20,26 +22,21 @@ import { DetailDrawer } from "@/components/ui/DetailDrawer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterToolbar } from "@/components/ui/FilterToolbar";
 import { MetricTile } from "@/components/ui/MetricTile";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { type TaskItem, usePaginatedTasks, useTaskDetail, useTaskEventStream } from "@/features/operations/tasks/api";
-import { t } from "@/lib/i18n";
+import { t, type LangKey } from "@/lib/i18n";
 import { formatDateTime } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
+import { scopedTaskTypes, taskTypesByScope, taskBelongsToScope, taskScopeHref, type TaskScope } from "@/features/operations/task-scope";
 
 const statusOptions = ["pending", "queued", "running", "retrying", "completed", "failed", "cancelled"];
 
-const typeOptions = [
-  "crawl_data",
-  "process_data",
-  "generate_report",
-  "generate_section",
-  "review_section",
-  "export_data",
-  "send_email",
-  "update_disease_knowledge",
-];
+function taskLabel(lang: "en" | "zh", value: string): string {
+  const key = value === "pending" ? "cc_collection_pending_status" : value === "retrying" ? "cc_collection_retrying_status" : `cc_collection_${value}`;
+  const translated = t(lang, key as LangKey);
+  return translated === key ? value : translated;
+}
 
 const statusColors: Record<string, string> = {
   pending: CHART_TOKENS.neutral,
@@ -86,9 +83,9 @@ function ProgressCell({ value, status }: { value: number; status: string }) {
 function TaskNameCell({ task }: { task: TaskItem }) {
   return (
     <div className="min-w-[240px] max-w-[420px]">
-      <p className="truncate font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+      <Link href={taskScopeHref(task)} className="block truncate font-medium text-tremor-content-strong underline decoration-stone-300 underline-offset-4 hover:text-orange-800">
         {task.task_name}
-      </p>
+      </Link>
       <p className="mt-1 truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
         {task.task_uuid}
       </p>
@@ -96,38 +93,42 @@ function TaskNameCell({ task }: { task: TaskItem }) {
   );
 }
 
-export default function TasksPage() {
-  const { lang, countryCode } = useAppStore();
+export default function TasksPage({ scope = "collection" }: { scope?: TaskScope }) {
+  const { lang } = useAppStore();
+  const typeOptions = taskTypesByScope[scope];
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const statusFilter = searchParams.get("status") ?? "";
-  const typeFilter = searchParams.get("task_type") ?? "";
+  const requestedStatus = searchParams.get("status") ?? "";
+  const statusFilter = statusOptions.includes(requestedStatus) ? requestedStatus : "";
+  const requestedTypes = searchParams.get("task_type");
+  const allowedTypes = scopedTaskTypes(scope, requestedTypes);
+  const typeFilter = requestedTypes && (typeOptions as readonly string[]).includes(requestedTypes) ? requestedTypes : "";
   const search = searchParams.get("search") ?? "";
-  const selectedUuid = searchParams.get("task");
+  const selectedUuid = searchParams.get("detail") ?? searchParams.get("task");
   const requestedPage = Number(searchParams.get("page") || "1");
   const page = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
   const pageSize = 50;
 
-  const setUrlState = (updates: Record<string, string | null>) => {
+  const setUrlState = useCallback((updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([key, value]) => {
       if (value) params.set(key, value); else params.delete(key);
     });
     router.replace(`${pathname}${params.size ? `?${params.toString()}` : ""}`, { scroll: false });
-  };
+  }, [pathname, router, searchParams]);
 
   useTaskEventStream();
 
   const taskQuery = usePaginatedTasks(
     statusFilter || undefined,
-    typeFilter || undefined,
-    countryCode || undefined,
+    allowedTypes.join(","),
+    undefined,
     search || undefined,
     pageSize,
     (page - 1) * pageSize,
   );
-  const tasks = taskQuery.data?.items;
+  const tasks = useMemo(() => taskQuery.data?.items.filter((task) => taskBelongsToScope(task.task_type, scope)), [taskQuery.data?.items, scope]);
   const isLoading = taskQuery.isLoading;
   const totalPages = Math.max(1, Math.ceil((taskQuery.data?.totalCount ?? 0) / pageSize));
 
@@ -136,6 +137,7 @@ export default function TasksPage() {
     [selectedUuid, tasks],
   );
   const { data: taskDetail, isFetching: detailLoading } = useTaskDetail(selectedUuid);
+  const detailInScope = !taskDetail || taskBelongsToScope(taskDetail.task_type, scope) || (scope === "ai" && searchParams.get("historical") === "1" && !["export_data", ...taskTypesByScope.collection].includes(taskDetail.task_type));
 
   const statusChartData = useMemo(() => {
     const rows = new Map<string, number>();
@@ -167,7 +169,7 @@ export default function TasksPage() {
     const failed = list.filter((task) => task.status === "failed").length;
     const completed = list.filter((task) => task.status === "completed").length;
     const avgProgress = total
-      ? Math.round(list.reduce((acc, task) => acc + task.progress, 0) / total)
+      ? Math.round(list.reduce((acc, task) => acc + task.progress, 0) / Math.max(1, list.length))
       : 0;
 
     return { total, running, failed, completed, avgProgress };
@@ -180,7 +182,7 @@ export default function TasksPage() {
       {
         key: "status",
         header: lang === "zh" ? "状态" : "Status",
-        render: (task) => <StatusBadge status={task.status}>{task.status}</StatusBadge>,
+        render: (task) => <StatusBadge status={task.status}>{taskLabel(lang, task.status)}</StatusBadge>,
       },
       {
         key: "task",
@@ -192,7 +194,7 @@ export default function TasksPage() {
         header: lang === "zh" ? "类型" : "Type",
         render: (task) => (
           <span className="whitespace-nowrap font-mono text-xs text-tremor-content dark:text-dark-tremor-content">
-            {task.task_type}
+            {taskLabel(lang, task.task_type)}
           </span>
         ),
       },
@@ -227,6 +229,11 @@ export default function TasksPage() {
         ),
       },
       {
+        key: "logs",
+        header: t(lang, "cc_collection_logs"),
+        render: (task) => <button className="cc-button whitespace-nowrap" onClick={() => setUrlState({ detail: task.task_uuid })}>{t(lang, "cc_collection_logs")}</button>,
+      },
+      {
         key: "created",
         header: lang === "zh" ? "创建时间" : "Created",
         render: (task) => (
@@ -236,7 +243,7 @@ export default function TasksPage() {
         ),
       },
     ],
-    [lang],
+    [lang, setUrlState],
   );
 
   const statusOption = useMemo(
@@ -254,12 +261,13 @@ export default function TasksPage() {
           label: { show: false },
           data: statusChartData.map((row) => ({
             ...row,
+            name: taskLabel(lang, row.name),
             itemStyle: { color: statusColors[row.name] ?? CHART_TOKENS.neutral },
           })),
         },
       ],
     }),
-    [statusChartData],
+    [statusChartData, lang],
   );
 
   const progressOption = useMemo(
@@ -293,44 +301,19 @@ export default function TasksPage() {
   );
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        eyebrow={lang === "zh" ? "运维" : "Operations"}
-        title={t(lang, "tasks")}
-        description={
-          lang === "zh"
-            ? "集中查看后台任务状态、进度、失败原因和执行明细。"
-            : "Monitor task status, progress, failures, and execution details from one console."
-        }
-        meta={
-          <>
-            <StatusBadge tone={summary.failed > 0 ? "danger" : "success"}>
-              {summary.failed > 0
-                ? lang === "zh"
-                  ? `${summary.failed} 个失败任务`
-                  : `${summary.failed} failed`
-                : lang === "zh"
-                  ? "无失败任务"
-                  : "No failures"}
-            </StatusBadge>
-            <StatusBadge tone={summary.running > 0 ? "warning" : "neutral"}>
-              {summary.running > 0
-                ? lang === "zh"
-                  ? `${summary.running} 个运行中`
-                  : `${summary.running} running`
-                : lang === "zh"
-                  ? "暂无运行任务"
-                  : "Nothing running"}
-            </StatusBadge>
-          </>
-        }
-      />
+    <WorkspacePage
+      eyebrow={t(lang, scope === "ai" ? "models" : scope)}
+      title={t(lang, `cc_scope_${scope}_title`)}
+      description={t(lang, `cc_scope_${scope}_desc`)}
+      actions={<Link className="cc-button" href={scope === "ai" ? "/models" : `/${scope}`}>{t(lang, scope === "ai" ? "models" : scope)}</Link>}
+    >
 
       <FilterToolbar>
         <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tremor-content-subtle" />
           <input
             type="search"
+            aria-label={lang === "zh" ? "搜索任务名称或 ID" : "Search task name or ID"}
             placeholder={lang === "zh" ? "搜索任务名称或 ID" : "Search task name or ID"}
             className="h-10 w-full rounded-tremor-default border border-tremor-border bg-tremor-background py-2 pl-9 pr-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
             value={search}
@@ -349,7 +332,7 @@ export default function TasksPage() {
             <option value="">{lang === "zh" ? "全部状态" : "All statuses"}</option>
             {statusOptions.map((status) => (
               <option key={status} value={status}>
-                {status}
+                {taskLabel(lang, status)}
               </option>
             ))}
           </select>
@@ -364,7 +347,7 @@ export default function TasksPage() {
           <option value="">{lang === "zh" ? "全部类型" : "All types"}</option>
           {typeOptions.map((type) => (
             <option key={type} value={type}>
-              {type}
+              {taskLabel(lang, type)}
             </option>
           ))}
         </select>
@@ -396,14 +379,14 @@ export default function TasksPage() {
           value={isLoading ? "-" : summary.running}
           icon={<Activity className="h-4 w-4" />}
           tone="warning"
-          hint={lang === "zh" ? "正在执行" : "In execution"}
+          hint={t(lang, "cc_collection_current_page")}
         />
         <MetricTile
           label={t(lang, "failed_tasks")}
           value={isLoading ? "-" : summary.failed}
           icon={<AlertTriangle className="h-4 w-4" />}
           tone={summary.failed > 0 ? "danger" : "success"}
-          hint={lang === "zh" ? "需要优先处理" : "Needs attention"}
+          hint={t(lang, "cc_collection_current_page")}
         />
         <MetricTile
           label={lang === "zh" ? "平均进度" : "Average Progress"}
@@ -419,7 +402,9 @@ export default function TasksPage() {
       </div>
 
       {!isLoading && tasks && tasks.length > 0 ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <details className="cc-panel">
+          <summary className="cursor-pointer text-sm font-semibold">{t(lang, "cc_collection_charts")}</summary>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <section className="app-panel p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
@@ -449,11 +434,11 @@ export default function TasksPage() {
             </div>
             <Chart option={progressOption} height={220} />
           </section>
-        </div>
+        </div></details>
       ) : null}
 
-      {isLoading ? (
-        <div className="space-y-3">
+      {taskQuery.isError ? <div className="cc-panel space-y-3"><p role="alert" className="text-sm text-rose-800">{t(lang, "cc_collection_read_failure")} {taskQuery.error instanceof Error ? taskQuery.error.message : ""}</p><button className="cc-button" disabled={taskQuery.isFetching} onClick={() => taskQuery.refetch()}>{t(lang, "cc_collection_reload_history")}</button></div> : isLoading ? (
+        <div role="status" aria-label={t(lang, "loading")} className="space-y-3">
           {[1, 2, 3].map((item) => (
             <div
               key={item}
@@ -467,7 +452,6 @@ export default function TasksPage() {
           rows={tasks ?? []}
           getRowKey={(task) => task.task_uuid}
           selectedRowKey={selectedUuid}
-          onRowClick={(task) => setUrlState({ task: task.task_uuid })}
           emptyState={
             <EmptyState
               icon={<ListTodo className="h-10 w-10" />}
@@ -477,9 +461,7 @@ export default function TasksPage() {
                   ? lang === "zh"
                     ? "当前筛选条件下没有任务。"
                     : "No tasks match the current filters."
-                  : lang === "zh"
-                    ? "当前国家暂时没有后台任务。"
-                    : "There are no background tasks for the current country."
+                  : t(lang, "cc_scope_empty")
               }
             />
           }
@@ -488,8 +470,8 @@ export default function TasksPage() {
 
       {!isLoading && (taskQuery.data?.totalCount ?? 0) > pageSize ? (
         <div className="flex items-center justify-between rounded-md border border-[#D9D9D6] bg-white px-4 py-3 text-sm">
-          <span className="text-[#6B7280]">Page {page} of {totalPages} · {taskQuery.data?.totalCount ?? 0} tasks</span>
-          <div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setUrlState({ page: String(page - 1), task: null })} className="h-8 rounded-md border border-[#D9D9D6] px-3 font-semibold text-[#374151] disabled:opacity-40">Previous</button><button type="button" disabled={page >= totalPages} onClick={() => setUrlState({ page: String(page + 1), task: null })} className="h-8 rounded-md border border-[#D9D9D6] px-3 font-semibold text-[#374151] disabled:opacity-40">Next</button></div>
+          <span className="text-[#6B7280]">{t(lang, "cc_collection_page")} {page} / {totalPages} · {taskQuery.data?.totalCount ?? 0} {t(lang, "tasks")}</span>
+          <div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setUrlState({ page: String(page - 1), detail: null })} className="h-8 rounded-md border border-[#D9D9D6] px-3 font-semibold text-[#374151] disabled:opacity-40">{t(lang, "cc_collection_previous")}</button><button type="button" disabled={page >= totalPages} onClick={() => setUrlState({ page: String(page + 1), detail: null })} className="h-8 rounded-md border border-[#D9D9D6] px-3 font-semibold text-[#374151] disabled:opacity-40">{t(lang, "cc_collection_next_page")}</button></div>
         </div>
       ) : null}
 
@@ -499,16 +481,17 @@ export default function TasksPage() {
         subtitle={
           selectedTask ? (
             <span className="flex min-w-0 items-center gap-2">
-              <StatusBadge status={selectedTask.status}>{selectedTask.status}</StatusBadge>
+              <StatusBadge status={selectedTask.status}>{taskLabel(lang, selectedTask.status)}</StatusBadge>
               <span className="truncate font-mono text-xs">{selectedTask.task_uuid}</span>
               <span>{formatDateTime(selectedTask.created_at)}</span>
             </span>
           ) : null
         }
-        onClose={() => setUrlState({ task: null })}
+        onClose={() => setUrlState({ detail: null, task: null })}
       >
-        <TaskDetailPanel taskDetail={taskDetail} detailLoading={detailLoading} />
+        <TaskDetailPanel taskDetail={detailInScope ? taskDetail : undefined} detailLoading={detailLoading} emptyMessage={detailInScope ? undefined : t(lang, "cc_scope_other_workspace")} />
+        {!detailInScope && taskDetail && <Link className="cc-button mt-4" href={taskScopeHref(taskDetail)}>{t(lang, "cc_scope_open_task")}</Link>}
       </DetailDrawer>
-    </div>
+    </WorkspacePage>
   );
 }

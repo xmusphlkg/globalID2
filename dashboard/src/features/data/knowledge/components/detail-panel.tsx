@@ -9,7 +9,7 @@ import { BriefCard } from "./brief-card";
 import { SourceTraceItem } from "./source-trace-item";
 import { ActionButton, DetailSkeleton, Panel, fieldValue, statusColor } from "./shared";
 
-export function DetailPanel({ lang, state }: { lang: "en" | "zh"; state: KnowledgePageState }) {
+export function DetailPanel({ lang, state, mode = "governance" }: { lang: "en" | "zh"; state: KnowledgePageState; mode?: "governance" | "ai" }) {
   const {
     detail, detailLoading, detailPanelRef, selectedDiseaseId, selectedDisease, detailTab, setDetailTab,
     briefLanguage, setBriefLanguage, detailSources, availableBriefLanguages, selectedBrief, refreshPending,
@@ -62,7 +62,7 @@ export function DetailPanel({ lang, state }: { lang: "en" | "zh"; state: Knowled
                           {selectedDisease.source_count} {lang === "zh" ? "条来源" : "sources"}
                         </Badge>
                       </div>
-                      <ActionButton
+                      {mode === "ai" && <ActionButton
                         tone="primary"
                         onClick={handleSingleRefresh}
                         disabled={refreshPending}
@@ -70,7 +70,8 @@ export function DetailPanel({ lang, state }: { lang: "en" | "zh"; state: Knowled
                         className="h-8 px-2.5 text-xs"
                       >
                         {lang === "zh" ? "刷新" : "Refresh"}
-                      </ActionButton>
+                      </ActionButton>}
+
                     </div>
 
                     <div role="tablist" className="grid grid-cols-3 rounded-tremor-default bg-tremor-background-muted p-1 dark:bg-dark-tremor-background-muted">

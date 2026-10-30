@@ -1,5 +1,24 @@
+import { workflowMessages } from "./workflow-messages";
+import { sourceMessages } from "@/features/collection-sources/messages";
+import { scopeMessages } from "@/features/operations/scope-messages";
+import { modelsPublishMessages } from "@/features/control-plane/models-publish-messages";
+import { collectionMessages } from "@/features/control-plane/collection-messages";
+import { controlMessages } from "./control-messages";
+
 const dict = {
   en: {
+    ...workflowMessages.en,
+    ...sourceMessages.en,
+    ...scopeMessages.en,
+    ...controlMessages.en,
+    ...modelsPublishMessages.en,
+    ...collectionMessages.en,
+    collection: "Collection",
+    models: "Models",
+    publish: "Publish",
+    nav_collection_desc: "Collect, organize, and store source data",
+    nav_models_desc: "Route capacity and model work queue",
+    nav_publish_desc: "Unpublished scopes and releases",
     app_title: "GIDS Dashboard",
     brand_name: "GIDS",
     overview: "Overview",
@@ -11,9 +30,9 @@ const dict = {
     explorer: "Data Explorer",
     quality: "Data Quality",
     // Workflow modules
-    mod_sources: "Collection & Tasks",
-    mod_database: "Data Assets",
-    mod_ai: "AI Production",
+    mod_sources: "Ingestion & Tasks",
+    mod_database: "Data Governance",
+    mod_ai: "AI",
     mod_results: "Publishing",
     mod_settings: "System",
     crawl_tasks: "Crawl Tasks",
@@ -198,6 +217,18 @@ const dict = {
     disease_mapping: "Disease Mapping",
   },
   zh: {
+    ...workflowMessages.zh,
+    ...sourceMessages.zh,
+    ...scopeMessages.zh,
+    ...controlMessages.zh,
+    ...modelsPublishMessages.zh,
+    ...collectionMessages.zh,
+    collection: "收集",
+    models: "模型",
+    publish: "发布",
+    nav_collection_desc: "收集、整理和入库",
+    nav_models_desc: "路线容量和模型工作队列",
+    nav_publish_desc: "未发布范围和发布运行",
     app_title: "GIDS 数据看板",
     brand_name: "GIDS",
     overview: "概览",
@@ -210,8 +241,8 @@ const dict = {
     quality: "数据质量",
     // 工作流模块
     mod_sources: "采集运行",
-    mod_database: "数据资产",
-    mod_ai: "AI 生产",
+    mod_database: "数据治理",
+    mod_ai: "AI",
     mod_results: "发布触达",
     mod_settings: "系统设置",
     crawl_tasks: "爬取任务",

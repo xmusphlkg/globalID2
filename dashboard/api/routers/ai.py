@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
@@ -16,9 +15,6 @@ from ..deps import get_db
 from ..schemas.task import TaskOut
 from src.ai.model_center import (
     bootstrap_model_center_from_env,
-    check_all_models,
-    check_model_by_id,
-    check_provider_by_id,
     discover_provider_models_by_id,
     get_model_rate_limit_state,
     get_model_runtime_health_state,
@@ -38,6 +34,7 @@ from src.domain.report import Report, ReportType
 from src.domain.task import Task, TaskPriority, TaskStatus, TaskType
 from src.services.ai_content_governance_service import ai_content_governance_service
 from src.services.disease_duplicate_audit_service import DiseaseDuplicateAuditService
+from src.services.model_operations import run_worker_operation
 from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService, SOURCE_GROUPS, expand_sources
 
 router = APIRouter()
@@ -268,77 +265,10 @@ class DiseaseKnowledgeDetail(BaseModel):
 
 @router.post("/ai/disease-audit/run", response_model=Dict[str, Any])
 async def run_disease_duplicate_audit(body: DiseaseDuplicateAuditRequest):
-    service = DiseaseDuplicateAuditService()
-    run_id = str(uuid4())
-    logs: list[dict[str, Any]] = []
-    service.record_event(
-        logs,
-        run_id,
-        "run_started",
-        "Disease duplicate audit run started.",
-        include_ai=body.include_ai,
-        include_new_disease_candidates=body.include_new_disease_candidates,
-        max_ai_candidates=body.max_ai_candidates,
-    )
-    audit = service.run_local_audit(
-        include_new_disease_candidates=body.include_new_disease_candidates,
-    )
-    audit["run_id"] = run_id
-    audit["logs"] = logs
-    service.record_event(
-        logs,
-        run_id,
-        "local_audit_completed",
-        "Local disease duplicate audit completed.",
-        summary=audit.get("summary"),
-    )
     if body.include_ai:
-        try:
-            audit["ai_review"] = await service.run_ai_review(
-                audit,
-                max_candidates=body.max_ai_candidates,
-                run_id=run_id,
-                logs=logs,
-            )
-        except Exception as exc:
-            service.record_event(
-                logs,
-                run_id,
-                "ai_review_exception",
-                "Disease audit AI review failed and local audit result will be returned.",
-                level="error",
-                error=str(exc),
-            )
-            audit["ai_review"] = {
-                "status": "failed",
-                "summary": {
-                    "merge": 0,
-                    "keep_separate": 0,
-                    "add_standard_disease": 0,
-                },
-                "recommendations": [],
-                "warnings": [
-                    str(exc),
-                    "Local audit completed, but AI review failed because no model-center route returned a usable chat completion.",
-                    "Open the AI Models page and test/fix provider base URLs, keys, quota, and enabled model routes.",
-                ],
-            }
-    else:
-        service.record_event(
-            logs,
-            run_id,
-            "ai_review_skipped",
-            "Disease audit AI review was skipped by request.",
-        )
-    service.record_event(
-        logs,
-        run_id,
-        "run_completed",
-        "Disease duplicate audit run completed.",
-        ai_status=(audit.get("ai_review") or {}).get("status", "completed") if audit.get("ai_review") else "skipped",
-    )
-    audit["logs"] = logs
-    return audit
+        return await run_worker_operation("disease_audit", body.model_dump())
+    service = DiseaseDuplicateAuditService()
+    return service.run_local_audit(include_new_disease_candidates=body.include_new_disease_candidates)
 
 
 @router.get("/ai/disease-audit/status", response_model=Dict[str, Any])
@@ -519,15 +449,7 @@ async def run_ai_content_governance(
     body: AIContentGovernanceRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    result = await ai_content_governance_service.run_once(
-        db,
-        dry_run=body.dry_run,
-        knowledge_retry_limit=body.knowledge_retry_limit,
-        literature_limit=body.literature_limit,
-        literature_article_limit=body.literature_article_limit,
-        source_limit=body.source_limit,
-        learning_limit=body.learning_limit,
-    )
+    result = await run_worker_operation("content_governance", body.model_dump())
     return AIContentGovernanceResponse(**result)
 
 
@@ -1000,7 +922,8 @@ async def test_provider(
     ).scalar_one_or_none()
     if provider_id is None:
         raise HTTPException(404, "Provider not found")
-    return await check_provider_by_id(int(provider_id), structured=structured)
+    await db.rollback()
+    return await run_worker_operation("check_provider", {"provider_id": int(provider_id), "structured": structured})
 
 
 @router.post("/ai/models/providers/{provider_key}/discover-models")
@@ -1194,13 +1117,14 @@ async def test_model(
     ).scalar_one_or_none()
     if model_id is None:
         raise HTTPException(404, "Model not found")
-    return await check_model_by_id(int(model_id), structured=structured)
+    await db.rollback()
+    return await run_worker_operation("check_model", {"model_id": int(model_id), "structured": structured})
 
 
 @router.post("/ai/models/check-all")
 async def test_all_models(structured: bool = True):
     await bootstrap_model_center_from_env(force=False)
-    return await check_all_models(structured=structured)
+    return await run_worker_operation("check_all_models", {"structured": structured})
 
 
 @router.get("/ai/models/call-logs", response_model=List[AIModelCallLogOut])

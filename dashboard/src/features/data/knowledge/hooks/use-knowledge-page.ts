@@ -105,8 +105,8 @@ export function useKnowledgePage(lang: "en" | "zh") {
   const blockedProfiles = catalogue?.filter((item) => item.knowledge_display_mode === "blocked").length ?? 0;
   const visibleAllSelected = visibleEntries.length > 0 && visibleEntries.every((item) => selectedSet.has(item.disease_id));
   const taskLogsHref = selectedDiseaseId
-    ? `/ai/tasks?task_type=update_disease_knowledge&search=${encodeURIComponent(selectedDiseaseId)}`
-    : "/ai/tasks?task_type=update_disease_knowledge";
+    ? `/models/tasks?task_type=update_disease_knowledge&search=${encodeURIComponent(selectedDiseaseId)}`
+    : "/models/tasks?task_type=update_disease_knowledge";
   const detailTabs: Array<{ key: DetailTab; label: string; count: number }> = [
     { key: "briefs", label: lang === "zh" ? "简介" : "Briefs", count: detailBriefs.length },
     { key: "sources", label: lang === "zh" ? "来源" : "Sources", count: detailSources.length },

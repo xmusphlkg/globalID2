@@ -1,6 +1,3 @@
-import { Suspense } from "react";
-import SchedulesView from "@/features/operations/schedules/view";
-
-export default function Page() {
-  return <Suspense fallback={<div className="p-8 text-sm text-[#6B7280]">Loading schedules…</div>}><SchedulesView /></Suspense>;
-}
+import { permanentRedirect } from "next/navigation";
+import { legacyScheduleDestination } from "@/shared/navigation/legacy-workspace";
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string,string|string[]|undefined>> }) { permanentRedirect(legacyScheduleDestination(await searchParams)); }

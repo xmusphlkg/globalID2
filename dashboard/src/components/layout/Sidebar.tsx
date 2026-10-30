@@ -6,8 +6,10 @@ import { ChevronDown, Cpu, Globe2, HardDrive, Loader2, MemoryStick, Network, Ser
 import { useEffect, useRef } from "react";
 
 import { useControlPlaneOverview } from "@/features/overview/api";
+import { t } from "@/lib/i18n";
+import { useAppStore } from "@/stores/app-store";
 import { cn } from "@/lib/utils";
-import { findSectionByPath, navigationSections } from "@/shared/navigation/route-registry";
+import { findRouteByPath, findSectionByPath, navigationSections } from "@/shared/navigation/route-registry";
 
 const ACTIVE_TASK_STATUSES = ["pending", "queued", "running", "retrying"] as const;
 
@@ -40,13 +42,15 @@ function relativeUpdateTime(value?: string | null): string {
 export function Sidebar({
   mobileOpen,
   onClose,
-  collapsed = false,
+  collapsed: desktopCollapsed = false,
 }: {
   mobileOpen?: boolean;
   onClose?: () => void;
   collapsed?: boolean;
 }) {
+  const collapsed = desktopCollapsed && !mobileOpen;
   const pathname = usePathname();
+  const { lang } = useAppStore();
   const activeSection = findSectionByPath(pathname);
   const mobileDialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -61,24 +65,24 @@ export function Sidebar({
   const schedulesEnabled = data?.schedules.enabled ?? 0;
   const schedulesTotal = data?.schedules.total ?? 0;
   const resources = data?.system_resources;
-  const proxyLabel = proxyLocationLabel(resources?.proxy);
+  const proxyLabel = resources?.proxy?.lookup_status === "unavailable" || !resources?.proxy ? t(lang, "cc_unavailable") : proxyLocationLabel(resources.proxy);
   const hasAttention = overview.isError || actionItems > 0 || failedTasks > 0 || !runtimeAvailable || !apiLive;
   const statusLabel = overview.isLoading
-    ? "Checking"
+    ? t(lang, "cc_checking")
     : hasAttention
-      ? "Attention"
+      ? t(lang, "cc_attention")
       : activeTasks > 0
-        ? "Running"
-        : "Healthy";
+        ? t(lang, "cc_running")
+        : t(lang, "cc_healthy");
   const statusDetail = overview.isLoading
-    ? "Loading project status"
+    ? t(lang, "cc_loading")
     : overview.isError
-      ? "Control plane unavailable"
+      ? t(lang, "cc_unavailable")
       : hasAttention
-        ? `${compactNumber(actionItems || failedTasks || 1)} item${(actionItems || failedTasks || 1) === 1 ? "" : "s"} need review`
+        ? `${compactNumber(actionItems || failedTasks || 1)} ${t(lang, "cc_review_count")}`
         : activeTasks > 0
-          ? `${compactNumber(activeTasks)} active task${activeTasks === 1 ? "" : "s"}`
-          : `API live · ${compactNumber(liveServices)} services · ${compactNumber(schedulesEnabled)}/${compactNumber(schedulesTotal)} jobs`;
+          ? `${compactNumber(activeTasks)} ${t(lang, "cc_active_count")}`
+          : `API · ${compactNumber(liveServices)} ${t(lang, "cc_service_count")} · ${compactNumber(schedulesEnabled)}/${compactNumber(schedulesTotal)}`;
   const statusTone = overview.isLoading
     ? "text-[#6B7280] bg-[#E5E5E2]"
     : hasAttention
@@ -89,6 +93,7 @@ export function Sidebar({
 
   useEffect(() => {
     if (!mobileOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
     closeButtonRef.current?.focus();
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -114,13 +119,13 @@ export function Sidebar({
       }
     };
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    return () => { document.removeEventListener("keydown", handleKeyDown); previousFocus?.focus(); };
   }, [mobileOpen, onClose]);
 
   const content = (
     <div className={cn("flex h-full flex-col border-r border-[#D9D9D6] bg-white", collapsed ? "px-2" : "px-3")}>
       <div className={cn("flex h-16 items-center border-b border-[#ECECEA]", collapsed ? "justify-center" : "gap-3 px-2")}>
-        <Link href="/overview" onClick={onClose} className="flex items-center gap-3" aria-label="GIDS Control Center overview">
+        <Link href="/overview" onClick={onClose} className="flex items-center gap-3" aria-label={`GIDS ${t(lang, "cc_center")} ${t(lang, "overview")}`}>
           <img
             className="control-center-logo"
             src="/icons/gids-192.png"
@@ -133,13 +138,13 @@ export function Sidebar({
           {!collapsed ? (
             <span className="min-w-0">
               <span className="block text-sm font-semibold tracking-tight text-[var(--cc-text-strong)]">GIDS</span>
-              <span className="block truncate text-[11px] font-medium uppercase tracking-[.08em] text-[var(--cc-text-muted)]">Control Center</span>
+              <span className="block truncate text-[11px] font-medium uppercase tracking-[.08em] text-[var(--cc-text-muted)]">{t(lang, "cc_center")}</span>
             </span>
           ) : null}
         </Link>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-4" aria-label="Control center workspaces">
+      <nav className="flex-1 overflow-y-auto py-4" aria-label={t(lang, "cc_workspaces")}>
         <ul className="space-y-1">
           {navigationSections.map((section) => {
             const active = section.id === activeSection.id;
@@ -149,7 +154,7 @@ export function Sidebar({
                 <Link
                   href={section.href}
                   onClick={onClose}
-                  title={section.title}
+                  title={t(lang, section.titleKey)}
                   className={cn(
                     "group flex min-h-10 items-center rounded-md text-sm font-medium transition",
                     collapsed ? "justify-center px-2" : "gap-3 px-3",
@@ -157,18 +162,19 @@ export function Sidebar({
                   )}
                 >
                   <SectionIcon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-[#C2410C]" : "text-[#6B7280]")} />
-                  {!collapsed ? <span className="min-w-0 flex-1 truncate">{section.title}</span> : null}
+                  {!collapsed ? <span className="min-w-0 flex-1 truncate">{t(lang, section.titleKey)}</span> : null}
                   {!collapsed && active ? <ChevronDown className="h-3.5 w-3.5 text-[#C2410C]" /> : null}
                 </Link>
 
                 {!collapsed && active ? (
                   <ul className="ml-[21px] mt-1 space-y-0.5 border-l border-[#E5E5E2] pl-3">
                     {section.items.map((item) => {
-                      const itemActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                      const itemActive = findRouteByPath(pathname)?.id === item.id;
                       return (
                         <li key={item.id}>
                           <Link
                             href={item.href}
+                            aria-current={itemActive ? "page" : undefined}
                             onClick={onClose}
                             className={cn(
                               "block rounded-md px-3 py-2 text-[13px] leading-5 transition",
@@ -177,7 +183,7 @@ export function Sidebar({
                                 : "text-[#6B7280] hover:bg-[#F7F7F5] hover:text-[#1D1D1F]",
                             )}
                           >
-                            {item.label}
+                            {t(lang, item.labelKey)}
                           </Link>
                         </li>
                       );
@@ -192,11 +198,11 @@ export function Sidebar({
 
       {collapsed ? (
         <Link
-          href="/operations/runtime"
+          href="/collection/runtime"
           onClick={onClose}
-          title={`Project status: ${statusLabel}. ${statusDetail}`}
+          title={`${t(lang, "cc_status")}: ${statusLabel}. ${statusDetail}`}
           className="mb-3 flex h-10 items-center justify-center rounded-md border border-[#E5E5E2] bg-[#F7F7F5] text-[#4B5563] transition hover:border-[#D9D9D6] hover:bg-white hover:text-[#1D1D1F]"
-          aria-label={`Project status: ${statusLabel}. ${statusDetail}`}
+          aria-label={`${t(lang, "cc_status")}: ${statusLabel}. ${statusDetail}`}
         >
           <span className="relative">
             {overview.isLoading ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <ServerCog className="h-[18px] w-[18px]" />}
@@ -207,24 +213,24 @@ export function Sidebar({
         <div className="mb-3 rounded-md border border-[#E5E5E2] bg-[#F7F7F5] px-3 py-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-[11px] font-semibold uppercase tracking-[.08em] text-[#6B7280]">System Resources</p>
+              <p className="truncate text-[11px] font-semibold uppercase tracking-[.08em] text-[#6B7280]">{t(lang, "cc_resources")}</p>
               <p className="mt-1 truncate text-sm font-semibold text-[#1D1D1F]">{statusLabel}</p>
             </div>
             <span className={cn("inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[11px] font-semibold", statusTone)}>
-              {overview.isLoading ? "Sync" : hasAttention ? "Review" : "OK"}
+              {overview.isLoading ? t(lang, "cc_sync") : hasAttention ? t(lang, "cc_review") : "OK"}
             </span>
           </div>
           <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-[#6B7280]">{statusDetail}</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <ResourceStat icon={Cpu} label="CPU" value={formatPercent(resources?.cpu.usage_percent)} muted={overview.isLoading} />
-            <ResourceStat icon={MemoryStick} label="Memory" value={formatPercent(resources?.memory.used_percent)} muted={overview.isLoading} />
-            <ResourceStat icon={HardDrive} label="Disk" value={formatPercent(resources?.disk.used_percent)} muted={overview.isLoading} />
-            <ResourceStat icon={Network} label="Network" value={`${compactNumber(resources?.network.total ?? 0)} conns`} muted={overview.isLoading} />
+            <ResourceStat icon={MemoryStick} label={t(lang, "cc_memory")} value={formatPercent(resources?.memory.used_percent)} muted={overview.isLoading} />
+            <ResourceStat icon={HardDrive} label={t(lang, "cc_disk")} value={formatPercent(resources?.disk.used_percent)} muted={overview.isLoading} />
+            <ResourceStat icon={Network} label={t(lang, "cc_network")} value={`${compactNumber(resources?.network.total ?? 0)}`} muted={overview.isLoading} />
           </div>
-          <Link href="/operations/runtime" onClick={onClose} className="mt-3 flex items-center gap-2 border-t border-[#E5E5E2] pt-2 text-[11px] font-medium text-[#6B7280] hover:text-[#C2410C]" title={`Exit IP: ${proxyLabel}`}>
+          <Link href="/collection/runtime" onClick={onClose} className="mt-3 flex items-center gap-2 border-t border-[#E5E5E2] pt-2 text-[11px] font-medium text-[#6B7280] hover:text-[#C2410C]" title={`${t(lang, "cc_exit_ip")}: ${proxyLabel}`}>
             <Globe2 className="h-3.5 w-3.5 shrink-0" />
-            <span className="min-w-0 flex-1 truncate">Exit IP: {proxyLabel}</span>
-            <span className="shrink-0">{relativeUpdateTime(data?.generated_at)}</span>
+            <span className="min-w-0 flex-1 truncate">{t(lang, "cc_exit_ip")}: {proxyLabel}</span>
+            <span className="shrink-0">{data?.generated_at ? new Date(data.generated_at).toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", { hour: "2-digit", minute: "2-digit" }) : "—"}</span>
           </Link>
         </div>
       )}
@@ -234,10 +240,10 @@ export function Sidebar({
   return (
     <>
       {mobileOpen ? (
-        <div ref={mobileDialogRef} className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Control center navigation">
+        <div ref={mobileDialogRef} className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={t(lang, "cc_nav")}>
           <div className="fixed inset-0 bg-black/35" onClick={onClose} />
           <div className="fixed inset-y-0 left-0 w-[286px] shadow-2xl">
-            <button ref={closeButtonRef} type="button" onClick={onClose} className="absolute right-3 top-3 z-10 rounded-md p-2 text-[var(--cc-text-muted)] hover:bg-[#F7F7F5]" aria-label="Close navigation">
+            <button ref={closeButtonRef} type="button" onClick={onClose} className="absolute right-3 top-3 z-10 rounded-md p-2 text-[var(--cc-text-muted)] hover:bg-[#F7F7F5]" aria-label={t(lang, "cc_close_nav")}>
               <X className="h-5 w-5" />
             </button>
             {content}

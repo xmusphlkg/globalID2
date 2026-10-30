@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
+import dashboard.api.routers.sources as sources_router
 
 import pytest
 from fastapi import HTTPException
 
-from dashboard.api.routers.crawl import _validate_iceland_crawl_options
+from src.core.source_scopes import validate_iceland_crawl_options as _validate_iceland_crawl_options
 from dashboard.api.routers.sources import (
     _country_source_config,
     _pick_latest_crawl_task,
@@ -101,14 +103,14 @@ def test_iceland_crawl_options_are_source_aware() -> None:
         fill_missing=False,
         start_year=1997,
     )
-    with pytest.raises(HTTPException, match="complete workbook catalogue"):
+    with pytest.raises(ValueError, match="complete workbook catalogue"):
         _validate_iceland_crawl_options(
             country_code="IS",
             source="is_history",
             fill_missing=False,
             start_year=1997,
         )
-    with pytest.raises(HTTPException, match="fill_missing is not supported"):
+    with pytest.raises(ValueError, match="fill_missing is not supported"):
         _validate_iceland_crawl_options(
             country_code="IS",
             source="is_doh_sti",
@@ -138,7 +140,7 @@ class _DB:
 
 
 @pytest.mark.asyncio
-async def test_iceland_flow_uses_lossless_series_counts_and_semantics() -> None:
+async def test_iceland_flow_uses_lossless_series_counts_and_semantics(monkeypatch) -> None:
     specs = [
         ("SRC_IS_DOH_ANNUAL", 14, 209, "active", "revised", "case_notifications", "conditional", 2010, 2025),
         ("SRC_IS_DOH_HISTORY", 73, 4369, "historical", "raw", "case_notifications", "conditional", 1997, 2021),
@@ -202,21 +204,10 @@ async def test_iceland_flow_uses_lossless_series_counts_and_semantics() -> None:
         )
         for source, series_count, _observations, _availability, _quality, _metric, _comparability, _start, _end in specs
     ]
-    db = _DB(
-        [
-            [],
-            series_rows,
-            [],
-            definition_rows,
-            [],
-            quality_rows,
-            [],
-            availability_rows,
-            [],
-            [],
-            [_country()],
-        ]
-    )
+    # Stub the aggregate repository boundary; its SQL query plan is independent
+    # of the flow presentation and source semantics asserted here.
+    monkeypatch.setattr(sources_router, '_load_series_flow_facts', AsyncMock(return_value=(series_rows, definition_rows, quality_rows, availability_rows)))
+    db = _DB([[], [], [_country()]])
 
     flows = await get_sources_flow(country_code=None, db=db)
 
@@ -236,7 +227,7 @@ async def test_iceland_flow_uses_lossless_series_counts_and_semantics() -> None:
 
 
 @pytest.mark.asyncio
-async def test_australia_subdivision_flow_uses_observation_geography() -> None:
+async def test_australia_subdivision_flow_uses_observation_geography(monkeypatch) -> None:
     country = SimpleNamespace(
         id=31001,
         code="AU-NSW",
@@ -288,21 +279,8 @@ async def test_australia_subdivision_flow_uses_observation_geography() -> None:
             count=68,
         )
     ]
-    db = _DB(
-        [
-            [],
-            [],
-            series_rows,
-            [],
-            definition_rows,
-            [],
-            quality_rows,
-            [],
-            availability_rows,
-            [],
-            [country],
-        ]
-    )
+    monkeypatch.setattr(sources_router, '_load_series_flow_facts', AsyncMock(return_value=(series_rows, definition_rows, quality_rows, availability_rows)))
+    db = _DB([[], [], [country]])
 
     flows = await get_sources_flow(country_code=None, db=db)
 

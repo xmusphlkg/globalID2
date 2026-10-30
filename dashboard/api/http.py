@@ -194,18 +194,22 @@ def install_http_contract(app: FastAPI) -> None:
                             "meta": {"$ref": "#/components/schemas/ResponseMeta"},
                         },
                     }
-                for status_code in (400, 401, 404, 409, 422, 500):
+                problem_detail_response = {
+                    "description": "Problem detail",
+                    "content": {
+                        "application/problem+json": {
+                            "schema": {"$ref": "#/components/schemas/ProblemDetail"}
+                        }
+                    },
+                }
+                for status_code in (400, 401, 404, 409, 500):
                     operation.setdefault("responses", {}).setdefault(
-                        str(status_code),
-                        {
-                            "description": "Problem detail",
-                            "content": {
-                                "application/problem+json": {
-                                    "schema": {"$ref": "#/components/schemas/ProblemDetail"}
-                                }
-                            },
-                        },
+                        str(status_code), problem_detail_response
                     )
+                # FastAPI auto-generates a 422 HTTPValidationError for body/query
+                # models; the runtime handler returns RFC 9457 problem+json, so
+                # overwrite it rather than leave two divergent 422 shapes.
+                operation.setdefault("responses", {})["422"] = problem_detail_response
         schema["x-gids-contract-version"] = "2026-08"
         app.openapi_schema = schema
         return schema

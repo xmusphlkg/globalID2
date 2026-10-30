@@ -1209,13 +1209,13 @@ export default function AIModelsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow={t(lang, "mod_ai")}
+        eyebrow={t(lang, "settings")}
         title={t(lang, "ai_models")}
         description={copy.subtitle}
         meta={
           <>
             <StatusBadge tone={summary.configuredKeys === summary.totalProviders && summary.totalProviders > 0 ? "success" : "warning"}>
-              {summary.configuredKeys}/{summary.totalProviders} keys
+              {summary.configuredKeys}/{summary.totalProviders} {isZh ? "密钥" : "keys"}
             </StatusBadge>
             <StatusBadge tone={summary.routeCoverage >= 80 ? "success" : summary.routeCoverage >= 40 ? "warning" : "danger"}>
               {summary.routeCoverage}% {copy.routeCoverage}
@@ -1225,7 +1225,7 @@ export default function AIModelsPage() {
         actions={
           <>
             <Link
-              href="/production/ai"
+              href="/models"
               className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
             >
               <ListTodo className="h-4 w-4" />

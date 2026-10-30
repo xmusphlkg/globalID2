@@ -2000,6 +2000,50 @@
         "title": "AgentWorkflowStepOut",
         "type": "object"
       },
+      "ArtifactOut": {
+        "properties": {
+          "attempt": {
+            "title": "Attempt",
+            "type": "integer"
+          },
+          "byte_size": {
+            "title": "Byte Size",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "relative_path": {
+            "title": "Relative Path",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          }
+        },
+        "required": [
+          "attempt",
+          "relative_path",
+          "sha256",
+          "byte_size",
+          "kind"
+        ],
+        "title": "ArtifactOut",
+        "type": "object"
+      },
       "AutomationConfigOut": {
         "properties": {
           "admin_emails": {
@@ -4130,6 +4174,21 @@
         "title": "DataResponse[ControlPlaneOverviewOut]",
         "type": "object"
       },
+      "DataResponse_KnowledgeSourceRunResult_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/KnowledgeSourceRunResult"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[KnowledgeSourceRunResult]",
+        "type": "object"
+      },
       "DataResponse_LiteratureArticleOut_": {
         "properties": {
           "data": {
@@ -4188,6 +4247,36 @@
           "data"
         ],
         "title": "DataResponse[LiteratureSyncOut]",
+        "type": "object"
+      },
+      "DataResponse_PendingOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PendingOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[PendingOut]",
+        "type": "object"
+      },
+      "DataResponse_RunOut_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RunOut"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[RunOut]",
         "type": "object"
       },
       "DataResponse_RuntimeSummaryOut_": {
@@ -4269,6 +4358,25 @@
           "data"
         ],
         "title": "DataResponse[list[ActionItemOut]]",
+        "type": "object"
+      },
+      "DataResponse_list_LineOut__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/LineOut"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[LineOut]]",
         "type": "object"
       },
       "DataResponse_list_LiteratureArticleOut__": {
@@ -4383,6 +4491,26 @@
           "data"
         ],
         "title": "DataResponse[list[TaskEventOut]]",
+        "type": "object"
+      },
+      "DataResponse_list_dict__": {
+        "properties": {
+          "data": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ResponseMeta"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[list[dict]]",
         "type": "object"
       },
       "DataSourceDist": {
@@ -6190,6 +6318,286 @@
         "title": "KnowledgeRepairRetryRequest",
         "type": "object"
       },
+      "KnowledgeRunCreate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional task description",
+            "title": "Description"
+          },
+          "disease_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Disease Ids",
+            "type": "array"
+          },
+          "force": {
+            "default": false,
+            "title": "Force",
+            "type": "boolean"
+          },
+          "generator": {
+            "default": "auto",
+            "description": "auto prefers reviewed profiles; ai always uses the model center",
+            "title": "Generator",
+            "type": "string"
+          },
+          "line": {
+            "const": "knowledge",
+            "title": "Line",
+            "type": "string"
+          },
+          "priority": {
+            "default": "normal",
+            "title": "Priority",
+            "type": "string"
+          },
+          "source": {
+            "description": "Source groups: who / search / wikidata / wikipedia / pubmed / msd",
+            "items": {
+              "type": "string"
+            },
+            "title": "Source",
+            "type": "array"
+          },
+          "task_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional batch task name prefix",
+            "title": "Task Name"
+          }
+        },
+        "required": [
+          "disease_ids",
+          "line"
+        ],
+        "title": "KnowledgeRunCreate",
+        "type": "object"
+      },
+      "KnowledgeSourceRunCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "disease_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Disease Ids",
+            "type": "array"
+          },
+          "force": {
+            "default": false,
+            "title": "Force",
+            "type": "boolean"
+          },
+          "priority": {
+            "default": "normal",
+            "enum": [
+              "urgent",
+              "high",
+              "normal",
+              "low"
+            ],
+            "title": "Priority",
+            "type": "string"
+          },
+          "source": {
+            "description": "Source groups; omitted or empty uses the service's default source adapters.",
+            "items": {
+              "enum": [
+                "who",
+                "who_don",
+                "search",
+                "web",
+                "web_search",
+                "wikidata",
+                "wikipedia",
+                "pubmed",
+                "msd"
+              ],
+              "type": "string"
+            },
+            "title": "Source",
+            "type": "array"
+          }
+        },
+        "required": [
+          "disease_ids"
+        ],
+        "title": "KnowledgeSourceRunCreate",
+        "type": "object"
+      },
+      "KnowledgeSourceRunResult": {
+        "properties": {
+          "created_count": {
+            "title": "Created Count",
+            "type": "integer"
+          },
+          "created_tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskReferenceOut"
+            },
+            "title": "Created Tasks",
+            "type": "array"
+          },
+          "force": {
+            "title": "Force",
+            "type": "boolean"
+          },
+          "requested_disease_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requested Disease Ids",
+            "type": "array"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeSourceRunSkipped"
+            },
+            "title": "Skipped",
+            "type": "array"
+          },
+          "skipped_count": {
+            "title": "Skipped Count",
+            "type": "integer"
+          },
+          "source_groups": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Groups",
+            "type": "array"
+          }
+        },
+        "required": [
+          "requested_disease_ids",
+          "source_groups",
+          "force",
+          "created_count",
+          "skipped_count",
+          "created_tasks",
+          "skipped"
+        ],
+        "title": "KnowledgeSourceRunResult",
+        "type": "object"
+      },
+      "KnowledgeSourceRunSkipped": {
+        "properties": {
+          "disease_id": {
+            "title": "Disease Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "task_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Uuid"
+          }
+        },
+        "required": [
+          "disease_id",
+          "reason"
+        ],
+        "title": "KnowledgeSourceRunSkipped",
+        "type": "object"
+      },
+      "LineOut": {
+        "properties": {
+          "latest_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Stage"
+          },
+          "latest_stage_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Stage Status"
+          },
+          "latest_task_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Task Uuid"
+          },
+          "line": {
+            "title": "Line",
+            "type": "string"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "pending_publish_count": {
+            "title": "Pending Publish Count",
+            "type": "integer"
+          },
+          "schedule_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Schedule Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "line",
+          "schedule_ids",
+          "pending_publish_count"
+        ],
+        "title": "LineOut",
+        "type": "object"
+      },
       "LiteratureArticleOut": {
         "properties": {
           "article_id": {
@@ -6494,11 +6902,6 @@
           "dry_run": {
             "default": false,
             "title": "Dry Run",
-            "type": "boolean"
-          },
-          "export": {
-            "default": true,
-            "title": "Export",
             "type": "boolean"
           }
         },
@@ -7119,6 +7522,32 @@
           "started_at"
         ],
         "title": "LiteratureIngestRunOut",
+        "type": "object"
+      },
+      "LiteratureRunCreate": {
+        "properties": {
+          "line": {
+            "const": "literature",
+            "title": "Line",
+            "type": "string"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          }
+        },
+        "required": [
+          "line"
+        ],
+        "title": "LiteratureRunCreate",
         "type": "object"
       },
       "LiteratureSummaryOut": {
@@ -8092,6 +8521,40 @@
         "title": "PaginationMeta",
         "type": "object"
       },
+      "PendingOut": {
+        "properties": {
+          "knowledge": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Knowledge",
+            "type": "array"
+          },
+          "literature": {
+            "title": "Literature",
+            "type": "boolean"
+          },
+          "situation": {
+            "title": "Situation",
+            "type": "boolean"
+          },
+          "surveillance": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Surveillance",
+            "type": "array"
+          }
+        },
+        "required": [
+          "surveillance",
+          "literature",
+          "situation",
+          "knowledge"
+        ],
+        "title": "PendingOut",
+        "type": "object"
+      },
       "PipelineStageOut": {
         "properties": {
           "id": {
@@ -8113,6 +8576,25 @@
           "status"
         ],
         "title": "PipelineStageOut",
+        "type": "object"
+      },
+      "PriorityChange": {
+        "properties": {
+          "priority": {
+            "enum": [
+              "urgent",
+              "high",
+              "normal",
+              "low"
+            ],
+            "title": "Priority",
+            "type": "string"
+          }
+        },
+        "required": [
+          "priority"
+        ],
+        "title": "PriorityChange",
         "type": "object"
       },
       "ProblemDetail": {
@@ -8668,6 +9150,22 @@
           "lookup_status"
         ],
         "title": "ProxyLocationOut",
+        "type": "object"
+      },
+      "PublishRunCreate": {
+        "properties": {
+          "full": {
+            "default": false,
+            "title": "Full",
+            "type": "boolean"
+          },
+          "job_id": {
+            "default": "site-release",
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "title": "PublishRunCreate",
         "type": "object"
       },
       "QualityStats": {
@@ -9510,6 +10008,99 @@
         "title": "ResponseMeta",
         "type": "object"
       },
+      "RunOut": {
+        "properties": {
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactOut"
+            },
+            "title": "Artifacts",
+            "type": "array"
+          },
+          "attempt": {
+            "title": "Attempt",
+            "type": "integer"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "publication": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Publication",
+            "type": "array"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageOut"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "task_type": {
+            "title": "Task Type",
+            "type": "string"
+          },
+          "task_uuid": {
+            "title": "Task Uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_uuid",
+          "task_type",
+          "line",
+          "status",
+          "attempt",
+          "stages",
+          "artifacts",
+          "publication"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
       "RuntimeRouteOut": {
         "properties": {
           "api_key_hint": {
@@ -10199,6 +10790,35 @@
         "title": "SiteSettingsUpdate",
         "type": "object"
       },
+      "SituationRunCreate": {
+        "properties": {
+          "ai_limit": {
+            "default": 30,
+            "title": "Ai Limit",
+            "type": "integer"
+          },
+          "line": {
+            "const": "situation",
+            "title": "Line",
+            "type": "string"
+          },
+          "mode": {
+            "default": "full",
+            "enum": [
+              "full",
+              "no_fetch",
+              "metadata_only"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line"
+        ],
+        "title": "SituationRunCreate",
+        "type": "object"
+      },
       "SmtpSettingsOut": {
         "properties": {
           "admin_emails": {
@@ -10722,6 +11342,174 @@
           "task_type"
         ],
         "title": "StageInfo",
+        "type": "object"
+      },
+      "StageOut": {
+        "properties": {
+          "attempt": {
+            "title": "Attempt",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "title": "Metrics",
+            "type": "object"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "attempt",
+          "status",
+          "metrics",
+          "started_at"
+        ],
+        "title": "StageOut",
+        "type": "object"
+      },
+      "SurveillanceRunCreate": {
+        "properties": {
+          "country_code": {
+            "maxLength": 16,
+            "minLength": 2,
+            "title": "Country Code",
+            "type": "string"
+          },
+          "fill_missing": {
+            "default": false,
+            "title": "Fill Missing",
+            "type": "boolean"
+          },
+          "force": {
+            "default": false,
+            "title": "Force",
+            "type": "boolean"
+          },
+          "include_current_month": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Current Month"
+          },
+          "line": {
+            "const": "surveillance",
+            "title": "Line",
+            "type": "string"
+          },
+          "priority": {
+            "default": "normal",
+            "title": "Priority",
+            "type": "string"
+          },
+          "process": {
+            "default": true,
+            "title": "Process",
+            "type": "boolean"
+          },
+          "revision_window_months": {
+            "anyOf": [
+              {
+                "maximum": 52.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Window Months"
+          },
+          "save_raw": {
+            "default": true,
+            "title": "Save Raw",
+            "type": "boolean"
+          },
+          "source": {
+            "default": "all",
+            "title": "Source",
+            "type": "string"
+          },
+          "source_dir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Dir"
+          },
+          "source_file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source File"
+          },
+          "start_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1900.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Year"
+          }
+        },
+        "required": [
+          "line",
+          "country_code"
+        ],
+        "title": "SurveillanceRunCreate",
         "type": "object"
       },
       "SystemResourcesOut": {
@@ -11781,13 +12569,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -11904,13 +12692,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -12009,13 +12797,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -12116,13 +12904,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -12336,13 +13124,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -12529,13 +13317,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -12727,13 +13515,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -12898,13 +13686,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -13001,13 +13789,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -13199,13 +13987,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -13300,13 +14088,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -13402,13 +14190,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -13514,13 +14302,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -13617,13 +14405,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -13729,13 +14517,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -13928,13 +14716,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -14040,13 +14828,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -14152,13 +14940,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -14324,13 +15112,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -14425,13 +15213,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -14529,13 +15317,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -14633,13 +15421,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -14737,13 +15525,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -14857,13 +15645,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -15042,13 +15830,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -15159,13 +15947,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -15344,13 +16132,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -15469,13 +16257,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -15585,6 +16373,374 @@
         ]
       }
     },
+    "/api/v1/collection/lines": {
+      "get": {
+        "operationId": "lines_api_v1_collection_lines_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_LineOut__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Lines",
+        "tags": [
+          "Collection"
+        ]
+      }
+    },
+    "/api/v1/collection/runs": {
+      "post": {
+        "operationId": "start_run_api_v1_collection_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "knowledge": "#/components/schemas/KnowledgeRunCreate",
+                    "literature": "#/components/schemas/LiteratureRunCreate",
+                    "situation": "#/components/schemas/SituationRunCreate",
+                    "surveillance": "#/components/schemas/SurveillanceRunCreate"
+                  },
+                  "propertyName": "line"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/SurveillanceRunCreate"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LiteratureRunCreate"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SituationRunCreate"
+                  },
+                  {
+                    "$ref": "#/components/schemas/KnowledgeRunCreate"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_dict_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Start Run",
+        "tags": [
+          "Collection"
+        ]
+      }
+    },
+    "/api/v1/collection/runs/{task_uuid}": {
+      "get": {
+        "operationId": "run_api_v1_collection_runs__task_uuid__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_uuid",
+            "required": true,
+            "schema": {
+              "title": "Task Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_RunOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Run",
+        "tags": [
+          "Collection"
+        ]
+      }
+    },
+    "/api/v1/collection/summary": {
+      "get": {
+        "operationId": "summary_api_v1_collection_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_dict_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Summary",
+        "tags": [
+          "Collection"
+        ]
+      }
+    },
     "/api/v1/content-governance/knowledge-retries": {
       "post": {
         "operationId": "requeue_failed_knowledge_repairs_api_v1_content_governance_knowledge_retries_post",
@@ -15661,13 +16817,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -15764,13 +16920,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -15965,13 +17121,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -16260,13 +17416,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -16367,13 +17523,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -16697,13 +17853,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -16830,13 +17986,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -16951,13 +18107,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -17055,13 +18211,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -17198,13 +18354,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -17349,13 +18505,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -17452,13 +18608,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -17555,13 +18711,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -17577,6 +18733,97 @@
         "summary": "Start Disease Knowledge Tasks",
         "tags": [
           "AI"
+        ]
+      }
+    },
+    "/api/v1/knowledge/source-runs": {
+      "post": {
+        "operationId": "start_knowledge_source_runs_api_v1_knowledge_source_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeSourceRunCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_KnowledgeSourceRunResult_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Start Knowledge Source Runs",
+        "tags": [
+          "Knowledge Sources"
         ]
       }
     },
@@ -17659,13 +18906,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -18044,13 +19291,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -18156,13 +19403,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -18322,13 +19569,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -18424,13 +19671,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -18647,13 +19894,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -18763,13 +20010,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -18862,13 +20109,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -18964,13 +20211,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -19080,6 +20327,393 @@
         ]
       }
     },
+    "/api/v1/models/queue": {
+      "get": {
+        "operationId": "queue_api_v1_models_queue_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "queued",
+              "enum": [
+                "queued",
+                "leased",
+                "succeeded",
+                "failed",
+                "cancelled"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_dict__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Queue",
+        "tags": [
+          "Models"
+        ]
+      }
+    },
+    "/api/v1/models/queue/{item_id}": {
+      "get": {
+        "operationId": "detail_api_v1_models_queue__item_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_dict_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Detail",
+        "tags": [
+          "Models"
+        ]
+      }
+    },
+    "/api/v1/models/queue/{item_id}/priority": {
+      "post": {
+        "operationId": "priority_api_v1_models_queue__item_id__priority_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriorityChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_dict_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Priority",
+        "tags": [
+          "Models"
+        ]
+      }
+    },
+    "/api/v1/models/routes": {
+      "get": {
+        "operationId": "routes_api_v1_models_routes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_list_dict__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Routes",
+        "tags": [
+          "Models"
+        ]
+      }
+    },
     "/api/v1/notification-campaigns": {
       "get": {
         "operationId": "subscription_notifications_api_v1_notification_campaigns_get",
@@ -19171,13 +20805,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -19270,13 +20904,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -19384,13 +21018,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -19498,13 +21132,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -19612,13 +21246,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -19715,6 +21349,178 @@
         "summary": "Overview",
         "tags": [
           "Control Plane"
+        ]
+      }
+    },
+    "/api/v1/publish/pending": {
+      "get": {
+        "operationId": "pending_api_v1_publish_pending_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_PendingOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Pending",
+        "tags": [
+          "Publish"
+        ]
+      }
+    },
+    "/api/v1/publish/runs": {
+      "post": {
+        "operationId": "start_api_v1_publish_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishRunCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_dict_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Start",
+        "tags": [
+          "Publish"
         ]
       }
     },
@@ -19849,13 +21655,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -19960,13 +21766,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -20077,13 +21883,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -20183,13 +21989,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -20555,13 +22361,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -20657,13 +22463,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -20769,13 +22575,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -20873,13 +22679,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -20965,13 +22771,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -21121,13 +22927,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -21225,13 +23031,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -21330,13 +23136,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -21439,13 +23245,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -21556,13 +23362,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -21694,13 +23500,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -21796,13 +23602,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -21888,13 +23694,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -21979,13 +23785,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -22151,13 +23957,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -22253,13 +24059,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -22375,13 +24181,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -22466,13 +24272,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -22649,13 +24455,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -22740,13 +24546,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -22920,13 +24726,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -23211,13 +25017,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -23313,13 +25119,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -23425,13 +25231,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -23529,13 +25335,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -23621,13 +25427,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -23736,13 +25542,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -23826,13 +25632,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -24022,13 +25828,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -24125,13 +25931,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -24228,13 +26034,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -24331,13 +26137,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -24432,13 +26238,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -24627,13 +26433,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -24727,13 +26533,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -24932,13 +26738,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -25120,13 +26926,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -25226,13 +27032,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -25333,13 +27139,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -25492,13 +27298,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -25693,13 +27499,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -25805,13 +27611,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -25998,13 +27804,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -26118,13 +27924,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -26233,13 +28039,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -26333,13 +28139,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -26436,13 +28242,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -26873,13 +28679,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -27249,13 +29055,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -27350,13 +29156,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -27547,13 +29353,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -27651,13 +29457,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -27743,13 +29549,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {
@@ -27835,13 +29641,13 @@
           },
           "422": {
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Problem detail"
           },
           "500": {
             "content": {

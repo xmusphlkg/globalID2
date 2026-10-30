@@ -1,2 +1,3 @@
 import { permanentRedirect } from "next/navigation";
-export default function LegacyPage() { permanentRedirect("/operations/tasks"); }
+import { legacyDestination } from "@/shared/navigation/legacy-query";
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string,string|string[]|undefined>> }) { permanentRedirect(legacyDestination("/operations/tasks", await searchParams)); }

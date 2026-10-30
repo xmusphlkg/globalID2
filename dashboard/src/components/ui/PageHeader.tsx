@@ -21,7 +21,7 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 border-b border-tremor-border pb-5 dark:border-dark-tremor-border lg:flex-row lg:items-end lg:justify-between",
+        "workspace-header",
         className,
       )}
     >
@@ -32,11 +32,11 @@ export function PageHeader({
           </div>
         ) : null}
         <div>
-          <h1 className="text-2xl font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong sm:text-[1.7rem]">
+          <h1 className="workspace-title">
             {title}
           </h1>
           {description ? (
-            <p className="mt-1 max-w-3xl text-sm text-tremor-content dark:text-dark-tremor-content">
+            <p className="workspace-description">
               {description}
             </p>
           ) : null}

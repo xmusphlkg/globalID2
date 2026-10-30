@@ -17,7 +17,7 @@ from src.domain import (
     MappingNotificationOutbox,
     SourceDiseaseCategory,
 )
-from src.services.disease_mapping_ai_service import disease_mapping_ai_service
+from src.services.model_operations import run_worker_operation
 from src.services.disease_mapping_audit_service import disease_mapping_audit_service
 from src.services.disease_mapping_automation_service import disease_mapping_automation_service
 from src.services.disease_mapping_registry_service import disease_mapping_registry_service
@@ -113,8 +113,9 @@ async def suggest_mapping_v3(category_key: str, db: AsyncSession = Depends(get_d
     ).scalar_one_or_none()
     if category_id is None:
         raise HTTPException(404, "Mapping category not found")
+    await db.rollback()
     try:
-        return await disease_mapping_ai_service.suggest_for_category(db, category_id)
+        return await run_worker_operation("mapping_suggest", {"category_id": category_id})
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
     except Exception as exc:

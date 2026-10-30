@@ -21,7 +21,7 @@ export const useAppStore = create<AppState>()(
       countryName: "",
       countryCode: "",
       sidebarCollapsed: false,
-      setLang: () => set({ lang: "en" }),
+      setLang: (lang) => set({ lang }),
       setCountry: (id, name, code = "") =>
         set({ countryId: id, countryName: name, countryCode: code }),
       clearCountry: () => set({ countryId: null, countryName: "", countryCode: "" }),
@@ -30,6 +30,7 @@ export const useAppStore = create<AppState>()(
     {
       name: "globalid-dashboard-store",
       partialize: (state) => ({
+        lang: state.lang,
         countryId: state.countryId,
         countryName: state.countryName,
         countryCode: state.countryCode,
@@ -38,7 +39,7 @@ export const useAppStore = create<AppState>()(
       merge: (persisted, current) => ({
         ...current,
         ...(persisted as Partial<AppState>),
-        lang: "en" as const,
+        lang: (persisted as Partial<AppState>)?.lang === "zh" ? "zh" : "en",
       }),
     },
   ),

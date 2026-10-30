@@ -1459,12 +1459,16 @@ class _SummaryFailureDB:
     def __init__(self):
         self.summary = None
         self.commits = 0
+        self.dirty = []
 
     async def execute(self, _statement):
         return _ScalarResult(self.summary)
 
     def add(self, summary):
-        self.summary = summary
+        if isinstance(summary, LiteratureSummary):
+            self.summary = summary
+        else:
+            self.dirty.append(summary)
 
     async def commit(self):
         self.commits += 1
@@ -1503,12 +1507,15 @@ async def test_enrichment_generation_failures_record_attempts_and_stop_requeue(m
 
     await pipeline._store_failure(
         article,
+        task_uuid="11111111-1111-4111-8111-111111111111",
         language="zh",
         error=ValueError("bilingual_null_alignment_mismatch:main_findings"),
     )
 
     assert isinstance(db.summary, LiteratureSummary)
     assert db.summary.status == "review"
+    assert db.dirty[0].source_task_uuid == "11111111-1111-4111-8111-111111111111"
+    assert db.dirty[0].line == "literature"
     assert db.summary.language == "zh"
     assert db.summary.generated_by == "literature-evidence-agent"
     assert db.summary.generation_metadata["publication_gate"] == "generation-failed"
@@ -1520,6 +1527,7 @@ async def test_enrichment_generation_failures_record_attempts_and_stop_requeue(m
 
     await pipeline._store_failure(
         article,
+        task_uuid="11111111-1111-4111-8111-111111111111",
         language="zh",
         error=ValueError("bilingual_null_alignment_mismatch:main_findings"),
     )
@@ -1550,6 +1558,7 @@ async def test_transient_enrichment_failures_do_not_consume_quality_attempts(mon
 
     await pipeline._store_failure(
         article,
+        task_uuid="11111111-1111-4111-8111-111111111111",
         language="en",
         error=RuntimeError("Agent completion failed after trying models ['fast']: Connection error."),
     )

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Bot, Check, Database, Mail, Play, RotateCw, ShieldCheck, X } from "lucide-react";
 
 import { MetricTile } from "@/components/ui/MetricTile";
@@ -51,8 +52,9 @@ const button = "inline-flex h-9 items-center gap-2 rounded-tremor-default border
 export default function DiseaseMappingView() {
   const lang = useAppStore((state) => state.lang);
   const copy = text[lang];
-  const [country, setCountry] = useState("");
-  const [aiStatus, setAiStatus] = useState("no_model");
+  const params = useSearchParams();
+  const [country, setCountry] = useState(params.get("country")?.toUpperCase() ?? "");
+  const [aiStatus, setAiStatus] = useState(params.get("ai_status") ?? "");
   const summary = useMappingSummary();
   const coverage = useMappingCoverage();
   const countries = useCountries();

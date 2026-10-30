@@ -18,26 +18,22 @@ test("canonical pages meet automated WCAG 2.2 A/AA checks", async ({ page }, tes
   }
 });
 
-test("AI creation dialogs are labelled and keyboard dismissible", async ({ page }, testInfo) => {
+test("navigation search is labelled and keyboard dismissible", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Dialog semantics do not vary by viewport");
-  await page.goto("/production/ai?country=JP");
-
-  for (const buttonName of ["New AI Task", "Update Disease Knowledge"]) {
-    await page.getByRole("button", { name: buttonName }).click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    const result = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-      .analyze();
-    expect(result.violations, `${buttonName} dialog must be accessible`).toEqual([]);
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog")).toBeHidden();
-  }
+  await page.goto("/models/queue");
+  await page.getByRole("button", { name: /Jump to/ }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Search workspaces and tools" })).toBeFocused();
+  const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
+  expect(result.violations).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
 });
 
 test("mobile shell exposes a compact title, country context, and accessible drawer", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "Mobile shell check runs in the mobile project");
   await page.goto("/overview/events?country=JP", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("banner").locator("p").filter({ hasText: "Events & Signals" })).toBeVisible();
+  await expect(page.getByRole("banner").locator("p").filter({ hasText: "Events & signals" })).toBeVisible();
   await expect(page.getByText("Global scope", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Open navigation" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();

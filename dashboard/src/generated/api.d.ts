@@ -483,6 +483,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/collection/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lines */
+        get: operations["lines_api_v1_collection_lines_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/collection/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Run */
+        post: operations["start_run_api_v1_collection_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/collection/runs/{task_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Run */
+        get: operations["run_api_v1_collection_runs__task_uuid__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/collection/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_v1_collection_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/content-governance/knowledge-retries": {
         parameters: {
             query?: never;
@@ -813,6 +881,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/knowledge/source-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Knowledge Source Runs */
+        post: operations["start_knowledge_source_runs_api_v1_knowledge_source_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/knowledge/{disease_id}": {
         parameters: {
             query?: never;
@@ -1035,6 +1120,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/models/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Queue */
+        get: operations["queue_api_v1_models_queue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models/queue/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail */
+        get: operations["detail_api_v1_models_queue__item_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models/queue/{item_id}/priority": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Priority */
+        post: operations["priority_api_v1_models_queue__item_id__priority_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models/routes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Routes */
+        get: operations["routes_api_v1_models_routes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notification-campaigns": {
         parameters: {
             query?: never;
@@ -1115,6 +1268,40 @@ export interface paths {
         get: operations["overview_api_v1_overview_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/publish/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pending */
+        get: operations["pending_api_v1_publish_pending_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/publish/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start */
+        post: operations["start_api_v1_publish_runs_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3049,6 +3236,21 @@ export interface components {
             /** Updated At */
             updated_at?: string | null;
         };
+        /** ArtifactOut */
+        ArtifactOut: {
+            /** Attempt */
+            attempt: number;
+            /** Byte Size */
+            byte_size: number;
+            /** Kind */
+            kind: string;
+            /** Relative Path */
+            relative_path: string;
+            /** Sha256 */
+            sha256: string;
+            /** Source Url */
+            source_url?: string | null;
+        };
         /** AutomationConfigOut */
         AutomationConfigOut: {
             /** Admin Emails */
@@ -3812,6 +4014,11 @@ export interface components {
             data: components["schemas"]["ControlPlaneOverviewOut"];
             meta?: components["schemas"]["ResponseMeta"];
         };
+        /** DataResponse[KnowledgeSourceRunResult] */
+        DataResponse_KnowledgeSourceRunResult_: {
+            data: components["schemas"]["KnowledgeSourceRunResult"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
         /** DataResponse[LiteratureArticleOut] */
         DataResponse_LiteratureArticleOut_: {
             data: components["schemas"]["LiteratureArticleOut"];
@@ -3830,6 +4037,16 @@ export interface components {
         /** DataResponse[LiteratureSyncOut] */
         DataResponse_LiteratureSyncOut_: {
             data: components["schemas"]["LiteratureSyncOut"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        /** DataResponse[PendingOut] */
+        DataResponse_PendingOut_: {
+            data: components["schemas"]["PendingOut"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        /** DataResponse[RunOut] */
+        DataResponse_RunOut_: {
+            data: components["schemas"]["RunOut"];
             meta?: components["schemas"]["ResponseMeta"];
         };
         /** DataResponse[RuntimeSummaryOut] */
@@ -3859,6 +4076,12 @@ export interface components {
         DataResponse_list_ActionItemOut__: {
             /** Data */
             data: components["schemas"]["ActionItemOut"][];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        /** DataResponse[list[LineOut]] */
+        DataResponse_list_LineOut__: {
+            /** Data */
+            data: components["schemas"]["LineOut"][];
             meta?: components["schemas"]["ResponseMeta"];
         };
         /** DataResponse[list[LiteratureArticleOut]] */
@@ -3895,6 +4118,14 @@ export interface components {
         DataResponse_list_TaskEventOut__: {
             /** Data */
             data: components["schemas"]["TaskEventOut"][];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        /** DataResponse[list[dict]] */
+        DataResponse_list_dict__: {
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            }[];
             meta?: components["schemas"]["ResponseMeta"];
         };
         /** DataSourceDist */
@@ -4535,6 +4766,111 @@ export interface components {
              */
             limit: number;
         };
+        /** KnowledgeRunCreate */
+        KnowledgeRunCreate: {
+            /**
+             * Description
+             * @description Optional task description
+             */
+            description?: string | null;
+            /** Disease Ids */
+            disease_ids: string[];
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
+            /**
+             * Generator
+             * @description auto prefers reviewed profiles; ai always uses the model center
+             * @default auto
+             */
+            generator: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            line: "knowledge";
+            /**
+             * Priority
+             * @default normal
+             */
+            priority: string;
+            /**
+             * Source
+             * @description Source groups: who / search / wikidata / wikipedia / pubmed / msd
+             */
+            source?: string[];
+            /**
+             * Task Name
+             * @description Optional batch task name prefix
+             */
+            task_name?: string | null;
+        };
+        /** KnowledgeSourceRunCreate */
+        KnowledgeSourceRunCreate: {
+            /** Disease Ids */
+            disease_ids: string[];
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
+            /**
+             * Priority
+             * @default normal
+             * @enum {string}
+             */
+            priority: "urgent" | "high" | "normal" | "low";
+            /**
+             * Source
+             * @description Source groups; omitted or empty uses the service's default source adapters.
+             */
+            source?: ("who" | "who_don" | "search" | "web" | "web_search" | "wikidata" | "wikipedia" | "pubmed" | "msd")[];
+        };
+        /** KnowledgeSourceRunResult */
+        KnowledgeSourceRunResult: {
+            /** Created Count */
+            created_count: number;
+            /** Created Tasks */
+            created_tasks: components["schemas"]["TaskReferenceOut"][];
+            /** Force */
+            force: boolean;
+            /** Requested Disease Ids */
+            requested_disease_ids: string[];
+            /** Skipped */
+            skipped: components["schemas"]["KnowledgeSourceRunSkipped"][];
+            /** Skipped Count */
+            skipped_count: number;
+            /** Source Groups */
+            source_groups: string[];
+        };
+        /** KnowledgeSourceRunSkipped */
+        KnowledgeSourceRunSkipped: {
+            /** Disease Id */
+            disease_id: string;
+            /** Reason */
+            reason: string;
+            /** Task Uuid */
+            task_uuid?: string | null;
+        };
+        /** LineOut */
+        LineOut: {
+            /** Latest Stage */
+            latest_stage?: string | null;
+            /** Latest Stage Status */
+            latest_stage_status?: string | null;
+            /** Latest Task Uuid */
+            latest_task_uuid?: string | null;
+            /** Line */
+            line: string;
+            /** Next Run At */
+            next_run_at?: string | null;
+            /** Pending Publish Count */
+            pending_publish_count: number;
+            /** Schedule Ids */
+            schedule_ids: string[];
+        };
         /** LiteratureArticleOut */
         LiteratureArticleOut: {
             /** Article Id */
@@ -4628,11 +4964,6 @@ export interface components {
              * @default false
              */
             dry_run: boolean;
-            /**
-             * Export
-             * @default true
-             */
-            export: boolean;
         };
         /** LiteratureDashboardOut */
         LiteratureDashboardOut: {
@@ -4833,6 +5164,16 @@ export interface components {
             status: string;
             /** Through Indexed At */
             through_indexed_at?: string | null;
+        };
+        /** LiteratureRunCreate */
+        LiteratureRunCreate: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            line: "literature";
+            /** Since */
+            since?: string | null;
         };
         /** LiteratureSummaryOut */
         LiteratureSummaryOut: {
@@ -5163,6 +5504,17 @@ export interface components {
             /** Total Pages */
             total_pages: number;
         };
+        /** PendingOut */
+        PendingOut: {
+            /** Knowledge */
+            knowledge: string[];
+            /** Literature */
+            literature: boolean;
+            /** Situation */
+            situation: boolean;
+            /** Surveillance */
+            surveillance: string[];
+        };
         /** PipelineStageOut */
         PipelineStageOut: {
             /** Id */
@@ -5171,6 +5523,14 @@ export interface components {
             label: string;
             /** Status */
             status: string;
+        };
+        /** PriorityChange */
+        PriorityChange: {
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "urgent" | "high" | "normal" | "low";
         };
         /** ProblemDetail */
         ProblemDetail: {
@@ -5385,6 +5745,19 @@ export interface components {
             ip?: string | null;
             /** Lookup Status */
             lookup_status: string;
+        };
+        /** PublishRunCreate */
+        PublishRunCreate: {
+            /**
+             * Full
+             * @default false
+             */
+            full: boolean;
+            /**
+             * Job Id
+             * @default site-release
+             */
+            job_id: string;
         };
         /** QualityStats */
         QualityStats: {
@@ -5692,6 +6065,31 @@ export interface components {
             /** Request Id */
             request_id?: string | null;
         };
+        /** RunOut */
+        RunOut: {
+            /** Artifacts */
+            artifacts: components["schemas"]["ArtifactOut"][];
+            /** Attempt */
+            attempt: number;
+            /** Country Code */
+            country_code?: string | null;
+            /** Line */
+            line: string | null;
+            /** Publication */
+            publication: {
+                [key: string]: unknown;
+            }[];
+            /** Source */
+            source?: string | string[] | null;
+            /** Stages */
+            stages: components["schemas"]["StageOut"][];
+            /** Status */
+            status: string;
+            /** Task Type */
+            task_type: string;
+            /** Task Uuid */
+            task_uuid: string;
+        };
         /** RuntimeRouteOut */
         RuntimeRouteOut: {
             /** Api Key Hint */
@@ -5962,6 +6360,25 @@ export interface components {
             /** Public Ga4 Measurement Id */
             public_ga4_measurement_id?: string | null;
         };
+        /** SituationRunCreate */
+        SituationRunCreate: {
+            /**
+             * Ai Limit
+             * @default 30
+             */
+            ai_limit: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            line: "situation";
+            /**
+             * Mode
+             * @default full
+             * @enum {string}
+             */
+            mode: "full" | "no_fetch" | "metadata_only";
+        };
         /** SmtpSettingsOut */
         SmtpSettingsOut: {
             /** Admin Emails */
@@ -6184,6 +6601,78 @@ export interface components {
             task_type: string;
             /** Task Uuid */
             task_uuid?: string | null;
+        };
+        /** StageOut */
+        StageOut: {
+            /** Attempt */
+            attempt: number;
+            /** Error */
+            error?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            };
+            /** Stage */
+            stage: string;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /** Status */
+            status: string;
+        };
+        /** SurveillanceRunCreate */
+        SurveillanceRunCreate: {
+            /** Country Code */
+            country_code: string;
+            /**
+             * Fill Missing
+             * @default false
+             */
+            fill_missing: boolean;
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
+            /** Include Current Month */
+            include_current_month?: boolean | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            line: "surveillance";
+            /**
+             * Priority
+             * @default normal
+             */
+            priority: string;
+            /**
+             * Process
+             * @default true
+             */
+            process: boolean;
+            /** Revision Window Months */
+            revision_window_months?: number | null;
+            /**
+             * Save Raw
+             * @default true
+             */
+            save_raw: boolean;
+            /**
+             * Source
+             * @default all
+             */
+            source: string;
+            /** Source Dir */
+            source_dir?: string | null;
+            /** Source File */
+            source_file?: string | null;
+            /** Start Year */
+            start_year?: number | null;
         };
         /** SystemResourcesOut */
         SystemResourcesOut: {
@@ -6591,13 +7080,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -6674,13 +7163,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -6758,13 +7247,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -6840,13 +7329,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -6927,13 +7416,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -7011,13 +7500,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -7170,13 +7659,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -7254,13 +7743,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -7333,13 +7822,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -7492,13 +7981,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -7573,13 +8062,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -7656,13 +8145,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -7735,13 +8224,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -7814,13 +8303,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -7895,13 +8384,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8056,13 +8545,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8135,13 +8624,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8216,13 +8705,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8300,13 +8789,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8381,13 +8870,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8460,13 +8949,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8539,13 +9028,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8618,13 +9107,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8702,13 +9191,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8790,13 +9279,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8870,13 +9359,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -8958,13 +9447,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -9039,13 +9528,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -9078,6 +9567,308 @@ export interface operations {
                         data: unknown;
                         meta: components["schemas"]["ResponseMeta"];
                     };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    lines_api_v1_collection_lines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_list_LineOut__"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    start_run_api_v1_collection_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SurveillanceRunCreate"] | components["schemas"]["LiteratureRunCreate"] | components["schemas"]["SituationRunCreate"] | components["schemas"]["KnowledgeRunCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_dict_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    run_api_v1_collection_runs__task_uuid__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_RunOut_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    summary_api_v1_collection_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_dict_"];
                 };
             };
             /** @description Problem detail */
@@ -9197,13 +9988,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -9278,13 +10069,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -9435,13 +10226,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -9602,13 +10393,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -9684,13 +10475,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -9853,13 +10644,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -9938,13 +10729,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -10019,13 +10810,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -10098,13 +10889,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -10182,13 +10973,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -10302,13 +11093,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -10383,13 +11174,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -10464,13 +11255,91 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    start_knowledge_source_runs_api_v1_knowledge_source_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeSourceRunCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_KnowledgeSourceRunResult_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -10543,13 +11412,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -10857,13 +11726,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -10940,13 +11809,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -11023,13 +11892,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -11102,13 +11971,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -11260,13 +12129,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -11340,13 +12209,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -11421,13 +12290,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -11500,13 +12369,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -11539,6 +12408,313 @@ export interface operations {
                         data: unknown;
                         meta: components["schemas"]["ResponseMeta"];
                     };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    queue_api_v1_models_queue_get: {
+        parameters: {
+            query?: {
+                status?: "queued" | "leased" | "succeeded" | "failed" | "cancelled";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_list_dict__"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    detail_api_v1_models_queue__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_dict_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    priority_api_v1_models_queue__item_id__priority_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriorityChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_dict_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    routes_api_v1_models_routes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_list_dict__"];
                 };
             };
             /** @description Problem detail */
@@ -11657,13 +12833,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -11738,13 +12914,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -11819,13 +12995,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -11900,13 +13076,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -11981,13 +13157,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -12017,6 +13193,158 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DataResponse_ControlPlaneOverviewOut_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    pending_api_v1_publish_pending_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_PendingOut_"];
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    start_api_v1_publish_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishRunCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataResponse_dict_"];
                 };
             };
             /** @description Problem detail */
@@ -12140,13 +13468,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -12220,13 +13548,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -12300,13 +13628,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -12379,13 +13707,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -12689,13 +14017,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -12772,13 +14100,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -12851,13 +14179,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -12930,13 +14258,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13006,13 +14334,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13089,13 +14417,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13170,13 +14498,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13249,13 +14577,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13329,13 +14657,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13410,13 +14738,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13489,13 +14817,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13569,13 +14897,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13645,13 +14973,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13723,13 +15051,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13875,13 +15203,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -13955,13 +15283,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -14033,13 +15361,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -14111,13 +15439,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -14265,13 +15593,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -14343,13 +15671,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -14493,13 +15821,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -14729,13 +16057,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -14812,13 +16140,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -14891,13 +16219,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -14970,13 +16298,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -15046,13 +16374,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -15125,13 +16453,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -15201,13 +16529,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -15359,13 +16687,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -15440,13 +16768,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -15521,13 +16849,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -15602,13 +16930,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -15683,13 +17011,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -15839,13 +17167,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -15918,13 +17246,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -16006,13 +17334,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -16093,13 +17421,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -16175,13 +17503,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -16257,13 +17585,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -16342,13 +17670,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -16506,13 +17834,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -16588,13 +17916,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -16743,13 +18071,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -16824,13 +18152,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -16903,13 +18231,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -16983,13 +18311,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -17066,13 +18394,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -17380,13 +18708,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -17622,13 +18950,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -17703,13 +19031,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -17859,13 +19187,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -17938,13 +19266,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -18014,13 +19342,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */
@@ -18090,13 +19418,13 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Problem detail */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
                 };
             };
             /** @description Problem detail */

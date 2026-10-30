@@ -3,7 +3,7 @@
 | 字段 | 值 |
 | --- | --- |
 | 日期 | 2026-10-30 |
-| 状态 | 待实施 |
+| 状态 | 实施中：代码迁移已接通，集成与真实运行验收进行中 |
 | 范围 | `/home/likangguo/globalID/globalID2` 生产系统 |
 | 读者 | 按 PR 实施的工程师 |
 | Alembic 头 | `0021_situation_alerts`（`down_revision = 0020_drop_legacy_situation`） |
@@ -312,7 +312,7 @@ CREATE INDEX ix_ai_work_items_parent
 1. 未发布的 `surveillance.scope_key` 经 `expand_country_scopes()` 后写入 `incremental_country_codes`。
 2. 存在未发布的 `literature`、`situation` 或 `knowledge` 时，把 `incremental_site` 设为 true，让站点生成重建对应数据段。
 3. `input_data.full = true` 时忽略脏标记，按全量生成。这个开关给投影格式变更用。
-4. 脏标记表还没有任何行、且调用方没有要求全量时，沿用现在的「上次发布后的已完成采集」扫描，避免迁移当天漏掉已入库未投影的国家。C1 之后的新入库只走脏标记。下一次专门清理 PR 再删除这段回退。
+4. 不保留按已完成采集任务推断范围的回退。没有脏标记时国家范围为空，不重新计算国家曲线；需要全量时显式设置 `full=true`。
 
 `execute_release_task()` 的步骤顺序保持：
 
@@ -320,7 +320,7 @@ CREATE INDEX ix_ai_work_items_parent
 | --- | --- | --- | --- |
 | 1 | Release Preflight | `release_preflight` | 保持 |
 | 2 | Refresh Situation Room | `refresh_situation_notices` | 命令已经是 `--export-only`。标题改为 `Export Situation` |
-| 3 | Generate Site Data | `generate_site_data` | 使用上一节算好的增量参数。对脏国家调用 `refresh_public_disease_series(countries, force=True)` |
+| 3 | Generate Site Data | `generate_site_data` | 使用上一节算好的增量参数，从观察事实生成本次候选站点数据；此时不修改公开投影表 |
 | 4 | Build Astro Site | `astro_build` | 保持 |
 | 5 | Validate Situation Release Gate | `situation_release_gate` | 保持 |
 | 6 | Site Release Identity | `site_release_identity` | 保持 |
@@ -329,9 +329,9 @@ CREATE INDEX ix_ai_work_items_parent
 | 9 | Deploy Cloudflare Pages | 现有事件 | 项目仍是 `globalidv2` |
 | 10 | Production Release Verified | 现有事件 | 保持 |
 
-只有第 10 步成功，才更新本轮选中的 `publish_dirty.published_task_uuid`。构建失败、部署失败时脏行保留，下一次发布会再读到。
+只有第 10 步成功，才在同一事务提交本次国家公开投影和选中脏标记的 `published_task_uuid`、`published_at`。构建失败、部署失败时公开投影不变、脏行保留，下一次发布会再读到；本地候选站点文件恢复到任务开始前的快照。
 
-`refresh_public_disease_series()` 对脏国家使用 `force=True`。非脏国家不进入这次调用。函数内部按 `PROJECTION_VERSION` 跳过的逻辑继续服务于全量开关。
+最终投影通过 `commit_release_projection()` 调用单国家投影逻辑。非脏国家不进入增量投影；`full=true` 显式重算全量。原直接批量写投影的维护入口已删除，回填命令也只能入队全量发布。发布与正式数据写入互斥，确保站点生成和最终公开投影使用相同事实。部署重试只有构建内容摘要一致时才复用检查点，生产验证同样核对摘要。
 
 文献触发的增量发布已经会设置 `incremental_site`。C1 之后以脏标记为准，触发任务 uuid 仍写入 `input_data.trigger_task_uuid` 供排查。
 
@@ -586,12 +586,13 @@ CREATE INDEX ix_ai_work_items_parent
 - 行为：任务路径记录三个阶段。`export` 在任务和命令行默认路径都是 false。`--export-only` 保持。`store` 成功写 `publish_dirty(line='situation', scope_key='*')`。
 - 验收：任务运行不调用 `export_site`。`--export-only` 不调用 `collect()`。
 
-### PR B3 — 知识两段任务
+### PR B3 — 知识任务三阶段
 
 - 文件：知识来源刷新和 `UPDATE_DISEASE_KNOWLEDGE` 的执行函数。
 - 依赖：A2。
-- 行为：来源任务记录 `collect` 与 `store`。简报任务记录 `organize` 与 `store`。成功写 `publish_dirty(line='knowledge', scope_key=疾病 id 或 sources)`。autopilot 仍不进入 `GET /schedules`。
-- 验收：一次简报入库产生脏标记，不调用站点生成。
+- 行为：来源刷新和简报任务每次运行都记录同一 attempt 的 `collect`、`organize`、`store`。简报的 `collect` 可以只读取已有数据库输入，不请求来源，因此允许没有新增原始 artifact。成功写 `publish_dirty(line='knowledge', scope_key=疾病 id 或 sources)`。autopilot 仍不进入 `GET /schedules`。
+- 验收：成功任务最新 attempt 的三个阶段各有一条且均为 `completed`，不能缺阶段或以 `skipped` 代替。历史失败 attempt 的 `failed`、`skipped` 行保留。一次简报入库产生脏标记，不调用站点生成。此三阶段要求以用户最终验收为准，替代原先知识两段任务约定。
+- 只读核对：`venv/bin/python scripts/verify_data_line_acceptance.py --task-uuid UUID --json`。所有主线任务都按上述三阶段规则检查；知识简报零新增原始 artifact 不影响通过，来源刷新仍须有 artifact。工具仅查询数据库和校验已有本地文件，不抓取、重试或发布。
 
 ### PR C1 — 发布消费脏标记
 
@@ -704,7 +705,7 @@ A2 与 C1 应在同一次维护窗口里紧挨着上。中间隔太久，公开�
 2. 四条线共用阶段名和脏标记，正式表不合并。
 3. `tasks.task_uuid` 就是一次运行。retry 不换 uuid。
 4. 未切换国家用 `fused=true` 过渡，契约变绿后该标记消失。
-5. 发布增量以 `publish_dirty` 为准。现有的「上次发布后已完成采集」扫描只在脏标记表尚空时回退。
+5. 发布增量只以 `publish_dirty` 为准；空范围不计算国家曲线，不保留旧任务扫描回退。
 6. 站点发布里的态势步骤保持 `--export-only`。
 7. 模型池是 worker 内的调度协程加 Postgres 工作项，不新开进程。
 8. 父任务等待子项时不占用 AI 槽位，用 `input_data.ai_waiting` 标记，不新增任务状态枚举。
@@ -712,3 +713,24 @@ A2 与 C1 应在同一次维护窗口里紧挨着上。中间隔太久，公开�
 10. 国家切换不改变未映射行的处理方式。观察差集默认必须为空。
 11. 冰岛未公开周报的 `public_release_enabled` 保持 false。
 12. 中国省级、人口 oneshot、巴西州 oneshot 本轮不进这条调度。
+
+## 17. 当前实施状态（2026-10-30）
+
+以下记录代码实施进度，不代表已完成生产验收。
+
+验收范围更新（用户于 2026-10-30 明确）：不需要全量采集或重新抓取历史数据，重点是迁移已有数据库并测试所有功能。正在进行的美国全来源抓取已请求取消，自动 retry 验收也已停止；保留已登记原始文件和真实阶段记录，不据此伪造采集成功。后续使用已有数据、离线契约和隔离数据库验证三阶段、重试及发布行为。
+
+运行策略继续以增量更新为默认：只处理新增或修订窗口的数据，发布范围只来自脏标记；生成器复用未变化国家、疾病及下载分区，知识等独立更新不触发国家曲线重算。全量开关仅保留为显式操作和隔离测试能力，不作为迁移或日常更新前提。
+
+- `0022_collection_stages`、`0023_ai_work_items`、`0024_collection_jsonb` 已升级到当前数据库；实际 PostgreSQL schema 检查无差异。
+- 全部 237 个国家/地区注册入口已接三阶段 runner；采集编排中的 fused 回退已移除。
+- 窗口删除保留在 ECDC 和加拿大国家提交策略；挪威保留独立闭月规划；爱尔兰来源仍禁公开。
+- 最新 `tests/unit` 与 `tests/contract` 回归合计 2414 通过、1 跳过。此前完整 `tests` 回归为 2576 通过、26 跳过、4 失败；4 项为文献事务变更期间的测试适配问题，修复后相关 57 项已通过。最终整合后仍须覆盖后续新增改动。
+- 面板/API 和 OpenAPI 生成文件已实现，最终生成、同批提交及 `openapi:check` 尚待集成完成后执行。
+- 原始文件并发写入、模型排队及等待期间释放数据库连接、通知翻译、只读验收工具已补齐相应测试。控制中心基础页面通过 lint、单元测试、生产构建及桌面/平板/手机共 27 项浏览器测试；新版 UI 统一设计另行推进。
+- 美国全来源任务已按用户最新要求取消，未开始 retry；保留三阶段实际状态与 83 份原始文件，没有入库或新增脏标记。1959 条美国及子地区公开曲线的内容和更新时间聚合哈希与采集前完全相同。同国重复入队的真实 API 返回 409。
+- 文献、态势、知识来源三个真实任务均已成功，同 attempt 三阶段完成，446 份原始文件已逐一核对大小与 SHA-256，各自保留未发布标记；态势本次明确跳过模型。详见 `docs/acceptance/DATA_LINE_RUNTIME_20261030.md`。
+- 既有数据库的默认只读迁移审计覆盖 295 个国家/地区公开范围：状态版本、公开行聚合哈希、序列/点数与观察水位一致，检测到需补脏范围为 0、需补发布状态为 0。该检查不等于重新从事实计算完整曲线，人口/映射/策略历史指纹不足等不确定性在报告中保留；未强制标全量 dirty，也未重算现有曲线。
+- 生产发布失败/成功和第二次无脏标记发布均尚待验收。发布门槛要求工作区干净，不能以跳过该门槛代替最终集成提交。
+
+契约默认 `ALLOWED_DIFFS = []`。不得将离线 fixture 测试、编译通过或阶段标签存在等同于真实采集/部署验收通过。

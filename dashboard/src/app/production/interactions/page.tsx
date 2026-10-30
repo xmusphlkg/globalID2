@@ -1,3 +1,3 @@
-import AIInteractionsView from "@/features/ai/interactions/view";
-
-export default AIInteractionsView;
+import { permanentRedirect } from "next/navigation";
+import { legacyDestination } from "@/shared/navigation/legacy-query";
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string,string|string[]|undefined>> }) { permanentRedirect(legacyDestination("/models/interactions", await searchParams)); }
