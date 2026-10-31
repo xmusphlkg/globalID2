@@ -55,6 +55,7 @@ logger = get_logger(__name__)
 PROMPT_VERSION = "ai-content-governance.v1"
 REVIEW_CONCURRENCY = 192
 REVIEW_MAX_TOKENS = 4000
+_POOL_REFRESH_SECONDS = 5
 
 
 async def _release_review_connection(db: AsyncSession, pending: list[Any]) -> dict[int, Any]:
@@ -1215,11 +1216,36 @@ class AIContentGovernanceService:
             "learning_suggestions": int(learning or 0),
         }
 
+    async def _live_review_slots(self) -> int:
+        """Reviews to keep in flight: one per currently routable model permit.
+
+        Each review holds a single model call at a time. Matching that number to
+        the sum of route permits fills the dispatcher without claiming a fixed
+        batch ahead of the routes that can actually run.
+        """
+
+        from src.ai.model_center import get_runtime_routes
+
+        try:
+            routes = await get_runtime_routes()
+        except Exception:  # noqa: BLE001 - a capacity miss must not abort the drain
+            logger.warning("Review pool could not read model capacity; keeping one slot")
+            return 1
+        total = 0
+        for route in routes:
+            if not route.get("available_for_routing"):
+                continue
+            try:
+                total += max(0, int(route.get("runtime_model_capacity") or 0))
+            except (TypeError, ValueError):
+                continue
+        return max(1, min(REVIEW_CONCURRENCY, total or 1))
+
     async def stream_review(
         self,
         kind: str,
         *,
-        workers: int = 96,
+        workers: int | None = None,
         fetch_size: int = 64,
         commit_every: int = 25,
         commit_seconds: float = 10.0,
@@ -1229,13 +1255,15 @@ class AIContentGovernanceService:
         claims: ReviewClaims | None = None,
         max_claims: int | None = None,
     ) -> dict[str, int]:
-        """Review a backlog with a fixed worker pool and no batch boundaries.
+        """Review a backlog until it is empty, pacing calls from live route permits.
 
-        A feeder claims rows in short database sessions, ``workers`` tasks only
-        call models (one item each, taking the next as soon as one finishes), and
-        a single writer commits finished reviews in small groups. No worker holds a
-        database connection while it waits on a model. Rows that fail on the model
-        side stay in ``review`` for the next run.
+        Omit ``workers`` to follow the model center: the pool grows when routes
+        gain permits and never claims a fixed slice. Pass ``workers`` only to pin
+        a ceiling, which tests and a manual override use. A feeder claims rows in
+        short database sessions, pool tasks call models (one item each, taking the
+        next as soon as one finishes), and a single writer commits finished
+        reviews in small groups. No worker holds a database connection while it
+        waits on a model. Rows that fail on the model side stay in ``review``.
 
         ``max_claims`` ends the run after that many rows so a caller can work in
         slices; pass the same ``claims`` to every slice so rows deferred earlier are
@@ -1246,11 +1274,15 @@ class AIContentGovernanceService:
 
         if kind not in {"articles", "summaries"}:
             raise ValueError(f"unsupported stream kind: {kind}")
+        dynamic = workers is None
+        pool_size = await self._live_review_slots() if dynamic else max(1, workers)
         decide = self._decide_article if kind == "articles" else self._decide_summary
         emit = emit or (lambda _record: None)
         claims = claims or ReviewClaims()
         gate = _review_gate()
-        todo: asyncio.Queue[Any] = asyncio.Queue(maxsize=max(2, workers * 2))
+        # Two items per slot keeps the dispatcher fed when one call returns.
+        # The cap stays on the live pool, not on a pre-claimed slice.
+        todo: asyncio.Queue[Any] = asyncio.Queue(maxsize=max(2, pool_size * 2))
         finished: asyncio.Queue[Any] = asyncio.Queue()
         totals = {"claimed": 0, "archived": 0, "published": 0, "rejected": 0, "deferred": 0, "stale": 0, "write_errors": 0, "exhausted": 0}
         state: dict[str, Any] = {"failures": 0, "route_error": None}
@@ -1344,21 +1376,49 @@ class AIContentGovernanceService:
                     await flush(batch)
 
         writer_task = asyncio.create_task(writer())
-        worker_tasks = [asyncio.create_task(worker()) for _ in range(max(1, workers))]
+        worker_tasks: list[asyncio.Task[None]] = []
+        spawn_lock = asyncio.Lock()
+
+        def spawn(count: int) -> None:
+            for _ in range(count):
+                worker_tasks.append(asyncio.create_task(worker()))
+
+        spawn(pool_size)
+
+        async def follow_capacity() -> None:
+            while True:
+                await asyncio.sleep(_POOL_REFRESH_SECONDS)
+                target = await self._live_review_slots()
+                async with spawn_lock:
+                    deficit = target - len(worker_tasks)
+                if deficit > 0:
+                    async with spawn_lock:
+                        spawn(target - len(worker_tasks))
+
+        scaler_task = asyncio.create_task(follow_capacity()) if dynamic else None
         try:
             await feeder()
-            for _ in worker_tasks:
+            if scaler_task is not None:
+                scaler_task.cancel()
+                await asyncio.gather(scaler_task, return_exceptions=True)
+                scaler_task = None
+            async with spawn_lock:
+                stopping = list(worker_tasks)
+            for _ in stopping:
                 await todo.put(None)
-            await asyncio.gather(*worker_tasks)
+            await asyncio.gather(*stopping)
             await finished.put(None)
             await writer_task
         except BaseException:
             # A bounded todo queue may be full while every worker waits on a
             # model. Draining it during cancellation keeps issuing work and can
             # prevent the worker from relinquishing its singleton lease.
-            for child in (*worker_tasks, writer_task):
+            children: list[asyncio.Task[Any]] = [*worker_tasks, writer_task]
+            if scaler_task is not None:
+                children.append(scaler_task)
+            for child in children:
                 child.cancel()
-            await asyncio.gather(*worker_tasks, writer_task, return_exceptions=True)
+            await asyncio.gather(*children, return_exceptions=True)
             raise
         return totals
 
