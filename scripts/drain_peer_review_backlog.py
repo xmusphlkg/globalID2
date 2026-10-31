@@ -32,9 +32,11 @@ def log(stage: str, payload: dict) -> None:
     print(json.dumps({"at": datetime.now(timezone.utc).isoformat(), "stage": stage, **keep}, ensure_ascii=False), flush=True)
 
 
-async def drain_stream(kind: str, workers: int, commit_every: int) -> None:
-    totals = await run_worker_operation("governance_stream", {
-        "kind": kind, "workers": workers, "commit_every": commit_every})
+async def drain_stream(kind: str, workers: int | None, commit_every: int) -> None:
+    options: dict = {"kind": kind, "commit_every": commit_every}
+    if workers is not None:
+        options["workers"] = workers
+    totals = await run_worker_operation("governance_stream", options)
     log(f"{kind}_done", {"totals": totals})
 
 
@@ -48,7 +50,12 @@ async def drain_simple(name: str, method, batch: int) -> None:
 
 async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workers", type=int, default=96, help="model-calling workers in flight")
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="pin in-flight reviews; omit to follow live model-route permits",
+    )
     parser.add_argument("--commit-every", type=int, default=25, help="finished rows per database commit")
     parser.add_argument("--batch", type=int, default=64, help="rows per pass for sources and learning")
     parser.add_argument("--only", choices=["articles", "summaries", "sources", "learning"])

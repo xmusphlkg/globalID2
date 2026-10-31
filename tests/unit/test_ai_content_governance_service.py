@@ -635,6 +635,66 @@ def test_stream_review_refills_workers_immediately_and_defers_failures(monkeypat
     assert started_while_slow_running > 20
 
 
+def test_stream_review_follows_live_route_capacity_instead_of_a_fixed_batch(monkeypatch) -> None:
+    import contextlib
+
+    import src.core as core
+    from src.ai.peer_review import ReviewedOutput
+    from src.services import ai_content_governance_service as module
+
+    service = AIContentGovernanceService()
+    pending = list(range(40))
+    running = 0
+    peak = 0
+
+    @contextlib.asynccontextmanager
+    async def fake_db():
+        yield object()
+
+    class FakePool:
+        def completer(self, avoid=()):
+            return object()
+
+    async def fake_route_pool(self):
+        return FakePool()
+
+    async def claim(db, kind, limit, claims):
+        taken, rest = pending[:limit], pending[limit:]
+        pending[:] = rest
+        return len(taken), [(item, None, item) for item in taken], 0
+
+    async def decide(model, item):
+        nonlocal running, peak
+        running += 1
+        peak = max(peak, running)
+        try:
+            await asyncio.sleep(0.01)
+            return ReviewedOutput("published", {"decision": "publish"}, "a", "b", "accept", 1, [], 0.9, None)
+        finally:
+            running -= 1
+
+    async def write(db, kind, results):
+        return {"published": len(results), "rejected": 0, "stale": 0}
+
+    async def slots(self):
+        return 5
+
+    monkeypatch.setattr(core, "get_db", fake_db)
+    monkeypatch.setattr(module.ReviewClaims, "route_pool", fake_route_pool)
+    monkeypatch.setattr(service, "_claim_stream_items", claim)
+    monkeypatch.setattr(service, "_decide_article", decide)
+    monkeypatch.setattr(service, "_write_stream_results", write)
+    monkeypatch.setattr(AIContentGovernanceService, "_live_review_slots", slots)
+
+    totals = asyncio.run(service.stream_review(
+        "articles", workers=None, fetch_size=16, commit_every=10, commit_seconds=0.05,
+    ))
+
+    assert peak == 5
+    assert totals["claimed"] == 40
+    assert totals["exhausted"] == 1
+
+
 def test_same_model_failure_is_retried_on_other_models_then_gives_up() -> None:
     from src.ai.peer_review import SameModelReviewError
     from src.services import ai_content_governance_service as module

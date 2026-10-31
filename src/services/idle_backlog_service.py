@@ -3,8 +3,9 @@
 Scheduled AI tasks and release exports always go first. While none is waiting
 and few are running, this loop spends spare model capacity on the queues the
 other automations leave behind: Research Radar articles and summaries,
-knowledge sources, learning suggestions and Situation reports. Work is cut into
-short slices, so foreground work is noticed again within minutes.
+knowledge sources, learning suggestions and Situation reports. Article and
+summary review stay on one open stream whose in-flight calls follow live route
+permits, instead of a fixed slice.
 """
 
 from __future__ import annotations
@@ -107,9 +108,10 @@ def _queued_lane(name: str, operation: str, options) -> Lane:
 
 
 def stream_lane(name: str, kind: str) -> Lane:
-    return _queued_lane(name, "governance_stream", lambda size, workers: {
-        "kind": kind, "workers": workers, "fetch_size": min(64, size),
-        "max_claims": size, "stall_limit": max(8, workers), "pause_seconds": 1.0})
+    # No slice and no fixed worker count. stream_review sizes the pool from
+    # the permits each route still has, and keeps claiming until that kind is empty.
+    return _queued_lane(name, "governance_stream", lambda _size, _workers: {
+        "kind": kind, "fetch_size": 64, "stall_limit": 24, "pause_seconds": 1.0})
 
 
 def simple_lane(name: str, method: str) -> Lane:
