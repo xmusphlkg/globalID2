@@ -197,7 +197,7 @@ const seo = {
     </section>
     <div class="mt-6" id="research"><DiseaseResearchPanel diseaseId={diseaseId || slug} locale={locale} /></div>
     <div class="mt-6" id="international">
-      <InternationalNoticePanel alerts={countryDiseaseNotices} locale={locale} />
+      <InternationalNoticePanel alerts={countryDiseaseNotices} locale={locale} mapHref={diseaseId ? `${prefix}/situation/?country=${String(code).toUpperCase()}&disease=${encodeURIComponent(diseaseId)}` : `${prefix}/situation/?country=${String(code).toUpperCase()}`} />
     </div>
     {countryDownload && (
       <div id="downloads" class="mt-6 scroll-mt-24">

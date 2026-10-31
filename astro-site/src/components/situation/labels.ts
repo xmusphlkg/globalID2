@@ -19,6 +19,16 @@ export function formatCount(value: number, locale: Locale): string {
   return value.toLocaleString(TAG[locale]);
 }
 
+export function formatSignedPercent(value: number, locale: Locale): string {
+  const digits = Math.abs(value) < 10 ? 1 : 0;
+  const formatted = value.toLocaleString(TAG[locale], {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    signDisplay: 'exceptZero',
+  });
+  return `${formatted}%`;
+}
+
 const regionNames = new Map<Locale, Intl.DisplayNames | null>();
 
 function regionName(code: string, locale: Locale): string | null {
@@ -139,10 +149,36 @@ export interface SituationCopy {
   mapFailed: string;
   timelineFailed: string;
   mapLabel: string;
+  stageTitle: string;
   updated: string;
   firstReported: string;
   alertsCount: (n: number) => string;
   sourceLine: string;
+  weekly: string;
+  monthly: string;
+  methods: string;
+  placesToggle: string;
+  linked: (linked: number, total: number) => string;
+  countryDossier: string;
+  alertsHere: string;
+  noAlertsHere: string;
+  widenWindow: string;
+  surveillanceHeading: string;
+  nationalSeries: string;
+  noNationalSeries: string;
+  diseaseNotInSeries: (disease: string, count: number) => string;
+  trackedDiseases: (n: number) => string;
+  openCountry: string;
+  openDisease: string;
+  openResearch: (n: number) => string;
+  vsPrevious: string;
+  footprintLegend: string;
+  seriesLegend: string;
+  monitoringHeading: string;
+  monitoringLead: string;
+  close: string;
+  breathe: string;
+  activeLabel: string;
 }
 
 export const COPY: Record<Locale, SituationCopy> = {
@@ -166,7 +202,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     recent: '8 to 30 days ago',
     older: '31 to 90 days ago',
     stale: 'More than 90 days ago',
-    legendNote: 'Colour shows how recent the report is. It does not show how severe the event is.',
+    legendNote: 'Colour and pulse show how recent the report is. A faster pulse is the last 7 days. Neither shows severity.',
     detailHeading: 'Alert timeline',
     pickHint: 'Select a place on the map or in the list to see the alerts reported for this outbreak.',
     originalReport: 'Original report',
@@ -182,10 +218,36 @@ export const COPY: Record<Locale, SituationCopy> = {
     mapFailed: 'The map could not be loaded. The list and timeline still work.',
     timelineFailed: 'The alert timeline could not be loaded.',
     mapLabel: 'World map of places with recent outbreak reports',
+    stageTitle: 'Situation map',
     updated: 'Updated',
     firstReported: 'First reported',
     alertsCount: n => `${n} ${n === 1 ? 'alert' : 'alerts'}`,
     sourceLine: 'Source',
+    weekly: 'Weekly changes',
+    monthly: 'Monthly archive',
+    methods: 'How this works',
+    placesToggle: 'Places',
+    linked: (linked, total) => `${linked} of ${total} places match a national series`,
+    countryDossier: 'Open this country',
+    alertsHere: 'Alerts in this country',
+    noAlertsHere: 'No alert in this window.',
+    widenWindow: 'Show the whole period',
+    surveillanceHeading: 'GIDS surveillance',
+    nationalSeries: 'National surveillance series',
+    noNationalSeries: 'GIDS does not publish a national surveillance series for this place.',
+    diseaseNotInSeries: (disease, count) => `${disease} is not in the national series. GIDS tracks ${count} diseases here.`,
+    trackedDiseases: n => `Tracks ${n} ${n === 1 ? 'disease' : 'diseases'}`,
+    openCountry: 'Country surveillance',
+    openDisease: 'Disease page',
+    openResearch: n => `${n} ${n === 1 ? 'paper' : 'papers'}`,
+    vsPrevious: 'vs previous period',
+    footprintLegend: 'Shading: countries where GIDS publishes surveillance.',
+    seriesLegend: 'Shading: latest GIDS value for the selected disease.',
+    monitoringHeading: 'Monitoring products',
+    monitoringLead: 'Periodic roundups with nothing unusual. They add no point.',
+    close: 'Close',
+    breathe: 'A pulse marks a report from the last 30 days.',
+    activeLabel: 'Active outbreaks',
   },
   zh: {
     filters: '筛选',
@@ -207,7 +269,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     recent: '8 至 30 天前',
     older: '31 至 90 天前',
     stale: '90 天以前',
-    legendNote: '颜色只表示报告有多新，不表示事件的严重程度。',
+    legendNote: '颜色和呼吸闪动都只表示报告有多新。更快的闪动是最近 7 天。两者都不表示严重程度。',
     detailHeading: '警报时间线',
     pickHint: '在地图或列表中选择一个地点，查看这起疫情的警报。',
     originalReport: '查看原始报告',
@@ -223,10 +285,36 @@ export const COPY: Record<Locale, SituationCopy> = {
     mapFailed: '地图加载失败，列表和时间线仍可使用。',
     timelineFailed: '警报时间线加载失败。',
     mapLabel: '近期有疫情报告的地点世界地图',
+    stageTitle: '态势地图',
     updated: '更新于',
     firstReported: '首次报告',
     alertsCount: n => `${n} 条警报`,
     sourceLine: '来源',
+    weekly: '每周变化',
+    monthly: '月度归档',
+    methods: '方法说明',
+    placesToggle: '地点',
+    linked: (linked, total) => `${total} 个地点中有 ${linked} 个能对上国家级序列`,
+    countryDossier: '打开该国',
+    alertsHere: '该国的警报',
+    noAlertsHere: '当前时间范围内没有警报。',
+    widenWindow: '显示全部时段',
+    surveillanceHeading: '本站监测',
+    nationalSeries: '国家级监测序列',
+    noNationalSeries: 'GIDS 没有发布该地的国家级监测序列。',
+    diseaseNotInSeries: (disease, count) => `国家级序列未收录${disease}。GIDS 在这里跟踪 ${count} 种疾病。`,
+    trackedDiseases: n => `跟踪 ${n} 种疾病`,
+    openCountry: '国家监测页',
+    openDisease: '疾病页',
+    openResearch: n => `${n} 篇研究`,
+    vsPrevious: '较上一周期',
+    footprintLegend: '底色：GIDS 发布了监测数据的国家。',
+    seriesLegend: '底色：所选疾病在 GIDS 中的最新值。',
+    monitoringHeading: '监测产品',
+    monitoringLead: '没有异常事件的定期汇总，不会在地图上增加点。',
+    close: '关闭',
+    breathe: '呼吸闪动表示报告来自最近 30 天。',
+    activeLabel: '活跃疫情',
   },
   fr: {
     filters: 'Filtres',
@@ -248,7 +336,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     recent: 'Il y a 8 à 30 jours',
     older: 'Il y a 31 à 90 jours',
     stale: 'Il y a plus de 90 jours',
-    legendNote: 'La couleur indique la fraîcheur du rapport, pas la gravité de l’événement.',
+    legendNote: 'La couleur et la pulsation indiquent la fraîcheur du rapport. Une pulsation plus rapide correspond aux 7 derniers jours. Ni l’une ni l’autre n’indique la gravité.',
     detailHeading: 'Chronologie des alertes',
     pickHint: 'Sélectionnez un lieu sur la carte ou dans la liste pour voir les alertes de cette flambée.',
     originalReport: 'Rapport original',
@@ -264,9 +352,35 @@ export const COPY: Record<Locale, SituationCopy> = {
     mapFailed: 'La carte n’a pas pu être chargée. La liste et la chronologie restent disponibles.',
     timelineFailed: 'La chronologie des alertes n’a pas pu être chargée.',
     mapLabel: 'Carte du monde des lieux avec des rapports récents de flambée',
+    stageTitle: 'Carte de situation',
     updated: 'Mis à jour',
     firstReported: 'Premier signalement',
     alertsCount: n => `${n} ${n === 1 ? 'alerte' : 'alertes'}`,
     sourceLine: 'Source',
+    weekly: 'Changements hebdomadaires',
+    monthly: 'Archive mensuelle',
+    methods: 'Méthodologie',
+    placesToggle: 'Lieux',
+    linked: (linked, total) => `${linked} lieux sur ${total} correspondent à une série nationale`,
+    countryDossier: 'Ouvrir ce pays',
+    alertsHere: 'Alertes dans ce pays',
+    noAlertsHere: 'Aucune alerte sur cette période.',
+    widenWindow: 'Afficher toute la période',
+    surveillanceHeading: 'Surveillance GIDS',
+    nationalSeries: 'Série nationale de surveillance',
+    noNationalSeries: 'GIDS ne publie pas de série nationale de surveillance pour ce lieu.',
+    diseaseNotInSeries: (disease, count) => `${disease} ne figure pas dans la série nationale. GIDS suit ${count} maladies ici.`,
+    trackedDiseases: n => `Suit ${n} ${n === 1 ? 'maladie' : 'maladies'}`,
+    openCountry: 'Surveillance du pays',
+    openDisease: 'Page de la maladie',
+    openResearch: n => `${n} ${n === 1 ? 'article' : 'articles'}`,
+    vsPrevious: 'vs période précédente',
+    footprintLegend: 'Teinte : pays pour lesquels GIDS publie une surveillance.',
+    seriesLegend: 'Teinte : dernière valeur GIDS pour la maladie choisie.',
+    monitoringHeading: 'Produits de surveillance',
+    monitoringLead: 'Synthèses périodiques sans événement inhabituel. Elles n’ajoutent aucun point.',
+    close: 'Fermer',
+    breathe: 'Une pulsation marque un rapport des 30 derniers jours.',
+    activeLabel: 'Flambées actives',
   },
 };

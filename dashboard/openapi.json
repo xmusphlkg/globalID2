@@ -2694,6 +2694,24 @@
         "title": "AutomationTriggerResult",
         "type": "object"
       },
+      "AvailabilityWindowIn": {
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "AvailabilityWindowIn",
+        "type": "object"
+      },
       "CandidateReviewRequest": {
         "properties": {
           "notes": {
@@ -7783,6 +7801,31 @@
             ],
             "title": "Api Style"
           },
+          "availability_timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Availability Timezone"
+          },
+          "availability_windows": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AvailabilityWindowIn"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Availability Windows"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -7808,17 +7851,6 @@
             "default": true,
             "title": "Is Enabled",
             "type": "boolean"
-          },
-          "max_tokens": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Max Tokens"
           },
           "model_key": {
             "anyOf": [
@@ -7914,6 +7946,18 @@
             ],
             "title": "Api Style"
           },
+          "availability_timezone": {
+            "default": "Asia/Shanghai",
+            "title": "Availability Timezone",
+            "type": "string"
+          },
+          "availability_windows": {
+            "items": {
+              "$ref": "#/components/schemas/AvailabilityWindowIn"
+            },
+            "title": "Availability Windows",
+            "type": "array"
+          },
           "display_name": {
             "title": "Display Name",
             "type": "string"
@@ -7972,17 +8016,6 @@
               }
             ],
             "title": "Last Rate Limit At"
-          },
-          "max_tokens": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Max Tokens"
           },
           "model_key": {
             "title": "Model Key",
@@ -8176,6 +8209,31 @@
             ],
             "title": "Api Style"
           },
+          "availability_timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Availability Timezone"
+          },
+          "availability_windows": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AvailabilityWindowIn"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Availability Windows"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -8220,17 +8278,6 @@
               }
             ],
             "title": "Is Enabled"
-          },
-          "max_tokens": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Max Tokens"
           },
           "model_type": {
             "anyOf": [

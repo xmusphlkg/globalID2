@@ -672,7 +672,7 @@ async def test_parent_cancellation_persists_child_terminal_status(db):
 async def test_real_worker_releases_waiting_parent_concurrency_slot(
     db, monkeypatch, next_type
 ):
-    """With one execution slot and zero AI slots, another parent still starts."""
+    """A waiting AI parent frees its own lane, so another parent can start."""
     from unittest.mock import AsyncMock
 
     from src.services import task_worker as worker
@@ -760,10 +760,15 @@ async def test_real_worker_releases_waiting_parent_concurrency_slot(
     monkeypatch.setattr(
         worker, "task_manager", SimpleNamespace(set_broadcast_hook=lambda hook: None)
     )
-    monkeypatch.setattr(worker, "MAX_CONCURRENT_TASKS", 1)
+    monkeypatch.setattr(worker, "GENERAL_WORKER_CONCURRENCY", 0)
+    monkeypatch.setattr(worker, "RELEASE_WORKER_CONCURRENCY", 0)
     monkeypatch.setattr(worker, "POLL_INTERVAL_SECONDS", 0.01)
     monkeypatch.setattr(worker, "AIWorkDispatcher", Dispatcher)
-    monkeypatch.setattr(worker, "_load_runtime_routes", AsyncMock(return_value=[]))
+    monkeypatch.setattr(
+        worker,
+        "_load_runtime_routes",
+        AsyncMock(return_value=[{"available_for_routing": True, "runtime_model_capacity": 1}]),
+    )
     monkeypatch.setattr(
         worker, "recover_interrupted_tasks_on_startup", AsyncMock(return_value=0)
     )

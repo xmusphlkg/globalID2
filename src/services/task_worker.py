@@ -35,9 +35,11 @@ TASK_WORKER_CONFIG = get_config().task_worker
 POLL_INTERVAL_SECONDS = TASK_WORKER_CONFIG.poll_interval_seconds
 IDLE_LOG_EVERY = TASK_WORKER_CONFIG.idle_log_every
 MAX_CONCURRENT_TASKS = TASK_WORKER_CONFIG.concurrency
+GENERAL_WORKER_CONCURRENCY = TASK_WORKER_CONFIG.general_concurrency
+RELEASE_WORKER_CONCURRENCY = TASK_WORKER_CONFIG.release_concurrency
 MAX_CONCURRENT_KNOWLEDGE_SOURCE_TASKS = min(
     TASK_WORKER_CONFIG.knowledge_source_concurrency,
-    MAX_CONCURRENT_TASKS,
+    GENERAL_WORKER_CONCURRENCY,
 )
 MIN_CONCURRENT_AI_TASKS = min(
     max(1, TASK_WORKER_CONFIG.ai_concurrency_min),
@@ -109,6 +111,61 @@ def _release_memory_blocked_task_types(
         blocked.update(RELEASE_SHARED_BLOCKED_TASK_TYPES)
     if active & (RELEASE_SHARED_BLOCKED_TASK_TYPES | RELEASE_EXCLUSIVE_TASK_TYPES):
         blocked.update(RELEASE_EXCLUSIVE_TASK_TYPES)
+    return blocked
+
+
+GENERAL_TASK_TYPES = frozenset(
+    task_type
+    for task_type in TaskType
+    if task_type not in AI_TASK_TYPES and task_type not in RELEASE_EXCLUSIVE_TASK_TYPES
+)
+
+
+def _lane_blocked_task_types(
+    executing_types: Iterable[TaskType],
+    *,
+    ai_capacity: int,
+    general_capacity: int | None = None,
+    release_capacity: int | None = None,
+    knowledge_source_capacity: int | None = None,
+) -> set[TaskType] | None:
+    """Task types the next claim should skip, or None when every lane is full.
+
+    Release, ordinary work, and AI parents do not share one counter. The AI
+    lane size is the sum of routable per-model limits. Zero means the model
+    center has nothing to route, so new AI parents wait while the other lanes
+    stay open. Waiting parents are omitted by the caller and do not consume a
+    lane. Pooled model calls keep their own per-model permits in the dispatcher.
+    """
+    general_limit = GENERAL_WORKER_CONCURRENCY if general_capacity is None else general_capacity
+    release_limit = RELEASE_WORKER_CONCURRENCY if release_capacity is None else release_capacity
+    knowledge_limit = (
+        MAX_CONCURRENT_KNOWLEDGE_SOURCE_TASKS
+        if knowledge_source_capacity is None
+        else knowledge_source_capacity
+    )
+    executing = list(executing_types)
+    general_count = sum(1 for task_type in executing if task_type in GENERAL_TASK_TYPES)
+    release_count = sum(1 for task_type in executing if task_type in RELEASE_EXCLUSIVE_TASK_TYPES)
+    ai_count = sum(1 for task_type in executing if task_type in AI_TASK_TYPES)
+    knowledge_count = sum(1 for task_type in executing if task_type in KNOWLEDGE_SOURCE_TASK_TYPES)
+    ai_limit = max(0, ai_capacity)
+
+    general_full = general_count >= general_limit
+    release_full = release_count >= release_limit
+    ai_full = ai_count >= ai_limit
+    if general_full and release_full and ai_full:
+        return None
+
+    blocked: set[TaskType] = set()
+    if general_full:
+        blocked.update(GENERAL_TASK_TYPES)
+    elif knowledge_count >= knowledge_limit:
+        blocked.update(KNOWLEDGE_SOURCE_TASK_TYPES)
+    if release_full:
+        blocked.update(RELEASE_EXCLUSIVE_TASK_TYPES)
+    if ai_full:
+        blocked.update(AI_TASK_TYPES)
     return blocked
 
 
@@ -468,9 +525,10 @@ async def _resume_knowledge_repairs_after_model_recovery() -> None:
 async def run_worker() -> None:
     """Main worker loop."""
     logger.info(
-        "Task worker started (poll_interval={}s, non_ai_concurrency={}, ai_slots=per_model)",
+        "Task worker started (poll_interval={}s, general_workers={}, release_workers={}, ai_slots=per_model)",
         POLL_INTERVAL_SECONDS,
-        MAX_CONCURRENT_TASKS,
+        GENERAL_WORKER_CONCURRENCY,
+        RELEASE_WORKER_CONCURRENCY,
     )
 
     ai_concurrency = AdaptiveAIConcurrencyController(
@@ -527,6 +585,8 @@ async def run_worker() -> None:
         lease_loss_shutdown_timeout_seconds=SHUTDOWN_GRACE_SECONDS + 15,
         metadata=lambda: {
             "concurrency": MAX_CONCURRENT_TASKS,
+            "general_concurrency": GENERAL_WORKER_CONCURRENCY,
+            "release_concurrency": RELEASE_WORKER_CONCURRENCY,
             "ai_concurrency_max": ai_concurrency.capacity,
             "ai_concurrency_current": ai_concurrency.capacity,
             "ai_concurrency_adaptive": True,
@@ -621,17 +681,17 @@ async def run_worker() -> None:
             waiting = waiting_parent_uuids()
             executing_types = [task_type for task, task_type in active_task_types.items()
                                if active_task_uuids.get(task) not in waiting]
-            # Task slots cover CPU/database orchestration. Individual model calls
-            # use independent permits held only by the model dispatch coroutine.
-            if len(executing_types) >= MAX_CONCURRENT_TASKS:
+            # Parent tasks use separate lanes. Model HTTP permits stay per model
+            # inside AIWorkDispatcher and are not collapsed into one AI parent.
+            lane_blocked = _lane_blocked_task_types(
+                executing_types,
+                ai_capacity=ai_concurrency.capacity,
+            )
+            if lane_blocked is None:
                 break
-            active_source_tasks = sum(t in KNOWLEDGE_SOURCE_TASK_TYPES for t in executing_types)
-            blocked_task_types: set[TaskType] = set()
-            if active_source_tasks >= MAX_CONCURRENT_KNOWLEDGE_SOURCE_TASKS:
-                blocked_task_types.update(KNOWLEDGE_SOURCE_TASK_TYPES)
             claimed = await _claim_next_task_uuid(
                 instance_id,
-                blocked_task_types=blocked_task_types or None,
+                blocked_task_types=lane_blocked or None,
                 excluded_task_uuids=set(active_task_uuids.values()),
             )
             if not claimed:

@@ -508,7 +508,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
     )}
 
     <div id="international" class="scroll-mt-24">
-      <InternationalNoticePanel alerts={countryNotices} locale={locale} />
+      <InternationalNoticePanel alerts={countryNotices} locale={locale} mapHref={`${prefix}/situation/?country=${String(country).toUpperCase()}`} />
     </div>
 
     {countryDownload && (

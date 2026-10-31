@@ -25,8 +25,10 @@ from src.ai.attachments import (
     route_accepts_native_files,
 )
 from src.ai.model_center import (
+    ANTHROPIC_PROTOCOL_MAX_TOKENS,
     acquire_runtime_route_admission,
     clear_route_rate_limit,
+    drop_rejected_optional_parameter,
     extract_retry_after_seconds,
     is_model_channel_failure,
     get_active_model_routes,
@@ -41,14 +43,15 @@ from src.ai.model_center import (
     mark_route_rate_limited,
     mark_route_unavailable,
     runtime_route_admission_score,
-    runtime_route_completion_max_tokens,
     runtime_route_request_timeout_seconds,
+    visible_assistant_text,
 )
 
 logger = get_logger(__name__)
 
-#: Anthropic's API refuses a request without ``max_tokens``; this is its ceiling stand-in for "no limit".
-ANTHROPIC_UNCAPPED_MAX_TOKENS = 64000
+#: Kept for older imports. Completion requests are not capped; Anthropic still
+#: requires the field, so that call sends the protocol ceiling.
+ANTHROPIC_UNCAPPED_MAX_TOKENS = ANTHROPIC_PROTOCOL_MAX_TOKENS
 
 
 class NoModelAvailable(Exception):
@@ -386,6 +389,7 @@ class BaseAgent(ABC):
                 or key.startswith("rate_limit_")
                 or key.startswith("runtime_")
                 or key.startswith("health_check_")
+                or key.startswith("availability_")
             ):
                 continue
             sanitized[key] = value
@@ -398,50 +402,8 @@ class BaseAgent(ABC):
         return match.group(1) if match else None
 
     @staticmethod
-    def _extract_unsupported_optional_param(
-        error: Exception,
-        payload: Dict[str, Any],
-    ) -> Optional[str]:
-        """Identify optional OpenAI-compatible parameters rejected by a proxy.
-
-        Some compatible endpoints accept normal chat completions but reject
-        ``response_format``.  That capability difference must not make an
-        otherwise healthy Model Center route unavailable.
-        """
-        message = str(error or "").lower()
-        if "response_format" not in payload or "response_format" not in message:
-            return None
-        rejection_markers = (
-            "unsupported",
-            "unknown parameter",
-            "invalid parameter",
-            "unexpected",
-            "not allowed",
-            "unrecognized",
-        )
-        return "response_format" if any(marker in message for marker in rejection_markers) else None
-
-    @staticmethod
     def _completion_content_to_text(content: Any) -> str:
-        if content is None:
-            return ""
-        if isinstance(content, str):
-            return content
-        if isinstance(content, list):
-            parts: List[str] = []
-            for item in content:
-                if isinstance(item, str):
-                    parts.append(item)
-                elif isinstance(item, dict):
-                    text = item.get("text") or item.get("content")
-                    if text is not None:
-                        parts.append(str(text))
-                else:
-                    text = getattr(item, "text", None) or getattr(item, "content", None)
-                    if text is not None:
-                        parts.append(str(text))
-            return "\n".join(part for part in parts if part)
-        return str(content)
+        return visible_assistant_text(content)
 
     @staticmethod
     def _empty_completion_error(response: Any) -> RuntimeError:
@@ -564,6 +526,7 @@ class BaseAgent(ABC):
         from src.ai.work_queue import require_dispatcher
         require_dispatcher()
         payload = dict(request_payload or {})
+        dropped_parameters: set[str] = set()
         for _ in range(max(1, max_retries)):
             try:
                 return await client.chat.completions.create(**payload)
@@ -578,16 +541,15 @@ class BaseAgent(ABC):
                     payload.get("model"),
                 )
                 payload.pop(unexpected_kwarg, None)
+                dropped_parameters.add(unexpected_kwarg)
             except Exception as exc:
-                unsupported_param = self._extract_unsupported_optional_param(exc, payload)
-                if not unsupported_param:
+                if not drop_rejected_optional_parameter(exc, payload, dropped_parameters):
                     raise
                 logger.warning(
-                    "Dropping unsupported completion argument '{}' for model '{}'",
-                    unsupported_param,
+                    "Dropping unsupported completion argument for model '{}': {}",
                     payload.get("model"),
+                    ", ".join(sorted(dropped_parameters)),
                 )
-                payload.pop(unsupported_param, None)
 
         # Should be unreachable because loop returns or raises.
         return await client.chat.completions.create(**payload)
@@ -1264,8 +1226,9 @@ class BaseAgent(ABC):
         model_name = str(route.get("model_name") or self.model)
         route_temperature = route.get("temperature")
         temperature = self.temperature if route_temperature is None else float(route_temperature)
-        max_tokens = runtime_route_completion_max_tokens(route)
         sanitized_kwargs = self._sanitize_completion_params(dict(kwargs))
+        sanitized_kwargs.pop("max_tokens", None)
+        sanitized_kwargs.pop("max_completion_tokens", None)
 
         if style == "anthropic":
             client = AsyncAnthropic(api_key=route.get("api_key"))
@@ -1274,8 +1237,8 @@ class BaseAgent(ABC):
                 system=system or "",
                 messages=[{"role": "user", "content": content}],
                 temperature=temperature,
-                # The Anthropic API cannot omit the limit; this is its ceiling, not a cap on answers.
-                max_tokens=max_tokens or ANTHROPIC_UNCAPPED_MAX_TOKENS,
+                # The Anthropic API cannot omit this field. It is the protocol ceiling.
+                max_tokens=ANTHROPIC_PROTOCOL_MAX_TOKENS,
                 **sanitized_kwargs,
             )
 
@@ -1286,7 +1249,7 @@ class BaseAgent(ABC):
                     "completion": response.usage.output_tokens,
                     "total": response.usage.input_tokens + response.usage.output_tokens,
                 }
-            return response.content[0].text, token_usage
+            return visible_assistant_text(response.content), token_usage
 
         client = AsyncOpenAI(
             api_key=route.get("api_key"),
@@ -1300,16 +1263,17 @@ class BaseAgent(ABC):
         messages.append({"role": "user", "content": content})
 
         extra_params = dict(route.get("extra_params") or {})
-        for reserved in ("model", "messages", "temperature", "max_tokens"):
+        for reserved in ("model", "messages", "temperature", "max_tokens", "max_completion_tokens"):
             extra_params.pop(reserved, None)
         extra_params.update(sanitized_kwargs)
         extra_params = self._sanitize_completion_params(extra_params)
+        extra_params.pop("max_tokens", None)
+        extra_params.pop("max_completion_tokens", None)
 
         request_payload = {
             "model": model_name,
             "messages": messages,
             "temperature": temperature,
-            **({"max_tokens": max_tokens} if max_tokens else {}),
             **extra_params,
         }
         response = await self._safe_openai_completion_create(client, request_payload)

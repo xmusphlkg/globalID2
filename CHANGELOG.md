@@ -4,6 +4,28 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+### Added
+
+- A model route can be limited to one or more clock windows, including a window that crosses midnight. The schedule uses an IANA timezone (default Asia/Shanghai). Outside that window the route is not selected and automatic health probes skip it, so a night-discount model stays idle during the day. An empty schedule remains available all day.
+
+### Changed
+
+- Completion requests no longer send a token cap. Route `max_tokens`, `runtime_completion_max_tokens`, probe budgets, and agent output budgets are not forwarded. Anthropic calls still send that API's required ceiling because the protocol rejects a request without the field. Health probes wait up to 180 seconds by default, and at most 600.
+- The task worker claims ordinary work, data release, and AI parent tasks on separate lanes. AI parent slots follow the sum of routable per-model capacity. A release still blocks crawl writes and AI while it runs.
+- A gateway that rejects an optional parameter (temperature, thinking, response format, and the same class of fields) is retried once without that field. Assistant text is read from the answer content after `<think>` / `<thinking>` blocks are removed, so a new reasoning model does not need its own parser.
+
+### Removed
+
+- The model-center control for a maximum completion length.
+
+## [0.16.1] - 2026-10-31
+
+### Changed
+
+- The public Situation page is now a map that fills the viewport under the site header. Filters, the place list, and the alert timeline float over the map instead of sitting in a document column.
+- Opening a place joins the official alert to the rest of the catalogue: the national surveillance series (latest value, change, and a short sparkline), the disease page, the country page, and research for that disease and country. Clicking the country itself opens the same join when there is no alert. Country, disease, and country-disease pages link back onto the map.
+- Reports from the last 30 days breathe on the map. A faster pulse is the last 7 days. Older points stay still. The pulse encodes recency, not severity, and it stays off when the visitor prefers reduced motion.
+
 ## [0.16.0] - 2026-10-29
 
 ### Added
