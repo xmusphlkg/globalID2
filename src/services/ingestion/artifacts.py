@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import os
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
@@ -13,6 +14,19 @@ from uuid import UUID, uuid4
 
 from src.core.database import get_db
 from src.domain.collection import SourceArtifact
+
+# capture_sync blocks a default-executor thread until the coroutine finishes.
+# The file write and reread must use another pool. On a 4-core runner the
+# default pool has 8 threads; eight waiting captures fill it and the writes
+# they are waiting for never start.
+_IO_EXECUTOR = ThreadPoolExecutor(
+    max_workers=min(32, (os.cpu_count() or 1) + 4),
+    thread_name_prefix="artifact-io",
+)
+
+
+async def run_artifact_io(func, /, *args):
+    return await asyncio.get_running_loop().run_in_executor(_IO_EXECUTOR, func, *args)
 
 
 class ArtifactWriter:
@@ -86,7 +100,7 @@ class ArtifactWriter:
         }.get(kind, "bin")
         # UUIDs also avoid collisions between writer instances for the same run.
         path = self.directory / f"{uuid4().hex}-{digest[:16]}.{extension}"
-        await asyncio.to_thread(_save_atomic, path, payload)
+        await run_artifact_io(_save_atomic, path, payload)
         try:
             artifact = SourceArtifact(
                 task_uuid=self.task_uuid,
@@ -105,7 +119,7 @@ class ArtifactWriter:
         except BaseException:
             # Never expose unregistered bytes to parsers. Cleanup errors also
             # propagate, with the registration failure retained as their context.
-            await asyncio.to_thread(_remove_file, path)
+            await run_artifact_io(_remove_file, path)
             raise
         self.artifacts.append(artifact)
         return artifact

@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from contextvars import copy_context
 from pathlib import Path
@@ -66,6 +67,43 @@ async def test_parser_input_is_reread_only_after_hash_registration(
         assert output == raw
         assert len(rereads) == 1
     assert len(await records(capture_db)) == 1
+
+
+async def test_capture_sync_finishes_when_it_fills_the_default_executor(capture_db):
+    """A 4-core runner gives the default pool 8 threads. Waiting captures must not need one more."""
+
+    loop = asyncio.get_running_loop()
+    executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="saturated-default")
+    previous = getattr(loop, "_default_executor", None)
+    loop.set_default_executor(executor)
+    try:
+        with capture.capture_sources(str(uuid4()), 1, "surveillance") as bound:
+            results = await asyncio.wait_for(
+                asyncio.gather(
+                    *(
+                        asyncio.to_thread(
+                            capture.capture_sync,
+                            b"same",
+                            "https://fixture.test/data.csv",
+                        )
+                        for _ in range(2)
+                    ),
+                    *(
+                        capture.capture_async(b"same", "https://fixture.test/data.csv")
+                        for _ in range(2)
+                    ),
+                ),
+                timeout=5,
+            )
+        assert results == [b"same"] * 4
+        assert len({item.relative_path for item in bound.writer.artifacts}) == 4
+        assert len(await records(capture_db)) == 4
+    finally:
+        if previous is None:
+            loop._default_executor = None
+        else:
+            loop.set_default_executor(previous)
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 async def test_mixed_async_and_thread_captures_are_unique(capture_db):

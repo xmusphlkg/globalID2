@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from .artifacts import ArtifactWriter, read_artifact
+from .artifacts import ArtifactWriter, read_artifact, run_artifact_io
 
 _current: ContextVar[SourceCapture | None] = ContextVar("source_capture", default=None)
 
@@ -81,7 +81,7 @@ class SourceCapture:
                     kind=kind,
                     metadata={"media_type": media_type},
                 )
-            return await asyncio.to_thread(read_artifact, artifact)
+            return await run_artifact_io(read_artifact, artifact)
         except BaseException as exc:
             if self.error is None:
                 self.error = exc
