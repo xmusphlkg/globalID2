@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { PanelLock } from "@/components/PanelLock";
 import { Providers } from "@/components/Providers";
 import { AppShell } from "@/shared/layout/AppShell";
 
@@ -28,9 +29,11 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <body className="m-0 h-full bg-tremor-background-subtle text-tremor-content-strong antialiased">
         <Providers>
-          <AppShell>
-            {children}
-          </AppShell>
+          <PanelLock>
+            <AppShell>
+              {children}
+            </AppShell>
+          </PanelLock>
         </Providers>
       </body>
     </html>
