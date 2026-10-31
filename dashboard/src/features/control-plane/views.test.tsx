@@ -422,6 +422,8 @@ describe("control-plane recovery and interactions", () => {
       failed_stages: [
         {
           task_uuid: "run-1",
+          task_name: "Refresh GIDS Research Radar",
+          task_type: "sync_literature",
           stage: "organize",
           attempt: 2,
           error: "Invalid source",
@@ -435,9 +437,32 @@ describe("control-plane recovery and interactions", () => {
     expect(
       await screen.findByRole("link", { name: /Failed organize/ }),
     ).toHaveAttribute("href", "/collection/runs/run-1");
+    expect(screen.getByText("Refresh GIDS Research Radar")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Unpublished 2/ }),
     ).toHaveAttribute("href", "/publish");
+  });
+
+  it("opens a non-collection failed stage in that task workspace", async () => {
+    vi.mocked(apiFetch).mockResolvedValue({
+      failed_stages: [
+        {
+          task_uuid: "agent-1",
+          task_name: "Model operation: knowledge_reconcile",
+          task_type: "agent_workflow",
+          stage: "store",
+          attempt: 1,
+          error: "TimeoutError",
+        },
+      ],
+      model_queue: { queued: 0, leased: 0 },
+      pending_publish: {},
+      overdue_schedules: [],
+    });
+    show(<CollectionSummary />);
+    expect(
+      await screen.findByRole("link", { name: /Model operation: knowledge_reconcile/ }),
+    ).toHaveAttribute("href", "/models/tasks?detail=agent-1");
   });
 });
 

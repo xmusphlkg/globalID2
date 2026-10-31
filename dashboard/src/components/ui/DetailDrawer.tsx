@@ -31,19 +31,19 @@ export function DetailDrawer({
       <div className="fixed inset-0 flex justify-end">
         <DialogPanel
           className={cn(
-          "relative flex h-full w-full max-w-3xl flex-col border-l border-tremor-border bg-tremor-background shadow-2xl dark:border-dark-tremor-border dark:bg-dark-tremor-background sm:w-[720px]",
+          "relative flex h-full w-full min-w-0 max-w-4xl flex-col overflow-hidden border-l border-tremor-border bg-tremor-background shadow-2xl dark:border-dark-tremor-border dark:bg-dark-tremor-background sm:w-[min(56rem,100vw)]",
           className,
         )}
       >
         <div className="flex items-start justify-between gap-4 border-b border-tremor-border bg-tremor-background-subtle/70 px-5 py-4 dark:border-dark-tremor-border">
-          <div className="min-w-0">
-            <DialogTitle className="truncate text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="break-words text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
               {title}
             </DialogTitle>
             {subtitle ? (
-              <p className="mt-1 truncate text-sm text-tremor-content dark:text-dark-tremor-content">
+              <div className="mt-1 min-w-0 text-sm text-tremor-content dark:text-dark-tremor-content">
                 {subtitle}
-              </p>
+              </div>
             ) : null}
           </div>
           <button
@@ -55,7 +55,7 @@ export function DetailDrawer({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-5 py-4">{children}</div>
       </DialogPanel>
       </div>
     </Dialog>

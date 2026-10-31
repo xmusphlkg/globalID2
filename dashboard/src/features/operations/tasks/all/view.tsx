@@ -480,9 +480,9 @@ export default function TasksPage({ scope = "collection" }: { scope?: TaskScope 
         title={selectedTask?.task_name ?? (lang === "zh" ? "任务详情" : "Task Detail")}
         subtitle={
           selectedTask ? (
-            <span className="flex min-w-0 items-center gap-2">
+            <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               <StatusBadge status={selectedTask.status}>{taskLabel(lang, selectedTask.status)}</StatusBadge>
-              <span className="truncate font-mono text-xs">{selectedTask.task_uuid}</span>
+              <span className="break-all font-mono text-xs">{selectedTask.task_uuid}</span>
               <span>{formatDateTime(selectedTask.created_at)}</span>
             </span>
           ) : null

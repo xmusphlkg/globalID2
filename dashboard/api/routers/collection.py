@@ -3,7 +3,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.control_plane.operations import (
@@ -12,7 +12,7 @@ from src.control_plane.operations import (
 )
 from src.domain.collection import LINES, PublishDirty, RunStage, SourceArtifact
 from src.domain.country import Country
-from src.domain.task import Task, TaskType
+from src.domain.task import Task, TaskStatus, TaskType
 
 from ..deps import get_db
 from ..schemas.collection import (
@@ -43,6 +43,73 @@ LINE_TYPES = {
 
 def value(v):
     return v.value if hasattr(v, "value") else v
+
+
+def public_stage_error(error: str | None, limit: int = 280) -> str | None:
+    """Keep the failure reason readable when the stored text continues into JSON."""
+    if not error:
+        return None
+    line = next(
+        (part.strip() for part in error.replace("\r", "\n").split("\n") if part.strip()),
+        "",
+    )
+    if not line:
+        return None
+    brace = line.find("{")
+    if brace > 0:
+        line = line[:brace].rstrip(" :")
+    line = " ".join(line.split())
+    if len(line) > limit:
+        line = line[: limit - 1].rstrip() + "…"
+    return line or None
+
+
+async def list_unresolved_failed_stages(db: AsyncSession, limit: int = 20) -> list[dict]:
+    """Latest attempt of a stage that is still failed on a task that is still failed.
+
+    Recovered attempts, completed or cancelled tasks, and stage rows with no task
+    are omitted. The overview otherwise lists historical noise as current work.
+    """
+    latest_attempt = (
+        select(
+            RunStage.task_uuid.label("task_uuid"),
+            RunStage.stage.label("stage"),
+            func.max(RunStage.attempt).label("attempt"),
+        )
+        .group_by(RunStage.task_uuid, RunStage.stage)
+        .subquery()
+    )
+    rows = (
+        await db.execute(
+            select(RunStage, Task.task_name, Task.task_type, Task.status)
+            .join(
+                latest_attempt,
+                and_(
+                    RunStage.task_uuid == latest_attempt.c.task_uuid,
+                    RunStage.stage == latest_attempt.c.stage,
+                    RunStage.attempt == latest_attempt.c.attempt,
+                ),
+            )
+            .join(Task, Task.task_uuid == RunStage.task_uuid)
+            .where(RunStage.status == "failed")
+            .where(Task.status == TaskStatus.FAILED)
+            .order_by(RunStage.finished_at.desc(), RunStage.started_at.desc())
+            .limit(limit)
+        )
+    ).all()
+    return [
+        {
+            "task_uuid": stage.task_uuid,
+            "task_name": task_name,
+            "task_type": value(task_type),
+            "task_status": value(task_status),
+            "stage": stage.stage,
+            "attempt": stage.attempt,
+            "error": public_stage_error(stage.error),
+            "finished_at": stage.finished_at.isoformat() if stage.finished_at else None,
+        }
+        for stage, task_name, task_type, task_status in rows
+    ]
 
 
 def task_line(task):
@@ -111,18 +178,7 @@ async def lines(db: AsyncSession = DB_DEPENDENCY):
 async def summary(db: AsyncSession = DB_DEPENDENCY):
     from src.domain.ai_work_item import AIWorkItem
 
-    failed = (
-        (
-            await db.execute(
-                select(RunStage)
-                .where(RunStage.status == "failed")
-                .order_by(RunStage.started_at.desc())
-                .limit(10)
-            )
-        )
-        .scalars()
-        .all()
-    )
+    failed = await list_unresolved_failed_stages(db)
     queue = dict(
         (
             await db.execute(
@@ -159,15 +215,7 @@ async def summary(db: AsyncSession = DB_DEPENDENCY):
     ]
     return DataResponse(
         data={
-            "failed_stages": [
-                {
-                    "task_uuid": s.task_uuid,
-                    "stage": s.stage,
-                    "attempt": s.attempt,
-                    "error": s.error,
-                }
-                for s in failed
-            ],
+            "failed_stages": failed,
             "model_queue": {
                 "queued": queue.get("queued", 0),
                 "leased": queue.get("leased", 0),
