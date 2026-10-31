@@ -205,6 +205,11 @@ const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[in
     </div>
   </header>
 
+  <div class="wrap audience-slot">
+    <div id="gid-live-stats-widget"></div>
+  </div>
+  <script is:inline defer src="https://stats.globalinfectiousdisease.com/embed-badge.js" data-api="https://stats.globalinfectiousdisease.com"></script>
+
   <div class="about-nav">
     <div class="wrap">
       <PageAnchorNav items={anchorItems} locale={locale} label={copy.onPage} labelZh={copy.onPage} numbered showTitle={false} />
@@ -364,6 +369,7 @@ const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[in
 <style>
   .about-page { color: rgb(var(--text)); }
   .wrap { width: min(1080px, calc(100% - 2rem)); margin-inline: auto; }
+  .audience-slot { margin: 1.25rem auto 0; }
   .about-hero { padding-block: clamp(3.5rem, 8vw, 6rem); border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
   .hero-grid { display: grid; grid-template-columns: minmax(16rem, .8fr) minmax(0, 1.2fr); gap: clamp(2.5rem, 8vw, 7rem); }
   .eyebrow { margin: 0 0 .65rem; color: rgb(var(--color-teal)); font-size: .7rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }

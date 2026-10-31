@@ -36,6 +36,7 @@ const siteSourceCommit = import.meta.env.PUBLIC_GIDS_SOURCE_COMMIT?.trim() || ''
 const siteDeploymentBranch = import.meta.env.PUBLIC_GIDS_DEPLOY_BRANCH?.trim() || '';
 const siteBase = Astro.site?.toString() ?? Astro.url.origin;
 const canonicalURL = new URL(seo?.canonicalPath ?? Astro.url.pathname, siteBase);
+const audiencePixel = `https://stats.globalinfectiousdisease.com/api/track?pixel=1&path=${encodeURIComponent(canonicalURL.pathname)}`;
 const siteOrigin = new URL(siteBase).origin;
 const documentLocale = seo?.locale ?? initialLanguage;
 const isChinese = documentLocale === 'zh';
@@ -179,6 +180,7 @@ const structuredData = {
         data-measurement-id={validGaMeasurementId}
       ></script>
     )}
+    <script is:inline defer src="https://stats.globalinfectiousdisease.com/tracker.js" data-endpoint="https://stats.globalinfectiousdisease.com/api/track"></script>
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="128x128" href="/logo-mark-128.png" />
@@ -195,6 +197,7 @@ const structuredData = {
     </script>
   </head>
   <body class:list={['min-h-screen flex flex-col', stage && 'is-stage']}>
+    <noscript><img src={audiencePixel} alt="" width="1" height="1" style="display:none;" /></noscript>
     <a class="skip-link" href="#main-content">{isChinese ? '跳到主要内容' : isFrench ? 'Aller au contenu principal' : 'Skip to main content'}</a>
     <Header initialLanguage={initialLanguage} hideLanguageToggle={hideLanguageToggle} />
     {maintenanceMessage && <div class="site-update-banner border-b" role="status" aria-live="polite">
