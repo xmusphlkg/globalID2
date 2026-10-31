@@ -37,9 +37,21 @@ function regionName(code: string, locale: Locale): string | null {
   }
 }
 
-type DiseaseNames = Pick<SituationAlertRecord, 'disease_label' | 'disease_name_en' | 'disease_name_zh'>;
-type CountryNames = Pick<SituationAlertRecord, 'country_code' | 'country_name_en' | 'country_name_zh'>;
-type SourceNames = Pick<SituationAlertRecord, 'source_id' | 'source_label_en' | 'source_label_zh'>;
+type DiseaseNames = {
+  disease_label: string;
+  disease_name_en: string;
+  disease_name_zh?: string | null;
+};
+type CountryNames = {
+  country_code: string;
+  country_name_en: string;
+  country_name_zh?: string | null;
+};
+type SourceNames = {
+  source_id: string;
+  source_label_en?: string | null;
+  source_label_zh?: string | null;
+};
 
 export function diseaseName(record: DiseaseNames, locale: Locale): string {
   const zh = locale === 'zh' ? record.disease_name_zh : null;
