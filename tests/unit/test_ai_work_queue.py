@@ -291,6 +291,45 @@ async def test_health_permit_is_atomic_across_dispatchers(db):
     assert sum(item is not None for item in claims) == 1
 
 
+async def test_failed_agent_workflow_call_updates_progress_and_keeps_the_error(db):
+    from src.domain import TaskWorkbook
+
+    async with db() as session:
+        connection = await session.connection()
+        await connection.run_sync(lambda sync: TaskWorkbook.__table__.create(sync, checkfirst=True))
+        session.add(
+            Task(
+                task_uuid="parent-log",
+                task_type=TaskType.AGENT_WORKFLOW,
+                task_name="Model operation: governance_stream",
+                priority=TaskPriority.LOW,
+                status=TaskStatus.RUNNING,
+                input_data={"operation": "governance_stream"},
+                progress=0,
+            )
+        )
+        await session.commit()
+    work_id = await add(parent="parent-log")
+
+    async def routes():
+        return [route()]
+
+    async def complete(item, chosen):
+        raise ValueError("invalid model response")
+
+    dispatcher = queue.AIWorkDispatcher(routes, complete)
+    for _ in range(3):
+        await dispatcher.tick()
+        await asyncio.gather(*dispatcher.active.values())
+    async with db() as session:
+        task = (await session.execute(select(Task).where(Task.task_uuid == "parent-log"))).scalar_one()
+        logs = (await session.execute(select(TaskWorkbook).order_by(TaskWorkbook.id))).scalars().all()
+    assert task.progress == 99
+    assert [log.title for log in logs] == ["Model call retry", "Model call retry", "Model call failed"]
+    assert "invalid model response" in logs[-1].content
+    assert (await row(db, work_id)).status == "failed"
+
+
 async def test_non_cooling_failures_stop_after_three_attempts(db):
     work_id = await add()
 

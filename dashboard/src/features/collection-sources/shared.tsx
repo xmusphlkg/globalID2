@@ -21,3 +21,8 @@ export function useCollectionAction() {
  return { error, busy, uuid, submit };
 }
 export function CollectionActionResult({ action }: { action: ReturnType<typeof useCollectionAction> }) { const { text } = useSourceText(); return <>{action.error != null && <p role="alert" className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{action.error instanceof Error ? action.error.message : String(action.error)}</p>}{action.uuid && <p role="status" className="cc-panel border-emerald-200 text-sm">{text("source_submitted")} <Link className="underline" href={`/collection/runs/${encodeURIComponent(action.uuid)}`}>{text("source_open_run")}</Link></p>}</>; }
+export function SourceStages({ stages }: { stages?: Array<{ stage: string; status?: string | null }> | null }) {
+ const { text } = useSourceText();
+ const byName = new Map((stages ?? []).map((stage) => [stage.stage, stage.status]));
+ return <ul className="flex flex-wrap gap-1.5" aria-label={text("source_stages")}>{(["collect", "organize", "store"] as const).map((name) => { const status = byName.get(name) || "not_checked"; const statusKey = `source_${status}` as LangKey; const statusLabel = text(statusKey); return <li key={name} className="rounded-full border border-stone-300 px-2 py-0.5 text-xs">{text(`source_stage_${name}` as LangKey)} · {statusLabel === statusKey ? status : statusLabel}</li>; })}</ul>;
+}

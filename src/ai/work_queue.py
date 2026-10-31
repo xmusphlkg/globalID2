@@ -23,8 +23,9 @@ from typing import Any
 
 from sqlalchemy import case, func, select, text, tuple_
 
+from src.ai.task_progress import displayed_progress, task_type_name
 from src.core import get_database, get_logger
-from src.domain import Task, TaskStatus
+from src.domain import Task, TaskStatus, TaskWorkbook
 from src.domain.ai_work_item import AIWorkItem
 
 from .route_selection import route_weight
@@ -439,6 +440,92 @@ def _utc(value: datetime) -> datetime:
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
 
 
+async def note_parent_work(event: dict[str, Any]) -> None:
+    """Record model-call progress and keep a failure in the parent task log.
+
+    Successful calls only move the parent percentage. A retry or terminal
+    failure is written to the workbook, because the work-item row replaces its
+    error on the next attempt.
+    """
+
+    parent = str(event.get("parent") or "")
+    if not parent or parent == "runtime":
+        return
+    try:
+        async with get_database() as db:
+            task = (
+                await db.execute(select(Task).where(Task.task_uuid == parent))
+            ).scalar_one_or_none()
+            if task is None or task_type_name(task.task_type) != "agent_workflow":
+                return
+            rows = (
+                await db.execute(
+                    select(AIWorkItem.status, func.count())
+                    .where(AIWorkItem.parent_task_uuid == parent)
+                    .group_by(AIWorkItem.status)
+                )
+            ).all()
+            counts = {str(status): int(count or 0) for status, count in rows}
+            progress = displayed_progress(
+                task_type=task.task_type,
+                status=task.status,
+                stored=0,
+                counts=counts,
+            )
+            if task_type_name(task.status) in {"pending", "queued", "running", "retrying"}:
+                if int(task.progress or 0) != progress:
+                    task.set_progress(progress)
+            error = event.get("error")
+            if event.get("record_error") and error:
+                state = "failed" if event.get("status") == "failed" else "retry"
+                db.add(
+                    TaskWorkbook(
+                        task_id=task.id,
+                        entry_type="error" if state == "failed" else "warning",
+                        title=f"Model call {state}",
+                        content="\n".join(
+                            line
+                            for line in (
+                                f"work_id: {event.get('work_id')}",
+                                f"line: {event.get('line')}",
+                                f"agent: {event.get('agent')}" if event.get("agent") else "",
+                                f"route: {event.get('route')}" if event.get("route") else "",
+                                f"attempt: {event.get('attempt')}",
+                                f"error: {str(error)[:1000]}",
+                            )
+                            if line
+                        ),
+                        content_type="text",
+                        model_used=(str(event.get("route"))[:100] if event.get("route") else None),
+                        success=False,
+                        error_message=str(error)[:1000],
+                        metadata_={
+                            "source": "ai_work_item",
+                            "work_id": event.get("work_id"),
+                            "status": event.get("status"),
+                        },
+                    )
+                )
+    except Exception:
+        logger.exception("Could not record model work progress for {}", parent)
+
+
+def _work_event(current: AIWorkItem, *, route_key: str | None, record_error: bool) -> dict[str, Any]:
+    payload = current.payload if isinstance(current.payload, dict) else {}
+    agent = payload.get("agent_name")
+    return {
+        "parent": current.parent_task_uuid,
+        "work_id": current.id,
+        "line": current.line,
+        "status": current.status,
+        "attempt": current.attempt,
+        "route": route_key,
+        "error": current.error,
+        "agent": agent if isinstance(agent, str) and agent.strip() else None,
+        "record_error": record_error and bool(current.error),
+    }
+
+
 def _owns_lease(current: AIWorkItem | None, claimed: AIWorkItem) -> bool:
     # Cooldown requeues do not advance attempt. Include the exact lease boundary
     # so a late callback cannot overwrite a subsequent lease on the same route.
@@ -628,6 +715,7 @@ class AIWorkDispatcher:
     async def _execute(self, item: AIWorkItem, route: dict[str, Any]) -> None:
         token = _DISPATCHING.set(True)
         succeeded = False
+        noted: dict[str, Any] | None = None
         try:
             if self.complete:
                 result = await self.complete(item, route)
@@ -644,6 +732,11 @@ class AIWorkDispatcher:
                 current.error = None
                 current.finished_at = _now()
                 current.lease_expires_at = None
+                noted = _work_event(
+                    current,
+                    route_key=str(route.get("model_key") or "") or None,
+                    record_error=False,
+                )
             succeeded = True
         except asyncio.CancelledError:
             raise  # The persisted lease is recovered by the next dispatcher.
@@ -686,9 +779,18 @@ class AIWorkDispatcher:
                 else:
                     current.status = "failed"
                     current.finished_at = _now()
+                noted = _work_event(
+                    current,
+                    route_key=str(route.get("model_key") or "") or None,
+                    record_error=not cooling,
+                )
         finally:
             self.outcomes[str(route.get("model_key"))].append(succeeded)
             _DISPATCHING.reset(token)
+            if noted is not None and (
+                noted["status"] in {"succeeded", "failed"} or noted.get("record_error")
+            ):
+                await note_parent_work(noted)
 
     async def _complete(
         self, item: AIWorkItem, route: dict[str, Any]

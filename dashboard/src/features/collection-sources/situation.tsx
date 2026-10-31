@@ -1,9 +1,10 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import type { SituationSourceAdapter } from "@/lib/hooks/useSources";
 import type { components } from "@/generated/api";
 import { WorkspacePage } from "@/shared/ui";
-import { CollectionActionResult, SourceFeedback, SourceLinks, SourceStatus, sourceDate, useCollectionAction, useSourceQuery, useSourceText } from "./shared";
+import { CollectionActionResult, SourceFeedback, SourceLinks, SourceStages, SourceStatus, sourceDate, useCollectionAction, useSourceQuery, useSourceText } from "./shared";
 
 export function SituationSourcesView() {
  const { lang, text } = useSourceText();
@@ -21,6 +22,8 @@ export function SituationSourcesView() {
   <div className="grid items-start gap-4 xl:grid-cols-2">{rows.map((source) => <section key={source.source_id} className="cc-panel space-y-3">
    <div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">{(lang === "zh" ? source.label_zh : source.label_en) || source.source_id}</h2><p className="cc-muted">{source.agency_en} · {source.cadence?.[lang]}</p></div><SourceStatus status={source.status || "not_checked"} /></div>
    <dl className="grid grid-cols-2 gap-3 text-sm"><div><dt className="cc-muted">{text("source_stored")}</dt><dd className="mt-1 font-semibold">{source.stored_notices}</dd></div><div><dt className="cc-muted">{text("source_checked")}</dt><dd>{sourceDate(source.last_checked_at, lang)}</dd></div><div><dt className="cc-muted">{text("source_success")}</dt><dd>{sourceDate(source.last_success_at, lang)}</dd></div></dl>
+   <SourceStages stages={source.stages} />
+   <div className="flex flex-wrap items-center gap-3"><button type="button" className="cc-button" aria-label={`${text("source_collect_one")}: ${(lang === "zh" ? source.label_zh : source.label_en) || source.source_id}`} disabled={action.busy} onClick={() => { void action.submit({ line: "situation", mode: "metadata_only", sources: [source.source_id] }); }}>{text("source_collect_one")}</button>{source.latest_task_uuid && <Link className="text-sm text-orange-800 underline" href={`/collection/runs/${encodeURIComponent(source.latest_task_uuid)}`}>{text("source_latest_run")}</Link>}</div>
    {source.last_error && <p className="break-words text-sm text-rose-800">{source.last_error}</p>}
    {(source.homepage || source.endpoint) && <a className="inline-block text-sm text-orange-800 underline" href={source.homepage || source.endpoint || ""} target="_blank" rel="noreferrer">{text("source_official")}</a>}
    <details><summary className="cursor-pointer text-sm font-semibold">{text("source_history")} · {source.history?.length ?? 0}</summary><div className="mt-3 space-y-3">{source.history?.map((run) => <article className="space-y-2 border-t border-stone-200 pt-3 text-xs" key={`${run.run_id}:${run.started_at}`}><div className="flex flex-wrap justify-between gap-2"><time>{sourceDate(run.started_at, lang)}</time><SourceStatus status={run.status} /></div><p>{text("source_fetched")}: {run.fetched_count} · {text("source_new")}: {run.new_count} · {text("source_updated")}: {run.updated_count}</p><p className="break-all font-mono">{run.run_id}</p>{run.error && <p className="break-words text-rose-800">{run.error}</p>}</article>)}{!source.history?.length && <p className="cc-muted">{text("source_empty_history")}</p>}</div></details>

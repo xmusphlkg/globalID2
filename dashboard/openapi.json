@@ -6955,6 +6955,13 @@
             "title": "Latest Runs",
             "type": "array"
           },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/LiteratureSourceOut"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
           "published_articles": {
             "title": "Published Articles",
             "type": "integer"
@@ -7560,12 +7567,178 @@
               }
             ],
             "title": "Since"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
           }
         },
         "required": [
           "line"
         ],
         "title": "LiteratureRunCreate",
+        "type": "object"
+      },
+      "LiteratureSourceOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "error_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Count"
+          },
+          "fetched": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_run_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run Uuid"
+          },
+          "last_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Started At"
+          },
+          "last_task_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Task Uuid"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/LiteratureSourceStageOut"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "label",
+          "enabled",
+          "status"
+        ],
+        "title": "LiteratureSourceOut",
+        "type": "object"
+      },
+      "LiteratureSourceStageOut": {
+        "properties": {
+          "attempt": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "task_uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Uuid"
+          }
+        },
+        "required": [
+          "stage"
+        ],
+        "title": "LiteratureSourceStageOut",
         "type": "object"
       },
       "LiteratureSummaryOut": {
@@ -7783,6 +7956,13 @@
               }
             ],
             "title": "Since"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
           }
         },
         "title": "LiteratureSyncRequest",
@@ -9339,6 +9519,13 @@
             ],
             "title": "Mode",
             "type": "string"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
           }
         },
         "title": "RefreshRequest",
@@ -10858,6 +11045,13 @@
             ],
             "title": "Mode",
             "type": "string"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
           }
         },
         "required": [
@@ -27467,7 +27661,7 @@
     },
     "/api/v1/situation/refresh": {
       "post": {
-        "description": "Queue one end-to-end Situation run on the task worker.",
+        "description": "Queue one Situation run, optionally limited to named feeds.",
         "operationId": "queue_refresh_api_v1_situation_refresh_post",
         "requestBody": {
           "content": {

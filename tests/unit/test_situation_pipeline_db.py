@@ -329,6 +329,50 @@ async def test_collection_runner_has_three_stages_and_dirty_without_export(db, m
     assert not calls
 
 
+async def test_runner_limits_collect_and_documents_to_named_sources(db, monkeypatch):
+    from uuid import uuid4
+
+    from src.domain.collection import PublishDirty, RunStage, SourceArtifact
+    from src.services.situation_notices import runner
+
+    async with database_module.get_engine().begin() as conn:
+        await conn.run_sync(lambda sync: Base.metadata.create_all(
+            sync,
+            tables=[RunStage.__table__, PublishDirty.__table__, SourceArtifact.__table__],
+        ))
+    seen: dict[str, object] = {}
+
+    def collect(**kwargs):
+        seen["sources"] = kwargs.get("sources")
+        return {"events": [], "sources": [{"source_id": "who_don", "status": "ok", "event_count": 0, "error": None}]}
+
+    async def fetch_pending_documents(**kwargs):
+        seen["source_ids"] = kwargs.get("source_ids")
+        return {"ready": 0, "unavailable": 0, "failed": 0}
+
+    monkeypatch.setattr(runner, "collect", collect)
+    monkeypatch.setattr(runner, "fetch_pending_documents", fetch_pending_documents)
+    await runner.run_situation(task_uuid=str(uuid4()), skip_ai=True, sources=["who_don"])
+    assert seen["sources"] == ["who_don"]
+    assert seen["source_ids"] == ["who_don"]
+
+
+async def test_document_fetch_skips_sources_outside_the_request(db):
+    who = _event("2026-DON640", ref={"kind": "who_don", "slug": "2026-DON640"})
+    ecdc = _event("ecdc-1", ref={"kind": "ecdc", "slug": "ecdc-1"})
+    ecdc["source_id"] = "ecdc_cdtr"
+    ecdc["event_id"] = "ecdc_cdtr:ecdc-1"
+    await store_notices({"events": [who, ecdc], "sources": []}, run_id="r-scope")
+    seen: list[str] = []
+
+    def fetch(ref):
+        seen.append(str(ref.get("kind")))
+        return FetchedDocument(media_type="text/html", text="stored body")
+
+    await fetch_pending_documents(fetch=fetch, source_ids=["ecdc_cdtr"])
+    assert seen == ["ecdc"]
+
+
 async def test_export_only_does_not_collect_or_rebuild(db, monkeypatch, tmp_path):
     from src.services.situation_notices import runner
     def forbidden(*_args, **_kwargs):

@@ -187,22 +187,28 @@ def _file_name(notice_id: str, media_type: str | None) -> str:
 
 
 async def fetch_pending_documents(
-    *, limit: int = 40, fetch: Callable[[dict[str, Any] | None], FetchedDocument] = fetch_document
+    *,
+    limit: int = 40,
+    fetch: Callable[[dict[str, Any] | None], FetchedDocument] = fetch_document,
+    source_ids: list[str] | None = None,
 ) -> dict[str, int]:
     """Download the body of every due report; one failing source never stops the batch."""
 
     counts = {"ready": 0, "unavailable": 0, "failed": 0}
     now = utc_now()
+    filters = [
+        SituationDocument.status.in_(("pending", "failed")),
+        SituationDocument.attempts < MAX_DOCUMENT_ATTEMPTS,
+        _is_due(SituationDocument.next_attempt_at, now),
+    ]
+    if source_ids:
+        filters.append(SituationNotice.source_id.in_(tuple(source_ids)))
     async with get_db() as db:
         due = (
             await db.execute(
                 select(SituationDocument.notice_id, SituationDocument.ref)
                 .join(SituationNotice, SituationNotice.notice_id == SituationDocument.notice_id)
-                .where(
-                    SituationDocument.status.in_(("pending", "failed")),
-                    SituationDocument.attempts < MAX_DOCUMENT_ATTEMPTS,
-                    _is_due(SituationDocument.next_attempt_at, now),
-                )
+                .where(*filters)
                 .order_by(SituationNotice.published_date.desc())
                 .limit(limit)
             )
@@ -434,24 +440,32 @@ async def _release_extraction(claim: _ExtractionClaim) -> None:
         await db.execute(update(SituationNotice).where(claim.predicate()).values(ai_next_attempt_at=None))
 
 
-async def extract_pending(complete: Completer | ReviewRoutePool, *, limit: int = 30) -> dict[str, int]:
+async def extract_pending(
+    complete: Completer | ReviewRoutePool,
+    *,
+    limit: int = 30,
+    source_ids: list[str] | None = None,
+) -> dict[str, int]:
     """Claim/read, wait without a session, then save each report in a short transaction."""
 
     counts = {"published": 0, "rejected": 0, "failed": 0, "unchanged": 0}
     diseases = allowed_diseases()
     country_codes = set(country_catalogue())
     now = utc_now()
+    filters = [
+        SituationNotice.ai_status.in_(("pending", "failed")),
+        SituationNotice.ai_attempts < MAX_AI_ATTEMPTS,
+        _is_due(SituationNotice.ai_next_attempt_at, now),
+        SituationDocument.status == "ready",
+    ]
+    if source_ids:
+        filters.append(SituationNotice.source_id.in_(tuple(source_ids)))
     async with get_db() as db:
         due = (
             await db.execute(
                 select(SituationNotice.notice_id)
                 .join(SituationDocument, SituationDocument.notice_id == SituationNotice.notice_id)
-                .where(
-                    SituationNotice.ai_status.in_(("pending", "failed")),
-                    SituationNotice.ai_attempts < MAX_AI_ATTEMPTS,
-                    _is_due(SituationNotice.ai_next_attempt_at, now),
-                    SituationDocument.status == "ready",
-                )
+                .where(*filters)
                 .order_by(SituationNotice.published_date.desc())
                 .limit(limit)
             )

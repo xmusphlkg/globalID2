@@ -220,7 +220,14 @@ class LiteratureService:
             minutes=getattr(cfg, "ai_enrichment_catch_up_interval_minutes", 1)
         )
 
-    async def trigger_job(self, job_id: str, *, manual: bool, since: datetime | None = None) -> dict[str, Any]:
+    async def trigger_job(
+        self,
+        job_id: str,
+        *,
+        manual: bool,
+        since: datetime | None = None,
+        sources: list[str] | None = None,
+    ) -> dict[str, Any]:
         if job_id != self.JOB_ID:
             raise ValueError(f"Literature job not found: {job_id}")
         if not self._config().enabled:
@@ -257,13 +264,23 @@ class LiteratureService:
                         "scheduled_trigger": not manual,
                         "manual_trigger": manual,
                         **({"since": since.isoformat()} if since else {}),
+                        **({"sources": list(sources)} if sources else {}),
                     },
-                    tags=["research-radar", "literature"],
+                    tags=["research-radar", "literature", *(sources or [])],
                 )
                 self._state.last_task_uuid = task.task_uuid
                 self._state.last_status = "queued"
                 self._state.last_finished_at = datetime.now(ZoneInfo(self._config().timezone))
                 self._state.next_run_at = self._next_run(self._state.last_finished_at)
+                from src.literature.source_log import log_literature_event
+
+                scope = ", ".join(sources) if sources else "all enabled providers"
+                await log_literature_event(
+                    task.task_uuid,
+                    title="Literature collection queued",
+                    content=f"Queued metadata sync for {scope}.",
+                    metadata={"event": "literature_queued", "sources": list(sources or [])},
+                )
                 return {"job_id": job_id, "status": "queued", "task_uuid": task.task_uuid}
             except Exception as exc:
                 self._state.last_finished_at = datetime.now(ZoneInfo(self._config().timezone))

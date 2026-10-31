@@ -207,6 +207,12 @@ class TaskManager:
                 task.last_error = error_message
                 if status in [TaskStatus.FAILED, TaskStatus.RETRYING]:
                     task.retry_count += 1
+
+            if status == TaskStatus.COMPLETED:
+                from src.ai.task_progress import AI_TASK_TYPES, task_type_name
+
+                if task_type_name(task.task_type) in AI_TASK_TYPES and int(task.progress or 0) < 100:
+                    task.set_progress(100)
             
             await db.commit()
             await db.refresh(task)
