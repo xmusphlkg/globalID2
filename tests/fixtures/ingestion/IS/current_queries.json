@@ -1,0 +1,823 @@
+[
+  {
+    "scope": "is_doh_annual",
+    "entity": "Kynsjúkdómar",
+    "context": {
+      "view_url": "https://app.powerbi.com/view?r=eyJrIjoiY2Q4Mjk2NDQtNDA1MS00YTcxLTk1NzEtZTBlZDYwMTU3ZDNiIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+      "resource_key": "00000000-0000-4000-8000-000000000000",
+      "api_base_url": "https://example.org",
+      "model_id": 123,
+      "dataset_id": "dataset",
+      "report_id": "report",
+      "last_refresh": "2026-07-01T00:00:00Z",
+      "schema_fingerprint": "sha256:fixture"
+    },
+    "request": {
+      "fixture_entity": "Kynsjúkdómar"
+    },
+    "payload": {
+      "results": [
+        {
+          "result": {
+            "data": {
+              "descriptor": {
+                "Select": [
+                  {
+                    "Value": "G0",
+                    "Name": "Kynsjúkdómar.AR"
+                  },
+                  {
+                    "Value": "G1",
+                    "Name": "Kynsjúkdómar.SJUKDOMUR"
+                  },
+                  {
+                    "Value": "G2",
+                    "Name": "Sum(Kynsjúkdómar.FJOLDI)"
+                  }
+                ]
+              },
+              "dsr": {
+                "DS": [
+                  {
+                    "PH": [
+                      {
+                        "DM0": [
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "HIV sýking",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Klamydíusýking",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Lekandi",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Sárasótt",
+                              0
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "scope": "is_doh_annual",
+    "entity": "Lifrarbólgur",
+    "context": {
+      "view_url": "https://app.powerbi.com/view?r=eyJrIjoiY2Q4Mjk2NDQtNDA1MS00YTcxLTk1NzEtZTBlZDYwMTU3ZDNiIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+      "resource_key": "00000000-0000-4000-8000-000000000000",
+      "api_base_url": "https://example.org",
+      "model_id": 123,
+      "dataset_id": "dataset",
+      "report_id": "report",
+      "last_refresh": "2026-07-01T00:00:00Z",
+      "schema_fingerprint": "sha256:fixture"
+    },
+    "request": {
+      "fixture_entity": "Lifrarbólgur"
+    },
+    "payload": {
+      "results": [
+        {
+          "result": {
+            "data": {
+              "descriptor": {
+                "Select": [
+                  {
+                    "Value": "G0",
+                    "Name": "Lifrarbólgur.AR"
+                  },
+                  {
+                    "Value": "G1",
+                    "Name": "Lifrarbólgur.SJUKDOMUR"
+                  },
+                  {
+                    "Value": "G2",
+                    "Name": "Sum(Lifrarbólgur.FJOLDI)"
+                  }
+                ]
+              },
+              "dsr": {
+                "DS": [
+                  {
+                    "PH": [
+                      {
+                        "DM0": [
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Lifrarbólga B",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Lifrarbólga C",
+                              0
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "scope": "is_doh_annual",
+    "entity": "Matarsýkingar",
+    "context": {
+      "view_url": "https://app.powerbi.com/view?r=eyJrIjoiY2Q4Mjk2NDQtNDA1MS00YTcxLTk1NzEtZTBlZDYwMTU3ZDNiIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+      "resource_key": "00000000-0000-4000-8000-000000000000",
+      "api_base_url": "https://example.org",
+      "model_id": 123,
+      "dataset_id": "dataset",
+      "report_id": "report",
+      "last_refresh": "2026-07-01T00:00:00Z",
+      "schema_fingerprint": "sha256:fixture"
+    },
+    "request": {
+      "fixture_entity": "Matarsýkingar"
+    },
+    "payload": {
+      "results": [
+        {
+          "result": {
+            "data": {
+              "descriptor": {
+                "Select": [
+                  {
+                    "Value": "G0",
+                    "Name": "Matarsýkingar.AR"
+                  },
+                  {
+                    "Value": "G1",
+                    "Name": "Matarsýkingar.SJUKDOMUR"
+                  },
+                  {
+                    "Value": "G2",
+                    "Name": "Sum(Matarsýkingar.FJOLDI)"
+                  }
+                ]
+              },
+              "dsr": {
+                "DS": [
+                  {
+                    "PH": [
+                      {
+                        "DM0": [
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Giardíusýking",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Kampýlóbaktersýking",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Salmonellusýking",
+                              0
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "scope": "is_doh_annual",
+    "entity": "Ónæmir sýklar",
+    "context": {
+      "view_url": "https://app.powerbi.com/view?r=eyJrIjoiY2Q4Mjk2NDQtNDA1MS00YTcxLTk1NzEtZTBlZDYwMTU3ZDNiIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+      "resource_key": "00000000-0000-4000-8000-000000000000",
+      "api_base_url": "https://example.org",
+      "model_id": 123,
+      "dataset_id": "dataset",
+      "report_id": "report",
+      "last_refresh": "2026-07-01T00:00:00Z",
+      "schema_fingerprint": "sha256:fixture"
+    },
+    "request": {
+      "fixture_entity": "Ónæmir sýklar"
+    },
+    "payload": {
+      "results": [
+        {
+          "result": {
+            "data": {
+              "descriptor": {
+                "Select": [
+                  {
+                    "Value": "G0",
+                    "Name": "Ónæmir sýklar.AR"
+                  },
+                  {
+                    "Value": "G1",
+                    "Name": "Ónæmir sýklar.SJUKDOMUR"
+                  },
+                  {
+                    "Value": "G2",
+                    "Name": "Sum(Ónæmir sýklar.FJOLDI)"
+                  }
+                ]
+              },
+              "dsr": {
+                "DS": [
+                  {
+                    "PH": [
+                      {
+                        "DM0": [
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Breiðvirkir beta laktamasar (ESBL/AmpC)",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Meticillín ónæmur staph. aureus (MÓSA)",
+                              0
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "scope": "is_doh_annual",
+    "entity": "Öndunarfærasýkingar",
+    "context": {
+      "view_url": "https://app.powerbi.com/view?r=eyJrIjoiY2Q4Mjk2NDQtNDA1MS00YTcxLTk1NzEtZTBlZDYwMTU3ZDNiIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+      "resource_key": "00000000-0000-4000-8000-000000000000",
+      "api_base_url": "https://example.org",
+      "model_id": 123,
+      "dataset_id": "dataset",
+      "report_id": "report",
+      "last_refresh": "2026-07-01T00:00:00Z",
+      "schema_fingerprint": "sha256:fixture"
+    },
+    "request": {
+      "fixture_entity": "Öndunarfærasýkingar"
+    },
+    "payload": {
+      "results": [
+        {
+          "result": {
+            "data": {
+              "descriptor": {
+                "Select": [
+                  {
+                    "Value": "G0",
+                    "Name": "Öndunarfærasýkingar.AR"
+                  },
+                  {
+                    "Value": "G1",
+                    "Name": "Öndunarfærasýkingar.SJUKDOMUR"
+                  },
+                  {
+                    "Value": "G2",
+                    "Name": "Sum(Öndunarfærasýkingar.FJOLDI)"
+                  }
+                ]
+              },
+              "dsr": {
+                "DS": [
+                  {
+                    "PH": [
+                      {
+                        "DM0": [
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "COVID-19",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Inflúensa",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              "Pneumókokkasýking, ífarandi",
+                              0
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "scope": "is_doh_sti",
+    "entity": "Kynsjúkdómar",
+    "context": {
+      "view_url": "https://app.powerbi.com/view?r=eyJrIjoiNTNmN2ViYTEtZjdiZi00MmRkLWFjYWQtOWI0ZmEwNjhjYmQyIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+      "resource_key": "00000000-0000-4000-8000-000000000000",
+      "api_base_url": "https://example.org",
+      "model_id": 123,
+      "dataset_id": "dataset",
+      "report_id": "report",
+      "last_refresh": "2026-07-01T00:00:00Z",
+      "schema_fingerprint": "sha256:fixture"
+    },
+    "request": {
+      "fixture_entity": "Kynsjúkdómar"
+    },
+    "payload": {
+      "results": [
+        {
+          "result": {
+            "data": {
+              "descriptor": {
+                "Select": [
+                  {
+                    "Value": "G0",
+                    "Name": "Kynsjúkdómar.AR"
+                  },
+                  {
+                    "Value": "G1",
+                    "Name": "Kynsjúkdómar.MAN"
+                  },
+                  {
+                    "Value": "G2",
+                    "Name": "Kynsjúkdómar.SJUKDOMUR"
+                  },
+                  {
+                    "Value": "G3",
+                    "Name": "Sum(Kynsjúkdómar.FJOLDI)"
+                  }
+                ]
+              },
+              "dsr": {
+                "DS": [
+                  {
+                    "PH": [
+                      {
+                        "DM0": [
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              },
+                              {
+                                "N": "G3"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              6,
+                              "Klamydía",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              },
+                              {
+                                "N": "G3"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              6,
+                              "Lekandi",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              },
+                              {
+                                "N": "G3"
+                              }
+                            ],
+                            "C": [
+                              2025,
+                              6,
+                              "Sárasótt",
+                              0
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "scope": "is_doh_respiratory",
+    "entity": "Sýkingar",
+    "context": {
+      "view_url": "https://app.powerbi.com/view?r=eyJrIjoiZjgyOWI0YzgtNjNkZC00Y2QzLTllMzctMWIxMTAxZThlMDJkIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+      "resource_key": "00000000-0000-4000-8000-000000000000",
+      "api_base_url": "https://example.org",
+      "model_id": 123,
+      "dataset_id": "dataset",
+      "report_id": "report",
+      "last_refresh": "2026-07-01T00:00:00Z",
+      "schema_fingerprint": "sha256:fixture"
+    },
+    "request": {
+      "fixture_entity": "Sýkingar"
+    },
+    "payload": {
+      "results": [
+        {
+          "result": {
+            "data": {
+              "descriptor": {
+                "Select": [
+                  {
+                    "Value": "G0",
+                    "Name": "Sýkingar.ISO_AR"
+                  },
+                  {
+                    "Value": "G1",
+                    "Name": "Sýkingar.VIKUNUMER_ISO"
+                  },
+                  {
+                    "Value": "G2",
+                    "Name": "Sýkingar.SJUKDOMUR"
+                  },
+                  {
+                    "Value": "G3",
+                    "Name": "Sum(Sýkingar.FJOLDI)"
+                  }
+                ]
+              },
+              "dsr": {
+                "DS": [
+                  {
+                    "PH": [
+                      {
+                        "DM0": [
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              },
+                              {
+                                "N": "G3"
+                              }
+                            ],
+                            "C": [
+                              2020,
+                              1,
+                              "Covid",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              },
+                              {
+                                "N": "G3"
+                              }
+                            ],
+                            "C": [
+                              2020,
+                              1,
+                              "inflúensa",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              },
+                              {
+                                "N": "G3"
+                              }
+                            ],
+                            "C": [
+                              2020,
+                              1,
+                              "RSV",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              },
+                              {
+                                "N": "G3"
+                              }
+                            ],
+                            "C": [
+                              2020,
+                              1,
+                              "kíghósti",
+                              0
+                            ]
+                          },
+                          {
+                            "S": [
+                              {
+                                "N": "G0"
+                              },
+                              {
+                                "N": "G1"
+                              },
+                              {
+                                "N": "G2"
+                              },
+                              {
+                                "N": "G3"
+                              }
+                            ],
+                            "C": [
+                              2020,
+                              1,
+                              "mycoplasma",
+                              0
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

@@ -80,8 +80,12 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
             raise KeyboardInterrupt()
         old_sigterm = signal.signal(signal.SIGTERM, _noop)
 
+    from src.ai.work_queue import AIWorkFailed, assert_children_succeeded, task_context
+    ai_context = task_context(task)
+    await ai_context.__aenter__()
     try:
         yield
+        assert_children_succeeded()
         if await task_manager.is_cancel_requested(task.task_uuid):
             raise TaskCancelledError("Cancellation requested by user")
         await task_manager.update_task_status(task.task_uuid, TaskStatus.COMPLETED)
@@ -116,7 +120,7 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
         # path. Plan it while the worker still owns the RUNNING lease so the
         # task transitions directly to QUEUED instead of briefly presenting a
         # false terminal failure to the control plane.
-        if task.task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE:
+        if task.task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE and not isinstance(exc, AIWorkFailed):
             try:
                 from src.services.ai_content_governance_service import (
                     ai_content_governance_service,
@@ -181,7 +185,7 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
                     task.task_uuid,
                     retry_exc,
                 )
-        elif task.task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE:
+        elif task.task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE and not isinstance(exc, AIWorkFailed):
             try:
                 from src.services.ai_content_governance_service import (
                     ai_content_governance_service,
@@ -209,6 +213,7 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
         raise
 
     finally:
+        await ai_context.__aexit__(None, None, None)
         if old_sigterm is not None:
             signal.signal(signal.SIGTERM, old_sigterm)
 

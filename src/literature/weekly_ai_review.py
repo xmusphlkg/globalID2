@@ -442,7 +442,8 @@ class WeeklyAIReviewRunner:
         }
         last_error: Exception | None = None
         try:
-            async with asyncio.timeout(timeout_seconds):
+            from src.ai.work_queue import current_parent
+            async with asyncio.timeout(None if current_parent() is not None else timeout_seconds):
                 for _ in range(max(1, min(int(max_attempts), 2))):
                     try:
                         if self.completer is None:

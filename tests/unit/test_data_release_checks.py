@@ -45,7 +45,10 @@ async def test_raw_archive_check_uses_ssh_over_443_after_primary_failure(tmp_pat
 
     async def run_capture(command, *, env, **_kwargs):
         calls.append((command, env))
-        if command[1] == "ls-remote" and "Hostname=ssh.github.com" not in env["GIT_SSH_COMMAND"]:
+        if (
+            command[1] == "ls-remote"
+            and "Hostname=ssh.github.com" not in env["GIT_SSH_COMMAND"]
+        ):
             return {"returncode": 1, "stdout": "port 22 blocked"}
         return {"returncode": 0, "stdout": "ok"}
 
@@ -97,7 +100,6 @@ async def test_cloudflare_check_normalizes_api_failure_without_deployment_lookup
     async def latest_deployment(*_args, **_kwargs):
         nonlocal latest_calls
         latest_calls += 1
-        return None
 
     result = await checks.cloudflare_check(
         project="globalid",
@@ -119,6 +121,7 @@ async def test_verify_cloudflare_release_accepts_matching_normalized_payload():
         "release_id": "release-1",
         "deployment_branch": "main",
         "source_commit": "abc123",
+        "build_digest": "a" * 64,
     }
 
     async def latest_deployment(_project: str, *, environment: str):
@@ -136,6 +139,7 @@ async def test_verify_cloudflare_release_accepts_matching_normalized_payload():
             "release_id": "release-1",
             "deployment_branch": "main",
             "source_commit": "abc123",
+            "build_digest": "a" * 64,
         }
 
     result = await checks.verify_cloudflare_production_release(
@@ -148,3 +152,41 @@ async def test_verify_cloudflare_release_accepts_matching_normalized_payload():
 
     assert result["verified"] is True
     assert result["production_url"] == "https://globalid.pages.dev"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("production_digest", [None, "old-build"])
+async def test_verification_rejects_previous_attempt_at_same_revision(
+    monkeypatch, production_digest
+):
+    identity = {
+        "release_id": "release-1",
+        "deployment_branch": "main",
+        "source_commit": "abc123",
+        "build_digest": "new-build",
+    }
+
+    async def latest(_project, **_kwargs):
+        return {
+            "environment": "production",
+            "status": "success",
+            "branch": "main",
+            "commit_hash": "abc123",
+        }
+
+    async def manifest(url):
+        assert "build=new-build" in url
+        return {**identity, "build_digest": production_digest}
+
+    async def no_sleep(_seconds):
+        pass
+
+    monkeypatch.setattr(checks.asyncio, "sleep", no_sleep)
+    with pytest.raises(RuntimeError, match="could not be verified"):
+        await checks.verify_cloudflare_production_release(
+            project_name="globalid",
+            subdomain="globalid.pages.dev",
+            release_identity=identity,
+            latest_deployment=latest,
+            fetch_public_json=manifest,
+        )

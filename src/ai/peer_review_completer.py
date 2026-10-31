@@ -18,6 +18,7 @@ from src.ai.agents.base import BaseAgent
 from src.ai.model_center import get_active_model_routes
 
 from .peer_review import AIOutputError, Completion
+from .route_selection import route_weight
 
 
 class PeerReviewAgent(BaseAgent):
@@ -79,6 +80,9 @@ class ModelCenterCompleter:
         cross-model review without a code change.
         """
 
+        from .work_queue import current_parent
+        if current_parent() is not None:
+            return QueuedModelCompleter(line=line, max_tokens=max_tokens, allow_single_model=allow_single_model)
         routes = [_route_key(route) for route in await get_active_model_routes()]
         distinct = list(dict.fromkeys(key for key in routes if key))
         if len(distinct) >= 2:
@@ -102,6 +106,10 @@ class ModelCenterCompleter:
         it is active; the reviewer takes the first other route.
         """
 
+        from .work_queue import current_parent
+        if current_parent() is not None:
+            return QueuedModelCompleter(line=line, max_tokens=max_tokens, allow_single_model=allow_single_model,
+                                        author_model=author_model)
         routes = [_route_key(route) for route in await get_active_model_routes()]
         distinct = list(dict.fromkeys(key for key in routes if key))
         if not distinct:
@@ -152,6 +160,35 @@ class ModelCenterCompleter:
             model=served_by,
             input_mode=getattr(agent, "_last_input_mode", None) if attachments else None,
         )
+
+
+class QueuedModelCompleter:
+    """Peer-review roles routed by the worker without testing route availability."""
+    def __init__(self, *, line="situation_notice", max_tokens=2400, allow_single_model=True, author_model=None):
+        self.agents = {role: PeerReviewAgent(f"{line}_{role}", max_tokens=max_tokens)
+                       for role in ("author", "reviewer")}
+        self.author_model = author_model
+        self.allow_single_model = allow_single_model
+        self.single_model = False
+
+    @property
+    def review_mode(self):
+        return "single_model" if self.single_model else "cross_model"
+
+    async def __call__(self, role, system, prompt, *, attachments=None):
+        agent = self.agents[role]
+        extra = {"attachments": list(attachments)} if attachments else {}
+        if role == "reviewer" and self.author_model:
+            extra["_avoid_models"] = [self.author_model]
+        text = await agent.complete(prompt=prompt, system=system, use_cache=False, **extra)
+        conversation = agent.get_latest_conversation() or {}
+        served_by = str(conversation.get("model") or "unknown")
+        if role == "author":
+            self.author_model = served_by
+        else:
+            self.single_model = self.allow_single_model and served_by == self.author_model
+        return Completion(text=text, model=served_by,
+                          input_mode=getattr(agent, "_last_input_mode", None) if attachments else None)
 
 
 class ReviewRoutePool:
@@ -228,6 +265,9 @@ class ReviewRoutePool:
     async def from_model_center(
         cls, *, line: str = "content_governance", max_tokens: int = 4000
     ) -> "ReviewRoutePool":
+        from .work_queue import current_parent
+        if current_parent() is not None:
+            return cls({"queued:worker": 1}, line=line, max_tokens=max_tokens)
         capacities, model_ids = await cls._load_routes()
         pool = cls(capacities, line=line, max_tokens=max_tokens)
         await pool._apply_worker_load(model_ids)
@@ -244,6 +284,9 @@ class ReviewRoutePool:
         for a route that left the active set is kept, just no longer chosen.
         """
 
+        from .work_queue import current_parent
+        if current_parent() is not None:
+            return
         capacities, model_ids = await self._load_routes()
         await self._apply_worker_load(model_ids)
         for key, capacity in capacities.items():
@@ -258,15 +301,18 @@ class ReviewRoutePool:
         return (len(window) - sum(window)) / len(window) if window else 0.0
 
     def weight(self, key: str) -> float:
-        window = self._outcomes[key]
-        success = (sum(window) + 2) / (len(window) + 2)
-        free = max(self._capacity[key] - self._inflight[key] - self._external.get(key, 0), 1)
-        return free * success**2
+        return route_weight(
+            self._capacity[key], self._inflight[key] + self._external.get(key, 0), self._outcomes[key]
+        )
 
     def _choose(self, keys: list[str]) -> str:
-        return self._rng.choices(keys, weights=[self.weight(key) for key in keys])[0]
+        weights = [self.weight(key) for key in keys]
+        return self._rng.choices(keys, weights=weights)[0] if any(weights) else self._rng.choice(keys)
 
     def completer(self, avoid: Iterable[str] = ()) -> ModelCenterCompleter:
+        from .work_queue import current_parent
+        if current_parent() is not None:
+            return QueuedModelCompleter(line=self._line, max_tokens=self._max_tokens)
         # Author and reviewer are different models. Any pair is fine (a fast model may
         # review another fast model); load and failure rate decide, so a saturated
         # or failing route stops attracting work. ``avoid`` holds models a failed
@@ -319,4 +365,4 @@ class ReviewRoutePool:
                 self._outcomes[other].append(True)
 
 
-__all__ = ["ModelCenterCompleter", "PeerReviewAgent", "ReviewRoutePool"]
+__all__ = ["ModelCenterCompleter", "PeerReviewAgent", "QueuedModelCompleter", "ReviewRoutePool"]

@@ -68,9 +68,11 @@ class IEAnnualUpdater:
         *,
         source_name: str = DEFAULT_ANNUAL_SOURCE_NAME,
         output_csv: Path = DEFAULT_ANNUAL_OUTPUT_CSV,
+        crawler_type=None,
     ) -> None:
         self.source_name = source_name
         self.output_csv = Path(output_csv)
+        self.crawler_type = crawler_type or IrelandHPSCAnnualCrawler
 
     def _load_rows(self) -> List[Dict[str, str]]:
         if not self.output_csv.exists():
@@ -141,7 +143,7 @@ class IEAnnualUpdater:
             selected = DEFAULT_REVISION_YEARS.intersection(catalogue)
 
         actual_raw_dir = Path(raw_dir) if raw_dir else ROOT / "data/raw/ie/annual"
-        crawler = IrelandHPSCAnnualCrawler(
+        crawler = self.crawler_type(
             save_raw=save_raw,
             raw_dir=actual_raw_dir,
         )

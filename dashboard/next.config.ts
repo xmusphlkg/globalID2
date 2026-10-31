@@ -7,6 +7,7 @@ const allowedDevOrigins = (process.env.GLOBALID_DASHBOARD_ALLOWED_DEV_ORIGINS ||
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  distDir: process.env.GLOBALID_NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
   // Next.js 16 rejects client chunks requested from a LAN hostname unless
   // the development origin is explicitly trusted. Keep this allowlist
@@ -34,7 +35,6 @@ const nextConfig: NextConfig = {
       { source: "/ai/interactions", destination: "/production/interactions", permanent: true },
       { source: "/ai/models", destination: "/settings/models", permanent: true },
       { source: "/ai/tasks", destination: "/production/ai", permanent: true },
-      { source: "/data", destination: "/data/analytics", permanent: true },
       { source: "/data/dashboard", destination: "/data/analytics", permanent: true },
       { source: "/data/release", destination: "/production/releases", permanent: true },
       { source: "/diseases", destination: "/data/diseases", permanent: true },
@@ -42,7 +42,6 @@ const nextConfig: NextConfig = {
       { source: "/quality", destination: "/data/quality", permanent: true },
       { source: "/reports", destination: "/production/reports", permanent: true },
       { source: "/setting", destination: "/settings/integrations", permanent: true },
-      { source: "/settings", destination: "/settings/integrations", permanent: true },
       { source: "/situation", destination: "/overview/events", permanent: true },
       { source: "/sources", destination: "/operations/sources", permanent: true },
       { source: "/sources/automation", destination: "/operations/schedules/ingestion", permanent: true },

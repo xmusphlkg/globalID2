@@ -16,6 +16,24 @@ def test_knowledge_backlog_slots_are_bounded() -> None:
     assert knowledge_backlog_slots(20, target=12, batch_size=6) == 0
 
 
+async def test_scheduler_only_enqueues_reconciliation(monkeypatch):
+    from unittest.mock import AsyncMock
+    from src.services import knowledge_automation_service as module
+    from src.services import model_operations
+    from src.ai import work_queue
+
+    service = module.KnowledgeAutomationService()
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(knowledge_automation_interval_seconds=60))
+    monkeypatch.setattr(module.schedule_state_repository, "save", AsyncMock())
+    monkeypatch.setattr(work_queue, "current_parent", lambda: None)
+    enqueue = AsyncMock(return_value=SimpleNamespace(task_uuid="queued-maintenance"))
+    monkeypatch.setattr(model_operations, "enqueue_model_operation", enqueue)
+    monkeypatch.setattr(module, "DiseaseKnowledgeUpdateService", lambda: (_ for _ in ()).throw(AssertionError("scheduler opened knowledge writer")))
+    result = await service.reconcile_once()
+    assert result == {"status": "queued", "task_uuid": "queued-maintenance"}
+    assert enqueue.call_args.args == ("knowledge_reconcile", {})
+
+
 def test_source_backlog_slots_are_independent_from_model_queue_depth() -> None:
     # The scheduler supplies source-task depth, not all knowledge tasks, so
     # model-provider cooldowns cannot stop source discovery from progressing.

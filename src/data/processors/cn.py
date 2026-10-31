@@ -18,7 +18,6 @@ from bs4 import BeautifulSoup
 from src.core import get_logger
 from src.core.database import get_db
 from src.core.missing_values import normalize_rate_columns
-from src.domain import CrawlRawPage
 from src.data.crawlers.base import CrawlerResult
 from src.data.parsers.html_parser import HTMLTableParser
 from src.data.normalizers.english_mapper import create_disease_mapper
@@ -172,15 +171,6 @@ class DataProcessor:
                     logger.debug(f"[DataProcessor][{self.country_code}] Parse failed | [{index}/{total}] error={parse_result.error_message!r}")
                     return None
 
-                if save_raw and crawl_run_id and raw_dir and parse_result.raw_content:
-                    await self._save_raw_content(
-                        run_id=crawl_run_id,
-                        raw_dir=raw_dir,
-                        result=result,
-                        raw_html=parse_result.raw_content,
-                        fetched_at=parse_result.parse_date,
-                    )
-                
                 # Create the appropriate disease mapper for this source
                 data_source = result.metadata.get("source", "")
                 language = result.metadata.get("language", "en")
@@ -211,44 +201,8 @@ class DataProcessor:
                 if save_to_file and result.year_month:
                     self._save_to_file(df, result.year_month)
                 
-                # Keep the compatibility projection and the lossless source-series
-                # facts in one transaction. A crawler result carrying an ontology
-                # source ID declares Registry coverage, so any unresolved row aborts
-                # both writes instead of creating a legacy-only shadow fact.
                 async with get_db() as db:
-                    await self._record_store.save_dataframe(
-                        df,
-                        self.country_code,
-                        db=db,
-                    )
-                    ontology_source_id = result.metadata.get("ontology_source_id")
-                    series_result = await self._series_observation_store.save_rows(
-                        db,
-                        df.to_dict(orient="records"),
-                        self.country_code,
-                        source_id=ontology_source_id,
-                        geography_key=(
-                            f"country:{self.country_code}:national"
-                            if self.country_code == "CN"
-                            else None
-                        ),
-                        quality_policy=SeriesObservationQualityPolicy(
-                            registry_coverage=(
-                                "auto" if ontology_source_id else "legacy_only"
-                            )
-                        ),
-                    )
-                    if series_result.skipped_registry_not_synced:
-                        raise RuntimeError(
-                            "Disease source-series registry is not synchronized: "
-                            f"{series_result.skipped_registry_not_synced} matched rows "
-                            "could not be written"
-                        )
-                    if series_result.skipped_ambiguous:
-                        raise RuntimeError(
-                            "Ambiguous disease source-series identities: "
-                            f"{series_result.skipped_ambiguous} rows"
-                        )
+                    series_result = await self.store_report(db, df, result)
                 logger.info(
                     f"[DataProcessor][{self.country_code}] Source-series dual write"
                     f" | upserted={series_result.upserted}"
@@ -265,46 +219,98 @@ class DataProcessor:
                 logger.error(f"[DataProcessor][{self.country_code}] [{index}/{total}] Failed | error={e}")
                 raise
 
-    async def save_raw_pages(
-        self,
-        results: List[CrawlerResult],
-        crawl_run_id: int,
-        raw_dir: Path,
-    ) -> int:
-        """Archive raw page text only (no normalisation or DB writes)."""
-        saved = 0
-        for i, result in enumerate(results, 1):
-            try:
-                _raw_kwargs = dict(
-                    title=result.title,
-                    date=result.date,
-                    year_month=result.year_month,
-                    source=result.metadata.get("source"),
-                    language=result.metadata.get("language", "en"),
-                    doi=result.metadata.get("doi"),
+    async def organize_report(self, result):
+        """Prepare a report from collected content without HTTP or formal writes."""
+        index = total = 1
+        # Parse HTML table: use pre-fetched content if available, otherwise fetch from URL
+        _parse_kwargs = dict(
+            title=result.title,
+            date=result.date,
+            year_month=result.year_month,
+            source=result.metadata.get("source"),
+            language=result.metadata.get("language", "en"),
+            doi=result.metadata.get("doi"),
+        )
+        if result.content:
+            parse_result = self.parser.parse(result.content, url=result.url, **_parse_kwargs)
+        elif result.url:
+            raise ValueError("Organization requires collected report content")
+        else:
+            logger.warning(f"[DataProcessor][{self.country_code}] [{index}/{total}] No content or URL | title={result.title!r}")
+            return None
+
+        if not parse_result.success or not parse_result.has_data:
+            logger.debug(f"[DataProcessor][{self.country_code}] Parse failed | [{index}/{total}] error={parse_result.error_message!r}")
+            return None
+
+        # Create the appropriate disease mapper for this source
+        data_source = result.metadata.get("source", "")
+        language = result.metadata.get("language", "en")
+
+        # New multi-language architecture: country code and language are separate
+        disease_mapper = await create_disease_mapper(
+            country_code=self.country_code or "CN",  # use the processor's country code
+            language=language,
+            data_source=data_source
+        )
+        disease_mapper.defer_writes = True
+
+        # Normalise disease names
+        df = await self._normalize_disease_names(
+            parse_result.data,
+            language=language,
+            disease_mapper=disease_mapper,
+        )
+
+        # Calculate incidence/mortality rates (if population data is available)
+        df = self._calculate_rates(df)
+
+        # Validate data
+        if not self._validate_data(df):
+            logger.debug(f"[DataProcessor][{self.country_code}] [{index}/{total}] Validation failed | period={result.year_month!r}")
+            return None
+        df.attrs["mapping_effects"] = list(getattr(disease_mapper, "pending_effects", []))
+        return df
+
+    async def store_report(self, db, df, result):
+        """Write one prepared report using the caller's transaction."""
+        from src.services.ingestion.mapping_effects import persist_mapping_effects
+        await persist_mapping_effects(db, df.attrs.get("mapping_effects", []))
+        await self._record_store.save_dataframe(
+            df,
+            self.country_code,
+            db=db,
+        )
+        ontology_source_id = result.metadata.get("ontology_source_id")
+        series_result = await self._series_observation_store.save_rows(
+            db,
+            df.to_dict(orient="records"),
+            self.country_code,
+            source_id=ontology_source_id,
+            geography_key=(
+                f"country:{self.country_code}:national"
+                if self.country_code == "CN"
+                else None
+            ),
+            quality_policy=SeriesObservationQualityPolicy(
+                registry_coverage=(
+                    "auto" if ontology_source_id else "legacy_only"
                 )
-                if result.content:
-                    parse_result = self.parser.parse(result.content, url=result.url, **_raw_kwargs)
-                elif result.url:
-                    parse_result = self.parser.fetch_and_parse(result.url, **_raw_kwargs)
-                else:
-                    continue
+            ),
+        )
+        if series_result.skipped_registry_not_synced:
+            raise RuntimeError(
+                "Disease source-series registry is not synchronized: "
+                f"{series_result.skipped_registry_not_synced} matched rows "
+                "could not be written"
+            )
+        if series_result.skipped_ambiguous:
+            raise RuntimeError(
+                "Ambiguous disease source-series identities: "
+                f"{series_result.skipped_ambiguous} rows"
+            )
+        return series_result
 
-                if parse_result.raw_content:
-                    await self._save_raw_content(
-                        run_id=crawl_run_id,
-                        raw_dir=raw_dir,
-                        result=result,
-                        raw_html=parse_result.raw_content,
-                        fetched_at=parse_result.parse_date,
-                    )
-                    saved += 1
-            except Exception as e:
-                logger.warning(f"[DataProcessor] Raw page save failed | title={result.title!r} error={e}")
-                continue
-
-        return saved
-    
     async def _normalize_disease_names(
         self,
         df: pd.DataFrame,
@@ -395,66 +401,6 @@ class DataProcessor:
         cleaned = "\n".join(line for line in lines if line)
         return cleaned
 
-    async def _save_raw_content(
-        self,
-        run_id: int,
-        raw_dir: Path,
-        result: CrawlerResult,
-        raw_html: str,
-        fetched_at: datetime,
-    ) -> None:
-        # Extract year from year_month (supports "2025 December", "2025-12", "202512" formats)
-        year_str = "unknown"
-        if result.year_month:
-            import re
-            year_match = re.search(r'(20\d{2})', result.year_month)
-            if year_match:
-                year_str = year_match.group(1)
-        
-        year_dir = raw_dir / year_str
-        year_dir.mkdir(parents=True, exist_ok=True)
-
-        label = result.year_month or result.title or "report"
-        plain_text = self._html_to_text(raw_html)
-        content_hash = hashlib.sha256(plain_text.encode("utf-8")).hexdigest()
-        filename = f"{self._slugify(label)}_{content_hash[:8]}.txt"
-        file_path = year_dir / filename
-
-        # Prepend a metadata header to the plain text
-        metadata_header = f"""# ========================================
-# Raw data file metadata
-# ========================================
-# URL: {result.url or 'N/A'}
-# Title: {result.title or 'N/A'}
-# Report period: {result.year_month or 'N/A'}
-# Data source: {result.metadata.get('source', 'N/A')}
-# Fetched at: {fetched_at.strftime('%Y-%m-%d %H:%M:%S')}
-# Content hash: {content_hash}
-# DOI: {result.metadata.get('doi', 'N/A')}
-# ========================================
-
-"""
-        full_content = metadata_header + plain_text
-        file_path.write_text(full_content, encoding="utf-8")
-
-        async with get_db() as db:
-            db.add(
-                CrawlRawPage(
-                    run_id=run_id,
-                    url=result.url or "",
-                    title=result.title,
-                    content_path=str(file_path),
-                    content_hash=content_hash,
-                    content_type="text/plain",
-                    fetched_at=fetched_at,
-                    source=result.metadata.get("source"),
-                    metadata_={
-                        "year_month": result.year_month,
-                        "has_url": bool(result.url),
-                    },
-                )
-            )
-    
     def _calculate_rates(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Calculate incidence and mortality rates.

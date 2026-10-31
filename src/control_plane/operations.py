@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.control_plane.events import control_plane_events
 from src.control_plane.runtime import runtime_registry
-from src.core.source_scopes import canonicalize_task_source
+from src.core.source_scopes import canonicalize_task_source, validate_iceland_crawl_options
 from src.core.task_manager import task_manager
 from src.domain import Country, Task, TaskStatus, TaskType, TaskWorkbook
 from src.services.automation_service import automation_service
@@ -444,8 +444,33 @@ class TaskOperationsService:
         ).scalar_one_or_none()
         if task is None:
             return None
-        if task.status not in {TaskStatus.FAILED, TaskStatus.CANCELLED}:
+        collection_types = {
+            TaskType.CRAWL_DATA,
+            TaskType.SYNC_LITERATURE,
+            TaskType.REFRESH_SITUATION_SOURCES,
+            TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
+            TaskType.UPDATE_DISEASE_KNOWLEDGE,
+        }
+        completed_collection = task.status == TaskStatus.COMPLETED and task.task_type in collection_types
+        if task.status not in {TaskStatus.FAILED, TaskStatus.CANCELLED} and not completed_collection:
             raise RuntimeError(f"Task status '{_value(task.status)}' cannot be retried")
+
+        if task.task_type == TaskType.CRAWL_DATA and task.country_id is not None:
+            # Match enqueue's country lock so retry and new collection requests
+            # cannot both pass the active-task check before either commits.
+            await self.db.execute(
+                select(Country.id)
+                .where(Country.id == task.country_id)
+                .with_for_update(key_share=True)
+            )
+            active = (await self.db.execute(select(Task.id).where(
+                Task.task_type == TaskType.CRAWL_DATA,
+                Task.country_id == task.country_id,
+                Task.id != task.id,
+                Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.RETRYING]),
+            ).limit(1))).scalar_one_or_none()
+            if active is not None:
+                raise RuntimeError("This country already has a queued or running collection")
 
         metadata = dict(task.metadata_ or {})
         for key in ("cancel_requested", "cancel_requested_at", "cancel_reason"):
@@ -602,16 +627,7 @@ class SourceOperationsService:
         )
         fill_missing = bool(payload.get("fill_missing", False))
         start_year = payload.get("start_year")
-        if normalized_code == "IS" and fill_missing:
-            raise ValueError(
-                "Iceland mixed-grain sources preserve missing periods as unknown; "
-                "fill_missing is not supported"
-            )
-        if normalized_code == "IS" and source in self._iceland_history_scopes and start_year is not None:
-            raise ValueError(
-                "start_year applies only to Iceland current dashboards; reviewed history "
-                "sources always process their complete workbook catalogue"
-            )
+        validate_iceland_crawl_options(country_code=normalized_code, source=source, fill_missing=fill_missing, start_year=start_year)
 
         result = await crawl_task_service.enqueue_crawl_task(
             country_id=country.id,

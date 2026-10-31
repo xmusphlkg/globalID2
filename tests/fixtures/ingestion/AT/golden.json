@@ -1,0 +1,30 @@
+{
+  "rows": [
+    {
+      "AuthoritativeRevision": "true",
+      "Cases": "7",
+      "DatasetStatus": "closed_revisable",
+      "Date": "2026-02-01",
+      "Dimensions": "{\"source_disease_code\": \"masern\", \"source_disease_label\": \"Masern\"}",
+      "DiseaseCode": "__source_native__",
+      "DownloadURL": "https://example.org/ages.csv",
+      "Geography": "Austria",
+      "GeographyKey": "country:AT:national",
+      "IsProvisional": "false",
+      "License": "not_specified_by_AGES",
+      "LicenseReviewStatus": "pending",
+      "Month": "2",
+      "PeriodType": "monthly",
+      "PublicReleaseEnabled": "false",
+      "RawDiseaseLabel": "Masern",
+      "RawSHA256": "edfb78af6b794e9dd44d019001ea89b255a92d1a9be243cd6e4368ad26e2315c",
+      "RetrievedAt": "2026-03-01T00:00:00Z",
+      "RevisionSemantics": "authoritative_revision",
+      "Source": "Austria AGES Radar for Infectious Diseases",
+      "SourceDiseaseCode": "masern",
+      "SourceURL": "https://example.org/issue",
+      "Year": "2026"
+    }
+  ],
+  "observations": []
+}

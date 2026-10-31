@@ -234,6 +234,46 @@ class AISettings(_BaseEnvSettings):
         validation_alias="AI__KNOWLEDGE_AUTOMATION_SOURCE_RETRY_SECONDS",
         description="来源适配器超时或失败后的首次自动重试退避秒数；后续重试指数退避但不会进入人工队列",
     )
+    idle_backlog_enabled: bool = Field(
+        default=True,
+        validation_alias="AI__IDLE_BACKLOG_ENABLED",
+        description="闲时由控制面调度模型处理文献雷达、Situation 等 AI 审核积压",
+    )
+    idle_backlog_interval_seconds: int = Field(
+        default=30,
+        ge=10,
+        le=3600,
+        validation_alias="AI__IDLE_BACKLOG_INTERVAL_SECONDS",
+        description="闲时积压处理的检查间隔；出现故障时以此为基数指数退避",
+    )
+    idle_backlog_rest_seconds: int = Field(
+        default=1800,
+        ge=60,
+        le=86400,
+        validation_alias="AI__IDLE_BACKLOG_REST_SECONDS",
+        description="一轮处理没有进展或队列清空后，该条数据线再次检查前的休息秒数",
+    )
+    idle_backlog_slice_size: int = Field(
+        default=200,
+        ge=10,
+        le=2000,
+        validation_alias="AI__IDLE_BACKLOG_SLICE_SIZE",
+        description="每次切片最多领取的条目数；切片之间会重新检查前台任务",
+    )
+    idle_backlog_workers: int = Field(
+        default=24,
+        ge=1,
+        le=192,
+        validation_alias="AI__IDLE_BACKLOG_WORKERS",
+        description="闲时积压处理同时在飞的模型调用数",
+    )
+    idle_backlog_max_running_ai_tasks: int = Field(
+        default=2,
+        ge=0,
+        le=32,
+        validation_alias="AI__IDLE_BACKLOG_MAX_RUNNING_AI_TASKS",
+        description="正在运行的前台 AI 任务超过该数量时不处理积压；有排队的 AI 任务或发布导出时一律让路",
+    )
     agent_role_models_raw: str = Field(
         default="",
         description="多专家角色模型偏好，格式 role=model1|model2,role2=model3；为空时回退到 model_chain",
@@ -783,10 +823,6 @@ class LiteratureSettings(_BaseEnvSettings):
     autopilot_auto_reject_weak_links: bool = Field(default=True)
     autopilot_auto_exclude_incomplete: bool = Field(default=True)
     autopilot_auto_exclude_preprints: bool = Field(default=True)
-    autopilot_export_on_change: bool = Field(
-        default=True,
-        description="Refresh local public Research Radar artifacts after an automated decision",
-    )
 
     @property
     def ai_enrichment_languages(self) -> list[str]:

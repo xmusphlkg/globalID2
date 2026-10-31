@@ -456,6 +456,12 @@ def get_expected_scopes_for_country(country_code: Optional[str]) -> list[str]:
     code = (country_code or "").strip().upper()
     if not code:
         return []
+    if code.startswith("CN-"):
+        from src.data.crawlers.cn_province_adapters import province_adapter_registry
+        if code in province_adapter_registry():
+            return ["cn_province_datacenter", "cn_province_monthly_report"]
+    if code.startswith("BR-"):
+        return ["sinan_datasus"]
 
     try:
         from src.core.country_library import get_country_bootstrap_config
@@ -711,3 +717,13 @@ def canonical_data_source_label(
     if scope != "all":
         return scope_display_label(scope, country_code=country_code)
     return data_source or "Unknown"
+
+
+def validate_iceland_crawl_options(*, country_code: str, source: str, fill_missing: bool, start_year: int | None) -> None:
+    """Validate source semantics consistently across all enqueue entry points."""
+    country = str(country_code or '').strip().upper()
+    scope = canonicalize_task_source(source, country_code=country)
+    if country == 'IS' and fill_missing:
+        raise ValueError('Iceland mixed-grain sources preserve missing periods as unknown; fill_missing is not supported')
+    if country == 'IS' and scope in {'is_doh_history', 'is_doh_legacy_icd'} and start_year is not None:
+        raise ValueError('start_year applies only to Iceland current dashboards; reviewed history sources always process their complete workbook catalogue')

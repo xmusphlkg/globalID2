@@ -55,6 +55,22 @@ describe("compactTaskLogEntries", () => {
     expect(result.hiddenCount).toBe(2);
   });
 
+  it("keeps the last output chunk when a command fails", () => {
+    const result = compactTaskLogEntries([
+      entry(1, "Publish Downloads Started"),
+      entry(2, "Publish Downloads Output #1"),
+      entry(3, "Publish Downloads Output #2"),
+      entry(4, "Publish Downloads Failed"),
+    ]);
+
+    expect(result.entries.map((item) => item.title)).toEqual([
+      "Publish Downloads Started",
+      "Publish Downloads Output #2",
+      "Publish Downloads Failed",
+    ]);
+    expect(result.hiddenCount).toBe(1);
+  });
+
   it("leaves ordinary workbook entries unchanged", () => {
     const entries = [entry(1, "Release Preflight"), entry(2, "Phase 1/3")];
 

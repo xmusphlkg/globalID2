@@ -19,14 +19,12 @@ from src.services.literature_automation_service import literature_automation_ser
 async def run(
     *,
     dry_run: bool,
-    export: bool,
     batch_size: int | None = None,
     statement_timeout_seconds: int | None = None,
     lock_timeout_seconds: int | None = None,
 ) -> dict:
     return await literature_automation_service.reconcile(
         dry_run=dry_run,
-        export=export,
         batch_size=batch_size,
         statement_timeout_seconds=statement_timeout_seconds,
         lock_timeout_seconds=lock_timeout_seconds,
@@ -46,7 +44,6 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Explicitly evaluate decisions without writing them (the default)",
     )
-    parser.add_argument("--no-export", action="store_true", help="Do not refresh public Research Radar artifacts")
     parser.add_argument("--batch-size", type=int, help="Override the configured reconciliation batch size")
     parser.add_argument(
         "--statement-timeout-seconds",
@@ -75,7 +72,6 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(
         asyncio.run(run(
             dry_run=not args.apply,
-            export=not args.no_export,
             **optional_overrides,
         )),
         ensure_ascii=False,

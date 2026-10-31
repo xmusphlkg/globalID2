@@ -272,6 +272,11 @@ class CanadaCNDSSNationalCrawler(BaseCrawler):
             except (KeyError, TypeError, ValueError) as exc:
                 raise CNDSSContractError("CNDSS raw record has invalid identity") from exc
             if key in records:
+                # The upstream extract repeats some historical null cells.
+                # Only identical source records are safe to coalesce; count,
+                # rate, group, or other metadata differences remain errors.
+                if records[key] == raw:
+                    continue
                 raise CNDSSContractError(f"Duplicate CNDSS annual slot: {key}")
             records[key] = raw
         if set(records) != expected_keys:

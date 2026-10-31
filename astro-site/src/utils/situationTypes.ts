@@ -53,9 +53,31 @@ export interface LocalSeries {
   curveHref: string | null;
 }
 
-export interface MapPoint extends SituationAlertRecord {
+/**
+ * One place on the map page. Labels and dates only: the quote, summaries and
+ * review metadata live on the outbreak timeline fetched when the place is opened.
+ */
+export interface MapMarker {
+  alert_id: string;
+  outbreak_id: string | null;
+  source_id: string;
+  source_label_en?: string | null;
+  source_label_zh?: string | null;
+  disease_id?: string | null;
+  disease_slug?: string | null;
+  disease_label: string;
+  disease_name_en: string;
+  disease_name_zh?: string | null;
+  country_code: string;
+  country_name_en: string;
+  country_name_zh?: string | null;
+  admin_area?: string | null;
+  status: AlertStatus;
+  published_date: string;
   local?: LocalSeries | null;
 }
+
+export type MapPoint = MapMarker;
 
 export interface FacetEntry {
   id: string;
@@ -91,7 +113,7 @@ export interface SituationMapFile {
   as_of: string;
   since_date: string;
   point_count: number;
-  points: SituationAlertRecord[];
+  points: MapMarker[];
   facets: { diseases: FacetEntry[]; countries: FacetEntry[]; sources: FacetEntry[] };
   outbreaks: OutbreakSummary[];
 }

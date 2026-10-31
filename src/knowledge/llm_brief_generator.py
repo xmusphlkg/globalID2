@@ -10,6 +10,7 @@ from typing import Any
 
 from src.ai.agents.base import BaseAgent
 from src.ai.model_center import get_runtime_routes, record_route_runtime_failure
+from src.ai.work_queue import AIWorkFailed, current_parent
 from src.core import get_config, get_logger
 from src.knowledge.brief_generator import DISCLAIMER_EN, DISCLAIMER_ZH
 from src.knowledge.citations import (
@@ -170,6 +171,8 @@ class AIDiseaseBriefGenerator:
             )
             latest_conversation = agent.get_latest_conversation() or {}
         except Exception as exc:
+            if isinstance(exc, AIWorkFailed):
+                raise
             logger.warning(
                 "AI disease brief generation failed for {}/{}: {}",
                 disease.get("disease_id"),
@@ -244,6 +247,8 @@ class AIDiseaseBriefGenerator:
                     parsed = self._parse_json(response)
                     break
                 except Exception as exc:
+                    if isinstance(exc, AIWorkFailed):
+                        raise
                     repair_exc = exc
                     logger.warning(
                         "AI JSON format repair failed for {}/{}: {}",
@@ -381,6 +386,8 @@ class AIDiseaseBriefGenerator:
                     fields=target_sections,
                 )
             except Exception as exc:
+                if isinstance(exc, AIWorkFailed):
+                    raise
                 repair_error = str(exc)
                 logger.warning(
                     "AI citation repair failed for {}/{}: {}",
@@ -533,6 +540,8 @@ class AIDiseaseBriefGenerator:
                     evidence_manifest=evidence_manifest,
                 )
             except Exception as exc:
+                if isinstance(exc, AIWorkFailed):
+                    raise
                 quality_repair_error = str(exc)
                 logger.warning(
                     "AI quality repair failed for {}/{}: {}",
@@ -763,6 +772,8 @@ class AIDiseaseBriefGenerator:
             latest_conversation = agent.get_latest_conversation() or {}
             parsed = self._parse_json(response)
         except Exception as exc:
+            if isinstance(exc, AIWorkFailed):
+                raise
             logger.warning(
                 "AI disease brief translation failed for {}/{}: {}",
                 disease.get("disease_id"),
@@ -1027,22 +1038,25 @@ class AIDiseaseBriefGenerator:
             1,
             int(getattr(agent, "max_tokens", config.knowledge_max_output_tokens)),
         )
-        return await asyncio.wait_for(
-            agent.complete(
-                prompt=prompt,
-                system=system,
-                use_cache=True,
-                preferred_models=preferred_models,
-                max_quota_recovery_rounds=config.knowledge_quota_recovery_rounds,
-                wait_for_model_recovery=config.knowledge_wait_for_model_recovery,
-                model_request_timeout_seconds=self._effective_model_request_timeout_seconds(
-                    output_token_budget=output_token_budget,
-                ),
-                max_attempts_per_model=config.knowledge_model_attempts_per_route,
-                timeout_cooldown_seconds=config.knowledge_timeout_cooldown_seconds,
-                response_format={"type": "json_object"},
+        request = agent.complete(
+            prompt=prompt,
+            system=system,
+            use_cache=True,
+            preferred_models=preferred_models,
+            max_quota_recovery_rounds=config.knowledge_quota_recovery_rounds,
+            wait_for_model_recovery=config.knowledge_wait_for_model_recovery,
+            model_request_timeout_seconds=self._effective_model_request_timeout_seconds(
+                output_token_budget=output_token_budget,
             ),
-            timeout=float(config.knowledge_generation_timeout_seconds),
+            max_attempts_per_model=config.knowledge_model_attempts_per_route,
+            timeout_cooldown_seconds=config.knowledge_timeout_cooldown_seconds,
+            response_format={"type": "json_object"},
+        )
+        if current_parent() is not None:
+            # Queue waiting is unbounded; the provider timeout starts at lease.
+            return await request
+        return await asyncio.wait_for(
+            request, timeout=float(config.knowledge_generation_timeout_seconds),
         )
 
     @staticmethod
@@ -1143,6 +1157,8 @@ class AIDiseaseBriefGenerator:
                 evidence_fragments=fragments,
             )
         except Exception as exc:  # noqa: BLE001 - outage: the brief waits as a draft
+            if isinstance(exc, AIWorkFailed):
+                raise
             logger.warning("Knowledge brief peer review unavailable: {}", exc)
             blocked = {**payload, "status": "draft"}
             blocked["metadata"] = {

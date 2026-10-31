@@ -1,65 +1,55 @@
-#!/usr/bin/env python3
-"""Backfill public_disease_series from the current observation ledger.
+"""Queue an incremental site-release for stored, unpublished disease series.
 
-The load is resumable. A jurisdiction already published at the current
-projection version is skipped unless --force is set.
-
-Examples:
+Usage:
     venv/bin/python scripts/backfill_public_disease_series.py
-    venv/bin/python scripts/backfill_public_disease_series.py --country JP
-    venv/bin/python scripts/backfill_public_disease_series.py --jobs 2 --force
+
+This command queues EXPORT_DATA using committed dirty scopes. --full explicitly
+requests a complete regeneration. The worker performs the same
+preflight, export, build, deploy, and production verification as the publishing
+page, then commits public curves and acknowledges dirty markers. It never
+rewrites the public projection directly. A worker must be running to execute
+the queued release; a queued response does not mean publication has completed.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.generation.public_series_store import refresh_public_disease_series  # noqa: E402
+
+async def enqueue_release(*, full: bool = False) -> dict:
+    from src.core.database import dispose_database
+    from src.services.data_release_service import data_release_service
+
+    try:
+        return await data_release_service.trigger_job(
+            "site-release", manual=True, trigger="public-series-backfill", full=full
+        )
+    finally:
+        await dispose_database()
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--country",
-        action="append",
-        default=[],
-        help="Parent or subdivision code to refresh. Repeat for more than one. Default: every public country.",
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
-        "--jobs",
-        type=int,
-        default=2,
-        help="How many jurisdictions to project at once (default: 2).",
-    )
-    parser.add_argument(
-        "--force",
+        "--full",
         action="store_true",
-        help="Rebuild jurisdictions that are already at the current projection version.",
+        help="Explicitly rebuild all countries instead of using dirty scopes",
     )
-    args = parser.parse_args()
-    summary = asyncio.run(
-        refresh_public_disease_series(
-            args.country or None,
-            jobs=args.jobs,
-            force=args.force,
+    args = parser.parse_args(argv)
+    print(
+        json.dumps(
+            asyncio.run(enqueue_release(full=args.full)), ensure_ascii=False, indent=2
         )
     )
-    print(
-        "Public series backfill: "
-        f"refreshed={summary['refreshed']} skipped={summary['skipped']} "
-        f"failed={len(summary['failed'])} series_rows={summary['series_rows']} "
-        f"elapsed={summary['elapsed_seconds']}s"
-    )
-    for item in summary["failed"]:
-        print(f"FAILED {item['country_code']}: {item.get('error')}", file=sys.stderr)
-    if summary["failed"]:
-        raise SystemExit(1)
 
 
 if __name__ == "__main__":

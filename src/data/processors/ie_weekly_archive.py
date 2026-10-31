@@ -70,9 +70,11 @@ class IEWeeklyArchiveUpdater:
         *,
         source_name: str = DEFAULT_ARCHIVE_SOURCE_NAME,
         output_csv: Path = DEFAULT_ARCHIVE_OUTPUT_CSV,
+        crawler_type=None,
     ) -> None:
         self.source_name = source_name
         self.output_csv = Path(output_csv)
+        self.crawler_type = crawler_type or IrelandHPSCWeeklyArchiveCrawler
 
     def _load_rows(self) -> List[Dict[str, str]]:
         if not self.output_csv.exists():
@@ -136,7 +138,7 @@ class IEWeeklyArchiveUpdater:
             min(int(start_year or DEFAULT_ARCHIVE_START_YEAR), DEFAULT_ARCHIVE_END[0]),
         )
         actual_raw_dir = Path(raw_dir) if raw_dir else ROOT / "data/raw/ie/weekly_archive"
-        crawler = IrelandHPSCWeeklyArchiveCrawler(save_raw=save_raw, raw_dir=actual_raw_dir)
+        crawler = self.crawler_type(save_raw=save_raw, raw_dir=actual_raw_dir)
         try:
             catalogue = tuple(
                 report for report in crawler.discover_catalogue()

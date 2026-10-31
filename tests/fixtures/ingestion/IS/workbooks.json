@@ -1,0 +1,26 @@
+[
+  {
+    "key": "annual",
+    "source_kind": "registry_annual",
+    "filename": "annual.xlsx",
+    "url": "https://example.org/annual.xlsx",
+    "disease_key": "",
+    "validation_only": false
+  },
+  {
+    "key": "monthly",
+    "source_kind": "registry_disease_monthly",
+    "filename": "monthly.xlsx",
+    "url": "https://example.org/monthly.xlsx",
+    "disease_key": "hepatitis_c",
+    "validation_only": false
+  },
+  {
+    "key": "legacy",
+    "source_kind": "legacy_icd_monthly",
+    "filename": "legacy.xlsx",
+    "url": "https://example.org/legacy.xlsx",
+    "disease_key": "",
+    "validation_only": false
+  }
+]

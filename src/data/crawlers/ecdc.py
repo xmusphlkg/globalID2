@@ -178,23 +178,21 @@ class ECDCAtlasCrawler(BaseCrawler):
         return payload
 
     def _topic_rows(self, contract: ECDCTopicContract, topic_id: int, *, start_year: int) -> tuple[list[dict], dict]:
+        payloads = []
+        for population in contract.populations:
+            measures = self._json("GetIndicatorMeasuresForHealthTopicDatasetAndPopulation", datasetId=DATASET_ID, healthtopicId=topic_id, measurePopulation=population)
+            measure = _annual_count_measure(measures.get("Measures") or [])
+            results = self._json("GetMeasureResultsForTimeUnitAndGeoRegion", measureId=int(measure["Id"]), timeUnit="Y", geoCode=self.source_geo_code)
+            payloads.append((population, measures, results))
+        return self.parse_topic_payloads(contract, topic_id, payloads, start_year=start_year)
+
+    def parse_topic_payloads(self, contract: ECDCTopicContract, topic_id: int, payloads, *, start_year: int) -> tuple[list[dict], dict]:
+        """Normalize captured topic responses without performing network I/O."""
         by_population: list[dict[int, float]] = []
         measure_meta: list[dict] = []
         raw_results: list[dict] = []
-        for population in contract.populations:
-            measures_payload = self._json(
-                "GetIndicatorMeasuresForHealthTopicDatasetAndPopulation",
-                datasetId=DATASET_ID,
-                healthtopicId=topic_id,
-                measurePopulation=population,
-            )
+        for population, measures_payload, result_payload in payloads:
             measure = _annual_count_measure(measures_payload.get("Measures") or [])
-            result_payload = self._json(
-                "GetMeasureResultsForTimeUnitAndGeoRegion",
-                measureId=int(measure["Id"]),
-                timeUnit="Y",
-                geoCode=self.source_geo_code,
-            )
             values: dict[int, float] = {}
             for item in result_payload.get("MeasureResults") or []:
                 if item.get("GeoCountry") != self.source_geo_code or item.get("YValue") is None:

@@ -156,9 +156,7 @@ class ISMultiFrequencyUpdater:
         self.refresh_recent_months = int(
             crawler_cfg.get("refresh_recent_months") or self.refresh_recent_months
         )
-        self.refresh_recent_weeks = int(
-            crawler_cfg.get("refresh_recent_weeks") or 52
-        )
+        self.refresh_recent_weeks = int(crawler_cfg.get("refresh_recent_weeks") or 52)
 
     @staticmethod
     def _scope_filter(
@@ -176,7 +174,8 @@ class ISMultiFrequencyUpdater:
         return [
             row
             for row in rows
-            if (parsed := _parse_date(row)) is not None and parsed.year >= int(start_year)
+            if (parsed := _parse_date(row)) is not None
+            and parsed.year >= int(start_year)
         ]
 
     def refresh_source(
@@ -210,7 +209,9 @@ class ISMultiFrequencyUpdater:
         if self.output_csv.exists():
             try:
                 prior_rows = self._load_rows(self.output_csv)
-                logs.append(f"[cache] loaded {len(prior_rows)} rows from current snapshot")
+                logs.append(
+                    f"[cache] loaded {len(prior_rows)} rows from current snapshot"
+                )
             except Exception as exc:
                 logs.append(
                     f"[cache] unable to read current snapshot: {type(exc).__name__}: {exc}"
@@ -270,7 +271,9 @@ class ISMultiFrequencyUpdater:
 
         selected_rows = self._filter_start_year(selected_rows, start_year)
         if not selected_rows:
-            raise RuntimeError("No Iceland current rows remained after start-year filtering")
+            raise RuntimeError(
+                "No Iceland current rows remained after start-year filtering"
+            )
 
         if not source_row_counts:
             for scope in scopes:
@@ -290,65 +293,63 @@ class ISMultiFrequencyUpdater:
     def _load_rows(self, csv_path: Path) -> List[Dict[str, str]]:
         if not csv_path.exists():
             raise FileNotFoundError(f"Iceland crawler output not found: {csv_path}")
-        rows: List[Dict[str, str]] = []
         with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
-            for source_row in csv.DictReader(handle):
-                report_date = _parse_date(source_row)
-                cases = _parse_int(source_row.get("Cases"))
-                label = _norm_text(
-                    source_row.get("Disease") or source_row.get("RawDiseaseLabel")
-                )
-                disease_code = _norm_text(
-                    source_row.get("DiseaseCode")
-                    or source_row.get("SourceSeriesCode")
-                )
-                scope = _norm_text(source_row.get("SourceScope"))
-                if (
-                    report_date is None
-                    or cases is None
-                    or not label
-                    or not disease_code
-                    or scope not in SUPPORTED_SOURCE_SCOPES
-                ):
-                    continue
-                row = {
-                    key: _norm_text(value)
-                    for key, value in source_row.items()
-                    if key not in {None, ""}
-                }
-                row.update(
-                    {
-                        "Date": report_date.isoformat(),
-                        "RawDiseaseLabel": label,
-                        "DiseaseCode": disease_code,
-                        "SourceSeriesCode": _norm_text(
-                            source_row.get("SourceSeriesCode")
-                        )
-                        or disease_code,
-                        "Cases": str(cases),
-                        "SourceScope": scope,
-                        "SourceId": _norm_text(source_row.get("SourceId"))
-                        or SOURCE_IDS[scope],
-                        "Source": _norm_text(source_row.get("Source"))
-                        or SOURCE_NAMES[scope],
-                        "GeographyKey": _norm_text(source_row.get("GeographyKey"))
-                        or "country:IS:national",
-                        "Dimensions": _norm_text(source_row.get("Dimensions")) or "{}",
-                        "Measure": _norm_text(source_row.get("Measure"))
-                        or "case_notifications",
-                        "Unit": _norm_text(source_row.get("Unit")) or "count",
-                        "AuthoritativeRevision": _norm_text(
-                            source_row.get("AuthoritativeRevision")
-                        )
-                        or "true",
-                    }
-                )
-                rows.append(row)
-        rows.sort(
-            key=lambda row: (
-                row["Date"], row["SourceScope"], row["DiseaseCode"]
+            return self.normalize_current_rows(list(csv.DictReader(handle)))
+
+    @staticmethod
+    def normalize_current_rows(source_rows) -> List[Dict[str, str]]:
+        """Apply the existing source-row contract to an offline iterable."""
+        rows = []
+        for source_row in source_rows:
+            report_date = _parse_date(source_row)
+            cases = _parse_int(source_row.get("Cases"))
+            label = _norm_text(
+                source_row.get("Disease") or source_row.get("RawDiseaseLabel")
             )
-        )
+            disease_code = _norm_text(
+                source_row.get("DiseaseCode") or source_row.get("SourceSeriesCode")
+            )
+            scope = _norm_text(source_row.get("SourceScope"))
+            if (
+                report_date is None
+                or cases is None
+                or not label
+                or not disease_code
+                or scope not in SUPPORTED_SOURCE_SCOPES
+            ):
+                continue
+            row = {
+                key: _norm_text(value)
+                for key, value in source_row.items()
+                if key not in {None, ""}
+            }
+            row.update(
+                {
+                    "Date": report_date.isoformat(),
+                    "RawDiseaseLabel": label,
+                    "DiseaseCode": disease_code,
+                    "SourceSeriesCode": _norm_text(source_row.get("SourceSeriesCode"))
+                    or disease_code,
+                    "Cases": str(cases),
+                    "SourceScope": scope,
+                    "SourceId": _norm_text(source_row.get("SourceId"))
+                    or SOURCE_IDS[scope],
+                    "Source": _norm_text(source_row.get("Source"))
+                    or SOURCE_NAMES[scope],
+                    "GeographyKey": _norm_text(source_row.get("GeographyKey"))
+                    or "country:IS:national",
+                    "Dimensions": _norm_text(source_row.get("Dimensions")) or "{}",
+                    "Measure": _norm_text(source_row.get("Measure"))
+                    or "case_notifications",
+                    "Unit": _norm_text(source_row.get("Unit")) or "count",
+                    "AuthoritativeRevision": _norm_text(
+                        source_row.get("AuthoritativeRevision")
+                    )
+                    or "true",
+                }
+            )
+            rows.append(row)
+        rows.sort(key=lambda row: (row["Date"], row["SourceScope"], row["DiseaseCode"]))
         return rows
 
     @staticmethod

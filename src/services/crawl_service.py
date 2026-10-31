@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import os
-import time
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -96,7 +95,7 @@ class CrawlService:
         )
     for _subdivision_code, _subdivision in SUBDIVISION_REGISTRY.items():
         _parent_code = str(_subdivision.get("parent_country_code") or "").upper()
-        if _parent_code not in {"JP", "SE", "DE", "US", "CH", "NZ"}:
+        if _parent_code not in {"JP", "SE", "DE", "US", "CH", "NZ", "BR"}:
             continue
         _parent_pipeline = _PIPELINES.get(_parent_code)
         if _parent_pipeline is not None:
@@ -105,6 +104,12 @@ class CrawlService:
                 if _parent_code == "NZ"
                 else _parent_pipeline
             )
+    from src.data.crawlers.cn_province_adapters import province_adapter_registry as _province_registry
+    for _province_code in _province_registry():
+        _PIPELINES[_province_code] = _PipelineSpec("_execute_cn_province", "CNProvinceUpdater")
+    from src.data.processors.br_subdivisions import STATE_CODES as _br_states
+    for _state in _br_states.values():
+        _PIPELINES[f"BR-{_state}"] = _PipelineSpec("_execute_br_monthly", "BRMonthlyUpdater")
     _SERIES_SOURCE_IDS: Dict[str, str | Dict[str, str]] = {
         "US": {
             "US CDC NNDSS": "SRC_US_NNDSS",
@@ -167,6 +172,9 @@ class CrawlService:
 
     @staticmethod
     def _make_updater(updater_name: str, country_code: Optional[str] = None):
+        if updater_name == "CNProvinceUpdater":
+            from src.data.processors.cn_provinces import CNProvinceUpdater
+            return CNProvinceUpdater(country_code=str(country_code).upper())
         from src.data.processors import (
             AUMonthlyUpdater,
             ATMonthlyUpdater,
@@ -219,11 +227,14 @@ class CrawlService:
             return updater_type(country_code or "FR")
         if updater_name == "AUMonthlyUpdater" and country_code:
             return updater_type(country_code=country_code)
+        if updater_name == "BRMonthlyUpdater" and str(country_code or "").startswith("BR-"):
+            from pathlib import Path
+            return updater_type(country_code=country_code, output_csv=Path("data/processed/br/subdivisions") / f"{country_code}.csv")
         subdivision = SUBDIVISION_REGISTRY.get(str(country_code or "").upper())
         if subdivision and updater_name in {
             "JPWeeklyUpdater", "SEMonthlyUpdater", "DEWeeklyUpdater",
             "USWeeklyUpdater", "CHMonthlyUpdater", "NZMonthlyUpdater",
-            "NZDHBAnnualUpdater",
+            "NZDHBAnnualUpdater", "BRMonthlyUpdater",
         }:
             return updater_type(country_code=str(country_code).upper())
         return updater_type()
@@ -533,6 +544,9 @@ class CrawlService:
                 f"Available: {self.supported_country_text()}"
             )
 
+        implementation = (task.input_data or {}).get("pipeline_impl")
+        if implementation not in {None, "v2"}:
+            raise ValueError(f"Unsupported pipeline implementation: {implementation}")
         if pipeline.handler_name != "_execute_cn_cdc":
             updater = self._make_updater(
                 pipeline.updater_name or "", normalized_country
@@ -544,7 +558,7 @@ class CrawlService:
                 include_current_month=include_current_month,
                 revision_window_months=revision_window_months,
             )
-            if normalized_country == "BR":
+            if normalized_country == "BR" or normalized_country.startswith("BR-"):
                 start_year = (
                     task.input_data.get("start_year")
                     if isinstance(task.input_data, dict)
@@ -581,66 +595,7 @@ class CrawlService:
                 save_raw=save_raw,
                 fill_missing=fill_missing,
             )
-        if process:
-            await self._publish_country_series(task, normalized_country)
         return result
-
-    async def _publish_country_series(self, task: Task, country_code: str) -> None:
-        """Rewrite published curves after observations have been stored.
-
-        A publish failure is recorded on the crawl task and does not discard
-        the observations. Re-run scripts/backfill_public_disease_series.py
-        for that country to repair the read model.
-        """
-
-        from src.generation.public_series_store import refresh_public_disease_series
-
-        started = time.perf_counter()
-        try:
-            summary = await refresh_public_disease_series(
-                [country_code],
-                jobs=2,
-                force=True,
-            )
-        except Exception as exc:
-            logger.exception("Public series publish failed for {}", country_code)
-            await self._record_publish_note(
-                task,
-                success=False,
-                content=f"{type(exc).__name__}: {exc}",
-            )
-            return
-        failed = summary.get("failed") or []
-        content = (
-            f"Published {summary['refreshed']} jurisdictions "
-            f"({summary['series_rows']} series, skipped {summary['skipped']}) "
-            f"in {time.perf_counter() - started:.1f}s."
-        )
-        if failed:
-            content += " Failed: " + ", ".join(
-                f"{item['country_code']} ({item.get('error')})" for item in failed
-            )
-            logger.error(content)
-        else:
-            logger.info(content)
-        await self._record_publish_note(task, success=not failed, content=content)
-
-    async def _record_publish_note(self, task: Task, *, success: bool, content: str) -> None:
-        try:
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="error" if not success else "log",
-                title="Public series publish",
-                content=content,
-                success=success,
-                error_message=None if success else content,
-            )
-        except Exception as exc:
-            logger.warning(
-                "Failed to record public series publish note for {}: {}",
-                getattr(task, "task_uuid", ""),
-                exc,
-            )
 
     async def fail_current_run(
         self,
@@ -763,6 +718,21 @@ class CrawlService:
         if hasattr(updater, "refresh_recent_weeks"):
             updater.refresh_recent_weeks = effective_window
 
+    async def _execute_cn_province(self, *, task, source, force, process, save_raw, fill_missing, updater):
+        from src.services.ingestion.countries import cn_province
+        from src.services.ingestion.runner import run_surveillance
+        options = {
+            "country_code": updater.country_code,
+            "force": bool(force or fill_missing),
+            "start_year": (task.input_data or {}).get("start_year"),
+            "recent_months": updater.refresh_recent_months,
+        }
+        return await run_surveillance(
+            self, task=task, updater=updater, connector=cn_province,
+            source=source, force=force, process=process,
+            strategy=cn_province.ProvinceCommitStrategy(), connector_options=options,
+        )
+
     async def _execute_cn_cdc(
         self,
         *,
@@ -774,28 +744,11 @@ class CrawlService:
         save_raw: bool,
         fill_missing: bool,
     ) -> CrawlResult:
-        """Compatibility entry point for the China CDC pipeline."""
-        from src.data.crawlers import ChinaCDCCrawler
-        from src.data.processors import DataProcessor
-        from src.services.crawl_pipelines.cn import execute_cn_pipeline
+        """Run the source through durable collection stages."""
+        from src.services.ingestion.countries import cn
+        from src.services.ingestion.runner import run_surveillance
+        return await cn.run(self, task=task, source=source, force=force, process=process, fill_missing=fill_missing)
 
-        return await execute_cn_pipeline(
-            self,
-            task=task,
-            country_code=country_code,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
-            get_database=get_database,
-            task_manager=task_manager,
-            crawl_run_type=CrawlRun,
-            result_type=CrawlResult,
-            crawler_type=ChinaCDCCrawler,
-            processor_type=DataProcessor,
-            logger=logger,
-        )
 
     async def _execute_us_weekly(
         self,
@@ -808,24 +761,18 @@ class CrawlService:
         fill_missing: bool,
         updater,
     ) -> CrawlResult:
-        """Compatibility entry point for the US CDC pipeline."""
-        from src.services.crawl_pipelines.us import execute_us_pipeline
+        """Run the source through durable collection stages."""
+        from src.services.ingestion.countries import us
+        from src.services.ingestion.runner import run_surveillance
+        async with get_database() as db:
+            options = await us.plan_collection(
+                db, country_code=updater.country_code, source=source,
+                force=force, fill_missing=fill_missing,
+            )
+        return await run_surveillance(self, task=task, updater=updater, connector=us, source=source, force=force, process=process, connector_options={
+            **options, "subdivision": updater.country_code != "US", "task_uuid": task.task_uuid,
+        })
 
-        return await execute_us_pipeline(
-            self,
-            task=task,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
-            updater=updater,
-            get_database=get_database,
-            task_manager=task_manager,
-            crawl_run_type=CrawlRun,
-            result_type=CrawlResult,
-            logger=logger,
-        )
 
     async def _execute_jp_weekly(
         self,
@@ -838,118 +785,42 @@ class CrawlService:
         fill_missing: bool,
         updater,
     ) -> CrawlResult:
-        """Compatibility entry point for the Japan NIID pipeline."""
-        from src.services.crawl_pipelines.jp import execute_jp_pipeline
+        """Run the source through durable collection stages."""
+        from src.services.ingestion.countries import jp
+        from src.services.ingestion.runner import run_surveillance
+        return await run_surveillance(self, task=task, updater=updater, connector=jp, source=source, force=force, process=process, connector_options={"output_csv": updater.output_csv, "force": force, "fill_missing": fill_missing})
 
-        return await execute_jp_pipeline(
-            self,
-            task=task,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
-            updater=updater,
-            get_database=get_database,
-            task_manager=task_manager,
-            crawl_run_type=CrawlRun,
-            result_type=CrawlResult,
-            logger=logger,
-        )
 
     async def _execute_configured_monthly(self, country_code: str, **kwargs) -> CrawlResult:
-        """Delegate a monthly country pipeline while preserving service hooks."""
-        from src.services.crawl_pipelines.monthly import CONFIGS, execute_monthly_pipeline
+        """Dispatch explicit monthly source contracts to the three-stage runner."""
+        from importlib import import_module
+        from src.services.crawl_pipelines.monthly import CONFIGS, _months_to_fetch
+        from src.services.ingestion.runner import run_surveillance
 
-        updater = kwargs.get("updater")
-        target_code = str(getattr(updater, "country_code", country_code) or country_code).upper()
-        pipeline_config = CONFIGS[country_code]
-        if target_code != pipeline_config.country_code:
-            pipeline_config = replace(pipeline_config, country_code=target_code)
-        return await execute_monthly_pipeline(
-            self,
-            config=pipeline_config,
-            get_database=get_database,
-            task_manager=task_manager,
-            crawl_run_type=CrawlRun,
-            result_type=CrawlResult,
-            logger=logger,
-            **kwargs,
-        )
+        modules = {"AU": "au", "NZ": "nz", "TW": "tw", "HK": "hk", "FI": "fi", "CA-ON": "ca_on", "SE": "se", "AT": "at"}
+        if country_code not in modules:
+            raise ValueError(f"No staged monthly contract for {country_code}")
+        config = CONFIGS[country_code]
+        if kwargs["fill_missing"] and not config.supports_fill_missing:
+            raise ValueError(f"{country_code} publishes a complete snapshot; fill_missing is not supported")
+        updater, task = kwargs["updater"], kwargs["task"]
+        months = await _months_to_fetch(config, updater, fill_missing=kwargs["fill_missing"], force=kwargs["force"], get_database=get_database)
+        options = {"months": months, "output_csv": updater.output_csv}
+        if country_code == "AU":
+            options.update(country_code=updater.country_code, include_current_month=updater.include_current_month, refresh_recent_months=updater.refresh_recent_months)
+        elif country_code == "AT":
+            options.update(force=kwargs["force"], refresh_recent_months=updater.refresh_recent_months)
+        elif country_code == "FI":
+            options.update(include_current_month=updater.include_current_month, refresh_recent_months=updater.refresh_recent_months, backfill_history=bool((task.input_data or {}).get("backfill_history")))
+        elif country_code == "SE":
+            options.update(country_code=updater.country_code, include_current_month=updater.include_current_month, force=kwargs["force"], refresh_recent_months=updater.refresh_recent_months)
+        elif country_code == "CA-ON":
+            options.update(force=kwargs["force"], **updater.pipeline_refresh_kwargs(task))
+        connector = import_module("src.services.ingestion.countries." + modules[country_code])
+        return await run_surveillance(self, task=task, updater=updater, connector=connector, source=kwargs["source"], force=kwargs["force"], process=kwargs["process"], connector_options=options)
 
-    async def _execute_au_monthly(
-        self,
-        *,
-        task: Task,
-        source: str,
-        force: bool,
-        process: bool,
-        save_raw: bool,
-        fill_missing: bool,
-        updater,
-    ) -> CrawlResult:
-        """Compatibility entry point for the Australia monthly pipeline."""
-        from src.services.crawl_pipelines.monthly import CONFIGS
-
-        config = CONFIGS["AU"]
-        updater_country = str(getattr(updater, "country_code", "AU") or "AU").upper()
-        if updater_country != "AU":
-            config = replace(
-                config,
-                country_code=updater_country,
-                raw_dir_name=f"au/subdivisions/{updater_country.lower()}",
-                fetch_description=(
-                    "Launching Playwright to capture Power BI token, then fetching "
-                    f"NINDSS state/territory data for {updater_country}..."
-                ),
-                upsert_description=(
-                    "AU state/territory data is dynamically revised"
-                ),
-                finalizing_description=(
-                    f"Finalizing {updater_country} monthly update and crawl run summary..."
-                ),
-                process_disabled_summary=(
-                    f"Process disabled, refreshed {updater_country} source only."
-                ),
-                imported_summary=lambda count, months, code=updater_country: (
-                    f"{code} NINDSS data upserted: {count} rows across "
-                    f"{months} month(s) updated in database."
-                ),
-                no_rows_summary=(
-                    f"{updater_country} source refreshed; no rows matched disease "
-                    "mapping (check AU mapping config)."
-                ),
-            )
-
-            from src.services.crawl_pipelines.monthly import execute_monthly_pipeline
-
-            return await execute_monthly_pipeline(
-                self,
-                config=config,
-                task=task,
-                source=source,
-                force=force,
-                process=process,
-                save_raw=save_raw,
-                fill_missing=fill_missing,
-                updater=updater,
-                get_database=get_database,
-                task_manager=task_manager,
-                crawl_run_type=CrawlRun,
-                result_type=CrawlResult,
-                logger=logger,
-            )
-
-        return await self._execute_configured_monthly(
-            "AU",
-            task=task,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
-            updater=updater,
-        )
+    async def _execute_au_monthly(self, **kwargs) -> CrawlResult:
+        return await self._execute_configured_monthly("AU", **kwargs)
 
     async def _execute_nz_monthly(
         self,
@@ -962,7 +833,7 @@ class CrawlService:
         fill_missing: bool,
         updater,
     ) -> CrawlResult:
-        """Compatibility entry point for the New Zealand monthly pipeline."""
+        """Run the New Zealand monthly pipeline."""
         return await self._execute_configured_monthly(
             "NZ",
             task=task,
@@ -985,24 +856,11 @@ class CrawlService:
         fill_missing: bool,
         updater,
     ) -> CrawlResult:
-        """Run PHF Science's annual DHB series for one registered NZ region."""
-        from src.services.crawl_pipelines.nz_dhb import execute_nz_dhb_pipeline
+        """Run independent annual DHB observations through durable stages."""
+        from src.services.ingestion.countries import nz_dhb
+        from src.services.ingestion.runner import run_surveillance
+        return await run_surveillance(self, task=task, updater=updater, connector=nz_dhb, source=source, force=force, process=process, connector_options={"country_code": updater.country_code, "output_csv": updater.output_csv})
 
-        return await execute_nz_dhb_pipeline(
-            self,
-            task=task,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
-            updater=updater,
-            get_database=get_database,
-            task_manager=task_manager,
-            crawl_run_type=CrawlRun,
-            result_type=CrawlResult,
-            logger=logger,
-        )
 
     async def _execute_tw_monthly(
         self,
@@ -1015,7 +873,7 @@ class CrawlService:
         fill_missing: bool,
         updater,
     ) -> CrawlResult:
-        """Compatibility entry point for the Taiwan, China monthly pipeline."""
+        """Run the Taiwan, China monthly pipeline."""
         return await self._execute_configured_monthly(
             "TW",
             task=task,
@@ -1038,7 +896,7 @@ class CrawlService:
         fill_missing: bool,
         updater,
     ) -> CrawlResult:
-        """Compatibility entry point for the Hong Kong monthly pipeline."""
+        """Run the Hong Kong monthly pipeline."""
         return await self._execute_configured_monthly(
             "HK",
             task=task,
@@ -1213,36 +1071,62 @@ class CrawlService:
         self, *, task: Task, source: str, force: bool, process: bool,
         save_raw: bool, fill_missing: bool, updater,
     ) -> CrawlResult:
-        from src.services.crawl_pipelines.de import execute_de_pipeline
-        return await execute_de_pipeline(
-            self, task=task, source=source, force=force, process=process,
-            save_raw=save_raw, fill_missing=fill_missing, updater=updater,
-            get_database=get_database, task_manager=task_manager, crawl_run_type=CrawlRun,
-            result_type=CrawlResult, logger=logger,
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.countries import de
+        today = datetime.now(timezone.utc).date()
+        raw_start = (task.input_data or {}).get("start_year")
+        try:
+            start_year = max(updater.full_history_start_year, min(today.year, int(raw_start or updater.full_history_start_year)))
+        except (TypeError, ValueError):
+            start_year = updater.full_history_start_year
+        if force:
+            weeks = updater.history_weeks(today=today, start_year=start_year)
+        elif fill_missing:
+            async with get_database() as db:
+                existing = await updater.get_db_week_dates(db)
+            weeks = sorted(set(updater.history_weeks(today=today, start_year=start_year)).difference(existing) | set(updater._recent_weeks(today)))
+        else:
+            weeks = updater._recent_weeks(today)
+        return await run_surveillance(
+            self, task=task, updater=updater, connector=de, source=source,
+            force=force, process=process,
+            connector_options={"country_code": updater.country_code, "weeks": weeks, "force": force, "export_url_template": updater.export_url_template, "history_csv": updater.output_csv},
         )
 
     async def _execute_sg_weekly(
         self, *, task: Task, source: str, force: bool, process: bool,
         save_raw: bool, fill_missing: bool, updater,
     ) -> CrawlResult:
-        from src.services.crawl_pipelines.sg import execute_sg_pipeline
-        return await execute_sg_pipeline(
-            self, task=task, source=source, force=force, process=process,
-            save_raw=save_raw, fill_missing=fill_missing, updater=updater,
-            get_database=get_database, task_manager=task_manager,
-            crawl_run_type=CrawlRun, result_type=CrawlResult, logger=logger,
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.countries import sg
+        raw_start = (task.input_data or {}).get("start_year")
+        try:
+            start_year = max(updater.full_history_start_year, min(datetime.now(timezone.utc).year, int(raw_start or updater.full_history_start_year)))
+        except (TypeError, ValueError):
+            start_year = updater.full_history_start_year
+        return await run_surveillance(
+            self, task=task, updater=updater, connector=sg, source=source,
+            force=force, process=process,
+            connector_options={"force": force, "fill_missing": fill_missing, "start_year": start_year, "history_csv": updater.output_csv},
         )
 
     async def _execute_ecdc_annual(
         self, *, task: Task, source: str, force: bool, process: bool,
         save_raw: bool, fill_missing: bool, updater,
     ) -> CrawlResult:
-        from src.services.crawl_pipelines.ecdc import execute_ecdc_pipeline
-        return await execute_ecdc_pipeline(
-            self, task=task, source=source, force=force, process=process,
-            save_raw=save_raw, fill_missing=fill_missing, updater=updater,
-            get_database=get_database, task_manager=task_manager,
-            crawl_run_type=CrawlRun, result_type=CrawlResult, logger=logger,
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.countries import ecdc
+        from src.services.ingestion.strategies import EcdcWindowCommitStrategy
+        raw_start = (task.input_data or {}).get("start_year")
+        try:
+            start_year = max(updater.full_history_start_year, int(raw_start or updater.full_history_start_year))
+        except (TypeError, ValueError):
+            start_year = updater.full_history_start_year
+        return await run_surveillance(
+            self, task=task, updater=updater, connector=ecdc, source=source,
+            force=force, process=process, strategy=EcdcWindowCommitStrategy(),
+            strategy_options={"start_year": start_year},
+            connector_options={"country_code": updater.country_code, "start_year": start_year, "history_csv": updater.output_csv},
         )
 
     async def _execute_ca_on_monthly(
@@ -1280,22 +1164,18 @@ class CrawlService:
         updater,
     ) -> CrawlResult:
         """Run the national Canadian CNDSS annual authoritative snapshot."""
-        from src.services.crawl_pipelines.ca_national import execute_ca_national_pipeline
-
-        return await execute_ca_national_pipeline(
-            self,
-            task=task,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
-            updater=updater,
-            get_database=get_database,
-            task_manager=task_manager,
-            crawl_run_type=CrawlRun,
-            result_type=CrawlResult,
-            logger=logger,
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.countries import ca_national
+        from src.services.ingestion.strategies import CanadaCndssWindowCommitStrategy
+        raw_start = (task.input_data or {}).get("start_year")
+        try:
+            start_year = max(updater.full_history_start_year, int(raw_start or updater.full_history_start_year))
+        except (TypeError, ValueError):
+            start_year = updater.full_history_start_year
+        return await run_surveillance(
+            self, task=task, updater=updater, connector=ca_national, source=source,
+            force=force, process=process, strategy=CanadaCndssWindowCommitStrategy(),
+            strategy_options={"start_year": start_year}, connector_options={"start_year": start_year},
         )
 
     async def _execute_br_monthly(
@@ -1310,48 +1190,18 @@ class CrawlService:
         start_year: Optional[int] = None,
         updater,
     ) -> CrawlResult:
-        """Compatibility entry point for the Brazil SINAN pipeline."""
-        from src.data.crawlers import BrazilSINANCrawler
-        from src.services.crawl_pipelines.br import execute_br_pipeline
+        """Run source collection, offline organization and atomic commit."""
+        from src.services.ingestion.countries import br
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.planning import history_start_year, plan_months
+        boundary = history_start_year(task, updater, start_year)
+        months = await plan_months(task, updater, force=force, fill_missing=fill_missing, start_year=boundary)
+        months = updater._resolve_requested_months(months)
+        options = {"months": months, "history_csv": updater.output_csv, "start_year": boundary, "country_code": updater.country_code}
+        return await run_surveillance(self, task=task, updater=updater, connector=br, source=source, force=force, process=process, connector_options=options)
 
-        return await execute_br_pipeline(
-            self,
-            task=task,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
-            start_year=start_year,
-            updater=updater,
-            get_database=get_database,
-            task_manager=task_manager,
-            crawl_run_type=CrawlRun,
-            result_type=CrawlResult,
-            crawler_type=BrazilSINANCrawler,
-            logger=logger,
-        )
 
-    @staticmethod
-    def _chunk_months(
-        values: List[Tuple[int, int]],
-        chunk_size: int,
-    ) -> List[List[Tuple[int, int]]]:
-        """Compatibility entry point for Brazil's batch planner."""
-        from src.services.crawl_pipelines.br import chunk_months
 
-        return chunk_months(values, chunk_size)
-
-    @staticmethod
-    def _br_history_start_year(
-        task: Task,
-        updater,
-        default_start_year: Optional[int] = None,
-    ) -> int:
-        """Compatibility entry point for Brazil's history boundary."""
-        from src.services.crawl_pipelines.br import history_start_year
-
-        return history_start_year(task, updater, default_start_year)
 
     async def _execute_kr_monthly(
         self,
@@ -1364,31 +1214,16 @@ class CrawlService:
         fill_missing: bool,
         updater,
     ) -> CrawlResult:
-        """Compatibility entry point for the Korea KDCA pipeline."""
-        from src.services.crawl_pipelines.kr import execute_kr_pipeline
+        """Run source collection, offline organization and atomic commit."""
+        from src.services.ingestion.countries import kr
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.planning import history_start_year, plan_months
+        boundary = history_start_year(task, updater)
+        months = await plan_months(task, updater, force=force, fill_missing=fill_missing, start_year=boundary)
+        months = updater._resolve_requested_months(months)
+        options = {"months": months, "history_csv": updater.output_csv, "source_file": (task.input_data or {}).get("source_file"), "source_dir": (task.input_data or {}).get("source_dir")}
+        return await run_surveillance(self, task=task, updater=updater, connector=kr, source=source, force=force, process=process, connector_options=options)
 
-        return await execute_kr_pipeline(
-            self,
-            task=task,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
-            updater=updater,
-            get_database=get_database,
-            task_manager=task_manager,
-            crawl_run_type=CrawlRun,
-            result_type=CrawlResult,
-            logger=logger,
-        )
-
-    @staticmethod
-    def _kr_history_start_year(task: Task, updater) -> int:
-        """Compatibility entry point for Korea's history boundary."""
-        from src.services.crawl_pipelines.kr import history_start_year
-
-        return history_start_year(task, updater)
 
 
     async def _execute_ch_monthly(
@@ -1402,31 +1237,16 @@ class CrawlService:
         fill_missing: bool,
         updater,
     ) -> CrawlResult:
-        """Compatibility entry point for the Switzerland FOPH pipeline."""
-        from src.services.crawl_pipelines.ch import execute_ch_pipeline
+        """Run source collection, offline organization and atomic commit."""
+        from src.services.ingestion.countries import ch
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.planning import history_start_year, plan_months
+        boundary = history_start_year(task, updater)
+        months = await plan_months(task, updater, force=False, fill_missing=fill_missing and not force, start_year=boundary)
+        options = {"country_code": updater.country_code, "history_csv": updater.output_csv, "months": months, "force": force, "start_year": boundary if force else None}
+        return await run_surveillance(self, task=task, updater=updater, connector=ch, source=source, force=force, process=process, connector_options=options)
 
-        return await execute_ch_pipeline(
-            self,
-            task=task,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
-            updater=updater,
-            get_database=get_database,
-            task_manager=task_manager,
-            crawl_run_type=CrawlRun,
-            result_type=CrawlResult,
-            logger=logger,
-        )
 
-    @staticmethod
-    def _ch_history_start_year(task: Task, updater) -> int:
-        """Compatibility entry point for Switzerland's history boundary."""
-        from src.services.crawl_pipelines.ch import history_start_year
-
-        return history_start_year(task, updater)
 
     async def _execute_is_mixed(
         self,
@@ -1440,22 +1260,23 @@ class CrawlService:
         updater,
     ) -> CrawlResult:
         """Run Iceland's mixed annual/monthly/weekly surveillance pipeline."""
-        from src.services.crawl_pipelines.is_ import execute_is_pipeline
-
-        return await execute_is_pipeline(
-            self,
-            task=task,
-            source=source,
-            force=force,
-            process=process,
-            save_raw=save_raw,
-            fill_missing=fill_missing,
-            updater=updater,
-            get_database=get_database,
-            task_manager=task_manager,
-            crawl_run_type=CrawlRun,
-            result_type=CrawlResult,
-            logger=logger,
+        from src.core.source_scopes import canonicalize_task_source, validate_iceland_crawl_options
+        from src.services.ingestion.runner import run_surveillance
+        from src.services.ingestion.countries import is_ as connector
+        normalized = canonicalize_task_source(source, country_code="IS")
+        start_year = (task.input_data or {}).get("start_year")
+        validate_iceland_crawl_options(country_code="IS", source=normalized, fill_missing=fill_missing, start_year=start_year)
+        strategy = connector.IcelandCurrentCommitStrategy()
+        if normalized in connector.HISTORY_SOURCES:
+            from src.data.processors.is_history import IcelandHistoryProcessor, HISTORY_SOURCE_NAME, HISTORY_SOURCE_ID, LEGACY_SOURCE_NAME, LEGACY_SOURCE_ID
+            updater = IcelandHistoryProcessor()
+            updater.ontology_source_id = {HISTORY_SOURCE_NAME: HISTORY_SOURCE_ID, LEGACY_SOURCE_NAME: LEGACY_SOURCE_ID}
+            updater.series_geography_key = "country:IS:national"
+            strategy = connector.IcelandHistoryCommitStrategy()
+        return await run_surveillance(
+            self, task=task, updater=updater, connector=connector,
+            source=normalized, force=force, process=process, strategy=strategy,
+            connector_options={"fill_missing": fill_missing, "start_year": start_year, "history_csv": getattr(updater, "output_csv", None)},
         )
 
     @staticmethod

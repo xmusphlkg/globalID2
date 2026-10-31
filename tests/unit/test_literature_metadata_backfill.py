@@ -7,7 +7,8 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from src.domain import LiteratureArticle
+from src.domain import LiteratureArticle, Task
+from src.domain.collection import PublishDirty
 from src.literature.metadata_backfill import (
     _load_checkpoint,
     _write_checkpoint,
@@ -24,6 +25,12 @@ class _AsyncSessionAdapter:
 
     async def commit(self) -> None:
         self.session.commit()
+
+    async def rollback(self) -> None:
+        self.session.rollback()
+
+    def add(self, value) -> None:
+        self.session.add(value)
 
 
 class _DatabaseContext:
@@ -135,6 +142,8 @@ def backfill_database():
         poolclass=StaticPool,
     )
     LiteratureArticle.__table__.create(engine)
+    Task.__table__.create(engine)
+    PublishDirty.__table__.create(engine)
     with Session(engine) as session:
         session.add_all([
             LiteratureArticle(

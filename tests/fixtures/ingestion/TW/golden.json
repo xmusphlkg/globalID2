@@ -1,0 +1,58 @@
+{
+  "rows": [
+    {
+      "Date": "2026-01-01",
+      "RawDiseaseLabel": "後天免疫缺乏症候群",
+      "DiseaseCode": "042",
+      "Year": "2026",
+      "Month": "1",
+      "Cases": "5",
+      "LocalCases": "5",
+      "ImportedCases": "0",
+      "Source": "Taiwan, China CDC NIDSS Open Data",
+      "SourceURL": "https://od.cdc.gov.tw/eic/Age_County_Gender_042.csv",
+      "DatasetStatus": "closed_revisable",
+      "IsProvisional": "false"
+    },
+    {
+      "Date": "2026-02-01",
+      "RawDiseaseLabel": "後天免疫缺乏症候群",
+      "DiseaseCode": "042",
+      "Year": "2026",
+      "Month": "2",
+      "Cases": "0",
+      "LocalCases": "0",
+      "ImportedCases": "0",
+      "Source": "Taiwan, China CDC NIDSS Open Data",
+      "SourceURL": "https://od.cdc.gov.tw/eic/Age_County_Gender_042.csv",
+      "DatasetStatus": "closed_revisable",
+      "IsProvisional": "false"
+    }
+  ],
+  "observations": [
+    {
+      "time": "2026-01-01T00:00:00+00:00",
+      "series_code": "SER_TW_AIDS_042",
+      "geography_key": "country:TW:national",
+      "dimension_key": "all",
+      "value": 5.0,
+      "suppressed": false,
+      "quality_status": "raw",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-02-01T00:00:00+00:00",
+      "series_code": "SER_TW_AIDS_042",
+      "geography_key": "country:TW:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "raw",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ]
+}

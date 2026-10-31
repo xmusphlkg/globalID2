@@ -1,0 +1,6 @@
+{
+  "country_code": "HR",
+  "source_geo_code": "HR",
+  "responses": "../ECDC/responses.json",
+  "window_start": 2020
+}

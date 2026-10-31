@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.data.crawlers.cn_provinces import (
     DATACENTER_SOURCE_ID,
     MONTHLY_REPORT_SOURCE_ID,
+    province_configs,
 )
 from src.data.storage.series_observation_store import (
     SeriesObservationQualityPolicy,
@@ -38,7 +39,11 @@ class CNProvinceUpdater:
         {DATACENTER_SOURCE_ID, MONTHLY_REPORT_SOURCE_ID}
     )
 
-    def __init__(self, store: SeriesObservationStore | None = None) -> None:
+    def __init__(self, store: SeriesObservationStore | None = None, *, country_code: str = "CN") -> None:
+        if country_code != "CN" and country_code not in province_configs():
+            raise ValueError(f"Unknown Chinese province: {country_code}")
+        self.country_code = country_code
+        self.refresh_recent_months = 3
         self.store = store or SeriesObservationStore()
 
     async def import_rows(
@@ -54,6 +59,8 @@ class CNProvinceUpdater:
             if source_id not in self.supported_source_ids:
                 raise ValueError(f"Unsupported Chinese province source: {source_id!r}")
             geography_key = str(row.get("GeographyKey") or "")
+            if self.country_code != "CN" and geography_key != f"country:{self.country_code}:national":
+                raise ValueError(f"Observation belongs to a different province: {geography_key!r}")
             if not geography_key.startswith("country:CN-"):
                 raise ValueError(
                     "Province observations must not use the CN national geography: "

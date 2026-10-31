@@ -2,7 +2,7 @@
 """Aggregate official SINAN microdata by residence state and notification month.
 
 Defaults to historical coverage. --apply imports source + legacy records and
---export refreshes the site. --recent-years 2 is suitable for weekly revisions.
+--export queues a site release. --recent-years 2 is suitable for weekly revisions.
 Never substitutes notifying UF for residence. National cases are untouched.
 """
 
@@ -13,7 +13,6 @@ import asyncio
 import csv
 import hashlib
 import json
-import struct
 import sys
 import tempfile
 from collections import Counter, defaultdict
@@ -30,156 +29,11 @@ from src.data.crawlers.br import (
     _deduplicate_sinan_file_aliases,
 )
 from src.data.processors.br import BRMonthlyUpdater, BRUpdateImportResult
-
-STATE_CODES = dict(
-    zip(
-        [
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "21",
-            "22",
-            "23",
-            "24",
-            "25",
-            "26",
-            "27",
-            "28",
-            "29",
-            "31",
-            "32",
-            "33",
-            "35",
-            "41",
-            "42",
-            "43",
-            "50",
-            "51",
-            "52",
-            "53",
-        ],
-        [
-            "RO",
-            "AC",
-            "AM",
-            "RR",
-            "PA",
-            "AP",
-            "TO",
-            "MA",
-            "PI",
-            "CE",
-            "RN",
-            "PB",
-            "PE",
-            "AL",
-            "SE",
-            "BA",
-            "MG",
-            "ES",
-            "RJ",
-            "SP",
-            "PR",
-            "SC",
-            "RS",
-            "MS",
-            "MT",
-            "GO",
-            "DF",
-        ],
-        strict=True,
-    )
+from src.data.processors.br_subdivisions import (
+    STATE_CODES, coalesce_source_rows, projected_dbf_records, record_month, residence_state,
 )
+
 CACHE_VERSION = "residence-notification-month-v2"
-
-
-def residence_state(record):
-    value = str(record.get("SG_UF") or "").strip().removesuffix(".0")
-    municipality = str(record.get("ID_MN_RESI") or "").strip().removesuffix(".0")
-    if value in STATE_CODES:
-        if municipality[:2] in STATE_CODES and municipality[:2] != value:
-            return None  # conflicting residence fields, never choose notifying UF
-        return "BR-" + STATE_CODES[value]
-    if value.upper() in STATE_CODES.values():
-        return "BR-" + value.upper()
-    if (
-        value in {"", "0", "00", "99"}
-        and len(municipality) in {6, 7}
-        and municipality[:2] in STATE_CODES
-    ):
-        return "BR-" + STATE_CODES[municipality[:2]]
-    return None
-
-
-def projected_dbf_records(path):
-    """Read only non-identifying date/geography fields from a validated DBF."""
-    wanted = {
-        "SG_UF",
-        "ID_MN_RESI",
-        "DT_NOTIFIC",
-        "DT_SIN_PRI",
-        "DT_DIAG",
-        "DT_ACID",
-        "NU_ANO",
-    }
-    with path.open("rb") as handle:
-        header = handle.read(32)
-        if len(header) != 32:
-            raise ValueError("Truncated DBF header")
-        count = struct.unpack_from("<I", header, 4)[0]
-        header_length, record_length = struct.unpack_from("<HH", header, 8)
-        if record_length < 2 or header_length < 33:
-            raise ValueError("Invalid DBF record layout")
-        fields, offset = {}, 1
-        for _ in range((header_length - 33) // 32):
-            descriptor = handle.read(32)
-            name = descriptor[:11].split(b"\0", 1)[0].decode("ascii")
-            length = descriptor[16]
-            if name in wanted:
-                if chr(descriptor[11]) not in {"C", "N", "D", "F"}:
-                    raise ValueError(f"Unsupported DBF field type: {name}")
-                fields[name] = (offset, offset + length)
-            offset += length
-        if offset != record_length:
-            raise ValueError("DBF field lengths do not match records")
-        if not ({"SG_UF", "ID_MN_RESI"} & fields.keys()):
-            raise LookupError("No residence geography fields")
-        handle.seek(header_length)
-        chunk_records = max(1, 2_000_000 // record_length)
-        remaining = count
-        while remaining:
-            take = min(remaining, chunk_records)
-            chunk = handle.read(take * record_length)
-            if len(chunk) != take * record_length:
-                raise ValueError("Truncated DBF records")
-            for start in range(0, len(chunk), record_length):
-                if chunk[start : start + 1] == b"*":
-                    continue
-                yield {
-                    name: chunk[start + left : start + right].decode("latin1").strip()
-                    for name, (left, right) in fields.items()
-                }
-            remaining -= take
-
-
-def record_month(record, fallback_year):
-    for field in ("DT_NOTIFIC", "DT_SIN_PRI", "DT_DIAG", "DT_ACID"):
-        value = record.get(field, "")
-        if len(value) == 8 and value.isdigit():
-            try:
-                parsed = date(int(value[:4]), int(value[4:6]), int(value[6:]))
-                return parsed.year, parsed.month, field
-            except ValueError:
-                pass
-    value = record.get("NU_ANO", "")
-    year = (
-        int(value) if str(value).isascii() and str(value).isdigit() else fallback_year
-    )
-    return year, 1, "year_only_fallback"
 
 
 def aggregate_file(item):
@@ -303,35 +157,12 @@ class StateBatchUpdater(BRMonthlyUpdater):
         )
 
 
-def coalesce_source_rows(rows):
-    """Annual extracts can contribute to the same notification month.
-
-    Keep one selected file per prefix/year, then add contributions by residence
-    state just like national aggregation; never add final and preliminary copies.
-    """
-    grouped = {}
-    for row in rows:
-        key = (row["CountryCode"], row["DiseaseCode"], row["Date"])
-        if key not in grouped:
-            grouped[key] = dict(row)
-            continue
-        existing = grouped[key]
-        old_files = set(existing["SourceFiles"].split("|"))
-        if old_files & set(row["SourceFiles"].split("|")):
-            raise ValueError("Duplicate source-file contribution")
-        existing["Cases"] = str(int(existing["Cases"]) + int(row["Cases"]))
-        for field in ("SourceFiles", "SourceURLs", "DatasetStatus"):
-            existing[field] = "|".join(
-                sorted(set(existing[field].split("|")) | set(row[field].split("|")))
-            )
-    return list(grouped.values())
-
-
 async def apply(rows):
     from sqlalchemy import text
 
     from src.core.database import dispose_database, get_db
     from src.services.crawl_service import CrawlService
+    from src.services.ingestion.manual_runs import record_manual_store
 
     try:
         async with get_db() as db:
@@ -353,7 +184,14 @@ async def apply(rows):
                 ),
                 [{"code": code} for code in codes],
             )
+            audit = await record_manual_store(
+                db, line="surveillance", scope_keys=codes,
+                operation="update_br_subdivisions",
+                metrics={"upserted": result.inserted_or_updated,
+                         "unmapped": result.skipped_unmapped},
+            )
             return {
+                "task_uuid": audit.task_uuid,
                 "upserted": result.inserted_or_updated,
                 "unmapped": result.skipped_unmapped,
             }
@@ -362,8 +200,6 @@ async def apply(rows):
 
 
 def main():
-    import subprocess
-
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--export", action="store_true")
@@ -458,10 +294,10 @@ def main():
         json.dumps({k: v for k, v in report.items() if k not in {"files"}}), flush=True
     )
     if args.export:
-        command = [sys.executable, str(ROOT / "scripts/generate_site_data.py")]
-        for code in report["coverage"]:
-            command.extend(["--incremental-country", code])
-        subprocess.run(command, cwd=ROOT, check=True)
+        from src.services.data_release_service import data_release_service
+        print(json.dumps(asyncio.run(data_release_service.trigger_job(
+            "site-release", manual=True, trigger="update-br-subdivisions-cli"
+        )), default=str))
 
 
 if __name__ == "__main__":

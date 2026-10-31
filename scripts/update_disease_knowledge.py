@@ -7,6 +7,7 @@ Examples:
     python scripts/update_disease_knowledge.py --disease-id D028 --source who --source wikidata
     python scripts/update_disease_knowledge.py --force
 """
+
 from __future__ import annotations
 
 import argparse
@@ -19,13 +20,14 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.core import get_database, init_database  # noqa: E402
+from src.core.task_manager import task_manager  # noqa: E402
+from src.domain import TaskStatus, TaskType  # noqa: E402
+from src.knowledge.catalogue import should_generate_public_disease_page  # noqa: E402
 from src.services.disease_knowledge_service import (  # noqa: E402
-    DiseaseKnowledgeUpdateService,
     expand_sources,
     load_standard_diseases,
 )
-from src.knowledge.catalogue import should_generate_public_disease_page  # noqa: E402
+from src.services.model_operations import wait_task_output  # noqa: E402
 
 
 async def async_main(args: argparse.Namespace) -> None:
@@ -42,17 +44,20 @@ async def async_main(args: argparse.Namespace) -> None:
     enabled_sources = expand_sources(args.source)
 
     async def run_one(disease: dict[str, Any]) -> dict[str, Any]:
-        service = DiseaseKnowledgeUpdateService(disease_csv_path=args.disease_csv)
-        return await service.update_disease(
-            disease["disease_id"],
-            enabled_sources=enabled_sources,
-            force=args.force or args.dry_run,
-            generator_mode=args.generator,
-            dry_run=args.dry_run,
+        task = await task_manager.create_task(
+            task_type=TaskType.UPDATE_DISEASE_KNOWLEDGE,
+            task_name=f"Update {disease['disease_id']} knowledge",
+            status=TaskStatus.QUEUED,
+            input_data={
+                "disease_id": disease["disease_id"],
+                "disease_csv_path": str(args.disease_csv.resolve()),
+                "source_groups": enabled_sources,
+                "force": args.force or args.dry_run,
+                "generator": args.generator,
+                "dry_run": args.dry_run,
+            },
         )
-
-    if not args.dry_run:
-        await init_database()
+        return await wait_task_output(task.task_uuid)
 
     concurrency = max(1, args.concurrency)
     semaphore = asyncio.Semaphore(concurrency)
@@ -89,20 +94,41 @@ async def async_main(args: argparse.Namespace) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Update source-grounded disease knowledge briefs")
-    parser.add_argument("--disease-csv", type=Path, default=ROOT / "configs" / "standard_diseases.csv")
-    parser.add_argument("--disease-id", action="append", help="Standard disease ID to update, e.g. D001")
-    parser.add_argument("--source", action="append", choices=sorted(["who", "wikidata", "wikipedia", "pubmed", "msd"]), help="Source group to fetch")
-    parser.add_argument("--force", action="store_true", help="Fetch sources even when existing rows are present")
+    parser = argparse.ArgumentParser(
+        description="Update source-grounded disease knowledge briefs"
+    )
+    parser.add_argument(
+        "--disease-csv", type=Path, default=ROOT / "configs" / "standard_diseases.csv"
+    )
+    parser.add_argument(
+        "--disease-id", action="append", help="Standard disease ID to update, e.g. D001"
+    )
+    parser.add_argument(
+        "--source",
+        action="append",
+        choices=sorted(["who", "wikidata", "wikipedia", "pubmed", "msd"]),
+        help="Source group to fetch",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Fetch sources even when existing rows are present",
+    )
     parser.add_argument(
         "--generator",
         choices=["ai", "auto"],
         default="auto",
         help="Brief generator. auto prefers a reviewed profile when available, then uses the AI model center.",
     )
-    parser.add_argument("--dry-run", action="store_true", help="Fetch and render without writing database rows")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Queue a fetch/render preview without saving knowledge rows (requires a running worker)",
+    )
     parser.add_argument("--limit", type=int, default=0, help="Limit number of diseases")
-    parser.add_argument("--concurrency", type=int, default=2, help="Parallel disease updates")
+    parser.add_argument(
+        "--concurrency", type=int, default=2, help="Parallel disease updates"
+    )
     parser.add_argument("--json", action="store_true", help="Print final JSON summary")
     return parser
 

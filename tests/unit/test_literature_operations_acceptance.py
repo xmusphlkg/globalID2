@@ -11,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 from src.control_plane.schedule_state import schedule_state_repository
 from src.core.config import LiteratureSettings
 from src.core.task_manager import task_manager
+from src.domain.collection import RunStage, PublishDirty, SourceArtifact
 from src.domain import (
     Base,
     Country,
@@ -213,6 +214,9 @@ async def test_scheduled_task_runs_literature_pipeline_twice_against_sqlite(
         poolclass=StaticPool,
     )
     tables = [
+        RunStage.__table__,
+        PublishDirty.__table__,
+        SourceArtifact.__table__,
         Country.__table__,
         StandardDisease.__table__,
         Task.__table__,
@@ -279,6 +283,8 @@ async def test_scheduled_task_runs_literature_pipeline_twice_against_sqlite(
     database = _AsyncSqliteFactory(engine)
     monkeypatch.setattr("src.core.task_manager.get_db", database)
     monkeypatch.setattr("src.literature.pipeline.get_db", database)
+    monkeypatch.setattr("src.services.ingestion.stages.get_db", database)
+    monkeypatch.setattr("src.services.ingestion.artifacts.get_db", database)
     monkeypatch.setattr("src.services.literature_service.get_database", database)
     monkeypatch.setattr("src.services.task_executor.get_database", database)
     monkeypatch.setattr("src.literature.pipeline.CrossrefClient", _AcceptanceCrossrefClient)

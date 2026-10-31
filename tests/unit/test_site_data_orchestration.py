@@ -2,6 +2,7 @@ import ast
 import asyncio
 import inspect
 import json
+import pytest
 from types import SimpleNamespace
 
 from scripts import generate_site_data as legacy_api
@@ -83,7 +84,7 @@ def test_publish_hash_manifest_avoids_rereading_country_snapshots(tmp_path, monk
     assert site_data_export._local_publish_hashes(tmp_path, ["SG"]) == {"SG": "abc123"}
 
 
-def test_incremental_export_falls_back_when_snapshot_is_missing(tmp_path, monkeypatch) -> None:
+def test_incremental_export_requires_snapshot_without_unrequested_full_rebuild(tmp_path, monkeypatch) -> None:
     attempts = []
 
     async def collect(*args, **kwargs):
@@ -95,9 +96,10 @@ def test_incremental_export_falls_back_when_snapshot_is_missing(tmp_path, monkey
     monkeypatch.setattr(site_data_export, "collect_site_export_context", collect)
     monkeypatch.setattr(site_data_export, "write_site_export_artifacts", lambda *args: None)
     monkeypatch.setattr(site_data_export, "build_direct_download_files", lambda *args, **kwargs: {})
-    asyncio.run(site_data_export.export(tmp_path / "data", tmp_path / "manifest.json", incremental_site=True))
+    with pytest.raises(RuntimeError, match="Incremental site export is missing"):
+        asyncio.run(site_data_export.export(tmp_path / "data", tmp_path / "manifest.json", incremental_site=True))
 
-    assert attempts == [(None, True), (None, False)]
+    assert attempts == [(None, True)]
 
 
 def test_direct_download_default_workers_respect_tight_cgroup_memory() -> None:

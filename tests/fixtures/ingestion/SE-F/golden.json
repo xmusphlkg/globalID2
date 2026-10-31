@@ -1,0 +1,117 @@
+{
+  "rows": [
+    {
+      "Date": "2025-01-01",
+      "RawDiseaseLabel": "Gonorré",
+      "DiseaseCode": "gonorre",
+      "Year": "2025",
+      "Month": "1",
+      "Cases": "0",
+      "Geography": "SE:county:Jönköping",
+      "GeographyKey": "country:SE-F:national",
+      "Scope": "all",
+      "Granularity": "monthly",
+      "DatasetStatus": "closed_revisable",
+      "IsProvisional": "false",
+      "DataComplete": "TRUE",
+      "AuthoritativeRevision": "true",
+      "UpdateMode": "authoritative_revision",
+      "SourceUpdatedAt": "2026-08-08",
+      "RetrievedAt": "2026-08-10T12:00:00Z",
+      "Source": "Sweden Public Health Agency SmiNet",
+      "SourceURL": "https://www.folkhalsomyndigheten.se/statistik/gonorre-statistik/?scope%5B%5D=all&tab=tab-region&year%5B%5D=2025",
+      "DownloadURL": "https://sminet3-prod.sminet.se/mapapp/gonorre_mSWE_2025_ALL_20260808.csv",
+      "RetrievalMethod": "machine_csv",
+      "PublicReleaseEnabled": "true",
+      "LicenseReviewStatus": "approved_for_public_release"
+    },
+    {
+      "Date": "2025-02-01",
+      "RawDiseaseLabel": "Gonorré",
+      "DiseaseCode": "gonorre",
+      "Year": "2025",
+      "Month": "2",
+      "Cases": "0",
+      "Geography": "SE:county:Jönköping",
+      "GeographyKey": "country:SE-F:national",
+      "Scope": "all",
+      "Granularity": "monthly",
+      "DatasetStatus": "closed_revisable",
+      "IsProvisional": "false",
+      "DataComplete": "TRUE",
+      "AuthoritativeRevision": "true",
+      "UpdateMode": "authoritative_revision",
+      "SourceUpdatedAt": "2026-08-08",
+      "RetrievedAt": "2026-08-10T12:00:00Z",
+      "Source": "Sweden Public Health Agency SmiNet",
+      "SourceURL": "https://www.folkhalsomyndigheten.se/statistik/gonorre-statistik/?scope%5B%5D=all&tab=tab-region&year%5B%5D=2025",
+      "DownloadURL": "https://sminet3-prod.sminet.se/mapapp/gonorre_mSWE_2025_ALL_20260808.csv",
+      "RetrievalMethod": "machine_csv",
+      "PublicReleaseEnabled": "true",
+      "LicenseReviewStatus": "approved_for_public_release"
+    },
+    {
+      "Date": "2025-03-01",
+      "RawDiseaseLabel": "Gonorré",
+      "DiseaseCode": "gonorre",
+      "Year": "2025",
+      "Month": "3",
+      "Cases": "0",
+      "Geography": "SE:county:Jönköping",
+      "GeographyKey": "country:SE-F:national",
+      "Scope": "all",
+      "Granularity": "monthly",
+      "DatasetStatus": "closed_revisable",
+      "IsProvisional": "false",
+      "DataComplete": "TRUE",
+      "AuthoritativeRevision": "true",
+      "UpdateMode": "authoritative_revision",
+      "SourceUpdatedAt": "2026-08-08",
+      "RetrievedAt": "2026-08-10T12:00:00Z",
+      "Source": "Sweden Public Health Agency SmiNet",
+      "SourceURL": "https://www.folkhalsomyndigheten.se/statistik/gonorre-statistik/?scope%5B%5D=all&tab=tab-region&year%5B%5D=2025",
+      "DownloadURL": "https://sminet3-prod.sminet.se/mapapp/gonorre_mSWE_2025_ALL_20260808.csv",
+      "RetrievalMethod": "machine_csv",
+      "PublicReleaseEnabled": "true",
+      "LicenseReviewStatus": "approved_for_public_release"
+    }
+  ],
+  "observations": [
+    {
+      "time": "2025-01-01T00:00:00+00:00",
+      "series_code": "SER_SE_FOHM_SMINET_GONORRHEA",
+      "geography_key": "country:SE-F:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2025-02-01T00:00:00+00:00",
+      "series_code": "SER_SE_FOHM_SMINET_GONORRHEA",
+      "geography_key": "country:SE-F:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2025-03-01T00:00:00+00:00",
+      "series_code": "SER_SE_FOHM_SMINET_GONORRHEA",
+      "geography_key": "country:SE-F:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ]
+}

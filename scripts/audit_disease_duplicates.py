@@ -268,7 +268,11 @@ def main() -> int:
                 mapping_dir=args.mapping_dir,
             )
             service_audit = service.run_local_audit(include_new_disease_candidates=True)
-            result = asyncio.run(service.run_ai_review(service_audit, max_candidates=args.ai_limit))
+            from src.services.model_operations import run_worker_operation
+            completed = asyncio.run(run_worker_operation("disease_audit", {
+                "include_ai": True, "include_new_disease_candidates": True, "max_ai_candidates": args.ai_limit,
+                "standard_path": str(args.standard), "mapping_dir": str(args.mapping_dir)}))
+            result = completed.get("ai_review") or {}
         except Exception as exc:
             print("## AI review")
             print(f"- Failed: {exc}")

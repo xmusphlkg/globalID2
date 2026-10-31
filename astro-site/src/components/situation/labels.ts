@@ -37,9 +37,21 @@ function regionName(code: string, locale: Locale): string | null {
   }
 }
 
-type DiseaseNames = Pick<SituationAlertRecord, 'disease_label' | 'disease_name_en' | 'disease_name_zh'>;
-type CountryNames = Pick<SituationAlertRecord, 'country_code' | 'country_name_en' | 'country_name_zh'>;
-type SourceNames = Pick<SituationAlertRecord, 'source_id' | 'source_label_en' | 'source_label_zh'>;
+type DiseaseNames = {
+  disease_label: string;
+  disease_name_en: string;
+  disease_name_zh?: string | null;
+};
+type CountryNames = {
+  country_code: string;
+  country_name_en: string;
+  country_name_zh?: string | null;
+};
+type SourceNames = {
+  source_id: string;
+  source_label_en?: string | null;
+  source_label_zh?: string | null;
+};
 
 export function diseaseName(record: DiseaseNames, locale: Locale): string {
   const zh = locale === 'zh' ? record.disease_name_zh : null;
@@ -125,6 +137,7 @@ export interface SituationCopy {
   unplaced: string;
   mapLoading: string;
   mapFailed: string;
+  timelineFailed: string;
   mapLabel: string;
   updated: string;
   firstReported: string;
@@ -167,6 +180,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     unplaced: 'Not drawn on the map',
     mapLoading: 'Loading map…',
     mapFailed: 'The map could not be loaded. The list and timeline still work.',
+    timelineFailed: 'The alert timeline could not be loaded.',
     mapLabel: 'World map of places with recent outbreak reports',
     updated: 'Updated',
     firstReported: 'First reported',
@@ -207,6 +221,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     unplaced: '未能画在地图上',
     mapLoading: '正在加载地图…',
     mapFailed: '地图加载失败，列表和时间线仍可使用。',
+    timelineFailed: '警报时间线加载失败。',
     mapLabel: '近期有疫情报告的地点世界地图',
     updated: '更新于',
     firstReported: '首次报告',
@@ -247,6 +262,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     unplaced: 'Non placés sur la carte',
     mapLoading: 'Chargement de la carte…',
     mapFailed: 'La carte n’a pas pu être chargée. La liste et la chronologie restent disponibles.',
+    timelineFailed: 'La chronologie des alertes n’a pas pu être chargée.',
     mapLabel: 'Carte du monde des lieux avec des rapports récents de flambée',
     updated: 'Mis à jour',
     firstReported: 'Premier signalement',

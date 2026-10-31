@@ -70,28 +70,26 @@ async def test_non_deadlock_database_error_is_not_retried(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_reconciliation_retries_transaction_before_export(monkeypatch) -> None:
+async def test_reconciliation_retries_transaction_without_export(monkeypatch) -> None:
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
     from src.core.config import LiteratureSettings
     import src.services.literature_automation_service as automation
-    import src.services.literature_publication_service as publication
 
     config = LiteratureSettings(autopilot_enabled=True)
     monkeypatch.setattr(automation, "get_config", lambda: SimpleNamespace(literature=config))
     service = automation.LiteratureAutomationService()
     transaction = AsyncMock(side_effect=[_DeadlockError("deadlock"), {"changed": 2}])
-    export = AsyncMock(return_value={"ok": True})
     monkeypatch.setattr(service, "_reconcile_database", transaction)
-    monkeypatch.setattr(publication, "export_public_research_artifacts", export)
     monkeypatch.setattr(pipeline_module.asyncio, "sleep", AsyncMock())
 
-    result = await service.reconcile(export=True)
+    from src.ai import work_queue
+    monkeypatch.setattr(work_queue, "current_parent", lambda: SimpleNamespace(task_uuid="11111111-1111-4111-8111-111111111111"))
+    result = await service.reconcile()
 
-    assert result == {"changed": 2, "public_export": {"ok": True}}
+    assert result == {"changed": 2}
     assert transaction.await_count == 2
     assert transaction.await_args_list[0] == transaction.await_args_list[1]
-    export.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -101,19 +99,17 @@ async def test_reconciliation_failure_does_not_export(monkeypatch, error) -> Non
     from unittest.mock import AsyncMock
     from src.core.config import LiteratureSettings
     import src.services.literature_automation_service as automation
-    import src.services.literature_publication_service as publication
 
     config = LiteratureSettings(autopilot_enabled=True, persistence_deadlock_max_retries=1)
     monkeypatch.setattr(automation, "get_config", lambda: SimpleNamespace(literature=config))
     service = automation.LiteratureAutomationService()
     transaction = AsyncMock(side_effect=error)
-    export = AsyncMock()
     monkeypatch.setattr(service, "_reconcile_database", transaction)
-    monkeypatch.setattr(publication, "export_public_research_artifacts", export)
     monkeypatch.setattr(pipeline_module.asyncio, "sleep", AsyncMock())
 
+    from src.ai import work_queue
+    monkeypatch.setattr(work_queue, "current_parent", lambda: SimpleNamespace(task_uuid="11111111-1111-4111-8111-111111111111"))
     with pytest.raises(type(error)):
-        await service.reconcile(export=True)
+        await service.reconcile()
 
     assert transaction.await_count == (2 if isinstance(error, _DeadlockError) else 1)
-    export.assert_not_awaited()

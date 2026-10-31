@@ -391,6 +391,14 @@ class SwitzerlandIDDCrawler(BaseCrawler):
         url = self._api_url(f"data/{series.identifier}")
         response = self.post(url, json=series.config)
         payload = response.json()
+        rows, version = self.parse_series_payload(series, payload, url=url)
+        if self.save_raw:
+            self._save_raw_json(["data", f"{series.slug}_{series.period_type}.json"], {"request": series.config, "response": payload})
+        return rows, version
+
+    @staticmethod
+    def parse_series_payload(series, payload, *, url):
+        """Parse captured IDD values without accessing a transport."""
         version = _norm_text(payload.get("version")) if isinstance(payload, dict) else None
         values = payload.get("values") if isinstance(payload, dict) else None
         rows: List[Dict[str, str]] = []
@@ -431,12 +439,6 @@ class SwitzerlandIDDCrawler(BaseCrawler):
                     "Source": DEFAULT_SOURCE_NAME,
                     "SourceURL": url,
                 }
-            )
-
-        if self.save_raw:
-            self._save_raw_json(
-                ["data", f"{series.slug}_{series.period_type}.json"],
-                {"request": series.config, "response": payload},
             )
 
         return rows, version

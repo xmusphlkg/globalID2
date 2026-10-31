@@ -1,0 +1,6 @@
+{
+  "country_code": "IE",
+  "source_geo_code": "IE",
+  "responses": "../ECDC/responses.json",
+  "window_start": 2020
+}

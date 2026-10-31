@@ -334,7 +334,11 @@ SERIES_DEFINITIONS: Tuple[ISSeriesDefinition, ...] = (
 )
 
 _SERIES_BY_KEY = {
-    (definition.source_scope, definition.entity, definition.raw_disease_label): definition
+    (
+        definition.source_scope,
+        definition.entity,
+        definition.raw_disease_label,
+    ): definition
     for definition in SERIES_DEFINITIONS
 }
 
@@ -347,7 +351,7 @@ _ANNUAL_ENTITIES = (
 )
 _SOURCE_LINK_RE = re.compile(
     r'<a\b[^>]*href=["\'](?P<url>https://app\.powerbi\.com/view\?[^"\']+)'
-    r'[^>]*>(?P<label>.*?)</a>',
+    r"[^>]*>(?P<label>.*?)</a>",
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -515,7 +519,9 @@ class IcelandDOHCrawler(BaseCrawler):
                 url = html_lib.unescape(match.group("url"))
                 if "annual incidence" in label:
                     discovered[SOURCE_SCOPE_ANNUAL] = url
-                elif all(word in label for word in ("gonorrhoea", "syphilis", "chlamydia")):
+                elif all(
+                    word in label for word in ("gonorrhoea", "syphilis", "chlamydia")
+                ):
                     discovered[SOURCE_SCOPE_STI] = url
                 elif "respiratory tract infections" in label:
                     discovered[SOURCE_SCOPE_RESPIRATORY] = url
@@ -619,122 +625,105 @@ class IcelandDOHCrawler(BaseCrawler):
             "RawArtifact": "",
         }
 
-    def _fetch_annual(
-        self,
-        context: PowerBIReportContext,
-        retrieved_at: str,
-    ) -> Tuple[List[Dict[str, str]], List[Tuple[str, PowerBIQueryResult]]]:
-        rows: List[Dict[str, str]] = []
-        queries: List[Tuple[str, PowerBIQueryResult]] = []
-        for entity in _ANNUAL_ENTITIES:
-            result = self.powerbi.query_entity_sum(
-                context,
-                entity=entity,
-                group_columns=("AR", "SJUKDOMUR"),
-                value_column="FJOLDI",
+    def _fetch_annual(self, context, retrieved_at):
+        queries = [
+            (
+                entity,
+                self.powerbi.query_entity_sum(
+                    context,
+                    entity=entity,
+                    group_columns=("AR", "SJUKDOMUR"),
+                    value_column="FJOLDI",
+                ),
             )
-            queries.append((entity, result))
+            for entity in _ANNUAL_ENTITIES
+        ]
+        return self.parse_scope_queries(
+            SOURCE_SCOPE_ANNUAL, context, queries, retrieved_at
+        ), queries
+
+    def _fetch_sti(self, context, retrieved_at):
+        entity = "Kynsjúkdómar"
+        queries = [
+            (
+                entity,
+                self.powerbi.query_entity_sum(
+                    context,
+                    entity=entity,
+                    group_columns=("AR", "MAN", "SJUKDOMUR"),
+                    value_column="FJOLDI",
+                ),
+            )
+        ]
+        return self.parse_scope_queries(
+            SOURCE_SCOPE_STI, context, queries, retrieved_at
+        ), queries
+
+    def _fetch_respiratory(self, context, retrieved_at):
+        entity = "Sýkingar"
+        queries = [
+            (
+                entity,
+                self.powerbi.query_entity_sum(
+                    context,
+                    entity=entity,
+                    group_columns=("ISO_AR", "VIKUNUMER_ISO", "SJUKDOMUR"),
+                    value_column="FJOLDI",
+                ),
+            )
+        ]
+        return self.parse_scope_queries(
+            SOURCE_SCOPE_RESPIRATORY, context, queries, retrieved_at
+        ), queries
+
+    def parse_scope_queries(self, scope, context, queries, retrieved_at):
+        """Normalize decoded captured aggregates; this method performs no I/O."""
+        rows = []
+        for entity, result in queries:
             for source_row in result.rows:
                 definition = self._definition(
-                    SOURCE_SCOPE_ANNUAL,
-                    entity,
-                    source_row.get(f"{entity}.SJUKDOMUR"),
+                    scope, entity, source_row.get(f"{entity}.SJUKDOMUR")
                 )
-                year = _parse_year(source_row.get(f"{entity}.AR"))
                 count = _parse_count(source_row.get(f"Sum({entity}.FJOLDI)"))
-                rows.append(
-                    self._base_row(
-                        definition,
-                        report_date=date(year, 1, 1),
-                        period_value=str(year),
-                        cases=count,
-                        context=context,
-                        retrieved_at=retrieved_at,
-                    )
-                )
-        return rows, queries
-
-    def _fetch_sti(
-        self,
-        context: PowerBIReportContext,
-        retrieved_at: str,
-    ) -> Tuple[List[Dict[str, str]], List[Tuple[str, PowerBIQueryResult]]]:
-        entity = "Kynsjúkdómar"
-        result = self.powerbi.query_entity_sum(
-            context,
-            entity=entity,
-            group_columns=("AR", "MAN", "SJUKDOMUR"),
-            value_column="FJOLDI",
-        )
-        rows: List[Dict[str, str]] = []
-        for source_row in result.rows:
-            definition = self._definition(
-                SOURCE_SCOPE_STI,
-                entity,
-                source_row.get(f"{entity}.SJUKDOMUR"),
-            )
-            year = _parse_year(source_row.get(f"{entity}.AR"))
-            try:
-                month = int(float(_norm_text(source_row.get(f"{entity}.MAN"))))
-                report_date = date(year, month, 1)
-            except (TypeError, ValueError) as exc:
-                raise ValueError(
-                    f"Invalid Iceland STI month: {source_row.get(f'{entity}.MAN')!r}"
-                ) from exc
-            count = _parse_count(source_row.get(f"Sum({entity}.FJOLDI)"))
-            rows.append(
-                self._base_row(
+                if scope == SOURCE_SCOPE_ANNUAL:
+                    year = _parse_year(source_row.get(f"{entity}.AR"))
+                    report_date = date(year, 1, 1)
+                    period = str(year)
+                elif scope == SOURCE_SCOPE_STI:
+                    year = _parse_year(source_row.get(f"{entity}.AR"))
+                    try:
+                        month = int(float(_norm_text(source_row.get(f"{entity}.MAN"))))
+                        report_date = date(year, month, 1)
+                    except (TypeError, ValueError) as exc:
+                        raise ValueError(
+                            f"Invalid Iceland STI month: {source_row.get(f'{entity}.MAN')!r}"
+                        ) from exc
+                    period = f"{year}{month:02d}"
+                else:
+                    iso_year = _parse_year(source_row.get(f"{entity}.ISO_AR"))
+                    try:
+                        iso_week = int(
+                            float(_norm_text(source_row.get(f"{entity}.VIKUNUMER_ISO")))
+                        )
+                        report_date = date.fromisocalendar(iso_year, iso_week, 1)
+                    except (TypeError, ValueError) as exc:
+                        raise ValueError(
+                            f"Invalid Iceland respiratory ISO week: {iso_year}-W{source_row.get(f'{entity}.VIKUNUMER_ISO')!r}"
+                        ) from exc
+                    period = f"{iso_year}{iso_week:02d}"
+                row = self._base_row(
                     definition,
                     report_date=report_date,
-                    period_value=f"{year}{month:02d}",
+                    period_value=period,
                     cases=count,
                     context=context,
                     retrieved_at=retrieved_at,
                 )
-            )
-        return rows, [(entity, result)]
-
-    def _fetch_respiratory(
-        self,
-        context: PowerBIReportContext,
-        retrieved_at: str,
-    ) -> Tuple[List[Dict[str, str]], List[Tuple[str, PowerBIQueryResult]]]:
-        entity = "Sýkingar"
-        result = self.powerbi.query_entity_sum(
-            context,
-            entity=entity,
-            group_columns=("ISO_AR", "VIKUNUMER_ISO", "SJUKDOMUR"),
-            value_column="FJOLDI",
-        )
-        rows: List[Dict[str, str]] = []
-        for source_row in result.rows:
-            definition = self._definition(
-                SOURCE_SCOPE_RESPIRATORY,
-                entity,
-                source_row.get(f"{entity}.SJUKDOMUR"),
-            )
-            iso_year = _parse_year(source_row.get(f"{entity}.ISO_AR"))
-            try:
-                iso_week = int(float(_norm_text(source_row.get(f"{entity}.VIKUNUMER_ISO"))))
-                report_date = date.fromisocalendar(iso_year, iso_week, 1)
-            except (TypeError, ValueError) as exc:
-                raise ValueError(
-                    "Invalid Iceland respiratory ISO week: "
-                    f"{iso_year}-W{source_row.get(f'{entity}.VIKUNUMER_ISO')!r}"
-                ) from exc
-            count = _parse_count(source_row.get(f"Sum({entity}.FJOLDI)"))
-            row = self._base_row(
-                definition,
-                report_date=report_date,
-                period_value=f"{iso_year}{iso_week:02d}",
-                cases=count,
-                context=context,
-                retrieved_at=retrieved_at,
-            )
-            row["ISOYear"] = str(iso_year)
-            row["ISOWeek"] = str(iso_week)
-            rows.append(row)
-        return rows, [(entity, result)]
+                if scope == SOURCE_SCOPE_RESPIRATORY:
+                    row["ISOYear"] = str(iso_year)
+                    row["ISOWeek"] = str(iso_week)
+                rows.append(row)
+        return rows
 
     @staticmethod
     def _validate_scope_rows(scope: str, rows: Sequence[Mapping[str, str]]) -> None:

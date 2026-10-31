@@ -21,12 +21,8 @@ ENV/
 .env.*
 !.env.example
 !.env.*.example
-cloudflare/subscriptions/wrangler.toml
-cloudflare/subscriptions/wrangler.generated.toml
-dashboard/.env.local
-dashboard/.env.development.local
-dashboard/.env.test.local
-dashboard/.env.production.local
+/cloudflare/subscriptions/wrangler.toml
+/cloudflare/subscriptions/wrangler.generated.toml
 
 # Python tooling caches
 .pytest_cache/
@@ -44,18 +40,23 @@ coverage.xml
 # Jupyter Notebook
 .ipynb_checkpoints/
 
-# Next.js / Node.js frontend
-dashboard/node_modules/
-dashboard/.next/
-dashboard/out/
-dashboard/.turbo/
-dashboard/.vercel/
-dashboard/coverage/
-dashboard/test-results/
-dashboard/playwright-report/
-dashboard/blob-report/
-dashboard/next-env.d.ts
-dashboard/tmp-app/
+# Node.js dependencies (dashboard, Astro and subscription worker)
+node_modules/
+
+# Next.js control plane (including isolated GLOBALID_NEXT_DIST_DIR builds)
+/dashboard/.next/
+/dashboard/.next-*/
+/dashboard/out/
+/dashboard/.turbo/
+/dashboard/.vercel/
+/dashboard/next-env.d.ts
+/dashboard/tmp-app/
+
+# Frontend test and build artifacts
+coverage/
+test-results/
+playwright-report/
+blob-report/
 **/.wrangler/
 *.tsbuildinfo
 .eslintcache
@@ -72,9 +73,14 @@ pnpm-debug.log*
 
 # Project generated data and outputs
 /logs/
-/logs/*.pid
 /exports/
 /reports/
+/dashboard/logs/
+/astro-site/logs/
+/astro-site/public/site-data/
+/astro-site/public/flags/
+
+# Published data snapshots; keep TypeScript data modules versioned
 /astro-site/src/data/*.json
 /astro-site/src/data/countries/
 /astro-site/src/data/disease-knowledge/
@@ -82,10 +88,12 @@ pnpm-debug.log*
 /astro-site/src/data/reports/
 /astro-site/src/data/research/
 /astro-site/src/data/situation/
+
+# Runtime data, including data/raw/<line>/<task_uuid>/<attempt>/ artifacts.
+# Contract fixtures in tests/fixtures/ingestion/ must remain versioned.
 /data/current/
 /data/raw/
 /data/history/
-/dashboard/logs/
 /data/processed/
 /data/cache/
 /data/demo_output/
@@ -99,14 +107,23 @@ pnpm-debug.log*
 /configs/literature/weekly_ai_reviews.json.lock
 
 # Documentation build artifacts / large fixtures
-site/
-tests/fixtures/ai_test_data/
+/site/
+/tests/fixtures/ai_test_data/
 
 # Local databases and temp files
 *.db
 *.dump
 *.sqlite
 *.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
 *backup*.sql
 *Backup*.sql
 *.tmp
@@ -115,7 +132,3 @@ tests/fixtures/ai_test_data/
 # System files
 .DS_Store
 Thumbs.db
-astro-site/public/site-data/
-astro-site/logs/
-/astro-site/test-results/
-/astro-site/public/flags/

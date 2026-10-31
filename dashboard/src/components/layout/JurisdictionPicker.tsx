@@ -134,7 +134,7 @@ export function JurisdictionPicker({
               <Globe2 className="h-4 w-4 shrink-0 text-[#52606F]" />
             )}
             <span className="min-w-0 flex-1">
-              <span className="hidden text-[10px] font-semibold uppercase tracking-[0.08em] text-[#7A858F] sm:block">
+              <span className="hidden text-[10px] font-semibold uppercase tracking-[0.08em] text-[#52606F] sm:block">
                 {lang === "zh" ? "国家 / 地区" : "Country / region"}
               </span>
               <span className="block truncate text-sm font-semibold text-[#1D1D1F]">
@@ -159,7 +159,7 @@ export function JurisdictionPicker({
                     placeholder={lang === "zh" ? "搜索名称或代码，例如上海、CN-SH" : "Search name or code, e.g. Shanghai, CN-SH"}
                     displayValue={() => query}
                     onChange={(event) => setQuery(event.target.value)}
-                    className="h-10 min-w-0 flex-1 bg-transparent text-sm text-[#1D1D1F] outline-none placeholder:text-[#7A858F]"
+                    className="h-10 min-w-0 flex-1 bg-transparent text-sm text-[#1D1D1F] outline-none placeholder:text-[#52606F]"
                   />
                   <kbd className="hidden rounded border border-[#D9D9D6] bg-white px-1.5 py-0.5 text-[10px] text-[#6B7280] sm:inline">esc</kbd>
                 </div>

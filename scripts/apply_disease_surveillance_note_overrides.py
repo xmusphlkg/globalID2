@@ -61,6 +61,15 @@ async def run(*, apply: bool) -> dict:
                     row.metadata_ = payload.get("metadata") or {}
                     changed.append(f"{disease_id}:{language}")
         if apply:
+            if changed:
+                from src.services.ingestion.manual_runs import record_manual_store
+                await record_manual_store(
+                    db, line="knowledge",
+                    scope_keys={identity.split(":", 1)[0] for identity in changed},
+                    operation="apply_disease_surveillance_note_overrides",
+                    metrics={"changed_briefs": len(changed)},
+                    input_data={"review_version": document.get("review_version")},
+                )
             await db.commit()
         else:
             await db.rollback()

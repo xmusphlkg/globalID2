@@ -9,6 +9,10 @@ Design principles:
   - fetch_and_parse(url) is the explicit method that owns network I/O.
 """
 from typing import Dict, Optional
+import base64
+import json
+import re
+from urllib.parse import urlsplit
 
 import pandas as pd
 import requests
@@ -91,9 +95,11 @@ class HTMLTableParser(BaseParser):
             
             # 解析HTML
             soup = BeautifulSoup(html_content, "html.parser")
+            if self.is_security_verification(html_content):
+                raise ValueError("Upstream blocked: Security Verification challenge page")
             
             # 提取表格
-            tables = soup.find_all("table")
+            tables = self._embedded_cdc_tables(soup, url=url, language=language) or soup.find_all("table")
             if not tables:
                 return ParseResult(
                     source_url=url,
@@ -103,10 +109,13 @@ class HTMLTableParser(BaseParser):
                     metadata=kwargs,
                 )
             
-            # 提取第一个表格（通常是数据表格）
-            table = tables[0]
-            self.logger.debug(f"Found {len(tables)} table(s), using first one")
-            df = self._extract_table_data(table)
+            # Layout/template tables can precede the actual surveillance table.
+            df = pd.DataFrame()
+            for table in tables:
+                candidate = self._extract_table_data(table)
+                if not candidate.empty:
+                    df = candidate
+                    break
             self.logger.debug(f"Extracted DataFrame shape: {df.shape}")
             
             if df.empty:
@@ -143,7 +152,6 @@ class HTMLTableParser(BaseParser):
                 success=True,
                 metadata=kwargs,
             )
-            
         except Exception as e:
             self.logger.error(f"[HTMLTableParser] Parse failed | error={e}")
             return ParseResult(
@@ -153,6 +161,58 @@ class HTMLTableParser(BaseParser):
                 error_message=str(e),
                 metadata=kwargs,
             )
+
+    @staticmethod
+    def is_security_verification(content: str) -> bool:
+        soup = BeautifulSoup(content, "html.parser")
+        title = soup.title.get_text(" ", strip=True).casefold() if soup.title else ""
+        return title == "security verification" or bool(soup.select_one("#captcha-container, #tianai-captcha-slider"))
+
+    @staticmethod
+    def _embedded_cdc_tables(soup, *, url: str, language: str):
+        """Decode publisher-provided data without evaluating JavaScript or HTTP."""
+        if urlsplit(url).hostname != "weekly.chinacdc.cn":
+            return []
+        assignment = re.compile(r"\b(?:var\s+)?article_meta_data\s*=\s*(['\"])(.*?)\1", re.S)
+        for script in soup.find_all("script"):
+            match = assignment.search(script.string or script.get_text())
+            if match is None:
+                continue
+            encoded = match.group(2)
+            if len(encoded) > 8_000_000:
+                raise ValueError("CDC embedded article metadata exceeds size limit")
+            try:
+                payload = json.loads(base64.b64decode(encoded, validate=True).decode("utf-8"))
+            except (ValueError, UnicodeError) as exc:
+                raise ValueError("Invalid CDC embedded article metadata") from exc
+            if not isinstance(payload, dict) or not isinstance(payload.get("tableList"), list):
+                raise ValueError("CDC embedded article metadata lacks tableList")
+            tables = []
+            preferred = ("contentCn", "contentEn") if language == "zh" else ("contentEn", "contentCn")
+            for item in payload["tableList"]:
+                if not isinstance(item, dict):
+                    raise ValueError("Invalid CDC embedded table entry")
+                content = next((item.get(key) for key in preferred if item.get(key)), "")
+                if not isinstance(content, str):
+                    raise ValueError("Invalid CDC embedded table content")
+                for table in BeautifulSoup(content, "html.parser").find_all("table"):
+                    heading = " ".join(row.get_text(" ", strip=True) for row in table.find_all("tr")[:2]).casefold()
+                    if not all(word in heading for word in ("disease", "cases", "deaths")):
+                        continue
+                    tables.append(table)
+            if not tables:
+                raise ValueError("CDC embedded metadata has no disease/cases/deaths table")
+            return tables
+        return []
+
+    @staticmethod
+    def _without_header(df: pd.DataFrame) -> pd.DataFrame:
+        """Headers may live in thead; never discard the first disease row."""
+        if not df.empty and str(df.iloc[0, 0]).strip().casefold() in {
+            "disease", "diseases", "病种", "疾病", "疾病名称", "病名",
+        }:
+            return df.iloc[1:].copy()
+        return df.copy()
     
     def _extract_table_data(self, table) -> pd.DataFrame:
         """
@@ -219,7 +279,7 @@ class HTMLTableParser(BaseParser):
         self.logger.debug(f"_clean_english_data input DataFrame shape: {df.shape}")
         
         # 复制数据，避免修改原始数据
-        data = df.iloc[1:].copy()  # skip header row
+        data = self._without_header(df)
         self.logger.debug(f"After skipping header: {data.shape}")
         
         # 设置列名
@@ -291,7 +351,7 @@ class HTMLTableParser(BaseParser):
         Returns:
             Cleaned DataFrame with standardised columns.
         """
-        data = df.iloc[1:].copy()  # skip header row
+        data = self._without_header(df)
         
         # 设置列名
         if len(data.columns) >= 3:

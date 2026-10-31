@@ -1,12 +1,14 @@
 """Situation runs: a scheduled refresh that writes the database, and a release export.
 
 :func:`run_situation` collects reports, stores them, fetches full text and runs
-peer-reviewed alert extraction (the scheduler calls it with ``export=False``).
+peer-reviewed alert extraction and commits stored outbreaks.
 :func:`export_situation` is the release step: it only reads the database.
 """
 
 from __future__ import annotations
 
+import asyncio
+from uuid import uuid4
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
@@ -38,20 +40,32 @@ async def run_situation(
     don_limit: int = 200,
     document_limit: int = 40,
     ai_limit: int = 30,
-    output_dir: Path | str = DEFAULT_OUTPUT_DIR,
     skip_ai: bool = False,
     require_cross_model: bool = False,
     fetch: bool = True,
-    export: bool = True,
+    task_uuid: str | None = None,
     progress: Progress = _noop,
 ) -> dict[str, Any]:
     now = utc_now()
     run_id = f"situation-{now.strftime('%Y%m%dT%H%M%SZ')}"
     summary: dict[str, Any] = {"run_id": run_id, "started_at": now.isoformat()}
 
+    from src.services.ingestion.stages import StageRun
+    stages = await StageRun.start(task_uuid or str(uuid4()), "situation")
+    await stages.transition("collect", metrics={"step": "documents"})
+    from src.services.ingestion.capture import capture_sources
+    try:
+        with capture_sources(stages.task_uuid, stages.attempt, "situation"):
+            return await _run_stages(summary=summary, now=now, run_id=run_id, stages=stages, since_days=since_days, don_limit=don_limit, document_limit=document_limit, ai_limit=ai_limit, skip_ai=skip_ai, require_cross_model=require_cross_model, fetch=fetch, progress=progress)
+    except BaseException as exc:
+        await stages.finish(error=str(exc) or type(exc).__name__)
+        raise
+
+
+async def _run_stages(*, summary, now, run_id, stages, since_days, don_limit, document_limit, ai_limit, skip_ai, require_cross_model, fetch, progress):
     if fetch:
         # ``collect`` is synchronous HTTP; it isolates each source internally.
-        envelope = collect(since_days=since_days, don_limit=don_limit)
+        envelope = await asyncio.to_thread(collect, since_days=since_days, don_limit=don_limit)
         summary["sources"] = envelope["sources"]
         summary["stored"] = await store_notices(envelope, run_id=run_id)
     await progress(20)
@@ -59,31 +73,24 @@ async def run_situation(
     summary["documents"] = await fetch_pending_documents(limit=document_limit)
     await progress(40)
 
+    from src.services.ingestion.capture import _current
+    if _current.get():
+        _current.get().verify()
+    await stages.transition("organize", metrics={"step": "extract"})
     summary["review_mode"] = None
     if not skip_ai:
-        from src.ai.peer_review import AIOutputError
-        from src.ai.peer_review_completer import ReviewRoutePool
+        from src.ai.peer_review_completer import QueuedModelCompleter
+        complete = QueuedModelCompleter(line="situation_notice", allow_single_model=not require_cross_model)
 
-        try:
-            # A pool picks each report's author/reviewer by load and keeps failover
-            # off the other role's model, so a rate-limited reviewer cannot collapse
-            # both roles onto one model.
-            pool = await ReviewRoutePool.from_model_center(line="situation_notice")
-            routes = len(pool._capacity)
-            if require_cross_model and routes < 2:
-                raise AIOutputError(f"peer review needs at least two active model routes; found {routes}")
-        except Exception as exc:  # noqa: BLE001 - no model must not block the export
-            logger.warning("Situation AI unavailable, exporting what is already extracted: {}", exc)
-            summary["ai_error"] = f"{type(exc).__name__}: {exc}"
-        else:
-            summary["review_mode"] = "cross_model" if routes >= 2 else "single_model"
-            summary["requeued_stale_prompts"] = await requeue_stale_prompts()
-            summary["extraction"] = await extract_pending(pool, limit=ai_limit)
+        summary["review_mode"] = "scheduled"
+        summary["requeued_stale_prompts"] = await requeue_stale_prompts()
+        summary["extraction"] = await extract_pending(complete, limit=ai_limit)
+    await stages.finish(metrics=summary.get("extraction") or {})
     await progress(75)
 
-    summary["outbreaks"] = await rebuild_outbreaks(as_of=now.date())
-    if export:
-        summary["export"] = await export_site(output_dir=output_dir, as_of=now.date())
+    await stages.transition("store")
+    summary["outbreaks"] = await rebuild_outbreaks(as_of=now.date(), task_uuid=stages.task_uuid)
+    await stages.finish(metrics={"outbreaks": summary["outbreaks"]})
     summary["finished_at"] = utc_now().isoformat()
     await progress(100)
     return summary
@@ -95,7 +102,6 @@ async def export_situation(*, output_dir: Path | str = DEFAULT_OUTPUT_DIR) -> di
     now = utc_now()
     return {
         "started_at": now.isoformat(),
-        "outbreaks": await rebuild_outbreaks(as_of=now.date()),
         "export": await export_site(output_dir=output_dir, as_of=now.date()),
         "finished_at": utc_now().isoformat(),
     }

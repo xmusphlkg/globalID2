@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { components } from "@/generated/api";
+import { ApiError, apiFetch } from "@/lib/api";
+import { Dialog, WorkspacePage } from "@/shared/ui";
+import { SourceFeedback, SourceLinks } from "@/features/collection-sources/shared";
 import { useAppStore } from "@/stores/app-store";
 import { t } from "@/lib/i18n";
 import {
@@ -11,9 +17,6 @@ import {
   useOntologySeries,
   useSourceConfigs,
   useSourcesFlow,
-  useStartCrawl,
-  useSituationSources,
-  useRefreshSituationSources,
 } from "@/features/operations/sources/api";
 import { useTaskEventStream } from "@/features/operations/tasks/api";
 import { formatDate } from "@/lib/utils";
@@ -424,6 +427,7 @@ function SeriesMappingRegister({
         </summary>
         <div className="border-t border-tremor-border p-3 dark:border-dark-tremor-border">
           <input
+            aria-label={lang === "zh" ? "搜索来源序列" : "Search source series"}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder={lang === "zh" ? "搜索 D-code、来源标签、metric…" : "Search D-code, source label, metric…"}
@@ -433,12 +437,12 @@ function SeriesMappingRegister({
             <table className="w-full min-w-[980px] border-collapse text-left text-xs">
               <thead className="sticky top-0 bg-tremor-background dark:bg-dark-tremor-background">
                 <tr className="border-b border-tremor-border dark:border-dark-tremor-border">
-                  <th className="px-2 py-2">Series / source</th>
-                  <th className="px-2 py-2">Local label</th>
-                  <th className="px-2 py-2">Target</th>
-                  <th className="px-2 py-2">Metric / grain</th>
-                  <th className="px-2 py-2">Mapping / comparability</th>
-                  <th className="px-2 py-2">Availability</th>
+                  <th className="px-2 py-2">{lang === "zh" ? "序列 / 来源" : "Series / source"}</th>
+                  <th className="px-2 py-2">{lang === "zh" ? "来源标签" : "Local label"}</th>
+                  <th className="px-2 py-2">{lang === "zh" ? "映射目标" : "Target"}</th>
+                  <th className="px-2 py-2">{lang === "zh" ? "指标 / 粒度" : "Metric / grain"}</th>
+                  <th className="px-2 py-2">{lang === "zh" ? "映射 / 可比性" : "Mapping / comparability"}</th>
+                  <th className="px-2 py-2">{lang === "zh" ? "可用性" : "Availability"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -545,7 +549,13 @@ function CreateCrawlModal({
   const [sourceFile, setSourceFile] = useState("");
   const [sourceDir, setSourceDir] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const { mutate: startCrawl, isPending, isSuccess } = useStartCrawl();
+  const client = useQueryClient();
+  const submitLock = useRef(false);
+  const { mutate: startCrawl, isPending, isSuccess, data: result, reset } = useMutation({
+    mutationFn: (payload: Omit<components["schemas"]["SurveillanceRunCreate"], "line">) => apiFetch<components["schemas"]["TaskReferenceOut"]>("/collection/runs", { method: "POST", body: JSON.stringify({ line: "surveillance", ...payload }) }),
+    onSuccess: () => { client.invalidateQueries({ queryKey: ["sources-flow"] }); client.invalidateQueries({ queryKey: ["tasks"] }); },
+  });
+  useEffect(() => { if (open) { reset(); setError(null); submitLock.current = false; } }, [open, reset]);
 
   useEffect(() => {
     setFillMissing(sourceConfig?.default_fill_missing ?? true);
@@ -585,6 +595,8 @@ function CreateCrawlModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitLock.current) return;
+    submitLock.current = true;
     setError(null);
     startCrawl(
       {
@@ -602,11 +614,9 @@ function CreateCrawlModal({
         priority,
       },
       {
-        onSuccess: () => {
-          setTimeout(onClose, 1200);
-        },
+        onSettled: () => { submitLock.current = false; },
         onError: (err: unknown) => {
-          const msg = err instanceof Error ? err.message : String(err);
+          const msg = err instanceof ApiError && err.status === 409 ? `${t(lang, "cc_collection_conflict")} ${err.message}` : err instanceof Error ? err.message : String(err);
           setError(msg);
         },
       },
@@ -621,27 +631,28 @@ function CreateCrawlModal({
     "mb-1 block text-xs font-medium text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-tremor-default bg-tremor-background p-6 shadow-xl dark:bg-dark-tremor-background">
+    <Dialog open={open} onClose={onClose} title={t(lang, "source_ingestion_new")}><div className="relative">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-tremor-content-subtle hover:text-tremor-content-strong dark:text-dark-tremor-content-subtle dark:hover:text-dark-tremor-content-strong"
+          aria-label={t(lang, "source_close")}
+          className="absolute right-0 top-0 inline-flex h-9 w-9 items-center justify-center rounded-md text-tremor-content-subtle hover:text-tremor-content-strong dark:text-dark-tremor-content-subtle dark:hover:text-dark-tremor-content-strong"
         >
           <X className="h-5 w-5" />
         </button>
 
-        <Title className="mb-4">{t(lang, "flow_new_crawl_task")}</Title>
+
 
         {isSuccess ? (
           <div className="flex flex-col items-center gap-2 py-4 text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-8 w-8" />
             <span className="text-sm font-medium">{t(lang, "flow_task_created")}</span>
             <span className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-              {lang === "zh" ? "任务已开始执行，可在任务页面查看进度" : "Task is now running. Check Tasks page for progress."}
+              {t(lang, "source_submitted")}
             </span>
+            {result?.task_uuid && <Link className="cc-button" href={`/collection/runs/${encodeURIComponent(result.task_uuid)}`}>{t(lang, "source_open_run")}</Link>}
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 pt-10">
             {!supportedMode && (
               <div className="rounded-tremor-default border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
                 {lang === "zh"
@@ -655,7 +666,7 @@ function CreateCrawlModal({
               <label className={labelCls}>
                 {lang === "zh" ? "数据源" : "Data Source"}
               </label>
-              <select value={source} onChange={(e) => setSource(e.target.value)} className={inputCls} disabled={!supportedMode}>
+              <select aria-label={lang === "zh" ? "数据源" : "Data Source"} value={source} onChange={(e) => setSource(e.target.value)} className={inputCls} disabled={!supportedMode}>
                 {sourceOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
@@ -694,7 +705,7 @@ function CreateCrawlModal({
             {/* Priority */}
             <div>
               <label className={labelCls}>{t(lang, "priority")}</label>
-              <select value={priority} onChange={(e) => setPriority(e.target.value)} className={inputCls}>
+              <select aria-label={t(lang, "priority")} value={priority} onChange={(e) => setPriority(e.target.value)} className={inputCls}>
                 {["low", "normal", "high", "urgent"].map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
@@ -743,6 +754,7 @@ function CreateCrawlModal({
                         : (lang === "zh" ? "动态修订窗口（月）" : "Revision window (months)")}
                   </label>
                   <input
+                    aria-label={lang === "zh" ? "修订窗口" : "Revision window"}
                     type="number"
                     min={1}
                     max={revisionWindowUnit === "weeks" ? 52 : revisionWindowUnit === "years" ? 10 : 24}
@@ -769,6 +781,7 @@ function CreateCrawlModal({
                           : (lang === "zh" ? "历史起始年份" : "History Start Year")}
                       </label>
                       <input
+                        aria-label={lang === "zh" ? "起始年份" : "Start year"}
                         type="number"
                         min={selectedSourceOption?.default_start_year ?? sourceConfig?.default_start_year ?? 1900}
                         max={selectedSourceOption?.history_end_year ?? new Date().getFullYear()}
@@ -792,6 +805,7 @@ function CreateCrawlModal({
                       </label>
                       <input
                         type="text"
+                        aria-label={lang === "zh" ? "来源文件" : "Source file"}
                         value={sourceFile}
                         onChange={(e) => setSourceFile(e.target.value)}
                         placeholder="data/raw/<country>/export.csv"
@@ -806,6 +820,7 @@ function CreateCrawlModal({
                       </label>
                       <input
                         type="text"
+                        aria-label={lang === "zh" ? "来源目录" : "Source directory"}
                         value={sourceDir}
                         onChange={(e) => setSourceDir(e.target.value)}
                         placeholder="data/raw/<country>/"
@@ -826,7 +841,7 @@ function CreateCrawlModal({
 
             {/* Error message */}
             {error && (
-              <div className="rounded-tremor-default border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
+              <div role="alert" className="rounded-tremor-default border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
                 {error}
               </div>
             )}
@@ -846,13 +861,13 @@ function CreateCrawlModal({
                 className="flex items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 py-2 text-sm font-medium text-tremor-brand-inverted transition hover:opacity-90 disabled:opacity-60 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                {lang === "zh" ? "开始爬取" : "Start Crawl"}
+                {t(lang, "source_ingestion_start")}
               </button>
             </div>
           </form>
         )}
       </div>
-    </div>
+    </Dialog>
   );
 }
 
@@ -866,10 +881,10 @@ export default function SourcesFlowPage() {
       ? (lang === "zh" ? "全部国家" : "All countries")
       : countryName;
 
-  const { data: flows, isLoading, error } = useSourcesFlow(effectiveCountryCode);
-  const { data: sourceConfigs } = useSourceConfigs(lang);
-  const { data: situationSources, isLoading: situationSourcesLoading, error: situationSourcesError } = useSituationSources();
-  const refreshSituationSources = useRefreshSituationSources();
+  const flowQuery = useSourcesFlow(effectiveCountryCode);
+  const { data: flows, isLoading, error } = flowQuery;
+  const sourceConfigQuery = useSourceConfigs(lang);
+  const { data: sourceConfigs } = sourceConfigQuery;
   const { data: ontologySeries } = useOntologySeries(
     scopeMode === "selected" ? countryCode : null,
   );
@@ -885,7 +900,7 @@ export default function SourcesFlowPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
 
-  useTaskEventStream({ extraQueryKeys: [["sources-flow"], ["situation-sources"]] });
+  useTaskEventStream({ extraQueryKeys: [["sources-flow"]] });
 
   const openModal = () => setModalOpen(true);
   const closeModal = () => setModalOpen(false);
@@ -935,9 +950,9 @@ export default function SourcesFlowPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow={t(lang, "mod_sources")}
-        title={t(lang, "flow_title")}
-        description={t(lang, "flow_subtitle")}
+        eyebrow={t(lang, "collection")}
+        title={t(lang, "source_ingestion")}
+        description={t(lang, "source_ingestion_desc")}
         meta={
           <>
             <StatusBadge tone={scopeMode === "all" ? "info" : "primary"}>
@@ -961,49 +976,13 @@ export default function SourcesFlowPage() {
               className="flex h-10 items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 text-sm font-medium text-tremor-brand-inverted transition hover:opacity-90 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
             >
               <Plus className="h-4 w-4" />
-              {t(lang, "flow_new_crawl_task")}
+              {t(lang, "source_ingestion_new")}
             </button>
           ) : null
         }
       />
-
-      <section className="app-panel overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-tremor-border p-4 dark:border-dark-tremor-border lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <Title className="flex items-center gap-2"><RadioTower className="h-5 w-5 text-tremor-brand" />{lang === "zh" ? "全球态势通报来源" : "Global Situation notice sources"}</Title>
-            <Text className="mt-1">{lang === "zh" ? "采集 WHO、ECDC、Africa CDC、PAHO 官方通报，随后自动执行 AI 同行评审、事件聚类、周综述与导出。" : "Collects official WHO, ECDC, Africa CDC and PAHO notices, then runs AI peer review, event clustering, weekly digests and export automatically."}</Text>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button disabled={refreshSituationSources.isPending} onClick={() => refreshSituationSources.mutate("no_fetch")} className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border px-3 text-sm font-medium disabled:opacity-50 dark:border-dark-tremor-border"><RefreshCw className={`h-4 w-4 ${refreshSituationSources.isPending ? "animate-spin" : ""}`} />{lang === "zh" ? "仅重跑 AI 与导出" : "Re-run AI and export"}</button>
-            <button disabled={refreshSituationSources.isPending} onClick={() => refreshSituationSources.mutate("full")} className="inline-flex h-9 items-center gap-2 rounded-tremor-default bg-tremor-brand px-3 text-sm font-medium text-tremor-brand-inverted disabled:opacity-50 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"><Download className="h-4 w-4" />{lang === "zh" ? "采集全部通报来源" : "Collect all notice sources"}</button>
-          </div>
-        </div>
-        {refreshSituationSources.isSuccess ? <p className="border-b border-emerald-200 bg-emerald-50 px-4 py-2 text-xs text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">{lang === "zh" ? `任务已进入队列：${refreshSituationSources.data.task_uuid}` : `Task queued: ${refreshSituationSources.data.task_uuid}`}</p> : null}
-        {refreshSituationSources.error || situationSourcesError ? <p className="border-b border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">{String((refreshSituationSources.error || situationSourcesError) instanceof Error ? (refreshSituationSources.error || situationSourcesError)?.message : (refreshSituationSources.error || situationSourcesError))}</p> : null}
-        <div className="grid gap-0 md:grid-cols-2 xl:grid-cols-3">
-          {situationSourcesLoading ? <div className="col-span-full p-6 text-sm text-tremor-content-subtle"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{lang === "zh" ? "加载来源状态…" : "Loading source status…"}</div> : situationSources?.map((source) => {
-            const status = source.status || "not_checked";
-            const statusTone = status === "ok" ? "success" : status === "failed" ? "danger" : status === "skipped" ? "warning" : "neutral";
-            const latest = source.history[0];
-            const label = (lang === "zh" ? source.label_zh : source.label_en) || source.label_en || source.source_id;
-            const link = source.homepage || source.endpoint;
-            return <article key={source.source_id} className="border-b border-r border-tremor-border p-4 dark:border-dark-tremor-border">
-              <div className="flex items-start justify-between gap-3">
-                <div><p className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{label}</p><p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{source.agency_en ?? "—"} · {(lang === "zh" ? source.cadence?.zh : source.cadence?.en) ?? "—"}</p></div>
-                <StatusBadge tone={statusTone}>{status.replaceAll("_", " ")}</StatusBadge>
-              </div>
-              <div className="mt-2 rounded border border-tremor-border bg-tremor-background-subtle p-2 text-xs dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
-                <p className="font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{source.stored_notices} {lang === "zh" ? "条已入库通报" : "stored notices"}</p>
-                <p className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{latest ? `${lang === "zh" ? "最近一次" : "Last run"}: ${latest.fetched_count} ${lang === "zh" ? "抓取" : "fetched"} · ${latest.new_count} ${lang === "zh" ? "新增" : "new"} · ${latest.updated_count} ${lang === "zh" ? "更新" : "updated"}` : (lang === "zh" ? "尚未运行" : "Not run yet")}</p>
-                <p className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{source.redistribution === "metadata_only" ? (lang === "zh" ? "仅元数据（再分发条款待核实）" : "Metadata only (redistribution terms pending)") : (lang === "zh" ? "元数据与简短摘录" : "Metadata and short extract")}</p>
-              </div>
-              <p className="mt-2 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{lang === "zh" ? "最后检查" : "Checked"}: {source.last_checked_at ? formatDate(source.last_checked_at) : "—"} · {lang === "zh" ? "最后成功" : "Last success"}: {source.last_success_at ? formatDate(source.last_success_at) : "—"}</p>
-              {source.last_error ? <p className="mt-2 line-clamp-2 text-xs text-rose-700 dark:text-rose-300" title={source.last_error}>{source.last_error}</p> : null}
-              {link ? <a href={link} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-tremor-brand hover:underline dark:text-dark-tremor-brand">{lang === "zh" ? "官方来源" : "Official source"}<ExternalLink className="h-3 w-3" /></a> : null}
-            </article>;
-          })}
-        </div>
-      </section>
+      <div className="flex flex-wrap gap-2"><SourceLinks type="crawl_data" kind="ingestion" /></div>
+      <SourceFeedback query={sourceConfigQuery} />
 
       <FilterToolbar>
         <div className="flex items-center gap-1 rounded-tremor-default border border-tremor-border bg-tremor-background-subtle p-1 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
@@ -1022,7 +1001,7 @@ export default function SourcesFlowPage() {
         </div>
       </FilterToolbar>
 
-      {scopeMode === "selected" && countryId && !countrySupported && (
+      {scopeMode === "selected" && countryId && !countrySupported && !sourceConfigQuery.isLoading && !sourceConfigQuery.isError && (
         <div className="app-panel p-4">
           <Text>
             {lang === "zh"
@@ -1081,26 +1060,13 @@ export default function SourcesFlowPage() {
           </div>
         </div>
       ) : isLoading ? (
-        <div className="space-y-4">
+        <div role="status" aria-label={t(lang, "source_loading")} className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-24 w-full animate-pulse rounded-tremor-default bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
           ))}
         </div>
       ) : error ? (
-        <div className="app-panel p-4">
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <AlertCircle className="mb-4 h-12 w-12 text-rose-500" />
-            <Title>{lang === "zh" ? "加载失败" : "Failed to load flow"}</Title>
-            <Text className="max-w-2xl">
-              {error instanceof Error ? error.message : (lang === "zh" ? "请求数据时发生错误。" : "An error occurred while loading data.")}
-            </Text>
-            <Text className="mt-2 text-xs text-tremor-content">
-              {lang === "zh"
-                ? "如果你刚刚更新了 dashboard 代码，请重启 API 服务；旧版 API 不支持 all countries 聚合接口。"
-                : "If you just updated the dashboard code, restart the API service. Older API builds do not support the all-countries flow endpoint."}
-            </Text>
-          </div>
-        </div>
+        <SourceFeedback query={flowQuery} />
       ) : !flows || flows.length === 0 ? (
         <div className="app-panel p-4">
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -1109,6 +1075,7 @@ export default function SourcesFlowPage() {
             <Text>{t(lang, "flow_no_sources_hint")}</Text>
             <button
               onClick={openModal}
+              disabled={!countrySupported || !countryId}
               className="mt-4 flex items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 py-2 text-sm font-medium text-tremor-brand-inverted transition hover:opacity-90 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
             >
               <Plus className="h-4 w-4" />

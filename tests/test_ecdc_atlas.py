@@ -70,6 +70,9 @@ def test_shared_ecdc_adapter_covers_all_eu_eea_country_codes() -> None:
 def test_permission_gated_national_sources_do_not_enter_public_ecdc_export() -> None:
     austria = get_country_bootstrap_config("AT")
     ireland = get_country_bootstrap_config("IE")
+    assert austria["public_release_enabled"] is True
+    assert ireland["public_release_enabled"] is False
+    assert ireland["crawler_config"]["source_policies"]["ecdc_atlas_annual"]["public_release_enabled"] is True
     assert austria["crawler_config"]["sources"] == [
         "ages_radar",
         "ecdc_atlas_annual",

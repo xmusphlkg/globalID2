@@ -88,6 +88,35 @@ from scripts.generate_site_data import (
 
 
 @pytest.fixture(autouse=True)
+def isolate_task_stage_storage(monkeypatch):
+    # These tests exercise knowledge policy using task and database doubles.
+    # Stage persistence and raw bytes have dedicated database integration tests.
+    from contextlib import contextmanager
+    class Stages:
+        current = None
+        attempt = 1
+        @classmethod
+        async def start(cls, task_uuid, _line):
+            result = cls()
+            result.task_uuid = task_uuid
+            return result
+        async def transition(self, stage, **_kwargs):
+            self.current = stage
+        async def finish(self, **_kwargs):
+            self.current = None
+        async def mark_dirty(self, *_args):
+            pass
+    class Capture:
+        def verify(self):
+            pass
+    @contextmanager
+    def capture(*_args):
+        yield Capture()
+    monkeypatch.setattr("src.services.ingestion.stages.StageRun", Stages)
+    monkeypatch.setattr("src.services.ingestion.capture.capture_sources", capture)
+
+
+@pytest.fixture(autouse=True)
 def _reset_source_adapter_health() -> None:
     """Keep process-local source circuits out of unit-test ordering."""
 
@@ -3944,3 +3973,67 @@ def test_report_v4_disease_context_is_locale_first_and_evidence_bound() -> None:
     assert "流感" in disease_context["body"]["zh"]
     assert "Influenza" in disease_context["body"]["en"]
     assert "disease:D001.total_cases" in disease_context["evidence_refs"]
+
+
+@pytest.mark.parametrize("failure_at", [1, 2])
+def test_durable_model_failure_is_not_converted_to_scaffold_or_retried(monkeypatch, failure_at):
+    from src.ai.work_queue import AIWorkFailed
+
+    class FailedWorkAgent:
+        def __init__(self):
+            self.calls = 0
+
+        def clear_conversation_history(self):
+            pass
+
+        def get_latest_conversation(self):
+            return {}
+
+        async def complete(self, **_kwargs):
+            self.calls += 1
+            if self.calls == failure_at:
+                raise AIWorkFailed("durable child failed")
+            return "malformed JSON"
+
+    async def routes(**_kwargs):
+        return [], 0, "test"
+
+    async def noop(*_args):
+        pass
+
+    monkeypatch.setattr(AIDiseaseBriefGenerator, "_preferred_models_for", staticmethod(routes))
+    monkeypatch.setattr(AIDiseaseBriefGenerator, "_record_structured_output_failure", staticmethod(noop))
+    disease = attach_profile_schema({
+        "disease_id": "ANY", "name_en": "Example infection",
+        "target_sections": ["brief", "prevention"],
+        "evidence_target_sections": ["brief", "prevention"],
+        "_evidence_packet_prepared": True,
+    })
+    source = {
+        "id": 10, "source_type": "who", "source_name": "WHO",
+        "url": "https://example.org/source", "status": "active", "review_status": "approved",
+        "content_text": "Prevention and control include vaccination and hygiene measures. " * 4,
+        "metadata": {"relevance_score": 1.0},
+    }
+    agent = FailedWorkAgent()
+    with pytest.raises(AIWorkFailed, match="durable child failed"):
+        asyncio.run(AIDiseaseBriefGenerator(agent=agent).generate_with_trace(
+            disease=disease, sources=[source], language="en",
+        ))
+    assert agent.calls == failure_at
+
+
+def test_peer_review_durable_failure_propagates_to_parent(monkeypatch):
+    from src.ai.work_queue import AIWorkFailed
+    from src.knowledge import peer_review
+
+    async def failed_review(*_args, **_kwargs):
+        raise AIWorkFailed("review child failed")
+
+    monkeypatch.setattr(peer_review, "review_brief", failed_review)
+    manifest = SimpleNamespace(to_dict=lambda **_kwargs: {"fragments": []})
+    with pytest.raises(AIWorkFailed, match="review child failed"):
+        asyncio.run(AIDiseaseBriefGenerator._peer_review_brief(
+            {"status": "published"}, object(), author_model="author", language="en",
+            target_sections=["brief"], evidence_manifest=manifest,
+        ))

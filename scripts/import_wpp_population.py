@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import select
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -235,74 +235,54 @@ def is_wpp_population_target(metadata: object) -> bool:
     )
 
 
-async def ensure_table(db) -> None:
-    await db.execute(
-        text(
-            """
-            CREATE TABLE IF NOT EXISTS population_records (
-                id SERIAL PRIMARY KEY,
-                country_id INTEGER NOT NULL REFERENCES countries(id) ON DELETE CASCADE,
-                year INTEGER NOT NULL,
-                population DOUBLE PRECISION NOT NULL,
-                source VARCHAR(100) NOT NULL DEFAULT 'WPP',
-                metadata JSON NOT NULL DEFAULT '{}'::json,
-                created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT uq_population_country_year UNIQUE (country_id, year)
-            )
-            """
-        )
-    )
-    await db.execute(text("CREATE INDEX IF NOT EXISTS idx_population_country ON population_records(country_id)"))
-    await db.execute(text("CREATE INDEX IF NOT EXISTS idx_population_year ON population_records(year)"))
-    await db.execute(text("CREATE INDEX IF NOT EXISTS idx_population_country_year ON population_records(country_id, year)"))
+def _wpp_provenance(input_path: Path | None) -> dict[str, Any]:
+    if input_path is None:
+        return {}
+    import hashlib
+    with input_path.open("rb") as handle:
+        digest = hashlib.file_digest(handle, "sha256").hexdigest()
+    return {"wpp_snapshot": input_path.name, "input_sha256": digest}
 
 
-async def import_rows(rows: list[PopulationRow], dry_run: bool) -> None:
+def _prepared_wpp(row: PlannedPopulationRow, provenance: dict) -> dict:
+    return {
+        "country_code": row.country_code, "year": row.year,
+        "population": row.population, "source": "WPP",
+        "semantic_metadata": {},
+        "provenance_metadata": {"country_code": row.country_code, "wpp_iso2": row.wpp_iso2, **provenance},
+    }
+
+
+async def import_rows(
+    rows: list[PopulationRow], dry_run: bool, *, input_path: Path | None = None,
+) -> dict[str, Any]:
+    from src.domain import Country
+    from scripts.import_subdivision_population import store_population_changes
+
+    provenance = _wpp_provenance(input_path)
     async with get_db() as db:
-        await ensure_table(db)
-
-        countries_result = await db.execute(text("SELECT id, code FROM countries"))
-        country_by_code = {str(code).upper(): int(country_id) for country_id, code in countries_result.fetchall()}
-
-        mapped = 0
-        skipped = 0
-
-        for row in rows:
-            country_id = country_by_code.get(row.iso2)
-            if country_id is None:
-                skipped += 1
-                continue
-
-            mapped += 1
-            if dry_run:
-                continue
-
-            await db.execute(
-                text(
-                    """
-                    INSERT INTO population_records (country_id, year, population, source, metadata, created_at, updated_at)
-                    VALUES (:country_id, :year, :population, :source, '{}'::json, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    ON CONFLICT (country_id, year) DO UPDATE SET
-                        population = EXCLUDED.population,
-                        source = EXCLUDED.source,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE population_records.source = 'WPP'
-                    """
-                ),
-                {
-                    "country_id": country_id,
-                    "year": row.year,
-                    "population": row.population,
-                    "source": "WPP",
-                },
-            )
-
+        countries = (await db.execute(select(Country.id, Country.code, Country.metadata_))).all()
+        by_iso: dict[str, list[tuple[int, str]]] = {}
+        for identifier, code, metadata in countries:
+            if is_wpp_population_target(metadata):
+                normalized = norm_text(code).upper()
+                by_iso.setdefault(COUNTRY_CODE_TO_WPP_ISO2.get(normalized, normalized), []).append((identifier, normalized))
+        planned = [
+            PlannedPopulationRow(identifier, code, row.iso2, row.year, row.population)
+            for row in rows for identifier, code in by_iso.get(row.iso2, [])
+        ]
+        result = await store_population_changes(
+            db, [_prepared_wpp(row, provenance) for row in planned],
+            operation="import_wpp_population", input_data=provenance,
+            preserve_official=True, dry_run=dry_run,
+        )
+    skipped = sum(row.iso2 not in by_iso for row in rows)
     print(f"Parsed rows: {len(rows)}")
-    print(f"Mapped rows: {mapped}")
+    print(f"Mapped rows: {len(planned)}")
     print(f"Skipped rows (unknown country code): {skipped}")
     if dry_run:
         print("Dry-run mode: no data written")
+    return {**result, "parsed_rows":len(rows), "mapped_rows":len(planned), "skipped_rows":skipped, "dry_run":dry_run, **provenance}
 
 
 async def ensure_wpp_population(
@@ -310,11 +290,10 @@ async def ensure_wpp_population(
     *,
     strict: bool = True,
 ) -> dict[str, Any]:
-    """Idempotently provision complete WPP denominators for enabled countries.
+    """Explicitly import changed WPP denominators for enabled countries.
 
-    This intentionally reparses the full WPP snapshot on every readiness run.
-    A country added after an earlier import is therefore discovered and
-    backfilled automatically without maintaining a separate country list.
+    Parsing the local snapshot does not imply rewriting identical records.
+    Official NBS/ABS/IBGE denominators always retain priority over WPP.
     """
 
     csv_path = input_path or resolve_default_input()
@@ -324,10 +303,12 @@ async def ensure_wpp_population(
     if not rows:
         raise ValueError("No rows matched WPP filter rules")
 
+    from src.domain import Country
+    from scripts.import_subdivision_population import store_population_changes
+    provenance = _wpp_provenance(csv_path)
     async with get_db() as db:
-        await ensure_table(db)
         countries_result = await db.execute(
-            text("SELECT id, code, metadata FROM countries WHERE is_active = TRUE")
+            select(Country.id, Country.code, Country.metadata_).where(Country.is_active.is_(True))
         )
         country_rows = countries_result.fetchall()
         country_by_code = {
@@ -347,35 +328,11 @@ async def ensure_wpp_population(
         if strict:
             validate_population_import_plan(plan)
         planned_rows: list[PlannedPopulationRow] = plan["rows"]
-        for row in planned_rows:
-            await db.execute(
-                text(
-                    """
-                    INSERT INTO population_records (country_id, year, population, source, metadata, created_at, updated_at)
-                    VALUES (:country_id, :year, :population, :source, CAST(:metadata AS json), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    ON CONFLICT (country_id, year) DO UPDATE SET
-                        population = EXCLUDED.population,
-                        source = EXCLUDED.source,
-                        metadata = EXCLUDED.metadata,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE population_records.source = 'WPP'
-                    """
-                ),
-                {
-                    "country_id": row.country_id,
-                    "year": row.year,
-                    "population": row.population,
-                    "source": "WPP",
-                    "metadata": json.dumps(
-                        {
-                            "country_code": row.country_code,
-                            "wpp_iso2": row.wpp_iso2,
-                            "wpp_snapshot": csv_path.name,
-                            "auto_provisioned": True,
-                        }
-                    ),
-                },
-            )
+        changes = await store_population_changes(
+            db, [_prepared_wpp(row, {**provenance, "auto_provisioned": True}) for row in planned_rows],
+            operation="import_enabled_country_wpp_population", input_data=provenance,
+            preserve_official=True,
+        )
     expected_years = plan["expected_years"]
     return {
         "parsed_rows": len(rows),
@@ -389,6 +346,8 @@ async def ensure_wpp_population(
         "year_min": min(expected_years) if expected_years else None,
         "year_max": max(expected_years) if expected_years else None,
         "source_path": str(csv_path),
+        "input_sha256": provenance["input_sha256"],
+        **changes,
     }
 
 
@@ -401,7 +360,8 @@ def main() -> None:
     if not rows:
         raise SystemExit("No rows matched WPP filter rules")
 
-    asyncio.run(import_rows(rows, args.dry_run))
+    result = asyncio.run(import_rows(rows, args.dry_run, input_path=args.input))
+    print(json.dumps(result, ensure_ascii=False, sort_keys=True))
 
 
 if __name__ == "__main__":

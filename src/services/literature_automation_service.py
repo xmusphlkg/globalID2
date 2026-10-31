@@ -584,12 +584,14 @@ class LiteratureAutomationService:
         self,
         *,
         dry_run: bool = False,
-        export: bool | None = None,
         policy_overrides: Mapping[str, float] | None = None,
         diagnostics: bool = False,
         batch_size: int | None = None,
         statement_timeout_seconds: int | None = None,
         lock_timeout_seconds: int | None = None,
+        expected_plan_sha256: str | None = None,
+        max_projected_backlog: int = 500,
+        max_changes: int = 5000,
     ) -> dict[str, Any]:
         config = _effective_config(get_config().literature, policy_overrides)
         if not config.autopilot_enabled and not dry_run:
@@ -613,11 +615,35 @@ class LiteratureAutomationService:
             raise ValueError("statement_timeout_seconds must be between 30 and 3600")
         if not 1 <= effective_lock_timeout <= 300:
             raise ValueError("lock_timeout_seconds must be between 1 and 300")
+        from src.ai.work_queue import current_parent
+        parent = current_parent()
+        if not dry_run and parent is None:
+            from src.services.model_operations import enqueue_model_operation
+            task = await enqueue_model_operation("literature_reconcile", {
+                "dry_run": False,
+                "policy_overrides": dict(policy_overrides) if policy_overrides else None,
+                "diagnostics": diagnostics,
+                "batch_size": batch_size,
+                "statement_timeout_seconds": statement_timeout_seconds,
+                "lock_timeout_seconds": lock_timeout_seconds,
+                "expected_plan_sha256": expected_plan_sha256,
+                "max_projected_backlog": max_projected_backlog,
+                "max_changes": max_changes,
+            })
+            return {"enabled": True, "dry_run": False, "status": "queued", "task_uuid": task.task_uuid, "changed": 0}
+        if expected_plan_sha256 and not dry_run:
+            from src.literature.governance import governance_plan
+            preview = await self.reconcile(dry_run=True, policy_overrides=policy_overrides, diagnostics=True, batch_size=batch_size, statement_timeout_seconds=statement_timeout_seconds, lock_timeout_seconds=lock_timeout_seconds)
+            plan = governance_plan(preview, max_projected_backlog=max_projected_backlog)
+            if plan["plan_sha256"] != expected_plan_sha256:
+                raise ValueError("Confirmed governance plan changed before worker execution")
+            if not plan["within_backlog_guard"] or plan["counts"]["changed"] > max_changes:
+                raise ValueError("Governance plan exceeds the confirmed bounds")
         async with _RUN_LOCK:
             from src.literature.pipeline import _retry_postgres_deadlock
 
             # Retry the whole rolled-back transaction with a fresh session and
-            # counters. Export only after a successful commit.
+            # counters. Publication artifacts are generated only by EXPORT_DATA.
             result = await _retry_postgres_deadlock(
                 lambda: self._reconcile_database(
                     config,
@@ -626,15 +652,11 @@ class LiteratureAutomationService:
                     batch_size=effective_batch_size,
                     statement_timeout_seconds=effective_statement_timeout,
                     lock_timeout_seconds=effective_lock_timeout,
+                    source_task_uuid=parent.task_uuid if parent else None,
                 ),
                 max_retries=config.persistence_deadlock_max_retries,
                 base_delay_seconds=config.persistence_deadlock_retry_base_seconds,
             )
-            should_export = config.autopilot_export_on_change if export is None else export
-            if not dry_run and should_export and result["changed"]:
-                from src.services.literature_publication_service import export_public_research_artifacts
-
-                result["public_export"] = await export_public_research_artifacts()
             return result
 
     async def _reconcile_database(
@@ -646,7 +668,10 @@ class LiteratureAutomationService:
         batch_size: int,
         statement_timeout_seconds: int,
         lock_timeout_seconds: int,
+        source_task_uuid: str | None = None,
     ) -> dict[str, Any]:
+        if not dry_run and not source_task_uuid:
+            raise RuntimeError("Literature governance writes require a worker task")
         at = _now()
         counts = {
             "articles_published": 0,
@@ -1051,6 +1076,8 @@ class LiteratureAutomationService:
             else:
                 run_uuid = None
             if not dry_run:
+                from src.services.ingestion.stages import mark_dirty
+                await mark_dirty(db, line="literature", scope_key="*", task_uuid=source_task_uuid)
                 await db.commit()
         result = {
             "enabled": config.autopilot_enabled,

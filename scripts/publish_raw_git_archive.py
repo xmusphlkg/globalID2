@@ -133,7 +133,7 @@ def _safe_relative_path(value: str) -> PurePosixPath:
 
 
 def iter_source_files(source_dir: Path) -> Iterator[tuple[Path, Path]]:
-    """Yield source files in stable order while excluding authentication data."""
+    """Yield source bytes, excluding authentication and private model requests."""
 
     source = source_dir.resolve()
     if not source.is_dir():
@@ -141,7 +141,7 @@ def iter_source_files(source_dir: Path) -> Iterator[tuple[Path, Path]]:
     files: list[tuple[Path, Path]] = []
     for candidate in source.rglob("*"):
         relative = candidate.relative_to(source)
-        if "_auth" in relative.parts:
+        if "_auth" in relative.parts or relative.parts[0] == "ai":
             continue
         if candidate.is_symlink():
             raise RawArchiveError(f"Symlinks are forbidden in raw archives: {candidate}")
@@ -655,7 +655,8 @@ def _write_repository_metadata(
         f"本仓库由 GlobalID 自动维护，`{TARGET_BRANCH}` 分支直接镜像 `data/raw`。普通文件保留原始目录、"
         "文件名和内容，可以直接浏览或下载。同步任务只提交实际新增、更新或删除的数据；不创建 PR 或 Release。\n\n"
         f"This repository is maintained automatically by GlobalID. The `{TARGET_BRANCH}` branch mirrors "
-        "`data/raw` with original paths and bytes. Authentication data under `_auth` is excluded.\n\n"
+        "`data/raw` with original paths and bytes. Authentication data under `_auth` "
+        "and private model requests under `data/raw/ai` are excluded.\n\n"
         "## 超大文件 / Large files\n\n"
         "GitHub 不接受超过 100 MiB 的单个 Git 文件，因此极少数超大文件会保存为相邻的 "
         "`<原文件名>.parts/part-*`。它们未经压缩，按文件名顺序拼接即可恢复：\n\n"

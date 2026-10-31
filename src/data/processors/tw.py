@@ -9,6 +9,7 @@ revised, so imports upsert all fetched rows unconditionally.
 from __future__ import annotations
 
 import csv
+import io
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -46,6 +47,7 @@ class TWUpdateFetchResult:
     source_latest_date: Optional[date]
     source_csv: Path
     script_logs: List[str]
+    source_audit: Optional[Dict] = None
 
 
 @dataclass
@@ -241,10 +243,15 @@ class TWMonthlyUpdater:
             raise FileNotFoundError(
                 f"TW crawler output not found: {csv_path}. Please run the TW crawler first."
             )
+        return self.parse_source_csv(csv_path.read_bytes(), source_file=csv_path.name)
+
+    def parse_source_csv(self, payload: bytes, *, source_file: str | None = None) -> List[Dict[str, str]]:
+        """Normalize an immutable source snapshot without filesystem reads."""
+        csv_path = Path(source_file or self.output_csv.name)
 
         rows: List[Dict[str, str]] = []
         today = datetime.now(timezone.utc).date()
-        with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
+        with io.StringIO(payload.decode("utf-8-sig"), newline="") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
                 disease = _norm_text(row.get("Disease"))
@@ -253,8 +260,8 @@ class TWMonthlyUpdater:
                 if not disease or report_date is None or cases is None:
                     continue
 
-                local_cases = _parse_int(row.get("LocalCases")) or 0
-                imported_cases = _parse_int(row.get("ImportedCases")) or 0
+                local_cases = _parse_int(row.get("LocalCases"))
+                imported_cases = _parse_int(row.get("ImportedCases"))
                 is_open_month = (report_date.year, report_date.month) == (
                     today.year,
                     today.month,
@@ -267,8 +274,8 @@ class TWMonthlyUpdater:
                         "Year": str(report_date.year),
                         "Month": str(report_date.month),
                         "Cases": str(max(0, cases)),
-                        "LocalCases": str(max(0, local_cases)),
-                        "ImportedCases": str(max(0, imported_cases)),
+                        "LocalCases": "" if local_cases is None else str(max(0, local_cases)),
+                        "ImportedCases": "" if imported_cases is None else str(max(0, imported_cases)),
                         "Source": _norm_text(row.get("Source")) or self.source_name,
                         "SourceURL": _norm_text(row.get("SourceURL")),
                         # NIDSS warns that generated results can change after
@@ -283,6 +290,7 @@ class TWMonthlyUpdater:
 
         rows.sort(key=lambda r: (r["Date"], r["RawDiseaseLabel"]))
         return rows
+
 
     def _load_raw_monthly_rows(
         self,

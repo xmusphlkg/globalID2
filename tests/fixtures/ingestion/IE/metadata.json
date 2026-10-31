@@ -1,0 +1,46 @@
+{
+  "name": "IDHUB_AllCasesTS_L",
+  "type": "Table",
+  "maxRecordCount": 2000,
+  "fields": [
+    {
+      "name": "Cat"
+    },
+    {
+      "name": "Disease"
+    },
+    {
+      "name": "Format"
+    },
+    {
+      "name": "Include"
+    },
+    {
+      "name": "ObjectId"
+    },
+    {
+      "name": "SubCat"
+    },
+    {
+      "name": "Unique_ID"
+    },
+    {
+      "name": "Value"
+    },
+    {
+      "name": "YearWeek"
+    },
+    {
+      "name": "location"
+    },
+    {
+      "name": "week"
+    },
+    {
+      "name": "year"
+    }
+  ],
+  "editingInfo": {
+    "dataLastEditDate": 1785932755555
+  }
+}

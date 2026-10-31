@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh official NBS, ABS and IBGE populations; default is fetch/validate only.
 
-Use --apply for an idempotent database update and --export to refresh site data.
+Use --apply for an idempotent database update and --export to queue a site release.
 Published observations only; absent years are never interpolated or carried forward.
 """
 
@@ -14,7 +14,6 @@ import hashlib
 import io
 import json
 import re
-import subprocess
 import sys
 from datetime import datetime
 from decimal import Decimal
@@ -485,10 +484,11 @@ def main():
     content = csv_buffer.getvalue()
     (run / "population.csv").write_text(content, encoding="utf-8")
     checksum = hashlib.sha256(content.encode()).hexdigest()
+    changes = None
     if args.apply:
         if states:
             asyncio.run(register_brazil_states(states))
-        asyncio.run(apply_rows(rows, {row.source: checksum for row in rows}))
+        changes = asyncio.run(apply_rows(rows, {row.source: checksum for row in rows}))
     coverage = {}
     for row in rows:
         coverage.setdefault(row.country_code, []).append(row.year)
@@ -509,6 +509,7 @@ def main():
         },
         "sources": source.sources,
         "input_sha256": checksum,
+        "changes": changes,
         "snapshot": str(run),
         "policy": "exact geography, same calendar year, no interpolation or carry-forward",
     }
@@ -532,11 +533,10 @@ def main():
         flush=True,
     )
     if args.export:
-        args_export = [sys.executable, str(ROOT / "scripts/generate_site_data.py")]
-        # Include state rates once actual disease ingestion has activated them.
-        for code in sorted(asyncio.run(active_population_locations(list(coverage)))):
-            args_export += ["--incremental-country", code]
-        subprocess.run(args_export, cwd=ROOT, check=True)
+        from src.services.data_release_service import data_release_service
+        print(json.dumps(asyncio.run(data_release_service.trigger_job(
+            "site-release", manual=True, trigger="official-population-cli"
+        )), default=str))
 
 
 if __name__ == "__main__":

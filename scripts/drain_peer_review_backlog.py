@@ -24,8 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.core import get_db  # noqa: E402
-from src.services.ai_content_governance_service import ai_content_governance_service as gov  # noqa: E402
+from src.services.model_operations import run_worker_operation  # noqa: E402
 
 
 def log(stage: str, payload: dict) -> None:
@@ -34,19 +33,14 @@ def log(stage: str, payload: dict) -> None:
 
 
 async def drain_stream(kind: str, workers: int, commit_every: int) -> None:
-    totals = await gov.stream_review(
-        kind,
-        workers=workers,
-        commit_every=commit_every,
-        emit=lambda record: log(kind, record),
-    )
+    totals = await run_worker_operation("governance_stream", {
+        "kind": kind, "workers": workers, "commit_every": commit_every})
     log(f"{kind}_done", {"totals": totals})
 
 
 async def drain_simple(name: str, method, batch: int) -> None:
     while True:
-        async with get_db() as db:
-            result = await method(db, limit=batch)
+        result = await run_worker_operation("governance_simple", {"method": method, "limit": batch})
         log(name, result)
         if result["reviewed"] == 0 or result["deferred"] == result["reviewed"]:
             return
@@ -62,8 +56,8 @@ async def main() -> int:
     stages = {
         "articles": lambda: drain_stream("articles", args.workers, args.commit_every),
         "summaries": lambda: drain_stream("summaries", args.workers, args.commit_every),
-        "sources": lambda: drain_simple("knowledge_sources", gov.review_knowledge_sources, args.batch),
-        "learning": lambda: drain_simple("learning_suggestions", gov.review_learning_suggestions, args.batch),
+        "sources": lambda: drain_simple("knowledge_sources", "review_knowledge_sources", args.batch),
+        "learning": lambda: drain_simple("learning_suggestions", "review_learning_suggestions", args.batch),
     }
     for name, run in stages.items():
         if args.only and name != args.only:

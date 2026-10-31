@@ -14,20 +14,11 @@ from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
 
-from anthropic import AsyncAnthropic
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
-from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
-from src.ai.model_center import (
-    extract_retry_after_seconds,
-    get_active_model_routes,
-    is_model_unavailable_error,
-    is_rate_limit_error,
-    mark_route_rate_limited,
-    mark_route_unavailable,
-)
 from src.core import get_logger
+from src.services.model_operations import run_worker_operation
 from src.services.settings_service import system_settings_service
 
 try:
@@ -44,16 +35,6 @@ SUBSCRIPTION_SCRIPT = ROOT_DIR / "cloudflare" / "subscriptions" / "scripts" / "w
 SUPPORTED_NOTIFICATION_LOCALES = ["en", "zh", "ja", "ko", "es", "fr", "de", "pt"]
 WORKER_NETWORK_ATTEMPTS = 3
 WORKER_RETRY_DELAY_SECONDS = 0.35
-LOCALE_NAMES = {
-    "en": "English",
-    "zh": "Simplified Chinese",
-    "ja": "Japanese",
-    "ko": "Korean",
-    "es": "Spanish",
-    "fr": "French",
-    "de": "German",
-    "pt": "Portuguese",
-}
 _active_notification_sends: set[str] = set()
 
 
@@ -206,165 +187,9 @@ def _extract_json_object(text: str) -> str:
     return value
 
 
-def _content_to_text(content: Any) -> str:
-    if content is None:
-        return ""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts: list[str] = []
-        for item in content:
-            if isinstance(item, str):
-                parts.append(item)
-            elif isinstance(item, dict):
-                text = item.get("text") or item.get("content")
-                if isinstance(text, str):
-                    parts.append(text)
-            else:
-                text = getattr(item, "text", None)
-                if isinstance(text, str):
-                    parts.append(text)
-        return "\n".join(parts)
-    return str(content)
-
-
-def _openai_response_text(response: Any) -> str:
-    choices = getattr(response, "choices", None)
-    if choices:
-        first = choices[0]
-        message = getattr(first, "message", None)
-        if message is not None:
-            return _content_to_text(getattr(message, "content", None))
-        text = getattr(first, "text", None)
-        if isinstance(text, str):
-            return text
-    if isinstance(response, dict):
-        choices = response.get("choices")
-        if isinstance(choices, list) and choices:
-            first = choices[0]
-            if isinstance(first, dict):
-                message = first.get("message")
-                if isinstance(message, dict):
-                    return _content_to_text(message.get("content"))
-                text = first.get("text")
-                if isinstance(text, str):
-                    return text
-        output_text = response.get("output_text")
-        if isinstance(output_text, str):
-            return output_text
-        return json.dumps(response, ensure_ascii=False)
-    output_text = getattr(response, "output_text", None)
-    if isinstance(output_text, str):
-        return output_text
-    return str(response)
-
-
-def _looks_like_html(text: str) -> bool:
-    normalized = text.lstrip().lower()
-    return normalized.startswith("<!doctype html") or normalized.startswith("<html")
-
-
-def _should_not_try_base_url_fallback(error: Exception) -> bool:
-    if is_rate_limit_error(error):
-        return True
-    status_code = getattr(error, "status_code", None)
-    try:
-        normalized_status = int(status_code) if status_code is not None else None
-    except (TypeError, ValueError):
-        normalized_status = None
-    return normalized_status in {400, 401, 403, 429}
-
-
-async def _chat_translation(route: dict[str, Any], payload: dict[str, Any]) -> str:
-    style = str(route.get("api_style") or "openai_compatible").lower()
-    target_labels = {
-        locale: LOCALE_NAMES.get(locale, locale)
-        for locale in payload["target_locales"]
-    }
-    system_prompt = (
-        "You translate administrative product-update emails for GIDS. "
-        "Preserve Markdown structure, links, numbers, code blocks, disease names, and dates. "
-        "Do not add facts, disclaimers, or sections. Return only valid JSON."
-    )
-    user_content = json.dumps(
-        {
-            "source_locale": payload["source_locale"],
-            "target_locales": target_labels,
-            "subject": payload["subject"],
-            "markdown": payload["markdown"],
-            "required_schema": {
-                "translations": {
-                    "<locale>": {
-                        "subject": "translated subject",
-                        "markdown": "translated markdown",
-                    }
-                }
-            },
-        },
-        ensure_ascii=False,
-        indent=2,
-    )
-    configured_max_tokens = route.get("max_tokens")
-    try:
-        max_tokens = int(configured_max_tokens) if configured_max_tokens is not None else 5000
-    except (TypeError, ValueError):
-        max_tokens = 5000
-    max_tokens = max(1200, min(max_tokens, 8000))
-    temperature = float(route.get("temperature") if route.get("temperature") is not None else 0.1)
-
-    if style == "anthropic":
-        client = AsyncAnthropic(api_key=route.get("api_key"))
-        response = await client.messages.create(
-            model=str(route.get("model_name") or ""),
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_content}],
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-        return "\n".join(
-            str(block.text)
-            for block in response.content
-            if getattr(block, "type", None) == "text" and getattr(block, "text", None)
-        )
-
-    base_url = str(route.get("base_url") or "").rstrip("/")
-    base_urls: list[str | None] = [base_url or None]
-    if base_url and not base_url.endswith("/v1"):
-        base_urls.append(f"{base_url}/v1")
-
-    last_error: Exception | None = None
-    for candidate_base_url in base_urls:
-        try:
-            client = AsyncOpenAI(
-                api_key=route.get("api_key"),
-                base_url=candidate_base_url,
-                default_headers=(route.get("extra_headers") or None),
-            )
-            response = await client.chat.completions.create(
-                model=str(route.get("model_name") or ""),
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content},
-                ],
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
-            text = _openai_response_text(response)
-            if _looks_like_html(text):
-                raise RuntimeError(
-                    "Model route returned an HTML page instead of a chat completion. "
-                    "Check the provider base_url; OpenAI-compatible gateways usually require /v1."
-                )
-            return text
-        except Exception as exc:
-            last_error = exc
-            if _should_not_try_base_url_fallback(exc):
-                raise
-            continue
-
-    if last_error:
-        raise last_error
-    raise RuntimeError("AI translation returned no usable response.")
+async def _chat_translation(payload: dict[str, Any]) -> dict[str, Any]:
+    """Wait for worker-owned model work without selecting or calling a provider."""
+    return await run_worker_operation("notification_translation", payload)
 
 
 async def _translate_notification_contents(
@@ -384,63 +209,40 @@ async def _translate_notification_contents(
     if not missing:
         return contents, {"status": "skipped", "reason": "source_locale_only"}
 
-    routes = await get_active_model_routes()
-    if not routes:
-        raise HTTPException(
-            400,
-            "No active AI model route is available. Configure and enable a model before sending translated notifications.",
-        )
-
-    errors: list[str] = []
     payload = {
         "subject": subject,
         "markdown": markdown,
         "source_locale": source_locale,
         "target_locales": missing,
     }
-    for route in routes:
-        route_label = f"{route.get('provider_key')}/{route.get('model_name')}"
-        try:
-            text = await _chat_translation(route, payload)
-            parsed = json.loads(_extract_json_object(text))
-            translations = parsed.get("translations") if isinstance(parsed, dict) else None
-            if not isinstance(translations, dict):
-                raise RuntimeError("AI response did not include translations object.")
+    try:
+        result = await _chat_translation(payload)
+        parsed = json.loads(_extract_json_object(result["text"]))
+        translations = parsed.get("translations") if isinstance(parsed, dict) else None
+        if not isinstance(translations, dict):
+            raise RuntimeError("AI response did not include translations object.")
 
-            for locale in missing:
-                item = translations.get(locale)
-                if not isinstance(item, dict):
-                    raise RuntimeError(f"AI response missing locale: {locale}")
-                translated_subject = str(item.get("subject") or "").strip()
-                translated_markdown = str(item.get("markdown") or "").strip()
-                if not translated_subject or not translated_markdown:
-                    raise RuntimeError(f"AI response returned empty content for locale: {locale}")
-                contents[locale] = {
-                    "subject": translated_subject[:200],
-                    "markdown": translated_markdown[:50000],
-                }
-
-            return contents, {
-                "status": "translated",
-                "model_route": {
-                    "model_id": route.get("model_id"),
-                    "model_key": route.get("model_key"),
-                    "model_name": route.get("model_name"),
-                    "provider_key": route.get("provider_key"),
-                    "provider_name": route.get("provider_name"),
-                },
-                "locales": target_locales,
+        for locale in missing:
+            item = translations.get(locale)
+            if not isinstance(item, dict):
+                raise RuntimeError(f"AI response missing locale: {locale}")
+            translated_subject = str(item.get("subject") or "").strip()
+            translated_markdown = str(item.get("markdown") or "").strip()
+            if not translated_subject or not translated_markdown:
+                raise RuntimeError(f"AI response returned empty content for locale: {locale}")
+            contents[locale] = {
+                "subject": translated_subject[:200],
+                "markdown": translated_markdown[:50000],
             }
-        except Exception as exc:
-            message = str(exc)
-            errors.append(f"{route_label}: {message}")
-            if is_rate_limit_error(exc):
-                await mark_route_rate_limited(route, message, extract_retry_after_seconds(exc))
-            elif is_model_unavailable_error(exc):
-                await mark_route_unavailable(route, message)
-            logger.warning(f"Notification translation failed for {route_label}: {message}")
 
-    raise HTTPException(502, f"AI translation failed for all model routes: {' | '.join(errors[-3:])}")
+        return contents, {
+            "status": "translated",
+            "model_route": result["model_route"],
+            "locales": target_locales,
+        }
+    except Exception as exc:
+        logger.warning(f"Notification translation failed: {exc}")
+        raise HTTPException(502, f"AI translation failed: {exc}") from exc
 
 
 async def _process_notification_campaign_background(campaign_id: str, batch_size: int = 20) -> None:

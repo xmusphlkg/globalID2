@@ -13,8 +13,8 @@ from src.core.country_library import (
     get_country_profile,
     get_standard_country_codes,
 )
-from src.core.database import Base, get_db, init_database
-from src.core.db_schema import ensure_country_scope, ensure_country_scope_schema
+from src.core.database import Base, get_db
+from src.core.db_schema import ensure_country_scope
 
 
 def _build_country_metadata(profile: Any, bootstrap: dict) -> dict:
@@ -152,7 +152,7 @@ async def ensure_standard_country_rows(
 
 
 async def ensure_site_export_database_ready() -> int:
-    """Create missing tables, seed countries, and return the country count."""
+    """Validate the migrated database without changing schema or source data."""
     async with get_db() as session:
         tables_ready = bool(
             (
@@ -201,16 +201,9 @@ async def ensure_site_export_database_ready() -> int:
             ).scalar_one()
         )
         if not tables_ready or not required_columns_ready:
-            # Runtime site exports share this database with active workers.
-            # Re-running CREATE/ALTER TABLE on an already migrated schema can
-            # deadlock with worker reads, so DDL is only a repair path when a
-            # required table or column is actually missing.
-            await session.rollback()
-            await init_database()
-            async with get_db() as repair_session:
-                await ensure_country_scope_schema(repair_session)
-        else:
-            await session.rollback()
-        await ensure_standard_country_rows(session)
+            raise RuntimeError(
+                "Site export requires the migrated database schema; apply database "
+                "migrations before exporting. Export does not repair or seed data."
+            )
         result = await session.execute(text("SELECT COUNT(*) FROM countries"))
         return int(result.scalar() or 0)

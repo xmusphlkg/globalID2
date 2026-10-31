@@ -682,12 +682,25 @@ class ProvinceMonthlyReportCrawler:
         url: str,
         *,
         headers: Mapping[str, str] | None = None,
+        data: Mapping[str, str] | None = None,
     ) -> requests.Response:
         """Retry once after a cookie challenge used by some commission sites."""
 
-        response = self.session.get(url, timeout=self.timeout, headers=headers)
+        for attempt in range(2):
+            try:
+                response = (self.session.post(url, data=data, timeout=self.timeout, headers=headers)
+                            if data is not None else self.session.get(url, timeout=self.timeout, headers=headers))
+                if response.status_code in {429, 502, 503, 504} and attempt == 0:
+                    time.sleep(0.25)
+                    continue
+                break
+            except (requests.ConnectionError, requests.Timeout):
+                if attempt:
+                    raise
+                time.sleep(0.25)
         if response.status_code == 403 and response.cookies:
-            response = self.session.get(url, timeout=self.timeout, headers=headers)
+            response = (self.session.post(url, data=data, timeout=self.timeout, headers=headers)
+                        if data is not None else self.session.get(url, timeout=self.timeout, headers=headers))
         response.raise_for_status()
         return response
 
@@ -698,15 +711,24 @@ class ProvinceMonthlyReportCrawler:
         links: dict[tuple[date, str], MonthlyReportLink] = {}
         index_urls = (config.index_url, *config.archive_index_urls)
         for index_url in index_urls:
-            response = self._get(index_url)
+            response = self._get(index_url, data=dict(config.index_post_data)) if config.index_post_data else self._get(index_url)
             soup = BeautifulSoup(response.content, "lxml")
-            for anchor in soup.find_all("a", href=True):
-                title = " ".join(anchor.get_text(" ", strip=True).split())
+            base = soup.find("base", href=True)
+            base_url = urljoin(response.url, str(base["href"])) if base else response.url
+            for anchor in soup.select("a[href], [data-link]"):
+                heading = anchor.select_one(".article__title")
+                title = " ".join((heading or anchor).get_text(" ", strip=True).split())
+                title = str(anchor.get("title") or title)
                 match = MONTH_PATTERN.search(title)
-                if not match or "传染病" not in title:
+                if not match or "传染病" not in title or "全国" in title:
                     continue
+                if jurisdiction_code == "CN-SD" and "山东省" not in title:
+                    continue  # The official city mirror also lists city-only reports.
                 report_date = date(int(match["year"]), int(match["month"]), 1)
-                url = urljoin(response.url, str(anchor["href"]))
+                href = anchor.get("data-link") or anchor.get("href")
+                if not href or str(href).startswith(("javascript:", "#")):
+                    continue
+                url = urljoin(base_url, str(href))
                 links[(report_date, url)] = MonthlyReportLink(
                     jurisdiction_code, report_date, title, url
                 )
@@ -732,6 +754,8 @@ class ProvinceMonthlyReportCrawler:
                 f"{link.jurisdiction_code} source is {parser}; no source is configured"
             )
         soup = BeautifulSoup(response.content, "lxml")
+        base = soup.find("base", href=True)
+        base_url = urljoin(response.url, str(base["href"])) if base else response.url
         candidates: list[tuple[str, str]] = []
         for anchor in soup.find_all("a", href=True):
             href = str(anchor["href"])
@@ -739,7 +763,7 @@ class ProvinceMonthlyReportCrawler:
                 anchor.get_text(" ", strip=True)
             )
             if suffix is not None:
-                candidates.append((urljoin(response.url, href), suffix))
+                candidates.append((urljoin(base_url, href), suffix))
         # Prefer complete HTML disease tables when present, even for an
         # adapter previously classified as narrative-only. Some publishers
         # alternate formats or add detail tables without changing the index.
@@ -974,6 +998,20 @@ def _normalize_narrative_report(
                 f"{previous[1]} vs {cases} ({source_url})"
             )
         explicit[code] = (label, cases, evidence)
+
+    # Some bulletins state a monitored category total and explicitly identify
+    # its sole disease (e.g. "报告发病914例，均为水痘病例"). Only an exact
+    # single registered disease is safe; rankings and multi-disease totals
+    # cannot be assigned to an individual disease.
+    sole_disease = re.compile(
+        r"(?:报告(?:发病)?|发病|报告重点监测的\d+种其他非法定传染病)([\d,]+)例[,，]均为([^,，。；;]{1,40})"
+    )
+    for match in sole_disease.finditer(compact):
+        label = re.sub(r"(?:病例|患者)$", "", match.group(2)).casefold()
+        disease = aliases.get(label)
+        clause_start = max(compact.rfind("。", 0, match.start()), compact.rfind("；", 0, match.start())) + 1
+        if disease is not None and "死亡" not in compact[clause_start:match.start()]:
+            add(str(disease["labels"][0]), disease, int(match.group(1).replace(",", "")), match.group(0))
 
     # Match a named disease immediately followed by a parenthetical case
     # count, as in 流行性感冒（2393例）. This does not parse death counts.

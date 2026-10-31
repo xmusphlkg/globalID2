@@ -184,7 +184,9 @@ def decode_dsr_v2(payload: Mapping[str, Any]) -> List[Dict[str, Any]]:
         if not isinstance(result_body, Mapping):
             continue
         if result_body.get("error"):
-            raise RuntimeError(f"Power BI semantic query failed: {result_body['error']}")
+            raise RuntimeError(
+                f"Power BI semantic query failed: {result_body['error']}"
+            )
         data = result_body.get("data")
         if not isinstance(data, Mapping):
             continue
@@ -217,7 +219,9 @@ def decode_dsr_v2(payload: Mapping[str, Any]) -> List[Dict[str, Any]]:
                 for compact in compact_rows:
                     row_schema = compact.get("S")
                     if isinstance(row_schema, list):
-                        schema = [item for item in row_schema if isinstance(item, Mapping)]
+                        schema = [
+                            item for item in row_schema if isinstance(item, Mapping)
+                        ]
                     if not schema:
                         raise ValueError("Power BI DSR rowset has no column schema")
 
@@ -289,7 +293,9 @@ class PublicPowerBIClient:
         self.session.headers.setdefault("User-Agent", user_agent)
 
     @staticmethod
-    def _request_headers(resource_key: str, *, json_body: bool = False) -> Dict[str, str]:
+    def _request_headers(
+        resource_key: str, *, json_body: bool = False
+    ) -> Dict[str, str]:
         headers = {
             "Accept": "application/json",
             "ActivityId": str(uuid.uuid4()),
@@ -313,7 +319,9 @@ class PublicPowerBIClient:
         if resource_match is None:
             resource_match = _RESOURCE_KEY_FALLBACK_RE.search(html)
         if resource_match is None:
-            raise RuntimeError("Unable to discover Power BI resource key from report page")
+            raise RuntimeError(
+                "Unable to discover Power BI resource key from report page"
+            )
         resource_key = resource_match.group("key").lower()
 
         cluster_match = _CLUSTER_RE.search(html)
@@ -346,7 +354,11 @@ class PublicPowerBIClient:
         if not isinstance(report, Mapping):
             raise RuntimeError("Power BI bootstrap did not expose a report")
 
-        models = models_payload.get("models") if isinstance(models_payload, Mapping) else None
+        models = (
+            models_payload.get("models")
+            if isinstance(models_payload, Mapping)
+            else None
+        )
         if not isinstance(models, list) or not models:
             raise RuntimeError("Power BI bootstrap did not expose a model")
         report_model_id = report.get("modelId")
@@ -363,16 +375,22 @@ class PublicPowerBIClient:
             None,
         )
         if not isinstance(model, Mapping):
-            raise RuntimeError("Power BI report model was not present in bootstrap models")
+            raise RuntimeError(
+                "Power BI report model was not present in bootstrap models"
+            )
 
         try:
             model_id = int(model["id"])
         except (KeyError, TypeError, ValueError) as exc:
-            raise RuntimeError("Power BI bootstrap contains an invalid model id") from exc
+            raise RuntimeError(
+                "Power BI bootstrap contains an invalid model id"
+            ) from exc
         dataset_id = str(model.get("dbName") or "").strip()
         report_id = str(report.get("objectId") or "").strip()
         if not dataset_id or not report_id:
-            raise RuntimeError("Power BI bootstrap is missing dataset/report identifiers")
+            raise RuntimeError(
+                "Power BI bootstrap is missing dataset/report identifiers"
+            )
 
         return PowerBIReportContext(
             view_url=view_url,
@@ -389,17 +407,14 @@ class PublicPowerBIClient:
         )
 
     @staticmethod
-    def _entity_properties(
-        context: PowerBIReportContext, entity_name: str
-    ) -> set[str]:
+    def _entity_properties(context: PowerBIReportContext, entity_name: str) -> set[str]:
         schemas = context.schema_payload.get("schemas")
         for wrapper in schemas if isinstance(schemas, list) else []:
             if not isinstance(wrapper, Mapping):
                 continue
             wrapper_model_id = wrapper.get("modelId")
-            if (
-                wrapper_model_id is not None
-                and str(wrapper_model_id) != str(context.model_id)
+            if wrapper_model_id is not None and str(wrapper_model_id) != str(
+                context.model_id
             ):
                 continue
             schema = wrapper.get("schema")
@@ -412,9 +427,11 @@ class PublicPowerBIClient:
                     for prop in entity.get("Properties") or []
                     if isinstance(prop, Mapping) and prop.get("Name")
                 }
-        raise RuntimeError(f"Power BI entity not found in current schema: {entity_name}")
+        raise RuntimeError(
+            f"Power BI entity not found in current schema: {entity_name}"
+        )
 
-    def query_entity_sum(
+    def entity_sum_request(
         self,
         context: PowerBIReportContext,
         *,
@@ -422,8 +439,8 @@ class PublicPowerBIClient:
         group_columns: Sequence[str],
         value_column: str,
         row_limit: int = 30_000,
-    ) -> PowerBIQueryResult:
-        """Group an entity by columns and sum one numeric fact column."""
+    ) -> dict:
+        """Build a reviewed aggregate request from report schema metadata."""
 
         properties = self._entity_properties(context, entity)
         expected = {*group_columns, value_column}
@@ -470,9 +487,7 @@ class PublicPowerBIClient:
                 "Query": semantic_query,
                 "Binding": {
                     "Primary": {
-                        "Groupings": [
-                            {"Projections": list(range(len(selections)))}
-                        ]
+                        "Groupings": [{"Projections": list(range(len(selections)))}]
                     },
                     "DataReduction": {
                         "DataVolume": 6,
@@ -504,6 +519,25 @@ class PublicPowerBIClient:
             "modelId": context.model_id,
         }
 
+        return request_payload
+
+    def query_entity_sum(
+        self,
+        context: PowerBIReportContext,
+        *,
+        entity: str,
+        group_columns: Sequence[str],
+        value_column: str,
+        row_limit: int = 30_000,
+    ) -> PowerBIQueryResult:
+        """Group an entity by columns and sum one numeric fact column."""
+        request_payload = self.entity_sum_request(
+            context,
+            entity=entity,
+            group_columns=group_columns,
+            value_column=value_column,
+            row_limit=row_limit,
+        )
         query_url = f"{context.api_base_url}/public/reports/querydata?synchronous=true"
         response = self.session.post(
             query_url,

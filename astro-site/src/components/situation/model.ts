@@ -1,6 +1,15 @@
 /** Pure map logic: recency, filtering, ordering and placement. Kept free of React and Node so it is unit-testable. */
 
-import type { MapPoint, SituationAlertRecord } from '../../utils/situationTypes.ts';
+import type { MapPoint } from '../../utils/situationTypes.ts';
+
+type FilterablePoint = {
+  alert_id: string;
+  published_date: string;
+  country_code: string;
+  source_id: string;
+  disease_id?: string | null;
+  disease_label: string;
+};
 
 export type Recency = 'fresh' | 'recent' | 'older' | 'stale';
 export type WindowKey = '7' | '30' | '90' | 'all';
@@ -40,7 +49,7 @@ export function recencyOf(date: string, asOf: string): Recency {
   return 'fresh';
 }
 
-export function filterPoints<T extends SituationAlertRecord>(points: T[], filters: Filters, asOf: string): T[] {
+export function filterPoints<T extends FilterablePoint>(points: T[], filters: Filters, asOf: string): T[] {
   const limit = filters.window === 'all' ? Infinity : Number(filters.window);
   return points.filter(point => {
     if (filters.disease && (point.disease_id ?? point.disease_label) !== filters.disease) return false;
@@ -51,7 +60,7 @@ export function filterPoints<T extends SituationAlertRecord>(points: T[], filter
 }
 
 /** Points updated in the last 7 days first, then newest first. */
-export function sortPoints<T extends SituationAlertRecord>(points: T[], asOf: string): T[] {
+export function sortPoints<T extends FilterablePoint>(points: T[], asOf: string): T[] {
   const rank = (point: T) => (recencyOf(point.published_date, asOf) === 'fresh' ? 0 : 1);
   return [...points].sort(
     (a, b) =>
@@ -114,7 +123,7 @@ export interface PlacedPoint<T> {
 }
 
 /** Points that share a country fan out around its anchor so none hides another. */
-export function placePoints<T extends SituationAlertRecord>(
+export function placePoints<T extends FilterablePoint>(
   points: T[],
   anchors: Record<string, [number, number]>,
 ): { placed: PlacedPoint<T>[]; unplaced: T[] } {

@@ -46,6 +46,8 @@ class DiseaseMapperDB:
         self.country_code = country_code.upper() if country_code else country_code
         self._local_cache = {}   # in-memory cache for local-name lookups
         self._standard_cache = {}  # in-memory cache for standard-name lookups
+        self.defer_writes = False
+        self.pending_effects = []
     
     async def map_local_to_id(self, local_name: str) -> Optional[str]:
         """
@@ -79,6 +81,10 @@ class DiseaseMapperDB:
             
             if row:
                 disease_id = row[0]
+                if self.defer_writes:
+                    self.pending_effects.append({"kind": "usage", "country": self.country_code, "name": str(local_name)})
+                    self._local_cache[cache_key] = disease_id
+                    return disease_id
                 
                 # 更新使用统计（异步，不阻塞）
                 try:
@@ -98,7 +104,10 @@ class DiseaseMapperDB:
                 return disease_id
             else:
                 # 记录未知疾病
-                await self._record_unknown_disease(local_name)
+                if self.defer_writes:
+                    self.pending_effects.append({"kind": "unknown", "country": self.country_code, "name": str(local_name)})
+                else:
+                    await self._record_unknown_disease(local_name)
                 return None
     
     async def _record_unknown_disease(self, local_name: str):

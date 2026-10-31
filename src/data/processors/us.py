@@ -393,13 +393,19 @@ class USWeeklyUpdater:
                 f"Unsupported US source: {source}. Available: all, nndss_api, nhss_hiv"
             )
 
+        nndss = USNNDSSCrawler().fetch_raw_pages() if normalized_source in {"all", "nndss_api"} else None
+        nhss = USNHSSHIVCrawler().fetch_national_annual_rows() if normalized_source in {"all", "nhss_hiv"} and self.subdivision_code is None else None
+        return self.organize_sources(normalized_source, nndss=nndss, nhss=nhss)
+
+    def organize_sources(self, normalized_source: str, *, nndss=None, nhss=None) -> USUpdateFetchResult:
+        """Normalize already collected source rows without requesting a source."""
         normalized_rows: List[Dict[str, str]] = []
         series_rows: List[Dict[str, str]] = []
         source_refs: List[str] = []
         latest_by_source: Dict[str, Optional[date]] = {}
 
         if normalized_source in {"all", "nndss_api"}:
-            raw_rows, nndss_ref = USNNDSSCrawler().fetch_raw_pages()
+            raw_rows, nndss_ref = nndss
             # Both the legacy national projection and the national source
             # series use US RESIDENTS.  TOTAL remains available only as a
             # distinct source aggregate in the lossless series projection.
@@ -452,7 +458,7 @@ class USWeeklyUpdater:
             )
 
         if normalized_source in {"all", "nhss_hiv"} and self.subdivision_code is None:
-            nhss_rows, nhss_ref = USNHSSHIVCrawler().fetch_national_annual_rows()
+            nhss_rows, nhss_ref = nhss
             typed_nhss_rows = [dict(row) for row in nhss_rows]
             normalized_rows.extend(typed_nhss_rows)
             series_rows.extend(typed_nhss_rows)

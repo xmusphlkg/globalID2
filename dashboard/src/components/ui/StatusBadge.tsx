@@ -14,6 +14,8 @@ const toneClasses: Record<StatusTone, string> = {
 
 const statusToneMap: Record<string, StatusTone> = {
   completed: "success",
+  succeeded: "success",
+  leased: "warning",
   published: "success",
   approved: "success",
   ready: "success",

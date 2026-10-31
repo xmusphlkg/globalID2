@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import csv
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
@@ -45,6 +45,7 @@ class KRUpdateFetchResult:
     source_latest_date: Optional[date]
     source_csv: Path
     script_logs: List[str]
+    source_audit: List[dict] = field(default_factory=list)
 
 
 @dataclass

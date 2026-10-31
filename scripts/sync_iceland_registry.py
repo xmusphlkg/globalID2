@@ -41,7 +41,7 @@ from src.domain import (  # noqa: E402
     StandardDisease,
 )
 from src.ontology import load_disease_ontology  # noqa: E402
-from src.services.crawl_pipelines.is_ import _ensure_is_country  # noqa: E402
+from src.services.ingestion.countries.is_ import ensure_iceland_country  # noqa: E402
 from src.services.disease_ontology_sync_service import (  # noqa: E402
     build_disease_ontology_sync_payload,
 )
@@ -305,7 +305,7 @@ async def sync(*, apply: bool) -> None:
 
     await init_app()
     async with get_database() as db:
-        await _ensure_is_country(db)
+        await ensure_iceland_country(db)
         await ensure_country_scope_schema(db)
         await ensure_country_scope_for_code(db, "IS")
         await ensure_disease_mapping_source_schema(db)

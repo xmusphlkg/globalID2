@@ -34,7 +34,6 @@ from src.ai.model_center import (
     is_model_unavailable_error,
     is_provider_authentication_error,
     is_rate_limit_error,
-    mark_model_unavailable_by_name,
     mark_provider_authentication_failed,
     record_route_runtime_failure,
     record_route_runtime_success,
@@ -139,9 +138,7 @@ class BaseAgent(ABC):
         # 对话历史记录
         self.conversation_history = []
         
-        # 初始化客户端
-        self.clients = {}
-        self._init_clients()
+        # Provider clients are constructed only for the dispatcher-selected route.
         
         logger.info(
             "Agent '{}' initialized with bootstrap provider '{}' and model '{}'; "
@@ -276,46 +273,6 @@ class BaseAgent(ABC):
 
             return candidates, list(runtime_model_names)
 
-        # Legacy direct mode is kept only for explicit callers that bypass
-        # model-center route loading by passing runtime_routes=None.
-        chain = BaseAgent.AVAILABLE_MODEL_CHAIN
-        if chain is None:
-            chain = getattr(self.config.ai, "model_chain", None) or []
-        chain_used = list(chain)
-
-        if chain:
-            for model_name in chain:
-                if not ignore_local_cooldowns and BaseAgent._is_model_cooling_down(model_name):
-                    continue
-                candidates.append(
-                    {
-                        "route_key": model_name,
-                        "model_name": model_name,
-                        "route": None,
-                    }
-                )
-            return candidates, chain_used
-
-        seen = set()
-        if self.model not in seen:
-            candidates.append(
-                {
-                    "route_key": self.model,
-                    "model_name": self.model,
-                    "route": None,
-                }
-            )
-            seen.add(self.model)
-        fallback_model = getattr(self.config.ai, "fallback_model", None)
-        if fallback_model and fallback_model not in seen:
-            candidates.append(
-                {
-                    "route_key": fallback_model,
-                    "model_name": fallback_model,
-                    "route": None,
-                }
-            )
-
         return candidates, chain_used
 
     @staticmethod
@@ -394,68 +351,6 @@ class BaseAgent(ABC):
             + order_runtime_by_admission(order_group(deferred_runtime))
             + order_group(direct)
         )
-    
-    def _init_clients(self):
-        """Initialize clients for supported AI providers."""
-        # OpenAI客户端
-        if self.config.ai.openai_api_key:
-            try:
-                self.clients['openai'] = AsyncOpenAI(
-                    api_key=self.config.ai.openai_api_key,
-                    base_url=self.config.ai.openai_base_url
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize OpenAI client: {e}")
-        
-        # GLM (Zhipu) client (uses OpenAI-compatible interface)
-        if self.config.ai.glm_api_key:
-            try:
-                self.clients['glm'] = AsyncOpenAI(
-                    api_key=self.config.ai.glm_api_key,
-                    base_url=self.config.ai.glm_base_url
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize GLM client: {e}")
-        
-        # QianWen client (uses OpenAI-compatible interface)
-        if self.config.ai.qianwen_api_key:
-            try:
-                self.clients['qianwen'] = AsyncOpenAI(
-                    api_key=self.config.ai.qianwen_api_key,
-                    base_url=self.config.ai.qianwen_base_url
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize QianWen client: {e}")
-        
-        # Anthropic client
-        if self.config.ai.anthropic_api_key:
-            try:
-                self.clients['anthropic'] = AsyncAnthropic(
-                    api_key=self.config.ai.anthropic_api_key
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize Anthropic client: {e}")
-        
-        # Azure OpenAI client
-        if self.config.ai.azure_api_key:
-            try:
-                self.clients['azure'] = AsyncOpenAI(
-                    api_key=self.config.ai.azure_api_key,
-                    azure_endpoint=self.config.ai.azure_endpoint,
-                    api_version=self.config.ai.azure_api_version
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize Azure client: {e}")
-        
-        # Custom client
-        if self.config.ai.custom_api_key and self.config.ai.custom_base_url:
-            try:
-                self.clients['custom'] = AsyncOpenAI(
-                    api_key=self.config.ai.custom_api_key,
-                    base_url=self.config.ai.custom_base_url
-                )
-            except Exception as e:
-                logger.warning(f"Failed to initialize custom client: {e}")
     
     def _infer_provider_from_model(self, model: str) -> Optional[str]:
         """根据模型名推断 provider，不依赖 self.provider。"""
@@ -666,6 +561,8 @@ class BaseAgent(ABC):
         max_retries: int = 3,
     ) -> Any:
         """Call OpenAI-compatible completion API and auto-drop unsupported kwargs."""
+        from src.ai.work_queue import require_dispatcher
+        require_dispatcher()
         payload = dict(request_payload or {})
         for _ in range(max(1, max_retries)):
             try:
@@ -734,7 +631,16 @@ class BaseAgent(ABC):
             conversation_entry["metadata"] = metadata
         self.conversation_history.append(conversation_entry)
     
-    async def complete(
+    async def complete(self, prompt: str, system: Optional[str] = None, use_cache: bool = True, **kwargs) -> str:
+        """Submit durable business work; provider execution belongs to the worker."""
+        from src.ai.work_queue import in_dispatcher, submit_completion
+        if not in_dispatcher():
+            return await submit_completion(self, prompt, system, use_cache, kwargs)
+        if kwargs.get("_scheduled_route") is None:
+            raise RuntimeError("Model dispatcher must pin an admitted route")
+        return await self._complete_transport(prompt, system=system, use_cache=use_cache, **kwargs)
+
+    async def _complete_transport(
         self,
         prompt: str,
         system: Optional[str] = None,
@@ -753,6 +659,9 @@ class BaseAgent(ABC):
         Returns:
             Generated text
         """
+        from src.ai.work_queue import require_dispatcher
+        require_dispatcher()
+        scheduled_route = kwargs.pop("_scheduled_route", None)
         # Consume the legacy flag; the round counter below bounds recovery.
         kwargs.pop("_quota_recovery_attempted", None)
         quota_recovery_round = int(kwargs.pop("_quota_recovery_round", 0) or 0)
@@ -809,12 +718,12 @@ class BaseAgent(ABC):
         
         # 调用 LLM：运行时路由由模型中心统一管理；env 链路只用于初始化模型中心。
         route_cache_ttl = max(1, int(getattr(self.config.ai, "route_cache_ttl_seconds", 15)))
-        runtime_routes = BaseAgent.AVAILABLE_MODEL_ROUTES
+        runtime_routes = [scheduled_route] if scheduled_route is not None else BaseAgent.AVAILABLE_MODEL_ROUTES
         route_cache_expired = (
             BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT is None
             or (time.time() - BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT) >= route_cache_ttl
         )
-        if runtime_routes is None or route_cache_expired:
+        if scheduled_route is None and (runtime_routes is None or route_cache_expired):
             try:
                 runtime_routes = await get_active_model_routes()
                 if not runtime_routes:
@@ -938,24 +847,8 @@ class BaseAgent(ABC):
                             **kwargs,
                         )
                     else:
-                        # Determine which provider to use for this model
-                        provider = self.get_provider_for_model(self.model)
-                        legacy_kwargs = dict(kwargs)
-                        legacy_attachments = legacy_kwargs.pop("attachments", None) or []
-                        self._last_input_mode = TEXT_INPUT if legacy_attachments else None
-                        request = self._complete_with_provider(
-                            provider, as_text(prompt, legacy_attachments), system, **legacy_kwargs
-                        )
-                    # Runtime-route admission is intentional local
-                    # backpressure.  Its wait is outside the provider request
-                    # deadline, which is enforced inside the admitted call.
-                    if model_request_timeout_seconds is not None and not route:
-                        response_text, token_usage = await asyncio.wait_for(
-                            request,
-                            timeout=max(0.01, float(model_request_timeout_seconds)),
-                        )
-                    else:
-                        response_text, token_usage = await request
+                        raise NoModelAvailable("Dispatcher route is required")
+                    response_text, token_usage = await request
                     if not isinstance(response_text, str) or not response_text.strip():
                         raise RuntimeError("Model returned an empty completion response")
                     attempt_duration_seconds = time.perf_counter() - attempt_started_at
@@ -1203,17 +1096,6 @@ class BaseAgent(ABC):
                                 logger.warning(
                                     f"Failed to persist unavailable status for route '{route_key}': {unavailable_exc}"
                                 )
-                        else:
-                            try:
-                                updated = await mark_model_unavailable_by_name(self.model, str(e))
-                                if updated <= 0:
-                                    logger.warning(
-                                        f"No model-center records matched unavailable model '{self.model}'."
-                                    )
-                            except Exception as unavailable_exc:
-                                logger.warning(
-                                    f"Failed to persist unavailable status by model name '{self.model}': {unavailable_exc}"
-                                )
                         BaseAgent.AVAILABLE_MODEL_ROUTES = None
                         BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
                         break
@@ -1255,7 +1137,7 @@ class BaseAgent(ABC):
             await asyncio.sleep(wait_seconds)
             BaseAgent.AVAILABLE_MODEL_ROUTES = None
             BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
-            return await self.complete(
+            return await self._complete_transport(
                 prompt=prompt,
                 system=system,
                 use_cache=use_cache,
@@ -1288,6 +1170,8 @@ class BaseAgent(ABC):
         **kwargs,
     ) -> Tuple[str, Dict[str, int]]:
         """Generate through a permit; timeout and telemetry cover only the API call."""
+        from src.ai.work_queue import require_dispatcher
+        require_dispatcher()
         self._runtime_route_request_duration_seconds = None
         admission = await acquire_runtime_route_admission(route)
         request_started_at = time.perf_counter()
@@ -1340,6 +1224,8 @@ class BaseAgent(ABC):
         as text, and the route stays on text for a while.
         """
         attachments = list(kwargs.pop("attachments", None) or [])
+        from src.ai.work_queue import require_dispatcher
+        require_dispatcher()
         style = str(route.get("api_style") or "openai_compatible").lower()
         self._last_input_mode = None
         if attachments:
@@ -1372,6 +1258,8 @@ class BaseAgent(ABC):
         **kwargs,
     ) -> Tuple[str, Dict[str, int]]:
         """Issue the provider request; ``content`` is a string or provider content blocks."""
+        from src.ai.work_queue import require_dispatcher
+        require_dispatcher()
         style = str(route.get("api_style") or "openai_compatible").lower()
         model_name = str(route.get("model_name") or self.model)
         route_temperature = route.get("temperature")
@@ -1428,132 +1316,6 @@ class BaseAgent(ABC):
 
         return self._extract_openai_compatible_response(response)
 
-    async def _complete_with_provider(
-        self, 
-        provider: str,
-        prompt: str, 
-        system: Optional[str] = None, 
-        **kwargs
-    ) -> Tuple[str, Dict[str, int]]:
-        """根据提供商调用相应的完成方法，返回(响应文本, token使用量)"""
-        if provider == 'anthropic':
-            return await self._complete_anthropic(prompt, system, **kwargs)
-        elif provider in ['openai', 'glm', 'qianwen', 'azure', 'custom']:
-            return await self._complete_openai_compatible(provider, prompt, system, **kwargs)
-        else:
-            raise ValueError(f"Unsupported provider: {provider}")
-    
-    async def _complete_openai_compatible(
-        self,
-        provider: str,
-        prompt: str,
-        system: Optional[str] = None,
-        **kwargs
-    ) -> Tuple[str, Dict[str, int]]:
-        """Generate using an OpenAI-compatible API (supports QianWen, GLM, Azure, etc.)."""
-        client = self.clients.get(provider)
-        if not client:
-            raise ValueError(f"Client for provider '{provider}' not initialized")
-        
-        messages = []
-        if system:
-            messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": prompt})
-        
-        # Handle provider-specific model name mapping
-        model = self._map_model_name(provider, self.model)
-
-        request_payload = {
-            "model": model,
-            "messages": messages,
-            "temperature": self.temperature,
-            **self._sanitize_completion_params(dict(kwargs)),
-        }
-        response = await self._safe_openai_completion_create(client, request_payload)
-        
-        return self._extract_openai_compatible_response(response)
-    
-    async def _complete_anthropic(
-        self,
-        prompt: str,
-        system: Optional[str] = None,
-        **kwargs
-    ) -> Tuple[str, Dict[str, int]]:
-        """Generate using the Anthropic API."""
-        client = self.clients.get('anthropic')
-        if not client:
-            raise ValueError("Anthropic client not initialized")
-        
-        response = await client.messages.create(
-            model=self.model,
-            system=system or "",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=self.temperature,
-            max_tokens=ANTHROPIC_UNCAPPED_MAX_TOKENS,
-            **kwargs
-        )
-        
-        # Extract token usage
-        token_usage = {}
-        if hasattr(response, 'usage') and response.usage:
-            token_usage = {
-                "prompt": response.usage.input_tokens,
-                "completion": response.usage.output_tokens,
-                "total": response.usage.input_tokens + response.usage.output_tokens,
-            }
-        
-        return response.content[0].text, token_usage
-    
-    def _map_model_name(self, provider: str, model: str) -> str:
-        """Map generic model names to provider-specific names."""
-        if provider == 'glm':
-            # GLM智谱AI模型名称映射
-            mapping = {
-                'glm-4': 'glm-4',
-                'glm-4-7': 'glm-4',  # 将glm-4-7映射到glm-4
-                'glm-4-plus': 'glm-4-plus',
-                'glm-4-air': 'glm-4-air',
-                'glm-4-airx': 'glm-4-airx',
-                'glm-3-turbo': 'glm-3-turbo'
-            }
-            return mapping.get(model, model)
-        elif provider == 'qianwen':
-            # QianWen model name mapping
-            mapping = {
-                'qwen-turbo': 'qwen-turbo',
-                'qwen-plus': 'qwen-plus',
-                'qwen-max': 'qwen-max',
-                'qwen-max-longcontext': 'qwen-max-longcontext'
-            }
-            return mapping.get(model, model)
-        
-        return model
-    
-    async def test_connection(self) -> Dict[str, Any]:
-        """Test connectivity with the configured AI provider."""
-        provider = self.get_provider_for_model(self.model)
-        
-        try:
-            test_prompt = self.config.ai.test_prompt
-            # _complete_with_provider returns (response_text, token_usage) tuple
-            response_text, _ = await self._complete_with_provider(provider, test_prompt)
-            
-            return {
-                'success': True,
-                'provider': provider,
-                'model': self.model,
-                'response': response_text[:100] + '...' if len(response_text) > 100 else response_text,
-                'message': 'Connection test successful'
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'provider': provider,
-                'model': self.model,
-                'error': str(e),
-                'message': 'Connection test failed'
-            }
-    
     def _make_cache_key(self, prompt: str, system: Optional[str] = None) -> str:
         """Generate a cache key for a prompt/system pair."""
         import hashlib

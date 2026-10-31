@@ -1,8 +1,23 @@
 """Shared pytest configuration."""
 
 import os
+import signal
 
 import pytest
+
+# One stuck test used to hold the GitHub job until its 60-minute limit.
+# Fail that test instead, after enough time for the slowest real case.
+_CI_TEST_TIMEOUT_SECONDS = 300
+
+
+def _ci_test_timeout_enabled() -> bool:
+    return os.environ.get("CI") == "1"
+
+
+def _handle_ci_test_timeout(signum, frame):
+    raise TimeoutError(
+        f"CI stopped this test after {_CI_TEST_TIMEOUT_SECONDS}s with no result"
+    )
 
 
 def pytest_addoption(parser):
@@ -32,3 +47,20 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "network" in item.keywords:
             item.add_marker(skip_network)
+
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_runtest_protocol(item, nextitem):
+    """Bound each test on CI so a stalled test fails with its node id."""
+
+    if not _ci_test_timeout_enabled():
+        yield
+        return
+    previous = signal.getsignal(signal.SIGALRM)
+    signal.signal(signal.SIGALRM, _handle_ci_test_timeout)
+    signal.alarm(_CI_TEST_TIMEOUT_SECONDS)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)

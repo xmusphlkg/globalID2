@@ -4,7 +4,14 @@ import csv
 import json
 from pathlib import Path
 
-from src.data.crawlers.ie_annual import IEAnnualReportSpec, parse_annual_pdf
+import pytest
+import requests
+
+from src.data.crawlers.ie import IEContractError
+from src.data.crawlers.ie_annual import (
+    ANNUAL_REPORTS, DEFAULT_ANNUAL_INDEX_URL, IEAnnualReportSpec,
+    IrelandHPSCAnnualCrawler, parse_annual_pdf,
+)
 from src.data.storage.series_observation_store import SeriesObservationStore
 
 
@@ -27,6 +34,57 @@ class _FakeDocument:
 
     def __exit__(self, *_args):
         return None
+
+
+def _catalogue(extra="", host="file.hpsc.ie"):
+    return "".join(
+        f'<a href="https://{host}/{report.report_id}.pdf">'
+        'Annual Infectious Disease Notifications in Ireland '
+        f'{report.report_id.rsplit("_", 2)[-2]} - {report.report_id.rsplit("_", 2)[-1]}</a>'
+        for report in ANNUAL_REPORTS
+    ) + extra
+
+
+def _response(content):
+    response = requests.Response()
+    response.status_code = 200
+    response.url = DEFAULT_ANNUAL_INDEX_URL
+    response._content = content.encode() if isinstance(content, str) else content
+    return response
+
+
+def test_annual_catalogue_discovers_migrated_urls_without_expanding_years(monkeypatch):
+    crawler = IrelandHPSCAnnualCrawler()
+    monkeypatch.setattr(crawler, "get", lambda url: _response(_catalogue()))
+    reports = crawler.discover_reports()
+    assert reports[-1].url == "https://file.hpsc.ie/hpsc_annual_2020_2025.pdf"
+    assert reports[-1].years == (2020,)
+    assert {year for report in reports for year in report.years} == set(range(2004, 2021))
+
+
+@pytest.mark.parametrize("html", [
+    "<html>Temporarily unavailable</html>",
+    _catalogue(host="evil.example"),
+    _catalogue('<a href="https://file.hpsc.ie/duplicate.pdf">Annual Infectious Disease Notifications in Ireland 2020-2025</a>'),
+])
+def test_annual_catalogue_rejects_missing_ambiguous_or_foreign_reports(monkeypatch, html):
+    crawler = IrelandHPSCAnnualCrawler()
+    monkeypatch.setattr(crawler, "get", lambda url: _response(html))
+    with pytest.raises(IEContractError):
+        crawler.discover_reports()
+
+
+def test_annual_report_rejects_html_success_response(monkeypatch):
+    crawler = IrelandHPSCAnnualCrawler()
+    monkeypatch.setattr(crawler, "get", lambda url: _response("<html>Not found</html>"))
+    with pytest.raises(IEContractError, match="not a PDF"):
+        crawler.fetch_report(ANNUAL_REPORTS[-1])
+
+
+def test_annual_replay_keeps_original_pdf_only_capture():
+    crawler = IrelandHPSCAnnualCrawler()
+    crawler.replay_artifacts = ()
+    assert crawler.discover_reports() == ANNUAL_REPORTS
 
 
 def test_annual_pdf_parser_preserves_zero_and_na(monkeypatch) -> None:

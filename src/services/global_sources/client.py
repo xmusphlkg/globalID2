@@ -133,6 +133,8 @@ def fetch(
 ) -> httpx.Response:
     """GET ``url``.  Raises :class:`HostUnreachable`, or the last HTTP error after retries."""
 
+    from src.services.ingestion.capture import assert_source_access
+    assert_source_access()
     host = urlparse(url).hostname or ""
     guard.admit(host)
     request_headers = {"User-Agent": USER_AGENT, "Accept": "*/*"}
@@ -158,6 +160,9 @@ def fetch(
                 _backoff(attempt)
                 continue
             response.raise_for_status()
+            from src.services.ingestion.capture import capture_sync, is_capturing
+            if is_capturing():
+                response._content = capture_sync(response.content, str(response.url), response.headers.get("Content-Type", ""))
             return response
         raise RuntimeError("unreachable")  # pragma: no cover - the loop returns or raises
 

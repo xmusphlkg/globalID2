@@ -20,10 +20,11 @@ import hashlib
 import json
 import re
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Callable, Iterable
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import selectinload
 
 from src.ai.attachments import PDF, Attachment
@@ -58,6 +59,8 @@ MAX_AI_ATTEMPTS = 4
 SAME_MODEL_RETRIES = 3
 #: Reports downloaded at once; the HTTP client additionally caps each host.
 DOWNLOAD_WORKERS = 6
+#: Reuse the retry deadline as a renewable claim; a dead worker releases it by expiry.
+EXTRACTION_LEASE_SECONDS = 900
 
 
 def utc_now() -> datetime:
@@ -379,8 +382,60 @@ async def _extract_with_retry(complete: Completer | ReviewRoutePool, *args: Any,
     raise AssertionError("unreachable")
 
 
+@dataclass
+class _ExtractionClaim:
+    notice_id: str
+    content_hash: str
+    document_hash: str
+    expires_at: datetime
+
+    def predicate(self) -> Any:
+        return (
+            (SituationNotice.notice_id == self.notice_id)
+            & SituationNotice.ai_status.in_(("pending", "failed"))
+            & (SituationNotice.ai_next_attempt_at == self.expires_at)
+            & (SituationNotice.content_hash == self.content_hash)
+            & SituationNotice.document.has(
+                (SituationDocument.status == "ready")
+                & (SituationDocument.text_hash == self.document_hash)
+            )
+        )
+
+
+class _ExtractionClaimLost(Exception):
+    """A changed document or another worker invalidated this reading."""
+
+
+async def _extract_claimed(claim: _ExtractionClaim, complete: Any, *args: Any, **kwargs: Any) -> Any:
+    """Wait without a session, renewing in short transactions during long queue waits."""
+
+    work = asyncio.create_task(_extract_with_retry(complete, *args, **kwargs))
+    try:
+        while True:
+            done, _ = await asyncio.wait({work}, timeout=EXTRACTION_LEASE_SECONDS / 3)
+            if done:
+                return work.result()
+            expires_at = datetime.now(timezone.utc) + timedelta(seconds=EXTRACTION_LEASE_SECONDS)
+            async with get_db() as db:
+                renewed = await db.execute(
+                    update(SituationNotice).where(claim.predicate()).values(ai_next_attempt_at=expires_at)
+                )
+                if not renewed.rowcount:
+                    raise _ExtractionClaimLost(claim.notice_id)
+            claim.expires_at = expires_at
+    finally:
+        if not work.done():
+            work.cancel()
+        await asyncio.gather(work, return_exceptions=True)
+
+
+async def _release_extraction(claim: _ExtractionClaim) -> None:
+    async with get_db() as db:
+        await db.execute(update(SituationNotice).where(claim.predicate()).values(ai_next_attempt_at=None))
+
+
 async def extract_pending(complete: Completer | ReviewRoutePool, *, limit: int = 30) -> dict[str, int]:
-    """Peer-review every due report; one failing report never stops the batch."""
+    """Claim/read, wait without a session, then save each report in a short transaction."""
 
     counts = {"published": 0, "rejected": 0, "failed": 0, "unchanged": 0}
     diseases = allowed_diseases()
@@ -403,8 +458,23 @@ async def extract_pending(complete: Completer | ReviewRoutePool, *, limit: int =
         ).scalars().all()
 
     for notice_id in due:
-        # Each report commits on its own so a crash keeps finished work.
+        # The conditional UPDATE both claims the report and locks it only for
+        # this input snapshot. No connection/row lock survives the model wait.
         async with get_db() as db:
+            expires_at = datetime.now(timezone.utc) + timedelta(seconds=EXTRACTION_LEASE_SECONDS)
+            claimed = await db.execute(
+                update(SituationNotice)
+                .where(
+                    SituationNotice.notice_id == notice_id,
+                    SituationNotice.ai_status.in_(("pending", "failed")),
+                    SituationNotice.ai_attempts < MAX_AI_ATTEMPTS,
+                    _is_due(SituationNotice.ai_next_attempt_at, utc_now()),
+                    SituationNotice.document.has(SituationDocument.status == "ready"),
+                )
+                .values(ai_next_attempt_at=expires_at)
+            )
+            if not claimed.rowcount:
+                continue
             row = (
                 await db.execute(
                     select(SituationNotice)
@@ -412,7 +482,6 @@ async def extract_pending(complete: Completer | ReviewRoutePool, *, limit: int =
                     .where(SituationNotice.notice_id == notice_id)
                 )
             ).scalar_one()
-            row.ai_attempts += 1
             current = next((item for item in row.extractions if item.status == "published"), None)
             if (
                 current is not None
@@ -420,27 +489,59 @@ async def extract_pending(complete: Completer | ReviewRoutePool, *, limit: int =
                 and current.prompt_version == EXTRACTION_PROMPT_VERSION
             ):
                 row.ai_status = "extracted"
+                row.ai_next_attempt_at = None
                 counts["unchanged"] += 1
                 continue
-            try:
-                result = await _extract_with_retry(
-                    complete,
-                    _notice_payload(row),
-                    _attachment(row),
-                    allowed_diseases=diseases,
-                    allowed_country_codes=country_codes,
-                )
-            except NoModelAvailable as exc:
-                # Every route is cooling down: this report did nothing wrong, so it
-                # keeps its attempt and the rest of the batch waits for the next run.
-                logger.warning("Situation extraction paused, no model route available | {}", exc)
-                row.ai_attempts -= 1
+            claim = _ExtractionClaim(notice_id, row.content_hash, row.document.text_hash, expires_at)
+            notice = _notice_payload(row)
+
+        error = None
+        try:
+            # The document was eagerly loaded. Read cached files after closing
+            # the session too, and treat missing files as per-report failures.
+            attachment = _attachment(row)
+            result = await _extract_claimed(
+                claim,
+                complete,
+                notice,
+                attachment,
+                allowed_diseases=diseases,
+                allowed_country_codes=country_codes,
+            )
+        except NoModelAvailable as exc:
+            logger.warning("Situation extraction paused, no model route available | {}", exc)
+            await _release_extraction(claim)
+            counts["deferred"] = counts.get("deferred", 0) + 1
+            break
+        except _ExtractionClaimLost:
+            counts["deferred"] = counts.get("deferred", 0) + 1
+            continue
+        except asyncio.CancelledError:
+            await _release_extraction(claim)
+            raise
+        except Exception as exc:  # noqa: BLE001 - recorded and retried with backoff
+            logger.warning("Situation extraction failed | notice={} error={}", notice_id, exc)
+            error = f"{type(exc).__name__}: {str(exc)[:1000]}"
+
+        async with get_db() as db:
+            # Fences stale callbacks, including failures, before touching results.
+            saved = await db.execute(
+                update(SituationNotice).where(claim.predicate()).values(ai_next_attempt_at=None)
+            )
+            if not saved.rowcount:
                 counts["deferred"] = counts.get("deferred", 0) + 1
-                break
-            except Exception as exc:  # noqa: BLE001 - recorded and retried with backoff
-                logger.warning("Situation extraction failed | notice={} error={}", notice_id, exc)
+                continue
+            row = (
+                await db.execute(
+                    select(SituationNotice)
+                    .options(selectinload(SituationNotice.extractions))
+                    .where(SituationNotice.notice_id == notice_id)
+                )
+            ).scalar_one()
+            row.ai_attempts += 1
+            if error is not None:
                 row.ai_status = "failed"
-                row.ai_last_error = f"{type(exc).__name__}: {str(exc)[:1000]}"
+                row.ai_last_error = error
                 row.ai_next_attempt_at = utc_now() + _retry_delay(row.ai_attempts)
                 counts["failed"] += 1
                 continue
@@ -448,7 +549,7 @@ async def extract_pending(complete: Completer | ReviewRoutePool, *, limit: int =
             payload = result.payload
             extraction = SituationExtraction(
                 notice_id=row.notice_id,
-                document_hash=row.document.text_hash,
+                document_hash=claim.document_hash,
                 prompt_version=EXTRACTION_PROMPT_VERSION,
                 status=result.status,
                 document_type=payload.get("document_type"),
@@ -478,6 +579,34 @@ async def extract_pending(complete: Completer | ReviewRoutePool, *, limit: int =
             row.ai_last_error = None
             row.ai_next_attempt_at = None
     return counts
+
+
+async def backlog_counts() -> dict[str, int]:
+    """Reports waiting for a body download or a model reading right now."""
+
+    now = utc_now()
+    async with get_db() as db:
+        documents = await db.scalar(
+            select(func.count())
+            .select_from(SituationDocument)
+            .where(
+                SituationDocument.status.in_(("pending", "failed")),
+                SituationDocument.attempts < MAX_DOCUMENT_ATTEMPTS,
+                _is_due(SituationDocument.next_attempt_at, now),
+            )
+        )
+        extractions = await db.scalar(
+            select(func.count())
+            .select_from(SituationNotice)
+            .join(SituationDocument, SituationDocument.notice_id == SituationNotice.notice_id)
+            .where(
+                SituationNotice.ai_status.in_(("pending", "failed")),
+                SituationNotice.ai_attempts < MAX_AI_ATTEMPTS,
+                _is_due(SituationNotice.ai_next_attempt_at, now),
+                SituationDocument.status == "ready",
+            )
+        )
+    return {"documents": int(documents or 0), "extractions": int(extractions or 0)}
 
 
 # --- 4. outbreaks ---
@@ -565,7 +694,7 @@ def _outbreak(key: str, members: list[dict[str, Any]], as_of: date) -> dict[str,
     }
 
 
-async def rebuild_outbreaks(*, since_days: int = 365, as_of: date | None = None) -> int:
+async def rebuild_outbreaks(*, since_days: int = 365, as_of: date | None = None, task_uuid: str | None = None) -> int:
     """Derive outbreaks from the alerts; derived data, so the table is rebuilt wholesale."""
 
     as_of = as_of or utc_now().date()
@@ -619,4 +748,7 @@ async def rebuild_outbreaks(*, since_days: int = 365, as_of: date | None = None)
                 .where(SituationAlert.alert_id.in_(cluster["alert_ids"]))
                 .values(outbreak_id=cluster["outbreak_id"])
             )
+        if task_uuid:
+            from src.services.ingestion.stages import mark_dirty
+            await mark_dirty(db, line="situation", scope_key="*", task_uuid=task_uuid)
     return len(clusters)

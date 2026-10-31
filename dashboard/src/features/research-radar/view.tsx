@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useAppStore } from "@/stores/app-store";
+import { t } from "@/lib/i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Bot, BookOpenCheck, CheckCircle2, ExternalLink, Network, Radar, RefreshCw, Search, ShieldCheck, Sparkles, WandSparkles, XCircle } from "lucide-react";
 
@@ -155,7 +158,13 @@ function formatDate(value?: string | null) {
   return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value));
 }
 
-export default function ResearchRadarView() {
+function WorkflowAction({ enabled, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { enabled: boolean }) {
+  return enabled ? <button {...props} /> : null;
+}
+
+export default function ResearchRadarView({ mode = "ai" }: { mode?: "governance" | "ai" } = {}) {
+  const isAI = mode === "ai";
+  const lang = useAppStore((state) => state.lang);
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("review");
   const [searchDraft, setSearchDraft] = useState("");
@@ -226,13 +235,6 @@ export default function ResearchRadarView() {
   const selectedGap = gapRows.find((gap) => gap.gap_id === selectedGapId) ?? null;
   const articleRows = articles.data?.rows ?? [];
   const articlePagination: PaginationMeta | undefined = articles.data?.pagination ?? undefined;
-  const sync = useMutation({
-    mutationFn: () => apiFetch<{ task_uuid?: string; status: string; reason?: string }>("/research-radar/sync", {
-      method: "POST",
-      body: JSON.stringify({}),
-    }),
-    onSuccess: refreshAll,
-  });
   const enrichmentEnabled = Boolean(data?.schedule.jobs?.[0]?.ai_enrichment_enabled);
   const enrich = useMutation({
     mutationFn: (articleIds: string[] = []) => apiFetch<{ task_uuid?: string; status: string; reason?: string }>("/research-radar/enrich", {
@@ -257,10 +259,7 @@ export default function ResearchRadarView() {
     onSuccess: refreshAll,
   });
   const runAutopilot = useMutation({
-    mutationFn: () => apiFetch<Record<string, unknown>>("/research-radar/automation/run", {
-      method: "POST",
-      body: JSON.stringify({ dry_run: false, export: true }),
-    }),
+    mutationFn: () => apiFetch<Record<string, unknown>>("/research-radar/automation/run", { method: "POST", body: JSON.stringify({ dry_run: false }) }),
     onSuccess: refreshAll,
   });
   const discoverGaps = useMutation({
@@ -314,12 +313,12 @@ export default function ResearchRadarView() {
       render: (row) => (
         <div className="flex justify-end gap-1.5">
           {row.doi ? <a href={`https://doi.org/${row.doi}`} target="_blank" rel="noreferrer" aria-label="Open DOI" className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#D9D9D6] text-[#6B7280] hover:text-[#C2410C]"><ExternalLink className="h-3.5 w-3.5" /></a> : null}
-          <button type="button" title={enrichmentEnabled ? "Generate an evidence summary for automatic quality gating" : "Enable Literature AI enrichment in configuration first"} disabled={!enrichmentEnabled || enrich.isPending} onClick={() => enrich.mutate([row.article_id])} className="inline-flex h-8 items-center gap-1 rounded-md border border-[#D9D9D6] px-2 text-xs font-semibold text-[#6B7280] hover:border-violet-300 hover:text-violet-700 disabled:opacity-40"><WandSparkles className="h-3.5 w-3.5" />Summarize</button>
+          <WorkflowAction type="button" enabled={isAI} title={enrichmentEnabled ? "Generate an evidence summary for automatic quality gating" : "Enable Literature AI enrichment in configuration first"} disabled={!isAI || !enrichmentEnabled || enrich.isPending} onClick={() => enrich.mutate([row.article_id])} className="inline-flex h-8 items-center gap-1 rounded-md border border-[#D9D9D6] px-2 text-xs font-semibold text-[#6B7280] hover:border-violet-300 hover:text-violet-700 disabled:opacity-40"><WandSparkles className="h-3.5 w-3.5" />Summarize</WorkflowAction>
           {status === "review" ? <>
-            <button type="button" disabled={update.isPending} onClick={() => update.mutate({ articleId: row.article_id, patch: { publication_status: "excluded" } })} className="h-8 rounded-md border border-[#D9D9D6] px-2.5 text-xs font-semibold text-[#6B7280] hover:border-rose-300 hover:text-rose-700">Exclude</button>
-            <button type="button" disabled={update.isPending || row.integrity_status !== "current"} onClick={() => update.mutate({ articleId: row.article_id, patch: { publication_status: "published" } })} className="h-8 rounded-md bg-[#C2410C] px-2.5 text-xs font-semibold text-white hover:bg-[#9A3412] disabled:opacity-40">Publish</button>
+            <WorkflowAction type="button" enabled={isAI} disabled={!isAI || update.isPending} onClick={() => update.mutate({ articleId: row.article_id, patch: { publication_status: "excluded" } })} className="h-8 rounded-md border border-[#D9D9D6] px-2.5 text-xs font-semibold text-[#6B7280] hover:border-rose-300 hover:text-rose-700">Exclude</WorkflowAction>
+            <WorkflowAction type="button" enabled={isAI} disabled={!isAI || update.isPending || row.integrity_status !== "current"} onClick={() => update.mutate({ articleId: row.article_id, patch: { publication_status: "published" } })} className="h-8 rounded-md bg-[#C2410C] px-2.5 text-xs font-semibold text-white hover:bg-[#9A3412] disabled:opacity-40">Publish</WorkflowAction>
           </> : null}
-          {status === "published" ? <button type="button" disabled={update.isPending} onClick={() => update.mutate({ articleId: row.article_id, patch: { is_featured: !row.is_featured } })} className={`h-8 rounded-md border px-2.5 text-xs font-semibold ${row.is_featured ? "border-amber-300 bg-amber-50 text-amber-700" : "border-[#D9D9D6] text-[#6B7280]"}`}>{row.is_featured ? "Featured" : "Feature"}</button> : null}
+          {status === "published" ? <WorkflowAction type="button" enabled={isAI} disabled={!isAI || update.isPending} onClick={() => update.mutate({ articleId: row.article_id, patch: { is_featured: !row.is_featured } })} className={`h-8 rounded-md border px-2.5 text-xs font-semibold ${row.is_featured ? "border-amber-300 bg-amber-50 text-amber-700" : "border-[#D9D9D6] text-[#6B7280]"}`}>{row.is_featured ? "Featured" : "Feature"}</WorkflowAction> : null}
           {row.summaries.filter((summary) => summary.status === "review").map((summary) => <button key={`review-${summary.language}`} type="button" onClick={() => setSelectedSummary({ article: row, summary })} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-violet-200 bg-violet-50 px-2 text-[10px] font-semibold text-violet-700 hover:bg-violet-100"><BookOpenCheck className="h-3.5 w-3.5" />Review {summary.language.toUpperCase()}</button>)}
         </div>
       ),
@@ -328,37 +327,38 @@ export default function ResearchRadarView() {
 
   return (
     <WorkspacePage
-      eyebrow="AI & Reports"
-      title="Research Radar"
-      description="Monitor an automated evidence pipeline and review only records that fall outside its quality gates."
-      actions={<button type="button" onClick={() => sync.mutate()} disabled={sync.isPending} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#C2410C] px-3 text-sm font-semibold text-white hover:bg-[#9A3412] disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${sync.isPending ? "animate-spin" : ""}`} />Sync sources</button>}
+      eyebrow={isAI ? t(lang, "models") : (lang === "zh" ? "数据" : "Data")}
+      title={isAI ? (lang === "zh" ? "文献 AI 工作流" : "Literature AI workflows") : (lang === "zh" ? "文献与证据" : "Literature & evidence")}
+      description={isAI ? (lang === "zh" ? "文献证据补全与缺口发现任务。" : "Evidence enrichment and gap-discovery work.") : (lang === "zh" ? "浏览已入库文献、证据关系与质量状态。" : "Browse stored articles, evidence relationships and quality status.")}
+      actions={<Link className="cc-button" href="/collection/sources/literature">{t(lang, "source_literature")}</Link>}
     >
       <MetricStrip items={[
         { label: "Indexed", value: data?.total_articles ?? "—", detail: "Unique literature records", icon: BookOpenCheck },
-        { label: "Exceptions", value: data?.automation.exceptions.total ?? "—", detail: "Outside automatic quality gates", icon: Search, tone: data?.automation.exceptions.total ? "warning" : "neutral" },
+        { label: "Exceptions", value: data?.automation?.exceptions?.total ?? "—", detail: "Outside automatic quality gates", icon: Search, tone: data?.automation?.exceptions?.total ? "warning" : "neutral" },
         { label: "Published", value: data?.published_articles ?? "—", detail: `${data?.published_last_7_days ?? 0} from the past 7 days`, icon: Sparkles, tone: "success" },
-        { label: "Automated decisions", value: (data?.automation.automatic.published_articles ?? 0) + (data?.automation.automatic.confirmed_links ?? 0) + (data?.automation.automatic.published_summaries ?? 0), detail: "Audited publications and links", icon: Bot, tone: "success" },
+        { label: "Automated decisions", value: (data?.automation?.automatic?.published_articles ?? 0) + (data?.automation?.automatic?.confirmed_links ?? 0) + (data?.automation?.automatic?.published_summaries ?? 0), detail: "Audited publications and links", icon: Bot, tone: "success" },
       ]} />
       <section className="rounded-lg border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-700" /><h2 className="text-sm font-semibold text-[#1D1D1F]">Research Radar autopilot</h2><StatusBadge status={data?.automation.enabled ? "published" : "review"}>{data?.automation.enabled ? "active" : "paused"}</StatusBadge></div>
+            <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-700" /><h2 className="text-sm font-semibold text-[#1D1D1F]">Research Radar autopilot</h2><StatusBadge status={data?.automation?.enabled ? "published" : "review"}>{data?.automation?.enabled ? "active" : "paused"}</StatusBadge></div>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-[#4B5563]">High-confidence peer-reviewed records, exact evidence relationships, and source-grounded summaries are released automatically. Integrity flags, missing metadata, stale evidence, preprints, and boundary scores remain private as exceptions.</p>
           </div>
-          <button type="button" disabled={!data?.automation.enabled || runAutopilot.isPending} onClick={() => runAutopilot.mutate()} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-40"><Bot className={`h-3.5 w-3.5 ${runAutopilot.isPending ? "animate-pulse" : ""}`} />Run policy now</button>
+
         </div>
+        {isAI && <div className="mt-3 space-y-2"><p className="text-xs leading-5 text-stone-700">{t(lang, "source_policy_impact")}</p><WorkflowAction enabled={isAI} type="button" disabled={!data?.automation?.enabled || runAutopilot.isPending} onClick={() => runAutopilot.mutate()} className="cc-button">{t(lang, "source_policy_run")}</WorkflowAction></div>}
         <dl className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            ["Auto-published", data?.automation.automatic.published_articles ?? 0],
-            ["Auto-confirmed links", data?.automation.automatic.confirmed_links ?? 0],
-            ["Auto-published summaries", data?.automation.automatic.published_summaries ?? 0],
-            ["Human exceptions", data?.automation.exceptions.total ?? 0],
+            ["Auto-published", data?.automation?.automatic?.published_articles ?? 0],
+            ["Auto-confirmed links", data?.automation?.automatic?.confirmed_links ?? 0],
+            ["Auto-published summaries", data?.automation?.automatic?.published_summaries ?? 0],
+            ["Human exceptions", data?.automation?.exceptions?.total ?? 0],
           ].map(([label, value]) => <div key={String(label)} className="rounded-md border border-emerald-100 bg-white/80 p-3"><dt className="text-[10px] font-semibold uppercase tracking-wide text-[#6B7280]">{label}</dt><dd className="mt-1 font-mono text-lg font-semibold text-[#1D1D1F]">{value}</dd></div>)}
         </dl>
-        <p className="mt-3 font-mono text-[10px] text-[#6B7280]">{data?.automation.policy_version || "Policy unavailable"} · article ≥ {Math.round((data?.automation.thresholds.article_min_score ?? 0) * 100)} · exact relation ≥ {Math.round((data?.automation.thresholds.exact_relation_min_confidence ?? 0) * 100)} · context ≥ {Math.round((data?.automation.thresholds.context_relation_min_confidence ?? 0) * 100)} · summary ≥ {Math.round((data?.automation.thresholds.summary_min_quality ?? 0) * 100)}</p>
+        <p className="mt-3 font-mono text-[10px] text-[#6B7280]">{data?.automation?.policy_version || "Policy unavailable"} · article ≥ {Math.round((data?.automation?.thresholds?.article_min_score ?? 0) * 100)} · exact relation ≥ {Math.round((data?.automation?.thresholds?.exact_relation_min_confidence ?? 0) * 100)} · context ≥ {Math.round((data?.automation?.thresholds?.context_relation_min_confidence ?? 0) * 100)} · summary ≥ {Math.round((data?.automation?.thresholds?.summary_min_quality ?? 0) * 100)}</p>
       </section>
       <section className="rounded-lg border border-[#E5E7EB] bg-white p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-sm font-semibold text-[#1D1D1F]">Evidence enrichment & knowledge graph</h2><p className="mt-1 max-w-3xl text-xs leading-5 text-[#6B7280]">The public relationship graph remains deterministic. Model Center generates bilingual summaries on schedule; validated summaries publish automatically, while failed quality gates stay private.</p></div><button type="button" disabled={!enrichmentEnabled || enrich.isPending} onClick={() => enrich.mutate([])} className="inline-flex h-8 items-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-40"><WandSparkles className={`h-3.5 w-3.5 ${enrich.isPending ? "animate-pulse" : ""}`} />Generate next batch</button></div>
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-sm font-semibold text-[#1D1D1F]">Evidence enrichment & knowledge graph</h2><p className="mt-1 max-w-3xl text-xs leading-5 text-[#6B7280]">The public relationship graph remains deterministic. Model Center generates bilingual summaries on schedule; validated summaries publish automatically, while failed quality gates stay private.</p></div><WorkflowAction type="button" enabled={isAI} disabled={!isAI || !enrichmentEnabled || enrich.isPending} onClick={() => enrich.mutate([])} className="inline-flex h-8 items-center gap-2 rounded-md border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-40"><WandSparkles className={`h-3.5 w-3.5 ${enrich.isPending ? "animate-pulse" : ""}`} />Generate next batch</WorkflowAction></div>
         {!enrichmentEnabled ? <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">Model enrichment is safely disabled. Set LITERATURE__AI_ENRICHMENT_ENABLED=true after configuring and testing a Model Center route.</p> : null}
       </section>
       <section className="rounded-lg border border-[#E5E7EB] bg-white p-4">
@@ -386,8 +386,8 @@ export default function ResearchRadarView() {
             <p className="mt-1 max-w-3xl text-xs leading-5 text-[#6B7280]">Persistent gaps are derived from active surveillance signals. Targeted candidates pass automatic bibliographic, integrity, relationship, and publication gates; only exceptions remain here.</p>
           </div>
           <div className="flex gap-2">
-            <button type="button" disabled={refreshGaps.isPending} onClick={() => refreshGaps.mutate()} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#D9D9D6] px-3 text-xs font-semibold text-[#4B5563] hover:border-[#C2410C] hover:text-[#C2410C] disabled:opacity-40"><RefreshCw className={`h-3.5 w-3.5 ${refreshGaps.isPending ? "animate-spin" : ""}`} />Reconcile signals</button>
-            <button type="button" disabled={discoverGaps.isPending} onClick={() => discoverGaps.mutate([])} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#C2410C] px-3 text-xs font-semibold text-white hover:bg-[#9A3412] disabled:opacity-40"><Search className="h-3.5 w-3.5" />Discover evidence</button>
+            <WorkflowAction type="button" enabled={isAI} disabled={!isAI || refreshGaps.isPending} onClick={() => refreshGaps.mutate()} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#D9D9D6] px-3 text-xs font-semibold text-[#4B5563] hover:border-[#C2410C] hover:text-[#C2410C] disabled:opacity-40"><RefreshCw className={`h-3.5 w-3.5 ${refreshGaps.isPending ? "animate-spin" : ""}`} />Reconcile signals</WorkflowAction>
+            <WorkflowAction type="button" enabled={isAI} disabled={!isAI || discoverGaps.isPending} onClick={() => discoverGaps.mutate([])} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#C2410C] px-3 text-xs font-semibold text-white hover:bg-[#9A3412] disabled:opacity-40"><Search className="h-3.5 w-3.5" />Discover evidence</WorkflowAction>
           </div>
         </div>
         <dl className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
@@ -421,9 +421,9 @@ export default function ResearchRadarView() {
         <div className="flex flex-wrap items-center gap-1">{["review", "published", "excluded"].map((value) => <button key={value} type="button" onClick={() => { setStatus(value); setArticlePage(1); }} className={`h-8 rounded-md px-3 text-sm font-medium capitalize ${status === value ? "bg-[#FFF1E8] text-[#C2410C]" : "text-[#4B5563] hover:bg-[#F7F7F5]"}`}>{value}</button>)}</div>
         <label className="ml-auto flex h-8 min-w-64 items-center gap-2 rounded-md border border-[#D9D9D6] bg-white px-2.5"><Search className="h-3.5 w-3.5 text-[#9CA3AF]" /><input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Title, DOI, or journal" className="w-full border-0 bg-transparent p-0 text-sm outline-none" /></label>
       </FilterBar>
-      {(sync.isSuccess || enrich.isSuccess || discoverGaps.isSuccess || refreshGaps.isSuccess || reviewLink.isSuccess || runAutopilot.isSuccess) ? <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">Research Radar state updated. Automatic discovery, enrichment, publication, and release work can be followed in Task Runs.</div> : null}
-      {(sync.isError || enrich.isError || update.isError || dashboard.isError || articles.isError || gaps.isError || refreshGaps.isError || discoverGaps.isError || reviewLink.isError || dismissGap.isError || runAutopilot.isError) ? <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{String(sync.error || enrich.error || update.error || dashboard.error || articles.error || gaps.error || refreshGaps.error || discoverGaps.error || reviewLink.error || dismissGap.error || runAutopilot.error)}</div> : null}
-      <DataTable columns={columns} rows={articleRows} getRowKey={(row) => row.article_id} emptyState={<EmptyState title={articles.isLoading ? "Loading literature…" : "No articles in this queue"} description="Run a source sync or choose another editorial status." className="min-h-48" />} />
+      {(runAutopilot.isSuccess || enrich.isSuccess || discoverGaps.isSuccess || refreshGaps.isSuccess || reviewLink.isSuccess) ? <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">Research Radar state updated. Follow submitted work in Task Runs.</div> : null}
+      {(runAutopilot.isError || enrich.isError || update.isError || dashboard.isError || articles.isError || gaps.isError || refreshGaps.isError || discoverGaps.isError || reviewLink.isError || dismissGap.isError) ? <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{String(runAutopilot.error || enrich.error || update.error || dashboard.error || articles.error || gaps.error || refreshGaps.error || discoverGaps.error || reviewLink.error || dismissGap.error)}</div> : null}
+      <DataTable columns={columns} rows={articleRows} getRowKey={(row) => row.article_id} emptyState={<EmptyState title={articles.isLoading ? "Loading literature…" : "No articles in this queue"} description="Choose another editorial status or inspect the Literature Source workflow." className="min-h-48" />} />
       {articlePagination ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-xs text-[#4B5563]">
         <span>{articlePagination.total} records · page {articlePagination.total_pages ? articlePagination.page : 0} of {articlePagination.total_pages}</span>
         <div className="flex gap-1.5">
@@ -447,7 +447,7 @@ export default function ResearchRadarView() {
             ["GIDS interpretation", "gids_interpretation"],
           ] as const).map(([label, key]) => <section key={key} className="border-t border-[#E5E7EB] pt-4"><div className="flex items-center justify-between gap-3"><h3 className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">{label}</h3>{selectedSummary.summary.evidence_map?.[key] ? <span className="text-[10px] text-violet-700">{Math.round((selectedSummary.summary.evidence_map[key].confidence ?? 0) * 100)}% · {(selectedSummary.summary.evidence_map[key].sources ?? []).join(", ")}</span> : null}</div><p className={`mt-2 text-sm leading-6 ${selectedSummary.summary[key] ? "text-[#1D1D1F]" : "italic text-[#9CA3AF]"}`}>{selectedSummary.summary[key] || "No supported draft was generated for this field."}</p></section>)}
           {selectedSummary.summary.review_notes ? <p className="rounded-md bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">{selectedSummary.summary.review_notes}</p> : null}
-          <div className="sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-[#E5E7EB] bg-white py-4"><button type="button" disabled={update.isPending} onClick={() => update.mutate({ articleId: selectedSummary.article.article_id, patch: { summary_language: selectedSummary.summary.language, summary_status: "rejected" } })} className="h-9 rounded-md border border-rose-200 px-3 text-sm font-semibold text-rose-700 hover:bg-rose-50">Reject draft</button><button type="button" disabled={update.isPending || selectedSummary.article.publication_status !== "published"} title={selectedSummary.article.publication_status === "published" ? "Approve for public release" : "Publish the article first"} onClick={() => update.mutate({ articleId: selectedSummary.article.article_id, patch: { summary_language: selectedSummary.summary.language, summary_status: "published" } })} className="h-9 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-40">Approve for public release</button></div>
+          <div className="sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-[#E5E7EB] bg-white py-4"><WorkflowAction type="button" enabled={isAI} disabled={!isAI || update.isPending} onClick={() => update.mutate({ articleId: selectedSummary.article.article_id, patch: { summary_language: selectedSummary.summary.language, summary_status: "rejected" } })} className="h-9 rounded-md border border-rose-200 px-3 text-sm font-semibold text-rose-700 hover:bg-rose-50">Reject draft</WorkflowAction><WorkflowAction type="button" enabled={isAI} disabled={!isAI || update.isPending || selectedSummary.article.publication_status !== "published"} title={selectedSummary.article.publication_status === "published" ? "Approve for public release" : "Publish the article first"} onClick={() => update.mutate({ articleId: selectedSummary.article.article_id, patch: { summary_language: selectedSummary.summary.language, summary_status: "published" } })} className="h-9 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-40">Approve for public release</WorkflowAction></div>
         </div> : null}
       </Drawer>
       <Drawer
@@ -459,7 +459,7 @@ export default function ResearchRadarView() {
         {selectedGap ? <div className="space-y-5">
           <div className="grid grid-cols-2 gap-3 rounded-md bg-[#F7F7F5] p-3 text-xs"><div><p className="text-[#6B7280]">Lifecycle</p><div className="mt-1"><StatusBadge status={selectedGap.status}>{selectedGap.status.replaceAll("_", " ")}</StatusBadge></div></div><div><p className="text-[#6B7280]">Signal</p><p className="mt-1 font-mono text-[10px] text-[#1D1D1F]">{selectedGap.signal_id}</p></div></div>
           <section className="border-t border-[#E5E7EB] pt-4"><h3 className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">Transparent query plan</h3><dl className="mt-2 space-y-2 text-xs"><div><dt className="font-semibold text-[#1D1D1F]">Crossref</dt><dd className="mt-1 rounded bg-[#F7F7F5] p-2 font-mono text-[10px] leading-5 text-[#4B5563]">{selectedGap.query_plan.crossref?.exact || "—"}</dd></div><div><dt className="font-semibold text-[#1D1D1F]">Europe PMC</dt><dd className="mt-1 rounded bg-[#F7F7F5] p-2 font-mono text-[10px] leading-5 text-[#4B5563]">{selectedGap.query_plan.europe_pmc?.exact || "—"}</dd></div></dl></section>
-          <section className="border-t border-[#E5E7EB] pt-4"><div className="flex items-center justify-between gap-3"><h3 className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">Candidate relationships</h3><button type="button" disabled={discoverGaps.isPending} onClick={() => discoverGaps.mutate([selectedGap.gap_id])} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#D9D9D6] px-2.5 text-xs font-semibold text-[#4B5563]"><Search className="h-3.5 w-3.5" />Search again</button></div>
+          <section className="border-t border-[#E5E7EB] pt-4"><div className="flex items-center justify-between gap-3"><h3 className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">Candidate relationships</h3><WorkflowAction type="button" enabled={isAI} disabled={!isAI || discoverGaps.isPending} onClick={() => discoverGaps.mutate([selectedGap.gap_id])} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#D9D9D6] px-2.5 text-xs font-semibold text-[#4B5563]"><Search className="h-3.5 w-3.5" />Search again</WorkflowAction></div>
             <div className="mt-3 space-y-3">
               {selectedGap.candidates.map((candidate) => <article key={candidate.id} className="rounded-md border border-[#E5E7EB] p-3">
                 <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold leading-5 text-[#1D1D1F]">{candidate.article_title}</p><p className="mt-1 text-xs text-[#6B7280]">{candidate.journal || "Unknown journal"} · {formatDate(candidate.published_at)}</p></div><StatusBadge status={candidate.status}>{candidate.status}</StatusBadge></div>
@@ -467,11 +467,11 @@ export default function ResearchRadarView() {
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                   <span className="font-mono text-[10px] text-[#6B7280]">{Math.round(candidate.confidence * 100)}% · {candidate.relation_level.replaceAll("_", " ")}</span>
                   <div className="flex flex-wrap gap-1.5">
-                    {candidate.publication_status === "review" ? <button type="button" disabled={update.isPending || candidate.integrity_status !== "current"} onClick={() => update.mutate({ articleId: candidate.article_id, patch: { publication_status: "published" } })} className="inline-flex h-8 items-center gap-1 rounded-md border border-[#D9D9D6] px-2 text-xs font-semibold text-[#4B5563] hover:border-[#C2410C] hover:text-[#C2410C]">Publish article</button> : null}
+                    {candidate.publication_status === "review" ? <WorkflowAction type="button" enabled={isAI} disabled={!isAI || update.isPending || candidate.integrity_status !== "current"} onClick={() => update.mutate({ articleId: candidate.article_id, patch: { publication_status: "published" } })} className="inline-flex h-8 items-center gap-1 rounded-md border border-[#D9D9D6] px-2 text-xs font-semibold text-[#4B5563] hover:border-[#C2410C] hover:text-[#C2410C]">Publish article</WorkflowAction> : null}
                     {candidate.status === "review" ? <>
-                      <button type="button" disabled={reviewLink.isPending} onClick={() => reviewLink.mutate({ linkId: candidate.id, status: "rejected" })} className="inline-flex h-8 items-center gap-1 rounded-md border border-rose-200 px-2 text-xs font-semibold text-rose-700"><XCircle className="h-3.5 w-3.5" />Reject</button>
-                      <button type="button" disabled={reviewLink.isPending} onClick={() => reviewLink.mutate({ linkId: candidate.id, status: "confirmed", relationLevel: "disease_context" })} className="inline-flex h-8 items-center gap-1 rounded-md border border-amber-200 px-2 text-xs font-semibold text-amber-700"><AlertTriangle className="h-3.5 w-3.5" />Context only</button>
-                      <button type="button" disabled={reviewLink.isPending} onClick={() => reviewLink.mutate({ linkId: candidate.id, status: "confirmed", relationLevel: "exact_disease_geography" })} className="inline-flex h-8 items-center gap-1 rounded-md bg-emerald-700 px-2 text-xs font-semibold text-white"><CheckCircle2 className="h-3.5 w-3.5" />Confirm exact</button>
+                      <WorkflowAction type="button" enabled={isAI} disabled={!isAI || reviewLink.isPending} onClick={() => reviewLink.mutate({ linkId: candidate.id, status: "rejected" })} className="inline-flex h-8 items-center gap-1 rounded-md border border-rose-200 px-2 text-xs font-semibold text-rose-700"><XCircle className="h-3.5 w-3.5" />Reject</WorkflowAction>
+                      <WorkflowAction type="button" enabled={isAI} disabled={!isAI || reviewLink.isPending} onClick={() => reviewLink.mutate({ linkId: candidate.id, status: "confirmed", relationLevel: "disease_context" })} className="inline-flex h-8 items-center gap-1 rounded-md border border-amber-200 px-2 text-xs font-semibold text-amber-700"><AlertTriangle className="h-3.5 w-3.5" />Context only</WorkflowAction>
+                      <WorkflowAction type="button" enabled={isAI} disabled={!isAI || reviewLink.isPending} onClick={() => reviewLink.mutate({ linkId: candidate.id, status: "confirmed", relationLevel: "exact_disease_geography" })} className="inline-flex h-8 items-center gap-1 rounded-md bg-emerald-700 px-2 text-xs font-semibold text-white"><CheckCircle2 className="h-3.5 w-3.5" />Confirm exact</WorkflowAction>
                     </> : null}
                   </div>
                 </div>
@@ -481,7 +481,7 @@ export default function ResearchRadarView() {
             </div>
           </section>
           {selectedGap.error ? <p className="rounded-md bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700">{selectedGap.error}</p> : null}
-          <div className="sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-[#E5E7EB] bg-white py-4"><button type="button" disabled={dismissGap.isPending} onClick={() => dismissGap.mutate(selectedGap.gap_id)} className="h-9 rounded-md border border-[#D9D9D6] px-3 text-sm font-semibold text-[#6B7280]">Dismiss gap</button><button type="button" disabled={discoverGaps.isPending} onClick={() => discoverGaps.mutate([selectedGap.gap_id])} className="h-9 rounded-md bg-[#C2410C] px-3 text-sm font-semibold text-white">Run targeted discovery</button></div>
+          <div className="sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-[#E5E7EB] bg-white py-4"><WorkflowAction type="button" enabled={isAI} disabled={!isAI || dismissGap.isPending} onClick={() => dismissGap.mutate(selectedGap.gap_id)} className="h-9 rounded-md border border-[#D9D9D6] px-3 text-sm font-semibold text-[#6B7280]">Dismiss gap</WorkflowAction><WorkflowAction type="button" enabled={isAI} disabled={!isAI || discoverGaps.isPending} onClick={() => discoverGaps.mutate([selectedGap.gap_id])} className="h-9 rounded-md bg-[#C2410C] px-3 text-sm font-semibold text-white">Run targeted discovery</WorkflowAction></div>
         </div> : null}
       </Drawer>
     </WorkspacePage>

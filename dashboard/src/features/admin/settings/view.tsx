@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Badge, Button, Card, Text, Title } from "@/components/ui/tremor";
 import {
   Check,
@@ -26,6 +27,7 @@ import {
   ShieldCheck,
   TestTube2,
 } from "lucide-react";
+import { t } from "@/lib/i18n";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge as HeaderBadge } from "@/components/ui/StatusBadge";
 import { useAppStore } from "@/stores/app-store";
@@ -91,7 +93,9 @@ function SaveRow({ children }: { children: ReactNode }) {
 export default function SettingPage() {
   const { lang } = useAppStore();
   const isZh = lang === "zh";
-  const { data: settings, isLoading } = useSettings();
+  const params = useSearchParams();
+  const router = useRouter();
+  const { data: settings, isLoading, error: loadError, refetch } = useSettings();
   const updateSmtp = useUpdateSmtpSettings();
   const updateGithub = useUpdateGithubSettings();
   const updateCloudflare = useUpdateCloudflareSettings();
@@ -100,7 +104,11 @@ export default function SettingPage() {
   const testSmtp = useTestSmtpConnection();
   const sendTestEmail = useSendTestEmail();
 
-  const [activeSection, setActiveSection] = useState<SectionKey>("smtp");
+  const [activeSection, setActiveSection] = useState<SectionKey>(() => ["smtp","github","archive","cloudflare","site"].includes(params.get("section") ?? "") ? params.get("section") as SectionKey : "smtp");
+  const requestedSection = params.get("section");
+  useEffect(() => {
+    if (requestedSection && ["smtp","github","archive","cloudflare","site"].includes(requestedSection)) setActiveSection(requestedSection as SectionKey);
+  }, [requestedSection]);
   const [smtpForm, setSmtpForm] = useState<SmtpSettingsInput>({ smtp_host: "", smtp_port: 587, smtp_username: "", smtp_password: "", smtp_from_email: "", smtp_use_tls: true, admin_emails_raw: "" });
   const [githubForm, setGithubForm] = useState<GithubSettingsInput>({ github_data_share_repo_url: "", github_data_share_repo_branch: "", github_data_share_raw_base_url: "", raw_archive_enabled: false, raw_archive_repo_url: "", raw_archive_branch: "main", default_github_remote: "origin", default_github_branch: "" });
   const [cloudflareForm, setCloudflareForm] = useState<CloudflareSettingsInput>({ cloudflare_api_token: "", cloudflare_account_id: "", default_cloudflare_project_name: "globalid" });
@@ -179,14 +187,14 @@ export default function SettingPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <PageHeader eyebrow="Settings" title="Integrations" description="Manage system connections and site configuration in one place. Choose a section to edit." actions={<div className="flex gap-2"><Link href="/production/releases" className="inline-flex h-10 items-center gap-2 rounded-lg border border-tremor-border bg-tremor-background px-3 text-sm font-semibold text-tremor-content-strong hover:bg-tremor-background-subtle"><ExternalLink className="h-4 w-4" />Data releases</Link></div>} />
+      <PageHeader eyebrow={t(lang, "settings")} title={t(lang, "cc_integrations")} description={t(lang, "cc_settings_desc")} actions={<div className="flex gap-2"><Link href="/publish" className="inline-flex h-10 items-center gap-2 rounded-lg border border-tremor-border bg-tremor-background px-3 text-sm font-semibold text-tremor-content-strong hover:bg-tremor-background-subtle"><ExternalLink className="h-4 w-4" />{t(lang,"publish")}</Link></div>} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {summary.map((item) => <button key={item.key} type="button" onClick={() => setActiveSection(item.key)} className={`rounded-xl border bg-tremor-background p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${activeSection === item.key ? "border-tremor-brand ring-1 ring-tremor-brand/20" : "border-tremor-border"}`}><div className="flex items-center justify-between"><span className="text-tremor-content-subtle">{item.icon}</span><StateBadge label={item.value} color={item.ready ? "emerald" : "amber"} /></div><p className="mt-3 text-sm font-semibold text-tremor-content-strong">{item.title}</p><p className="mt-1 truncate text-xs text-tremor-content-subtle">{item.detail}</p></button>)}
+        {summary.map((item) => <button key={item.key} type="button" aria-pressed={activeSection === item.key} onClick={() => { setActiveSection(item.key); const next = new URLSearchParams(params.toString()); next.set("section",item.key); router.replace(`/settings/integrations?${next}`, {scroll:false}); }} className={`rounded-xl border bg-tremor-background p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${activeSection === item.key ? "border-tremor-brand ring-1 ring-tremor-brand/20" : "border-tremor-border"}`}><div className="flex items-center justify-between"><span className="text-tremor-content-subtle">{item.icon}</span><StateBadge label={item.value} color={item.ready ? "emerald" : "amber"} /></div><p className="mt-3 text-sm font-semibold text-tremor-content-strong">{item.title}</p><p className="mt-1 truncate text-xs text-tremor-content-subtle">{item.detail}</p></button>)}
       </div>
 
-      {notice && <div className={noticeCls(notice)}>{notice.message}</div>}
-      {isLoading && !settings ? <Card><Text>{isZh ? "正在加载设置…" : "Loading settings…"}</Text></Card> : (
+      {notice && <div role={notice.kind === "error" ? "alert" : "status"} className={noticeCls(notice)}>{notice.message}</div>}
+      {loadError ? <div className="cc-panel border-rose-300" role="alert"><p>{t(lang,"cc_load_failed")}</p><p className="cc-muted">{loadError.message}</p><button className="cc-button" onClick={() => refetch()}>{t(lang,"cc_retry_load")}</button></div> : isLoading && !settings ? <Card><Text>{isZh ? "正在加载设置…" : "Loading settings…"}</Text></Card> : (
         <Card className="min-w-0 !p-5 sm:!p-6">
             {activeSection === "smtp" && <>
               <SectionHeading icon={<Mail className="h-4 w-4" />} title={isZh ? "邮件通知" : "Email notifications"} description={isZh ? "任务告警、AI 报告和自动化提醒都会使用这里的配置。" : "Task alerts, AI reports and automation notices use this configuration."} status={<StateBadge label={settings?.smtp.smtp_configured ? (isZh ? "已配置" : "Configured") : (isZh ? "待配置" : "Needs setup")} color={settings?.smtp.smtp_configured ? "emerald" : "amber"} />} onReset={() => reset("smtp")} resetLabel={isZh ? "恢复默认" : "Reset"} />

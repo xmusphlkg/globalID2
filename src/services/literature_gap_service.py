@@ -40,6 +40,7 @@ from src.literature.normalization import (
 )
 from src.literature.pipeline import _global_country_catalogue
 from src.literature.repository import LiteratureRepository
+from src.literature.transactions import LiteratureCommitError, commit_literature_change
 from src.services.situation_notices.snapshot import latest_situation_snapshot as latest_report_v3
 
 
@@ -231,7 +232,7 @@ class LiteratureGapService:
             for article in articles
         ]
 
-    async def refresh_from_snapshot(self) -> dict[str, Any]:
+    async def refresh_from_snapshot(self, *, task_uuid: str | None = None) -> dict[str, Any]:
         """Reconcile durable gap state with the latest eligible snapshot."""
         snapshot = await latest_report_v3()
         if not snapshot:
@@ -348,17 +349,24 @@ class LiteratureGapService:
                 if signal["exact_article_count"] > 0
             }
             inactivated = 0
+            changed = bool(created or updated)
             for gap_id, row in existing.items():
                 if row.signal_id in exact_signal_ids and row.status != "dismissed":
                     row.status = "covered"
                     row.resolved_at = _utc_now()
                     row.resolution_note = "Published exact disease-and-geography evidence is available."
+                    changed = True
                 elif gap_id not in active_gap_ids and row.status in ACTIVE_GAP_STATUSES:
                     row.status = "inactive"
                     row.resolved_at = _utc_now()
                     row.resolution_note = "Signal is not active in the latest eligible Situation Room snapshot."
                     inactivated += 1
-            await db.commit()
+                    changed = True
+            if changed:
+                await commit_literature_change(
+                    db, operation="refresh_evidence_gaps", task_uuid=task_uuid,
+                    details={"snapshot_id": snapshot.get("snapshot_id")},
+                )
         return {
             "available": True,
             "snapshot_id": snapshot.get("snapshot_id"),
@@ -380,7 +388,11 @@ class LiteratureGapService:
         cfg = get_config().literature
         if not cfg.gap_discovery_enabled:
             raise ValueError("Literature evidence-gap discovery is disabled")
-        refresh = await self.refresh_from_snapshot()
+        from src.ai.work_queue import current_parent
+
+        parent = current_parent()
+        source_task_uuid = task.task_uuid if task else parent.task_uuid if parent else None
+        refresh = await self.refresh_from_snapshot(task_uuid=source_task_uuid)
         now = _utc_now()
         requested_gap_ids = (
             [str(item) for item in ((task.input_data or {}).get("gap_ids") or [])]
@@ -409,7 +421,7 @@ class LiteratureGapService:
                 )
             ).scalars().all()
         run_uuid = str(uuid.uuid4())
-        await self._create_run(run_uuid, gaps, now)
+        await self._create_run(run_uuid, gaps, now, task_uuid=source_task_uuid)
         disease_catalogue, country_catalogue, _ = await self._catalogues()
         taxonomy = _load_json(ROOT / cfg.taxonomy_path)
         totals = {
@@ -434,20 +446,23 @@ class LiteratureGapService:
                         country_catalogue=country_catalogue,
                         taxonomy=taxonomy,
                         now=now,
+                        task_uuid=source_task_uuid,
                     )
                     for key, value in result.items():
                         if key in totals:
                             totals[key] += int(value)
                     totals["gaps_with_candidates" if result["candidate_links"] else "gaps_without_results"] += 1
+                except LiteratureCommitError:
+                    raise
                 except Exception as exc:
                     totals["errors"] += 1
-                    await self._mark_gap_error(gap.gap_id, exc)
+                    await self._mark_gap_error(gap.gap_id, exc, task_uuid=source_task_uuid)
                 if task:
                     await task_manager.update_task_progress(
                         task.task_uuid,
                         min(98, int(100 * (index + 1) / max(1, len(gaps)))),
                     )
-            limit_result = await self.enforce_candidate_limits()
+            limit_result = await self.enforce_candidate_limits(task_uuid=source_task_uuid)
             totals["deprioritized_candidates"] = limit_result["deprioritized"]
             automation = None
             if cfg.autopilot_enabled:
@@ -471,6 +486,7 @@ class LiteratureGapService:
         country_catalogue: list[dict[str, str]],
         taxonomy: dict[str, Any],
         now: datetime,
+        task_uuid: str | None = None,
     ) -> dict[str, int]:
         cfg = get_config().literature
         async with get_db() as db:
@@ -482,7 +498,10 @@ class LiteratureGapService:
             gap.status = "searching"
             gap.error = None
             plan = dict(gap.query_plan or {})
-            await db.commit()
+            await commit_literature_change(
+                db, operation="start_gap_discovery", task_uuid=task_uuid,
+                details={"gap_id": gap_id},
+            )
         since = now - timedelta(days=cfg.gap_discovery_lookback_days)
         record_limit = cfg.gap_discovery_records_per_gap
         crossref = CrossrefClient(
@@ -721,7 +740,10 @@ class LiteratureGapService:
                 "weak_candidates": weak,
                 "last_run_at": now.isoformat(),
             }
-            await db.commit()
+            await commit_literature_change(
+                db, operation="store_gap_discovery", task_uuid=task_uuid,
+                details={"gap_id": gap_id, "inserted": inserted, "updated": updated},
+            )
         return {
             "fetched": raw_count,
             "normalized": len(candidates),
@@ -733,7 +755,7 @@ class LiteratureGapService:
             "candidate_links": candidate_links,
         }
 
-    async def enforce_candidate_limits(self) -> dict[str, int]:
+    async def enforce_candidate_limits(self, *, task_uuid: str | None = None) -> dict[str, int]:
         """Keep review queues bounded without treating overflow as rejection."""
         limit = get_config().literature.gap_discovery_candidate_limit
         relation_rank = {
@@ -742,6 +764,7 @@ class LiteratureGapService:
             "candidate": 1,
         }
         deprioritized = reactivated = 0
+        changed = False
         async with get_db() as db:
             rows = (
                 await db.execute(
@@ -777,6 +800,7 @@ class LiteratureGapService:
                     reactivated += int(desired == "review")
                     deprioritized += int(desired == "deprioritized")
                     link.status = desired
+                    changed = True
                     link.metadata_ = {
                         **(link.metadata_ or {}),
                         "queue_ranking": index + 1,
@@ -791,13 +815,20 @@ class LiteratureGapService:
                     )
                 ).scalar_one_or_none()
                 if gap:
-                    gap.latest_metrics = {
+                    metrics = {
                         **(gap.latest_metrics or {}),
                         "review_queue_limit": limit,
                         "eligible_candidate_links": len(candidates),
                         "deprioritized_candidates": max(0, len(candidates) - limit),
                     }
-            await db.commit()
+                    if gap.latest_metrics != metrics:
+                        gap.latest_metrics = metrics
+                        changed = True
+            if changed:
+                await commit_literature_change(
+                    db, operation="limit_gap_candidates", task_uuid=task_uuid,
+                    details={"deprioritized": deprioritized, "reactivated": reactivated},
+                )
         return {"deprioritized": deprioritized, "reactivated": reactivated}
 
     async def review_link(
@@ -808,6 +839,7 @@ class LiteratureGapService:
         relation_level: str | None,
         reviewer: str,
         note: str | None,
+        task_uuid: str | None = None,
     ) -> dict[str, Any]:
         if status not in {"confirmed", "rejected"}:
             raise ValueError("Unsupported evidence-link review status")
@@ -855,10 +887,15 @@ class LiteratureGapService:
                         if is_public_exact
                         else None
                     )
-            await db.commit()
+            await commit_literature_change(
+                db, operation="review_evidence_link", task_uuid=task_uuid, actor=reviewer,
+                details={"link_id": link_id, "status": status, "relation_level": link.relation_level},
+            )
             return self._link_payload(link, article)
 
-    async def update_gap(self, gap_id: str, *, status: str, note: str | None) -> dict[str, Any]:
+    async def update_gap(
+        self, gap_id: str, *, status: str, note: str | None, task_uuid: str | None = None,
+    ) -> dict[str, Any]:
         if status not in {"open", "dismissed"}:
             raise ValueError("Unsupported gap status update")
         async with get_db() as db:
@@ -876,7 +913,10 @@ class LiteratureGapService:
             gap.resolved_at = _utc_now() if status == "dismissed" else None
             if status == "open":
                 gap.next_search_at = _utc_now()
-            await db.commit()
+            await commit_literature_change(
+                db, operation="update_evidence_gap", task_uuid=task_uuid,
+                details={"gap_id": gap_id, "status": status, "note": note},
+            )
             return self._gap_payload(gap, [])
 
     async def count_gaps(self, *, status: str | None = None) -> int:
@@ -968,7 +1008,9 @@ class LiteratureGapService:
             "candidates": candidates,
         }
 
-    async def _mark_gap_error(self, gap_id: str, exc: Exception) -> None:
+    async def _mark_gap_error(
+        self, gap_id: str, exc: Exception, *, task_uuid: str | None = None,
+    ) -> None:
         cfg = get_config().literature
         async with get_db() as db:
             gap = (
@@ -979,12 +1021,19 @@ class LiteratureGapService:
                 gap.error = str(exc)[:4000]
                 gap.last_searched_at = _utc_now()
                 gap.next_search_at = _utc_now() + timedelta(hours=cfg.gap_discovery_retry_hours)
-                await db.commit()
+                await commit_literature_change(
+                    db, operation="record_gap_error", task_uuid=task_uuid,
+                    details={"gap_id": gap_id, "error": gap.error},
+                )
 
-    async def _create_run(self, run_uuid: str, gaps: list[LiteratureEvidenceGap], now: datetime) -> None:
+    async def _create_run(
+        self, run_uuid: str, gaps: list[LiteratureEvidenceGap], now: datetime,
+        *, task_uuid: str | None = None,
+    ) -> None:
         async with get_db() as db:
             db.add(LiteratureIngestRun(
                 run_uuid=run_uuid,
+                task_uuid=task_uuid,
                 source="evidence-gap-discovery",
                 status="running",
                 started_at=now,

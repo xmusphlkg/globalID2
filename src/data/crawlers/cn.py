@@ -9,6 +9,7 @@ Three-phase design:
 3. Crawl full content for new entries    - (handled by DataProcessor)
 """
 import json
+import asyncio
 import re
 from datetime import datetime
 from typing import List, Optional, Set, Dict
@@ -108,6 +109,10 @@ class ChinaCDCCrawler(BaseCrawler):
         return None
     
     async def fetch_list(self, source: str = "all", **kwargs) -> List[CrawlerResult]:
+        """Run blocking index discovery on a plain worker thread."""
+        return await asyncio.to_thread(self.fetch_index, source=source, **kwargs)
+
+    def fetch_index(self, source: str = "all", **kwargs) -> List[CrawlerResult]:
         """
         Phase 1: Lightweight index fetch.
         Retrieves only titles, URLs, and dates — no full content.

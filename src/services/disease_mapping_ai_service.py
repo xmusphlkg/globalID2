@@ -195,6 +195,7 @@ class DiseaseMappingAIService:
             await db.commit()
             return {"category_id": category.id, "status": "no_model", "created": created}
 
+        await db.commit()
         try:
             reviewed = await self._run_review(
                 completer, category, standards, relations, deterministic, source_language=source_language
@@ -308,12 +309,14 @@ class DiseaseMappingAIService:
         source_language: str,
     ) -> ReviewedOutput:
         timeout = _env_int("MAPPING_AI_REVIEW_TIMEOUT_SECONDS", 600, minimum=60, maximum=1800)
+        from src.ai.work_queue import current_parent
+        queue_timeout = None if current_parent() is not None else timeout
         try:
             return await asyncio.wait_for(
                 self.review_category(
                     completer, category, standards, relations, deterministic, source_language=source_language
                 ),
-                timeout=timeout,
+                timeout=queue_timeout,
             )
         except (AIOutputError, asyncio.CancelledError):
             raise

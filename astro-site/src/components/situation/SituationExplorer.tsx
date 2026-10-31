@@ -164,7 +164,7 @@ export default function SituationExplorer({ locale, asOf, points }: Props) {
 
   const remote = outbreakId ? outbreaks[outbreakId] : undefined;
   const file = remote && typeof remote === 'object' ? remote : null;
-  const timeline = file && file.alerts.length ? file.alerts : selected ? [selected] : [];
+  const timeline = file?.alerts ?? [];
   const placesInOutbreak = useMemo(() => {
     const seen = new Map<string, SituationAlertRecord>();
     for (const alert of timeline) if (!seen.has(alert.country_code)) seen.set(alert.country_code, alert);
@@ -298,6 +298,7 @@ export default function SituationExplorer({ locale, asOf, points }: Props) {
               </div>
             )}
             {remote === 'loading' && <p className="sit-muted" role="status">{copy.mapLoading}</p>}
+            {remote === 'error' && <p className="sit-muted" role="status">{copy.timelineFailed}</p>}
             <ol className="sit-timeline">
               {timeline.map(alert => (
                 <AlertItem

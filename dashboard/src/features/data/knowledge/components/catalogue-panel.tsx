@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { ActionButton, Panel, briefStatusColor, formatDateTime, inputClass, statusColor } from "./shared";
 import { SOURCE_GROUPS, type KnowledgeDisplayFilter, type KnowledgePageState, type KnowledgeStatusFilter, type RefreshGenerator, type RefreshPriority } from "../hooks/use-knowledge-page";
 
-export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: KnowledgePageState }) {
+export function CataloguePanel({ lang, state, mode = "governance" }: { lang: "en" | "zh"; state: KnowledgePageState; mode?: "governance" | "ai" }) {
   const {
     isLoading, isFetching, search, setSearch, statusFilter, setStatusFilter, displayFilter, setDisplayFilter,
     selectedSet, selectedDiseaseId, refreshSources, forceRefresh, setForceRefresh, generator, setGenerator,
@@ -54,6 +54,7 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
                   <option value="partial">{lang === "zh" ? "部分" : "Partial"}</option>
                   <option value="blocked">{lang === "zh" ? "阻断" : "Blocked"}</option>
                 </select>
+                {mode === "ai" && <>
                 <select
                   value={generator}
                   onChange={(event) => setGenerator(event.target.value as RefreshGenerator)}
@@ -74,8 +75,10 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
                   <option value="high">High</option>
                   <option value="urgent">Urgent</option>
                 </select>
+                </>}
               </FilterToolbar>
 
+              {mode === "ai" ? <>
               <div className="flex flex-wrap items-center gap-2">
                 <ActionButton onClick={toggleVisibleSelection} icon={<CheckSquare2 className="h-4 w-4" />}>
                   {t(lang, "knowledge_select_all_visible")}
@@ -156,6 +159,7 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
                 </div>
               </details>
 
+              </> : <div className="flex flex-wrap gap-2"><Link className="cc-button" href="/models/knowledge">{t(lang,"wf_create_brief")}</Link><Link className="cc-button" href="/collection/sources/knowledge">{t(lang,"wf_knowledge")}</Link></div>}
               {refreshError ? (
                 <div className="rounded-tremor-default border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/25 dark:text-rose-300">
                   {refreshError}
@@ -188,7 +192,7 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
                             {task.task_uuid}
                           </span>
                           <Link
-                            href={`/production/ai?task=${encodeURIComponent(task.task_uuid)}&task_type=update_disease_knowledge`}
+                            href={`/models/tasks?detail=${encodeURIComponent(task.task_uuid)}&task_type=update_disease_knowledge`}
                             className="inline-flex items-center gap-1 rounded-tremor-default border border-emerald-200 px-2 py-1 font-medium text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-900/40 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
                           >
                             {t(lang, "knowledge_view_task_logs")}

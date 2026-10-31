@@ -9,7 +9,7 @@ test("country context updates the URL and source data without client errors", as
     if (message.type() === "error") errors.push(message.text());
   });
 
-  await page.goto("/operations/sources?country=US");
+  await page.goto("/collection?country=US");
   const country = page.getByLabel("Active country or region");
   for (const selection of [
     { label: "Austria", code: "AT" },

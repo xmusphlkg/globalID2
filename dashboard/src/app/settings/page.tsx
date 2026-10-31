@@ -1,2 +1,2 @@
-import { permanentRedirect } from "next/navigation";
-export default function LegacyPage() { permanentRedirect("/settings/integrations"); }
+import { SettingsWorkbenchView } from "@/features/workspaces/views";
+export default SettingsWorkbenchView;

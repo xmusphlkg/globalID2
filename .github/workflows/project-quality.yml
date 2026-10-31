@@ -3,7 +3,7 @@ name: Project quality gates
 on:
   pull_request:
   push:
-    branches: [master, development]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -17,7 +17,7 @@ jobs:
   backend-and-contracts:
     name: Python, release, and contract tests
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:15-alpine
@@ -67,7 +67,7 @@ jobs:
           venv/bin/python scripts/full_rebuild_database.py --mode mappings --yes --checkpoint-file /tmp/globalid-ci-rebuild.json
           venv/bin/python scripts/automation/seed_ci_database_fixtures.py
       - name: Run complete offline Python suite
-        run: PYTHON_BIN=venv/bin/python ./tests/run_tests.sh --type all
+        run: PYTHONUNBUFFERED=1 PYTHON_BIN=venv/bin/python ./tests/run_tests.sh --type all --verbose
       - name: Regenerate and verify API/schema contracts
         run: |
           PYTHONPATH=. venv/bin/python scripts/export_dashboard_openapi.py

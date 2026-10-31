@@ -171,7 +171,12 @@ class NewZealandPHFCrawler(BaseCrawler):
             if last_error is None:
                 raise RuntimeError("[NZ-DHB] PHF annual CSV mirrors failed")
             raise last_error
-        rows = list(csv.DictReader(io.StringIO(response.text.lstrip("\ufeff"))))
+        return self.parse_dhb_annual_csv(response.content, source_url=source_url)
+
+    @staticmethod
+    def parse_dhb_annual_csv(payload: bytes, *, source_url: str):
+        """Parse an already collected official DHB annual CSV."""
+        rows = list(csv.DictReader(io.StringIO(payload.decode("utf-8-sig"))))
         required = {"Disease", "Report Year", "DHBName", "Case Count", "Case rate per 100,000"}
         if not rows or not required.issubset(rows[0]):
             raise RuntimeError("[NZ-DHB] PHF annual CSV is empty or has an unexpected schema")

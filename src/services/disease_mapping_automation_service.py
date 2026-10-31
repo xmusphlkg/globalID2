@@ -15,7 +15,6 @@ from src.ai.model_center import get_active_model_routes
 from src.core import get_database, get_logger
 from src.control_plane.schedule_state import schedule_state_repository
 from src.domain import ScheduledJobState, SourceDiseaseCategory, StandardDisease
-from src.services.disease_mapping_ai_service import disease_mapping_ai_service
 from src.services.disease_mapping_registry_service import disease_mapping_registry_service
 from src.services.mapping_notification_service import mapping_notification_service
 
@@ -221,8 +220,10 @@ class DiseaseMappingAutomationService:
 
         async def process_category(category_id: int) -> dict:
             try:
-                async with get_database() as db:
-                    return await disease_mapping_ai_service.suggest_for_category(db, category_id)
+                from src.services.model_operations import enqueue_model_operation
+                from src.domain import TaskPriority
+                task = await enqueue_model_operation("mapping_suggest", {"category_id": category_id}, priority=TaskPriority.LOW)
+                return {"category_id": category_id, "status": "queued", "task_uuid": task.task_uuid}
             except asyncio.CancelledError:
                 raise
             except Exception as exc:

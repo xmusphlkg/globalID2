@@ -10,6 +10,7 @@ back-fills any (year, month) pairs absent from the database.
 from __future__ import annotations
 
 import csv
+import io
 import json
 import re
 from dataclasses import dataclass
@@ -522,9 +523,13 @@ class AUMonthlyUpdater:
                 f"AU crawler output not found: {csv_path}. "
                 "Please run the AU crawler in globalID2 first."
             )
+        return self.parse_source_csv(csv_path.read_bytes(), source_file=csv_path.name)
+
+    def parse_source_csv(self, payload: bytes, *, source_file: str | None = None) -> List[Dict[str, str]]:
+        """Offline parser shared by CLI snapshots and the staged connector."""
         rows: List[Dict[str, str]] = []
         today = datetime.now(timezone.utc).date()
-        with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
+        with io.StringIO(payload.decode("utf-8-sig"), newline="") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
                 disease = _norm_text(row.get("Disease"))
@@ -585,7 +590,7 @@ class AUMonthlyUpdater:
                         "Geocode": _norm_text(row.get("Geocode")) or self.country_code,
                         "GeographyKey": _norm_text(row.get("GeographyKey"))
                         or self.series_geography_key,
-                        "__source_file": csv_path.name,
+                        "__source_file": source_file or self.output_csv.name,
                     }
                 )
 

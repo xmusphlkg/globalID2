@@ -62,7 +62,7 @@ def _iter_source_files(source: Path) -> dict[str, Path]:
     files: dict[str, Path] = {}
     for candidate in source.rglob("*"):
         relative = candidate.relative_to(source)
-        if "_auth" in relative.parts:
+        if "_auth" in relative.parts or relative.parts[0] == "ai":
             continue
         if candidate.is_symlink():
             raise RawArchiveValidationError(f"Symlink is not allowed: {candidate}")

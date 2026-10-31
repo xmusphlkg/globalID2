@@ -80,6 +80,11 @@
       "reason": "The full-pipeline CLI still derives its report window from legacy CN rows.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 1}
     },
+    "scripts/audit_existing_data_migration.py": {
+      "classification": "migration",
+      "reason": "Explicit existing-database migration audit reads historical per-country counts only. It never uses legacy rows as a runtime fallback or introduces a new write path to the legacy table.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
     "scripts/audit_iceland_integration.py": {
       "classification": "quality_audit",
       "reason": "Iceland integration audit checks the bounded compatibility projection against registered source-series facts during cutover validation.",

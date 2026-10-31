@@ -1,0 +1,14 @@
+{
+  "features": [
+    {
+      "attributes": {
+        "Disease": "Measles"
+      }
+    },
+    {
+      "attributes": {
+        "Disease": "Anthrax"
+      }
+    }
+  ]
+}

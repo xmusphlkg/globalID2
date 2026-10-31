@@ -6,7 +6,7 @@ import json
 from datetime import date, datetime, timezone
 
 from src.domain import SituationAlert, SituationExtraction, SituationNotice
-from src.services.situation_notices.export import alert_record, facets, latest_per_place, weekly_changes
+from src.services.situation_notices.export import alert_record, facets, latest_per_place, map_marker, weekly_changes
 
 SECRET_BODY = "INTERNAL-ONLY full report paragraph that must never be published."
 
@@ -159,6 +159,41 @@ def test_weekly_changes_counts_new_updated_and_first_seen_places():
     assert weeks["2026-W41"]["new_outbreaks"] == ["OB-1"] and weeks["2026-W41"]["new_places"] == 1
     assert weeks["2026-W42"]["updated_outbreaks"] == ["OB-1"]
     assert weeks["2026-W42"]["new_places"] == 1 and weeks["2026-W42"]["alerts"] == 2
+
+
+def test_map_marker_keeps_place_labels_and_drops_alert_prose():
+    marker = map_marker(
+        {
+            "alert_id": "a1",
+            "outbreak_id": "OB-1",
+            "source_id": "who_don",
+            "source_label_en": "WHO Disease Outbreak News",
+            "source_label_zh": "世卫组织疾病暴发新闻",
+            "disease_id": "D050",
+            "disease_slug": "ebola",
+            "disease_label": "Ebola",
+            "disease_name_en": "Ebola virus disease",
+            "disease_name_zh": "埃博拉病毒病",
+            "country_code": "KE",
+            "country_name_en": "Kenya",
+            "country_name_zh": "肯尼亚",
+            "admin_area": None,
+            "status": "ongoing",
+            "published_date": "2026-10-23",
+            "quote": "nine cases",
+            "summary_en": "Kenya reported nine cases.",
+            "summary_zh": "肯尼亚报告9例。",
+            "summary_fr": "Le Kenya a signalé neuf cas.",
+            "ai": {"verdict": "accept"},
+            "url": "https://www.who.int/item/1",
+            "cases": 9,
+            "deaths": 1,
+        }
+    )
+    assert marker["disease_name_zh"] == "埃博拉病毒病"
+    assert marker["published_date"] == "2026-10-23"
+    assert "admin_area" not in marker
+    assert set(marker).isdisjoint({"quote", "summary_en", "summary_zh", "summary_fr", "ai", "url", "cases", "deaths"})
 
 
 def test_map_point_prefers_the_recent_alert_with_counts_over_a_newer_empty_statement():

@@ -1,0 +1,68 @@
+{
+  "features": [
+    {
+      "attributes": {
+        "Disease": "Measles",
+        "year": "2026",
+        "week": "30",
+        "YearWeek": "2026 W30",
+        "Value": 0,
+        "Unique_ID": "2026-30-0",
+        "ObjectId": 1,
+        "location": "Ireland",
+        "Cat": "total",
+        "Format": "Weekly Number of Cases",
+        "SubCat": "Weekly Number of Cases",
+        "Include": "Yes"
+      }
+    },
+    {
+      "attributes": {
+        "Disease": "Anthrax",
+        "year": "2026",
+        "week": "30",
+        "YearWeek": "2026 W30",
+        "Value": null,
+        "Unique_ID": "2026-30-1",
+        "ObjectId": 2,
+        "location": "Ireland",
+        "Cat": "total",
+        "Format": "Weekly Number of Cases",
+        "SubCat": "Weekly Number of Cases",
+        "Include": "Yes"
+      }
+    },
+    {
+      "attributes": {
+        "Disease": "Measles",
+        "year": "2026",
+        "week": "31",
+        "YearWeek": "2026 W31",
+        "Value": 2,
+        "Unique_ID": "2026-31-0",
+        "ObjectId": 3,
+        "location": "Ireland",
+        "Cat": "total",
+        "Format": "Weekly Number of Cases",
+        "SubCat": "Weekly Number of Cases",
+        "Include": "Yes"
+      }
+    },
+    {
+      "attributes": {
+        "Disease": "Anthrax",
+        "year": "2026",
+        "week": "31",
+        "YearWeek": "2026 W31",
+        "Value": 3,
+        "Unique_ID": "2026-31-1",
+        "ObjectId": 4,
+        "location": "Ireland",
+        "Cat": "total",
+        "Format": "Weekly Number of Cases",
+        "SubCat": "Weekly Number of Cases",
+        "Include": "Yes"
+      }
+    }
+  ]
+}

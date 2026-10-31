@@ -96,3 +96,30 @@ def test_ibge_census_reference_is_kept_distinct_from_annual_estimates():
         r.reference_date == "2022-08-01" and r.basis == "census_resident_population"
         for r in rows
     )
+
+
+@pytest.mark.parametrize("changed_codes", [[], ["CN-GD"]])
+def test_explicit_population_export_queues_dirty_incremental_release(monkeypatch,tmp_path,changed_codes):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    import sys
+    from scripts import refresh_official_population as refresh
+    from src.services.data_release_service import data_release_service
+    class LocalSource:
+        def __init__(self,path):
+            self.output=path
+            path.mkdir(parents=True,exist_ok=True)
+            self.sources=[]
+    data=refresh.SubdivisionPopulation("CN-GD",2024,100,"NBS","2024-12-31","https://example.org/nbs","year_end")
+    apply=AsyncMock(return_value={"changed_country_codes":changed_codes,"changed_rows":len(changed_codes),"task_uuid":"audit" if changed_codes else None})
+    release=AsyncMock(return_value={"status":"queued","task_uuid":"release"})
+    monkeypatch.setattr(refresh,"PublicSource",LocalSource)
+    monkeypatch.setattr(refresh,"fetch_nbs",lambda *args:[data])
+    monkeypatch.setattr(refresh,"apply_rows",apply)
+    monkeypatch.setattr(data_release_service,"trigger_job",release)
+    monkeypatch.setattr(sys,"argv",["refresh_official_population.py","--sources","CN","--apply","--export","--start-year","2024","--output",str(tmp_path)])
+    refresh.main()
+    release.assert_awaited_once_with("site-release",manual=True,trigger="official-population-cli")
+    assert apply.await_args.args[0]==[data]
+    import json
+    assert json.loads((tmp_path/"latest.json").read_text())["changes"]["changed_country_codes"]==changed_codes

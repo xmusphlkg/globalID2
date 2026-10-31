@@ -155,59 +155,126 @@ def load_abs_population(
         workbook.close()
 
 
+def _population_metadata(row: SubdivisionPopulation) -> dict:
+    """Public denominator semantics; file digests are run provenance."""
+    return {
+        "location_code": row.country_code,
+        "location_type": "subdivision" if "-" in row.country_code else "country",
+        "reference_date": row.reference_date,
+        "population_basis": row.basis,
+        "source_url": row.source_url,
+        "annual_denominator_policy": "same_calendar_year_no_interpolation",
+    }
+
+
+async def store_population_changes(
+    db, rows: list[dict], *, operation: str, input_data: dict | None = None,
+    preserve_official: bool = False, dry_run: bool = False,
+) -> dict:
+    """Store semantic deltas and their exact dirty scopes in the caller transaction.
+
+    Each row separates semantic_metadata from provenance_metadata. File names
+    and checksums attest to a run; they do not change a country's denominator.
+    """
+    from sqlalchemy import select
+    from src.domain import Country, PopulationRecord
+    from src.services.ingestion.manual_runs import record_manual_store
+
+    country_query = select(Country.code, Country.id).where(
+        Country.code.in_({row["country_code"] for row in rows})
+    ).order_by(Country.id)
+    if not dry_run:
+        country_query = country_query.with_for_update()
+    countries = dict((await db.execute(country_query)).all())
+    missing = sorted({row["country_code"] for row in rows} - countries.keys())
+    if missing:
+        raise ValueError(f"Unregistered subdivisions: {missing}")
+    existing = {
+        (record.country_id, record.year): record
+        for record in (await db.execute(
+            select(PopulationRecord).where(
+                PopulationRecord.country_id.in_(countries.values()),
+                PopulationRecord.year.in_({row["year"] for row in rows}),
+            )
+        )).scalars()
+    }
+    changed_codes: set[str] = set()
+    changed_rows = skipped_official = 0
+    for row in rows:
+        record = existing.get((countries[row["country_code"]], row["year"]))
+        if preserve_official and record is not None and record.source != "WPP":
+            skipped_official += 1
+            continue
+        semantics = row.get("semantic_metadata") or {}
+        old_metadata = record.metadata_ if record is not None else {}
+        if not isinstance(old_metadata, dict):
+            old_metadata = {}
+        changed = (
+            record is None or record.population != row["population"]
+            or record.source != row["source"]
+            or any(old_metadata.get(key) != value for key, value in semantics.items())
+        )
+        if not changed:
+            continue
+        changed_rows += 1
+        changed_codes.add(row["country_code"])
+        if dry_run:
+            continue
+        metadata = {**old_metadata, **semantics, **(row.get("provenance_metadata") or {})}
+        if record is None:
+            record = PopulationRecord(
+                country_id=countries[row["country_code"]], year=row["year"],
+                population=row["population"], source=row["source"], metadata_=metadata,
+            )
+            db.add(record)
+            existing[(record.country_id, record.year)] = record
+        else:
+            record.population = row["population"]
+            record.source = row["source"]
+            record.metadata_ = metadata
+    audit_uuid = None
+    if changed_codes and not dry_run:
+        audit = await record_manual_store(
+            db, line="surveillance", scope_keys=changed_codes, operation=operation,
+            metrics={"changed_rows": changed_rows,
+                     "unchanged_rows": len(rows) - changed_rows - skipped_official,
+                     "skipped_official_rows": skipped_official},
+            input_data=input_data,
+        )
+        audit_uuid = audit.task_uuid
+    return {
+        "changed_country_codes": sorted(changed_codes), "changed_rows": changed_rows,
+        "unchanged_rows": len(rows) - changed_rows - skipped_official,
+        "skipped_official_rows": skipped_official, "task_uuid": audit_uuid,
+    }
+
+
 async def apply_rows(
     rows: list[SubdivisionPopulation], checksums: dict[str, str]
-) -> None:
-    from sqlalchemy import text
+) -> dict:
+    """Commit changed official denominators; keep identical timestamps untouched.
 
-    from scripts.import_wpp_population import ensure_table
+    The installed population schema is required. Current file checksums remain
+    in the CLI report and audit task; checksum-only refreshes never dirty curves.
+    """
     from src.core.database import dispose_database, get_db
 
+    rows = validate_rows(rows)
+    prepared = [{
+        "country_code": row.country_code, "year": row.year,
+        "population": row.population, "source": row.source,
+        "semantic_metadata": _population_metadata(row),
+        "provenance_metadata": {"input_sha256": checksums[row.source]},
+    } for row in rows]
     try:
         async with get_db() as db:
-            await ensure_table(db)
-            countries = {
-                code: country_id
-                for country_id, code in (
-                    await db.execute(text("SELECT id, code FROM countries"))
-                ).all()
-            }
-            missing = sorted({row.country_code for row in rows} - countries.keys())
-            if missing:
-                raise ValueError(f"Unregistered subdivisions: {missing}")
-            parameters = [
-                {
-                    "country_id": countries[row.country_code],
-                    "year": row.year,
-                    "population": row.population,
-                    "source": row.source,
-                    "metadata": json.dumps(
-                        {
-                            "location_code": row.country_code,
-                            "location_type": "subdivision"
-                            if "-" in row.country_code
-                            else "country",
-                            "reference_date": row.reference_date,
-                            "population_basis": row.basis,
-                            "source_url": row.source_url,
-                            "input_sha256": checksums[row.source],
-                            "annual_denominator_policy": "same_calendar_year_no_interpolation",
-                        }
-                    ),
-                }
-                for row in rows
-            ]
-            await db.execute(
-                text("""
-                INSERT INTO population_records (country_id, year, population, source, metadata, created_at, updated_at)
-                VALUES (:country_id, :year, :population, :source, CAST(:metadata AS json), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                ON CONFLICT (country_id, year) DO UPDATE SET population = EXCLUDED.population,
-                    source = EXCLUDED.source, metadata = EXCLUDED.metadata, updated_at = CURRENT_TIMESTAMP
-            """),
-                parameters,
+            result = await store_population_changes(
+                db, prepared, operation="import_official_population",
+                input_data={"input_sha256": dict(checksums)},
             )
     finally:
         await dispose_database()
+    return {**result, "input_sha256": dict(checksums)}
 
 
 def main() -> None:
@@ -255,7 +322,7 @@ def main() -> None:
         "missing_year_policy": "missing stays missing; no national population or carry-forward",
     }
     if args.apply:
-        asyncio.run(apply_rows(rows, checksums))
+        report["changes"] = asyncio.run(apply_rows(rows, checksums))
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(

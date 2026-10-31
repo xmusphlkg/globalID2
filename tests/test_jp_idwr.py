@@ -260,3 +260,22 @@ def test_parse_unknown_format_returns_diagnostics(crawler: JapanIDWRCrawler) -> 
     rows = [["foo", "bar"], ["baz", "qux"]]
 
     assert crawler._normalize_rows(rows, reporting_area="総数", source_kind="zensu") == []
+def test_english_total_row_keeps_national_identity():
+    from src.data.crawlers.jp import JapanIDWRCrawler
+
+    matrix = [
+        ["42nd week, 2026"],
+        ["Prefecture", "Tuberculosis", ""],
+        ["", "Current week", "Cumulative"],
+        ["Total No.", "173", "10000"],
+        ["Hokkaido", "7", "400"],
+    ]
+    crawler = JapanIDWRCrawler(save_raw=False)
+    national = crawler._normalize_rows(matrix, "総数", "zensu")
+    assert len(national) == 1
+    assert national[0]["GeographyKey"] == "country:JP:national"
+    assert national[0]["Current week"] == "173"
+    all_rows = crawler._normalize_rows(matrix, "ALL", "zensu")
+    assert {row["GeographyKey"] for row in all_rows} == {
+        "country:JP:national", "country:JP-01:national"
+    }

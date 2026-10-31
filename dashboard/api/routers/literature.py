@@ -38,6 +38,7 @@ from src.domain import (
     StandardDisease,
 )
 from src.generation.site_data_literature import build_surveillance_evidence
+from src.literature.transactions import commit_literature_change
 from src.services.literature_service import literature_service
 from src.services.literature_gap_service import literature_gap_service
 from src.services.literature_automation_service import literature_automation_service
@@ -412,11 +413,16 @@ async def update_article(
                 "publication_gate": "manual-control-plane-gate",
             },
         ))
-    await db.commit()
+    source_task_uuid = await commit_literature_change(
+        db,
+        operation="manual_article_edit",
+        actor=editor,
+        details={"article_id": article_id, "changes": body.model_dump(exclude_unset=True)},
+    )
     await db.refresh(article)
     projection = (await _project_articles(db, [article]))[0]
     if previous_status != article.publication_status:
-        await literature_gap_service.refresh_from_snapshot()
+        await literature_gap_service.refresh_from_snapshot(task_uuid=source_task_uuid)
     return DataResponse(data=LiteratureArticleOut.model_validate(projection), meta=_meta(request))
 
 
@@ -434,7 +440,6 @@ async def sync(body: LiteratureSyncRequest, request: Request):
 async def run_automation(body: LiteratureAutomationRequest, request: Request):
     result = await literature_automation_service.reconcile(
         dry_run=body.dry_run,
-        export=body.export,
     )
     return DataResponse(data=result, meta=_meta(request))
 

@@ -843,36 +843,27 @@ class AustraliaNINDSSCrawler(BaseCrawler):
             "RequestId": str(int(time.time() * 1000)),
         }
 
-    def _execute_payload(
-        self, payload: Dict[str, Any], timeout: int = 60
-    ) -> Tuple[Optional[List], Optional[Dict]]:
-        """POST a Power BI query payload; return (dm0, raw_response)."""
+    def request_payload_bytes(self, payload: Dict[str, Any], timeout: int = 60) -> bytes | None:
+        """Transport only; callers persist bytes before business parsing."""
         if not self._config or not self._http:
-            return None, None
+            return None
         try:
-            resp = self._http.post(
-                self._config["apiUrl"],
-                headers=self._auth_headers(),
-                json=payload,
-                timeout=timeout,
-            )
-            resp.raise_for_status()
-            raw = resp.json()
-            dsr = (
-                raw.get("results", [{}])[0]
-                .get("result", {})
-                .get("data", {})
-                .get("dsr")
-            )
-            dm0 = _find_dm0(dsr) if dsr is not None else None
-            return dm0, raw
+            response = self._http.post(self._config["apiUrl"], headers=self._auth_headers(), json=payload, timeout=timeout)
+            response.raise_for_status()
+            return response.content
         except requests.RequestException as exc:
-            status = getattr(getattr(exc, "response", None), "status_code", None)
-            if status == 401:
-                logger.warning("[AU-NINDSS] 401 Unauthorized — token may have expired")
-            else:
-                logger.debug(f"[AU-NINDSS] payload request failed | error={exc}")
-            return None, None
+            logger.debug("[AU-NINDSS] payload request failed | error={}", exc)
+            return None
+
+    @staticmethod
+    def parse_payload_bytes(payload: bytes) -> Tuple[Optional[List], Optional[Dict]]:
+        raw = json.loads(payload)
+        dsr = raw.get("results", [{}])[0].get("result", {}).get("data", {}).get("dsr")
+        return (_find_dm0(dsr) if dsr is not None else None), raw
+
+    def _execute_payload(self, payload: Dict[str, Any], timeout: int = 60) -> Tuple[Optional[List], Optional[Dict]]:
+        raw = self.request_payload_bytes(payload, timeout=timeout)
+        return self.parse_payload_bytes(raw) if raw is not None else (None, None)
 
     def _execute_dax_list(self, entity: str, column: str) -> List[str]:
         """Execute a simple DAX DISTINCT query and return the string list."""
@@ -926,7 +917,9 @@ class AustraliaNINDSSCrawler(BaseCrawler):
                 timeout=60,
             )
             resp.raise_for_status()
-            data = resp.json()
+            from src.services.ingestion.capture import capture_sync, is_capturing
+            body = capture_sync(resp.content, str(resp.url), "application/json") if is_capturing() else resp.content
+            data = json.loads(body)
             items = (
                 data["results"][0]["result"]["data"]["dsr"]["DS"][0]["PH"][0]["DM0"]
             )

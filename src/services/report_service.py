@@ -81,14 +81,10 @@ class ReportService:
         Progress is reported via task_manager (0 → 100 %).
         Raises on unrecoverable errors (caller handles via task_lifecycle).
         """
-        from src.ai.model_check import ensure_available_models_checked_async
         from src.generation import ReportGenerator
 
         language = "zh"
         report_layout = "report_v4"
-
-        # Check model availability once
-        await ensure_available_models_checked_async()
 
         async with get_database() as db:
             # ── Resolve effective time range ──────────────────────────────────
@@ -269,6 +265,8 @@ class ReportService:
                         content_type="text",
                     )
 
+            # Resolve/reuse queries must not reserve a connection for queued work.
+            await db.commit()
             report = await generator.generate(
                 country_id=country_obj.id,
                 report_type=report_type_enum,

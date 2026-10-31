@@ -6,6 +6,7 @@ const TERMINAL_SUFFIXES = ["Completed", "Timed Out", "Failed", "Cancelled"] as c
 interface OutputGroup {
   entries: WorkbookEntry[];
   terminal: boolean;
+  failure: boolean;
 }
 
 export interface CompactedTaskLogEntries {
@@ -13,9 +14,14 @@ export interface CompactedTaskLogEntries {
   hiddenCount: number;
 }
 
+function isFailureTitle(title: string): boolean {
+  return / (Failed|Timed Out|Cancelled)$/.test(title);
+}
+
 /**
- * Fold repetitive command-output chunks while retaining lifecycle entries and
- * the most useful diagnostic output for a command that is still running.
+ * Fold repetitive command-output chunks. A finished successful command keeps
+ * its terminal summary. A command that is still running, or that failed, keeps
+ * the last output chunk so the traceback remains visible.
  */
 export function compactTaskLogEntries(
   entries: WorkbookEntry[],
@@ -56,7 +62,7 @@ export function compactTaskLogEntries(
     if (outputMatch) {
       const base = outputMatch[1];
       const groupKey = `${base}\u0000${generations.get(base) ?? 0}`;
-      const group = groups.get(groupKey) ?? { entries: [], terminal: false };
+      const group = groups.get(groupKey) ?? { entries: [], terminal: false, failure: false };
       group.entries.push(entry);
       groups.set(groupKey, group);
       entryGroups.set(entry, groupKey);
@@ -65,8 +71,9 @@ export function compactTaskLogEntries(
 
     if (lifecycleEvent?.kind === "terminal") {
       const groupKey = `${lifecycleEvent.base}\u0000${generations.get(lifecycleEvent.base) ?? 0}`;
-      const group = groups.get(groupKey) ?? { entries: [], terminal: false };
+      const group = groups.get(groupKey) ?? { entries: [], terminal: false, failure: false };
       group.terminal = true;
+      group.failure = group.failure || isFailureTitle(entry.title);
       groups.set(groupKey, group);
     }
   });
@@ -77,7 +84,7 @@ export function compactTaskLogEntries(
       group.entries.forEach((entry) => visibleOutputEntries.add(entry));
       return;
     }
-    if (!group.terminal) {
+    if (!group.terminal || group.failure) {
       visibleOutputEntries.add(group.entries[group.entries.length - 1]);
     }
   });

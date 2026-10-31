@@ -1,0 +1,2090 @@
+{
+  "hpsc_ndh:recent": [
+    {
+      "time": "2026-07-20T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_MEASLES_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-07-27T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_MEASLES_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ],
+  "hpsc_ndh:full": [
+    {
+      "time": "2026-07-20T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_MEASLES_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2026-07-27T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_MEASLES_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "revised",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ],
+  "hpsc_annual:recent": [
+    {
+      "time": "2018-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2019-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_ANTHRAX_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2019-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ],
+  "hpsc_annual:full": [
+    {
+      "time": "2004-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2005-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_ANTHRAX_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2005-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2006-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2007-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_ANTHRAX_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2007-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2008-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2009-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_ANTHRAX_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2009-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2010-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2011-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_ANTHRAX_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2011-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2012-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2013-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_ANTHRAX_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2013-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2014-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2015-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_ANTHRAX_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2015-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2016-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2017-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_ANTHRAX_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2017-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2018-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2019-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_ANTHRAX_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2019-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-01-01T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ANNUAL_MEASLES_ANNUAL",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "final",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ],
+  "hpsc_weekly_archive:recent": [
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_ACUTE_ANTERIOR_POLIOMYELITIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_ANTHRAX_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_BACILLUS_CEREUS_FOOD_BORNE_INFECTION_OR_INTOXICATION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_BACTERIAL_MENINGITIS_NOT_OTHERWISE_SPECIFIED_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_BOTULISM_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_BRUCELLOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_COVID_19_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CAMPYLOBACTER_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CARBAPENEM_RESISTANT_ENTEROBACTERIACEAE_INFECTION_INVASIVE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CHANCROID_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CHICKENPOX_HOSPITALISED_CASES_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CHIKUNGUNYA_DISEASE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CHLAMYDIA_TRACHOMATIS_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CHOLERA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CLOSTRIDIUM_DIFFICILE_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CLOSTRIDIUM_PERFRINGENS_TYPE_A_FOOD_BORNE_DISEASE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CREUTZFELDT_JAKOB_DISEASE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CREUTZFELDT_JAKOB_DISEASE_VARIANT_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CRYPTOSPORIDIOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CYTOMEGALOVIRUS_INFECTION_CONGENITAL_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_DENGUE_FEVER_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_DIPHTHERIA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_ECHINOCOCCOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_GIARDIASIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_GONORRHOEA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_GRANULOMA_INGUINALE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HAEMOPHILUS_INFLUENZAE_DISEASE_INVASIVE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HEPATITIS_A_ACUTE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HEPATITIS_B_ACUTE_AND_CHRONIC_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HEPATITIS_C_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HEPATITIS_E_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HERPES_SIMPLEX_GENITAL_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HERPES_SIMPLEX_NEONATAL_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HUMAN_IMMUNODEFICIENCY_VIRUS_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_INFLUENZA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_INFLUENZA_SEASONAL_PANDEMIC_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LEGIONELLOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LEPROSY_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LEPTOSPIROSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LISTERIOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LYME_DISEASE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LYMPHOGRANULOMA_VENEREUM_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_MALARIA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_MEASLES_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_MENINGOCOCCAL_DISEASE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_MUMPS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_NOROVIRAL_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_OUTBREAK_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_PARATYPHOID_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_PERTUSSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_PLAGUE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_Q_FEVER_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_RABIES_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_RESPIRATORY_SYNCYTIAL_VIRUS_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_ROTAVIRUS_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_RUBELLA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_SALMONELLOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_SEVERE_ACUTE_RESPIRATORY_SYNDROME_SARS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_SHIGELLOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_SMALLPOX_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_STAPHYLOCOCCAL_FOOD_POISONING_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_STREPTOCOCCUS_GROUP_A_INFECTION_INVASIVE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_STREPTOCOCCUS_GROUP_B_INFECTION_INVASIVE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_STREPTOCOCCUS_PNEUMONIAE_INFECTION_INVASIVE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_SYPHILIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_TETANUS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_TOXOPLASMOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_TRICHINOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_TRICHOMONIASIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_MPOX_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ],
+  "hpsc_weekly_archive:full": [
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_ACUTE_ANTERIOR_POLIOMYELITIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_ANTHRAX_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_BACILLUS_CEREUS_FOOD_BORNE_INFECTION_OR_INTOXICATION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_BACTERIAL_MENINGITIS_NOT_OTHERWISE_SPECIFIED_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_BOTULISM_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_BRUCELLOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_COVID_19_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CAMPYLOBACTER_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CARBAPENEM_RESISTANT_ENTEROBACTERIACEAE_INFECTION_INVASIVE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CHANCROID_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CHICKENPOX_HOSPITALISED_CASES_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CHIKUNGUNYA_DISEASE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CHLAMYDIA_TRACHOMATIS_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CHOLERA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CLOSTRIDIUM_DIFFICILE_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CLOSTRIDIUM_PERFRINGENS_TYPE_A_FOOD_BORNE_DISEASE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CREUTZFELDT_JAKOB_DISEASE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CREUTZFELDT_JAKOB_DISEASE_VARIANT_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CRYPTOSPORIDIOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_CYTOMEGALOVIRUS_INFECTION_CONGENITAL_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_DENGUE_FEVER_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_DIPHTHERIA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_ECHINOCOCCOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_GIARDIASIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_GONORRHOEA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_GRANULOMA_INGUINALE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HAEMOPHILUS_INFLUENZAE_DISEASE_INVASIVE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HEPATITIS_A_ACUTE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HEPATITIS_B_ACUTE_AND_CHRONIC_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HEPATITIS_C_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HEPATITIS_E_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HERPES_SIMPLEX_GENITAL_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HERPES_SIMPLEX_NEONATAL_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_HUMAN_IMMUNODEFICIENCY_VIRUS_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_INFLUENZA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_INFLUENZA_SEASONAL_PANDEMIC_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LEGIONELLOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LEPROSY_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LEPTOSPIROSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LISTERIOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LYME_DISEASE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_LYMPHOGRANULOMA_VENEREUM_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_MALARIA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_MEASLES_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_MENINGOCOCCAL_DISEASE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_MUMPS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_NOROVIRAL_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_OUTBREAK_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_PARATYPHOID_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_PERTUSSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_PLAGUE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_Q_FEVER_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_RABIES_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_RESPIRATORY_SYNCYTIAL_VIRUS_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_ROTAVIRUS_INFECTION_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_RUBELLA_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_SALMONELLOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_SEVERE_ACUTE_RESPIRATORY_SYNDROME_SARS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_SHIGELLOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_SMALLPOX_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_STAPHYLOCOCCAL_FOOD_POISONING_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_STREPTOCOCCUS_GROUP_A_INFECTION_INVASIVE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_STREPTOCOCCUS_GROUP_B_INFECTION_INVASIVE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_STREPTOCOCCUS_PNEUMONIAE_INFECTION_INVASIVE_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_SYPHILIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_TETANUS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 2.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_TOXOPLASMOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 3.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_TRICHINOSIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 0.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_TRICHOMONIASIS_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    },
+    {
+      "time": "2020-05-11T00:00:00+00:00",
+      "series_code": "SER_IE_HPSC_ARCHIVE_MPOX_WEEKLY",
+      "geography_key": "country:IE:national",
+      "dimension_key": "all",
+      "value": 1.0,
+      "suppressed": false,
+      "quality_status": "provisional",
+      "metadata": {
+        "missing_value_status": null
+      }
+    }
+  ]
+}

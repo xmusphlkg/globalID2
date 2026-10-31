@@ -601,3 +601,35 @@ def test_direct_download_files_reject_non_raw_base(tmp_path) -> None:
             tmp_path,
             download_url_base="/downloads",
         )
+
+
+def test_scoped_unchanged_inputs_do_not_start_download_processes(tmp_path, monkeypatch):
+    base = "https://raw.githubusercontent.com/example/data/main"
+    initial = _context()
+    first = build_direct_download_files(initial, tmp_path, download_url_base=base)
+    files = {tmp_path / file["relative_path"] for entry in first["countries"] + first["diseases"] for part in entry["parts"] for file in part["files"].values()}
+    before = {path: (path.read_bytes(), path.stat().st_mtime_ns) for path in files}
+    def forbid_processes(*_args, **_kwargs):
+        raise AssertionError("unchanged download data must not regenerate CSV/JSON/XLSX")
+    monkeypatch.setattr(direct_download_files, "ProcessPoolExecutor", forbid_processes)
+    second = build_direct_download_files(_context(generated_at="2026-10-30T00:00:00Z"), tmp_path, download_url_base=base, changed_country_codes={"CN"}, changed_disease_ids={"D007"})
+    assert second["generation"]["changed_files"] == 0
+    assert all((path.read_bytes(), path.stat().st_mtime_ns) == state for path, state in before.items())
+
+
+def test_scoped_same_date_revision_invalidates_download_fingerprint(tmp_path):
+    base = "https://raw.githubusercontent.com/example/data/main"
+    first = build_direct_download_files(_context(), tmp_path, download_url_base=base)
+    revised = _context()  # Dates and generated_at remain identical.
+    revised["country_exports"][0]["country_data"]["disease_series"]["D007"]["cases"][0] = 99
+    revised["country_exports"][0]["country_data"]["disease_series"]["D007"]["incidence_rates"][0] = 2.5
+    second = build_direct_download_files(revised, tmp_path, download_url_base=base, changed_country_codes={"CN"}, changed_disease_ids={"D007"})
+    assert second["generation"]["changed_files"] > 0
+    assert second["countries"][0]["input_sha256"] != first["countries"][0]["input_sha256"]
+    assert second["diseases"][0]["input_sha256"] != first["diseases"][0]["input_sha256"]
+    import csv
+    from io import StringIO
+    rows = [row for part in second["countries"][0]["parts"] for row in csv.DictReader(StringIO((tmp_path / part["files"]["csv"]["relative_path"]).read_text()))]
+    old_date = next(row for row in rows if row["date"] == "2010-01-01")
+    assert old_date["cases"] == "99"
+    assert old_date["incidence_rate_per_100k"] == "2.5"

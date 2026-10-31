@@ -20,7 +20,7 @@ import { useAppStore } from "@/stores/app-store";
 
 const copy = {
   en: {
-    eyebrow: "AI Programs",
+    eyebrow: "Data Governance",
     title: "Disease Ontology Audit",
     subtitle: "Use the model center to review duplicate disease concepts and newly observed unmapped disease terms.",
     runLocal: "Run local audit",
@@ -57,7 +57,7 @@ const copy = {
     review: "Human review",
   },
   zh: {
-    eyebrow: "AI 程序",
+    eyebrow: "数据治理",
     title: "疾病本体审计",
     subtitle: "通过模型中心复核疾病重复实体，并识别当前数据中新出现但未映射的传染病候选。",
     runLocal: "仅运行本地审计",

@@ -10,7 +10,7 @@ import { CataloguePanel } from "./components/catalogue-panel";
 import { DetailPanel } from "./components/detail-panel";
 import { useKnowledgePage } from "./hooks/use-knowledge-page";
 
-export default function KnowledgePage() {
+export default function KnowledgePage({ mode = "governance" }: { mode?: "governance" | "ai" }) {
   const { lang } = useAppStore();
   const state = useKnowledgePage(lang);
   const {
@@ -20,9 +20,9 @@ export default function KnowledgePage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow={t(lang, "mod_database")}
-        title={t(lang, "knowledge_base")}
-        description={t(lang, "knowledge_base_subtitle")}
+        eyebrow={t(lang, mode === "ai" ? "wf_ai" : "wf_governance")}
+        title={t(lang, mode === "ai" ? "wf_briefs" : "wf_catalogue")}
+        description={t(lang, mode === "ai" ? "wf_ai_briefs_desc" : "wf_knowledge_readonly")}
         meta={
           <>
             <UiStatusBadge tone="primary">
@@ -69,8 +69,8 @@ export default function KnowledgePage() {
       </div>
 
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <CataloguePanel lang={lang} state={state} />
-        <DetailPanel lang={lang} state={state} />
+        <CataloguePanel lang={lang} state={state} mode={mode} />
+        <DetailPanel lang={lang} state={state} mode={mode} />
       </div>
     </div>
   );
