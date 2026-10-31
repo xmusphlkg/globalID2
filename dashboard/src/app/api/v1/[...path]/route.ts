@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 import { randomUUID } from "node:crypto";
 
+import { dashboardApiKey, panelPassword, sessionValid, PANEL_SESSION_COOKIE } from "@/lib/panel-session";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -31,10 +33,8 @@ function requestHeaders(request: NextRequest) {
     headers.delete(name);
   }
 
-  const dashboardApiKey = process.env.DASHBOARD_API_KEY?.trim();
-  if (dashboardApiKey) {
-    headers.set("x-dashboard-api-key", dashboardApiKey);
-  }
+  const apiKey = dashboardApiKey();
+  if (apiKey) headers.set("x-dashboard-api-key", apiKey);
   if (!headers.get("x-request-id")) headers.set("x-request-id", randomUUID());
   return headers;
 }
@@ -68,8 +68,25 @@ function responseHeaders(upstream: Response) {
   return headers;
 }
 
+function sessionRejected(requestId: string) {
+  return Response.json(
+    {
+      type: "https://globalid.dev/problems/authentication_required",
+      title: "Authentication required",
+      status: 401,
+      detail: "Control panel password required",
+      code: "authentication_required",
+      request_id: requestId,
+    },
+    { status: 401, headers: { "content-type": "application/problem+json", "x-request-id": requestId } },
+  );
+}
+
 async function proxyRequest(request: NextRequest, context: ProxyContext) {
   const requestId = request.headers.get("x-request-id") || randomUUID();
+  if (panelPassword() && !sessionValid(request.cookies.get(PANEL_SESSION_COOKIE)?.value)) {
+    return sessionRejected(requestId);
+  }
   try {
     validateMutationOrigin(request);
   } catch {

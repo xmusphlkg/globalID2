@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useCountries } from "@/shared/config/countries";
 import { JurisdictionPicker } from "@/components/layout/JurisdictionPicker";
 import { allRoutes, findRouteByPath, findSectionByPath } from "@/shared/navigation/route-registry";
+import { usePanelSession } from "@/components/PanelLock";
 import { useAppStore } from "@/stores/app-store";
 
 export function TopNavbar({
@@ -26,6 +27,7 @@ export function TopNavbar({
   const route = findRouteByPath(pathname);
   const section = findSectionByPath(pathname);
   const { countryId, countryCode, lang, setLang, setCountry } = useAppStore();
+  const panelSession = usePanelSession();
   const { data: countries, isLoading } = useCountries();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -114,6 +116,9 @@ export function TopNavbar({
           </button>
 
           <button className="cc-button shrink-0" onClick={() => setLang(lang === "en" ? "zh" : "en")} aria-label={t(lang, "language_toggle_label")}>{lang === "en" ? "中文" : "English"}</button>
+          {panelSession.required ? (
+            <button type="button" className="cc-button shrink-0" onClick={() => void panelSession.logout()}>退出</button>
+          ) : null}
           {route?.countryScope !== "none" ? (
             <JurisdictionPicker
               countries={countries ?? []}
