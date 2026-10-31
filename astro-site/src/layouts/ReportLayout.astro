@@ -14,6 +14,7 @@ interface Props {
   structuredData?: JsonLdNode | JsonLdNode[];
   seo?: import('../lib/seo').SeoDocument;
   hideLanguageToggle?: boolean;
+  stage?: boolean;
 }
 
 const {
@@ -24,6 +25,7 @@ const {
   structuredData = [],
   seo,
   hideLanguageToggle = false,
+  stage = false,
 } = Astro.props;
 const homeLabel = initialLanguage === 'zh' ? '首页' : initialLanguage === 'fr' ? 'Accueil' : 'Home';
 const localePrefix = initialLanguage === 'zh' ? '/zh' : initialLanguage === 'fr' ? '/fr' : '';
@@ -47,9 +49,10 @@ const additionalStructuredData = [
   additionalStructuredData={additionalStructuredData}
   seo={seo}
   hideLanguageToggle={hideLanguageToggle}
+  stage={stage}
 >
   <!-- Breadcrumb -->
-  {breadcrumbs.length > 0 && (
+  {!stage && breadcrumbs.length > 0 && (
     <nav class="site-breadcrumb border-b backdrop-blur-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <ol class="site-breadcrumb-list flex flex-wrap items-center gap-2 text-sm">
@@ -82,7 +85,12 @@ const additionalStructuredData = [
   )}
 
   <!-- Page content -->
-  <div class="academic-shell">
+  <div class={stage ? 'stage-slot' : 'academic-shell'}>
     <slot />
   </div>
 </BaseLayout>
+
+<style>
+  .stage-slot { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .stage-slot > :global(*) { flex: 1; min-height: 0; min-width: 0; }
+</style>

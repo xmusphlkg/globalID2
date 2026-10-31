@@ -1,4 +1,4 @@
-import { MapChart, ScatterChart } from 'echarts/charts';
+import { EffectScatterChart, MapChart, ScatterChart } from 'echarts/charts';
 import {
   GeoComponent,
   TooltipComponent,
@@ -9,6 +9,7 @@ import echarts from './echartsCore';
 echarts.use([
   MapChart,
   ScatterChart,
+  EffectScatterChart,
   GeoComponent,
   TooltipComponent,
   VisualMapComponent,

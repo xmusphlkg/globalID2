@@ -623,7 +623,7 @@ const diseaseSeo = {
         <div id="research" class="scroll-mt-24"><DiseaseResearchPanel diseaseId={diseaseId} locale={locale} /></div>
 
         <div id="international" class="scroll-mt-24">
-          <InternationalNoticePanel alerts={diseaseNotices} locale={locale} contextCodes={snapshotContextCodes} />
+          <InternationalNoticePanel alerts={diseaseNotices} locale={locale} contextCodes={snapshotContextCodes} mapHref={`${prefix}/situation/?disease=${encodeURIComponent(diseaseId)}`} />
         </div>
 
         {diseaseDownload && (

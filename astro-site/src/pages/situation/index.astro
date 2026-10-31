@@ -1,17 +1,14 @@
 ---
 /**
- * Situation map: one point is one disease in one place with recent news, read from
- * official reports. The map is the main interface; filters, the place list and the
- * alert timeline are one React island. The island receives map markers only;
- * quotes and summaries load with the outbreak timeline.
+ * Situation stage: a map that fills the page under the site header.
+ * Each point is one disease in one place. The island also receives a compact
+ * join to national surveillance, disease pages, and research.
  */
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import SituationExplorer from '../../components/situation/SituationExplorer';
-import { buildAlternatePaths, toSeoSlug, type SeoDocument } from '../../lib/seo';
-import { countryDiseaseCandidates } from '../../lib/seo-page-data';
-import { formatDay, sourceLabel } from '../../components/situation/labels';
-import { readLocalSnapshot } from '../../utils/internationalSnapshot';
+import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
 import { readMonitoring, readSituationMap, readSources } from '../../utils/international';
+import { readSituationSite } from '../../utils/situationSite';
 import { translateUi } from '../../utils/i18n';
 import type { MapPoint } from '../../utils/situationTypes';
 
@@ -25,39 +22,29 @@ const map = readSituationMap();
 const sources = readSources();
 const monitoring = readMonitoring();
 const published = map !== null;
-
-// Country-disease pages that exist on this site, so the timeline links only to real curves.
-let curvePages = new Set<string>();
-try {
-  curvePages = new Set(countryDiseaseCandidates().map(item => `${item.code}:${toSeoSlug(item.slug)}`));
-} catch {
-  curvePages = new Set();
-}
-const withLocal = (point: MapPoint): MapPoint => {
-  if (!point.disease_id) return point;
-  const snapshot = readLocalSnapshot(point.country_code, point.disease_id);
-  if (!snapshot || snapshot.latestValue == null) return point;
-  const code = point.country_code.toLowerCase();
-  const slug = point.disease_slug ? toSeoSlug(point.disease_slug) : '';
-  return {
-    ...point,
-    local: {
-      value: snapshot.latestValue,
-      date: snapshot.latestDate,
-      countryHref: `${prefix}/countries/${code}/`,
-      curveHref: slug && curvePages.has(`${code}:${slug}`) ? `${prefix}/countries/${code}/diseases/${slug}/` : null,
-    },
-  };
-};
-const points: MapPoint[] = (map?.points ?? []).map(withLocal);
+const points: MapPoint[] = map?.points ?? [];
+const diseaseIds = [...new Set(points.flatMap(point => point.disease_id ? [point.disease_id] : []))];
+const alertCountries = [...new Map(points.map(point => [point.country_code.toUpperCase(), {
+  code: point.country_code,
+  name_en: point.country_name_en,
+  name_zh: point.country_name_zh,
+}])).values()];
+const site = map
+  ? readSituationSite({
+      diseaseIds,
+      alertCountries,
+      sparkPairs: points.flatMap(point => point.disease_id ? [`${point.country_code}:${point.disease_id}`] : []),
+      prefix,
+    })
+  : { countries: {}, diseases: {}, series: {} };
 const activeOutbreaks = (map?.outbreaks ?? []).filter(outbreak => outbreak.status === 'active').length;
 const sourcesOk = sources.filter(source => source.status === 'ok').length;
 
 const title = pick('Global Infectious Disease Situation Map', '全球传染病态势地图', 'Carte mondiale de la situation des maladies infectieuses');
 const description = pick(
-  'Where outbreaks are being reported now: one point per disease and place, read from full WHO, ECDC, Africa CDC and PAHO reports, with the counts, a quoted sentence and a link to each original.',
-  '哪里正在报告疫情：每个点是一种病在一个地方，信息取自世卫组织、欧洲疾控中心、非洲疾控中心和泛美卫生组织的完整报告，附病例数、报告原话和原文链接。',
-  'Où des flambées sont signalées aujourd’hui : un point par maladie et par lieu, lu dans les rapports complets de l’OMS, de l’ECDC, de l’Africa CDC et de l’OPS, avec les chiffres, une phrase citée et le lien vers l’original.',
+  'A full-page map of official outbreak reports. Recent reports breathe. Open a place to read the alert beside the national surveillance series, the disease page, and related research.',
+  '铺满页面的官方疫情地图。近期报告会呼吸闪动。打开一个地点，可同时看到警报、国家级监测序列、疾病页和相关研究。',
+  'Une carte pleine page des rapports officiels de flambée. Les rapports récents pulsent. Ouvrez un lieu pour lire l’alerte à côté de la série nationale, de la page maladie et de la recherche associée.',
 );
 const canonicalPath = `${prefix}/situation/`;
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
@@ -83,85 +70,39 @@ const seo: SeoDocument = {
 };
 ---
 
-<ReportLayout title={title} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: pick('Situation map', '态势地图', 'Carte de situation') }]}>
-  <div class="situation-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    {published && map ? <>
-      <header class="report-hero">
-        <div>
-          <p class="eyebrow">{pick('Official reports, read in full', '官方报告，逐份通读', 'Rapports officiels, lus en entier')}</p>
-          <h1>{title}</h1>
-          <p>{pick(
-            'Each point is one disease in one place that an official report mentioned recently. Click it for the alerts reported there, the counts and dates the report states, one sentence from the report and a link to the original. Colour shows how recent the news is, not how severe the event is.',
-            '每个点是官方报告近期提到的某种疾病在某个地点的情况。点开可看到该地的警报、报告写明的病例数和日期、一句报告原话以及原文链接。颜色表示消息新旧，不表示事件严重程度。',
-            'Chaque point est une maladie dans un lieu cité récemment par un rapport officiel. Ouvrez-le pour voir les alertes, les chiffres et dates indiqués, une phrase du rapport et le lien vers l’original. La couleur indique la fraîcheur, pas la gravité.',
-          )}</p>
-        </div>
-        <dl>
-          <div><dt>{pick('Places with news', '有消息的地点', 'Lieux avec des nouvelles')}</dt><dd>{map.point_count}</dd></div>
-          <div><dt>{pick('Active outbreaks', '活跃疫情', 'Flambées actives')}</dt><dd>{activeOutbreaks}</dd></div>
-          <div><dt>{pick('Sources', '来源', 'Sources')}</dt><dd>{sourcesOk} / {sources.length}</dd></div>
-          <div><dt>{pick('Updated', '更新于', 'Mis à jour')}</dt><dd>{formatDay(map.generated_at, locale)}</dd></div>
-        </dl>
-      </header>
-
-      <nav class="period-nav" aria-label={pick('Situation archives', '态势归档', 'Archives de situation')}>
-        <a href={`${prefix}/situation/weekly/`}>{pick('Weekly changes', '每周变化', 'Changements hebdomadaires')}</a>
-        <a href={`${prefix}/situation/monthly/`}>{pick('Monthly archive', '月度归档', 'Archive mensuelle')}</a>
-        <a href={`${prefix}/situation/methodology/`}>{pick('How this works', '方法说明', 'Méthodologie')}</a>
-      </nav>
-
-      <SituationExplorer client:load locale={locale} asOf={map.as_of} points={points} />
-
-      <details class="monitoring">
-        <summary>{pick('Monitoring products', '监测产品', 'Produits de surveillance')} <small>{monitoring.length}</small></summary>
-        <p>{pick(
-          'Periodic roundups and routine bulletins that reported nothing unusual. They add no point to the map; the originals are listed here.',
-          '定期汇总和常规周报，未报告异常事件，因此不在地图上增加点；原文列在此处。',
-          'Synthèses périodiques et bulletins courants sans événement inhabituel. Ils n’ajoutent aucun point à la carte ; les originaux sont listés ici.',
-        )}</p>
-        {monitoring.length ? (
-          <ul>
-            {monitoring.map(product => (
-              <li>
-                <a href={product.url} target="_blank" rel="noopener noreferrer">{product.title_en}</a>
-                <span>{sourceLabel(product, locale)} · {formatDay(product.published_date, locale)}</span>
-              </li>
-            ))}
-          </ul>
-        ) : <p class="empty">{pick('No monitoring product in this period.', '本期没有监测产品。', 'Aucun produit de surveillance sur cette période.')}</p>}
-      </details>
-    </> : <section class="placeholder"><p class="eyebrow">{pick('Not yet published', '尚未发布', 'Pas encore publié')}</p><h1>{pick('No situation data is available yet', '暂无态势数据', 'Aucune donnée de situation n’est encore disponible')}</h1><p>{pick('This page appears once official reports have been collected, read and exported.', '官方报告采集、解析并导出后，本页将显示内容。', 'Cette page apparaît une fois les rapports officiels collectés, lus et exportés.')}</p><a href={`${prefix}/diseases/`}>{pick('Browse disease datasets', '浏览疾病数据', 'Parcourir les données par maladie')}</a></section>}
-  </div>
+<ReportLayout title={title} description={description} initialLanguage={locale} structuredData={structuredData} seo={seo} stage={published} breadcrumbs={published ? [] : [{ label: pick('Situation map', '态势地图', 'Carte de situation') }]}>
+  {published && map ? (
+    <SituationExplorer
+      client:load
+      locale={locale}
+      asOf={map.as_of}
+      generatedAt={map.generated_at}
+      points={points}
+      site={site}
+      monitoring={monitoring}
+      activeOutbreaks={activeOutbreaks}
+      sourcesOk={sourcesOk}
+      sourceCount={sources.length}
+      links={{
+        weekly: `${prefix}/situation/weekly/`,
+        monthly: `${prefix}/situation/monthly/`,
+        methods: `${prefix}/situation/methodology/`,
+      }}
+    />
+  ) : (
+    <section class="placeholder">
+      <p class="eyebrow">{pick('Not yet published', '尚未发布', 'Pas encore publié')}</p>
+      <h1>{pick('No situation data is available yet', '暂无态势数据', 'Aucune donnée de situation n’est encore disponible')}</h1>
+      <p>{pick('This page appears once official reports have been collected, read and exported.', '官方报告采集、解析并导出后，本页将显示内容。', 'Cette page apparaît une fois les rapports officiels collectés, lus et exportés.')}</p>
+      <a href={`${prefix}/diseases/`}>{pick('Browse disease datasets', '浏览疾病数据', 'Parcourir les données par maladie')}</a>
+    </section>
+  )}
 </ReportLayout>
 
 <style>
-  .situation-page { display: grid; gap: 1.25rem; padding-bottom: 4rem; padding-top: 2rem; }
-  .report-hero { align-items: end; background: linear-gradient(135deg, rgb(9 37 55), rgb(15 62 72)); border: 1px solid rgb(18 70 83); display: grid; gap: 2rem; grid-template-columns: minmax(0, 1fr) minmax(19rem, .42fr); padding: clamp(1.1rem, 3vw, 1.8rem); position: relative; }
-  .report-hero::after { background: rgb(var(--color-accent)); bottom: 0; content: ''; height: 3px; left: 0; position: absolute; width: 9rem; }
-  .report-hero > div { max-width: 55rem; }
-  .eyebrow { color: rgb(var(--color-teal)); font-size: .67rem; font-weight: 800; letter-spacing: .13em; margin: 0 0 .35rem; text-transform: uppercase; }
-  h1 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: clamp(1.8rem, 4.5vw, 2.7rem); line-height: 1.05; margin: 0; }
-  .report-hero h1 { color: rgb(241 247 248); }
-  .report-hero p { color: rgb(195 216 219); line-height: 1.65; margin: .7rem 0 0; }
-  .report-hero dl { display: grid; gap: .6rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
-  .report-hero dl div { border-left: 1px solid rgb(91 132 140); padding-left: .7rem; }
-  .report-hero dt { color: rgb(158 190 195); font-size: .6rem; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
-  .report-hero dd { color: rgb(238 246 247); font-family: ui-monospace, monospace; font-size: .8rem; margin: .15rem 0 0; }
-  .period-nav { display: flex; flex-wrap: wrap; gap: .5rem; }
-  .period-nav a { border: 1px solid rgb(var(--border)); color: rgb(var(--color-teal)); font-size: .72rem; font-weight: 750; padding: .42rem .65rem; text-decoration: none; }
-  .period-nav a:hover { background: rgb(var(--surface)); }
-  .monitoring { background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); padding: .8rem .9rem; }
-  .monitoring summary { color: rgb(var(--text-strong)); cursor: pointer; font-size: .9rem; font-weight: 700; }
-  .monitoring summary small { color: rgb(var(--text-faint)); font-weight: 500; margin-left: .4rem; }
-  .monitoring p { color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.55; margin: .5rem 0; }
-  .monitoring ul { display: grid; gap: .45rem; list-style: none; margin: 0; padding: 0; }
-  .monitoring li { display: grid; gap: .1rem; font-size: .8rem; }
-  .monitoring li a { color: rgb(var(--color-teal)); font-weight: 650; }
-  .monitoring li span { color: rgb(var(--text-faint)); font-size: .68rem; }
-  .monitoring .empty { color: rgb(var(--text-faint)); }
   .placeholder { background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); margin: 3rem auto; max-width: 48rem; padding: 2rem; text-align: center; }
+  .placeholder .eyebrow { color: rgb(var(--color-teal)); font-size: .67rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+  .placeholder h1 { color: rgb(var(--text-strong)); font-family: 'IBM Plex Sans', sans-serif; font-size: clamp(1.6rem, 4vw, 2.2rem); margin: .4rem 0; }
   .placeholder p { color: rgb(var(--text-muted)); line-height: 1.65; }
   .placeholder a { color: rgb(var(--color-teal)); }
-  @media (max-width: 900px) { .report-hero { grid-template-columns: 1fr; } }
-  @media (max-width: 600px) { .situation-page { padding-top: 1rem; } }
 </style>

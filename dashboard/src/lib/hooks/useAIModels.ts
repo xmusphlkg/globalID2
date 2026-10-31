@@ -38,6 +38,11 @@ export interface AIProviderItem {
 
 export type ThinkingMode = "default" | "enabled" | "disabled";
 
+export interface AvailabilityWindow {
+  start: string;
+  end: string;
+}
+
 export interface AIModelItem {
   id: number;
   provider_id: number;
@@ -49,9 +54,10 @@ export interface AIModelItem {
   model_type: string;
   api_style: string | null;
   temperature: number | null;
-  max_tokens: number | null;
   runtime_max_concurrency: number | null;
   thinking_mode: ThinkingMode;
+  availability_timezone: string;
+  availability_windows: AvailabilityWindow[];
   extra_params: Record<string, unknown>;
   is_enabled: boolean;
   is_default: boolean;
@@ -175,9 +181,10 @@ export interface ModelPayload {
   model_type?: string;
   api_style?: string | null;
   temperature?: number | null;
-  max_tokens?: number | null;
   runtime_max_concurrency?: number | null;
   thinking_mode?: ThinkingMode;
+  availability_timezone?: string | null;
+  availability_windows?: AvailabilityWindow[];
   extra_params?: Record<string, unknown>;
   is_enabled?: boolean;
   is_default?: boolean;
@@ -189,9 +196,10 @@ export interface ModelUpdatePayload {
   model_type?: string;
   api_style?: string | null;
   temperature?: number | null;
-  max_tokens?: number | null;
   runtime_max_concurrency?: number | null;
   thinking_mode?: ThinkingMode;
+  availability_timezone?: string | null;
+  availability_windows?: AvailabilityWindow[];
   extra_params?: Record<string, unknown>;
   is_enabled?: boolean;
   is_default?: boolean;

@@ -149,3 +149,45 @@ export interface SourceStatus {
   fetched_count: number | null;
   error: string | null;
 }
+
+/** Latest national surveillance point for one country and one disease. */
+export interface SeriesGlance {
+  value: number;
+  date?: string | null;
+  changePct?: number | null;
+  /** Last few published values, oldest to newest. Omitted unless this pair is on the map. */
+  spark?: number[];
+  /** Present only when that country-disease page is actually published. */
+  curveHref?: string | null;
+}
+
+/** One jurisdiction in the GIDS catalogue, whether or not it has an alert. */
+export interface CountryGlance {
+  name_en: string;
+  name_zh?: string | null;
+  href?: string | null;
+  researchHref?: string | null;
+  researchCount: number;
+  seriesCount: number;
+  latestDate?: string | null;
+}
+
+/** One disease the situation export mentions, joined to its catalogue and research pages. */
+export interface DiseaseGlance {
+  slug: string;
+  name_en: string;
+  name_zh?: string | null;
+  href?: string | null;
+  researchHref?: string | null;
+  researchCount: number;
+}
+
+/**
+ * Compact join of the situation map to the rest of the public site.
+ * `series` keys are `ISO:DISEASE_ID` in uppercase.
+ */
+export interface SiteIndex {
+  countries: Record<string, CountryGlance>;
+  diseases: Record<string, DiseaseGlance>;
+  series: Record<string, SeriesGlance>;
+}

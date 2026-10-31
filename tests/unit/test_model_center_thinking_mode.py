@@ -81,20 +81,20 @@ def test_with_thinking_mode_rejects_unknown_mode() -> None:
 
 
 @pytest.mark.parametrize(
-    ("route", "expected"),
+    "route",
     [
-        ({"extra_params": {"runtime_completion_max_tokens": 8000}}, 8000),
-        ({"extra_params": {"runtime_completion_max_tokens": 99999}}, 99999),
-        ({"extra_params": {"extra_body": {"thinking": {"type": "disabled"}}}}, None),
-        ({"extra_params": {}}, None),
-        ({"extra_params": {"extra_body": {"thinking": {"type": "enabled"}}}}, None),
-        ({"extra_params": {}, "max_tokens": 1000}, 1000),
+        {"extra_params": {"runtime_completion_max_tokens": 8000}},
+        {"extra_params": {"runtime_completion_max_tokens": 99999}},
+        {"extra_params": {"extra_body": {"thinking": {"type": "disabled"}}}},
+        {"extra_params": {}},
+        {"extra_params": {"extra_body": {"thinking": {"type": "enabled"}}}},
+        {"extra_params": {}, "max_tokens": 1000},
     ],
 )
-def test_completion_budget_is_automatic_for_reasoning_routes(route, expected) -> None:
+def test_completion_requests_are_not_capped(route) -> None:
     from src.ai.model_center import runtime_route_completion_max_tokens
 
-    assert runtime_route_completion_max_tokens(route, 2400) == expected
+    assert runtime_route_completion_max_tokens(route, 2400) is None
 
 
 def test_completion_sanitizer_strips_probe_only_settings_but_keeps_extra_body() -> None:
@@ -105,6 +105,8 @@ def test_completion_sanitizer_strips_probe_only_settings_but_keeps_extra_body() 
             "health_check_timeout_seconds": 90,
             "health_check_max_tokens": 4096,
             "runtime_completion_max_tokens": 12000,
+            "availability_windows": [{"start": "00:00", "end": "08:00"}],
+            "availability_timezone": "Asia/Shanghai",
             "extra_body": {"thinking": {"type": "disabled"}},
         }
     )

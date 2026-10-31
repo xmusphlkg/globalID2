@@ -8,9 +8,10 @@ import re
 import time
 import weakref
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 from urllib.parse import urlsplit
 from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
@@ -63,6 +64,33 @@ _STRUCTURED_MODEL_TEST_PROMPT = (
 )
 
 _recovery_probe_attempted_at: Dict[int, float] = {}
+
+#: Anthropic rejects a request that omits ``max_tokens``. This is that protocol's
+#: ceiling, not a product limit. OpenAI-compatible calls omit the field entirely.
+ANTHROPIC_PROTOCOL_MAX_TOKENS = 64000
+_DEFAULT_AVAILABILITY_TIMEZONE = "Asia/Shanghai"
+_CLOCK_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$")
+_THINK_BLOCK_RE = re.compile(
+    r"<(?:think|thinking)\b[^>]*>.*?</(?:think|thinking)>",
+    re.IGNORECASE | re.DOTALL,
+)
+_THINK_OPEN_RE = re.compile(
+    r"<(?:think|thinking)\b[^>]*>.*\Z",
+    re.IGNORECASE | re.DOTALL,
+)
+_OPTIONAL_REJECTION_MARKERS = (
+    "unsupported",
+    "unknown parameter",
+    "invalid parameter",
+    "unexpected",
+    "not allowed",
+    "unrecognized",
+    "not supported",
+    "is not supported",
+    "不支持",
+    "未知参数",
+)
+_PROTECTED_COMPLETION_FIELDS = {"model", "messages"}
 
 
 def _utcnow() -> datetime:
@@ -1442,12 +1470,19 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
             effective_status = _effective_route_check_status(model_status, provider_status)
             status_routable = effective_status != "unavailable"
             has_api_key = bool(provider.api_key)
-            routing_status, routing_status_reason = _route_routing_status(
-                {"has_api_key": has_api_key},
-                status_routable=status_routable,
-                rate_limit_state=rate_limit_state,
-                runtime_health_state=runtime_health_state,
-            )
+            outside_window = not route_available_at(model.extra_params)
+            if outside_window:
+                routing_status = "outside_window"
+                routing_status_reason = (
+                    "The route is outside its configured availability window."
+                )
+            else:
+                routing_status, routing_status_reason = _route_routing_status(
+                    {"has_api_key": has_api_key},
+                    status_routable=status_routable,
+                    rate_limit_state=rate_limit_state,
+                    runtime_health_state=runtime_health_state,
+                )
 
             route = {
                     "model_id": model.id,
@@ -1464,8 +1499,8 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
                     "extra_config": provider.extra_config or {},
                     "extra_params": model.extra_params or {},
                     "temperature": model.temperature,
-                    "max_tokens": model.max_tokens,
                     "has_api_key": has_api_key,
+                    "within_availability": not outside_window,
                     # Provider credential failures apply to every model under
                     # the provider. Preserve that durable state even when a
                     # sibling has an older model-level "available" result.
@@ -1523,16 +1558,43 @@ def _content_to_text(content: Any) -> str:
         for item in content:
             if isinstance(item, str):
                 parts.append(item)
-            elif isinstance(item, dict):
-                text = item.get("text") or item.get("content")
-                if isinstance(text, str):
-                    parts.append(text)
+                continue
+            if isinstance(item, dict):
+                kind = str(item.get("type") or "").lower()
+                if kind in {"thinking", "reasoning", "redacted_thinking"}:
+                    continue
+                text = item.get("text")
+                if text is None:
+                    text = item.get("content")
             else:
+                kind = str(getattr(item, "type", "") or "").lower()
+                if kind in {"thinking", "reasoning", "redacted_thinking"}:
+                    continue
                 text = getattr(item, "text", None)
-                if isinstance(text, str):
-                    parts.append(text)
-        return "\n".join(parts)
+                if text is None:
+                    text = getattr(item, "content", None)
+            if isinstance(text, str):
+                parts.append(text)
+            elif text is not None and not isinstance(text, (dict, list)):
+                parts.append(str(text))
+        return "\n".join(part for part in parts if part)
+    text = getattr(content, "text", None)
+    if isinstance(text, str):
+        return text
     return str(content)
+
+
+def visible_assistant_text(content: Any) -> str:
+    """Return the answer text, without a reasoning trace.
+
+    Gateways expose reasoning as ``reasoning_content``, as typed content blocks,
+    or inline as ``<think>`` / ``<thinking>`` tags (the formats used by Kiro-Go
+    and New API). The answer is the remaining text. Reasoning is not promoted
+    into the answer.
+    """
+    text = _THINK_BLOCK_RE.sub("", _content_to_text(content))
+    text = _THINK_OPEN_RE.sub("", text)
+    return text.strip()
 
 
 def _openai_response_text(response: Any) -> str:
@@ -1541,7 +1603,7 @@ def _openai_response_text(response: Any) -> str:
         first = choices[0]
         message = getattr(first, "message", None)
         if message is not None:
-            return _content_to_text(getattr(message, "content", None))
+            return visible_assistant_text(getattr(message, "content", None))
         text = getattr(first, "text", None)
         if isinstance(text, str):
             return text
@@ -1553,7 +1615,7 @@ def _openai_response_text(response: Any) -> str:
             if isinstance(first, dict):
                 message = first.get("message")
                 if isinstance(message, dict):
-                    return _content_to_text(message.get("content"))
+                    return visible_assistant_text(message.get("content"))
                 text = first.get("text")
                 if isinstance(text, str):
                     return text
@@ -1571,34 +1633,6 @@ def _openai_response_text(response: Any) -> str:
 def _looks_like_html(text: str) -> bool:
     normalized = text.lstrip().lower()
     return normalized.startswith("<!doctype html") or normalized.startswith("<html")
-
-
-def _test_max_tokens(route: Dict[str, Any]) -> int:
-    configured = route.get("max_tokens")
-    try:
-        value = int(configured) if configured is not None else 512
-    except (TypeError, ValueError):
-        value = 512
-    return max(64, min(value, 1600))
-
-
-def _probe_max_tokens(route: Dict[str, Any], *, structured: bool) -> int:
-    """Completion budget for a health probe.
-
-    ``health_check_max_tokens`` lets reasoning models reserve room for thinking
-    without raising the production ``max_tokens``. Without it, probes keep the
-    conservative budget derived from the model's own ``max_tokens``.
-    """
-    model_params = route.get("extra_params")
-    model_params = model_params if isinstance(model_params, dict) else {}
-    configured = model_params.get("health_check_max_tokens")
-    if configured not in (None, ""):
-        try:
-            return max(64, min(int(configured), 8192))
-        except (TypeError, ValueError):
-            pass
-    base = _test_max_tokens(route)
-    return max(768, min(base, 1200)) if structured else base
 
 
 THINKING_MODES = ("default", "enabled", "disabled")
@@ -1673,29 +1707,177 @@ def runtime_route_request_timeout_seconds(
         return default
 
 
-_REASONING_COMPLETION_CEILING = 16384
-
-
 def runtime_route_completion_max_tokens(route: Dict[str, Any], agent_limit: int | None = None) -> int | None:
-    """Completion budget for one request, or ``None`` to send no limit.
+    """Completion requests are not capped.
 
-    Callers no longer cap replies: the model decides when it is done, so a long
-    structured answer is never cut off mid-object.  Only a limit an operator set
-    on the route itself (``runtime_completion_max_tokens`` in the model's extra
-    params, or the model's ``max_tokens``) is honoured.  ``agent_limit`` is
-    accepted for old call sites and ignored.
+    A stored route limit or an agent budget used to be forwarded as
+    ``max_tokens``. Reasoning models spend that budget before the answer, so
+    every new model looked broken until someone raised the number. Callers keep
+    this function so older call sites stay valid; it never returns a cap.
     """
-    del agent_limit
-    model_params = route.get("extra_params")
-    model_params = model_params if isinstance(model_params, dict) else {}
-    for configured in (model_params.get("runtime_completion_max_tokens"), route.get("max_tokens")):
-        if configured in (None, ""):
-            continue
-        try:
-            return max(64, int(configured))
-        except (TypeError, ValueError):
-            continue
+    del route, agent_limit
     return None
+
+
+def normalize_availability_timezone(value: Any) -> str:
+    """Return an IANA timezone name, or raise ``ValueError``."""
+    name = str(value or "").strip() or _DEFAULT_AVAILABILITY_TIMEZONE
+    try:
+        ZoneInfo(name)
+    except ZoneInfoNotFoundError as exc:
+        raise ValueError(f"Unknown timezone: {name}") from exc
+    return name
+
+
+def _clock_minutes(value: Any) -> Optional[int]:
+    if not isinstance(value, str):
+        return None
+    match = _CLOCK_RE.match(value.strip())
+    if match is None:
+        return None
+    return int(match.group(1)) * 60 + int(match.group(2))
+
+
+def normalize_availability_windows(windows: Any) -> List[Dict[str, str]]:
+    """Validate ``[{start, end}]`` clock windows.
+
+    An empty list means the model is always available. A window whose end is
+    earlier than its start crosses midnight, which is how a night-discount
+    period such as 22:00–08:00 is written. A window of equal endpoints is
+    rejected so a typo cannot look like a full-day schedule.
+    """
+    if windows in (None, ""):
+        return []
+    if not isinstance(windows, Sequence) or isinstance(windows, (str, bytes)):
+        raise ValueError("Availability windows must be a list of start and end times")
+    if len(windows) > 8:
+        raise ValueError("A model can have at most 8 availability windows")
+    normalized: List[Dict[str, str]] = []
+    for item in windows:
+        if isinstance(item, dict):
+            start, end = item.get("start"), item.get("end")
+        elif isinstance(item, (list, tuple)) and len(item) == 2:
+            start, end = item
+        else:
+            raise ValueError("Each availability window needs a start and an end")
+        start_minutes = _clock_minutes(start)
+        end_minutes = _clock_minutes(end)
+        if start_minutes is None or end_minutes is None:
+            raise ValueError("Availability times must use HH:MM in 24-hour form")
+        if start_minutes == end_minutes:
+            raise ValueError("An availability window cannot start and end at the same time")
+        normalized.append({"start": f"{start_minutes // 60:02d}:{start_minutes % 60:02d}", "end": f"{end_minutes // 60:02d}:{end_minutes % 60:02d}"})
+    return normalized
+
+
+def with_availability(extra_params: Any, timezone_name: Any, windows: Any) -> Dict[str, Any]:
+    """Return ``extra_params`` with the availability schedule applied.
+
+    An empty window list removes the schedule, which means the model is always
+    available. Other extra parameters are preserved.
+    """
+    params = dict(extra_params) if isinstance(extra_params, dict) else {}
+    normalized = normalize_availability_windows(windows)
+    if not normalized:
+        params.pop("availability_windows", None)
+        params.pop("availability_timezone", None)
+        return params
+    params["availability_timezone"] = normalize_availability_timezone(
+        timezone_name or params.get("availability_timezone") or _DEFAULT_AVAILABILITY_TIMEZONE
+    )
+    params["availability_windows"] = normalized
+    return params
+
+
+def availability_view(extra_params: Any) -> Dict[str, Any]:
+    """Read the stored schedule for the control panel."""
+    params = extra_params if isinstance(extra_params, dict) else {}
+    raw_windows = params.get("availability_windows")
+    windows: List[Dict[str, str]] = []
+    if isinstance(raw_windows, list):
+        for item in raw_windows:
+            if not isinstance(item, dict):
+                continue
+            start, end = _clock_minutes(item.get("start")), _clock_minutes(item.get("end"))
+            if start is None or end is None or start == end:
+                continue
+            windows.append({"start": f"{start // 60:02d}:{start % 60:02d}", "end": f"{end // 60:02d}:{end % 60:02d}"})
+    timezone_name = str(params.get("availability_timezone") or _DEFAULT_AVAILABILITY_TIMEZONE)
+    try:
+        ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError:
+        timezone_name = _DEFAULT_AVAILABILITY_TIMEZONE
+    return {"availability_timezone": timezone_name, "availability_windows": windows}
+
+
+def route_available_at(extra_params: Any, moment: Optional[datetime] = None) -> bool:
+    """Whether a model may be called at ``moment``.
+
+    No usable windows means always available. Invalid stored values fail open
+    so a bad schedule cannot take every route offline. Comparison uses the
+    schedule timezone and ignores seconds.
+    """
+    view = availability_view(extra_params)
+    windows = view["availability_windows"]
+    if not windows:
+        return True
+    when = moment or _utcnow()
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    local = when.astimezone(ZoneInfo(view["availability_timezone"]))
+    minute = local.hour * 60 + local.minute
+    for item in windows:
+        start = _clock_minutes(item["start"])
+        end = _clock_minutes(item["end"])
+        if start is None or end is None:
+            continue
+        if start < end:
+            if start <= minute < end:
+                return True
+        elif minute >= start or minute < end:
+            return True
+    return False
+
+
+def drop_rejected_optional_parameter(
+    error: Any,
+    payload: Dict[str, Any],
+    already_dropped: set[str],
+) -> bool:
+    """Drop one optional field a gateway refused, and report whether to retry.
+
+    The field name comes from the error. ``model`` and ``messages`` are never
+    dropped. A refusal of ``thinking`` removes only that key from ``extra_body``.
+    This is the same idea as a gateway adaptor that passes unknown models
+    through and rewrites a request only after the upstream names the problem.
+    """
+    message = str(error or "")
+    lowered = message.lower()
+    if not any(marker in lowered for marker in _OPTIONAL_REJECTION_MARKERS):
+        return False
+    names: List[str] = []
+    names.extend(re.findall(r"['\"]([A-Za-z][A-Za-z0-9_]{0,40})['\"]", message))
+    labeled = re.search(r"(?:parameter|参数)\s*[:：]?\s*([A-Za-z][A-Za-z0-9_]{0,40})", message, re.IGNORECASE)
+    if labeled:
+        names.append(labeled.group(1))
+    for name in names:
+        if name in already_dropped or name in _PROTECTED_COMPLETION_FIELDS:
+            continue
+        if name == "thinking":
+            body = payload.get("extra_body")
+            if isinstance(body, dict) and "thinking" in body:
+                kept = {key: value for key, value in body.items() if key != "thinking"}
+                if kept:
+                    payload["extra_body"] = kept
+                else:
+                    payload.pop("extra_body", None)
+                already_dropped.add(name)
+                return True
+        if name in payload:
+            payload.pop(name, None)
+            already_dropped.add(name)
+            return True
+    return False
 
 
 def _response_preview(text: str, limit: int = 180) -> str:
@@ -1840,11 +2022,11 @@ def _test_timeout_seconds(route: Dict[str, Any]) -> float:
     model_params = model_params if isinstance(model_params, dict) else {}
     raw = model_params.get("health_check_timeout_seconds")
     if raw in (None, ""):
-        raw = provider_config.get("health_check_timeout_seconds", 45)
+        raw = provider_config.get("health_check_timeout_seconds", 180)
     try:
-        return float(max(10, min(120, int(raw))))
+        return float(max(10, min(600, int(raw))))
     except (TypeError, ValueError):
-        return 45.0
+        return 180.0
 
 
 async def _test_openai_compatible(
@@ -1864,20 +2046,34 @@ async def _test_openai_compatible(
             max_retries=0,
         )
         prompt = _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT
+        payload: Dict[str, Any] = {
+            "model": model_name,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are validating an evidence-summarization model used by a public-health literature pipeline.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0,
+        }
+        extra_body = route_completion_extra_body(route)
+        if extra_body:
+            payload["extra_body"] = extra_body
+        dropped_parameters: set[str] = set()
         try:
-            response = await client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are validating an evidence-summarization model used by a public-health literature pipeline.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=_probe_max_tokens(route, structured=structured),
-                temperature=0,
-                extra_body=route_completion_extra_body(route),
-            )
+            while True:
+                try:
+                    response = await client.chat.completions.create(**payload)
+                    break
+                except Exception as exc:
+                    if len(dropped_parameters) >= 4 or not drop_rejected_optional_parameter(exc, payload, dropped_parameters):
+                        raise
+                    logger.warning(
+                        "Probe dropped unsupported parameter for model '{}': {}",
+                        model_name,
+                        ", ".join(sorted(dropped_parameters)),
+                    )
         except Exception as exc:
             last_error = exc
             # An alternate API path can fix a missing endpoint, but cannot fix
@@ -1924,13 +2120,15 @@ async def _test_anthropic(
         model=model_name,
         system="You are validating an evidence-summarization model used by a public-health literature pipeline.",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=_probe_max_tokens(route, structured=structured),
+        max_tokens=ANTHROPIC_PROTOCOL_MAX_TOKENS,
         temperature=0,
     )
-    text = "\n".join(
-        str(block.text)
-        for block in response.content
-        if getattr(block, "type", None) == "text" and getattr(block, "text", None)
+    text = visible_assistant_text(
+        [
+            block
+            for block in response.content
+            if getattr(block, "type", None) == "text" and getattr(block, "text", None)
+        ]
     )
     if structured:
         _validate_structured_test_response(text)
@@ -2419,6 +2617,16 @@ async def check_all_models(*, structured: bool = True) -> List[Dict[str, Any]]:
 
     async def _check(route: Dict[str, Any]) -> Dict[str, Any]:
         provider_id = int(route["provider_id"])
+        if route.get("routing_status") == "outside_window":
+            return {
+                "success": True,
+                "status": "skipped",
+                "message": "Skipped: outside the model's availability window",
+                "model_id": route["model_id"],
+                "provider_id": provider_id,
+                "provider_key": route["provider_key"],
+                "model_name": route.get("model_name"),
+            }
         async with semaphores[provider_id]:
             result = await test_route_connection(route, structured=structured)
             if result["status"] == "rate_limited":
@@ -2443,7 +2651,10 @@ async def check_all_models(*, structured: bool = True) -> List[Dict[str, Any]]:
     for result in results:
         provider_results.setdefault(int(result["provider_id"]), []).append(result)
     for provider_id, provider_model_results in provider_results.items():
-        status, message = _provider_check_result_from_model_results(provider_model_results)
+        checked = [item for item in provider_model_results if item.get("status") != "skipped"]
+        if not checked:
+            continue
+        status, message = _provider_check_result_from_model_results(checked)
         await update_provider_check_result(provider_id, status, message)
     return results
 
@@ -2464,6 +2675,8 @@ async def probe_degraded_model_routes(
     due: List[Dict[str, Any]] = []
     for route in routes:
         if not route.get("runtime_degraded"):
+            continue
+        if route.get("routing_status") == "outside_window":
             continue
         if route.get("runtime_failure_active") or route.get("rate_limit_active"):
             continue

@@ -30,6 +30,8 @@ def test_task_worker_settings_reads_env_aliases(tmp_path: Path):
         "\n".join(
             [
                 "TASK_WORKER_CONCURRENCY=6",
+                "TASK_WORKER_GENERAL_CONCURRENCY=5",
+                "TASK_WORKER_RELEASE_CONCURRENCY=1",
                 "TASK_WORKER_AI_CONCURRENCY=4",
                 "TASK_WORKER_AI_DYNAMIC_CONCURRENCY_ENABLED=true",
                 "TASK_WORKER_AI_CONCURRENCY_MIN=1",
@@ -54,6 +56,8 @@ def test_task_worker_settings_reads_env_aliases(tmp_path: Path):
     settings = TaskWorkerSettings(_env_file=env_file)
 
     assert settings.concurrency == 6
+    assert settings.general_concurrency == 5
+    assert settings.release_concurrency == 1
     assert settings.ai_concurrency == 4
     assert settings.ai_dynamic_concurrency_enabled is True
     assert settings.ai_concurrency_min == 1
@@ -149,6 +153,95 @@ def test_adaptive_ai_concurrency_pauses_when_model_center_has_no_routes():
 
     assert asyncio.run(controller.refresh(force=True)) == 0
     assert controller.record_result(success=False, error=RuntimeError("connection error")) == 0
+
+
+def test_task_worker_lane_defaults_when_unset(tmp_path: Path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("TASK_WORKER_CONCURRENCY=8\n", encoding="utf-8")
+
+    settings = TaskWorkerSettings(_env_file=env_file)
+
+    assert settings.general_concurrency == 6
+    assert settings.release_concurrency == 1
+
+
+def test_task_lanes_keep_release_general_and_per_model_ai_independent():
+    assert TaskType.CRAWL_DATA in task_worker.GENERAL_TASK_TYPES
+    assert TaskType.SYNC_LITERATURE in task_worker.GENERAL_TASK_TYPES
+    assert TaskType.EXPORT_DATA not in task_worker.GENERAL_TASK_TYPES
+    assert TaskType.ENRICH_LITERATURE not in task_worker.GENERAL_TASK_TYPES
+
+    general_full = task_worker._lane_blocked_task_types(
+        [TaskType.CRAWL_DATA] * 6,
+        ai_capacity=4,
+        general_capacity=6,
+        release_capacity=1,
+    )
+    assert general_full is not None
+    assert TaskType.CRAWL_DATA in general_full
+    assert TaskType.EXPORT_DATA not in general_full
+    assert TaskType.GENERATE_REPORT not in general_full
+
+    release_full = task_worker._lane_blocked_task_types(
+        [TaskType.EXPORT_DATA],
+        ai_capacity=4,
+        general_capacity=6,
+        release_capacity=1,
+    )
+    assert release_full == {TaskType.EXPORT_DATA}
+
+    one_model_parent = task_worker._lane_blocked_task_types(
+        [TaskType.GENERATE_REPORT],
+        ai_capacity=4,
+        general_capacity=6,
+        release_capacity=1,
+    )
+    assert one_model_parent == set()
+
+    per_model_full = task_worker._lane_blocked_task_types(
+        [
+            TaskType.GENERATE_REPORT,
+            TaskType.ENRICH_LITERATURE,
+            TaskType.AGENT_WORKFLOW,
+            TaskType.DISCOVER_LITERATURE_GAPS,
+        ],
+        ai_capacity=4,
+        general_capacity=6,
+        release_capacity=1,
+    )
+    assert per_model_full is not None
+    assert TaskType.GENERATE_REPORT in per_model_full
+    assert TaskType.CRAWL_DATA not in per_model_full
+    assert TaskType.EXPORT_DATA not in per_model_full
+
+    no_routes = task_worker._lane_blocked_task_types(
+        [],
+        ai_capacity=0,
+        general_capacity=6,
+        release_capacity=1,
+    )
+    assert no_routes == set(task_worker.AI_TASK_TYPES)
+
+    assert task_worker._lane_blocked_task_types(
+        [TaskType.CRAWL_DATA] * 6
+        + [TaskType.EXPORT_DATA]
+        + [TaskType.GENERATE_REPORT, TaskType.ENRICH_LITERATURE],
+        ai_capacity=2,
+        general_capacity=6,
+        release_capacity=1,
+    ) is None
+
+
+def test_knowledge_source_cap_stays_inside_the_general_lane():
+    blocked = task_worker._lane_blocked_task_types(
+        [TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES] * 3,
+        ai_capacity=3,
+        general_capacity=6,
+        release_capacity=1,
+        knowledge_source_capacity=3,
+    )
+
+    assert blocked == {TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES}
 
 
 def test_release_export_and_literature_ai_tasks_do_not_overlap():

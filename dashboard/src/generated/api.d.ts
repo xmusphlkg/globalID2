@@ -3466,6 +3466,13 @@ export interface components {
             /** Task Uuid */
             task_uuid?: string | null;
         };
+        /** AvailabilityWindowIn */
+        AvailabilityWindowIn: {
+            /** End */
+            end: string;
+            /** Start */
+            start: string;
+        };
         /** CandidateReviewRequest */
         CandidateReviewRequest: {
             /**
@@ -5230,6 +5237,10 @@ export interface components {
         ModelCreateRequest: {
             /** Api Style */
             api_style?: string | null;
+            /** Availability Timezone */
+            availability_timezone?: string | null;
+            /** Availability Windows */
+            availability_windows?: components["schemas"]["AvailabilityWindowIn"][] | null;
             /** Display Name */
             display_name?: string | null;
             /** Extra Params */
@@ -5246,8 +5257,6 @@ export interface components {
              * @default true
              */
             is_enabled: boolean;
-            /** Max Tokens */
-            max_tokens?: number | null;
             /** Model Key */
             model_key?: string | null;
             /** Model Name */
@@ -5275,6 +5284,13 @@ export interface components {
         ModelOut: {
             /** Api Style */
             api_style?: string | null;
+            /**
+             * Availability Timezone
+             * @default Asia/Shanghai
+             */
+            availability_timezone: string;
+            /** Availability Windows */
+            availability_windows?: components["schemas"]["AvailabilityWindowIn"][];
             /** Display Name */
             display_name: string;
             /**
@@ -5298,8 +5314,6 @@ export interface components {
             last_checked_at?: string | null;
             /** Last Rate Limit At */
             last_rate_limit_at?: string | null;
-            /** Max Tokens */
-            max_tokens?: number | null;
             /** Model Key */
             model_key: string;
             /** Model Name */
@@ -5376,6 +5390,10 @@ export interface components {
         ModelUpdateRequest: {
             /** Api Style */
             api_style?: string | null;
+            /** Availability Timezone */
+            availability_timezone?: string | null;
+            /** Availability Windows */
+            availability_windows?: components["schemas"]["AvailabilityWindowIn"][] | null;
             /** Display Name */
             display_name?: string | null;
             /** Extra Params */
@@ -5386,8 +5404,6 @@ export interface components {
             is_default?: boolean | null;
             /** Is Enabled */
             is_enabled?: boolean | null;
-            /** Max Tokens */
-            max_tokens?: number | null;
             /** Model Type */
             model_type?: string | null;
             /** Priority */

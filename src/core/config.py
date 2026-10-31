@@ -876,12 +876,26 @@ class TaskWorkerSettings(_BaseEnvSettings):
         le=64,
         description="任务 worker 最大并发数",
     )
+    general_concurrency: int = Field(
+        default=6,
+        validation_alias="TASK_WORKER_GENERAL_CONCURRENCY",
+        ge=1,
+        le=64,
+        description="采集、整理、邮件等普通任务的并行槽位，不与发布或 AI 共用",
+    )
+    release_concurrency: int = Field(
+        default=1,
+        validation_alias="TASK_WORKER_RELEASE_CONCURRENCY",
+        ge=1,
+        le=8,
+        description="数据发布专用槽位",
+    )
     ai_concurrency: int = Field(
         default=1,
         validation_alias="TASK_WORKER_AI_CONCURRENCY",
         ge=1,
         le=64,
-        description="需要调用 AI/模型中心的任务并发硬上限",
+        description="AI 父任务车道配置值。认领时以各模型运行时容量之和为准，不用它把模型调用收成 1",
     )
     ai_dynamic_concurrency_enabled: bool = Field(
         default=True,

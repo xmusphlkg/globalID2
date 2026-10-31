@@ -141,6 +141,7 @@ function statusTone(status: string): "neutral" | "info" | "success" | "warning" 
 function routingStatusTone(status: string): "neutral" | "info" | "success" | "warning" | "danger" | "primary" {
   if (status === "routable") return "success";
   if (["cooling_down", "degraded", "rate_limited"].includes(status)) return "warning";
+  if (status === "outside_window") return "info";
   if (["missing_credentials", "probe_unavailable"].includes(status)) return "danger";
   return "neutral";
 }
@@ -153,6 +154,7 @@ function routingStatusLabel(status: string, isZh: boolean): string {
     rate_limited: ["限流冷却", "rate limited"],
     missing_credentials: ["缺少密钥", "missing key"],
     probe_unavailable: ["探针失败", "probe unavailable"],
+    outside_window: ["时段外", "outside window"],
   };
   const label = labels[status] ?? [status || "未知", status || "unknown"];
   return isZh ? label[0] : label[1];
@@ -167,6 +169,7 @@ function routingStatusReason(route: AIRuntimeRoute, isZh: boolean): string {
     rate_limited: "供应商或模型限流，正在等待冷却结束。",
     missing_credentials: "尚未配置供应商 API 密钥。",
     probe_unavailable: "最近一次模型或供应商负载探测未通过。",
+    outside_window: "当前不在该模型配置的可用时段内。",
   };
   return reasons[route.routing_status] || route.routing_status_reason || "-";
 }
@@ -354,9 +357,10 @@ export default function AIModelsPage() {
     model_type: "chat",
     api_style: "",
     temperature: "",
-    max_tokens: "",
     runtime_max_concurrency: "",
     thinking_mode: "default" as ThinkingMode,
+    availability_timezone: "Asia/Shanghai",
+    availability_windows: [] as { start: string; end: string }[],
     priority: 100,
     is_enabled: true,
     is_default: false,
@@ -448,13 +452,18 @@ export default function AIModelsPage() {
         modelName: "模型名",
         modelType: "模型类型",
         temperature: "温度",
-        maxTokens: "最大 Token",
+        availability: "可用时段",
+        availabilityTimezone: "时区",
+        addWindow: "添加时段",
+        removeWindow: "移除",
+        alwaysAvailable: "全天",
+        availabilityHint: "留空表示全天可用。结束早于开始表示跨夜，例如 22:00–08:00，用来吃夜间优惠。按所选时区判断，时段外不参与调度，也不会自动探测。",
         modelConcurrency: "单模型并发上限",
         setConcurrency: "设置并发",
         modelConcurrencyHint: "留空使用默认值 1；可设置 1–64，实际并发仍受提供商准入和 worker 总上限约束。",
         thinkingMode: "深度思考",
         thinkingLabels: { default: "跟随供应商默认", enabled: "开启", disabled: "关闭" } as Record<ThinkingMode, string>,
-        thinkingHint: "通过 extra_body.thinking 发送，健康检查与线上调用使用同一设置。跟随供应商默认时不发送该参数；思考与正文共用 max_tokens，思考模型预算过小会导致正文为空。供应商不支持该参数时请保持默认。",
+        thinkingHint: "通过 extra_body.thinking 发送，健康检查与线上调用使用同一设置。跟随供应商默认时不发送该参数。供应商拒绝该参数时，调用会去掉它再试一次。",
         modelEnabled: "启用该模型",
         defaultModel: "默认模型",
       }
@@ -543,13 +552,18 @@ export default function AIModelsPage() {
         modelName: "Model Name",
         modelType: "Model Type",
         temperature: "Temperature",
-        maxTokens: "Max Tokens",
+        availability: "Availability",
+        availabilityTimezone: "Timezone",
+        addWindow: "Add window",
+        removeWindow: "Remove",
+        alwaysAvailable: "Always",
+        availabilityHint: "Leave empty for all day. An end time before the start crosses midnight, for example 22:00–08:00, so a night discount can be used. Times use the selected timezone. Outside the window the model is not scheduled and is not probed automatically.",
         modelConcurrency: "Model concurrency limit",
         setConcurrency: "Set concurrency",
         modelConcurrencyHint: "Leave blank for the default of 1; set 1–64. Provider admission and the worker total limit still apply.",
         thinkingMode: "Deep thinking",
         thinkingLabels: { default: "Provider default", enabled: "On", disabled: "Off" } as Record<ThinkingMode, string>,
-        thinkingHint: "Sent as extra_body.thinking and shared by health probes and production calls. Provider default sends nothing. Reasoning and the answer share max_tokens, so a small budget can leave the answer empty on thinking models. Keep the default if the provider rejects this parameter.",
+        thinkingHint: "Sent as extra_body.thinking and shared by health probes and production calls. Provider default sends nothing. If a gateway rejects the parameter, the call drops it and retries.",
         modelEnabled: "Model is enabled",
         defaultModel: "Default model",
       };
@@ -672,9 +686,10 @@ export default function AIModelsPage() {
       model_type: "chat",
       api_style: "",
       temperature: "",
-      max_tokens: "",
       runtime_max_concurrency: "",
       thinking_mode: "default",
+      availability_timezone: "Asia/Shanghai",
+      availability_windows: [],
       priority: 100,
       is_enabled: true,
       is_default: false,
@@ -718,9 +733,10 @@ export default function AIModelsPage() {
       model_type: model.model_type || "chat",
       api_style: model.api_style || "",
       temperature: model.temperature == null ? "" : String(model.temperature),
-      max_tokens: model.max_tokens == null ? "" : String(model.max_tokens),
       runtime_max_concurrency: model.runtime_max_concurrency == null ? "" : String(model.runtime_max_concurrency),
       thinking_mode: model.thinking_mode ?? "default",
+      availability_timezone: model.availability_timezone || "Asia/Shanghai",
+      availability_windows: (model.availability_windows ?? []).map((window) => ({ ...window })),
       priority: model.priority,
       is_enabled: model.is_enabled,
       is_default: model.is_default,
@@ -775,9 +791,10 @@ export default function AIModelsPage() {
       model_type: modelForm.model_type.trim() || "chat",
       api_style: modelForm.api_style.trim() || null,
       temperature: modelForm.temperature.trim() === "" ? null : Number(modelForm.temperature),
-      max_tokens: modelForm.max_tokens.trim() === "" ? null : Number(modelForm.max_tokens),
       runtime_max_concurrency: modelForm.runtime_max_concurrency.trim() === "" ? null : Number(modelForm.runtime_max_concurrency),
       thinking_mode: modelForm.thinking_mode,
+      availability_timezone: modelForm.availability_timezone.trim() || "Asia/Shanghai",
+      availability_windows: modelForm.availability_windows,
       priority: Number(modelForm.priority) || 100,
       is_enabled: modelForm.is_enabled,
       is_default: modelForm.is_default,
@@ -1056,7 +1073,9 @@ export default function AIModelsPage() {
           <div className="min-w-[140px] text-sm text-tremor-content dark:text-dark-tremor-content">
             <p>{model.model_type || "chat"}</p>
             <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-              temp {model.temperature ?? "-"} / max {model.max_tokens ?? "-"}
+              temp {model.temperature ?? "-"} / {model.availability_windows?.length
+                ? `${model.availability_windows.map((window) => `${window.start}–${window.end}`).join(", ")} ${model.availability_timezone || ""}`
+                : copy.alwaysAvailable}
             </p>
             <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
               {copy.modelConcurrency}: {model.runtime_max_concurrency ?? 1}
@@ -1669,9 +1688,6 @@ export default function AIModelsPage() {
               <Field label={copy.temperature}>
                 <input type="number" step="0.01" className={inputClass} value={modelForm.temperature} onChange={(event) => setModelForm((prev) => ({ ...prev, temperature: event.target.value }))} />
               </Field>
-              <Field label={copy.maxTokens}>
-                <input type="number" className={inputClass} value={modelForm.max_tokens} onChange={(event) => setModelForm((prev) => ({ ...prev, max_tokens: event.target.value }))} />
-              </Field>
               <Field label={copy.modelConcurrency}>
                 <input type="number" min={1} max={512} step={1} className={inputClass} value={modelForm.runtime_max_concurrency} placeholder="1" onChange={(event) => setModelForm((prev) => ({ ...prev, runtime_max_concurrency: event.target.value }))} />
               </Field>
@@ -1685,6 +1701,59 @@ export default function AIModelsPage() {
             </div>
             <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy.modelConcurrencyHint}</p>
             <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy.thinkingHint}</p>
+            <div className="space-y-3 rounded-tremor-default border border-tremor-border p-3 dark:border-dark-tremor-border">
+              <p className="text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.availability}</p>
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <Field label={copy.availabilityTimezone}>
+                  <input className={inputClass} value={modelForm.availability_timezone} onChange={(event) => setModelForm((prev) => ({ ...prev, availability_timezone: event.target.value }))} placeholder="Asia/Shanghai" />
+                </Field>
+                <ActionButton
+                  type="button"
+                  onClick={() => setModelForm((prev) => ({
+                    ...prev,
+                    availability_windows: [...prev.availability_windows, { start: "00:00", end: "08:00" }],
+                  }))}
+                >
+                  {copy.addWindow}
+                </ActionButton>
+              </div>
+              {modelForm.availability_windows.length === 0 ? (
+                <p className="text-sm text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy.alwaysAvailable}</p>
+              ) : modelForm.availability_windows.map((window, index) => (
+                <div key={`${window.start}-${window.end}-${index}`} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
+                  <input
+                    type="time"
+                    required
+                    className={inputClass}
+                    value={window.start}
+                    onChange={(event) => setModelForm((prev) => ({
+                      ...prev,
+                      availability_windows: prev.availability_windows.map((item, itemIndex) => itemIndex === index ? { ...item, start: event.target.value } : item),
+                    }))}
+                  />
+                  <input
+                    type="time"
+                    required
+                    className={inputClass}
+                    value={window.end}
+                    onChange={(event) => setModelForm((prev) => ({
+                      ...prev,
+                      availability_windows: prev.availability_windows.map((item, itemIndex) => itemIndex === index ? { ...item, end: event.target.value } : item),
+                    }))}
+                  />
+                  <ActionButton
+                    type="button"
+                    onClick={() => setModelForm((prev) => ({
+                      ...prev,
+                      availability_windows: prev.availability_windows.filter((_, itemIndex) => itemIndex !== index),
+                    }))}
+                  >
+                    {copy.removeWindow}
+                  </ActionButton>
+                </div>
+              ))}
+              <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy.availabilityHint}</p>
+            </div>
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong">
                 <input type="checkbox" checked={modelForm.is_enabled} onChange={(event) => setModelForm((prev) => ({ ...prev, is_enabled: event.target.checked }))} />

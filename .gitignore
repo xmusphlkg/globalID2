@@ -28,6 +28,7 @@ ENV/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.astro/
 .hypothesis/
 .tox/
 .nox/

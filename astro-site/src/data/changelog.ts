@@ -26,6 +26,44 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.16.1',
+    date: '2026-10-31',
+    titleEn: 'The situation map fills the page',
+    titleZh: '态势地图铺满页面',
+    titleFr: 'La carte de situation occupe toute la page',
+    summaryEn:
+      'The situation map now fills the page. Recent reports breathe, and opening a place shows the official alert next to the national surveillance series, the disease page, and related research.',
+    summaryZh:
+      '态势地图现在铺满页面。近期报告会呼吸闪动。打开一个地点，可以同时看到官方警报、国家级监测序列、疾病页和相关研究。',
+    summaryFr:
+      'La carte de situation occupe désormais toute la page. Les rapports récents pulsent, et ouvrir un lieu affiche l’alerte officielle à côté de la série nationale, de la page maladie et de la recherche associée.',
+    sections: [
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'The situation map fills the page. Filters and the alert detail float over it, and the map can be opened from a country or disease page.',
+            zh: '态势地图铺满页面。筛选和警报详情浮在地图上，也可以从国家页或疾病页打开这张地图。',
+            fr: 'La carte de situation occupe toute la page. Les filtres et le détail de l’alerte flottent par-dessus, et la carte s’ouvre aussi depuis une page pays ou maladie.',
+          },
+          {
+            en: 'A place on the map is tied to the national surveillance series, the disease page, and related research when GIDS publishes them.',
+            zh: '地图上的地点会连到 GIDS 已发布的国家级监测序列、疾病页和相关研究。',
+            fr: 'Un lieu sur la carte est relié à la série nationale de surveillance, à la page maladie et à la recherche associée lorsque GIDS les publie.',
+          },
+          {
+            en: 'Reports from the last 30 days breathe on the map. A faster pulse means the last 7 days. The pulse shows how recent the report is, not how severe it is.',
+            zh: '最近 30 天的报告会在地图上呼吸闪动，更快的闪动表示最近 7 天。闪动只表示报告新旧，不表示严重程度。',
+            fr: 'Les rapports des 30 derniers jours pulsent sur la carte. Une pulsation plus rapide correspond aux 7 derniers jours. La pulsation indique la fraîcheur du rapport, pas sa gravité.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.16.0',
     date: '2026-10-29',
     titleEn: 'Situation becomes a map of individually reviewed alerts',

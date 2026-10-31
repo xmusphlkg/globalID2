@@ -21,8 +21,10 @@ from src.ai.model_center import (
     get_provider_rate_limit_state,
     get_provider_runtime_health_state,
     get_runtime_routes,
+    availability_view,
     get_thinking_mode,
     mask_api_key,
+    with_availability,
     with_thinking_mode,
 )
 from src.control_plane.runtime import runtime_registry
@@ -542,6 +544,31 @@ class ProviderOut(BaseModel):
 ThinkingMode = Literal["default", "enabled", "disabled"]
 
 
+class AvailabilityWindowIn(BaseModel):
+    start: str
+    end: str
+
+
+def _without_completion_caps(extra_params: Any) -> Dict[str, Any]:
+    """Drop stored completion budgets so they cannot be forwarded upstream."""
+    params = dict(extra_params) if isinstance(extra_params, dict) else {}
+    for key in (
+        "max_tokens",
+        "max_completion_tokens",
+        "runtime_completion_max_tokens",
+        "health_check_max_tokens",
+    ):
+        params.pop(key, None)
+    return params
+
+
+def _apply_availability(extra_params: Dict[str, Any], timezone_name: Optional[str], windows: Any) -> Dict[str, Any]:
+    try:
+        return with_availability(extra_params, timezone_name, windows)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
 class ModelCreateRequest(BaseModel):
     provider_key: str = Field(..., min_length=2, max_length=120)
     model_name: str = Field(..., min_length=1, max_length=120)
@@ -550,9 +577,10 @@ class ModelCreateRequest(BaseModel):
     model_type: str = "chat"
     api_style: Optional[str] = None
     temperature: Optional[float] = None
-    max_tokens: Optional[int] = None
     runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=512)
     thinking_mode: Optional[ThinkingMode] = None
+    availability_timezone: Optional[str] = None
+    availability_windows: Optional[List[AvailabilityWindowIn]] = None
     extra_params: Dict[str, Any] = Field(default_factory=dict)
     is_enabled: bool = True
     is_default: bool = False
@@ -564,9 +592,10 @@ class ModelUpdateRequest(BaseModel):
     model_type: Optional[str] = None
     api_style: Optional[str] = None
     temperature: Optional[float] = None
-    max_tokens: Optional[int] = None
     runtime_max_concurrency: Optional[int] = Field(default=None, ge=1, le=512)
     thinking_mode: Optional[ThinkingMode] = None
+    availability_timezone: Optional[str] = None
+    availability_windows: Optional[List[AvailabilityWindowIn]] = None
     extra_params: Optional[Dict[str, Any]] = None
     is_enabled: Optional[bool] = None
     is_default: Optional[bool] = None
@@ -584,9 +613,10 @@ class ModelOut(BaseModel):
     model_type: str
     api_style: Optional[str] = None
     temperature: Optional[float] = None
-    max_tokens: Optional[int] = None
     runtime_max_concurrency: Optional[int] = None
     thinking_mode: ThinkingMode = "default"
+    availability_timezone: str = "Asia/Shanghai"
+    availability_windows: List[AvailabilityWindowIn] = Field(default_factory=list)
     extra_params: Dict[str, Any] = {}
     is_enabled: bool
     is_default: bool
@@ -976,11 +1006,17 @@ async def create_model(body: ModelCreateRequest, db: AsyncSession = Depends(get_
         for old in (await db.execute(select(AIModelConfig).where(AIModelConfig.is_default.is_(True)))).scalars().all():
             old.is_default = False
 
-    extra_params = dict(body.extra_params)
+    extra_params = _without_completion_caps(body.extra_params)
     if body.runtime_max_concurrency is not None:
         extra_params["runtime_max_concurrency"] = body.runtime_max_concurrency
     if body.thinking_mode is not None:
         extra_params = with_thinking_mode(extra_params, body.thinking_mode)
+    if "availability_windows" in body.model_fields_set or "availability_timezone" in body.model_fields_set:
+        extra_params = _apply_availability(
+            extra_params,
+            body.availability_timezone,
+            [item.model_dump() for item in body.availability_windows] if body.availability_windows else [],
+        )
     model = AIModelConfig(
         provider_id=provider.id,
         model_key=model_key,
@@ -989,7 +1025,7 @@ async def create_model(body: ModelCreateRequest, db: AsyncSession = Depends(get_
         model_type=body.model_type,
         api_style=body.api_style,
         temperature=body.temperature,
-        max_tokens=body.max_tokens,
+        max_tokens=None,
         extra_params=extra_params,
         is_enabled=body.is_enabled,
         is_default=body.is_default,
@@ -1032,14 +1068,17 @@ async def update_model(model_key: str, body: ModelUpdateRequest, db: AsyncSessio
         model.api_style = body.api_style
     if body.temperature is not None:
         model.temperature = body.temperature
-    if body.max_tokens is not None:
-        model.max_tokens = body.max_tokens
+    model.max_tokens = None
     if (
         body.extra_params is not None
         or body.thinking_mode is not None
         or "runtime_max_concurrency" in body.model_fields_set
+        or "availability_windows" in body.model_fields_set
+        or "availability_timezone" in body.model_fields_set
     ):
-        extra_params = dict(body.extra_params if body.extra_params is not None else (model.extra_params or {}))
+        extra_params = _without_completion_caps(
+            body.extra_params if body.extra_params is not None else (model.extra_params or {})
+        )
         if "runtime_max_concurrency" in body.model_fields_set:
             if body.runtime_max_concurrency is None:
                 extra_params.pop("runtime_max_concurrency", None)
@@ -1047,7 +1086,22 @@ async def update_model(model_key: str, body: ModelUpdateRequest, db: AsyncSessio
                 extra_params["runtime_max_concurrency"] = body.runtime_max_concurrency
         if body.thinking_mode is not None:
             extra_params = with_thinking_mode(extra_params, body.thinking_mode)
+        if "availability_windows" in body.model_fields_set or "availability_timezone" in body.model_fields_set:
+            current = availability_view(extra_params)
+            windows = (
+                [item.model_dump() for item in body.availability_windows]
+                if body.availability_windows is not None
+                else current["availability_windows"]
+            )
+            timezone_name = (
+                body.availability_timezone
+                if "availability_timezone" in body.model_fields_set
+                else current["availability_timezone"]
+            )
+            extra_params = _apply_availability(extra_params, timezone_name, windows)
         model.extra_params = extra_params
+    elif model.extra_params:
+        model.extra_params = _without_completion_caps(model.extra_params)
     if body.is_enabled is not None:
         model.is_enabled = body.is_enabled
     if body.priority is not None:
@@ -1460,9 +1514,9 @@ def _model_to_out(model: AIModelConfig) -> ModelOut:
         model_type=model.model_type,
         api_style=model.api_style,
         temperature=model.temperature,
-        max_tokens=model.max_tokens,
         runtime_max_concurrency=(model.extra_params or {}).get("runtime_max_concurrency"),
         thinking_mode=get_thinking_mode(model.extra_params),
+        **availability_view(model.extra_params),
         extra_params=model.extra_params or {},
         is_enabled=model.is_enabled,
         is_default=model.is_default,

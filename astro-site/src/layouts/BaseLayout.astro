@@ -15,6 +15,8 @@ interface Props {
   additionalStructuredData?: JsonLdNode | JsonLdNode[];
   seo?: SeoDocument;
   hideLanguageToggle?: boolean;
+  /** Fill the viewport under the header and omit the footer. Used by the situation map. */
+  stage?: boolean;
 }
 
 const {
@@ -26,6 +28,7 @@ const {
   additionalStructuredData = [],
   seo,
   hideLanguageToggle = false,
+  stage = false,
 } = Astro.props;
 
 const siteReleaseId = import.meta.env.PUBLIC_GIDS_RELEASE_ID?.trim() || 'development';
@@ -191,7 +194,7 @@ const structuredData = {
       })();
     </script>
   </head>
-  <body class="min-h-screen flex flex-col">
+  <body class:list={['min-h-screen flex flex-col', stage && 'is-stage']}>
     <a class="skip-link" href="#main-content">{isChinese ? '跳到主要内容' : isFrench ? 'Aller au contenu principal' : 'Skip to main content'}</a>
     <Header initialLanguage={initialLanguage} hideLanguageToggle={hideLanguageToggle} />
     {maintenanceMessage && <div class="site-update-banner border-b" role="status" aria-live="polite">
@@ -204,9 +207,14 @@ const structuredData = {
         </span>
       </div>
     </div>}
-    <main id="main-content" tabindex="-1" class="flex-1 academic-shell">
+    <main id="main-content" tabindex="-1" class:list={['flex-1 academic-shell', stage && 'is-stage-main']}>
       <slot />
     </main>
-    <Footer initialLanguage={initialLanguage} />
+    {!stage && <Footer initialLanguage={initialLanguage} />}
   </body>
 </html>
+
+<style is:global>
+  body.is-stage { height: 100dvh; overflow: hidden; }
+  body.is-stage .is-stage-main { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+</style>
