@@ -187,6 +187,9 @@ export interface SituationSourceAdapter {
   last_checked_at: string | null;
   last_success_at: string | null;
   last_error: string | null;
+  latest_task_uuid?: string | null;
+  latest_task_status?: string | null;
+  stages?: Array<{ stage: string; status?: string | null; attempt?: number | null; error?: string | null; task_uuid?: string | null }>;
   history: Array<{ run_id: string; started_at: string; status: string; fetched_count: number; new_count: number; updated_count: number; error: string | null }>;
 }
 

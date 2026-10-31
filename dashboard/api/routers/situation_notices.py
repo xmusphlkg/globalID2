@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
@@ -30,6 +30,12 @@ from src.domain import (
 )
 from src.services.global_sources.catalogue import SOURCE_REGISTRY
 from src.services.situation_notices.ai import EXTRACTION_PROMPT_VERSION, review_mode
+from src.services.situation_notices.source_control import (
+    normalize_situation_sources,
+    reject_overlapping_run,
+    source_monitors,
+)
+from src.services.situation_notices.source_log import log_situation_event
 
 router = APIRouter(prefix="/situation")
 
@@ -37,6 +43,8 @@ router = APIRouter(prefix="/situation")
 class RefreshRequest(BaseModel):
     mode: Literal["full", "no_fetch", "metadata_only"] = "full"
     ai_limit: int = 30
+    #: Empty collects every registered feed. Names limit the run to those feeds.
+    sources: list[str] = Field(default_factory=list)
 
 
 def _published(row: SituationNotice) -> SituationExtraction | None:
@@ -383,6 +391,7 @@ async def list_sources(history: int = Query(10, ge=1, le=100)) -> list[dict]:
         counts = dict(
             (await db.execute(select(SituationNotice.source_id, func.count()).group_by(SituationNotice.source_id))).all()
         )
+        monitors = await source_monitors(db)
     by_source: dict[str, list[SituationSourceRun]] = {}
     for run in runs:
         by_source.setdefault(run.source_id, []).append(run)
@@ -390,6 +399,7 @@ async def list_sources(history: int = Query(10, ge=1, le=100)) -> list[dict]:
     for source_id, registry in SOURCE_REGISTRY.items():
         rows = by_source.get(source_id, [])[:history]
         last_ok = next((r for r in rows if r.status == "ok"), None)
+        monitor = monitors.get(source_id) or {}
         output.append(
             {
                 "source_id": source_id,
@@ -406,6 +416,9 @@ async def list_sources(history: int = Query(10, ge=1, le=100)) -> list[dict]:
                 "last_checked_at": rows[0].started_at.isoformat() if rows else None,
                 "last_success_at": last_ok.started_at.isoformat() if last_ok else None,
                 "last_error": rows[0].error if rows else None,
+                "latest_task_uuid": monitor.get("latest_task_uuid"),
+                "latest_task_status": monitor.get("latest_task_status"),
+                "stages": monitor.get("stages") or [],
                 "history": [
                     {
                         "run_id": r.run_id,
@@ -425,14 +438,28 @@ async def list_sources(history: int = Query(10, ge=1, le=100)) -> list[dict]:
 
 @router.post("/refresh", status_code=202)
 async def queue_refresh(body: RefreshRequest) -> dict:
-    """Queue one end-to-end Situation run on the task worker."""
+    """Queue one Situation run, optionally limited to named feeds."""
+    try:
+        selected = normalize_situation_sources(body.sources)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    async with get_db() as db:
+        await reject_overlapping_run(db, selected)
+    base_name = {
+        "full": "Situation: collect, read reports, extract alerts, export",
+        "no_fetch": "Situation: read reports, extract alerts, export (no fetch)",
+        "metadata_only": "Situation: collect and export without AI",
+    }[body.mode]
+    if len(selected) == 1:
+        label = (SOURCE_REGISTRY[selected[0]].get("label") or {}).get("en") or selected[0]
+        task_name = f"{base_name} · {label}"
+    elif selected:
+        task_name = f"{base_name} · {len(selected)} sources"
+    else:
+        task_name = base_name
     task = await task_manager.create_task(
         task_type=TaskType.REFRESH_SITUATION_SOURCES,
-        task_name={
-            "full": "Situation: collect, read reports, extract alerts, export",
-            "no_fetch": "Situation: read reports, extract alerts, export (no fetch)",
-            "metadata_only": "Situation: collect and export without AI",
-        }[body.mode],
+        task_name=task_name,
         priority=TaskPriority.HIGH,
         description="Alert-based Situation pipeline run",
         input_data={
@@ -441,13 +468,22 @@ async def queue_refresh(body: RefreshRequest) -> dict:
             "skip_ai": body.mode == "metadata_only",
             "ai_limit": max(1, min(int(body.ai_limit), 200)),
             "initiated_via": "control_panel",
+            **({"sources": selected} if selected else {}),
         },
-        tags=["situation", body.mode],
+        tags=["situation", body.mode, *selected],
     )
     task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
+    scope = ", ".join(selected) if selected else "all registered feeds"
+    await log_situation_event(
+        task.task_uuid,
+        title="Situation collection queued",
+        content=f"Queued {body.mode} collection for {scope}.",
+        metadata={"event": "situation_queued", "mode": body.mode, "sources": selected},
+    )
     return {
         "status": str(task.status.value if hasattr(task.status, "value") else task.status),
         "task_uuid": task.task_uuid,
         "mode": body.mode,
+        "sources": selected,
         "href": f"/operations/tasks?task={task.task_uuid}",
     }

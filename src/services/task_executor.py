@@ -633,6 +633,7 @@ async def _run_situation_sources_refresh(task: Task) -> Dict[str, Any]:
         async def progress(value: int) -> None:
             await task_manager.update_task_progress(task.task_uuid, value)
 
+        requested_sources = input_data.get("sources")
         result = await run_situation(
             since_days=int(input_data.get("since_days") or 120),
             don_limit=int(input_data.get("don_limit") or 200),
@@ -641,6 +642,7 @@ async def _run_situation_sources_refresh(task: Task) -> Dict[str, Any]:
             skip_ai=bool(input_data.get("skip_ai", False)),
             ai_limit=int(input_data.get("ai_limit") or 30),
             document_limit=int(input_data.get("document_limit") or 40),
+            sources=list(requested_sources) if isinstance(requested_sources, list) and requested_sources else None,
             task_uuid=task.task_uuid,
             progress=progress,
         )

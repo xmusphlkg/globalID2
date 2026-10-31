@@ -92,6 +92,7 @@ class LiteratureDashboardOut(BaseModel):
     surveillance_context: dict[str, Any] = Field(default_factory=dict)
     latest_articles: list[LiteratureArticleOut]
     latest_runs: list[LiteratureIngestRunOut]
+    providers: list[LiteratureSourceOut] = Field(default_factory=list)
     schedule: dict[str, Any]
     automation: dict[str, Any] = Field(default_factory=dict)
 
@@ -107,8 +108,32 @@ class LiteratureEnrichmentRequest(BaseModel):
     force: bool = False
 
 
+class LiteratureSourceStageOut(BaseModel):
+    stage: str
+    status: str | None = None
+    attempt: int | None = None
+    error: str | None = None
+    task_uuid: str | None = None
+
+
+class LiteratureSourceOut(BaseModel):
+    source_id: str
+    label: str
+    enabled: bool
+    status: str
+    fetched: int | None = None
+    error_count: int | None = None
+    last_error: str | None = None
+    last_run_uuid: str | None = None
+    last_task_uuid: str | None = None
+    last_started_at: datetime | None = None
+    stages: list[LiteratureSourceStageOut] = Field(default_factory=list)
+
+
 class LiteratureSyncRequest(BaseModel):
     since: datetime | None = None
+    #: Empty syncs every enabled provider. Names limit the run to those providers.
+    sources: list[str] = Field(default_factory=list)
 
 
 class LiteratureSyncOut(BaseModel):
@@ -192,6 +217,8 @@ __all__ = [
     "LiteratureGapDiscoveryRequest",
     "LiteratureGapUpdate",
     "LiteratureIngestRunOut",
+    "LiteratureSourceOut",
+    "LiteratureSourceStageOut",
     "LiteratureSyncOut",
     "LiteratureSyncRequest",
     "LiteratureSummaryOut",

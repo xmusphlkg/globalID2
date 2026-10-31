@@ -2167,7 +2167,7 @@ export interface paths {
         put?: never;
         /**
          * Queue Refresh
-         * @description Queue one end-to-end Situation run on the task worker.
+         * @description Queue one Situation run, optionally limited to named feeds.
          */
         post: operations["queue_refresh_api_v1_situation_refresh_post"];
         delete?: never;
@@ -4986,6 +4986,8 @@ export interface components {
             latest_articles: components["schemas"]["LiteratureArticleOut"][];
             /** Latest Runs */
             latest_runs: components["schemas"]["LiteratureIngestRunOut"][];
+            /** Providers */
+            providers?: components["schemas"]["LiteratureSourceOut"][];
             /** Published Articles */
             published_articles: number;
             /** Published Last 7 Days */
@@ -5181,6 +5183,46 @@ export interface components {
             line: "literature";
             /** Since */
             since?: string | null;
+            /** Sources */
+            sources?: string[];
+        };
+        /** LiteratureSourceOut */
+        LiteratureSourceOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Error Count */
+            error_count?: number | null;
+            /** Fetched */
+            fetched?: number | null;
+            /** Label */
+            label: string;
+            /** Last Error */
+            last_error?: string | null;
+            /** Last Run Uuid */
+            last_run_uuid?: string | null;
+            /** Last Started At */
+            last_started_at?: string | null;
+            /** Last Task Uuid */
+            last_task_uuid?: string | null;
+            /** Source Id */
+            source_id: string;
+            /** Stages */
+            stages?: components["schemas"]["LiteratureSourceStageOut"][];
+            /** Status */
+            status: string;
+        };
+        /** LiteratureSourceStageOut */
+        LiteratureSourceStageOut: {
+            /** Attempt */
+            attempt?: number | null;
+            /** Error */
+            error?: string | null;
+            /** Stage */
+            stage: string;
+            /** Status */
+            status?: string | null;
+            /** Task Uuid */
+            task_uuid?: string | null;
         };
         /** LiteratureSummaryOut */
         LiteratureSummaryOut: {
@@ -5232,6 +5274,8 @@ export interface components {
         LiteratureSyncRequest: {
             /** Since */
             since?: string | null;
+            /** Sources */
+            sources?: string[];
         };
         /** ModelCreateRequest */
         ModelCreateRequest: {
@@ -5845,6 +5889,8 @@ export interface components {
              * @enum {string}
              */
             mode: "full" | "no_fetch" | "metadata_only";
+            /** Sources */
+            sources?: string[];
         };
         /** ReleaseCreateRequest */
         ReleaseCreateRequest: {
@@ -6394,6 +6440,8 @@ export interface components {
              * @enum {string}
              */
             mode: "full" | "no_fetch" | "metadata_only";
+            /** Sources */
+            sources?: string[];
         };
         /** SmtpSettingsOut */
         SmtpSettingsOut: {

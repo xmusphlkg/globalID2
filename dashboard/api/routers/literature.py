@@ -22,6 +22,7 @@ from dashboard.api.schemas.literature import (
     LiteratureGapDiscoveryRequest,
     LiteratureGapUpdate,
     LiteratureIngestRunOut,
+    LiteratureSourceOut,
     LiteratureSyncOut,
     LiteratureSyncRequest,
 )
@@ -294,6 +295,10 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         },
         latest_articles=[LiteratureArticleOut.model_validate(item) for item in await _project_articles(db, latest)],
         latest_runs=[LiteratureIngestRunOut.model_validate(run, from_attributes=True) for run in runs],
+        providers=[
+            LiteratureSourceOut.model_validate(item)
+            for item in await _provider_catalogue(db)
+        ],
         schedule=schedule,
         automation=automation,
     )
@@ -426,12 +431,25 @@ async def update_article(
     return DataResponse(data=LiteratureArticleOut.model_validate(projection), meta=_meta(request))
 
 
+async def _provider_catalogue(db: AsyncSession) -> list[dict]:
+    from src.literature.collection_sources import load_provider_catalogue
+
+    return await load_provider_catalogue(db, literature_service._config())
+
+
 @router.post("/sync", response_model=DataResponse[LiteratureSyncOut], status_code=202)
 async def sync(body: LiteratureSyncRequest, request: Request):
+    from src.literature.collection_sources import normalize_literature_sources
+
+    try:
+        sources = normalize_literature_sources(body.sources, literature_service._config())
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     result = await literature_service.trigger_job(
         literature_service.JOB_ID,
         manual=True,
         since=body.since,
+        sources=sources,
     )
     return DataResponse(data=LiteratureSyncOut.model_validate(result), meta=_meta(request))
 

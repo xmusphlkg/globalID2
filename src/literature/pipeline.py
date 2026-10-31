@@ -392,40 +392,76 @@ class LiteraturePipeline:
                 timeout_seconds=self.config.request_timeout_seconds,
                 retries=self.config.max_retries,
             )
+            from src.literature.collection_sources import selected_sources, source_plan
+            from src.literature.source_log import log_literature_source
+
+            selected = selected_sources(task)
+            plan = source_plan(selected, self.config)
+
+            async def note(source: str, *, fetched: int, error: str | None = None, skipped: str | None = None) -> None:
+                await log_literature_source(task, source, fetched=fetched, error=error, skipped=skipped)
+
             source_result = None
             raw_records: list[dict[str, Any]] = []
             crossref_error: str | None = None
             pubmed_core_result = None
             pubmed_core_records: list[dict[str, Any]] = []
             pubmed_core_error: str | None = None
-            try:
-                source_result = await crossref.fetch_incremental(
-                    journals=journals,
-                    since=since,
-                    until=now,
-                    max_records=self.config.max_records_per_run,
-                    concurrency=self.config.source_concurrency,
-                    resume_after=resume_after,
-                )
-                raw_records = source_result.records
-                # If every journal stream failed, treat Crossref as
-                # unavailable so the existing PubMed fallback can take over.
-                # Partial Crossref results remain usable and are persisted.
-                if (
-                    int((source_result.checkpoint or {}).get("source_errors") or 0) > 0
-                    and not raw_records
-                ):
-                    crossref_error = "JournalStreamError"
-                    source_result = None
-                    raise RuntimeError("Crossref journal streams unavailable")
-            except Exception as exc:
-                crossref_error = type(exc).__name__ or "Exception"
-                if not getattr(self.config, "pubmed_enabled", False):
-                    raise
-                logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
-                    "Crossref core journal sync failed; attempting PubMed fallback error_type={}",
-                    crossref_error,
-                )
+            if plan["crossref"]:
+                try:
+                    source_result = await crossref.fetch_incremental(
+                        journals=journals,
+                        since=since,
+                        until=now,
+                        max_records=self.config.max_records_per_run,
+                        concurrency=self.config.source_concurrency,
+                        resume_after=resume_after,
+                    )
+                    raw_records = source_result.records
+                    # If every journal stream failed, treat Crossref as
+                    # unavailable so a selected PubMed source can take over.
+                    # Partial Crossref results remain usable and are persisted.
+                    if (
+                        int((source_result.checkpoint or {}).get("source_errors") or 0) > 0
+                        and not raw_records
+                    ):
+                        crossref_error = "JournalStreamError"
+                        source_result = None
+                        raise RuntimeError("Crossref journal streams unavailable")
+                except Exception as exc:
+                    crossref_error = type(exc).__name__ or "Exception"
+                    if not plan["pubmed"]:
+                        await note("crossref", fetched=len(raw_records), error=crossref_error)
+                        raise
+                    logger.warning(  # noqa: PLE1205 - get_logger returns a brace-format logger.
+                        "Crossref core journal sync failed; attempting PubMed fallback error_type={}",
+                        crossref_error,
+                    )
+                    await note("crossref", fetched=len(raw_records), error=crossref_error)
+                    pubmed_core_result, pubmed_core_error = await _isolate_optional_source(
+                        "pubmed",
+                        PubMedClient(
+                            contact_email=self.config.contact_email,
+                            api_key=getattr(self.config, "pubmed_api_key", ""),
+                            tool=getattr(self.config, "pubmed_tool", "GIDSResearchRadar"),
+                            timeout_seconds=self.config.request_timeout_seconds,
+                            retries=self.config.max_retries,
+                            min_interval_seconds=getattr(self.config, "pubmed_min_interval_seconds", 0.34),
+                        ).fetch_incremental(
+                            journals=journals,
+                            since=since,
+                            until=now,
+                            max_records=getattr(self.config, "max_pubmed_records", self.config.max_records_per_run),
+                        ),
+                    )
+                    if pubmed_core_result is None:
+                        await note("pubmed", fetched=0, error=pubmed_core_error or "Exception")
+                        raise
+                    pubmed_core_records = pubmed_core_result.records
+                    await note("pubmed", fetched=len(pubmed_core_records), error=pubmed_core_error)
+                else:
+                    await note("crossref", fetched=len(raw_records))
+            elif plan["pubmed"]:
                 pubmed_core_result, pubmed_core_error = await _isolate_optional_source(
                     "pubmed",
                     PubMedClient(
@@ -443,8 +479,10 @@ class LiteraturePipeline:
                     ),
                 )
                 if pubmed_core_result is None:
-                    raise
+                    await note("pubmed", fetched=0, error=pubmed_core_error or "Exception")
+                    raise RuntimeError(pubmed_core_error or "PubMed unavailable")
                 pubmed_core_records = pubmed_core_result.records
+                await note("pubmed", fetched=len(pubmed_core_records))
             taxonomy = _load_json(ROOT / self.config.taxonomy_path)
             diseases, countries = await self._classification_catalogues(taxonomy)
 
@@ -453,7 +491,7 @@ class LiteraturePipeline:
             controlled_crossref_records: list[dict[str, Any]] = []
             controlled_europe_pmc_records: list[dict[str, Any]] = []
             controlled_pubmed_records: list[dict[str, Any]] = []
-            if getattr(self.config, "controlled_discovery_enabled", False):
+            if plan["controlled-query"]:
                 controlled_checkpoint = await self._resolve_nested_checkpoint("controlled_discovery")
                 query_batches = build_controlled_query_batches(
                     diseases,
@@ -510,12 +548,17 @@ class LiteraturePipeline:
                     controlled_crossref_records = controlled_result.crossref_records
                     controlled_europe_pmc_records = controlled_result.europe_pmc_records
                     controlled_pubmed_records = controlled_result.pubmed_records
+                await note(
+                    "controlled-query",
+                    fetched=len(controlled_crossref_records) + len(controlled_europe_pmc_records) + len(controlled_pubmed_records),
+                    error=controlled_error,
+                )
 
             official_guidance_result = None
             official_guidance_records: list[dict[str, Any]] = []
             official_guidance_error: str | None = None
             official_guidance_checkpoint: dict[str, Any] | None = None
-            if getattr(self.config, "official_guidance_enabled", False):
+            if plan["who-iris-oai"]:
                 official_guidance_checkpoint = await self._resolve_nested_checkpoint("official_guidance")
                 try:
                     official_guidance_result = await OfficialGuidanceOaiClient(
@@ -536,17 +579,23 @@ class LiteraturePipeline:
                         "WHO IRIS guidance metadata discovery failed: {}",
                         official_guidance_error,
                     )
+                await note(
+                    "who-iris-oai",
+                    fetched=len(official_guidance_records),
+                    error=official_guidance_error.split(":", 1)[0] if official_guidance_error else None,
+                )
 
             springer_result = None
             springer_records: list[dict[str, Any]] = []
             springer_error: str | None = None
             springer_skipped_credentials = 0
             springer_checkpoint: dict[str, Any] | None = None
-            if getattr(self.config, "springer_nature_enabled", False):
+            if plan["springer-nature"]:
                 springer_checkpoint = await self._resolve_nested_checkpoint("springer_nature")
                 if not str(getattr(self.config, "springer_nature_api_key", "") or "").strip():
                     springer_skipped_credentials = 1
                     logger.warning("Springer Nature discovery enabled but credential is not configured; skipping")
+                    await note("springer-nature", fetched=0, skipped="credential is not configured")
                 else:
                     springer_result, springer_error = await _isolate_optional_source(
                         "springer-nature",
@@ -565,17 +614,19 @@ class LiteraturePipeline:
                     )
                     if springer_result is not None:
                         springer_records = springer_result.records
+                    await note("springer-nature", fetched=len(springer_records), error=springer_error)
 
             elsevier_result = None
             elsevier_records: list[dict[str, Any]] = []
             elsevier_error: str | None = None
             elsevier_skipped_credentials = 0
             elsevier_checkpoint: dict[str, Any] | None = None
-            if getattr(self.config, "elsevier_enabled", False):
+            if plan["elsevier"]:
                 elsevier_checkpoint = await self._resolve_nested_checkpoint("elsevier")
                 if not str(getattr(self.config, "elsevier_api_key", "") or "").strip():
                     elsevier_skipped_credentials = 1
                     logger.warning("Elsevier discovery enabled but credential is not configured; skipping")
+                    await note("elsevier", fetched=0, skipped="credential is not configured")
                 else:
                     elsevier_result, elsevier_error = await _isolate_optional_source(
                         "elsevier",
@@ -595,12 +646,13 @@ class LiteraturePipeline:
                     )
                     if elsevier_result is not None:
                         elsevier_records = elsevier_result.records
+                    await note("elsevier", fetched=len(elsevier_records), error=elsevier_error)
 
             preprint_result = None
             preprint_records: list[dict[str, Any]] = []
             preprint_error: str | None = None
             preprint_checkpoint: dict[str, Any] | None = None
-            if getattr(self.config, "preprint_discovery_enabled", False):
+            if plan["biorxiv-api"]:
                 preprint_checkpoint = await self._resolve_nested_checkpoint("preprints")
                 preprint_result, preprint_error = await _isolate_optional_source(
                     "biorxiv-api",
@@ -617,10 +669,11 @@ class LiteraturePipeline:
                 )
                 if preprint_result is not None:
                     preprint_records = preprint_result.records
+                await note("biorxiv-api", fetched=len(preprint_records), error=preprint_error)
 
             rss_result = None
             rss_records: list[dict[str, Any]] = []
-            if getattr(self.config, "publisher_rss_enabled", False):
+            if plan["publisher-rss"]:
                 rss_payload = _load_json(ROOT / self.config.publisher_rss_feeds_path)
                 if rss_payload.get("schema_version") != 1:
                     raise ValueError("Unsupported publisher RSS whitelist schema_version")
@@ -639,6 +692,7 @@ class LiteraturePipeline:
                     now=now,
                 )
                 rss_records = rss_result.records
+                await note("publisher-rss", fetched=len(rss_records))
             # Resolve identifiers for follow-up metadata requests without
             # creating normalized business candidates during collection.
             source_payloads = [*raw_records, *pubmed_core_records, *rss_records, *springer_records, *elsevier_records, *preprint_records, *controlled_crossref_records, *controlled_europe_pmc_records, *controlled_pubmed_records, *official_guidance_records]
@@ -974,8 +1028,7 @@ class LiteraturePipeline:
                 preprint_result,
                 preprint_checkpoint,
             )
-            checkpoint = {
-                **source_checkpoint,
+            nested = {
                 **({"pubmed_core": pubmed_core_result.checkpoint} if pubmed_core_result else {}),
                 **({"rss": rss_result.checkpoint} if rss_result else {}),
                 **(
@@ -1004,6 +1057,33 @@ class LiteraturePipeline:
                     else {}
                 ),
             }
+            # A full run replaces the checkpoint. A Crossref failure that fell
+            # back to PubMed keeps today's stub and a pubmed-fallback label, so
+            # it does not become the next Crossref cursor. A named subset keeps
+            # every cursor it did not collect, including the Crossref watermark.
+            pubmed_fallback = source_result is None and pubmed_core_result is not None and bool(plan["crossref"])
+            if selected is None or pubmed_fallback:
+                checkpoint = {**source_checkpoint, **nested}
+            else:
+                from src.literature.collection_sources import assemble_checkpoint
+
+                snapshot = await self._load_latest_completed_checkpoint()
+                previous = snapshot.get("checkpoint") if snapshot and isinstance(snapshot.get("checkpoint"), dict) else None
+                checkpoint = assemble_checkpoint(
+                    selected=selected,
+                    crossref_planned=bool(plan["crossref"]),
+                    crossref_ran=source_result is not None,
+                    source_checkpoint=source_checkpoint if isinstance(source_checkpoint, dict) else {},
+                    previous=previous,
+                    nested=nested,
+                )
+                if not plan["crossref"]:
+                    carried = snapshot.get("through_indexed_at") if snapshot else None
+                    if carried is not None and getattr(carried, "tzinfo", None) is None:
+                        carried = carried.replace(tzinfo=timezone.utc)
+                    if carried is None and isinstance(previous, dict):
+                        carried = _parse_checkpoint_datetime(previous.get("through_indexed_at"))
+                    through_indexed_at = carried or since
             await self._finish_run(
                 run_uuid,
                 "completed",
@@ -1013,7 +1093,7 @@ class LiteraturePipeline:
                 publish_task_uuid=stages.task_uuid,
                 source=(
                     self._source_label(crossref=False, pubmed_fallback=True)
-                    if source_result is None and pubmed_core_result is not None
+                    if pubmed_fallback
                     else None
                 ),
             )
@@ -1283,11 +1363,14 @@ class LiteraturePipeline:
         *,
         task: Task | None = None,
     ) -> None:
+        from src.literature.collection_sources import run_label, selected_sources
+
+        chosen = selected_sources(task)
         async with get_db() as db:
             db.add(LiteratureIngestRun(
                 run_uuid=run_uuid,
                 task_uuid=task.task_uuid if task is not None else None,
-                source=self._source_label(),
+                source=run_label(self._source_label(), chosen),
                 status="running",
                 started_at=datetime.now(timezone.utc),
                 from_indexed_at=since,
@@ -1297,6 +1380,7 @@ class LiteraturePipeline:
                     "overlap_days": 0,
                     "configured_legacy_overlap_days": self.config.index_overlap_days,
                     "task_uuid": task.task_uuid if task is not None else None,
+                    **({"selected_sources": chosen} if chosen else {}),
                 },
                 counts={},
             ))

@@ -8,6 +8,8 @@ from typing import Any
 from sqlalchemy import Text, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.ai.task_progress import task_type_name
+from src.control_plane.ai_task_trace import progress_for_task, stage_counts, trace_for_task, work_counts
 from src.control_plane.events import control_plane_events
 from src.control_plane.runtime import runtime_registry
 from src.core.source_scopes import canonicalize_task_source, validate_iceland_crawl_options
@@ -136,15 +138,33 @@ class TaskQueryRepository:
         if filters:
             query = query.where(*filters)
         rows = (await self.db.execute(query)).all()
-        return [
-            _task_projection(
+        task_uuids = [row.Task.task_uuid for row in rows]
+        counts = await work_counts(self.db, task_uuids)
+        stages = await stage_counts(
+            self.db,
+            [
+                row.Task.task_uuid
+                for row in rows
+                if task_type_name(row.Task.task_type) == "agent_workflow"
+            ],
+        )
+        projections = []
+        for row in rows:
+            projection = _task_projection(
                 row.Task,
                 country_code=row.country_code,
                 country_name=row.country_name,
                 workbook_count=int(row.workbook_count or 0),
             )
-            for row in rows
-        ], total
+            projection["progress"] = progress_for_task(
+                task_type=row.Task.task_type,
+                status=row.Task.status,
+                stored=row.Task.progress,
+                counts=counts.get(row.Task.task_uuid),
+                stages=stages.get(row.Task.task_uuid),
+            )
+            projections.append(projection)
+        return projections, total
 
     async def detail(self, task_uuid: str) -> dict[str, Any] | None:
         row = (
@@ -163,13 +183,16 @@ class TaskQueryRepository:
                 .order_by(TaskWorkbook.created_at)
             )
         ).scalars().all()
+        progress, trace_entries = await trace_for_task(self.db, row.Task)
+        projection = _task_projection(
+            row.Task,
+            country_code=row.country_code,
+            country_name=row.country_name,
+            workbook_count=len(workbooks),
+        )
+        projection["progress"] = progress
         return {
-            **_task_projection(
-                row.Task,
-                country_code=row.country_code,
-                country_name=row.country_name,
-                workbook_count=len(workbooks),
-            ),
+            **projection,
             "input_data": row.Task.input_data,
             "output_data": row.Task.output_data,
             "parent_task_id": row.Task.parent_task_id,
@@ -193,7 +216,8 @@ class TaskQueryRepository:
                     "created_at": entry.created_at,
                 }
                 for entry in workbooks
-            ],
+            ]
+            + trace_entries,
         }
 
     async def worker_status(self, concurrency: int) -> dict[str, Any]:

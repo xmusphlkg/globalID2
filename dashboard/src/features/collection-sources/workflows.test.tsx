@@ -27,6 +27,14 @@ describe("independent collection source workflows", () => {
   expect(apiFetch).toHaveBeenCalledWith("/collection/runs", { method: "POST", body: JSON.stringify({ line: "situation", mode: "metadata_only" }) });
   expect(screen.queryByRole("button", { name: /AI|export|publish/i })).toBeNull();
  });
+ it("collects one situation feed without changing the all-feeds request", async () => {
+  vi.mocked(apiFetch).mockImplementation((_path, init) => Promise.resolve(init?.method === "POST" ? { task_uuid: "one-situation-task", status: "queued" } : [source]));
+  show(<SituationSourcesView />);
+  fireEvent.click(await screen.findByRole("button", { name: "Collect this source: WHO notices" }));
+  await screen.findByRole("link", { name: "Open collection run" });
+  const one = vi.mocked(apiFetch).mock.calls.find(([, init]) => init?.method === "POST")!;
+  expect(JSON.parse(String(one[1]?.body))).toEqual({ line: "situation", mode: "metadata_only", sources: ["who"] });
+ });
  it("uses literature synchronization records and submits an indexed time window", async () => {
   vi.mocked(apiFetch).mockImplementation((_path, init) => Promise.resolve(init?.method === "POST" ? { task_uuid: "literature-task" } : { total_articles: 7, latest_articles: [], latest_runs: [{ run_uuid: "provider-run", source: "crossref", status: "completed", started_at: "2026-10-30T00:00:00Z", counts: { fetched: 7 } }, { run_uuid: "governance-run", source: "research-radar-autopilot", status: "completed", started_at: "2026-10-30T00:00:00Z", counts: {} }] }));
   show(<LiteratureSourcesView />);
@@ -39,6 +47,16 @@ describe("independent collection source workflows", () => {
   expect(mutation[0]).toBe("/collection/runs");
   expect(JSON.parse(String(mutation[1]?.body))).toEqual({ line: "literature", since: new Date("2026-10-01T10:00").toISOString() });
   expect(screen.queryByRole("button", { name: /enrich|summarize|publish/i })).toBeNull();
+ });
+ it("syncs one literature provider and keeps the indexed window", async () => {
+  vi.mocked(apiFetch).mockImplementation((_path, init) => Promise.resolve(init?.method === "POST" ? { task_uuid: "one-literature-task" } : { total_articles: 7, latest_articles: [], latest_runs: [{ run_uuid: "provider-run", source: "crossref", status: "completed", started_at: "2026-10-30T00:00:00Z", counts: { fetched: 7 } }] }));
+  show(<LiteratureSourcesView />);
+  await screen.findByRole("cell", { name: /^Crossref$/ });
+  fireEvent.change(screen.getByLabelText("Indexed since (optional)"), { target: { value: "2026-10-01T10:00" } });
+  fireEvent.click(screen.getByRole("button", { name: "Sync this source: Crossref" }));
+  await screen.findByRole("link", { name: "Open collection run" });
+  const one = vi.mocked(apiFetch).mock.calls.find(([, init]) => init?.method === "POST")!;
+  expect(JSON.parse(String(one[1]?.body))).toEqual({ line: "literature", since: new Date("2026-10-01T10:00").toISOString(), sources: ["crossref"] });
  });
  it("shows knowledge source documents without substituting brief generation for collection", async () => {
   vi.mocked(apiFetch).mockImplementation((path, init) => Promise.resolve(init?.method === "POST" ? { requested_disease_ids: ["D1"], source_groups: ["who"], force: false, created_count: 1, skipped_count: 0, created_tasks: [{ task_uuid: "knowledge-source-task", status: "queued", href: "/collection/runs/knowledge-source-task" }], skipped: [] } : path === "/knowledge" ? [{ disease_id: "D1", name_en: "Influenza", source_count: 1 }] : { disease_id: "D1", sources: [{ id: 1, source_name: "WHO", source_type: "who", title: "Influenza fact sheet", status: "completed", language: "en", url: "https://example.org/flu", raw_excerpt_hash: "abc", content_text: "Stored evidence" }] }));

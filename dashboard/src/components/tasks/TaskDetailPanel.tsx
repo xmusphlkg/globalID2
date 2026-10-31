@@ -513,6 +513,18 @@ export function TaskDetailPanel({
                 <Badge color={stage.status === "failed" ? "rose" : stage.status === "completed" ? "emerald" : "slate"}>{stage.status}</Badge>
                 <span className="text-tremor-content-subtle">#{stage.attempt}</span>
               </div>
+              {stage.metrics && Object.keys(stage.metrics).length > 0 ? (
+                <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {Object.entries(stage.metrics).map(([key, value]) => (
+                    <div key={key} className="min-w-0">
+                      <dt className="text-[10px] uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{key}</dt>
+                      <dd className="break-all text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                        {typeof value === "string" ? value : JSON.stringify(value)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
               {stage.error ? <div className="mt-2"><LogBody content={stage.error} expandLabel={copy.full} collapseLabel={copy.less} /></div> : null}
             </article>
           ))}
