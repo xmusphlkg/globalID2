@@ -151,3 +151,53 @@ def test_is_model_channel_failure_detects_missing_channel_message() -> None:
     )
 
     assert is_model_channel_failure(error) is True
+
+
+def test_rate_limit_cooldown_escalates_from_30s_to_ceiling() -> None:
+    from src.ai.model_center import _escalating_rate_limit_cooldown
+
+    assert [_escalating_rate_limit_cooldown(streak, 300) for streak in range(6)] == [30, 60, 120, 240, 300, 300]
+    assert _escalating_rate_limit_cooldown(0, 10) == 10
+
+
+def test_rate_limit_streak_resets_after_success_and_window() -> None:
+    from datetime import timedelta
+
+    from src.ai.model_center import (
+        _clear_payload_rate_limit,
+        _mark_payload_rate_limited,
+        _rate_limit_streak,
+        _utcnow,
+    )
+
+    now = _utcnow()
+    payload = _mark_payload_rate_limited({}, now + timedelta(seconds=30), now)
+    payload = _mark_payload_rate_limited(payload, now + timedelta(seconds=60), now)
+    assert _rate_limit_streak(payload, now) == 2
+    assert _rate_limit_streak(payload, now + timedelta(seconds=601)) == 0
+    assert _rate_limit_streak(_clear_payload_rate_limit(payload, now), now) == 0
+
+
+def test_rate_limit_cooldown_escalates_per_consecutive_limit_and_resets() -> None:
+    from datetime import timedelta
+
+    from src.ai.model_center import (
+        _clear_payload_rate_limit,
+        _escalating_rate_limit_cooldown,
+        _mark_payload_rate_limited,
+        _rate_limit_streak,
+        _utcnow,
+    )
+
+    now = _utcnow()
+    payload: dict = {}
+    seen = []
+    for _ in range(5):
+        streak = _rate_limit_streak(payload, now)
+        seen.append(_escalating_rate_limit_cooldown(streak, 300))
+        payload = _mark_payload_rate_limited(payload, now, now)
+    assert seen == [30, 60, 120, 240, 300]
+
+    # A success clears the streak; so does a quiet period past the window.
+    assert _rate_limit_streak(_clear_payload_rate_limit(payload, now), now) == 0
+    assert _rate_limit_streak(payload, now + timedelta(seconds=601)) == 0

@@ -941,7 +941,9 @@ async def delete_provider(provider_key: str, db: AsyncSession = Depends(get_db))
 @router.post("/ai/models/providers/{provider_key}/test")
 async def test_provider(
     provider_key: str,
-    structured: bool = True,
+    # A console test answers "is this route wired correctly"; the slower
+    # structured workload probe stays opt-in and runs in background recovery.
+    structured: bool = False,
     db: AsyncSession = Depends(get_db),
 ):
     await bootstrap_model_center_from_env(force=False)
@@ -1160,7 +1162,7 @@ async def delete_model(model_key: str, db: AsyncSession = Depends(get_db)):
 @router.post("/ai/models/{model_key}/test")
 async def test_model(
     model_key: str,
-    structured: bool = True,
+    structured: bool = False,
     db: AsyncSession = Depends(get_db),
 ):
     await bootstrap_model_center_from_env(force=False)

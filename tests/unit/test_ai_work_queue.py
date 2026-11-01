@@ -278,8 +278,9 @@ async def test_two_routes_cannot_lease_the_same_item(db):
     assert [item.id for item in claims if item is not None] == [work_id]
 
 
-async def test_health_permit_is_atomic_across_dispatchers(db):
-    for _ in range(2):
+async def test_health_permits_are_atomic_across_dispatchers(db):
+    extra = queue.HEALTH_PROBE_PERMITS + 2
+    for _ in range(extra):
         await queue.enqueue_work(
             parent_task_uuid="parent",
             line="model_probe",
@@ -287,8 +288,98 @@ async def test_health_permit_is_atomic_across_dispatchers(db):
             capability="health",
             payload={},
         )
-    claims = await asyncio.gather(queue.claim_probe(), queue.claim_probe())
-    assert sum(item is not None for item in claims) == 1
+    claims = await asyncio.gather(*(queue.claim_probe() for _ in range(extra)))
+    ids = [item.id for item in claims if item is not None]
+    assert len(ids) == len(set(ids)) == queue.HEALTH_PROBE_PERMITS
+
+
+async def test_console_probe_is_claimed_before_background_sweep(db):
+    background = await queue.enqueue_runtime_probe()
+    console = await queue.enqueue_work(
+        parent_task_uuid="parent",
+        line="model_probe",
+        priority="high",
+        capability="health",
+        payload={},
+    )
+    assert (await queue.claim_probe()).id == console
+    assert (await queue.claim_probe()).id == background
+
+
+async def test_background_sweep_is_not_queued_twice(db):
+    first = await queue.enqueue_runtime_probe()
+    assert first is not None
+    assert await queue.enqueue_runtime_probe() is None
+    await queue.claim_probe()  # leased still counts as pending
+    assert await queue.enqueue_runtime_probe() is None
+    async with db() as session:
+        item = await session.get(AIWorkItem, first)
+        item.status = "succeeded"
+        await session.commit()
+    assert await queue.enqueue_runtime_probe() is not None
+
+
+async def test_locally_cooling_route_is_not_claimed(db, monkeypatch):
+    from src.ai.agents.base import BaseAgent
+
+    work_id = await add()
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {"first": 1e18})
+
+    async def routes():
+        return [route()]
+
+    dispatcher = queue.AIWorkDispatcher(route_loader=routes)
+    assert await dispatcher.tick() == 0
+    assert (await row(db, work_id)).status == "queued"
+
+
+async def test_refused_call_does_not_lower_route_success_weight(db):
+    from src.ai.agents.base import NoModelAvailable
+
+    await add()
+
+    async def routes():
+        return [route()]
+
+    async def complete(item, chosen):
+        raise NoModelAvailable("route cooling locally")
+
+    dispatcher = queue.AIWorkDispatcher(routes, complete)
+    item = await queue.claim_work(route())
+    await dispatcher._execute(item, route())
+    assert list(dispatcher.outcomes["first"]) == []
+
+
+async def test_dispatcher_starts_several_health_probes_in_one_tick(db, monkeypatch):
+    from src.ai import model_center
+
+    release = asyncio.Event()
+    started = []
+
+    async def check(model_id, *, structured):
+        started.append(model_id)
+        await release.wait()
+        return {"success": True}
+
+    monkeypatch.setattr(model_center, "check_model_by_id", check)
+    for model_id in range(3):
+        await queue.enqueue_work(
+            parent_task_uuid="parent",
+            line="model_probe",
+            priority="high",
+            capability="health",
+            payload={"operation": "check_model", "arguments": {"model_id": model_id, "structured": False}},
+        )
+
+    async def routes():
+        return []
+
+    dispatcher = queue.AIWorkDispatcher(route_loader=routes)
+    await dispatcher.tick()
+    await asyncio.sleep(0)
+    assert sorted(started) == [0, 1, 2]
+    release.set()
+    await asyncio.gather(*dispatcher.active.values())
 
 
 async def test_failed_agent_workflow_call_updates_progress_and_keeps_the_error(db):

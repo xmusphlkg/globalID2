@@ -74,10 +74,11 @@ KNOWLEDGE_SERIAL_TASK_TYPES = {
     TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
 }
 RELEASE_EXCLUSIVE_TASK_TYPES = {TaskType.EXPORT_DATA}
-# File generation and the final public projection read the same live formal
-# tables. Keep every collection writer outside that interval. This is a data
-# consistency gate, independent of normal/AI slot accounting: ai_waiting
-# parents remain RUNNING until their final store transaction has finished.
+# Country export reads observation rows from separate sessions over many
+# minutes. A collection store that commits during that walk would mix two
+# moments into one site snapshot, so those writers stay outside the release.
+# AI review commits finished rows in its own transactions. Site reads do not
+# take those locks, and a parent stays RUNNING only until its own store ends.
 COLLECTION_STORE_TASK_TYPES = {
     TaskType.CRAWL_DATA,
     TaskType.PROCESS_DATA,
@@ -86,9 +87,7 @@ COLLECTION_STORE_TASK_TYPES = {
     TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
     TaskType.UPDATE_DISEASE_KNOWLEDGE,
 }
-RELEASE_SHARED_BLOCKED_TASK_TYPES = (
-    AI_TASK_TYPES | KNOWLEDGE_SOURCE_TASK_TYPES | COLLECTION_STORE_TASK_TYPES
-)
+RELEASE_SHARED_BLOCKED_TASK_TYPES = COLLECTION_STORE_TASK_TYPES
 # These operations persist their checkpoints and are designed to be resumed.
 # On a controlled worker restart, returning them to QUEUED is preferable to
 # waiting for a long model timeout or treating the deployment as a failure.
@@ -104,7 +103,7 @@ def _release_memory_blocked_task_types(
     *,
     release_waiting: bool = False,
 ) -> set[TaskType]:
-    """Serialize publication with source stores and memory-heavy model work."""
+    """Keep site export off the formal tables a collection store is rewriting."""
     active = set(active_task_types)
     blocked: set[TaskType] = set()
     if release_waiting or active & RELEASE_EXCLUSIVE_TASK_TYPES:

@@ -35,6 +35,10 @@ LEASE_SECONDS = 15 * 60
 MAX_ATTEMPTS = 3
 CLAIM_SCAN_PAGE_SIZE = 64
 WAIT_POLL_SECONDS = 0.5
+# Concurrent health operations across all dispatchers. Each operation bounds
+# its own per-provider fan-out, so this only limits how many run side by side.
+HEALTH_PROBE_PERMITS = 4
+RUNTIME_PARENT = "runtime"
 # None means individual failures are tolerated and counted by the line's organizer.
 FAILURE_THRESHOLDS = {
     "situation_notice": None,
@@ -395,22 +399,33 @@ async def submit_probe(operation: str, arguments: dict[str, Any]) -> Any:
             await _set_waiting(state, state.waiting > 0)
 
 
+def _priority_rank():
+    return case(
+        (AIWorkItem.priority == "urgent", 0),
+        (AIWorkItem.priority == "high", 1),
+        (AIWorkItem.priority == "normal", 2),
+        else_=3,
+    )
+
+
 async def claim_probe() -> AIWorkItem | None:
     async with get_database() as db:
         await _lock_reservation(db, "route:health:probe")
-        # Explicit probes recover disabled/cooling routes and therefore use a
-        # separate single health permit, not ordinary routability admission.
-        active = (
-            await db.execute(
-                select(AIWorkItem.id).where(
-                    AIWorkItem.capability == "health",
-                    AIWorkItem.status == "leased",
-                    AIWorkItem.lease_expires_at > _now(),
-                )
+        # Explicit probes recover disabled/cooling routes and therefore use
+        # separate health permits, not ordinary routability admission.
+        leased = await db.scalar(
+            select(func.count())
+            .select_from(AIWorkItem)
+            .where(
+                AIWorkItem.capability == "health",
+                AIWorkItem.status == "leased",
+                AIWorkItem.lease_expires_at > _now(),
             )
-        ).first()
-        if active:
+        )
+        if leased >= HEALTH_PROBE_PERMITS:
             return None
+        # A console-requested test must not wait behind the low-priority
+        # background recovery sweep.
         item = (
             await db.execute(
                 select(AIWorkItem)
@@ -419,7 +434,7 @@ async def claim_probe() -> AIWorkItem | None:
                     AIWorkItem.capability == "health",
                     AIWorkItem.available_at <= _now(),
                 )
-                .order_by(AIWorkItem.created_at, AIWorkItem.id)
+                .order_by(_priority_rank(), AIWorkItem.created_at, AIWorkItem.id)
                 .with_for_update(skip_locked=True)
                 .limit(1)
             )
@@ -430,6 +445,40 @@ async def claim_probe() -> AIWorkItem | None:
             item.lease_expires_at = _now() + timedelta(seconds=LEASE_SECONDS)
             await db.flush()
         return item
+
+
+async def enqueue_runtime_probe() -> int | None:
+    """Queue the background recovery sweep unless one is already pending.
+
+    A sweep can outlast the enqueue interval; without this guard the queue
+    grows without bound and delays console-requested tests.
+    """
+    async with get_database() as db:
+        await _lock_reservation(db, "runtime-probe")
+        pending = (
+            await db.execute(
+                select(AIWorkItem.id)
+                .where(
+                    AIWorkItem.parent_task_uuid == RUNTIME_PARENT,
+                    AIWorkItem.capability == "health",
+                    AIWorkItem.status.in_(("queued", "leased")),
+                )
+                .limit(1)
+            )
+        ).first()
+        if pending:
+            return None
+        item = AIWorkItem(
+            parent_task_uuid=RUNTIME_PARENT,
+            line="model_probe",
+            priority="low",
+            payload={"operation": "probe_degraded", "arguments": {"limit": 2}},
+            capability="health",
+            status="queued",
+        )
+        db.add(item)
+        await db.flush()
+        return item.id
 
 
 def _now() -> datetime:
@@ -621,12 +670,7 @@ async def claim_work(
         )
         if leased >= int(route["runtime_model_capacity"]):
             return None
-        rank = case(
-            (AIWorkItem.priority == "urgent", 0),
-            (AIWorkItem.priority == "high", 1),
-            (AIWorkItem.priority == "normal", 2),
-            else_=3,
-        )
+        rank = _priority_rank()
         due = (
             AIWorkItem.status == "queued",
             AIWorkItem.available_at <= now,
@@ -715,6 +759,8 @@ class AIWorkDispatcher:
     async def _execute(self, item: AIWorkItem, route: dict[str, Any]) -> None:
         token = _DISPATCHING.set(True)
         succeeded = False
+        # A refusal before any provider request says nothing about the model.
+        refused = False
         noted: dict[str, Any] | None = None
         try:
             if self.complete:
@@ -744,8 +790,9 @@ class AIWorkDispatcher:
             from .agents.base import NoModelAvailable
             from .model_center import is_rate_limit_error
 
+            refused = isinstance(exc, NoModelAvailable)
             cooling = (
-                isinstance(exc, NoModelAvailable)
+                refused
                 or is_rate_limit_error(exc)
                 or "429" in str(exc)
             )
@@ -785,7 +832,8 @@ class AIWorkDispatcher:
                     record_error=not cooling,
                 )
         finally:
-            self.outcomes[str(route.get("model_key"))].append(succeeded)
+            if not refused:
+                self.outcomes[str(route.get("model_key"))].append(succeeded)
             _DISPATCHING.reset(token)
             if noted is not None and (
                 noted["status"] in {"succeeded", "failed"} or noted.get("record_error")
@@ -885,17 +933,26 @@ class AIWorkDispatcher:
                     )
                 del self.active[work_id]
         await recover_expired_leases()
-        probe = await claim_probe()
-        if probe is not None:
+        while (probe := await claim_probe()) is not None:
             self.active[probe.id] = asyncio.create_task(
                 self._execute(probe, {"model_key": "health:probe"}),
                 name=f"model-health-{probe.id}",
             )
             self.active[probe.id]._ai_lease_expires_at = probe.lease_expires_at
+        from .agents.base import BaseAgent
+
+        # The transport refuses a route under this process's local cooldown
+        # (set on a 429 or channel failure) even when the persisted state is
+        # already clear. Claiming it would fail the item instantly, requeue it,
+        # and claim it again in a tight loop while real permits sit idle.
         routes = [
             r
             for r in await self.route_loader()
-            if r.get("available_for_routing") and r.get("runtime_model_capacity", 0) > 0
+            if r.get("available_for_routing")
+            and r.get("runtime_model_capacity", 0) > 0
+            and not BaseAgent._is_route_cooling_down(
+                str(r.get("model_key") or r.get("model_name") or "")
+            )
         ]
         if not routes:
             return 0
@@ -939,16 +996,7 @@ class AIWorkDispatcher:
                 try:
                     now = asyncio.get_running_loop().time()
                     if now - last_probe >= 60:
-                        await enqueue_work(
-                            parent_task_uuid="runtime",
-                            line="model_probe",
-                            priority="low",
-                            capability="health",
-                            payload={
-                                "operation": "probe_degraded",
-                                "arguments": {"limit": 2},
-                            },
-                        )
+                        await enqueue_runtime_probe()
                         last_probe = now
                     await self.tick()
                 except Exception:
