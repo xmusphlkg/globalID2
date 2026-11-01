@@ -15,7 +15,7 @@ export default defineConfig({
     actionTimeout: 10_000,
     serviceWorkers: "block",
     // Button fades would otherwise be sampled mid-transition by axe on slow runners.
-    reducedMotion: "reduce",
+    contextOptions: { reducedMotion: "reduce" },
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
