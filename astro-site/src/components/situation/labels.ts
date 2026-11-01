@@ -138,6 +138,7 @@ export interface SituationCopy {
   stale: string;
   detailHeading: string;
   otherCountries: string;
+  showEarlier: (shown: number, total: number) => string;
   pickHint: string;
   originalReport: string;
   quote: string;
@@ -207,6 +208,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     stale: '> 90 days',
     detailHeading: 'Alert timeline',
     otherCountries: 'Other countries',
+    showEarlier: (shown, total) => `Show earlier alerts (${shown} of ${total} shown)`,
     pickHint: 'Select a place on the map or in the list to see the alerts reported for this outbreak.',
     originalReport: 'Original report',
     quote: 'From the report',
@@ -274,6 +276,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     stale: '90 天以上',
     detailHeading: '警报时间线',
     otherCountries: '其他国家',
+    showEarlier: (shown, total) => `显示更早的警报（已显示 ${shown} / ${total} 条）`,
     pickHint: '在地图或列表中选择一个地点，查看这起疫情的警报。',
     originalReport: '查看原始报告',
     quote: '报告原话',
@@ -341,6 +344,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     stale: '> 90 jours',
     detailHeading: 'Chronologie des alertes',
     otherCountries: 'Autres pays',
+    showEarlier: (shown, total) => `Afficher les alertes plus anciennes (${shown} sur ${total})`,
     pickHint: 'Sélectionnez un lieu sur la carte ou dans la liste pour voir les alertes de cette flambée.',
     originalReport: 'Rapport original',
     quote: 'Extrait du rapport',

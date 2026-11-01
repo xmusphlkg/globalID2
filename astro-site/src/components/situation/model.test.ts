@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { ageDays, buildAnchors, buildGraph, filterPoints, placePoints, recencyOf, sortPoints } from './model.ts';
+import { WORLD_CENTER, ageDays, buildAnchors, buildGraph, filterPoints, fitView, placePoints, recencyOf, sortPoints } from './model.ts';
 
 const AS_OF = '2026-10-28';
 const point = (id: string, day: string, extra: Record<string, unknown> = {}) =>
@@ -121,4 +121,27 @@ test('timeline graph folds the quietest countries into one shared grey lane', ()
   assert.equal(rows[6].lane, 5);
   assert.deepEqual(rows[5].lines, [{ lane: 5, from: 0, to: 0, part: 'down' }]);
   assert.deepEqual(rows[6].lines, [{ lane: 5, from: 0, to: 0, part: 'up' }]);
+});
+
+test('fitView falls back to the world with no points or no size', () => {
+  assert.deepEqual(fitView([], 800, 600), { center: WORLD_CENTER, zoom: 1 });
+  assert.deepEqual(fitView([{ lng: 10, lat: 10 }], 0, 600), { center: WORLD_CENTER, zoom: 1 });
+});
+
+test('fitView centres a single place and caps the zoom', () => {
+  const view = fitView([{ lng: 36.8, lat: -1.3 }], 800, 600);
+  assert.deepEqual(view.center, [36.8, -1.3]);
+  assert.ok(view.zoom > 1 && view.zoom <= 8);
+});
+
+test('fitView zooms out further for a wider spread and frames its middle', () => {
+  const near = fitView([{ lng: 30, lat: 0 }, { lng: 40, lat: 5 }], 800, 600);
+  const far = fitView([{ lng: -10, lat: 0 }, { lng: 60, lat: 40 }], 800, 600);
+  assert.deepEqual(far.center, [25, 20]);
+  assert.ok(far.zoom < near.zoom);
+});
+
+test('fitView returns the world view for global spreads, including across the dateline', () => {
+  assert.deepEqual(fitView([{ lng: -100, lat: 0 }, { lng: 100, lat: 0 }], 800, 600), { center: WORLD_CENTER, zoom: 1 });
+  assert.deepEqual(fitView([{ lng: 178, lat: -17 }, { lng: -178, lat: -17 }], 800, 600), { center: WORLD_CENTER, zoom: 1 });
 });

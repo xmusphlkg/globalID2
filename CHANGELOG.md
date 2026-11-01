@@ -4,12 +4,21 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.16.2] - 2026-11-01
+
 ### Added
 
+- The Situation alert timeline is drawn like a commit graph. Alerts run newest first, each country has a coloured line, and a line only takes a column while that country is active, then bends into the gap when it ends. A small legend names the colours.
+- The Situation timeline shows the latest 30 alerts and a "show earlier" button for the rest. The row for the selected place is always shown.
+- Places in the Situation export carry coordinates from a gazetteer when the report names an admin area, so points land where the report says instead of at the country centre.
+- A control-panel CI job runs the fixture-only Playwright suite with no password set and uploads screenshots, so reviewers can see the panel without logging in. A Situation page smoke test checks the timeline and the filter-to-map flow.
 - A model route can be limited to one or more clock windows, including a window that crosses midnight. The schedule uses an IANA timezone (default Asia/Shanghai). Outside that window the route is not selected and automatic health probes skip it, so a night-discount model stays idle during the day. An empty schedule remains available all day.
 
 ### Changed
 
+- The Situation map re-centres and re-zooms to the visible places whenever the filters change, leaves the left panel clear, and resets to the world view.
+- The Situation filters are two columns and the legend is a single line with plain age bands.
+- Timeline lane colours were changed to separate them better from the map's age colours.
 - Completion requests no longer send a token cap. Route `max_tokens`, `runtime_completion_max_tokens`, probe budgets, and agent output budgets are not forwarded. Anthropic calls still send that API's required ceiling because the protocol rejects a request without the field. Health probes wait up to 180 seconds by default, and at most 600.
 - The task worker claims ordinary work, data release, and AI parent tasks on separate lanes. AI parent slots follow the sum of routable per-model capacity. A release still blocks crawl writes and AI while it runs.
 - A gateway that rejects an optional parameter (temperature, thinking, response format, and the same class of fields) is retried once without that field. Assistant text is read from the answer content after `<think>` / `<thinking>` blocks are removed, so a new reasoning model does not need its own parser.

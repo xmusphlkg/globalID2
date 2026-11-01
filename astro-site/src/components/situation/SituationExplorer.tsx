@@ -39,6 +39,7 @@ interface Option {
 }
 
 const LIST_LIMIT = 300;
+const TIMELINE_PAGE = 30;
 const OUTBREAK_URL = (id: string) => `/situation/outbreaks/${encodeURIComponent(id)}.json`;
 
 function tally(points: MapPoint[], idOf: (point: MapPoint) => string | null, labelOf: (point: MapPoint) => string): Option[] {
@@ -210,6 +211,7 @@ export default function SituationExplorer({
   const [listMode, setListMode] = useState<ListMode>('auto');
   const [wide, setWide] = useState(true);
   const [outbreaks, setOutbreaks] = useState<Record<string, Remote>>({});
+  const [timelineShown, setTimelineShown] = useState<Record<string, number>>({});
   const [Canvas, setCanvas] = useState<ComponentType<CanvasProps> | null>(null);
   const [canvasFailed, setCanvasFailed] = useState(false);
   const requested = useRef(new Set<string>());
@@ -332,6 +334,7 @@ export default function SituationExplorer({
     return [...seen.values()];
   }, [timeline]);
 
+
   const graph = useMemo(() => buildGraph(timeline, selected?.country_code ?? ''), [timeline, selected?.country_code]);
   const laneNames = useMemo(() => graph.lanes.map(lane => {
     if (lane.other) return copy.otherCountries;
@@ -346,6 +349,9 @@ export default function SituationExplorer({
     return timeline.find(alert => alert.alert_id === selected.alert_id) ?? timeline.find(samePlace) ?? null;
   }, [timeline, selected]);
   const selectedRecency = selected ? recencyOf(selected.published_date, asOf) : 'stale';
+  const headlineIndex = headline ? graph.rows.findIndex(row => row.alert.alert_id === headline.alert_id) : -1;
+  const rowLimit = Math.max((outbreakId ? timelineShown[outbreakId] : 0) || TIMELINE_PAGE, headlineIndex + 1);
+  const visibleRows = graph.rows.slice(0, rowLimit);
 
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) => setFilters(state => ({ ...state, [key]: value }));
   const closeListOnNarrow = () => {
@@ -597,7 +603,7 @@ export default function SituationExplorer({
                     </ul>
                   )}
                   <ol className="sit-timeline">
-                    {graph.rows.map(row => (
+                    {visibleRows.map(row => (
                       <AlertItem
                         key={`${selected.alert_id}:${row.alert.alert_id}`}
                         alert={row.alert}
@@ -611,6 +617,11 @@ export default function SituationExplorer({
                       />
                     ))}
                   </ol>
+                  {graph.rows.length > rowLimit && (
+                    <button type="button" className="sit-text-btn sit-more" onClick={() => outbreakId && setTimelineShown(state => ({ ...state, [outbreakId]: rowLimit + TIMELINE_PAGE }))}>
+                      {copy.showEarlier(rowLimit, graph.rows.length)}
+                    </button>
+                  )}
                 </section>
               )}
             </>

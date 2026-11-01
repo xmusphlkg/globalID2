@@ -137,3 +137,4 @@
 .sit-places > summary { color: rgb(var(--text-muted)); cursor: pointer; font-size: .66rem; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
 .sit-places > summary small { color: rgb(var(--text-faint)); font-size: .66rem; font-weight: 500; margin-left: .3rem; }
 .sit-places > ul { margin-top: .4rem; max-height: 9rem; overflow: auto; }
+.sit-more { justify-self: start; margin-top: .2rem; }

@@ -167,8 +167,45 @@ export function placeLabel(point: Pick<MapPoint, 'admin_area' | 'country_code'>,
   return point.admin_area ? `${point.admin_area}, ${countryName}` : countryName;
 }
 
+/** The world minus Antarctica: [west, north] to [east, south]. */
+export const WORLD_BOUNDS: [[number, number], [number, number]] = [[-180, 84], [180, -58]];
+export const WORLD_CENTER: [number, number] = [(WORLD_BOUNDS[0][0] + WORLD_BOUNDS[1][0]) / 2, (WORLD_BOUNDS[0][1] + WORLD_BOUNDS[1][1]) / 2];
+
+const FIT_PADDING = 1.5;
+const FIT_MIN_SPAN = 12;
+const FIT_MAX_ZOOM = 8;
+
+/**
+ * Centre and zoom that frame every placed point in a viewport of the given
+ * pixel size. The map is flat, so points on both sides of the antimeridian
+ * span nearly 360 degrees and fall back to the whole-world view.
+ */
+export function fitView(
+  placed: { lng: number; lat: number }[],
+  width: number,
+  height: number,
+): { center: [number, number]; zoom: number } {
+  const world = { center: WORLD_CENTER, zoom: 1 };
+  if (!placed.length || width <= 0 || height <= 0) return world;
+  let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (const { lng, lat } of placed) {
+    minLng = Math.min(minLng, lng);
+    maxLng = Math.max(maxLng, lng);
+    minLat = Math.min(minLat, lat);
+    maxLat = Math.max(maxLat, lat);
+  }
+  const spanLng = Math.max(maxLng - minLng, FIT_MIN_SPAN) * FIT_PADDING;
+  const spanLat = Math.max(maxLat - minLat, FIT_MIN_SPAN) * FIT_PADDING;
+  if (spanLng >= 180) return world;
+  const lngRange = WORLD_BOUNDS[1][0] - WORLD_BOUNDS[0][0];
+  const latRange = WORLD_BOUNDS[0][1] - WORLD_BOUNDS[1][1];
+  const cover = Math.max(width / lngRange, height / latRange);
+  const zoom = Math.min(FIT_MAX_ZOOM, Math.max(1, Math.min(width / (cover * spanLng), height / (cover * spanLat))));
+  return { center: [(minLng + maxLng) / 2, (minLat + maxLat) / 2], zoom };
+}
+
 export const MAX_LANES = 6;
-export const LANE_COLORS = ['#14b8a6', '#8b5cf6', '#ec4899', '#3b82f6', '#84cc16', '#f59e0b'];
+export const LANE_COLORS = ['#14b8a6', '#8b5cf6', '#ec4899', '#2563eb', '#84cc16', '#a16207'];
 export const OTHER_LANE_COLOR = '#8d9aa8';
 
 export interface Lane {

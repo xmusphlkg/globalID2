@@ -5,13 +5,13 @@ import ReactEChartsCore from '../../lib/echartsReact';
 import echarts from '../../lib/echartsMap';
 import featureIsoJson from '../../lib/data/world-feature-iso.json' with { type: 'json' };
 import type { Locale, MapPoint } from '../../utils/situationTypes.ts';
-import { RECENCY_COLORS, buildAnchors, placeLabel, placePoints, recencyOf } from './model.ts';
+import { RECENCY_COLORS, WORLD_BOUNDS, WORLD_CENTER, buildAnchors, fitView, placeLabel, placePoints, recencyOf } from './model.ts';
 import { COPY, STATUS_LABELS, countryName, diseaseName, formatDay } from './labels.ts';
 
 const MAP_NAME = 'world-countries-lnglat';
 const WORLD_MAP_URL = '/data/world.json';
-const DEFAULT_BOUNDS: [[number, number], [number, number]] = [[-180, 84], [180, -58]];
-const DEFAULT_CENTER: [number, number] = [(DEFAULT_BOUNDS[0][0] + DEFAULT_BOUNDS[1][0]) / 2, (DEFAULT_BOUNDS[0][1] + DEFAULT_BOUNDS[1][1]) / 2];
+const DEFAULT_BOUNDS = WORLD_BOUNDS;
+const DEFAULT_CENTER = WORLD_CENTER;
 const NAME_TO_ISO = (featureIsoJson as { featureNameToIso: Record<string, string> }).featureNameToIso;
 const ISO_TO_NAME: Record<string, string> = {};
 for (const [name, code] of Object.entries(NAME_TO_ISO)) {
@@ -75,30 +75,6 @@ interface PlacedDatum {
   point: MapPoint;
   symbolSize: number;
   itemStyle: { color: string; borderColor: string; borderWidth: number; opacity: number };
-}
-
-const WORLD_VIEW = { center: DEFAULT_CENTER, zoom: 1 };
-const FIT_PADDING = 1.5;
-const FIT_MIN_SPAN = 12;
-const FIT_MAX_ZOOM = 8;
-
-function fitView(placed: { lng: number; lat: number }[], width: number, height: number) {
-  if (!placed.length || width <= 0 || height <= 0) return WORLD_VIEW;
-  let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
-  for (const { lng, lat } of placed) {
-    minLng = Math.min(minLng, lng);
-    maxLng = Math.max(maxLng, lng);
-    minLat = Math.min(minLat, lat);
-    maxLat = Math.max(maxLat, lat);
-  }
-  const spanLng = Math.max(maxLng - minLng, FIT_MIN_SPAN) * FIT_PADDING;
-  const spanLat = Math.max(maxLat - minLat, FIT_MIN_SPAN) * FIT_PADDING;
-  if (spanLng >= 180) return WORLD_VIEW;
-  const lngRange = DEFAULT_BOUNDS[1][0] - DEFAULT_BOUNDS[0][0];
-  const latRange = DEFAULT_BOUNDS[0][1] - DEFAULT_BOUNDS[1][1];
-  const cover = Math.max(width / lngRange, height / latRange);
-  const zoom = Math.min(FIT_MAX_ZOOM, Math.max(1, Math.min(width / (cover * spanLng), height / (cover * spanLat))));
-  return { center: [(minLng + maxLng) / 2, (minLat + maxLat) / 2] as [number, number], zoom };
 }
 
 export default function SituationMapCanvas({
