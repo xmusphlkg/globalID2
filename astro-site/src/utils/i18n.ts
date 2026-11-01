@@ -5,14 +5,6 @@
 /** Supported interface locales. `fr` covers both France and Canadian users. */
 export const SUPPORTED_LANGS = ['en', 'fr', 'zh'] as const;
 export type Lang = typeof SUPPORTED_LANGS[number];
-/**
- * A user-facing locale preference can carry a regional variant while the
- * content language remains shared.  `fr-CA` currently reuses the reviewed
- * French catalogue and `/fr` routes, but keeps the preference explicit so a
- * Canadian terminology/format pass can be added without another URL tree.
- */
-export const LOCALE_PREFERENCES = ['en', 'fr', 'fr-CA', 'zh'] as const;
-export type LocalePreference = typeof LOCALE_PREFERENCES[number];
 
 export interface LocaleDefinition {
   code: Lang;
@@ -28,58 +20,6 @@ export const LOCALES: readonly LocaleDefinition[] = [
   { code: 'fr', bcp47: 'fr', pathPrefix: '/fr', nativeName: 'Français', names: { en: 'French', fr: 'français', zh: '法语' } },
   { code: 'zh', bcp47: 'zh-CN', pathPrefix: '/zh', nativeName: '中文', names: { en: 'Chinese', fr: 'chinois', zh: '中文' } },
 ] as const;
-
-export interface LocaleVariant {
-  id: LocalePreference;
-  contentLanguage: Lang;
-  bcp47: string;
-  pathPrefix: '' | '/fr' | '/zh';
-  nativeName: string;
-  names: Record<Lang, string>;
-}
-
-/** Selector options, including a regional French preference without duplicating static routes. */
-export const LOCALE_VARIANTS: readonly LocaleVariant[] = [
-  ...LOCALES.map((locale) => ({
-    id: locale.code,
-    contentLanguage: locale.code,
-    bcp47: locale.bcp47,
-    pathPrefix: locale.pathPrefix,
-    nativeName: locale.nativeName,
-    names: locale.names,
-  })),
-  {
-    id: 'fr-CA',
-    contentLanguage: 'fr',
-    bcp47: 'fr-CA',
-    pathPrefix: '/fr',
-    nativeName: 'Français (Canada)',
-    names: { en: 'Canadian French', fr: 'français canadien', zh: '加拿大法语' },
-  },
-] as const;
-
-export function isLocalePreference(value: unknown): value is LocalePreference {
-  return typeof value === 'string' && LOCALE_PREFERENCES.includes(value as LocalePreference);
-}
-
-export function normalizeLocalePreference(value: unknown): LocalePreference {
-  if (isLocalePreference(value)) return value;
-  const normalized = String(value ?? '').trim().toLowerCase();
-  if (normalized === 'fr-ca' || normalized === 'fr_ca' || normalized === 'français canadien') return 'fr-CA';
-  if (normalized === 'fr' || normalized === 'fr-fr' || normalized === 'french' || normalized === 'français') return 'fr';
-  if (normalized === 'zh' || normalized === 'zh-cn' || normalized === 'cn' || normalized === '中文') return 'zh';
-  return 'en';
-}
-
-export function contentLanguageForPreference(value: LocalePreference): Lang {
-  return value === 'fr-CA' ? 'fr' : value;
-}
-
-export function localeVariant(value: LocalePreference): LocaleVariant {
-  const variant = LOCALE_VARIANTS.find((item) => item.id === value);
-  if (!variant) throw new Error(`Unsupported locale preference: ${value}`);
-  return variant;
-}
 
 export const isLang = (value: unknown): value is Lang =>
   typeof value === 'string' && SUPPORTED_LANGS.includes(value as Lang);

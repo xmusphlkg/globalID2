@@ -115,13 +115,14 @@
       "review": {
         "verdict": "needs_editorial_review",
         "issue_codes": [
-          "peer_review_unresolved"
+          "missing_french_finding",
+          "missing_french_gap"
         ],
-        "reviewed_at": "2026-10-31T22:08:31+00:00",
+        "reviewed_at": "2026-11-01T04:14:29+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center",
-        "review_mode": null
+        "review_mode": "cross_model"
       }
     },
     {

@@ -16,7 +16,6 @@ const pathFor = (lang: Lang, path = englishPath) => localizedPath(path, lang);
 const localize = (path: string) => pathFor(currentLanguage, path);
 const copy = createTranslator(currentLanguage);
 const languageOptions = LOCALES;
-const initialLocalePreference = currentLanguage === 'fr' ? 'fr' : currentLanguage;
 const languageMenuLabel = copy('Language', '语言', 'Langue');
 // The Situation module is built on the international authority export.
 const situationVisible = existsSync(resolve('./src/data/situation/international/map.json'));
@@ -76,7 +75,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
             <span data-language-current aria-hidden="true">{currentLanguage === 'zh' ? '中文' : currentLanguage.toUpperCase()}</span><span class="site-language-summary-label">{languageMenuLabel}</span><span class="site-language-chevron" aria-hidden="true">⌄</span>
           </summary>
           <div class="site-language-popover" role="menu" aria-label={languageMenuLabel}>
-            {languageOptions.map(option => <a class:list={['site-language-option', option.code === initialLocalePreference && 'is-current']} href={`${pathFor(option.code)}${Astro.url.search}`} hreflang={option.bcp47} role="menuitem" aria-current={option.code === initialLocalePreference ? 'page' : undefined}>
+            {languageOptions.map(option => <a class:list={['site-language-option', option.code === currentLanguage && 'is-current']} href={`${pathFor(option.code)}${Astro.url.search}`} hreflang={option.bcp47} role="menuitem" aria-current={option.code === currentLanguage ? 'page' : undefined}>
               <span>{option.nativeName}</span><small>{option.names[currentLanguage]}</small>
             </a>)}
           </div>
@@ -98,7 +97,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
           {!hideLanguageToggle && <div class="site-mobile-language" aria-label={languageMenuLabel}>
             <span class="site-mobile-group-label">{languageMenuLabel}</span>
             <div class="site-mobile-language-options">
-              {languageOptions.map(option => <a class:list={['site-mobile-tool', 'focus-ring', option.code === initialLocalePreference && 'is-current']} href={`${pathFor(option.code)}${Astro.url.search}`} hreflang={option.bcp47} aria-current={option.code === initialLocalePreference ? 'page' : undefined}>{option.nativeName}<small>{option.names[currentLanguage]}</small></a>)}
+              {languageOptions.map(option => <a class:list={['site-mobile-tool', 'focus-ring', option.code === currentLanguage && 'is-current']} href={`${pathFor(option.code)}${Astro.url.search}`} hreflang={option.bcp47} aria-current={option.code === currentLanguage ? 'page' : undefined}>{option.nativeName}<small>{option.names[currentLanguage]}</small></a>)}
             </div>
           </div>}
         </div>
@@ -356,4 +355,3 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   searchDialog?.addEventListener('click', event => { if (event.target === searchDialog && searchDialog instanceof HTMLDialogElement) searchDialog.close(); });
   searchDialog?.addEventListener('close', () => searchOpen?.focus());
 </script>
-<script is:inline src="/scripts/locale-preference.js"></script>

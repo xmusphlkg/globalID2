@@ -393,13 +393,6 @@ const diseaseSeo = {
                 <a href={localeHref(`/compare/?d=${encodeURIComponent(diseaseId)}`)} class="site-action-secondary mt-4 ml-2 inline-flex items-center px-4 py-2 rounded-none border text-sm font-semibold transition-all">
                   {zh ? '比较国家趋势' : fr ? 'Comparer les pays' : 'Compare countries'}
                 </a>
-                {countryCount > 0 && (
-                  <div class="mt-6 scroll-mt-24" id="main-trend">
-                    <p class="figure-kicker">{zh ? '国家监测趋势' : fr ? 'Tendances nationales' : 'Country surveillance trends'}</p>
-                    <p class="figure-caption mt-2">{zh ? '选择国家、来源和指标；每条曲线保留原始报告周期与定义。' : fr ? 'Choisissez le pays, la source et la mesure ; chaque courbe conserve sa période et sa définition de déclaration.' : 'Choose a country, source, and measure. Each line retains its published reporting period and definition.'}</p>
-                    <div class="mt-4"><DiseaseCountryCurve client:load dataUrl={diseaseDataUrl} sourceMeta={chartSourceMeta} initialLanguage={locale} initialSelectionIds={preferredCountry ? [preferredCountry] : undefined} /></div>
-                  </div>
-                )}
               </div>
 
               {knowledgeProfileAvailable ? (
@@ -562,6 +555,14 @@ const diseaseSeo = {
         ]} />
 
         {countryCount > 0 && (
+          <section id="main-trend" class="figure-panel scroll-mt-24">
+            <p class="figure-kicker">{zh ? '国家监测趋势' : fr ? 'Tendances nationales' : 'Country surveillance trends'}</p>
+            <p class="figure-caption mt-2">{zh ? '选择国家、来源和指标；每条曲线保留原始报告周期与定义。' : fr ? 'Choisissez le pays, la source et la mesure ; chaque courbe conserve sa période et sa définition de déclaration.' : 'Choose a country, source, and measure. Each line retains its published reporting period and definition.'}</p>
+            <div class="mt-4"><DiseaseCountryCurve client:load dataUrl={diseaseDataUrl} sourceMeta={chartSourceMeta} initialLanguage={locale} initialSelectionIds={preferredCountry ? [preferredCountry] : undefined} /></div>
+          </section>
+        )}
+
+        {countryCount > 0 && (
           <section id="coverage" class="figure-panel scroll-mt-24">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -592,7 +593,7 @@ const diseaseSeo = {
                     class="reporting-country-link focus-ring group"
                     aria-label={zh ? `${nameZh}监测资料` : fr ? `Profil de surveillance de ${nameFr}` : `${nameEn} surveillance profile`}
                   >
-                    <CountryFlag code={code} name={`${nameEn} flag`} sizeClass="h-8 w-11 shrink-0" />
+                    <CountryFlag code={code} name={`${nameEn} flag`} sizeClass="h-5 w-7 shrink-0" />
                     <span class="min-w-0 flex-1">
                       <span
                         class="reporting-country-name"
@@ -601,9 +602,6 @@ const diseaseSeo = {
                       </span>
                       <span class="reporting-country-code">{code}</span>
                     </span>
-                    <svg class="reporting-country-arrow" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                      <path d="m7.5 4.5 5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
                   </a>
                 </li>
               ))}
@@ -652,13 +650,11 @@ const diseaseSeo = {
 </ReportLayout>
 
 <style>
-  .reporting-country-grid { display: grid; grid-template-columns: 1fr; gap: .75rem; margin-top: 1.25rem; }
-  .reporting-country-link { display: flex; min-height: 3.5rem; align-items: center; gap: .75rem; padding: .5rem .75rem; color: rgb(var(--text-strong)); background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); transition: border-color .18s ease, background-color .18s ease; }
+  .reporting-country-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .5rem; margin-top: 1.25rem; }
+  .reporting-country-link { display: flex; min-height: 2.75rem; align-items: center; gap: .5rem; padding: .375rem .5rem; color: rgb(var(--text-strong)); background: rgb(var(--surface)); border: 1px solid rgb(var(--border)); transition: border-color .18s ease, background-color .18s ease; }
   .reporting-country-link:hover { background: rgb(var(--bg-soft)); border-color: rgb(var(--border-soft)); }
   .reporting-country-name { display: block; overflow: hidden; font-size: .875rem; font-weight: 600; line-height: 1.25rem; text-overflow: ellipsis; white-space: nowrap; }
   .reporting-country-code { display: block; margin-top: .125rem; color: rgb(var(--text-faint)); font-family: ui-monospace, monospace; font-size: .625rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
-  .reporting-country-arrow { width: 1rem; height: 1rem; flex: 0 0 auto; color: rgb(var(--text-faint)); transition: color .18s ease, transform .18s ease; }
-  .reporting-country-link:hover .reporting-country-arrow { color: rgb(var(--color-brand)); transform: translateX(2px); }
   .profile-flow { column-count: 1; column-gap: 2rem; }
   .profile-flow-item { display: inline-block; width: 100%; margin: 0 0 1.25rem; padding-left: 1rem; border-left: 2px solid rgb(var(--border) / .56); break-inside: avoid; }
   .disease-profile-details { border-top: 1px solid rgb(var(--border)); }
@@ -666,7 +662,5 @@ const diseaseSeo = {
   .disease-profile-details > summary::-webkit-details-marker { display: none; }
   .disease-profile-details > summary span:last-child { display: grid; min-width: 1.8rem; height: 1.8rem; place-items: center; color: rgb(var(--text-muted)); border: 1px solid rgb(var(--border)); font-family: ui-monospace, monospace; font-size: .64rem; }
   .disease-profile-details .profile-flow { padding-top: .75rem; }
-  @media (min-width: 640px) { .reporting-country-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-  @media (min-width: 1024px) { .reporting-country-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } .profile-flow { column-count: 2; column-gap: 2.5rem; column-rule: 1px solid rgb(var(--border) / .5); } }
-  @media (min-width: 1280px) { .reporting-country-grid { grid-template-columns: repeat(4,minmax(0,1fr)); } }
+  @media (min-width: 1024px) { .profile-flow { column-count: 2; column-gap: 2.5rem; column-rule: 1px solid rgb(var(--border) / .5); } }
 </style>
