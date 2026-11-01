@@ -29,6 +29,10 @@ const copy = zh ? {
   title: '每条证据都可以追溯到来源',
   lead: 'GIDS 整理公共卫生机构发布的传染病监测记录，在保留原始报告语境的同时，让数据更容易查找、理解和复核。',
   updated: `公开数据快照更新于 ${generatedAt}。各来源的覆盖和发布时间不同。`,
+  audience: {
+    report: '统计报告',
+    metrics: ['过去 5 分钟', '累计用户', '累计访问', '自动访问'],
+  },
   onPage: '本页目录',
   nav: ['项目与维护者', '数据与方法', '使用边界', '致谢'],
   story: {
@@ -103,6 +107,10 @@ const copy = zh ? {
   title: 'Evidence you can trace back to its source',
   lead: 'GIDS organizes infectious disease surveillance records published by public health authorities, making them easier to find, understand, and verify while preserving the context of the original reports.',
   updated: `Public data snapshot updated ${generatedAt}. Coverage and publication schedules vary by source.`,
+  audience: {
+    report: 'Audience report',
+    metrics: ['Last 5 min', 'Readers', 'Visits', 'Automated'],
+  },
   onPage: 'On this page',
   nav: ['Project & maintainer', 'Data & methods', 'Responsible use', 'Acknowledgements'],
   story: {
@@ -179,6 +187,7 @@ if (fr) {
     eyebrow: 'Méthodes et à propos', title: 'Chaque preuve remonte à sa source',
     lead: 'GIDS organise les données de surveillance des maladies infectieuses publiées par les autorités de santé, afin de les rendre plus faciles à trouver, comprendre et vérifier tout en préservant le contexte des rapports originaux.',
     updated: `Instantané public mis à jour le ${generatedAt}. La couverture et les calendriers de publication varient selon les sources.`,
+    audience: { report: 'Rapport d’audience', metrics: ['5 dernières min', 'Lecteurs', 'Visites', 'Automatiques'] },
     onPage: 'Sur cette page', nav: ['Projet et responsable', 'Données et méthodes', 'Utilisation responsable', 'Remerciements'],
     story: { ...copy.story, kicker: 'Projet et responsable', title: 'D’un relevé personnel à un projet mondial de surveillance', lead: 'GIDS est né en 2021 pour conserver des données de surveillance qui évoluaient et disparaissaient dans des pages web et feuilles de calcul dispersées. Cette archive personnelle est devenue le projet public que je maintiens aujourd’hui.', paperLabel: 'Lire l’article de 2024', current: 'Période actuelle' },
     maintainer: { ...copy.maintainer, label: 'Responsable', role: 'Doctorant, École de santé publique, Université de Xiamen', bio: 'Je prépare un doctorat en épidémiologie et statistiques de santé, avec une diplomation prévue en 2027. GIDS me permet de réunir questions de santé publique, données réelles, ingénierie logicielle et chaîne de preuves vérifiable.', focus: ['Épidémiologie', 'Statistiques de santé', 'Recherche en vie réelle', 'Données de santé', 'Ingénierie des données', 'IA en santé'], opportunityTitle: 'Je recherche sincèrement un stage et de futures opportunités', opportunityIntro: 'Je recherche activement un stage dès maintenant et j\'envisage aussi un emploi à long terme après mon doctorat. Si votre équipe peut me donner l\'occasion de contribuer à des projets concrets, de continuer à apprendre et de prendre des responsabilités, je serais très heureux d\'en discuter, qu\'il s\'agisse d\'une entreprise pharmaceutique ou biotechnologique ou d\'un organisme de recherche.', opportunityNowLabel: 'Maintenant · Stages', opportunityNow: 'Je souhaite sincèrement effectuer un stage dans une entreprise pharmaceutique ou biotechnologique, ou dans un organisme de recherche. L\'épidémiologie, les statistiques de santé, la recherche en vie réelle, les plateformes de données de santé et l\'IA en santé sont les domaines que je connais le mieux et que je souhaite approfondir. Je reste également ouvert à d\'autres intitulés ou missions lorsque mes compétences peuvent être utiles, et je suis prêt à apprendre rapidement et à m\'investir avec sérieux.', opportunityFutureLabel: 'Après le doctorat · Emploi à long terme', opportunityFuture: 'Après mon doctorat, prévu en 2027, je souhaiterais construire une carrière à long terme dans une entreprise pharmaceutique ou biotechnologique, ou dans un organisme de recherche. J\'étudierai aussi sérieusement les possibilités de postdoctorat lorsque le sujet et l\'équipe correspondent bien. J\'accorderais une valeur particulière à un stage susceptible de devenir une collaboration durable.', opportunityCommitment: 'Je sais que les diplômes et les projets ne sont qu\'un point de départ : la confiance se gagne par le travail concret. Je suis prêt à commencer par des tâches fondamentales et minutieuses, à respecter les méthodes et le rythme de l\'équipe, et à tenir mes engagements avec fiabilité. Face à un sujet nouveau, j\'apprendrai activement et je serai honnête sur les limites de mon expérience actuelle. Que vous ayez un poste, une place de stage ou simplement l\'envie d\'échanger sur une collaboration possible, je vous serais reconnaissant de me contacter. Je lirai chaque message avec attention et répondrai dès que possible. Les dates et modalités du stage sont flexibles ; je peux travailler à distance dans le monde entier ou sur site en Chine continentale ou à Hong Kong.', profile: 'Visiter mon site personnel', email: 'M\'écrire directement' },
@@ -193,17 +202,29 @@ const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[in
 
 <article class="about-page">
   <header class="about-hero">
-    <div class="wrap hero-grid">
-      <div>
-        <p class="eyebrow">{copy.eyebrow}</p>
-        <h1>{copy.title}</h1>
+    <div class="wrap">
+      <div class="hero-grid">
+        <div>
+          <p class="eyebrow">{copy.eyebrow}</p>
+          <h1>{copy.title}</h1>
+        </div>
+        <div>
+          <p class="lead">{copy.lead}</p>
+          <p class="updated">{copy.updated}</p>
+        </div>
       </div>
-      <div>
-        <p class="lead">{copy.lead}</p>
-        <p class="updated">{copy.updated}</p>
+      <div id="gid-live-stats-widget" class="gid-audience">
+        {copy.audience.metrics.map((label, index) => (
+          <div>
+            <p>{label}</p>
+            <strong data-gid-metric={index}>—</strong>
+          </div>
+        ))}
+        <a href="https://stats.globalinfectiousdisease.com/">{copy.audience.report}<span aria-hidden="true"> ↗</span></a>
       </div>
     </div>
   </header>
+  <script is:inline defer src="https://stats.globalinfectiousdisease.com/embed-badge.js" data-api="https://stats.globalinfectiousdisease.com"></script>
 
   <div class="about-nav">
     <div class="wrap">
@@ -364,7 +385,11 @@ const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[in
 <style>
   .about-page { color: rgb(var(--text)); }
   .wrap { width: min(1080px, calc(100% - 2rem)); margin-inline: auto; }
-  .about-hero { padding-block: clamp(3.5rem, 8vw, 6rem); border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+  .about-hero { padding-top: clamp(3.5rem, 8vw, 6rem); padding-bottom: clamp(1.35rem, 3vw, 2rem); border-bottom: 1px solid rgb(var(--border)); background: rgb(var(--surface)); }
+  .gid-audience { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.5rem; margin: clamp(1.75rem, 4vw, 2.75rem) 0 0; padding-top: 1rem; border-top: 1px solid rgb(var(--border)); }
+  .gid-audience p { margin: 0; color: rgb(var(--text-muted)); font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .gid-audience strong { display: block; margin-top: .28rem; color: rgb(var(--text-strong)); font-size: clamp(1.45rem, 2.2vw, 1.85rem); font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.03em; line-height: 1.05; }
+  .gid-audience a { grid-column: 1 / -1; justify-self: start; color: rgb(var(--color-teal)); font-size: .75rem; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
   .hero-grid { display: grid; grid-template-columns: minmax(16rem, .8fr) minmax(0, 1.2fr); gap: clamp(2.5rem, 8vw, 7rem); }
   .eyebrow { margin: 0 0 .65rem; color: rgb(var(--color-teal)); font-size: .7rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
   h1 { max-width: 15ch; margin: 0; color: rgb(var(--text-strong)); font-size: clamp(2.6rem, 5.5vw, 4.5rem); font-weight: 650; line-height: 1.04; }
@@ -427,6 +452,10 @@ const anchorItems = ids.map((id, index) => ({ href: `#${id}`, label: copy.nav[in
   .acknowledgements li { padding: .25rem .45rem; color: rgb(var(--color-teal)); background: rgb(var(--color-teal) / .08); font-size: .68rem; font-weight: 700; }
   .acknowledgement-note { margin: 1rem 0 0; color: rgb(var(--text-muted)); font-size: .72rem; }
 
+  @media (min-width: 760px) {
+    .gid-audience { grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; column-gap: 2rem; }
+    .gid-audience a { grid-column: auto; justify-self: end; margin-bottom: .15rem; }
+  }
   @media (min-width: 640px) {
     .timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .timeline li { display: block; }

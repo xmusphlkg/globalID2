@@ -47,8 +47,19 @@ def test_waiting_release_drains_existing_writers_without_claiming_new_ones():
 
 def test_store_exclusion_does_not_change_other_task_concurrency():
     assert _release_memory_blocked_task_types([TaskType.SEND_EMAIL]) == set()
-    # AI waiting is not a new task state or slot: its parent's existing task
-    # type protects the eventual store just as an actively computing parent.
+    # Knowledge brief upserts still rewrite rows the site reads up front.
     assert TaskType.EXPORT_DATA in _release_memory_blocked_task_types(
         [TaskType.UPDATE_DISEASE_KNOWLEDGE]
     )
+
+
+def test_ai_review_parents_leave_the_release_slot_open():
+    assert TaskType.EXPORT_DATA not in _release_memory_blocked_task_types(
+        [TaskType.AGENT_WORKFLOW]
+    )
+    assert TaskType.EXPORT_DATA not in _release_memory_blocked_task_types(
+        [TaskType.ENRICH_LITERATURE]
+    )
+    blocked = _release_memory_blocked_task_types([], release_waiting=True)
+    assert TaskType.AGENT_WORKFLOW not in blocked
+    assert TaskType.ENRICH_LITERATURE not in blocked

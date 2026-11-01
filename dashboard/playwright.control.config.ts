@@ -14,6 +14,8 @@ export default defineConfig({
     trace: "retain-on-failure",
     actionTimeout: 10_000,
     serviceWorkers: "block",
+    // Button fades would otherwise be sampled mid-transition by axe on slow runners.
+    contextOptions: { reducedMotion: "reduce" },
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
@@ -21,7 +23,7 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["iPhone 15"], browserName: "chromium" } },
   ],
   webServer: {
-    command: "GLOBALID_NEXT_DIST_DIR=.next-control-e2e API_PROXY_TARGET=http://127.0.0.1:1 npm run dev -- --hostname 127.0.0.1 --port 3107",
+    command: "GLOBALID_DISABLE_DEV_INDICATOR=1 GLOBALID_NEXT_DIST_DIR=.next-control-e2e API_PROXY_TARGET=http://127.0.0.1:1 npm run dev -- --hostname 127.0.0.1 --port 3107",
     url: "http://127.0.0.1:3107",
     reuseExistingServer: false,
     timeout: 120_000,

@@ -157,19 +157,16 @@ test('locale switch changes URL, document language, title, and canonical', async
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/zh\/diseases\/dengue\/$/);
 });
 
-test('Canadian French preference persists on the shared French route', async ({ page }) => {
-  await page.goto('/fr/diseases/dengue/');
+test('language menu lists exactly the three supported languages', async ({ page }) => {
+  await page.goto('/diseases/dengue/');
   const desktopLocaleMenu = page.locator('.site-language-selector');
   if (await desktopLocaleMenu.isVisible()) {
     await desktopLocaleMenu.locator('summary').click();
-    await desktopLocaleMenu.locator('a[hreflang="fr-CA"]').click();
+    await expect(desktopLocaleMenu.locator('.site-language-option')).toHaveCount(3);
   } else {
     await page.locator('#mobile-menu-toggle').click();
-    await page.locator('.site-mobile-language-options a[hreflang="fr-CA"]').click();
+    await expect(page.locator('.site-mobile-language-options a')).toHaveCount(3);
   }
-  await expect(page).toHaveURL(/\/fr\/diseases\/dengue\/$/);
-  await expect(page.locator('html')).toHaveAttribute('lang', 'fr-CA');
-  await expect(page.locator('[data-locale-choice="fr-CA"]').first()).toHaveAttribute('aria-current', 'page');
 });
 
 test('French report disease pages expose localized analysis without placeholders', async ({ page }, testInfo) => {

@@ -1004,15 +1004,10 @@ class BaseAgent(ABC):
 
                     if quota_related:
                         saw_quota_failure = True
-                        quota_wait_candidates.append(max(1, int(cooldown_seconds)))
-                        logger.warning(
-                            f"Detected quota/rate-limit issue for model '{self.model}', "
-                            f"will cool down this route for {cooldown_seconds}s and switch to the next model if available."
-                        )
-                        if route is None:
-                            BaseAgent._mark_model_cooling_down(self.model, cooldown_seconds)
-                        BaseAgent._mark_route_cooling_down(route_key, cooldown_seconds)
                         if route:
+                            # The Model Center escalates the cooldown per
+                            # consecutive limit; the local marker must follow
+                            # that value instead of the flat configured ceiling.
                             try:
                                 persisted = await mark_route_rate_limited(
                                     route,
@@ -1024,6 +1019,14 @@ class BaseAgent(ABC):
                                 logger.warning(
                                     f"Failed to persist route cooldown for '{route_key}': {persist_exc}"
                                 )
+                        quota_wait_candidates.append(max(1, int(cooldown_seconds)))
+                        logger.warning(
+                            f"Detected quota/rate-limit issue for model '{self.model}', "
+                            f"will cool down this route for {cooldown_seconds}s and switch to the next model if available."
+                        )
+                        if route is None:
+                            BaseAgent._mark_model_cooling_down(self.model, cooldown_seconds)
+                        BaseAgent._mark_route_cooling_down(route_key, cooldown_seconds)
                         BaseAgent.AVAILABLE_MODEL_ROUTES = None
                         BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
                         break

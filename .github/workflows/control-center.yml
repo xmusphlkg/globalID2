@@ -41,3 +41,37 @@ jobs:
       - run: npm run build
         working-directory: dashboard
       - run: PYTHONPATH=. venv/bin/pytest -q tests/unit/test_control_plane_http_contract.py tests/unit/test_control_plane_runtime.py tests/unit/test_scheduler_shutdown.py
+
+  panel-preview:
+    name: Control panel fixture run and screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # CI never sets a panel password or API key, so the lock screen stays open
+      # and reviewers can see the panel from the uploaded screenshots.
+      DASHBOARD_PANEL_PASSWORD: ""
+      DASHBOARD_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+        working-directory: dashboard
+      - run: npx playwright install --with-deps chromium
+        working-directory: dashboard
+      - name: Run the fixture-only control panel suite
+        run: npx playwright test -c playwright.control.config.ts
+        working-directory: dashboard
+      - name: Upload panel screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-panel-screenshots
+          path: |
+            /tmp/globalid-workflow-center/results/**/*.png
+            /tmp/globalid-workflow-center/playwright-results.json
+          if-no-files-found: warn
+          retention-days: 14

@@ -26,6 +26,57 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.16.2',
+    date: '2026-11-01',
+    titleEn: 'The Situation timeline reads like a commit graph',
+    titleZh: '态势时间线改为提交图样式',
+    titleFr: 'La chronologie de Situation prend la forme d’un graphe de commits',
+    summaryEn:
+      'Alerts in the Situation timeline now run newest first, with one coloured line per country that bends into the gap when the country ends. Long outbreaks show the latest 30 alerts first, and points on the map land where the report places them.',
+    summaryZh:
+      '态势时间线按时间从新到旧排列，每个国家一条彩色线，国家结束后线条会弯曲并入空位。较长的疫情默认显示最近 30 条警报，地图上的点也更贴近报告所述的位置。',
+    summaryFr:
+      'La chronologie de Situation affiche les alertes de la plus récente à la plus ancienne, avec une ligne colorée par pays qui se referme lorsque le pays n’a plus d’alerte. Les longues épidémies montrent d’abord les 30 dernières alertes, et les points de la carte se placent là où le rapport les situe.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveautés',
+        items: [
+          {
+            en: 'The alert timeline is drawn like a commit graph. Each country has its own coloured line, and a small legend names the colours.',
+            zh: '警报时间线仿照提交图绘制，每个国家一条彩色线，并附有标明颜色的小图例。',
+            fr: 'La chronologie des alertes est dessinée comme un graphe de commits. Chaque pays a sa propre ligne colorée, avec une petite légende.',
+          },
+          {
+            en: 'A long timeline shows the latest 30 alerts and a button for earlier ones. The row for the selected place is always shown.',
+            zh: '较长的时间线默认显示最近 30 条警报，其余通过按钮展开。所选地点对应的那一条始终可见。',
+            fr: 'Une longue chronologie affiche les 30 dernières alertes et un bouton pour les plus anciennes. La ligne du lieu sélectionné reste toujours visible.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'When a report names an admin area, its point is placed there instead of at the country centre.',
+            zh: '报告指明行政区时，地图上的点会落在该行政区，而不是国家中心。',
+            fr: 'Lorsqu’un rapport nomme une subdivision, son point est placé à cet endroit plutôt qu’au centre du pays.',
+          },
+          {
+            en: 'The map re-centres on the visible places when the filters change, and the filters are more compact.',
+            zh: '筛选条件变化时，地图会重新对准可见的地点，筛选区也更紧凑。',
+            fr: 'La carte se recentre sur les lieux visibles lorsque les filtres changent, et les filtres sont plus compacts.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.16.1',
     date: '2026-10-31',
     titleEn: 'The situation map fills the page',

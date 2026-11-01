@@ -143,3 +143,76 @@ async def test_new_foreground_work_stops_the_cycle_between_lanes():
 
     assert calls == ["articles"]
     assert cycle["status"] == "yielded"
+
+
+def _stream_lane(monkeypatch, tasks):
+    from types import SimpleNamespace
+
+    from src.services import idle_backlog_service as idle
+    from src.services import model_operations
+
+    queued = []
+
+    async def enqueue(operation, arguments, *, priority):
+        uuid = f"task-{len(queued)}"
+        queued.append(uuid)
+        return SimpleNamespace(task_uuid=uuid)
+
+    async def load(uuid):
+        return tasks.get(uuid)
+
+    monkeypatch.setattr(model_operations, "enqueue_model_operation", enqueue)
+    monkeypatch.setattr(idle, "_load_task", load)
+    return idle.stream_lane("articles", "articles"), queued
+
+
+def _task(status, result=None):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(task_uuid="t", status=status, output_data={"result": result} if result else {})
+
+
+async def test_stream_lane_waits_on_its_task_then_relaunches_after_progress(monkeypatch):
+    from src.domain import TaskStatus
+
+    tasks = {}
+    lane, queued = _stream_lane(monkeypatch, tasks)
+    service, _ = make_service([lane])
+
+    await service.process_once()
+    assert queued == ["task-0"] and lane.next_at <= time.monotonic()
+
+    tasks["task-0"] = _task(TaskStatus.RUNNING)
+    await service.process_once()
+    assert queued == ["task-0"]  # still running: no second stream
+
+    tasks["task-0"] = _task(TaskStatus.COMPLETED, {"published": 3, "rejected": 2})
+    await service.process_once()
+    assert queued == ["task-0", "task-1"]  # progress: next stream starts at once
+    assert lane.pass_finalised == 5
+
+
+async def test_stream_lane_rests_when_its_task_made_no_progress(monkeypatch):
+    from src.domain import TaskStatus
+
+    tasks = {"task-0": _task(TaskStatus.COMPLETED, {"deferred": 9})}
+    lane, queued = _stream_lane(monkeypatch, tasks)
+    service, _ = make_service([lane])
+
+    await service.process_once()
+    await service.process_once()
+    assert queued == ["task-0"]
+    assert lane.next_at > time.monotonic() + 60
+
+
+async def test_stream_lane_failed_task_backs_off(monkeypatch):
+    from src.domain import TaskStatus
+
+    tasks = {"task-0": _task(TaskStatus.FAILED)}
+    lane, queued = _stream_lane(monkeypatch, tasks)
+    service, _ = make_service([lane])
+
+    await service.process_once()
+    cycle = await service.process_once()
+    assert queued == ["task-0"]
+    assert lane.failures == 1 and "failed" in cycle["lanes"]["articles"]["outage"]

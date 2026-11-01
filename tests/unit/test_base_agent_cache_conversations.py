@@ -216,6 +216,11 @@ def _stub_persisted_runtime_health(monkeypatch):
     async def _call_log(*_args, **_kwargs):
         return None
 
+    async def _rate_limited(*_args, **_kwargs):
+        # No persisted value: the agent keeps its configured cooldown.
+        return {}
+
+    monkeypatch.setattr("src.ai.agents.base.mark_route_rate_limited", _rate_limited)
     monkeypatch.setattr("src.ai.agents.base.record_route_runtime_success", _success)
     monkeypatch.setattr("src.ai.agents.base.record_route_runtime_failure", _failure)
     monkeypatch.setattr("src.ai.agents.base.record_model_call_log", _call_log)

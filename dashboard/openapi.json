@@ -14689,7 +14689,7 @@
             "name": "structured",
             "required": false,
             "schema": {
-              "default": true,
+              "default": false,
               "title": "Structured",
               "type": "boolean"
             }
@@ -15112,7 +15112,7 @@
             "name": "structured",
             "required": false,
             "schema": {
-              "default": true,
+              "default": false,
               "title": "Structured",
               "type": "boolean"
             }

@@ -39,6 +39,7 @@ from src.services.global_sources.catalogue import (
     iso_week,
 )
 
+from .gazetteer import locate
 from .pipeline import utc_now
 
 SCHEMA_VERSION = "gids.situation_alerts.v1"
@@ -190,11 +191,15 @@ def map_marker(point: dict[str, Any]) -> dict[str, Any]:
     situation page. The outbreak timeline already serves them on demand.
     """
 
-    return {
+    marker = {
         key: point.get(key)
         for key in _MARKER_FIELDS
         if point.get(key) is not None
     }
+    location = locate(point.get("country_code"), point.get("admin_area"))
+    if location:
+        marker.update(lat=location.lat, lng=location.lng, geo_precision=location.precision)
+    return marker
 
 
 def facets(points: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:

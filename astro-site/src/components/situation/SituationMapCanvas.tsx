@@ -5,12 +5,13 @@ import ReactEChartsCore from '../../lib/echartsReact';
 import echarts from '../../lib/echartsMap';
 import featureIsoJson from '../../lib/data/world-feature-iso.json' with { type: 'json' };
 import type { Locale, MapPoint } from '../../utils/situationTypes.ts';
-import { RECENCY_COLORS, buildAnchors, placeLabel, placePoints, recencyOf } from './model.ts';
+import { RECENCY_COLORS, WORLD_BOUNDS, WORLD_CENTER, buildAnchors, fitView, placeLabel, placePoints, recencyOf } from './model.ts';
 import { COPY, STATUS_LABELS, countryName, diseaseName, formatDay } from './labels.ts';
 
 const MAP_NAME = 'world-countries-lnglat';
 const WORLD_MAP_URL = '/data/world.json';
-const DEFAULT_BOUNDS: [[number, number], [number, number]] = [[-180, 84], [180, -58]];
+const DEFAULT_BOUNDS = WORLD_BOUNDS;
+const DEFAULT_CENTER = WORLD_CENTER;
 const NAME_TO_ISO = (featureIsoJson as { featureNameToIso: Record<string, string> }).featureNameToIso;
 const ISO_TO_NAME: Record<string, string> = {};
 for (const [name, code] of Object.entries(NAME_TO_ISO)) {
@@ -30,6 +31,7 @@ export interface CanvasProps {
   locale: Locale;
   regions: RegionTint[];
   notes: Record<string, string>;
+  insetLeftRem?: number;
   onSelect: (alertId: string) => void;
   onSelectCountry: (code: string) => void;
 }
@@ -83,10 +85,12 @@ export default function SituationMapCanvas({
   locale,
   regions,
   notes,
+  insetLeftRem = 0,
   onSelect,
   onSelectCountry,
 }: CanvasProps) {
   const copy = COPY[locale];
+  const insetLeft = Math.round(insetLeftRem * (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16));
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const [chart, setChart] = useState<any>(null);
@@ -210,7 +214,8 @@ export default function SituationMapCanvas({
         map: MAP_NAME,
         roam: true,
         boundingCoords: DEFAULT_BOUNDS,
-        left: 0,
+        preserveAspect: 'cover',
+        left: insetLeft,
         right: 0,
         top: 0,
         bottom: 0,
@@ -230,7 +235,7 @@ export default function SituationMapCanvas({
           : null,
       ].filter(Boolean),
     };
-  }, [geo, placed, asOf, selectedId, highlighted, locale, palette, regions, notes, reducedMotion, maxTint, theme]);
+  }, [geo, placed, asOf, selectedId, highlighted, locale, palette, regions, notes, reducedMotion, maxTint, theme, insetLeft]);
 
   const events = useMemo(
     () => ({
@@ -247,8 +252,18 @@ export default function SituationMapCanvas({
     [onSelect, onSelectCountry],
   );
 
+  const placedKey = useMemo(() => placed.map(item => item.point.alert_id).join('|'), [placed]);
+
+  useEffect(() => {
+    if (!chart || !geo) return;
+    const view = fitView(placed, chart.getWidth() - insetLeft, chart.getHeight());
+    chart.setOption({ geo: view });
+    // Refit only when the visible set changes, not on selection or theme updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chart, geo, placedKey]);
+
   const zoom = (factor: number) => chart?.dispatchAction({ type: 'geoRoam', componentType: 'geo', geoIndex: 0, zoom: factor });
-  const reset = () => chart?.setOption({ geo: { zoom: 1, boundingCoords: DEFAULT_BOUNDS } });
+  const reset = () => chart?.setOption({ geo: { zoom: 1, center: DEFAULT_CENTER } });
 
   if (failed) return <p className="sit-note" role="status">{copy.mapFailed}</p>;
   if (!geo) return <p className="sit-note" role="status">{copy.mapLoading}</p>;

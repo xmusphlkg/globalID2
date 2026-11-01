@@ -57,6 +57,7 @@ class Lane:
     next_at: float = 0.0
     failures: int = 0
     pass_finalised: int = 0
+    task_uuid: str | None = None
 
 
 async def foreground_pressure(max_running_ai_tasks: int) -> str | None:
@@ -98,12 +99,43 @@ async def _load_backlog_counts() -> dict[str, int]:
     return counts
 
 
+async def _load_task(task_uuid: str) -> Task | None:
+    async with get_database() as db:
+        return (await db.execute(select(Task).where(Task.task_uuid == task_uuid))).scalar_one_or_none()
+
+
+def _finalised(task: Task) -> int:
+    """Rows a finished stream decided; other operations report no count."""
+
+    result = (task.output_data or {}).get("result") if isinstance(task.output_data, dict) else None
+    if not isinstance(result, dict):
+        return 0
+    return sum(int(result.get(key) or 0) for key in ("published", "archived", "rejected"))
+
+
 def _queued_lane(name: str, operation: str, options) -> Lane:
     async def work(lane: Lane, slice_size: int, workers: int) -> SliceResult:
         from src.services.model_operations import enqueue_model_operation
         from src.domain import TaskPriority
+
+        # The lane follows its own worker task. Resting right after enqueueing
+        # left the backlog idle for the rest interval once that task finished.
+        if lane.task_uuid:
+            task = await _load_task(lane.task_uuid)
+            if task is not None and task.status in _ACTIVE_TASK_STATUSES:
+                return SliceResult(detail={"running_task_uuid": lane.task_uuid})
+            lane.task_uuid = None
+            if task is not None:
+                if task.status == TaskStatus.FAILED:
+                    return SliceResult(outage=f"task {task.task_uuid} failed")
+                finalised = _finalised(task)
+                if task.status != TaskStatus.COMPLETED or not finalised:
+                    # No progress: rest instead of re-claiming rows that keep deferring.
+                    return SliceResult(exhausted=True, detail={"finished_task_uuid": task.task_uuid})
+                lane.pass_finalised += finalised
         task = await enqueue_model_operation(operation, options(slice_size, workers), priority=TaskPriority.LOW)
-        return SliceResult(0, 1, True, None, {"queued_task_uuid": task.task_uuid})
+        lane.task_uuid = task.task_uuid
+        return SliceResult(detail={"queued_task_uuid": task.task_uuid})
     return Lane(name, work)
 
 

@@ -209,7 +209,35 @@ def _rate_limit_state(payload: Any, now: Optional[datetime] = None) -> Dict[str,
     }
 
 
+_RATE_LIMIT_BASE_COOLDOWN_SECONDS = 30
+# A rate limit older than this no longer counts toward the escalation streak.
+_RATE_LIMIT_STREAK_WINDOW_SECONDS = 600
+
+
+def _rate_limit_streak(payload: Any, now: datetime) -> int:
+    """Consecutive rate limits since the last success, within the streak window."""
+    state = _extract_routing_state(payload)
+    last = _parse_datetime(state.get("last_rate_limit_at"))
+    if last is None or (now - last).total_seconds() > _RATE_LIMIT_STREAK_WINDOW_SECONDS:
+        return 0
+    try:
+        return max(0, int(state.get("rate_limit_streak") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _escalating_rate_limit_cooldown(streak: int, ceiling: int) -> int:
+    """30s for an isolated limit, doubling per consecutive limit up to ``ceiling``.
+
+    Pooled upstream accounts fail one request at a time. A full ceiling on the
+    first failure parked whole routes while their siblings still had quota.
+    """
+    ceiling = max(1, int(ceiling))
+    return min(ceiling, _RATE_LIMIT_BASE_COOLDOWN_SECONDS * 2 ** min(max(0, streak), 10))
+
+
 def _mark_payload_rate_limited(payload: Any, cooldown_until: datetime, occurred_at: datetime) -> Dict[str, Any]:
+    streak = _rate_limit_streak(payload, occurred_at)
     state = _extract_routing_state(payload)
     try:
         current_count = int(state.get("rate_limit_count") or 0)
@@ -218,6 +246,7 @@ def _mark_payload_rate_limited(payload: Any, cooldown_until: datetime, occurred_
     state["cooldown_until"] = cooldown_until.isoformat()
     state["last_rate_limit_at"] = occurred_at.isoformat()
     state["rate_limit_count"] = current_count + 1
+    state["rate_limit_streak"] = streak + 1
     return _write_routing_state(payload, state)
 
 
@@ -227,6 +256,7 @@ def _clear_payload_rate_limit(payload: Any, recovered_at: Optional[datetime] = N
         return dict(payload or {}) if isinstance(payload, dict) else {}
 
     state.pop("cooldown_until", None)
+    state.pop("rate_limit_streak", None)
     if recovered_at is not None:
         state["last_recovered_at"] = recovered_at.isoformat()
     return _write_routing_state(payload, state)
@@ -2015,18 +2045,22 @@ def _validate_structured_test_response(text: str) -> None:
             raise RuntimeError("Structured workload probe returned confidence outside the 0..1 range")
 
 
-def _test_timeout_seconds(route: Dict[str, Any]) -> float:
+def _test_timeout_seconds(route: Dict[str, Any], *, structured: bool = False) -> float:
+    # The marker reply is a few tokens; a minute is ample even for a reasoning
+    # model. The structured probe writes three summaries and keeps the longer
+    # production-like deadline. A configured value overrides both.
+    default = 180 if structured else 60
     provider_config = route.get("extra_config")
     provider_config = provider_config if isinstance(provider_config, dict) else {}
     model_params = route.get("extra_params")
     model_params = model_params if isinstance(model_params, dict) else {}
     raw = model_params.get("health_check_timeout_seconds")
     if raw in (None, ""):
-        raw = provider_config.get("health_check_timeout_seconds", 180)
+        raw = provider_config.get("health_check_timeout_seconds", default)
     try:
         return float(max(10, min(600, int(raw))))
     except (TypeError, ValueError):
-        return 180.0
+        return float(default)
 
 
 async def _test_openai_compatible(
@@ -2042,7 +2076,7 @@ async def _test_openai_compatible(
             api_key=route.get("api_key"),
             base_url=candidate_base_url,
             default_headers=(route.get("extra_headers") or None),
-            timeout=_test_timeout_seconds(route),
+            timeout=_test_timeout_seconds(route, structured=structured),
             max_retries=0,
         )
         prompt = _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT
@@ -2113,14 +2147,16 @@ async def _test_anthropic(
     prompt = _STRUCTURED_MODEL_TEST_PROMPT if structured else _MODEL_TEST_PROMPT
     client = AsyncAnthropic(
         api_key=route.get("api_key"),
-        timeout=_test_timeout_seconds(route),
+        timeout=_test_timeout_seconds(route, structured=structured),
         max_retries=0,
     )
     response = await client.messages.create(
         model=model_name,
         system="You are validating an evidence-summarization model used by a public-health literature pipeline.",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=ANTHROPIC_PROTOCOL_MAX_TOKENS,
+        # The marker reply is a handful of tokens; asking for the protocol
+        # ceiling only lets a slow gateway hold the probe open.
+        max_tokens=ANTHROPIC_PROTOCOL_MAX_TOKENS if structured else 1024,
         temperature=0,
     )
     text = visible_assistant_text(
@@ -2211,6 +2247,12 @@ async def update_model_check_result(model_id: int, status: str, message: str) ->
                 duration_seconds=None,
             )
         await db.commit()
+    if status == "available":
+        # Probes run in the worker process, so a proven recovery must also lift
+        # the in-process cooldown the dispatcher and transport still honour.
+        from src.ai.agents.base import BaseAgent
+
+        BaseAgent.ROUTE_COOLDOWNS.pop(str(model.model_key or model.model_name or ""), None)
 
 
 async def update_provider_check_result(provider_id: int, status: str, message: str) -> None:
@@ -2278,18 +2320,21 @@ async def mark_route_rate_limited(
 ) -> Dict[str, Any]:
     """Persist a model-only cooldown after a runtime rate-limit error."""
     route_extra_params = route.get("extra_params") or {}
-    cooldown_seconds = retry_after_seconds
-    if cooldown_seconds is None:
-        cooldown_seconds = int(
-            route_extra_params.get("rate_limit_cooldown_seconds")
-            or get_config().ai.rate_limit_cooldown_seconds
-        )
+    # The configured value is now the escalation ceiling, not the first cooldown.
+    ceiling = int(
+        route_extra_params.get("rate_limit_cooldown_seconds")
+        or get_config().ai.rate_limit_cooldown_seconds
+    )
 
     now = _utcnow()
-    cooldown_until = now + timedelta(seconds=max(1, int(cooldown_seconds)))
 
     async with get_db() as db:
-        model = await db.get(AIModelConfig, int(route["model_id"]))
+        model = await db.get(AIModelConfig, int(route["model_id"]), with_for_update=True)
+        cooldown_seconds = retry_after_seconds
+        if cooldown_seconds is None:
+            streak = _rate_limit_streak(model.extra_params if model is not None else None, now)
+            cooldown_seconds = _escalating_rate_limit_cooldown(streak, ceiling)
+        cooldown_until = now + timedelta(seconds=max(1, int(cooldown_seconds)))
 
         if model is not None:
             if str(model.last_check_status or "").lower() != "unavailable":
@@ -2579,13 +2624,47 @@ async def check_provider_by_id(provider_id: int, *, structured: bool = True) -> 
         await update_provider_check_result(provider_id, result["status"], result["message"])
         return result
 
-    model_results: List[Dict[str, Any]] = []
-    for model in models:
-        result = await check_model_by_id(model.id, structured=structured)
-        if result.get("success"):
-            return result
+    # Probe models in parallel under the same provider bound as check_all_models.
+    # The semaphore is FIFO, so configured priority still decides start order,
+    # and the first success cancels the remaining probes.
+    provider = models[0].provider
+    provider_capacity = sum(
+        _positive_int(
+            (model.extra_params if isinstance(model.extra_params, dict) else {}).get(
+                "runtime_max_concurrency"
+            ),
+            _DEFAULT_MODEL_ADMISSION_MAX_CONCURRENCY,
+            maximum=_MODEL_CONCURRENCY_CEILING,
+        )
+        for model in models
+    )
+    semaphore = asyncio.Semaphore(
+        _health_check_concurrency(
+            {
+                "extra_config": (provider.extra_config if provider else None) or {},
+                "runtime_provider_max_capacity": provider_capacity,
+            }
+        )
+    )
+
+    async def _check(model: AIModelConfig) -> Dict[str, Any]:
+        async with semaphore:
+            result = await check_model_by_id(model.id, structured=structured)
         result["model_name"] = model.model_name
-        model_results.append(result)
+        return result
+
+    tasks = [asyncio.create_task(_check(model)) for model in models]
+    model_results: List[Dict[str, Any]] = []
+    try:
+        for finished in asyncio.as_completed(tasks):
+            result = await finished
+            if result.get("success"):
+                return result
+            model_results.append(result)
+    finally:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
     status, message = _provider_check_result_from_model_results(model_results)
     result = {"success": False, "status": status, "message": message, "models": model_results}
     await update_provider_check_result(provider_id, result["status"], result["message"])

@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { ageDays, buildAnchors, filterPoints, placePoints, recencyOf, sortPoints } from './model.ts';
+import { WORLD_CENTER, ageDays, buildAnchors, buildGraph, filterPoints, fitView, placePoints, recencyOf, sortPoints } from './model.ts';
 
 const AS_OF = '2026-10-28';
 const point = (id: string, day: string, extra: Record<string, unknown> = {}) =>
@@ -57,4 +57,91 @@ test('anchors use the largest landmass and points in one country fan out', () =>
   assert.deepEqual([placed[0].lng, placed[0].lat], [5, 5]);
   assert.notDeepEqual([placed[1].lng, placed[1].lat], [5, 5]);
   assert.deepEqual(unplaced.map(item => item.alert_id), ['c']);
+});
+
+test('exported coordinates win over the country anchor and do not use its fan-out', () => {
+  const anchors = { CD: [5, 5] as [number, number] };
+  const rows = [
+    point('a', '2026-10-27', { lat: 1.57, lng: 30.25 }),
+    point('b', '2026-10-27'),
+    point('c', '2026-10-27', { lat: 1.57, lng: 30.25 }),
+  ];
+  const { placed } = placePoints(rows, anchors);
+  const byId = Object.fromEntries(placed.map(item => [item.point.alert_id, item]));
+  assert.deepEqual([byId.a.lng, byId.a.lat], [30.25, 1.57]);
+  assert.deepEqual([byId.b.lng, byId.b.lat], [5, 5]);
+  assert.notDeepEqual([byId.c.lng, byId.c.lat], [30.25, 1.57]);
+  assert.ok(Math.abs(byId.c.lng - 30.25) < 1 && Math.abs(byId.c.lat - 1.57) < 1);
+});
+
+test('timeline graph packs columns: a country holds one only while it is active, and lines bend left when one ends', () => {
+  const row = (id: string, day: string, code: string) => ({ alert_id: id, published_date: day, country_code: code });
+  const { lanes, rows, width } = buildGraph([
+    row('a', '2026-10-01', 'KE'),
+    row('b', '2026-10-27', 'CD'),
+    row('c', '2026-10-20', 'KE'),
+    row('d', '2026-10-10', 'CD'),
+    row('e', '2026-10-15', 'NG'),
+  ], 'KE');
+  assert.deepEqual(rows.map(item => item.alert.alert_id), ['b', 'c', 'e', 'd', 'a']);
+  assert.deepEqual(lanes.map(lane => lane.key), ['KE', 'CD', 'NG']);
+  assert.equal(new Set(lanes.map(lane => lane.color)).size, 3);
+  assert.deepEqual(rows.map(item => item.node), [0, 1, 2, 0, 0]);
+  assert.deepEqual(rows[0].lines, [{ lane: 1, from: 0, to: 0, part: 'down' }]);
+  assert.deepEqual(rows[2].lines, [
+    { lane: 1, from: 0, to: 0, part: 'through' },
+    { lane: 0, from: 1, to: 1, part: 'through' },
+  ]);
+  assert.deepEqual(rows[3].lines, [
+    { lane: 0, from: 1, to: 0, part: 'through' },
+    { lane: 1, from: 0, to: 0, part: 'up' },
+  ]);
+  assert.deepEqual(rows[4].lines, [{ lane: 0, from: 0, to: 0, part: 'up' }]);
+  assert.equal(width, 3);
+});
+
+test('timeline graph stays one column wide when countries never overlap', () => {
+  const day = (value: number) => `2026-10-${String(value).padStart(2, '0')}`;
+  const alerts = ['A1', 'B2', 'C3'].flatMap((code, index) => [
+    { published_date: day(20 - index * 5), country_code: code },
+    { published_date: day(19 - index * 5), country_code: code },
+  ]);
+  const { rows, width } = buildGraph(alerts);
+  assert.equal(width, 1);
+  assert.ok(rows.every(item => item.node === 0));
+});
+
+test('timeline graph folds the quietest countries into one shared grey lane', () => {
+  const codes = ['A1', 'B2', 'C3', 'D4', 'E5', 'F6', 'G7'];
+  const alerts = codes.map((code, index) => ({ published_date: `2026-10-${String(20 - index).padStart(2, '0')}`, country_code: code }));
+  const { lanes, rows } = buildGraph(alerts);
+  assert.equal(lanes.length, 6);
+  assert.equal(lanes[5].other, true);
+  assert.equal(rows[5].lane, 5);
+  assert.equal(rows[6].lane, 5);
+  assert.deepEqual(rows[5].lines, [{ lane: 5, from: 0, to: 0, part: 'down' }]);
+  assert.deepEqual(rows[6].lines, [{ lane: 5, from: 0, to: 0, part: 'up' }]);
+});
+
+test('fitView falls back to the world with no points or no size', () => {
+  assert.deepEqual(fitView([], 800, 600), { center: WORLD_CENTER, zoom: 1 });
+  assert.deepEqual(fitView([{ lng: 10, lat: 10 }], 0, 600), { center: WORLD_CENTER, zoom: 1 });
+});
+
+test('fitView centres a single place and caps the zoom', () => {
+  const view = fitView([{ lng: 36.8, lat: -1.3 }], 800, 600);
+  assert.deepEqual(view.center, [36.8, -1.3]);
+  assert.ok(view.zoom > 1 && view.zoom <= 8);
+});
+
+test('fitView zooms out further for a wider spread and frames its middle', () => {
+  const near = fitView([{ lng: 30, lat: 0 }, { lng: 40, lat: 5 }], 800, 600);
+  const far = fitView([{ lng: -10, lat: 0 }, { lng: 60, lat: 40 }], 800, 600);
+  assert.deepEqual(far.center, [25, 20]);
+  assert.ok(far.zoom < near.zoom);
+});
+
+test('fitView returns the world view for global spreads, including across the dateline', () => {
+  assert.deepEqual(fitView([{ lng: -100, lat: 0 }, { lng: 100, lat: 0 }], 800, 600), { center: WORLD_CENTER, zoom: 1 });
+  assert.deepEqual(fitView([{ lng: 178, lat: -17 }, { lng: -178, lat: -17 }], 800, 600), { center: WORLD_CENTER, zoom: 1 });
 });
