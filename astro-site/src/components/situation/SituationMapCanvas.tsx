@@ -11,6 +11,7 @@ import { COPY, STATUS_LABELS, countryName, diseaseName, formatDay } from './labe
 const MAP_NAME = 'world-countries-lnglat';
 const WORLD_MAP_URL = '/data/world.json';
 const DEFAULT_BOUNDS: [[number, number], [number, number]] = [[-180, 84], [180, -58]];
+const DEFAULT_CENTER: [number, number] = [(DEFAULT_BOUNDS[0][0] + DEFAULT_BOUNDS[1][0]) / 2, (DEFAULT_BOUNDS[0][1] + DEFAULT_BOUNDS[1][1]) / 2];
 const NAME_TO_ISO = (featureIsoJson as { featureNameToIso: Record<string, string> }).featureNameToIso;
 const ISO_TO_NAME: Record<string, string> = {};
 for (const [name, code] of Object.entries(NAME_TO_ISO)) {
@@ -30,6 +31,7 @@ export interface CanvasProps {
   locale: Locale;
   regions: RegionTint[];
   notes: Record<string, string>;
+  insetLeftRem?: number;
   onSelect: (alertId: string) => void;
   onSelectCountry: (code: string) => void;
 }
@@ -75,6 +77,30 @@ interface PlacedDatum {
   itemStyle: { color: string; borderColor: string; borderWidth: number; opacity: number };
 }
 
+const WORLD_VIEW = { center: DEFAULT_CENTER, zoom: 1 };
+const FIT_PADDING = 1.5;
+const FIT_MIN_SPAN = 12;
+const FIT_MAX_ZOOM = 8;
+
+function fitView(placed: { lng: number; lat: number }[], width: number, height: number) {
+  if (!placed.length || width <= 0 || height <= 0) return WORLD_VIEW;
+  let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (const { lng, lat } of placed) {
+    minLng = Math.min(minLng, lng);
+    maxLng = Math.max(maxLng, lng);
+    minLat = Math.min(minLat, lat);
+    maxLat = Math.max(maxLat, lat);
+  }
+  const spanLng = Math.max(maxLng - minLng, FIT_MIN_SPAN) * FIT_PADDING;
+  const spanLat = Math.max(maxLat - minLat, FIT_MIN_SPAN) * FIT_PADDING;
+  if (spanLng >= 180) return WORLD_VIEW;
+  const lngRange = DEFAULT_BOUNDS[1][0] - DEFAULT_BOUNDS[0][0];
+  const latRange = DEFAULT_BOUNDS[0][1] - DEFAULT_BOUNDS[1][1];
+  const cover = Math.max(width / lngRange, height / latRange);
+  const zoom = Math.min(FIT_MAX_ZOOM, Math.max(1, Math.min(width / (cover * spanLng), height / (cover * spanLat))));
+  return { center: [(minLng + maxLng) / 2, (minLat + maxLat) / 2] as [number, number], zoom };
+}
+
 export default function SituationMapCanvas({
   points,
   asOf,
@@ -83,10 +109,12 @@ export default function SituationMapCanvas({
   locale,
   regions,
   notes,
+  insetLeftRem = 0,
   onSelect,
   onSelectCountry,
 }: CanvasProps) {
   const copy = COPY[locale];
+  const insetLeft = Math.round(insetLeftRem * (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16));
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const [chart, setChart] = useState<any>(null);
@@ -210,7 +238,8 @@ export default function SituationMapCanvas({
         map: MAP_NAME,
         roam: true,
         boundingCoords: DEFAULT_BOUNDS,
-        left: 0,
+        preserveAspect: 'cover',
+        left: insetLeft,
         right: 0,
         top: 0,
         bottom: 0,
@@ -230,7 +259,7 @@ export default function SituationMapCanvas({
           : null,
       ].filter(Boolean),
     };
-  }, [geo, placed, asOf, selectedId, highlighted, locale, palette, regions, notes, reducedMotion, maxTint, theme]);
+  }, [geo, placed, asOf, selectedId, highlighted, locale, palette, regions, notes, reducedMotion, maxTint, theme, insetLeft]);
 
   const events = useMemo(
     () => ({
@@ -247,8 +276,18 @@ export default function SituationMapCanvas({
     [onSelect, onSelectCountry],
   );
 
+  const placedKey = useMemo(() => placed.map(item => item.point.alert_id).join('|'), [placed]);
+
+  useEffect(() => {
+    if (!chart || !geo) return;
+    const view = fitView(placed, chart.getWidth() - insetLeft, chart.getHeight());
+    chart.setOption({ geo: view });
+    // Refit only when the visible set changes, not on selection or theme updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chart, geo, placedKey]);
+
   const zoom = (factor: number) => chart?.dispatchAction({ type: 'geoRoam', componentType: 'geo', geoIndex: 0, zoom: factor });
-  const reset = () => chart?.setOption({ geo: { zoom: 1, boundingCoords: DEFAULT_BOUNDS } });
+  const reset = () => chart?.setOption({ geo: { zoom: 1, center: DEFAULT_CENTER } });
 
   if (failed) return <p className="sit-note" role="status">{copy.mapFailed}</p>;
   if (!geo) return <p className="sit-note" role="status">{copy.mapLoading}</p>;

@@ -9,6 +9,8 @@ type FilterablePoint = {
   source_id: string;
   disease_id?: string | null;
   disease_label: string;
+  lat?: number;
+  lng?: number;
 };
 
 export type Recency = 'fresh' | 'recent' | 'older' | 'stale';
@@ -122,23 +124,39 @@ export interface PlacedPoint<T> {
   lat: number;
 }
 
-/** Points that share a country fan out around its anchor so none hides another. */
+const GOLDEN_ANGLE = 2.399963;
+
+/**
+ * Points with exported coordinates sit where the report says; several at one
+ * spot nudge apart slightly. Points without coordinates fan out around their
+ * country anchor so none hides another.
+ */
 export function placePoints<T extends FilterablePoint>(
   points: T[],
   anchors: Record<string, [number, number]>,
 ): { placed: PlacedPoint<T>[]; unplaced: T[] } {
-  const seen = new Map<string, number>();
+  const countrySeen = new Map<string, number>();
+  const spotSeen = new Map<string, number>();
   const placed: PlacedPoint<T>[] = [];
   const unplaced: T[] = [];
   for (const point of points) {
+    if (typeof point.lat === 'number' && typeof point.lng === 'number') {
+      const key = `${point.lat.toFixed(2)},${point.lng.toFixed(2)}`;
+      const index = spotSeen.get(key) ?? 0;
+      spotSeen.set(key, index + 1);
+      const radius = index === 0 ? 0 : 0.35 * Math.sqrt(index);
+      const angle = index * GOLDEN_ANGLE;
+      placed.push({ point, lng: point.lng + radius * Math.cos(angle), lat: point.lat + radius * Math.sin(angle) });
+      continue;
+    }
     const anchor = anchors[point.country_code];
     if (!anchor) {
       unplaced.push(point);
       continue;
     }
-    const index = seen.get(point.country_code) ?? 0;
-    seen.set(point.country_code, index + 1);
-    const angle = index * 2.399963;
+    const index = countrySeen.get(point.country_code) ?? 0;
+    countrySeen.set(point.country_code, index + 1);
+    const angle = index * GOLDEN_ANGLE;
     const radius = index === 0 ? 0 : 1.1 * Math.sqrt(index);
     placed.push({ point, lng: anchor[0] + radius * Math.cos(angle), lat: anchor[1] + radius * Math.sin(angle) });
   }
@@ -147,4 +165,92 @@ export function placePoints<T extends FilterablePoint>(
 
 export function placeLabel(point: Pick<MapPoint, 'admin_area' | 'country_code'>, countryName: string): string {
   return point.admin_area ? `${point.admin_area}, ${countryName}` : countryName;
+}
+
+export const MAX_LANES = 6;
+export const LANE_COLORS = ['#14b8a6', '#8b5cf6', '#ec4899', '#3b82f6', '#84cc16', '#f59e0b'];
+export const OTHER_LANE_COLOR = '#8d9aa8';
+
+export interface Lane {
+  key: string;
+  color: string;
+  other: boolean;
+}
+
+/**
+ * One line in a row, in graph columns. `up` runs from the row top to the node,
+ * `down` from the node to the row bottom, `through` from top to bottom and
+ * bends from column `from` to column `to` in the bottom of the row.
+ */
+export interface GraphLine {
+  lane: number;
+  from: number;
+  to: number;
+  part: 'up' | 'down' | 'through';
+}
+
+export interface GraphRow<T> {
+  alert: T;
+  lane: number;
+  node: number;
+  lines: GraphLine[];
+}
+
+/**
+ * Lays alerts out like a commit graph: newest first, one lane per country.
+ * A lane only takes a column while its country is active, and the columns to
+ * its right close the gap when it ends, so the graph is as wide as the number
+ * of countries active at once. The focused country is ranked first for colour,
+ * then busier countries. Past MAX_LANES the quietest countries share one grey lane.
+ */
+export function buildGraph<T extends { published_date: string; country_code: string }>(
+  alerts: T[],
+  focusCountry = '',
+): { lanes: Lane[]; rows: GraphRow<T>[]; width: number } {
+  const sorted = alerts
+    .map((alert, index) => ({ alert, index }))
+    .sort((a, b) => b.alert.published_date.localeCompare(a.alert.published_date) || a.index - b.index)
+    .map(item => item.alert);
+
+  const counts = new Map<string, number>();
+  for (const alert of sorted) counts.set(alert.country_code, (counts.get(alert.country_code) ?? 0) + 1);
+  const ranked = [...counts.keys()].sort(
+    (a, b) => Number(b === focusCountry) - Number(a === focusCountry) || (counts.get(b) ?? 0) - (counts.get(a) ?? 0) || a.localeCompare(b),
+  );
+
+  const overflow = ranked.length > MAX_LANES;
+  const own = overflow ? ranked.slice(0, MAX_LANES - 1) : ranked;
+  const lanes: Lane[] = own.map((key, index) => ({ key, color: LANE_COLORS[index % LANE_COLORS.length], other: false }));
+  if (overflow) lanes.push({ key: '*', color: OTHER_LANE_COLOR, other: true });
+
+  const laneOf = new Map(own.map((key, index) => [key, index]));
+  const otherLane = lanes.length - 1;
+  const laneIndexes = sorted.map(alert => laneOf.get(alert.country_code) ?? otherLane);
+
+  const last = lanes.map(() => -Infinity);
+  laneIndexes.forEach((lane, row) => {
+    last[lane] = row;
+  });
+
+  const active: number[] = [];
+  let width = 1;
+  const rows = sorted.map((alert, row): GraphRow<T> => {
+    const lane = laneIndexes[row];
+    const known = active.indexOf(lane);
+    const started = known < 0;
+    const node = started ? active.length : known;
+    const ends = row === last[lane];
+    const lines: GraphLine[] = [];
+    active.forEach((other, col) => {
+      if (other === lane) return;
+      lines.push({ lane: other, from: col, to: ends && col > node ? col - 1 : col, part: 'through' });
+    });
+    if (!started) lines.push({ lane, from: node, to: node, part: ends ? 'up' : 'through' });
+    else if (!ends) lines.push({ lane, from: node, to: node, part: 'down' });
+    if (started && !ends) active.push(lane);
+    else if (!started && ends) active.splice(node, 1);
+    width = Math.max(width, node + 1, ...lines.map(line => Math.max(line.from, line.to) + 1));
+    return { alert, lane, node, lines };
+  });
+  return { lanes, rows, width };
 }

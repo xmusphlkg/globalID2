@@ -72,6 +72,10 @@ export interface MapMarker {
   country_name_en: string;
   country_name_zh?: string | null;
   admin_area?: string | null;
+  /** Present when `admin_area` resolved to one place; absent means "use the country anchor". */
+  lat?: number;
+  lng?: number;
+  geo_precision?: 'admin1' | 'place';
   status: AlertStatus;
   published_date: string;
   local?: LocalSeries | null;

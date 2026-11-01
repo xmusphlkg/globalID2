@@ -99,6 +99,10 @@ const BASIS_LABELS: Record<CountBasis, Text3> = {
   total: t('total', '合计', 'total'),
 };
 
+export function basisLabel(basis: CountBasis, locale: Locale): string {
+  return BASIS_LABELS[basis][locale];
+}
+
 /** Counts exactly as the report states them: "9,704 cases (confirmed) · 4,687 deaths · as of 20 Oct 2026". */
 export function countsLine(record: SituationAlertRecord, locale: Locale): string {
   const parts: string[] = [];
@@ -128,13 +132,12 @@ export interface SituationCopy {
   listHeading: string;
   noResults: string;
   places: (n: number) => string;
-  legendHeading: string;
   fresh: string;
   recent: string;
   older: string;
   stale: string;
-  legendNote: string;
   detailHeading: string;
+  otherCountries: string;
   pickHint: string;
   originalReport: string;
   quote: string;
@@ -172,13 +175,14 @@ export interface SituationCopy {
   openDisease: string;
   openResearch: (n: number) => string;
   vsPrevious: string;
-  footprintLegend: string;
   seriesLegend: string;
   monitoringHeading: string;
   monitoringLead: string;
   close: string;
-  breathe: string;
   activeLabel: string;
+  statCases: string;
+  statDeaths: string;
+  statAsOf: string;
 }
 
 export const COPY: Record<Locale, SituationCopy> = {
@@ -189,7 +193,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     source: 'Source',
     window: 'Time window',
     any: 'All',
-    reset: 'Reset filters',
+    reset: 'Reset',
     win7: 'Last 7 days',
     win30: 'Last 30 days',
     win90: 'Last 90 days',
@@ -197,13 +201,12 @@ export const COPY: Record<Locale, SituationCopy> = {
     listHeading: 'Places with news',
     noResults: 'No place matches these filters.',
     places: n => `${n} ${n === 1 ? 'place' : 'places'}`,
-    legendHeading: 'Colour = recency of the latest report',
-    fresh: 'Updated in the last 7 days',
-    recent: '8 to 30 days ago',
-    older: '31 to 90 days ago',
-    stale: 'More than 90 days ago',
-    legendNote: 'Colour and pulse show how recent the report is. A faster pulse is the last 7 days. Neither shows severity.',
+    fresh: '≤ 7 days',
+    recent: '8–30 days',
+    older: '31–90 days',
+    stale: '> 90 days',
     detailHeading: 'Alert timeline',
+    otherCountries: 'Other countries',
     pickHint: 'Select a place on the map or in the list to see the alerts reported for this outbreak.',
     originalReport: 'Original report',
     quote: 'From the report',
@@ -241,13 +244,14 @@ export const COPY: Record<Locale, SituationCopy> = {
     openDisease: 'Disease page',
     openResearch: n => `${n} ${n === 1 ? 'paper' : 'papers'}`,
     vsPrevious: 'vs previous period',
-    footprintLegend: 'Shading: countries where GIDS publishes surveillance.',
     seriesLegend: 'Shading: latest GIDS value for the selected disease.',
     monitoringHeading: 'Monitoring products',
     monitoringLead: 'Periodic roundups with nothing unusual. They add no point.',
     close: 'Close',
-    breathe: 'A pulse marks a report from the last 30 days.',
     activeLabel: 'Active outbreaks',
+    statCases: 'Cases',
+    statDeaths: 'Deaths',
+    statAsOf: 'As of',
   },
   zh: {
     filters: '筛选',
@@ -256,7 +260,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     source: '来源',
     window: '时间范围',
     any: '全部',
-    reset: '重置筛选',
+    reset: '重置',
     win7: '最近 7 天',
     win30: '最近 30 天',
     win90: '最近 90 天',
@@ -264,13 +268,12 @@ export const COPY: Record<Locale, SituationCopy> = {
     listHeading: '有新消息的地点',
     noResults: '没有符合筛选条件的地点。',
     places: n => `${n} 个地点`,
-    legendHeading: '颜色 = 最新报告的新旧',
-    fresh: '最近 7 天有更新',
-    recent: '8 至 30 天前',
-    older: '31 至 90 天前',
-    stale: '90 天以前',
-    legendNote: '颜色和呼吸闪动都只表示报告有多新。更快的闪动是最近 7 天。两者都不表示严重程度。',
+    fresh: '7 天内',
+    recent: '8–30 天',
+    older: '31–90 天',
+    stale: '90 天以上',
     detailHeading: '警报时间线',
+    otherCountries: '其他国家',
     pickHint: '在地图或列表中选择一个地点，查看这起疫情的警报。',
     originalReport: '查看原始报告',
     quote: '报告原话',
@@ -308,13 +311,14 @@ export const COPY: Record<Locale, SituationCopy> = {
     openDisease: '疾病页',
     openResearch: n => `${n} 篇研究`,
     vsPrevious: '较上一周期',
-    footprintLegend: '底色：GIDS 发布了监测数据的国家。',
     seriesLegend: '底色：所选疾病在 GIDS 中的最新值。',
     monitoringHeading: '监测产品',
     monitoringLead: '没有异常事件的定期汇总，不会在地图上增加点。',
     close: '关闭',
-    breathe: '呼吸闪动表示报告来自最近 30 天。',
     activeLabel: '活跃疫情',
+    statCases: '病例',
+    statDeaths: '死亡',
+    statAsOf: '截至',
   },
   fr: {
     filters: 'Filtres',
@@ -323,7 +327,7 @@ export const COPY: Record<Locale, SituationCopy> = {
     source: 'Source',
     window: 'Période',
     any: 'Tous',
-    reset: 'Réinitialiser les filtres',
+    reset: 'Réinit.',
     win7: '7 derniers jours',
     win30: '30 derniers jours',
     win90: '90 derniers jours',
@@ -331,13 +335,12 @@ export const COPY: Record<Locale, SituationCopy> = {
     listHeading: 'Lieux avec des nouvelles',
     noResults: 'Aucun lieu ne correspond à ces filtres.',
     places: n => `${n} ${n === 1 ? 'lieu' : 'lieux'}`,
-    legendHeading: 'Couleur = fraîcheur du dernier rapport',
-    fresh: 'Mis à jour dans les 7 derniers jours',
-    recent: 'Il y a 8 à 30 jours',
-    older: 'Il y a 31 à 90 jours',
-    stale: 'Il y a plus de 90 jours',
-    legendNote: 'La couleur et la pulsation indiquent la fraîcheur du rapport. Une pulsation plus rapide correspond aux 7 derniers jours. Ni l’une ni l’autre n’indique la gravité.',
+    fresh: '≤ 7 jours',
+    recent: '8–30 jours',
+    older: '31–90 jours',
+    stale: '> 90 jours',
     detailHeading: 'Chronologie des alertes',
+    otherCountries: 'Autres pays',
     pickHint: 'Sélectionnez un lieu sur la carte ou dans la liste pour voir les alertes de cette flambée.',
     originalReport: 'Rapport original',
     quote: 'Extrait du rapport',
@@ -375,12 +378,13 @@ export const COPY: Record<Locale, SituationCopy> = {
     openDisease: 'Page de la maladie',
     openResearch: n => `${n} ${n === 1 ? 'article' : 'articles'}`,
     vsPrevious: 'vs période précédente',
-    footprintLegend: 'Teinte : pays pour lesquels GIDS publie une surveillance.',
     seriesLegend: 'Teinte : dernière valeur GIDS pour la maladie choisie.',
     monitoringHeading: 'Produits de surveillance',
     monitoringLead: 'Synthèses périodiques sans événement inhabituel. Elles n’ajoutent aucun point.',
     close: 'Fermer',
-    breathe: 'Une pulsation marque un rapport des 30 derniers jours.',
     activeLabel: 'Flambées actives',
+    statCases: 'Cas',
+    statDeaths: 'Décès',
+    statAsOf: 'Au',
   },
 };

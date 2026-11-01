@@ -1,13 +1,12 @@
 // Full-viewport situation stage. The map fills the page; filters, the place list
 // and the joined catalogue sit on top of it. Quotes load with the outbreak timeline.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ComponentType } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import './situation.css';
 import type { Locale, MapPoint, MonitoringProduct, OutbreakFile, SeriesGlance, SiteIndex, SituationAlertRecord } from '../../utils/situationTypes.ts';
-import { ageDays, DEFAULT_FILTERS, RECENCY_COLORS, filterPoints, placeLabel, recencyOf, sortPoints, type Filters, type WindowKey } from './model.ts';
-import { COPY, STATUS_LABELS, alertSummary, countryName, countsLine, diseaseName, formatCount, formatDay, formatSignedPercent, sourceLabel } from './labels.ts';
+import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, filterPoints, placeLabel, recencyOf, sortPoints, type Filters, type GraphRow, type Lane, type WindowKey } from './model.ts';
+import { COPY, STATUS_LABELS, alertSummary, basisLabel, countryName, countsLine, diseaseName, formatCount, formatDay, formatSignedPercent, sourceLabel } from './labels.ts';
 import { seriesKey } from './site.ts';
-import { provenance } from './text.ts';
 import type { CanvasProps, RegionTint } from './SituationMapCanvas.tsx';
 
 interface ArchiveLinks {
@@ -87,32 +86,100 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
-function AlertItem({ alert, selected, locale }: { alert: SituationAlertRecord; selected: boolean; locale: Locale }) {
+function shortCounts(alert: SituationAlertRecord, locale: Locale): string {
   const copy = COPY[locale];
-  const counts = countsLine(alert, locale);
-  const how = provenance(alert.ai, locale);
+  const parts: string[] = [];
+  if (alert.cases != null) parts.push(`${formatCount(alert.cases, locale)} ${copy.statCases.toLocaleLowerCase(locale)}`);
+  if (alert.deaths != null) parts.push(`${formatCount(alert.deaths, locale)} ${copy.statDeaths.toLocaleLowerCase(locale)}`);
+  return parts.join(' · ');
+}
+
+function Figures({ alert, locale }: { alert: SituationAlertRecord; locale: Locale }) {
+  const copy = COPY[locale];
+  const tiles: Array<{ key: string; label: string; value: string; note: string }> = [];
+  if (alert.cases != null) {
+    tiles.push({ key: 'cases', label: copy.statCases, value: formatCount(alert.cases, locale), note: alert.count_basis ? basisLabel(alert.count_basis, locale) : '' });
+  }
+  if (alert.deaths != null) tiles.push({ key: 'deaths', label: copy.statDeaths, value: formatCount(alert.deaths, locale), note: '' });
+  if (tiles.length && alert.as_of) tiles.push({ key: 'asof', label: copy.statAsOf, value: formatDay(alert.as_of, locale), note: '' });
+  if (!tiles.length) return alert.status !== 'routine' ? <p className="sit-muted">{copy.noCounts}</p> : null;
+  return (
+    <dl className="sit-stats">
+      {tiles.map(tile => (
+        <div key={tile.key} className={`sit-stat sit-stat-${tile.key}`}>
+          <dt>{tile.label}</dt>
+          <dd>
+            <strong>{tile.value}</strong>
+            {tile.note && <small>{tile.note}</small>}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+const GRAPH_COL = 9;
+const GRAPH_DOT_Y = 15;
+const GRAPH_BEND = 10;
+
+function GraphCell({ row, lanes, width }: { row: GraphRow<SituationAlertRecord>; lanes: Lane[]; width: number }) {
+  const x = (col: number) => col * GRAPH_COL + GRAPH_COL / 2;
+  const px = width * GRAPH_COL;
+  const color = (lane: number) => lanes[lane].color;
+  return (
+    <div className="sit-graph" style={{ width: px, '--bend': `${GRAPH_BEND}px` } as CSSProperties} aria-hidden="true">
+      <svg className="sit-graph-top" width={px}>
+        {row.lines.map(line => {
+          const y1 = line.part === 'down' ? GRAPH_DOT_Y : 0;
+          const y2 = line.part === 'up' ? GRAPH_DOT_Y : '100%';
+          return <line key={`t${line.lane}`} x1={x(line.from)} x2={x(line.from)} y1={y1} y2={y2} stroke={color(line.lane)} />;
+        })}
+        <circle className="sit-graph-node" cx={x(row.node)} cy={GRAPH_DOT_Y} r={3.5} fill={color(row.lane)} />
+      </svg>
+      <svg className="sit-graph-bend" width={px} height={GRAPH_BEND}>
+        {row.lines.filter(line => line.part !== 'up').map(line => (
+          <line key={`b${line.lane}`} x1={x(line.from)} x2={x(line.to)} y1={0} y2={GRAPH_BEND} stroke={color(line.lane)} />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function AlertItem({ alert, row, lanes, width, selected, featured, showPlace, locale }: { alert: SituationAlertRecord; row: GraphRow<SituationAlertRecord>; lanes: Lane[]; width: number; selected: boolean; featured: boolean; showPlace: boolean; locale: Locale }) {
+  const copy = COPY[locale];
+  const short = shortCounts(alert, locale);
+  const summary = alertSummary(alert, locale);
   return (
     <li className={`sit-alert${selected ? ' is-selected' : ''}`}>
-      <div className="sit-alert-head">
-        <time dateTime={alert.published_date}>{formatDay(alert.published_date, locale)}</time>
-        <span className={`sit-status sit-status-${alert.status}`}>{STATUS_LABELS[alert.status][locale]}</span>
-        <strong>{placeLabel(alert, countryName(alert, locale))}</strong>
-      </div>
-      {counts ? <p className="sit-counts">{counts}</p> : alert.status !== 'routine' && <p className="sit-muted">{copy.noCounts}</p>}
-      {alertSummary(alert, locale) && <p className="sit-summary">{alertSummary(alert, locale)}</p>}
-      {alert.quote ? (
-        <blockquote className="sit-quote" cite={alert.url}>
-          <p>{alert.quote}</p>
-          <footer>{copy.quote} · {sourceLabel(alert, locale)}</footer>
-        </blockquote>
-      ) : (
-        <p className="sit-muted">{copy.quoteWithheld}</p>
-      )}
-      <p className="sit-links">
-        <a href={alert.url} target="_blank" rel="noopener noreferrer">{copy.originalReport}</a>
-        <span>{copy.sourceLine}: {sourceLabel(alert, locale)}</span>
-        {how && <span>{how}</span>}
-      </p>
+      <GraphCell row={row} lanes={lanes} width={width} />
+      <details open={featured}>
+        <summary>
+          <span className="sit-alert-head">
+            {showPlace && <span className="sit-alert-place">{placeLabel(alert, countryName(alert, locale))}</span>}
+            <span className={`sit-status sit-status-${alert.status}`}>{STATUS_LABELS[alert.status][locale]}</span>
+          </span>
+          <span className="sit-alert-sub">
+            <time dateTime={alert.published_date}>{formatDay(alert.published_date, locale)}</time>
+            {short && <> · <span className="sit-alert-counts">{short}</span></>}
+          </span>
+        </summary>
+        <div className="sit-alert-body">
+          {!featured && countsLine(alert, locale) && <p className="sit-counts">{countsLine(alert, locale)}</p>}
+          {!featured && !short && alert.status !== 'routine' && <p className="sit-muted">{copy.noCounts}</p>}
+          {summary && <p className="sit-summary">{summary}</p>}
+          {alert.quote ? (
+            <blockquote className="sit-quote" cite={alert.url}>
+              <p>{alert.quote}</p>
+            </blockquote>
+          ) : (
+            <p className="sit-muted">{copy.quoteWithheld}</p>
+          )}
+          <p className="sit-links">
+            <a className="sit-source-link" href={alert.url} target="_blank" rel="noopener noreferrer">{copy.originalReport} ↗</a>
+            <span>{sourceLabel(alert, locale)}</span>
+          </p>
+        </div>
+      </details>
     </li>
   );
 }
@@ -265,6 +332,21 @@ export default function SituationExplorer({
     return [...seen.values()];
   }, [timeline]);
 
+  const graph = useMemo(() => buildGraph(timeline, selected?.country_code ?? ''), [timeline, selected?.country_code]);
+  const laneNames = useMemo(() => graph.lanes.map(lane => {
+    if (lane.other) return copy.otherCountries;
+    const alert = timeline.find(item => item.country_code === lane.key);
+    return alert ? countryName(alert, locale) : lane.key;
+  }), [graph, timeline, locale, copy]);
+
+  const headline = useMemo(() => {
+    if (!selected) return null;
+    const samePlace = (alert: SituationAlertRecord) =>
+      alert.country_code === selected.country_code && (alert.admin_area ?? '') === (selected.admin_area ?? '');
+    return timeline.find(alert => alert.alert_id === selected.alert_id) ?? timeline.find(samePlace) ?? null;
+  }, [timeline, selected]);
+  const selectedRecency = selected ? recencyOf(selected.published_date, asOf) : 'stale';
+
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) => setFilters(state => ({ ...state, [key]: value }));
   const closeListOnNarrow = () => {
     if (window.matchMedia('(max-width: 899px)').matches) setListMode('closed');
@@ -306,6 +388,19 @@ export default function SituationExplorer({
     }
     return out;
   }, [site.countries, site.series, diseaseOn, filters.disease, locale, copy]);
+
+  const detailTitle = selected
+    ? diseaseName(selected, locale)
+    : selection?.kind === 'country'
+      ? countryGlance
+        ? countryName({ country_code: selection.code, country_name_en: countryGlance.name_en, country_name_zh: countryGlance.name_zh }, locale)
+        : selection.code
+      : copy.detailHeading;
+  const detailSubtitle = selected
+    ? placeLabel(selected, countryName(selected, locale))
+    : selection?.kind === 'country' && countryGlance
+      ? [countryGlance.seriesCount > 0 ? copy.trackedDiseases(countryGlance.seriesCount) : '', countryGlance.latestDate ? formatDay(countryGlance.latestDate, locale) : ''].filter(Boolean).join(' · ')
+      : '';
 
   const windows: Array<[WindowKey, string]> = [['all', copy.winAll], ['7', copy.win7], ['30', copy.win30], ['90', copy.win90]];
   const filtersActive = filters.disease !== '' || filters.country !== '' || filters.source !== '' || filters.window !== DEFAULT_FILTERS.window;
@@ -353,6 +448,7 @@ export default function SituationExplorer({
               locale={locale}
               regions={regions}
               notes={notes}
+              insetLeftRem={wide && listOpen ? 22.6 : 0}
               onSelect={selectPlace}
               onSelectCountry={selectCountry}
             />
@@ -362,32 +458,24 @@ export default function SituationExplorer({
         </section>
 
         <aside className="sit-panel sit-list" aria-label={copy.filters}>
-          <h2>{copy.filters}</h2>
-          <Select label={copy.disease} value={filters.disease} options={diseases} anyLabel={copy.any} onChange={value => set('disease', value)} />
-          <Select label={copy.country} value={filters.country} options={countries} anyLabel={copy.any} onChange={value => set('country', value)} />
-          <Select label={copy.source} value={filters.source} options={sources} anyLabel={copy.any} onChange={value => set('source', value)} />
-          <label className="sit-field">
-            <span>{copy.window}</span>
-            <select value={filters.window} onChange={event => set('window', event.target.value as WindowKey)}>
-              {windows.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-          </label>
-          <button type="button" className="sit-reset" disabled={!filtersActive} onClick={() => setFilters(DEFAULT_FILTERS)}>{copy.reset}</button>
+          <div className="sit-panel-head">
+            <h2>{copy.filters}</h2>
+            <button type="button" className="sit-reset" disabled={!filtersActive} onClick={() => setFilters(DEFAULT_FILTERS)}>{copy.reset}</button>
+          </div>
+          <div className="sit-filter-grid">
+            <Select label={copy.disease} value={filters.disease} options={diseases} anyLabel={copy.any} onChange={value => set('disease', value)} />
+            <Select label={copy.country} value={filters.country} options={countries} anyLabel={copy.any} onChange={value => set('country', value)} />
+            <Select label={copy.source} value={filters.source} options={sources} anyLabel={copy.any} onChange={value => set('source', value)} />
+            <label className="sit-field">
+              <span>{copy.window}</span>
+              <select value={filters.window} onChange={event => set('window', event.target.value as WindowKey)}>
+                {windows.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+          </div>
           {filters.country && (
             <button type="button" className="sit-text-btn" onClick={() => selectCountry(filters.country)}>{copy.countryDossier}</button>
           )}
-          <div className="sit-legend">
-            <h3>{copy.legendHeading}</h3>
-            <ul>
-              {(['fresh', 'recent', 'older', 'stale'] as const).map(key => (
-                <li key={key}>
-                  <span className={`sit-dot${key === 'fresh' ? ' is-live' : ''}${key === 'recent' ? ' is-live-slow' : ''}`} style={{ background: RECENCY_COLORS[key] }} aria-hidden="true" />
-                  {copy[key]}
-                </li>
-              ))}
-            </ul>
-            <p className="sit-muted">{copy.legendNote}</p>
-          </div>
           <section aria-labelledby="sit-list-heading">
             <h2 id="sit-list-heading">{copy.listHeading} <small>{copy.places(visible.length)}</small></h2>
             {visible.length === 0 ? (
@@ -433,20 +521,30 @@ export default function SituationExplorer({
         </aside>
 
         <aside className={`sit-panel sit-detail${selection ? ' is-open' : ''}`} aria-live="polite" aria-labelledby="sit-detail-heading">
-          <div className="sit-detail-tools">
-            <h2 id="sit-detail-heading">{selected ? copy.detailHeading : copy.countryDossier}</h2>
-            {selection && <button type="button" className="sit-text-btn" onClick={() => setSelection(null)}>{copy.close}</button>}
+          <div className="sit-detail-bar">
+            {selected && (
+              <>
+                <span className={`sit-dot${selectedRecency === 'fresh' ? ' is-live' : ''}${selectedRecency === 'recent' ? ' is-live-slow' : ''}`} style={{ background: RECENCY_COLORS[selectedRecency] }} aria-hidden="true" />
+                <span className="sit-sr">{copy[selectedRecency]}</span>
+              </>
+            )}
+            <div className="sit-detail-title">
+              <h2 id="sit-detail-heading">{detailTitle}</h2>
+              {detailSubtitle && <p>{detailSubtitle}</p>}
+            </div>
+            {selected && <span className={`sit-status sit-status-${selected.status}`}>{STATUS_LABELS[selected.status][locale]}</span>}
+            {selection && <button type="button" className="sit-close" onClick={() => setSelection(null)} aria-label={copy.close} title={copy.close}>×</button>}
           </div>
           {!selection && <p className="sit-muted">{copy.pickHint}</p>}
           {selection?.kind === 'country' && countryGlance && (
             <CountryDossier
               locale={locale}
-              code={selection.code}
               country={countryGlance}
               diseaseId={diseaseOn ? filters.disease : ''}
               series={diseaseOn ? site.series[seriesKey(selection.code, filters.disease)] : undefined}
               disease={diseaseOn ? site.diseases[filters.disease] : undefined}
               alerts={countryAlerts}
+              asOf={asOf}
               canWiden={countryHasOlder && filters.window !== 'all'}
               onWiden={() => set('window', 'all')}
               onSelect={selectPlace}
@@ -454,20 +552,22 @@ export default function SituationExplorer({
           )}
           {selected && (
             <>
-              <header className="sit-detail-head">
-                <div>
-                  <strong>{diseaseName(selected, locale)}</strong>
-                  <p>
-                    {file
-                      ? `${copy.firstReported} ${formatDay(file.first_published, locale)} · ${copy.updated} ${formatDay(file.last_published, locale)} · ${copy.alertsCount(file.alert_count)}`
-                      : `${copy.updated} ${formatDay(selected.published_date, locale)}`}
-                  </p>
-                </div>
-              </header>
+              <p className="sit-detail-meta">
+                {file ? (
+                  <>
+                    <span>{copy.firstReported} <time dateTime={file.first_published}>{formatDay(file.first_published, locale)}</time></span>
+                    <span>{copy.updated} <time dateTime={file.last_published}>{formatDay(file.last_published, locale)}</time></span>
+                    <span>{copy.alertsCount(file.alert_count)}</span>
+                  </>
+                ) : (
+                  <span>{copy.updated} <time dateTime={selected.published_date}>{formatDay(selected.published_date, locale)}</time></span>
+                )}
+              </p>
+              {headline && <Figures alert={headline} locale={locale} />}
               <FusionCard locale={locale} point={selected} site={site} />
               {placesInOutbreak.length > 1 && (
-                <div className="sit-places">
-                  <h3>{copy.placesInOutbreak}</h3>
+                <details className="sit-places">
+                  <summary>{copy.placesInOutbreak} <small>{placesInOutbreak.length}</small></summary>
                   <ul>
                     {placesInOutbreak.map(alert => (
                       <li key={`${alert.country_code}:${alert.admin_area ?? ''}`}>
@@ -482,20 +582,37 @@ export default function SituationExplorer({
                       </li>
                     ))}
                   </ul>
-                </div>
+                </details>
               )}
               {remote === 'loading' && <p className="sit-muted" role="status">{copy.mapLoading}</p>}
               {remote === 'error' && <p className="sit-muted" role="status">{copy.timelineFailed}</p>}
-              <ol className="sit-timeline">
-                {timeline.map(alert => (
-                  <AlertItem
-                    key={alert.alert_id}
-                    alert={alert}
-                    locale={locale}
-                    selected={alert.country_code === selected.country_code && (alert.admin_area ?? '') === (selected.admin_area ?? '')}
-                  />
-                ))}
-              </ol>
+              {timeline.length > 0 && (
+                <section className="sit-timeline-wrap" aria-labelledby="sit-timeline-heading">
+                  <h3 id="sit-timeline-heading">{copy.detailHeading}</h3>
+                  {graph.lanes.length > 1 && (
+                    <ul className="sit-lanes">
+                      {graph.lanes.map((lane, index) => (
+                        <li key={lane.key}><i style={{ '--c': lane.color } as CSSProperties} aria-hidden="true" />{laneNames[index]}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <ol className="sit-timeline">
+                    {graph.rows.map(row => (
+                      <AlertItem
+                        key={`${selected.alert_id}:${row.alert.alert_id}`}
+                        alert={row.alert}
+                        row={row}
+                        lanes={graph.lanes}
+                        width={graph.width}
+                        locale={locale}
+                        featured={row.alert.alert_id === headline?.alert_id}
+                        showPlace={placesInOutbreak.length > 1}
+                        selected={row.alert.country_code === selected.country_code && (row.alert.admin_area ?? '') === (selected.admin_area ?? '')}
+                      />
+                    ))}
+                  </ol>
+                </section>
+              )}
             </>
           )}
         </aside>
@@ -509,10 +626,26 @@ export default function SituationExplorer({
               </li>
             ))}
           </ul>
-          <p className="sit-muted">{copy.breathe} {diseaseOn ? copy.seriesLegend : copy.footprintLegend}</p>
+          {diseaseOn && <p className="sit-muted">{copy.seriesLegend}</p>}
         </div>
       </div>
-      <p className="sit-sr">{copy.legendNote}</p>
+    </div>
+  );
+}
+
+function SeriesRow({ glance, locale }: { glance: SeriesGlance; locale: Locale }) {
+  const copy = COPY[locale];
+  return (
+    <div className="sit-series">
+      <div className="sit-series-main">
+        <strong>{formatCount(glance.value, locale)}</strong>
+        <span>
+          {copy.nationalSeries}
+          {glance.date ? ` · ${formatDay(glance.date, locale)}` : ''}
+          {glance.changePct != null && ` · ${formatSignedPercent(glance.changePct, locale)} ${copy.vsPrevious}`}
+        </span>
+      </div>
+      {glance.spark && <Sparkline values={glance.spark} />}
     </div>
   );
 }
@@ -527,14 +660,7 @@ function FusionCard({ locale, point, site }: { locale: Locale; point: MapPoint; 
     <div className="sit-fusion">
       <h3>{copy.surveillanceHeading}</h3>
       {glance ? (
-        <>
-          <p>{copy.nationalSeries}{glance.date ? ` · ${formatDay(glance.date, locale)}` : ''}</p>
-          <p>
-            <strong>{formatCount(glance.value, locale)}</strong>
-            {glance.changePct != null && ` · ${formatSignedPercent(glance.changePct, locale)} ${copy.vsPrevious}`}
-          </p>
-          {glance.spark && <Sparkline values={glance.spark} />}
-        </>
+        <SeriesRow glance={glance} locale={locale} />
       ) : country && country.seriesCount > 0 && point.disease_id ? (
         <p>{copy.diseaseNotInSeries(diseaseLabel, country.seriesCount)}</p>
       ) : (
@@ -553,46 +679,34 @@ function FusionCard({ locale, point, site }: { locale: Locale; point: MapPoint; 
 
 function CountryDossier({
   locale,
-  code,
   country,
   diseaseId,
   series,
   disease,
   alerts,
+  asOf,
   canWiden,
   onWiden,
   onSelect,
 }: {
   locale: Locale;
-  code: string;
   country: SiteIndex['countries'][string];
   diseaseId: string;
   series?: SeriesGlance;
   disease?: SiteIndex['diseases'][string];
   alerts: MapPoint[];
+  asOf: string;
   canWiden: boolean;
   onWiden: () => void;
   onSelect: (id: string) => void;
 }) {
   const copy = COPY[locale];
-  const name = countryName({ country_code: code, country_name_en: country.name_en, country_name_zh: country.name_zh }, locale);
   return (
     <>
-      <header className="sit-detail-head">
-        <div>
-          <strong>{name}</strong>
-          <p>{country.seriesCount > 0 ? copy.trackedDiseases(country.seriesCount) : copy.noNationalSeries}{country.latestDate ? ` · ${formatDay(country.latestDate, locale)}` : ''}</p>
-        </div>
-      </header>
       {diseaseId && series && (
         <div className="sit-fusion">
           <h3>{disease?.name_zh && locale === 'zh' ? disease.name_zh : disease?.name_en ?? diseaseId}</h3>
-          <p>{copy.nationalSeries}{series.date ? ` · ${formatDay(series.date, locale)}` : ''}</p>
-          <p>
-            <strong>{formatCount(series.value, locale)}</strong>
-            {series.changePct != null && ` · ${formatSignedPercent(series.changePct, locale)} ${copy.vsPrevious}`}
-          </p>
-          {series.spark && <Sparkline values={series.spark} />}
+          <SeriesRow glance={series} locale={locale} />
         </div>
       )}
       {diseaseId && !series && country.seriesCount > 0 && disease && (
@@ -614,16 +728,24 @@ function CountryDossier({
           </>
         ) : (
           <ul className="sit-places-list">
-            {alerts.slice(0, 12).map(point => (
-              <li key={point.alert_id}>
-                <button type="button" className="sit-item" onClick={() => onSelect(point.alert_id)}>
-                  <span className="sit-item-main">
-                    <strong>{diseaseName(point, locale)}</strong>
-                    <span>{formatDay(point.published_date, locale)}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
+            {alerts.slice(0, 12).map(point => {
+              const recency = recencyOf(point.published_date, asOf);
+              return (
+                <li key={point.alert_id}>
+                  <button type="button" className="sit-item" onClick={() => onSelect(point.alert_id)}>
+                    <span className="sit-dot" style={{ background: RECENCY_COLORS[recency] }} aria-hidden="true" />
+                    <span className="sit-item-main">
+                      <strong>{diseaseName(point, locale)}</strong>
+                      <span>{placeLabel(point, countryName(point, locale))}</span>
+                    </span>
+                    <span className="sit-item-meta">
+                      <span className={`sit-status sit-status-${point.status}`}>{STATUS_LABELS[point.status][locale]}</span>
+                      <time dateTime={point.published_date}>{formatDay(point.published_date, locale)}</time>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
