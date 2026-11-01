@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
   distDir: process.env.GLOBALID_NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  // The dev-tools button is first in tab order and its focus is hidden inside a
+  // shadow root, which breaks keyboard-focus assertions in the fixture e2e run.
+  ...(process.env.GLOBALID_DISABLE_DEV_INDICATOR === "1" ? { devIndicators: false as const } : {}),
   // Next.js 16 rejects client chunks requested from a LAN hostname unless
   // the development origin is explicitly trusted. Keep this allowlist
   // narrow and configurable instead of disabling the protection globally.
