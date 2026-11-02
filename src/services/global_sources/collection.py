@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any, Callable
 
-from . import africa_cdc, ecdc_cdtr, ecdc_events, paho, who_don, who_periodicals
+from . import africa_cdc, ecdc_cdtr, ecdc_events, paho, reliefweb, who_don, who_periodicals, who_regional
 from .catalogue import SOURCE_REGISTRY
 from .events import utc_now
 
@@ -54,6 +54,30 @@ def _load_paho(*, since: date, **_: Any) -> list[dict[str, Any]]:
     return paho.fetch_items(since=since.isoformat())
 
 
+def _load_paho_alerts(*, since: date, **_: Any) -> list[dict[str, Any]]:
+    return reliefweb.fetch_items(source_id="paho_alerts", since=since.isoformat())
+
+
+def _load_who_emro(*, since: date, **_: Any) -> list[dict[str, Any]]:
+    return reliefweb.fetch_items(source_id="who_emro", since=since.isoformat())
+
+
+def _load_who_afro(*, since: date, **_: Any) -> list[dict[str, Any]]:
+    return who_regional.fetch_afro(since=since.isoformat())
+
+
+def _load_who_searo(*, since: date, **_: Any) -> list[dict[str, Any]]:
+    return who_regional.fetch_publications(source_id="who_searo", url=who_regional.SEARO_URL, since=since.isoformat())
+
+
+def _load_who_euro(*, since: date, **_: Any) -> list[dict[str, Any]]:
+    return who_regional.fetch_publications(source_id="who_euro", url=who_regional.EURO_URL, since=since.isoformat())
+
+
+def _load_who_sitreps(*, since: date, **_: Any) -> list[dict[str, Any]]:
+    return who_regional.fetch_sitreps(since=since.isoformat())
+
+
 SOURCE_LOADERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "who_don": _load_who_don,
     "ecdc_cdtr": _load_ecdc_cdtr,
@@ -62,6 +86,12 @@ SOURCE_LOADERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "who_wpro": _load_who_wpro,
     "africa_cdc": _load_africa_cdc,
     "paho": _load_paho,
+    "paho_alerts": _load_paho_alerts,
+    "who_afro": _load_who_afro,
+    "who_searo": _load_who_searo,
+    "who_emro": _load_who_emro,
+    "who_euro": _load_who_euro,
+    "who_sitreps": _load_who_sitreps,
 }
 
 

@@ -2,8 +2,9 @@
 
 ``www.paho.org`` rejects non-browser clients with 403, including its RSS and
 JSON:API endpoints.  PAHO's own IRIS repository (``iris.paho.org``) exposes the
-same epidemiological alerts, updates and regional surveillance newsletters
-through the documented DSpace search API, so this adapter reads from there.
+regional surveillance newsletters through the DSpace search API. Dedicated
+alerts are collected separately by the ``paho_alerts`` ReliefWeb adapter;
+IRIS must not be treated as a complete mirror of PAHO's alerts archive.
 
 The search index mixes journal articles and governing-body documents with
 surveillance products, so only ``Newsletters`` whose title is an

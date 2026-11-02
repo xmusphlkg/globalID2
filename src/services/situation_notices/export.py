@@ -25,7 +25,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Iterable
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from src.ai.peer_review import review_mode
@@ -313,14 +313,20 @@ async def export_site(
                 .order_by(SituationNotice.published_date.desc())
             )
         ).all()
-        latest_run = (
-            await db.execute(select(SituationSourceRun.run_id).order_by(SituationSourceRun.started_at.desc()).limit(1))
-        ).scalar_one_or_none()
-        runs = (
-            (await db.execute(select(SituationSourceRun).where(SituationSourceRun.run_id == latest_run))).scalars().all()
-            if latest_run
-            else []
-        )
+        # Source-scoped refreshes must not erase the health of every other feed.
+        ranked_runs = select(
+            SituationSourceRun.id,
+            func.row_number().over(
+                partition_by=SituationSourceRun.source_id,
+                order_by=(SituationSourceRun.started_at.desc(), SituationSourceRun.id.desc()),
+            ).label("rank"),
+        ).subquery()
+        runs = (await db.execute(select(SituationSourceRun).where(
+            SituationSourceRun.id.in_(select(ranked_runs.c.id).where(ranked_runs.c.rank == 1))
+        ))).scalars().all()
+        report_dates = dict((await db.execute(select(
+            SituationNotice.source_id, func.max(SituationNotice.published_date)
+        ).group_by(SituationNotice.source_id))).all())
 
     records = [alert_record(row, row.notice, row.extraction, diseases) for row in alert_rows]
     by_outbreak: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -409,6 +415,9 @@ async def export_site(
             "sources": [
                 {
                     **registry,
+                    "latest_report_date": report_dates[source_id].isoformat() if report_dates.get(source_id) else None,
+                    "latest_alert_date": max((r["published_date"] for r in records if r["source_id"] == source_id), default=None),
+                    "alert_count": sum(r["source_id"] == source_id for r in records),
                     **{
                         key: getattr(next((run for run in runs if run.source_id == source_id), None), attr, None)
                         for key, attr in (("status", "status"), ("fetched_count", "fetched_count"), ("error", "error"))

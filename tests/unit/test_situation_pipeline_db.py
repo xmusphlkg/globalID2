@@ -211,6 +211,20 @@ async def test_unchanged_report_is_not_read_again(db):
     assert (await extract_pending(Scripted([], [])))["published"] == 0
 
 
+async def test_export_keeps_latest_health_for_each_source_after_scoped_refresh(db, tmp_path):
+    await store_notices(_run(_event("1", ref={"kind": "who_don", "slug": "1"})), run_id="full")
+    await store_notices({"events": [], "sources": [
+        {"source_id": "paho_alerts", "status": "failed", "event_count": 0, "error": "archive unavailable"}
+    ]}, run_id="scoped")
+    await export_module.export_site(output_dir=tmp_path, as_of=AS_OF)
+    sources = {row["source_id"]: row for row in json.loads((tmp_path / "sources.json").read_text())["sources"]}
+    assert sources["who_don"]["status"] == "ok"
+    assert sources["who_don"]["latest_report_date"] == "2026-10-23"
+    assert sources["who_don"]["latest_alert_date"] is None
+    assert sources["paho_alerts"]["status"] == "failed"
+    assert sources["paho_alerts"]["error"] == "archive unavailable"
+
+
 async def test_reviewer_rejection_publishes_no_alerts(db):
     await store_notices(_run(_event("2026-DON623", ref={"kind": "who_don", "slug": "2026-DON623"})), run_id="r1")
     await fetch_pending_documents(fetch=_fetcher([]))

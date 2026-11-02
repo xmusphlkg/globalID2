@@ -19,7 +19,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 from bs4 import BeautifulSoup
@@ -237,7 +237,7 @@ def pdf_link(markup: str, base_url: str) -> str | None:
     for anchor in BeautifulSoup(markup, "html.parser").find_all("a", href=True):
         href = str(anchor["href"])
         path = href.lower().split("?")[0]
-        if ".pdf" in href.lower() or (path.endswith("/content") and "/bitstreams/" in path):
+        if ".pdf" in href.lower() or (path.endswith(("/content", "/download")) and "/bitstreams/" in path):
             return urljoin(base_url, href)
     return None
 
@@ -308,6 +308,36 @@ def _pdf_page(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
     return _pdf_document(data)
 
 
+def _pdf_url(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
+    return _pdf_document(fetch(_https(ref.get("url")), client=client, timeout=DOWNLOAD_TIMEOUT).content)
+
+
+def _reliefweb_report(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
+    url = _https(ref.get("page_url"))
+    if urlsplit(url).hostname != "reliefweb.int" or not urlsplit(url).path.startswith("/report/"):
+        raise DocumentUnavailable("invalid ReliefWeb report URL")
+    page = fetch(url, client=client)
+    article = BeautifulSoup(page.text, "html.parser").select_one("article.rw-article--report")
+    if article is None:
+        raise ValueError("ReliefWeb report markup changed: missing article")
+    organization = str(ref.get("organization") or "")
+    authors = article.select('[class*="tag-value--source"] a[href]')
+    if organization not in {"paho", "who"} or not any(
+        urlsplit(a["href"]).path.rstrip("/") == f"/organization/{organization}" for a in authors
+    ):
+        raise DocumentUnavailable("ReliefWeb report author does not match the source")
+    # Do not read an abstract as if it were the full report, or accidentally
+    # download a PDF from the unrelated-report recommendations below it.
+    # WHO polio bulletins are sometimes tagged "Infographic" but still carry
+    # the original PDF under .rw-attachment--infographic.
+    attachments = article.select(".rw-attachment a[href]")
+    for anchor in attachments:
+        link = urljoin(url, anchor["href"])
+        if urlsplit(link).hostname == "reliefweb.int" and urlsplit(link).path.lower().endswith(".pdf"):
+            return _pdf_document(fetch(link, client=client, timeout=DOWNLOAD_TIMEOUT).content)
+    raise DocumentUnavailable("ReliefWeb report has no original PDF attachment")
+
+
 def _embedded(payload: dict[str, Any], key: str) -> list[dict[str, Any]]:
     return list((payload.get("_embedded") or {}).get(key) or [])
 
@@ -346,6 +376,8 @@ _HANDLERS: dict[str, Callable[[dict[str, Any], httpx.Client], FetchedDocument]] 
     "wp_rest": _wp_rest,
     "ecdc_event": _ecdc_event,
     "pdf_page": _pdf_page,
+    "pdf_url": _pdf_url,
+    "reliefweb_report": _reliefweb_report,
     "dspace": _dspace,
 }
 
