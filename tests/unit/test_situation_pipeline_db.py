@@ -590,6 +590,82 @@ async def test_long_model_wait_renews_claim_in_short_transactions(db, monkeypatc
     assert result["published"] == 1
 
 
+async def test_reports_are_read_concurrently_up_to_the_limit(db):
+    await _ready_reports("2026-DON660", "2026-DON661", "2026-DON662")
+    running = peak = 0
+
+    class Counting(Scripted):
+        async def __call__(self, role, *args, **kwargs):
+            nonlocal running, peak
+            if role == "author":
+                running += 1
+                peak = max(peak, running)
+                await asyncio.sleep(0.05)
+                running -= 1
+            return await super().__call__(role, *args, **kwargs)
+
+    counts = await extract_pending(
+        Counting([], []), concurrency=2, new_completer=lambda: Counting([DRAFT], [ACCEPT])
+    )
+    assert counts["published"] == 3 and counts["failed"] == 0
+    assert peak == 2
+    async with db() as session:
+        assert len((await session.execute(select(SituationExtraction))).scalars().all()) == 3
+
+
+async def test_no_model_route_stops_concurrent_workers_from_claiming_more(db):
+    from src.ai.agents.base import NoModelAvailable
+
+    await _ready_reports("2026-DON663", "2026-DON664", "2026-DON665")
+
+    class Exhausted(Scripted):
+        async def __call__(self, role, *args, **kwargs):
+            await asyncio.sleep(0.02)
+            raise NoModelAvailable("all routes cooling down")
+
+    counts = await extract_pending(
+        Exhausted([], []), concurrency=2, new_completer=lambda: Exhausted([], [])
+    )
+    assert counts["failed"] == 0 and counts["published"] == 0
+    assert counts["deferred"] == 2  # the two in flight released; the third was never claimed
+    async with db() as session:
+        rows = (await session.execute(select(SituationNotice))).scalars().all()
+    assert {row.ai_status for row in rows} == {"pending"}
+    assert {row.ai_attempts for row in rows} == {0}
+    assert all(row.ai_next_attempt_at is None for row in rows)
+
+
+async def test_concurrent_extraction_needs_a_completer_per_report(db):
+    with pytest.raises(ValueError):
+        await extract_pending(Scripted([], []), concurrency=2)
+
+
+async def test_pool_size_is_the_permits_of_routable_routes(monkeypatch):
+    from src.ai import model_center
+    from src.services.situation_notices.runner import model_pool_size
+
+    routes = [
+        {"available_for_routing": True, "runtime_model_capacity": 5},
+        {"available_for_routing": True, "runtime_model_capacity": 20},
+        {"available_for_routing": False, "runtime_model_capacity": 9},  # cooling down: no permits
+    ]
+
+    async def get_runtime_routes():
+        return routes
+
+    monkeypatch.setattr(model_center, "get_runtime_routes", get_runtime_routes)
+    assert await model_pool_size() == 25
+
+    routes.clear()
+    assert await model_pool_size() == 1  # never zero
+
+    async def broken():
+        raise RuntimeError("database down")
+
+    monkeypatch.setattr(model_center, "get_runtime_routes", broken)
+    assert await model_pool_size() == 1
+
+
 async def test_runner_waits_for_extraction_and_records_partial_failure_before_store(db, monkeypatch):
     from uuid import uuid4
 
@@ -615,7 +691,8 @@ async def test_runner_waits_for_extraction_and_records_partial_failure_before_st
     complete = OneFailure()
     monkeypatch.setattr(peer_review_completer, "QueuedModelCompleter", lambda **kwargs: complete)
     task_uuid = str(uuid4())
-    task = asyncio.create_task(runner.run_situation(task_uuid=task_uuid, fetch=False))
+    # One at a time: the scripted completer shares one failure flag and asserts an idle pool.
+    task = asyncio.create_task(runner.run_situation(task_uuid=task_uuid, fetch=False, concurrency=1))
     try:
         await asyncio.wait_for(complete.started.wait(), timeout=2)
         async with db() as session:
@@ -742,3 +819,30 @@ async def test_queued_runner_can_dispatch_with_a_single_database_connection(db, 
         for task in dispatcher.active.values():
             task.cancel()
         await asyncio.gather(*dispatcher.active.values(), return_exceptions=True)
+
+
+async def test_pool_size_is_the_permits_of_every_admitted_route(monkeypatch):
+    from src.ai import model_center
+    from src.services.situation_notices import runner
+
+    async def routes():
+        return [
+            {"available_for_routing": True, "runtime_model_capacity": 20},
+            {"available_for_routing": True, "runtime_model_capacity": 5},
+            {"available_for_routing": False, "runtime_model_capacity": 9},
+            {"available_for_routing": True, "runtime_model_capacity": None},
+        ]
+
+    monkeypatch.setattr(model_center, "get_runtime_routes", routes)
+    assert await runner.model_pool_size() == 25
+
+
+async def test_pool_size_falls_back_to_one_when_routes_cannot_be_read(monkeypatch):
+    from src.ai import model_center
+    from src.services.situation_notices import runner
+
+    async def broken():
+        raise RuntimeError("database unavailable")
+
+    monkeypatch.setattr(model_center, "get_runtime_routes", broken)
+    assert await runner.model_pool_size() == 1

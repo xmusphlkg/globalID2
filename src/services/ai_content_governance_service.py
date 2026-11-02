@@ -137,14 +137,15 @@ class ReviewClaims:
 SAME_MODEL_RETRIES = 3
 
 
-async def _decide_with_retry(
+async def _decide_once(
     decide: Callable[[Completer, Any], Awaitable[ReviewedOutput]],
     pool: ReviewRoutePool,
     item: Any,
+    avoid: set[str],
 ) -> ReviewedOutput:
     """Run one review; if failover put both roles on one model, redo it on other models."""
 
-    avoid: set[str] = set()
+    avoid = set(avoid)
     for attempt in range(SAME_MODEL_RETRIES + 1):
         try:
             return await decide(pool.completer(avoid), item)
@@ -153,6 +154,28 @@ async def _decide_with_retry(
                 raise
             avoid.add(exc.model)
     raise AssertionError("unreachable")
+
+
+async def _decide_with_retry(
+    decide: Callable[[Completer, Any], Awaitable[ReviewedOutput]],
+    pool: ReviewRoutePool,
+    item: Any,
+) -> ReviewedOutput:
+    """One review, plus a second opinion from other models when it comes back ``hold``.
+
+    A hold is a disagreement or an unsure verdict, not a decision. Instead of parking
+    the item for a person, a different author/reviewer pair reads it again. If that
+    pair also holds, the hold stands (the item is never excluded for being unsure).
+    A model outage in the second pass raises, so the item is retried as a whole.
+    """
+
+    first = await _decide_once(decide, pool, item, set())
+    if _review_outcome(first) != "hold":
+        return first
+    used = {model for model in (first.author_model, first.reviewer_model) if model}
+    second = await _decide_once(decide, pool, item, used)
+    second.notes = [f"second opinion after hold by {', '.join(sorted(used)) or 'unknown models'}", *second.notes]
+    return second
 
 
 _review_gates: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore]" = weakref.WeakKeyDictionary()
@@ -1212,16 +1235,24 @@ class AIContentGovernanceService:
         if kind == "articles":
             metadata = self._metadata(row.metadata_, "hold", reviewed)
             metadata["ai_content_governance"]["held_fingerprint"] = fingerprint
+            metadata["ai_content_governance"]["second_opinion"] = True
             row.metadata_ = metadata
         else:
             metadata = self._metadata(row.generation_metadata, "hold", reviewed)
             metadata["ai_content_governance"]["held_fingerprint"] = fingerprint
+            metadata["ai_content_governance"]["second_opinion"] = True
             row.generation_metadata = metadata
 
     @staticmethod
     def _held(metadata: Mapping[str, Any] | None, fingerprint: str) -> bool:
         record = (metadata or {}).get("ai_content_governance")
-        return isinstance(record, Mapping) and record.get("decision") == "hold" and record.get("held_fingerprint") == fingerprint
+        # Only a hold that already had a second opinion parks the item; older holds are read again.
+        return (
+            isinstance(record, Mapping)
+            and record.get("decision") == "hold"
+            and record.get("held_fingerprint") == fingerprint
+            and bool(record.get("second_opinion"))
+        )
 
     async def backlog_counts(self, db: AsyncSession) -> dict[str, int]:
         """Rows each review line still has to decide; the idle scheduler picks work from this."""
@@ -1258,22 +1289,9 @@ class AIContentGovernanceService:
         batch ahead of the routes that can actually run.
         """
 
-        from src.ai.model_center import get_runtime_routes
+        from src.ai.model_center import live_model_permits
 
-        try:
-            routes = await get_runtime_routes()
-        except Exception:  # noqa: BLE001 - a capacity miss must not abort the drain
-            logger.warning("Review pool could not read model capacity; keeping one slot")
-            return 1
-        total = 0
-        for route in routes:
-            if not route.get("available_for_routing"):
-                continue
-            try:
-                total += max(0, int(route.get("runtime_model_capacity") or 0))
-            except (TypeError, ValueError):
-                continue
-        return max(1, min(REVIEW_CONCURRENCY, total or 1))
+        return await live_model_permits(ceiling=REVIEW_CONCURRENCY)
 
     async def stream_review(
         self,

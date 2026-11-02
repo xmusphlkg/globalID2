@@ -784,6 +784,9 @@ class AIWorkDispatcher:
         self.active: dict[int, asyncio.Task] = {}
         self.outcomes: dict[str, deque] = defaultdict(lambda: deque(maxlen=50))
         self._tick_lock = asyncio.Lock()
+        # Set whenever a call ends, so the freed permit is refilled at once
+        # instead of at the next poll.
+        self._wake = asyncio.Event()
 
     async def _execute(self, item: AIWorkItem, route: dict[str, Any]) -> None:
         token = _DISPATCHING.set(True)
@@ -864,6 +867,7 @@ class AIWorkDispatcher:
             if not refused:
                 self.outcomes[str(route.get("model_key"))].append(succeeded)
             _DISPATCHING.reset(token)
+            self._wake.set()
             if noted is not None and (
                 noted["status"] in {"succeeded", "failed"} or noted.get("record_error")
             ):
@@ -997,9 +1001,15 @@ class AIWorkDispatcher:
             if not any(weights):
                 break
             route = random.choices(routes, weights=weights)[0]
-            item = await claim_work(
-                route, alternatives={r["model_key"] for r in routes}
-            )
+            # An avoided route defers only to a route that has a free permit
+            # now. A full route is no alternative: waiting for it would leave
+            # this permit idle while the item sits queued.
+            idle = {
+                r["model_key"]
+                for r, weight in zip(routes, weights)
+                if weight > 0
+            }
+            item = await claim_work(route, alternatives=idle)
             if item is None:
                 routes.remove(route)
                 continue
@@ -1012,6 +1022,19 @@ class AIWorkDispatcher:
             claimed += 1
         return claimed
 
+    async def _idle(self, stop_event: asyncio.Event, timeout: float = 0.5) -> None:
+        """Wait for a finished call, a stop request, or the poll interval."""
+        waiters = {
+            asyncio.create_task(self._wake.wait()),
+            asyncio.create_task(stop_event.wait()),
+        }
+        try:
+            await asyncio.wait(waiters, timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            for waiter in waiters:
+                waiter.cancel()
+            await asyncio.gather(*waiters, return_exceptions=True)
+
     async def run(self, stop_event: asyncio.Event) -> None:
         last_probe = 0.0
         try:
@@ -1021,13 +1044,13 @@ class AIWorkDispatcher:
                     if now - last_probe >= 60:
                         await enqueue_runtime_probe()
                         last_probe = now
+                    # Cleared before the scan, so a call that ends during it
+                    # still triggers the next scan immediately.
+                    self._wake.clear()
                     await self.tick()
                 except Exception:
                     logger.exception("Model work dispatch scan failed")
-                try:
-                    await asyncio.wait_for(stop_event.wait(), timeout=0.5)
-                except asyncio.TimeoutError:
-                    pass
+                await self._idle(stop_event)
         finally:
             for task in self.active.values():
                 task.cancel()

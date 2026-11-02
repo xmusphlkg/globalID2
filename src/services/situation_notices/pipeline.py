@@ -445,9 +445,19 @@ async def extract_pending(
     *,
     limit: int = 30,
     source_ids: list[str] | None = None,
+    concurrency: int = 1,
+    new_completer: Callable[[], Completer] | None = None,
 ) -> dict[str, int]:
-    """Claim/read, wait without a session, then save each report in a short transaction."""
+    """Claim/read, wait without a session, then save each report in a short transaction.
 
+    ``concurrency`` reports are read at once. A completer remembers which model
+    wrote the draft and which one served last, so reading several reports at once
+    needs ``new_completer`` (or a route pool), which gives every report its own.
+    """
+
+    concurrency = max(1, int(concurrency))
+    if concurrency > 1 and new_completer is None and not isinstance(complete, ReviewRoutePool):
+        raise ValueError("concurrent extraction needs new_completer or a ReviewRoutePool")
     counts = {"published": 0, "rejected": 0, "failed": 0, "unchanged": 0}
     diseases = allowed_diseases()
     country_codes = set(country_catalogue())
@@ -471,7 +481,11 @@ async def extract_pending(
             )
         ).scalars().all()
 
-    for notice_id in due:
+    # Set when no model route is available: reports already running finish or
+    # release their claim, and nothing new is claimed.
+    paused = asyncio.Event()
+
+    async def extract_one(notice_id: str) -> None:
         # The conditional UPDATE both claims the report and locks it only for
         # this input snapshot. No connection/row lock survives the model wait.
         async with get_db() as db:
@@ -488,7 +502,7 @@ async def extract_pending(
                 .values(ai_next_attempt_at=expires_at)
             )
             if not claimed.rowcount:
-                continue
+                return
             row = (
                 await db.execute(
                     select(SituationNotice)
@@ -505,7 +519,7 @@ async def extract_pending(
                 row.ai_status = "extracted"
                 row.ai_next_attempt_at = None
                 counts["unchanged"] += 1
-                continue
+                return
             claim = _ExtractionClaim(notice_id, row.content_hash, row.document.text_hash, expires_at)
             notice = _notice_payload(row)
 
@@ -516,7 +530,7 @@ async def extract_pending(
             attachment = _attachment(row)
             result = await _extract_claimed(
                 claim,
-                complete,
+                new_completer() if new_completer else complete,
                 notice,
                 attachment,
                 allowed_diseases=diseases,
@@ -524,12 +538,13 @@ async def extract_pending(
             )
         except NoModelAvailable as exc:
             logger.warning("Situation extraction paused, no model route available | {}", exc)
+            paused.set()
             await _release_extraction(claim)
             counts["deferred"] = counts.get("deferred", 0) + 1
-            break
+            return
         except _ExtractionClaimLost:
             counts["deferred"] = counts.get("deferred", 0) + 1
-            continue
+            return
         except asyncio.CancelledError:
             await _release_extraction(claim)
             raise
@@ -544,7 +559,7 @@ async def extract_pending(
             )
             if not saved.rowcount:
                 counts["deferred"] = counts.get("deferred", 0) + 1
-                continue
+                return
             row = (
                 await db.execute(
                     select(SituationNotice)
@@ -558,7 +573,7 @@ async def extract_pending(
                 row.ai_last_error = error
                 row.ai_next_attempt_at = utc_now() + _retry_delay(row.ai_attempts)
                 counts["failed"] += 1
-                continue
+                return
 
             payload = result.payload
             extraction = SituationExtraction(
@@ -592,6 +607,23 @@ async def extract_pending(
             row.extractions.append(extraction)
             row.ai_last_error = None
             row.ai_next_attempt_at = None
+
+    queue = iter(due)  # shared by the workers; next() never yields to the loop
+
+    async def worker() -> None:
+        for notice_id in queue:
+            if paused.is_set():
+                return
+            await extract_one(notice_id)
+
+    workers = [asyncio.create_task(worker()) for _ in range(min(concurrency, len(due)))]
+    try:
+        await asyncio.gather(*workers)
+    except BaseException:
+        for task in workers:
+            task.cancel()
+        await asyncio.gather(*workers, return_exceptions=True)
+        raise
     return counts
 
 

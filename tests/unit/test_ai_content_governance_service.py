@@ -717,7 +717,8 @@ def test_same_model_failure_is_retried_on_other_models_then_gives_up() -> None:
             raise SameModelReviewError("hy3")
         return item
 
-    assert asyncio.run(module._decide_with_retry(decide, pool, "x")) == "x"
+    done = _reviewed("published", "publish")
+    assert asyncio.run(module._decide_with_retry(decide, pool, done)) is done
     assert pool.avoids == [set(), {"hy3"}]
 
     async def always_same(_model, _item):
@@ -725,8 +726,68 @@ def test_same_model_failure_is_retried_on_other_models_then_gives_up() -> None:
 
     pool = Pool()
     with pytest.raises(SameModelReviewError):
-        asyncio.run(module._decide_with_retry(always_same, pool, "x"))
+        asyncio.run(module._decide_with_retry(always_same, pool, done))
     assert len(pool.avoids) == module.SAME_MODEL_RETRIES + 1
+
+
+def test_hold_gets_a_second_opinion_from_other_models_and_keeps_the_second_verdict() -> None:
+    from src.services import ai_content_governance_service as module
+
+    class Pool:
+        def __init__(self):
+            self.avoids = []
+
+        def completer(self, avoid=()):
+            self.avoids.append(set(avoid))
+            return object()
+
+    replies = [_reviewed("published", "hold"), _reviewed("published", "publish")]
+    pool = Pool()
+
+    async def decide(_model, _item):
+        return replies.pop(0)
+
+    result = asyncio.run(module._decide_with_retry(decide, pool, "x"))
+    assert result.payload["decision"] == "publish"
+    assert pool.avoids == [set(), {"a", "b"}]  # the second pair avoids both first-pass models
+    assert result.notes[0].startswith("second opinion after hold")
+
+
+def test_publish_or_reject_needs_no_second_opinion_and_two_holds_stay_a_hold() -> None:
+    from src.services import ai_content_governance_service as module
+
+    class Pool:
+        def completer(self, avoid=()):
+            return object()
+
+    calls = 0
+
+    async def decide_publish(_model, _item):
+        nonlocal calls
+        calls += 1
+        return _reviewed("published", "publish")
+
+    asyncio.run(module._decide_with_retry(decide_publish, Pool(), "x"))
+    assert calls == 1
+
+    calls = 0
+
+    async def decide_hold(_model, _item):
+        nonlocal calls
+        calls += 1
+        return _reviewed("published", "hold")
+
+    result = asyncio.run(module._decide_with_retry(decide_hold, Pool(), "x"))
+    assert calls == 2 and module._review_outcome(result) == "hold"
+
+
+def test_old_hold_without_second_opinion_is_read_again() -> None:
+    from src.services.ai_content_governance_service import AIContentGovernanceService as S
+
+    base = {"decision": "hold", "held_fingerprint": "f"}
+    assert S._held({"ai_content_governance": base}, "f") is False
+    assert S._held({"ai_content_governance": {**base, "second_opinion": True}}, "f") is True
+    assert S._held({"ai_content_governance": {**base, "second_opinion": True}}, "g") is False
 
 
 def test_route_pool_avoids_collapsed_model_while_two_others_remain() -> None:

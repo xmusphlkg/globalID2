@@ -1161,3 +1161,74 @@ async def test_terminal_result_rechecks_cancellation_despite_recent_cached_allow
             await queue.submit_completion(
                 fake_agent(), "already completed", None, False, {}
             )
+
+
+async def test_avoided_route_takes_work_when_the_other_route_is_full(db):
+    # "second" is the only alternative but its single permit is busy, so an item
+    # that avoids "first" must not wait for it while "first" sits idle.
+    busy = await add()
+    work_id = await queue.enqueue_work(
+        parent_task_uuid="parent",
+        line="knowledge_brief",
+        priority="low",
+        payload={"avoid_models": ["first"]},
+    )
+    release = asyncio.Event()
+    served = {}
+
+    async def routes():
+        return [route("first"), route("second")]
+
+    async def complete(item, chosen):
+        served[item.id] = chosen["model_key"]
+        if item.id == busy:
+            await release.wait()
+        return "done"
+
+    dispatcher = queue.AIWorkDispatcher(routes, complete)
+    # Pin the first claim to "second" so it is full when the avoiding item is scanned.
+    first = await queue.claim_work(route("second"), alternatives={"second"})
+    assert first.id == busy
+    dispatcher.active[busy] = asyncio.create_task(complete(first, route("second")))
+    dispatcher.active[busy]._ai_route_key = "second"
+    await asyncio.sleep(0)
+    await dispatcher.tick()
+    release.set()
+    await asyncio.gather(*dispatcher.active.values())
+    assert served[work_id] == "first"
+
+
+def test_route_pool_hands_avoid_models_to_the_queued_completer():
+    from src.ai.peer_review_completer import QueuedModelCompleter, ReviewRoutePool
+
+    pool = ReviewRoutePool({"p:a": 1}, line="t", max_tokens=10)
+    token = queue._PARENT.set(queue.ParentContext("parent", "situation_notice", "normal"))
+    try:
+        completer = pool.completer({"m1", ""})
+    finally:
+        queue._PARENT.reset(token)
+    assert isinstance(completer, QueuedModelCompleter)
+    assert completer.avoid_models == ["m1"]
+
+
+async def test_queued_completer_sends_avoid_models_for_both_roles(monkeypatch):
+    from src.ai import peer_review_completer as module
+
+    seen = []
+
+    class Agent:
+        def __init__(self, *_a, **_k):
+            pass
+
+        async def complete(self, **kwargs):
+            seen.append(kwargs.get("_avoid_models"))
+            return "{}"
+
+        def get_latest_conversation(self):
+            return {"model": "served"}
+
+    monkeypatch.setattr(module, "PeerReviewAgent", Agent)
+    completer = module.QueuedModelCompleter(line="t", avoid_models=["m1"])
+    await completer("author", "s", "p")
+    await completer("reviewer", "s", "p")
+    assert seen == [["m1"], ["m1", "served"]]

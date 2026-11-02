@@ -36,12 +36,26 @@ async def _noop(_: int) -> None:
     return None
 
 
+async def model_pool_size() -> int:
+    """Reports to read at once: the permits of every route the model center admits.
+
+    Each report holds one permit at a time (author, then reviewer), so this keeps
+    every permit busy. Extra reports only wait in the durable work queue, where the
+    dispatcher enforces the per-route limits and ranks this line above low-priority work.
+    """
+
+    from src.ai.model_center import live_model_permits
+
+    return await live_model_permits()
+
+
 async def run_situation(
     *,
     since_days: int = DEFAULT_SINCE_DAYS,
     don_limit: int = 200,
     document_limit: int = 40,
     ai_limit: int = 30,
+    concurrency: int | None = None,
     skip_ai: bool = False,
     require_cross_model: bool = False,
     fetch: bool = True,
@@ -62,13 +76,13 @@ async def run_situation(
     from src.services.ingestion.capture import capture_sources
     try:
         with capture_sources(stages.task_uuid, stages.attempt, "situation"):
-            return await _run_stages(summary=summary, now=now, run_id=run_id, stages=stages, since_days=since_days, don_limit=don_limit, document_limit=document_limit, ai_limit=ai_limit, skip_ai=skip_ai, require_cross_model=require_cross_model, fetch=fetch, sources=scoped, progress=progress)
+            return await _run_stages(summary=summary, now=now, run_id=run_id, stages=stages, since_days=since_days, don_limit=don_limit, document_limit=document_limit, ai_limit=ai_limit, concurrency=concurrency, skip_ai=skip_ai, require_cross_model=require_cross_model, fetch=fetch, sources=scoped, progress=progress)
     except BaseException as exc:
         await stages.finish(error=str(exc) or type(exc).__name__)
         raise
 
 
-async def _run_stages(*, summary, now, run_id, stages, since_days, don_limit, document_limit, ai_limit, skip_ai, require_cross_model, fetch, sources, progress):
+async def _run_stages(*, summary, now, run_id, stages, since_days, don_limit, document_limit, ai_limit, concurrency, skip_ai, require_cross_model, fetch, sources, progress):
     from .source_log import log_situation_event, log_situation_sources
 
     if fetch:
@@ -108,11 +122,18 @@ async def _run_stages(*, summary, now, run_id, stages, since_days, don_limit, do
     summary["review_mode"] = None
     if not skip_ai:
         from src.ai.peer_review_completer import QueuedModelCompleter
-        complete = QueuedModelCompleter(line="situation_notice", allow_single_model=not require_cross_model)
 
+        def new_completer() -> QueuedModelCompleter:
+            # One per report: it remembers which model wrote the draft.
+            return QueuedModelCompleter(line="situation_notice", allow_single_model=not require_cross_model)
+
+        workers = concurrency or await model_pool_size()
         summary["review_mode"] = "scheduled"
+        summary["extract_concurrency"] = workers
         summary["requeued_stale_prompts"] = await requeue_stale_prompts()
-        summary["extraction"] = await extract_pending(complete, limit=ai_limit, source_ids=sources)
+        summary["extraction"] = await extract_pending(
+            new_completer(), limit=ai_limit, source_ids=sources, concurrency=workers, new_completer=new_completer
+        )
         await log_situation_event(
             stages.task_uuid,
             title="Situation organize",

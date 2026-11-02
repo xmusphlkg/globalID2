@@ -1443,6 +1443,8 @@ def extract_retry_after_seconds(error: Any) -> Optional[int]:
         r"try again in\s+(\d+(?:\.\d+)?)s",
         r"in\s+(\d+(?:\.\d+)?)\s*seconds",
         r"after\s+(\d+(?:\.\d+)?)\s*seconds",
+        # Pooled gateways: "the pool resumes in 6050s".
+        r"resumes?\s+in\s+(\d+(?:\.\d+)?)\s*s\b",
         r"(?:please\s*)?retry\s*(?:in\s*)?(\d+(?:\.\d+)?)\s*s",
         r"(\d+(?:\.\d+)?)\s*\u79d2\s*(?:\u540e)?\s*(?:\u518d\u8bd5|\u91cd\u8bd5)",
         r"\u8bf7\u5728\s*(\d+(?:\.\d+)?)\s*\u79d2\s*(?:\u540e)?\s*(?:\u91cd\u8bd5|\u518d\u8bd5)",
@@ -1564,6 +1566,32 @@ async def get_active_model_routes() -> List[Dict[str, Any]]:
     """Return routable model routes ordered by model priority."""
     routes = await get_runtime_routes()
     return [route for route in routes if route.get("available_for_routing")]
+
+
+async def live_model_permits(*, ceiling: int | None = None) -> int:
+    """Model calls the center admits at once: the summed permits of routable routes.
+
+    The one sizing rule for every AI pool (content review, Situation, ...). A pool
+    that keeps this many items in flight fills the dispatcher without claiming a
+    fixed batch ahead of the routes that can run it. Never below one, so an
+    unreadable or empty center degrades to serial work instead of stopping it.
+    """
+
+    try:
+        routes = await get_runtime_routes()
+    except Exception as exc:  # noqa: BLE001 - a capacity miss must not abort the caller
+        logger.warning("Could not read model capacity; pool keeps one slot | {}", exc)
+        return 1
+    total = 0
+    for route in routes:
+        if not route.get("available_for_routing"):
+            continue
+        try:
+            total += max(0, int(route.get("runtime_model_capacity") or 0))
+        except (TypeError, ValueError):
+            continue
+    total = max(1, total)
+    return min(ceiling, total) if ceiling else total
 
 
 def _content_to_text(content: Any) -> str:

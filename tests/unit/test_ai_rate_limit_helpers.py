@@ -96,6 +96,15 @@ def test_extract_retry_after_seconds_parses_chinese_message() -> None:
     assert extract_retry_after_seconds(error) == 12
 
 
+def test_extract_retry_after_seconds_parses_pool_resume_message() -> None:
+    error = DummyRateLimitError(
+        "Error code: 429 - every usable account in realm 'cn' is cooling the upstream hy3 window; "
+        "the pool resumes in 6050s"
+    )
+
+    assert extract_retry_after_seconds(error) == 6050
+
+
 def test_is_model_unavailable_error_detects_model_not_found_code() -> None:
     error = DummyRateLimitError(
         "Error code: 404 - {'error': {'message': 'The model `hunyuan-standard` does not exist or you do not have access to it.', 'code': 'model_not_found'}}",
