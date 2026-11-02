@@ -1,3 +1,4 @@
+import { openGzipSizeCache } from './gzip-size-cache.mjs';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { brotliCompressSync, gzipSync } from 'node:zlib';
 import { basename, join, relative, resolve } from 'node:path';
@@ -61,7 +62,7 @@ function addJavaScriptDependencies(assetName, assets, selected) {
   }
 }
 
-export function auditPerformance(distDirectory, budgetOverrides = {}) {
+export function auditPerformance(distDirectory, budgetOverrides = {}, { gzipCache } = {}) {
   const dist = resolve(distDirectory);
   const assetDirectory = join(dist, '_astro');
   const budgets = { ...DEFAULT_PERFORMANCE_BUDGETS, ...budgetOverrides };
@@ -71,13 +72,14 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
     return { passed: false, errors: [`Missing build asset directory: ${assetDirectory}`], budgets };
   }
 
+  const gzipSize = bytes => gzipCache ? gzipCache.measure(bytes) : gzipSync(bytes, { level: 9 }).length;
   const assets = new Map();
   for (const entry of readdirSync(assetDirectory, { withFileTypes: true })) {
     if (!entry.isFile()) continue;
     const bytes = readFileSync(join(assetDirectory, entry.name));
     assets.set(entry.name, {
       rawBytes: bytes.length,
-      gzipBytes: gzipSync(bytes, { level: 9 }).length,
+      gzipBytes: gzipSize(bytes),
       text: entry.name.endsWith('.js') ? bytes.toString('utf8') : '',
     });
   }
@@ -139,7 +141,7 @@ export function auditPerformance(distDirectory, budgetOverrides = {}) {
     const htmlBytes = readFileSync(page);
     const html = htmlBytes.toString('utf8');
     totalHtmlBytes += htmlBytes.length;
-    const pageHtmlGzipBytes = gzipSync(htmlBytes, { level: 9 }).length;
+    const pageHtmlGzipBytes = gzipSize(htmlBytes);
     totalHtmlGzipBytes += pageHtmlGzipBytes;
     const routePath = `/${relative(dist, page).replaceAll('\\', '/')}`;
     if (pageHtmlGzipBytes > largestPageHtml.gzipBytes) largestPageHtml = { path: routePath, gzipBytes: pageHtmlGzipBytes };
@@ -239,7 +241,10 @@ function runCli() {
   const dist = distIndex >= 0 && process.argv[distIndex + 1]
     ? process.argv[distIndex + 1]
     : resolve(import.meta.dirname, '..', 'dist');
-  const result = auditPerformance(dist);
+  const gzipCache = openGzipSizeCache(resolve(import.meta.dirname, '../../data/cache/build-gzip-sizes.json'));
+  const result = auditPerformance(dist, {}, { gzipCache });
+  gzipCache.save();
+  result.compressionCache = gzipCache.stats;
   const label = result.passed ? 'PASS' : 'FAIL';
   process.stdout.write(`[performance-budget] ${label} ${JSON.stringify(result)}\n`);
   if (!result.passed) process.exitCode = 1;

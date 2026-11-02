@@ -286,7 +286,7 @@ async def run_logged_command(
 
     while True:
         now = loop.time()
-        if metadata.get("event") == "generate_site_data" and now >= next_progress_report:
+        if now >= next_progress_report:
             try:
                 await report_progress()
             except Exception as exc:
@@ -433,6 +433,7 @@ async def run_logged_command(
 
     completion_metadata = {
         **metadata,
+        "elapsed_seconds": round(loop.time() - started_at, 3),
         "total_output_lines": total_output_lines,
         "stored_output_chunks": persisted_output_chunks,
         "suppressed_output_chunks": suppressed_output_chunks,

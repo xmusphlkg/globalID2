@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import hashlib
+import gzip
 import hmac
 import json
+import io
+import re
 import time
+from contextlib import contextmanager
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+import fcntl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -15,6 +21,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.request import Request, urlopen
+from xml.etree import ElementTree
+
+import httpx
 
 from .papers_bundle import DEFAULT_PAPERS_ORIGIN, build_papers_manifest
 
@@ -139,6 +148,28 @@ def _sign_key(secret: str, datestamp: str, region: str, service: str) -> bytes:
     return _hmac_sha256(key_service, b"aws4_request")
 
 
+@contextmanager
+def _http_open(client: httpx.Client, request: Request, timeout: float):
+    """Adapt pooled HTTPX responses to the injectable urllib-style interface."""
+    try:
+        response = client.request(
+            request.get_method(), request.full_url,
+            headers=dict(request.header_items()), content=request.data, timeout=timeout,
+        )
+    except httpx.HTTPError as exc:
+        raise urllib.error.URLError(str(exc)) from exc
+    try:
+        if response.status_code >= 400:
+            raise urllib.error.HTTPError(
+                request.full_url, response.status_code, response.reason_phrase,
+                response.headers, io.BytesIO(response.content),
+            )
+        response.status = response.status_code
+        yield response
+    finally:
+        response.close()
+
+
 class R2S3Client:
     """Minimal SigV4 S3 client for Cloudflare R2 object operations."""
 
@@ -150,10 +181,25 @@ class R2S3Client:
         timeout_seconds: float = 120.0,
     ) -> None:
         self.config = config
-        self._opener = opener or (lambda request, timeout: urlopen(request, timeout=timeout))
+        self._http = None if opener else httpx.Client(
+            limits=httpx.Limits(max_connections=32, max_keepalive_connections=32),
+            follow_redirects=False,
+        )
+        self._opener = opener or self._pooled_open
         self.timeout_seconds = timeout_seconds
         self.region = "auto"
         self.service = "s3"
+
+    @contextmanager
+    def _pooled_open(self, request: Request, timeout: float):
+        """Reuse TLS connections across the bounded upload worker threads."""
+        assert self._http is not None
+        with _http_open(self._http, request, timeout) as response:
+            yield response
+
+    def close(self) -> None:
+        if self._http is not None:
+            self._http.close()
 
     def _host(self) -> str:
         return urllib.parse.urlparse(self.config.s3_endpoint).netloc
@@ -174,6 +220,7 @@ class R2S3Client:
         body: bytes = b"",
         content_type: str | None = None,
         cache_control: str | None = None,
+        content_encoding: str | None = None,
         query: str = "",
     ) -> Request:
         now = datetime.now(timezone.utc)
@@ -194,6 +241,8 @@ class R2S3Client:
             headers["content-type"] = content_type
         if cache_control:
             headers["cache-control"] = cache_control
+        if content_encoding:
+            headers["content-encoding"] = content_encoding
         if body:
             headers["content-length"] = str(len(body))
         signed_header_names = ";".join(sorted(headers))
@@ -240,6 +289,7 @@ class R2S3Client:
         body: bytes = b"",
         content_type: str | None = None,
         cache_control: str | None = None,
+        content_encoding: str | None = None,
         query: str = "",
     ) -> tuple[int, bytes]:
         last_error: BaseException | None = None
@@ -250,6 +300,7 @@ class R2S3Client:
                 body=body,
                 content_type=content_type,
                 cache_control=cache_control,
+                content_encoding=content_encoding,
                 query=query,
             )
             try:
@@ -257,8 +308,7 @@ class R2S3Client:
                     return int(getattr(response, "status", 200)), response.read()
             except urllib.error.HTTPError as exc:
                 detail = exc.read().decode("utf-8", errors="replace")
-                # 5xx from the edge is often brief; 4xx is a permanent rejection.
-                if 500 <= int(exc.code) <= 599 and attempt < _TRANSPORT_RETRY_ATTEMPTS:
+                if (int(exc.code) == 429 or 500 <= int(exc.code) <= 599) and attempt < _TRANSPORT_RETRY_ATTEMPTS:
                     last_error = R2S3Error(
                         f"R2 {method} {key!r} failed with HTTP {exc.code}: {detail}",
                         status=exc.code,
@@ -285,12 +335,22 @@ class R2S3Client:
         content_type: str | None = None,
         cache_control: str | None = None,
     ) -> None:
+        # The complete manifest remains JSON to callers. Compress its HTTP
+        # representation to avoid transferring ~11 MB of repeated paths and
+        # metadata on every changed release; ordinary object ETags stay intact.
+        content_encoding = None
+        if key == MANIFEST_KEY and len(body) > 1024:
+            encoded = gzip.compress(body, compresslevel=6, mtime=0)
+            if len(encoded) < len(body):
+                print(f"R2 manifest transport: raw_bytes={len(body)}, encoded_bytes={len(encoded)}", flush=True)
+                body, content_encoding = encoded, "gzip"
         status, _payload = self._request(
             "PUT",
             key,
             body=body,
             content_type=content_type,
             cache_control=cache_control,
+            content_encoding=content_encoding,
         )
         if status not in {200, 201}:
             raise R2S3Error(f"R2 PUT {key!r} returned HTTP {status}")
@@ -311,6 +371,14 @@ class R2S3Client:
             return None
         if status != 200:
             raise R2S3Error(f"R2 GET {key!r} returned HTTP {status}")
+        # HTTPX decodes Content-Encoding itself; injected/urllib transports
+        # may return the encoded representation. Accept both, including legacy
+        # uncompressed manifests, without changing the manifest schema.
+        if key == MANIFEST_KEY and payload.startswith(b"\x1f\x8b"):
+            try:
+                payload = gzip.decompress(payload)
+            except (OSError, EOFError) as exc:
+                raise R2S3Error("Invalid compressed papers manifest") from exc
         return payload
 
     def head_bucket(self) -> bool:
@@ -321,6 +389,36 @@ class R2S3Client:
         except R2S3Error:
             return False
         return status in {200, 204}
+
+    def list_objects(self) -> dict[str, dict[str, Any]]:
+        """Read metadata only, including objects left by an interrupted publish.
+
+        This publisher uses single PUTs, whose ETags identify their MD5 content.
+        Multipart ETags are never accepted as a content match.
+        """
+        objects: dict[str, dict[str, Any]] = {}
+        token = None
+        seen_tokens: set[str] = set()
+        while True:
+            params = {"list-type": "2", "max-keys": "1000"}
+            if token:
+                params["continuation-token"] = token
+            query = urllib.parse.urlencode(sorted(params.items()), quote_via=urllib.parse.quote)
+            _status, body = self._request("GET", "", query=query)
+            root = ElementTree.fromstring(body)
+            for item in root.findall("{*}Contents"):
+                key = item.findtext("{*}Key")
+                if key is not None:
+                    objects[key] = {
+                        "bytes": int(item.findtext("{*}Size") or "0"),
+                        "etag": (item.findtext("{*}ETag") or "").strip('"'),
+                    }
+            if root.findtext("{*}IsTruncated") != "true":
+                return objects
+            token = root.findtext("{*}NextContinuationToken")
+            if not token or token in seen_tokens:
+                raise R2S3Error("Invalid R2 listing continuation token")
+            seen_tokens.add(token)
 
 
 def _content_type_for(path: str) -> str:
@@ -375,6 +473,49 @@ def load_remote_manifest(client: R2S3Client) -> dict[str, Any]:
     return data
 
 
+def _verify_public_sample(url: str, opener=None) -> None:
+    # The public edge rejects urllib's default request (HTTP 403), while the
+    # same URL succeeds with HTTPX. Use the same transport family as the uploader
+    # and retain status/transport diagnostics rather than turning every failure
+    # into an unexplained boolean.
+    client = httpx.Client(follow_redirects=True) if opener is None else None
+    call = opener or (lambda request, timeout: _http_open(client, request, timeout))
+    detail = "unknown failure"
+    try:
+        for attempt in range(1, _TRANSPORT_RETRY_ATTEMPTS + 1):
+            retryable = False
+            try:
+                try:
+                    with call(Request(url, method="HEAD"), 30.0) as response:
+                        status = int(getattr(response, "status", 200))
+                        if status in {200, 204}:
+                            return
+                except urllib.error.HTTPError as exc:
+                    if exc.code != 405:
+                        raise
+                    with call(Request(url, method="GET", headers={"Range": "bytes=0-0"}), 30.0) as response:
+                        status = int(getattr(response, "status", 200))
+                        if status in {200, 206}:
+                            return
+                detail = f"HTTP {status}"
+                retryable = status == 429 or 500 <= status <= 599
+            except urllib.error.HTTPError as exc:
+                detail = f"HTTP {exc.code}"
+                retryable = exc.code == 429 or 500 <= exc.code <= 599
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                detail = f"transport failed: {exc}"
+                retryable = True
+            except (ValueError, R2S3Error) as exc:
+                detail = str(exc)
+            if not retryable or attempt == _TRANSPORT_RETRY_ATTEMPTS:
+                break
+            time.sleep(_TRANSPORT_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1)))
+    finally:
+        if client is not None:
+            client.close()
+    raise R2S3Error(f"Public papers verification failed for sample URL: {url}: {detail}")
+
+
 def publish_papers_site(
     papers_dir: Path,
     config: R2PapersConfig,
@@ -382,8 +523,38 @@ def publish_papers_site(
     client: R2S3Client | None = None,
     verify_public: bool = True,
     public_opener: Callable[[Request, float | None], Any] | None = None,
+    workers: int = 32,
+    lock_dir: Path | None = None,
 ) -> PapersPublishResult:
-    """Incrementally sync ``papers_dir`` to R2 using the papers manifest."""
+    """Publish with one writer per target and bounded parallel object transfers."""
+    if not 1 <= workers <= 32:
+        raise ValueError("R2 upload workers must be between 1 and 32")
+    directory = lock_dir or Path(__file__).resolve().parents[3] / "data/cache/r2-publish"
+    directory.mkdir(parents=True, exist_ok=True)
+    target = _sha256_hex(f"{config.s3_endpoint}/{config.bucket}".encode())
+    with (directory / f"{target}.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        active = client or R2S3Client(config)
+        try:
+            return _publish_papers_site(
+                papers_dir, config, client=active, verify_public=verify_public,
+                public_opener=public_opener, workers=workers,
+            )
+        finally:
+            if client is None:
+                active.close()
+
+
+def _publish_papers_site(
+    papers_dir: Path,
+    config: R2PapersConfig,
+    *,
+    client: R2S3Client,
+    verify_public: bool,
+    public_opener: Callable[[Request, float | None], Any] | None,
+    workers: int,
+) -> PapersPublishResult:
+    started = time.monotonic()
 
     if not papers_dir.is_dir():
         raise FileNotFoundError(f"Papers site directory not found: {papers_dir}")
@@ -400,7 +571,7 @@ def publish_papers_site(
             encoding="utf-8",
         )
 
-    active = client or R2S3Client(config)
+    active = client
     remote_manifest = load_remote_manifest(active)
     remote_by_key = {
         str(item.get("key")): item
@@ -419,45 +590,94 @@ def publish_papers_site(
             "remote object would be deleted."
         )
 
+    if len(local_by_key) != len(local_files):
+        raise R2S3Error("Duplicate or missing keys in local papers manifest")
+    source_root = papers_dir.resolve()
+    for key, item in local_by_key.items():
+        path = (source_root / str(item["path"])).resolve()
+        if (not path.is_relative_to(source_root) or not path.is_file()
+                or key == MANIFEST_KEY or ".." in key.split("/")):
+            raise R2S3Error(f"Invalid papers manifest path: {item['path']}")
+        if path.stat().st_size != int(item["bytes"]):
+            raise R2S3Error(f"Papers file size changed after build: {item['path']}")
+
+    print(f"R2 inventory: checking {len(local_files)} files; workers={workers}", flush=True)
+    # Remote metadata is also the durable resume checkpoint. Listing recovers
+    # successful PUTs from *any* earlier attempt, even if it never wrote its
+    # final manifest, and detects objects overwritten by an incomplete release.
+    inventory = active.list_objects() if hasattr(active, "list_objects") else None
+
     uploaded = 0
     unchanged = 0
     bytes_uploaded = 0
-    for key, item in local_by_key.items():
+    def transfer(item: dict) -> tuple[bool, int]:
+        key = str(item["key"])
         source_path = papers_dir / str(item["path"])
-        remote = remote_by_key.get(key)
-        if (
-            remote
-            and int(remote.get("bytes") or -1) == int(item.get("bytes") or -2)
-            and str(remote.get("sha256") or "") == str(item.get("sha256") or "")
-        ):
-            unchanged += 1
-            continue
         body = source_path.read_bytes()
+        if len(body) != int(item["bytes"]) or _sha256_hex(body) != item["sha256"]:
+            raise R2S3Error(f"Papers checksum changed after build: {item['path']}")
+        if inventory is not None:
+            stored = inventory.get(key) or {}
+            etag = str(stored.get("etag") or "")
+            if (stored.get("bytes") == len(body) and re.fullmatch(r"[0-9a-f]{32}", etag)
+                    and hashlib.md5(body, usedforsecurity=False).hexdigest() == etag):
+                return False, 0
+        else:
+            # Compatibility with injected legacy clients; production always
+            # checks the actual object inventory, never only the manifest.
+            remote = remote_by_key.get(key) or {}
+            if remote.get("bytes") == len(body) and remote.get("sha256") == item["sha256"]:
+                return False, 0
         active.put_object(
             key,
             body,
             content_type=_content_type_for(str(item["path"])),
             cache_control=_cache_control_for(str(item["path"])),
         )
-        uploaded += 1
-        bytes_uploaded += len(body)
+        return True, len(body)
 
-    removed = 0
-    for key in sorted(set(remote_by_key) - set(local_by_key)):
-        if key == MANIFEST_KEY:
-            continue
-        active.delete_object(key)
-        removed += 1
+    # At most 2 * workers futures (and workers file bodies) remain in memory.
+    # On failure, drain in-flight writes, cancel queued writes, then leave the
+    # manifest and orphan objects alone. The next attempt lists and resumes.
+    def transfer_batch(batch):
+        nonlocal uploaded, unchanged, bytes_uploaded
+        remaining = iter(batch)
+        last_progress = time.monotonic()
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="papers-r2") as pool:
+            pending = set()
+            try:
+                while True:
+                    while len(pending) < workers * 2:
+                        item = next(remaining, None)
+                        if item is None:
+                            break
+                        pending.add(pool.submit(transfer, item))
+                    if not pending:
+                        break
+                    done, pending = wait(pending, return_when=FIRST_COMPLETED)
+                    for future in done:
+                        changed, size = future.result()
+                        uploaded += int(changed)
+                        unchanged += int(not changed)
+                        bytes_uploaded += size
+                    if time.monotonic() - last_progress >= 15:
+                        print(
+                            f"R2 progress: {uploaded + unchanged}/{len(local_files)}; "
+                            f"uploaded={uploaded}, reused={unchanged}, bytes={bytes_uploaded}, "
+                            f"elapsed={time.monotonic() - started:.1f}s", flush=True,
+                        )
+                        last_progress = time.monotonic()
+            except BaseException:
+                for future in pending:
+                    future.cancel()
+                raise
 
-    manifest_body = json.dumps(
-        local_manifest, ensure_ascii=False, indent=2, sort_keys=True
-    ).encode("utf-8") + b"\n"
-    active.put_object(
-        MANIFEST_KEY,
-        manifest_body,
-        content_type="application/json; charset=utf-8",
-        cache_control=_cache_control_for(MANIFEST_KEY),
-    )
+    # Public indexes are commit pointers: never expose new shard URLs before
+    # every referenced object exists. Old shards remain in the local retention
+    # window and therefore remain in the release manifest until safe to prune.
+    indexes = {"site-data/research/index.json", "site-data/research/catalogue.json"}
+    transfer_batch([item for item in local_files if item["key"] not in indexes])
+    transfer_batch([item for item in local_files if item["key"] in indexes])
 
     sample_url = None
     sample_ok = True
@@ -473,28 +693,23 @@ def publish_papers_site(
         )
         sample_url = str(sample.get("url") or "")
         if verify_public and sample_url:
-            opener = public_opener or (lambda request, timeout: urlopen(request, timeout=timeout))
-            request = Request(sample_url, method="HEAD")
-            try:
-                with opener(request, 60.0) as response:
-                    sample_ok = int(getattr(response, "status", 200)) in {200, 204}
-            except urllib.error.HTTPError as exc:
-                # Some edges reject HEAD; fall back to a tiny GET range via GET.
-                if exc.code == 405:
-                    get_request = Request(sample_url, method="GET")
-                    try:
-                        with opener(get_request, 60.0) as response:
-                            sample_ok = int(getattr(response, "status", 200)) == 200
-                    except (OSError, ValueError, R2S3Error):
-                        sample_ok = False
-                else:
-                    sample_ok = False
-            except (OSError, ValueError, R2S3Error):
-                sample_ok = False
-            if not sample_ok:
-                raise R2S3Error(
-                    f"Public papers verification failed for sample URL: {sample_url}"
-                )
+            _verify_public_sample(sample_url, public_opener)
+
+    removed = 0
+    for key in sorted(set(remote_by_key) - set(local_by_key)):
+        if key != MANIFEST_KEY:
+            active.delete_object(key)
+            removed += 1
+    manifest_body = json.dumps(
+        local_manifest, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+    ).encode("utf-8")
+    if manifest_body != json.dumps(remote_manifest, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8"):
+        active.put_object(
+            MANIFEST_KEY, manifest_body,
+            content_type="application/json; charset=utf-8",
+            cache_control=_cache_control_for(MANIFEST_KEY),
+        )
+    print(f"R2 publish completed in {time.monotonic() - started:.1f}s", flush=True)
 
     return PapersPublishResult(
         uploaded=uploaded,
@@ -531,7 +746,10 @@ def r2_preflight_payload(config: R2PapersConfig | None, *, probe: bool = True) -
         return payload
     try:
         client = R2S3Client(config)
-        payload["bucket_access_ok"] = client.head_bucket()
+        try:
+            payload["bucket_access_ok"] = client.head_bucket()
+        finally:
+            client.close()
         if not payload["bucket_access_ok"]:
             payload["error"] = "R2 papers bucket probe failed."
     except Exception as exc:  # noqa: BLE001 - surface any probe failure

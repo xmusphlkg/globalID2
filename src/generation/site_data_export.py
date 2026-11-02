@@ -833,7 +833,12 @@ async def collect_site_export_context(
         publish_coverage = None
         curve_refresh_codes: set[str] | None = None
         import os
-        if recorded_at_as_of is None and os.environ.get("GLOBALID_RELEASE_FROM_OBSERVATIONS") != "1":
+        # A literature-only release has no surveillance curves to refresh.
+        # Reuse published coverage instead of scanning every disease artifact.
+        literature_only = incremental and not incremental_codes
+        if recorded_at_as_of is None and (
+            os.environ.get("GLOBALID_RELEASE_FROM_OBSERVATIONS") != "1" or literature_only
+        ):
             publish_states = await _fetch_publish_states(session)
             if publish_states is not None:
                 publish_states = {
@@ -1371,6 +1376,7 @@ async def collect_site_export_context(
         literature_export,
         situation_latest,
         diseases_by_id=diseases_by_id,
+        related_cache_path=Path(__file__).resolve().parents[2] / "data/cache/research-related.json",
     )
 
     return {
@@ -1836,6 +1842,38 @@ async def export(
         f"{time.perf_counter() - artifact_started:.1f}s",
         flush=True,
     )
+
+    # Freeze exactly the curves rendered by this release. The worker excludes
+    # collection-store writes for this entire generation/deployment interval.
+    import os
+    projection_dir = output_dir / "_release-projection"
+    if os.environ.get("GLOBALID_RELEASE_FROM_OBSERVATIONS") == "1" and recorded_at_as_of is None:
+        from sqlalchemy import bindparam, text
+        from src.generation.release_projection_snapshot import write_projection_snapshot
+
+        selected_codes = (
+            context["incremental_country_codes"] if context.get("incremental")
+            else [country["code"] for country in context["country_exports"]]
+        )
+        high_water = {}
+        if selected_codes:
+            async with get_db() as projection_db:
+                watermarks = await projection_db.execute(
+                    text(
+                        "SELECT geography_key, max(updated_at) FROM disease_series_observations "
+                        "WHERE geography_key IN :keys GROUP BY geography_key"
+                    ).bindparams(bindparam("keys", expanding=True)),
+                    {"keys": [f"country:{code}:national" for code in selected_codes]},
+                )
+                high_water = {
+                    str(key).removeprefix("country:").removesuffix(":national"): value
+                    for key, value in watermarks
+                }
+        write_projection_snapshot(context, projection_dir, high_water)
+    else:
+        # An ordinary/manual export must never leave an earlier release's
+        # projection eligible for acknowledgement.
+        (projection_dir / "manifest.json").unlink(missing_ok=True)
 
     downloads_started = time.perf_counter()
     curve_refresh_codes = context.get("publish_curve_refresh_codes")

@@ -124,6 +124,9 @@ async def execute_release_task(
     """Restore generated artifacts if build, deployment, or verification fails."""
     import shutil
     import tempfile
+    import time
+
+    release_started = time.monotonic()
 
     paths = [
         runtime.astro_dir / "src" / "data",
@@ -132,9 +135,16 @@ async def execute_release_task(
         runtime.root_dir / "exports" / "site-downloads",
         runtime.root_dir / "exports" / "papers-site",
     ]
-    # Snapshots may exceed 18 GiB; /tmp can be a RAM-backed filesystem whose
-    # usage is charged against the worker's memory limit. Keep independent
-    # copies on the same ignored export volume as the generated packages.
+    from .artifact_checkpoint import ArtifactCheckpoint, link_immutable_or_copy
+
+    checkpoint = (
+        ArtifactCheckpoint(runtime.root_dir, str(task.task_uuid), paths, dict(task.input_data or {}))
+        if task is not None and hasattr(task, "input_data") else None
+    )
+    # Download partitions are immutable: the generator replaces changed files
+    # atomically, and the publisher only reads them. Link their old inodes into
+    # the rollback snapshot instead of copying ~21 GiB on every release. Other
+    # artifacts still use independent copies because not every writer is atomic.
     backup_root = runtime.root_dir / "exports" / "release-backups"
     await asyncio.to_thread(backup_root.mkdir, parents=True, exist_ok=True)
     temporary = tempfile.TemporaryDirectory(prefix="globalid-release-", dir=backup_root)
@@ -144,10 +154,22 @@ async def execute_release_task(
             backup = Path(temporary.name) / str(index)
             existed = path.exists()
             if existed:
-                await asyncio.to_thread(shutil.copytree, path, backup)
+                copy_function = (
+                    link_immutable_or_copy if path == runtime.root_dir / "exports" / "site-downloads"
+                    else shutil.copy2
+                )
+                await asyncio.to_thread(
+                    shutil.copytree, path, backup, copy_function=copy_function
+                )
             backups.append((path, backup, existed))
+        backup_seconds = time.monotonic() - release_started
         try:
-            return await _execute_release_task(service, task, runtime=runtime)
+            result = await _execute_release_task(
+                service, task, runtime=runtime, artifact_checkpoint=checkpoint,
+                previous_site_dir=backups[2][1] if backups[2][2] else None,
+            )
+            if checkpoint is not None:
+                await asyncio.to_thread(checkpoint.discard)
         except BaseException:
             dist_dir = runtime.astro_dir / "dist"
             if dist_dir.is_dir():
@@ -175,6 +197,15 @@ async def execute_release_task(
                         "Could not write release failure dist inventory",
                         exc_info=True,
                     )
+            if checkpoint is not None:
+                try:
+                    await asyncio.to_thread(checkpoint.retain)
+                except Exception:
+                    logging.getLogger(__name__).warning(
+                        "Could not retain release candidate; retry will rebuild", exc_info=True,
+                    )
+                    # An incomplete retained candidate must never authorize reuse.
+                    await asyncio.to_thread(checkpoint.discard)
             for path, backup, existed in backups:
                 if path.exists():
                     await asyncio.to_thread(shutil.rmtree, path)
@@ -185,10 +216,26 @@ async def execute_release_task(
         # TemporaryDirectory.__exit__ would recursively delete gigabytes on
         # the scheduling loop and stall the AI dispatcher and task heartbeat.
         await asyncio.to_thread(temporary.cleanup)
+    if task is not None and callable(getattr(runtime.task_manager, "add_workbook_entry", None)):
+        timings = {
+            "elapsed_seconds": round(time.monotonic() - release_started, 3),
+            "backup_seconds": round(backup_seconds, 3),
+            "target_seconds": 600,
+        }
+        timings["within_target"] = timings["elapsed_seconds"] <= timings["target_seconds"]
+        result["release_timing"] = timings
+        await runtime.task_manager.add_workbook_entry(
+            task.task_uuid, entry_type="info", title="Release Timing",
+            content=json.dumps(timings), content_type="json",
+            metadata={"event": "release_timing", **timings},
+        )
+    return result
 
 
 async def _execute_release_task(
-    service: Any, task: Any, *, runtime: ReleasePipelineRuntime
+    service: Any, task: Any, *, runtime: ReleasePipelineRuntime,
+    artifact_checkpoint: Any = None,
+    previous_site_dir: Path | None = None,
 ) -> dict[str, Any]:
     input_data = dict(task.input_data or {})
     job_id = str(input_data.get("release_job_id") or "").strip()
@@ -273,110 +320,136 @@ async def _execute_release_task(
         )
     await runtime.task_manager.update_task_progress(task.task_uuid, 15)
 
-    await service._run_logged_command(
-        task.task_uuid,
-        title="Export Situation",
-        cmd=service._update_situation_notices_command(python_path=python_path),
-        cwd=runtime.root_dir,
-        env=git_env,
-        metadata={"event": "refresh_situation_notices", "release_job_id": job.job_id},
-        timeout_seconds=min(
-            runtime.generate_timeout_seconds,
-            SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS,
-        ),
-    )
-    await runtime.task_manager.update_task_progress(task.task_uuid, 22)
-
-    # EXPORT_DATA holds the worker's collection-store exclusion until task
-    # completion, covering both this read and commit_release_projection after
-    # production verification. Waiting AI parents retain RUNNING until their
-    # store completes, so their eventual writes cannot enter this interval.
-    generate_cmd = service._generate_site_data_command(
-        python_path=python_path,
-        download_url_base=download_url_base,
-        incremental_country_codes=input_data.get("incremental_country_codes") or [],
-        incremental_site=bool(input_data.get("incremental_site")),
-    )
-    await service._run_logged_command(
-        task.task_uuid,
-        title="Generate Site Data",
-        cmd=generate_cmd,
-        cwd=runtime.root_dir,
-        env={
-            **git_env,
-            "PYTHONUNBUFFERED": "1",
-            "GLOBALID_RELEASE_FROM_OBSERVATIONS": "1",
-        },
-        metadata={"event": "generate_site_data", "release_job_id": job.job_id},
-        timeout_seconds=runtime.generate_timeout_seconds,
-    )
-    await runtime.task_manager.update_task_progress(task.task_uuid, 35)
-
     downloads_published = False
     raw_archive_published = False
     r2_papers_published = False
     pages_deployed = False
     cloudflare_deployment = None
-    # Complete every local, side-effect-free release gate before publishing to
-    # remote repositories. A failed site build must never leave downloads and
-    # raw archives ahead of the production site.
-    await runtime.task_manager.update_task_progress(task.task_uuid, 45)
-    await service._run_logged_command(
-        task.task_uuid,
-        title="Build Astro Site",
-        cmd=["npm", "run", "build"],
-        cwd=runtime.astro_dir,
-        env={
-            # The full static catalogue can exceed Node's default ~4 GiB old
-            # space on the production worker. Keep the build within its
-            # 14 GiB cgroup while giving Astro enough room to finish.
-            "NODE_OPTIONS": "--max-old-space-size=6144",
-            "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
-            "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
-            "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
-            "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],
-            "PUBLIC_GIDS_DEPLOY_BRANCH": release_identity["deployment_branch"],
-            "PUBLIC_GIDS_BUILT_AT": release_identity["built_at"],
-        },
-        metadata={"event": "astro_build", "release_job_id": job.job_id},
-        timeout_seconds=runtime.astro_build_timeout_seconds,
-    )
-    await service._run_logged_command(
-        task.task_uuid,
-        title="Validate Situation Release Gate",
-        cmd=service._validate_situation_release_command(python_path=python_path),
-        cwd=runtime.root_dir,
-        env=git_env,
-        metadata={"event": "situation_release_gate", "release_job_id": job.job_id},
-        timeout_seconds=120,
-    )
     r2_enabled_fn = getattr(service, "_r2_papers_enabled", None)
     r2_papers_enabled = (
         bool(r2_enabled_fn(job)) if callable(r2_enabled_fn) else False
     )
-    if job.include_cloudflare_deploy or r2_papers_enabled:
-        # Move long-tail research pages out of the Pages upload set before the
-        # deployable digest is computed. Local npm builds keep a full dist.
+    artifact_signature = None
+    resumed_identity = None
+    if artifact_checkpoint is not None:
+        config = service._config()
+        artifact_signature = await asyncio.to_thread(
+            artifact_checkpoint.signature,
+            {
+                "config": config.model_dump() if hasattr(config, "model_dump") else vars(config),
+                "job": job.model_dump() if hasattr(job, "model_dump") else vars(job),
+                "download_url_base": download_url_base,
+                "deployment_branch": deployment_branch,
+            },
+        )
+        resumed_identity = await asyncio.to_thread(
+            artifact_checkpoint.restore, artifact_signature, release_identity, _built_site_digest,
+        )
+    if resumed_identity is not None:
+        release_identity = resumed_identity
+        await runtime.task_manager.add_workbook_entry(
+            task.task_uuid, entry_type="info", title="Validated Release Candidate Reused",
+            content="Resuming publication of the same frozen artifacts; generation and rendering were already validated.",
+            content_type="text", metadata={"event": "release_candidate_reused", "release_job_id": job.job_id},
+        )
+    else:
         await service._run_logged_command(
             task.task_uuid,
-            title="Split Papers Bundle",
-            cmd=service._split_papers_bundle_command(python_path=python_path),
+            title="Export Situation",
+            cmd=service._update_situation_notices_command(python_path=python_path),
             cwd=runtime.root_dir,
             env=git_env,
-            metadata={"event": "split_papers_bundle", "release_job_id": job.job_id},
-            timeout_seconds=1800,
-        )
-    if job.include_cloudflare_deploy:
-        # The public manifest identifies these exact bytes as well as the
-        # source revision. A retry may rebuild different facts at the same
-        # revision and must not verify an earlier production manifest.
-        release_identity = {
-            **release_identity,
-            "build_digest": await asyncio.to_thread(
-                _built_site_digest, runtime.astro_dir / "dist"
+            metadata={"event": "refresh_situation_notices", "release_job_id": job.job_id},
+            timeout_seconds=min(
+                runtime.generate_timeout_seconds,
+                SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS,
             ),
-        }
+        )
+        await runtime.task_manager.update_task_progress(task.task_uuid, 22)
+
+        # EXPORT_DATA holds the worker's collection-store exclusion until task
+        # completion, covering both this read and commit_release_projection after
+        # production verification. Waiting AI parents retain RUNNING until their
+        # store completes, so their eventual writes cannot enter this interval.
+        generate_cmd = service._generate_site_data_command(
+            python_path=python_path,
+            download_url_base=download_url_base,
+            incremental_country_codes=input_data.get("incremental_country_codes") or [],
+            incremental_site=bool(input_data.get("incremental_site")),
+        )
+        await service._run_logged_command(
+            task.task_uuid,
+            title="Generate Site Data",
+            cmd=generate_cmd,
+            cwd=runtime.root_dir,
+            env={
+                **git_env,
+                "PYTHONUNBUFFERED": "1",
+                "GLOBALID_RELEASE_FROM_OBSERVATIONS": "1",
+            },
+            metadata={"event": "generate_site_data", "release_job_id": job.job_id},
+            timeout_seconds=runtime.generate_timeout_seconds,
+        )
+        await runtime.task_manager.update_task_progress(task.task_uuid, 35)
+
+        # Complete every local, side-effect-free release gate before publishing to
+        # remote repositories. A failed site build must never leave downloads and
+        # raw archives ahead of the production site.
+        await runtime.task_manager.update_task_progress(task.task_uuid, 45)
+        await service._run_logged_command(
+            task.task_uuid,
+            title="Build Astro Site",
+            cmd=["npm", "run", "build"],
+            cwd=runtime.astro_dir,
+            env={
+                # The full static catalogue can exceed Node's default ~4 GiB old
+                # space on the production worker. Keep the build within its
+                # 14 GiB cgroup while giving Astro enough room to finish.
+                "NODE_OPTIONS": "--max-old-space-size=6144",
+                "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
+                "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
+                "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
+                "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],
+                "PUBLIC_GIDS_DEPLOY_BRANCH": release_identity["deployment_branch"],
+                "PUBLIC_GIDS_BUILT_AT": release_identity["built_at"],
+            },
+            metadata={"event": "astro_build", "release_job_id": job.job_id},
+            timeout_seconds=runtime.astro_build_timeout_seconds,
+        )
+        await service._run_logged_command(
+            task.task_uuid,
+            title="Validate Situation Release Gate",
+            cmd=service._validate_situation_release_command(python_path=python_path),
+            cwd=runtime.root_dir,
+            env=git_env,
+            metadata={"event": "situation_release_gate", "release_job_id": job.job_id},
+            timeout_seconds=120,
+        )
+        if job.include_cloudflare_deploy or r2_papers_enabled:
+            # Move long-tail research pages out of the Pages upload set before the
+            # deployable digest is computed. Local npm builds keep a full dist.
+            await service._run_logged_command(
+                task.task_uuid,
+                title="Split Papers Bundle",
+                cmd=service._split_papers_bundle_command(python_path=python_path),
+                cwd=runtime.root_dir,
+                env=git_env,
+                metadata={"event": "split_papers_bundle", "release_job_id": job.job_id},
+                timeout_seconds=1800,
+            )
+        if job.include_cloudflare_deploy:
+            # The public manifest identifies these exact bytes as well as the
+            # source revision. A retry may rebuild different facts at the same
+            # revision and must not verify an earlier production manifest.
+            release_identity = {
+                **release_identity,
+                "build_digest": await asyncio.to_thread(
+                    _built_site_digest, runtime.astro_dir / "dist"
+                ),
+            }
     release_manifest = service._write_site_release_manifest(release_identity)
+    if artifact_checkpoint is not None and resumed_identity is None:
+        await asyncio.to_thread(artifact_checkpoint.save_ready, artifact_signature, release_identity)
     await runtime.task_manager.add_workbook_entry(
         task.task_uuid,
         entry_type="info",
@@ -386,6 +459,16 @@ async def _execute_release_task(
         metadata={"event": "site_release_identity", "release_job_id": job.job_id},
     )
     await runtime.task_manager.update_task_progress(task.task_uuid, 60)
+
+    if r2_papers_enabled and job.include_cloudflare_deploy:
+        from .shared_assets import publish_shared_assets
+
+        await publish_shared_assets(
+            service, task, runtime, previous=previous_site_dir,
+            project_name=project_name, deployment_branch=deployment_branch,
+            release_identity=release_identity,
+            papers_origin=str(service._config().r2_papers_public_base_url or "https://papers.globalinfectiousdisease.com").rstrip("/"),
+        )
 
     repository_publications: list[tuple[str, Awaitable[None]]] = []
     if raw_archive_cfg.enabled and not literature_only:
@@ -644,6 +727,11 @@ async def _execute_release_task(
                 full=bool(input_data.get("full")),
                 dirty_ids=input_data.get("publish_dirty_ids") or [],
                 marked_before=input_data.get("publish_dirty_before"),
+                prepared_dir=(
+                    runtime.astro_dir / "src" / "data" / "_release-projection"
+                    if (runtime.astro_dir / "src" / "data" / "_release-projection" / "manifest.json").is_file()
+                    else None
+                ),
             )
             await db.commit()
 

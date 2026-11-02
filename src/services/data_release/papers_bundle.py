@@ -289,7 +289,7 @@ def build_papers_manifest(
     files: list[dict[str, object]] = []
     if papers_dir.is_dir():
         for path in sorted(papers_dir.rglob("*")):
-            if not path.is_file():
+            if not path.is_file() or path == papers_dir / "papers-manifest.json":
                 continue
             relative = path.relative_to(papers_dir).as_posix()
             key = _object_key_for_papers(relative)
@@ -327,9 +327,21 @@ def split_papers_bundle(
     if not dist_dir.is_dir():
         raise FileNotFoundError(f"Astro dist directory not found: {dist_dir}")
 
-    if papers_dir.exists():
-        shutil.rmtree(papers_dir)
     papers_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = papers_dir / "papers-manifest.json"
+    try:
+        previous_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        previous_manifest = {}
+    rewrite_fingerprint = hashlib.sha256(
+        Path(__file__).read_bytes() + main_origin.encode() + b"\0" + papers_origin.encode()
+    ).hexdigest()
+    previous = {
+        item["path"]: item for item in previous_manifest.get("files", [])
+    } if previous_manifest.get("rewrite_fingerprint") == rewrite_fingerprint else {}
+    sources: dict[str, str] = {}
+    expected: set[Path] = set()
+    reused_html = 0
 
     moved: list[str] = []
     for path in sorted(dist_dir.rglob("*")):
@@ -339,17 +351,25 @@ def split_papers_bundle(
         if not is_papers_relative_path(relative):
             continue
         destination = papers_dir / relative
+        expected.add(destination)
         destination.parent.mkdir(parents=True, exist_ok=True)
         if relative.endswith(".html"):
-            html = path.read_text(encoding="utf-8")
-            destination.write_text(
-                rewrite_papers_html(
-                    html,
-                    main_origin=main_origin,
-                    papers_origin=papers_origin,
-                ),
-                encoding="utf-8",
-            )
+            body = path.read_bytes()
+            source_hash = hashlib.sha256(body).hexdigest()
+            sources[relative] = source_hash
+            cached = previous.get(relative) or {}
+            if (cached.get("source_sha256") == source_hash and destination.is_file()
+                    and _sha256_file(destination) == cached.get("sha256")):
+                reused_html += 1
+            else:
+                destination.write_text(
+                    rewrite_papers_html(
+                        body.decode("utf-8"),
+                        main_origin=main_origin,
+                        papers_origin=papers_origin,
+                    ),
+                    encoding="utf-8",
+                )
             path.unlink()
         else:
             shutil.move(str(path), str(destination))
@@ -364,6 +384,7 @@ def split_papers_bundle(
                 continue
             relative = path.relative_to(host_dir).as_posix()
             destination = papers_dir / relative
+            expected.add(destination)
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(path), str(destination))
             moved.append(f"{PAPERS_HOST_DIR}/{relative}")
@@ -395,12 +416,19 @@ def split_papers_bundle(
             encoding="utf-8",
         )
 
+    for stale in papers_dir.rglob("*"):
+        if stale.is_file() and stale not in expected and stale != manifest_path:
+            stale.unlink()
     manifest = build_papers_manifest(papers_dir, papers_origin=papers_origin)
-    manifest_path = papers_dir / "papers-manifest.json"
+    manifest["rewrite_fingerprint"] = rewrite_fingerprint
+    for item in manifest["files"]:
+        if item["path"] in sources:
+            item["source_sha256"] = sources[item["path"]]
     manifest_path.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    print(f"Papers split: reused {reused_html}/{len(sources)} rewritten HTML files", flush=True)
 
     return PapersBundleResult(
         main_file_count=count_files(dist_dir),

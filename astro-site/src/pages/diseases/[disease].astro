@@ -37,11 +37,12 @@ import {
   toSeoSlug,
 } from '../../lib/seo';
 import metaRaw from '../../data/meta.json';
+import { shouldBuildPage } from '../../lib/page-build-plan';
 import { countryDiseaseCandidates, diseaseIndex, loadDisease, loadKnowledge } from '../../lib/seo-page-data';
 import { downloadCatalogue } from '../../lib/downloads-data';
 
 export async function getStaticPaths() {
-  return diseaseIndex.map(d => {
+  return diseaseIndex.filter(d => shouldBuildPage(`disease:${d.disease_id}`)).map(d => {
     const disease = toSeoSlug(d.slug) || d.slug;
     return {
       params: { disease },

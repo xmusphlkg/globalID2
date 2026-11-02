@@ -2,11 +2,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
-import researchData from '../../../data/research/index.json';
+import researchData from '../../../data/research/routes.json';
+import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { localizedResearchTopic } from '../../../utils/i18n';
 
 export function getStaticPaths() {
-  return ((researchData as any).facets?.topics ?? []).map((facet: any) => ({ params: { topic: facet.slug }, props: { facet, topic: facet.slug, locale: 'en' } }));
+  return ((researchData as any).facets?.topics ?? []).filter((facet: any) => shouldBuildPage(`research:topics:${facet.slug}`)).map((facet: any) => ({ params: { topic: facet.slug }, props: { facet, topic: facet.slug, locale: 'en' } }));
 }
 
 interface Props { facet?: any; topic?: string; locale?: 'en' | 'zh' | 'fr' }

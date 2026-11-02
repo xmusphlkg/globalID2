@@ -3,7 +3,7 @@ import copy
 import json
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import ANY, AsyncMock
 
 import pytest
 
@@ -282,3 +282,18 @@ async def test_export_readiness_never_imports_population_data(monkeypatch):
     monkeypatch.setattr(builtins, "__import__", forbid_population_import)
     await export.ensure_site_export_database_ready()
     readiness.assert_awaited_once_with()
+
+
+async def test_literature_only_release_reuses_published_coverage(snapshot, monkeypatch):
+    monkeypatch.setenv("GLOBALID_RELEASE_FROM_OBSERVATIONS", "1")
+    states = AsyncMock(return_value={"US": {"content_hash": "same", "point_count": 1}, "JP": {"content_hash": "same", "point_count": 2}})
+    monkeypatch.setattr(export, "_fetch_publish_states", states)
+    monkeypatch.setattr(export, "_fetch_published_rows_by_country", AsyncMock(return_value={}))
+    monkeypatch.setattr(export, "_collect_country_export", AsyncMock(side_effect=AssertionError("no changed curves")))
+    context = await export.collect_site_export_context(snapshot.output, incremental_country_codes=[], incremental_site=True, public_site_data_dir=snapshot.public)
+    states.assert_awaited_once()
+    export._published_country_codes_by_disease.assert_awaited_once()
+    assert context["incremental_country_codes"] == []
+    export._fetch_published_rows_by_country.assert_awaited_once_with(ANY, [])
+    assert context["changed_disease_ids"] == []
+    assert all(row["unchanged_curve"] for row in context["country_exports"])

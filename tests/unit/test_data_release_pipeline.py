@@ -92,7 +92,8 @@ async def test_repository_publisher_preserves_release_stage_for_retry_classifica
 
 
 @pytest.mark.asyncio
-async def test_pipeline_local_only_success_preserves_stage_order(tmp_path):
+@pytest.mark.parametrize("resume", [False, True])
+async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monkeypatch, resume):
     commands = []
     timeouts = []
     command_envs = {}
@@ -236,19 +237,26 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path):
         input_data={"release_job_id": "site-release"},
     )
 
+    if resume:
+        from src.services.data_release.artifact_checkpoint import ArtifactCheckpoint
+
+        identity = await Service()._site_release_identity("main")
+        monkeypatch.setattr(ArtifactCheckpoint, "restore", lambda *_args: identity)
+
     output = await pipeline.execute_release_task(Service(), task, runtime=runtime)
 
-    assert commands == [
+    expected_commands = [
         "Export Situation",
         "Generate Site Data",
         "Build Astro Site",
         "Validate Situation Release Gate",
     ]
-    assert timeouts[0] == pipeline.SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS
-    assert (
-        command_envs["Build Astro Site"]["NODE_OPTIONS"] == "--max-old-space-size=6144"
-    )
-    assert progress == [5, 15, 22, 35, 45, 60, 88, 100]
+    assert commands == ([] if resume else expected_commands)
+    if not resume:
+        assert timeouts[0] == pipeline.SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS
+        assert command_envs["Build Astro Site"]["NODE_OPTIONS"] == "--max-old-space-size=6144"
+    assert progress == ([5, 15, 60, 88, 100] if resume else [5, 15, 22, 35, 45, 60, 88, 100])
+    assert output["release_timing"]["within_target"]
     assert output["direct_downloads_published"] is False
     assert output["raw_archive_published"] is False
     assert output["pages_deployed"] is False
@@ -738,3 +746,28 @@ async def test_release_backups_use_export_volume_and_never_block_dispatcher(
     assert copies and all(path.is_relative_to(backup_root) for path in copies)
     assert removals and all(path.is_relative_to(backup_root) for path in removals)
     assert list(backup_root.iterdir()) == []
+
+
+async def test_download_rollback_links_are_isolated_from_atomic_updates(tmp_path, monkeypatch):
+    from src.generation.direct_download_files import _write_if_changed
+
+    runtime = _runtime(SimpleNamespace(), tmp_path)
+    downloads = tmp_path / "exports" / "site-downloads"
+    downloads.mkdir(parents=True)
+    partition = downloads / "partition.csv"
+    partition.write_bytes(b"old content")
+
+    async def failed_release(*_args, **_kwargs):
+        backup = next((tmp_path / "exports" / "release-backups").iterdir()) / "3" / partition.name
+        assert backup.stat().st_ino == partition.stat().st_ino
+        assert _write_if_changed(partition, b"new content")
+        assert backup.read_bytes() == b"old content"
+        assert backup.stat().st_ino != partition.stat().st_ino
+        (downloads / "new.csv").write_bytes(b"new file")
+        raise RuntimeError("publish failed")
+
+    monkeypatch.setattr(pipeline, "_execute_release_task", failed_release)
+    with pytest.raises(RuntimeError, match="publish failed"):
+        await pipeline.execute_release_task(None, None, runtime=runtime)
+    assert partition.read_bytes() == b"old content"
+    assert not (downloads / "new.csv").exists()

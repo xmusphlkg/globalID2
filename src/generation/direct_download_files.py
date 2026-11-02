@@ -11,6 +11,7 @@ from io import BytesIO, StringIO
 import json
 import multiprocessing
 import os
+import re
 from pathlib import Path
 import shutil
 import time
@@ -21,6 +22,7 @@ from openpyxl import Workbook
 
 from src.services.disease_series_policy import is_case_count_series
 from src.services import disease_series_policy
+from src.generation.site_data_writer import _write_if_changed
 
 
 DOWNLOAD_FIELDS = [
@@ -612,7 +614,18 @@ def _xlsx_bytes(metadata: dict, rows: list[dict]) -> bytes:
             target_info.compress_type = ZIP_DEFLATED
             target_info.external_attr = source_info.external_attr
             target_info.create_system = source_info.create_system
-            target_zip.writestr(target_info, source_zip.read(name))
+            payload = source_zip.read(name)
+            if name == "docProps/core.xml":
+                # openpyxl.save_workbook overwrites properties.modified with
+                # wall-clock time. Normalize after save, not only before it.
+                payload, replacements = re.subn(
+                    rb"(<dcterms:modified\b[^>]*>)[^<]*(</dcterms:modified>)",
+                    lambda match: match[1] + fixed.isoformat().encode() + b"Z" + match[2],
+                    payload,
+                )
+                if replacements != 1:
+                    raise ValueError("XLSX core properties lack a unique modified timestamp")
+            target_zip.writestr(target_info, payload)
     return canonical.getvalue()
 
 
@@ -756,14 +769,6 @@ def _bounded_partition_artifacts(
     return _bounded_partition_artifacts(dataset, *left, max_file_bytes) + _bounded_partition_artifacts(
         dataset, *right, max_file_bytes
     )
-
-
-def _write_if_changed(path: Path, content: bytes) -> bool:
-    if path.exists() and path.read_bytes() == content:
-        return False
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content)
-    return True
 
 
 def _remove_stale_files(root: Path, expected: set[Path]) -> int:

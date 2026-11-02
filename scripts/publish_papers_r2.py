@@ -56,6 +56,10 @@ def main(argv: list[str] | None = None) -> int:
         help="Local papers bundle produced by split_papers_bundle.py",
     )
     parser.add_argument(
+        "--workers", type=int, default=int(os.environ.get("R2_PAPERS_UPLOAD_WORKERS", "32")),
+        help="Concurrent pooled R2 transfers (1–32; default: 32)",
+    )
+    parser.add_argument(
         "--skip-public-verify",
         action="store_true",
         help="Skip the public HEAD/GET sample check after upload",
@@ -66,6 +70,7 @@ def main(argv: list[str] | None = None) -> int:
         args.source_dir,
         config,
         verify_public=not args.skip_public_verify,
+        workers=args.workers,
     )
     print(
         json.dumps(

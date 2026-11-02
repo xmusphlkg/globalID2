@@ -124,6 +124,9 @@ jobs:
         working-directory: astro-site
       - run: npm run test:perf
         working-directory: astro-site
+      - name: Test incremental build caches and HTML validation
+        run: node --test scripts/*build-cache.test.mjs scripts/gzip-size-cache.test.mjs scripts/html-visible-text.test.mjs
+        working-directory: astro-site
       - run: npm run build:astro
         working-directory: astro-site
 

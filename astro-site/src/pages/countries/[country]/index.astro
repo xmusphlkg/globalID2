@@ -31,11 +31,12 @@ import {
   toSeoSlug,
 } from '../../../lib/seo';
 import metaRaw from '../../../data/meta.json';
+import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { localizedDiseaseName } from '../../../utils/diseaseNames';
 import { localizedRegionName } from '../../../utils/i18n';
 
 export function getStaticPaths() {
-  return ((metaRaw as any).countries ?? []).filter(hasCountryDataSnapshot).map((c: any) => ({
+  return ((metaRaw as any).countries ?? []).filter(hasCountryDataSnapshot).filter((c: any) => shouldBuildPage(`country:${c.code.toLowerCase()}`)).map((c: any) => ({
     params: { country: c.code.toLowerCase() },
     props: { countryCode: c.code.toLowerCase(), locale: 'en' as 'en' | 'zh' | 'fr' },
   }));

@@ -85,6 +85,12 @@ class FakeR2:
     def head_bucket(self) -> bool:
         return True
 
+    def list_objects(self):
+        return {
+            key: {"bytes": len(body), "etag": hashlib.md5(body).hexdigest()}
+            for key, body in self.objects.items()
+        }
+
 
 def _seed_papers(tmp_path: Path) -> Path:
     dist = tmp_path / "dist"
@@ -204,3 +210,100 @@ def test_public_verify_failure_is_terminal(tmp_path: Path) -> None:
             verify_public=True,
             public_opener=public_opener,
         )
+    assert "papers-manifest.json" not in client.objects
+
+
+def test_interrupted_upload_resumes_without_published_manifest(tmp_path):
+    papers = _seed_papers(tmp_path)
+    config = R2PapersConfig("acct", "bucket", "key", "secret")
+
+    class Interrupted(FakeR2):
+        fail = True
+
+        def put_object(self, key, body, **kwargs):
+            if key.endswith(".png") and self.fail:
+                raise R2S3Error("connection reset")
+            super().put_object(key, body, **kwargs)
+
+    client = Interrupted()
+    with pytest.raises(R2S3Error, match="connection reset"):
+        publish_papers_site(papers, config, client=client, verify_public=False, workers=1)
+    assert "research/articles/slug/" in client.objects
+    assert "papers-manifest.json" not in client.objects
+    client.fail = False
+    result = publish_papers_site(papers, config, client=client, verify_public=False, workers=2)
+    assert result.uploaded == 1
+    assert result.unchanged == 1
+
+
+def test_actual_remote_bytes_override_stale_success_manifest(tmp_path):
+    papers = _seed_papers(tmp_path)
+    config = R2PapersConfig("acct", "bucket", "key", "secret")
+    client = FakeR2()
+    publish_papers_site(papers, config, client=client, verify_public=False)
+    # A later failed release overwrote an object but never committed a manifest.
+    client.objects["research/articles/slug/"] = b"other release"
+    result = publish_papers_site(papers, config, client=client, verify_public=False)
+    assert result.uploaded == 1
+    assert client.objects["research/articles/slug/"] == b"<html>article</html>"
+
+
+def test_uploads_run_concurrently_and_complete_before_manifest(tmp_path):
+    import threading
+    papers = _seed_papers(tmp_path)
+    config = R2PapersConfig("acct", "bucket", "key", "secret")
+    barrier = threading.Barrier(2, timeout=3)
+
+    class Parallel(FakeR2):
+        def put_object(self, key, body, **kwargs):
+            if key != "papers-manifest.json":
+                barrier.wait()
+            else:
+                assert len(self.objects) == 2
+            super().put_object(key, body, **kwargs)
+
+    result = publish_papers_site(papers, config, client=Parallel(), verify_public=False, workers=2)
+    assert result.uploaded == 2
+
+
+def test_changed_local_bytes_fail_without_manifest_or_deletion(tmp_path):
+    papers = _seed_papers(tmp_path)
+    (papers / "research/cards/slug.png").write_bytes(b"bad-bytes")
+    client = FakeR2()
+    config = R2PapersConfig("acct", "bucket", "key", "secret")
+    with pytest.raises(R2S3Error, match="checksum"):
+        publish_papers_site(papers, config, client=client, verify_public=False)
+    assert "papers-manifest.json" not in client.objects
+
+
+@pytest.mark.parametrize("fail_shard", [False, True])
+def test_public_indexes_wait_for_all_shards(tmp_path, fail_shard):
+    from src.services.data_release.papers_bundle import build_papers_manifest
+    papers = _seed_papers(tmp_path)
+    shard_key = "site-data/research/shards/new.json"
+    index_key = "site-data/research/index.json"
+    shard = papers / shard_key
+    shard.parent.mkdir(parents=True)
+    shard.write_text('{"records": []}')
+    (papers / index_key).write_text('{"file": "shards/new.json"}')
+    (papers / "papers-manifest.json").write_text(json.dumps(build_papers_manifest(papers)))
+
+    class CheckingR2(FakeR2):
+        def put_object(self, key, body, **kwargs):
+            if key == shard_key and fail_shard:
+                raise R2S3Error("shard failed")
+            if key == index_key:
+                assert shard_key in self.objects
+            super().put_object(key, body, **kwargs)
+
+    client = CheckingR2()
+    client.objects[index_key] = b"previous index"
+    config = R2PapersConfig("acct", "bucket", "key", "secret")
+    if fail_shard:
+        with pytest.raises(R2S3Error, match="shard failed"):
+            publish_papers_site(papers, config, client=client, verify_public=False)
+        assert client.objects[index_key] == b"previous index"
+        assert "papers-manifest.json" not in client.objects
+    else:
+        publish_papers_site(papers, config, client=client, verify_public=False)
+        assert client.objects[index_key] != b"previous index"

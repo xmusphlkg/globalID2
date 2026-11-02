@@ -108,3 +108,42 @@ def test_split_moves_papers_host_files_to_bundle_root(tmp_path: Path) -> None:
     assert not (dist / "papers-host").exists()
     manifest = json.loads((papers / "papers-manifest.json").read_text(encoding="utf-8"))
     assert {item["key"] for item in manifest["files"]} >= {"robots.txt", "sitemap.xml"}
+
+
+@pytest.mark.parametrize("change", ["none", "source", "destination", "origin"])
+def test_split_reuses_verified_html_and_removes_obsolete_files(tmp_path, monkeypatch, change):
+    from src.services.data_release import papers_bundle
+
+    dist, papers = tmp_path / "dist", tmp_path / "papers"
+    relative = Path("research/articles/example/index.html")
+    original = '<a href="/_astro/app.js">paper</a>'
+
+    def build(content):
+        (dist / relative).parent.mkdir(parents=True, exist_ok=True)
+        (dist / relative).write_text(content)
+
+    build(original)
+    split_papers_bundle(dist, papers_dir=papers)
+    modified = (papers / relative).stat().st_mtime_ns
+    (papers / "obsolete.json").write_text("old")
+    if change == "destination":
+        (papers / relative).write_text("damaged")
+    build(original + ("changed" if change == "source" else ""))
+    calls = []
+    original_rewrite = papers_bundle.rewrite_papers_html
+
+    def rewrite(*args, **kwargs):
+        calls.append(args)
+        return original_rewrite(*args, **kwargs)
+
+    monkeypatch.setattr(papers_bundle, "rewrite_papers_html", rewrite)
+    origin = "https://new.example" if change == "origin" else papers_bundle.DEFAULT_MAIN_SITE_ORIGIN
+    split_papers_bundle(dist, papers_dir=papers, main_origin=origin)
+    assert len(calls) == (0 if change == "none" else 1)
+    assert not (papers / "obsolete.json").exists()
+    assert not (dist / relative).exists()
+    manifest = json.loads((papers / "papers-manifest.json").read_text())
+    assert [item["path"] for item in manifest["files"]] == [relative.as_posix()]
+    assert f'{origin}/_astro/app.js' in (papers / relative).read_text()
+    if change == "none":
+        assert (papers / relative).stat().st_mtime_ns == modified

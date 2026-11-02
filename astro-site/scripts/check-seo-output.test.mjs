@@ -94,3 +94,12 @@ test('main-site pages linking to the absolute papers URL are accepted', () => {
     assert.deepEqual(linkErrors(auditSeoOutput(dist).errors), []);
   } finally { rmSync(dist, { recursive: true, force: true }); }
 });
+
+test('link lookup cache does not survive another audit',()=>{
+  const dist=pageDist({'':'<a href="/target/">target</a>',target:'<p>target</p>'});
+  try {
+    assert.deepEqual(linkErrors(auditSeoOutput(dist).errors),[]);
+    rmSync(join(dist,'target'),{recursive:true});
+    assert.ok(linkErrors(auditSeoOutput(dist).errors).some(e=>e.includes('broken internal link /target/')));
+  } finally {rmSync(dist,{recursive:true,force:true});}
+});

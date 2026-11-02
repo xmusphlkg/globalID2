@@ -20,6 +20,31 @@ from src.generation.site_data_views import (
 from src.generation.site_series_projection import apply_series_first_projection
 
 
+def test_xlsx_is_identical_across_save_times(monkeypatch):
+    import datetime
+    from types import SimpleNamespace
+    from io import BytesIO
+    from zipfile import ZipFile
+    import openpyxl.writer.excel
+
+    class Clock(datetime.datetime):
+        year_value = 2026
+
+        @classmethod
+        def now(cls, tz=None):
+            return cls(cls.year_value, 11, 2, tzinfo=tz)
+
+    monkeypatch.setattr(openpyxl.writer.excel, "datetime", SimpleNamespace(
+        datetime=Clock, timezone=datetime.timezone,
+    ))
+    first = direct_download_files._xlsx_bytes({"dataset": "stable"}, [{"cases": 7}])
+    Clock.year_value = 2030
+    second = direct_download_files._xlsx_bytes({"dataset": "stable"}, [{"cases": 7}])
+    assert first == second
+    with ZipFile(BytesIO(second)) as archive:
+        assert b"2000-01-01T00:00:00Z" in archive.read("docProps/core.xml")
+
+
 def _context(
     dates: list[str] | None = None,
     *,

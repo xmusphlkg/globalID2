@@ -514,22 +514,22 @@ def test_public_summary_gate_withholds_metadata_only_peer_reviewed_and_preprint_
 
 
 def test_browser_research_index_splits_lists_that_exceed_the_file_budget(tmp_path):
-    articles = [{"slug": f"article-{index}", "title": "x" * 40} for index in range(8)]
+    articles = [{"slug": f"article-{index}", "title": "x" * 40} for index in range(40)]
     document = {
         "schema_version": 1,
         "last_updated": "2026-10-21T00:00:00Z",
-        "metrics": {"articles_total": 8},
+        "metrics": {"articles_total": 40},
         "articles": articles,
     }
     full_size = len(_compact_json_bytes(document))
     slim_size = len(_compact_json_bytes({**document, "articles": []}))
-    budget = slim_size + (full_size - slim_size) // 3
+    budget = 1024
     assert budget < full_size
 
     published = publish_browser_research_index(document, tmp_path, max_bytes=budget)
 
     assert published["articles"]["sharded"] is True
-    assert published["articles"]["count"] == 8
+    assert published["articles"]["count"] == 40
     assert len(published["articles"]["chunks"]) >= 2
     assert (tmp_path / "index.json").stat().st_size <= budget
     assert (tmp_path / "catalogue.json").stat().st_size <= budget
@@ -547,7 +547,7 @@ def test_browser_research_index_splits_lists_that_exceed_the_file_budget(tmp_pat
     smaller = {**document, "articles": articles[:1]}
     republished = publish_browser_research_index(smaller, tmp_path, max_bytes=budget)
     assert republished["articles"] == articles[:1]
-    assert list((tmp_path / "shards").glob("*.json")) == []
+    assert list((tmp_path / "shards").glob("*.json"))  # cached old manifests still resolve
 
 
 def test_literature_artifacts_keep_the_build_index_while_sharding_the_browser_copy(tmp_path):
@@ -638,6 +638,22 @@ def test_literature_collection_files_keep_card_fields_without_repeating_summarie
     assert detail["summary"]["fr"]["main_findings"] == "Long detail"
     routes = json.loads((tmp_path / "research/routes.json").read_text(encoding="utf-8"))
     assert routes["articles"] == [{"slug": "published-article", "indexable": True}]
+
+
+def test_research_shared_disease_lookup_is_stable_when_article_rank_changes(tmp_path):
+    articles = [
+        {"article_id": name, "slug": name.lower(), "title": name,
+         "diseases": [{"disease_id": name, "name_en": name}],
+         "countries": [], "topics": []}
+        for name in ["Zulu", "Alpha"]
+    ]
+    payload = {**empty_literature_export(), "articles": articles}
+    write_literature_artifacts(payload, tmp_path)
+    first = json.loads((tmp_path / "research/routes.json").read_text())["diseases"]
+    write_literature_artifacts({**payload, "articles": list(reversed(articles))}, tmp_path)
+    second = json.loads((tmp_path / "research/routes.json").read_text())["diseases"]
+    assert first == second
+    assert [row["name_en"] for row in first] == ["Alpha", "Zulu"]
 
 
 def test_integrity_alert_projection_is_publication_gated_and_metadata_only():

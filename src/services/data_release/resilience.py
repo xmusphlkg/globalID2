@@ -22,6 +22,7 @@ _EXTERNAL_RETRY_STAGES = frozenset(
         "r2_papers_publish",
         "subscription_options_sync",
         "cloudflare_pages_deploy",
+        "shared_assets_compatibility_deploy",
         "cloudflare_production_verification",
     }
 )

@@ -9,6 +9,7 @@ The worker singleton lease also prevents independent claim loops from racing.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import delete, or_, select, union, update
 
@@ -56,6 +57,7 @@ async def commit_release_projection(
     full: bool,
     dirty_ids: list[int],
     marked_before: str | None = None,
+    prepared_dir: Path | None = None,
 ) -> None:
     published_codes = []
     if full or country_codes:
@@ -75,10 +77,34 @@ async def commit_release_projection(
             )
             if code in available
         ]
+        manifest = None
+        if prepared_dir is not None:
+            from src.generation.release_projection_snapshot import load_projection_manifest
+
+            manifest = load_projection_manifest(prepared_dir)
+            if set(manifest["countries"]) != set(published_codes):
+                raise ValueError("Prepared release projection does not match release scopes")
         for code in published_codes:
             # A single transaction covers all countries: one failure rolls back
             # every public row and leaves every selected marker pending.
-            await _publish_country(db, code, context, force=True)
+            if manifest is None:
+                await _publish_country(db, code, context, force=True)
+            else:
+                from src.generation.release_projection_snapshot import read_projection_country
+                from src.generation.public_series_store import build_public_series_row, _replace_country_rows
+
+                payload = read_projection_country(prepared_dir, manifest, code)
+                watermark = payload.get("source_high_water")
+                high_water = datetime.fromisoformat(watermark) if watermark else None
+                rows = []
+                for disease_id, series in sorted(payload["disease_series"].items()):
+                    row = build_public_series_row(code, disease_id, series, source_high_water=high_water)
+                    if row is not None:
+                        rows.append(row)
+                await _replace_country_rows(
+                    db, code, rows, source_high_water=high_water,
+                    stored_disease_ids=context["stored_disease_ids"],
+                )
     # This function runs only after successful deployment verification. Retire
     # old disabled snapshots in that same final transaction, including on a
     # site-only release, without scanning facts or touching active timestamps.

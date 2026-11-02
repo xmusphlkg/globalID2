@@ -142,3 +142,16 @@ test('scales the all-site gzip allowance while preserving a per-page ceiling', (
   assert.equal(result.html.gzipBudgetBytes, 2_000);
   assert.ok(result.html.averageGzipBytes < 1_000);
 });
+
+test('cached compression sizes still enforce changed budgets', async t => {
+  const {openGzipSizeCache}=await import('./gzip-size-cache.mjs');
+  const directory=fixture();
+  t.after(()=>rmSync(directory,{recursive:true,force:true}));
+  writeFileSync(join(directory,'index.html'),'<main>some content</main>');
+  const cache=openGzipSizeCache(join(directory,'sizes.json'));
+  assert.equal(auditPerformance(directory,{}, {gzipCache:cache}).passed,true);
+  const strict=auditPerformance(directory,{maxPageHtmlGzipBytes:1},{gzipCache:cache});
+  assert.equal(strict.passed,false);
+  assert.match(strict.errors.join('\n'),/Largest page HTML/);
+  assert.ok(cache.stats.hits>0);
+});

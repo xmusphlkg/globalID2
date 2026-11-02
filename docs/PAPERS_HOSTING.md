@@ -14,7 +14,7 @@ Public hosting is therefore three channels:
 1. Generate site data and build the full Astro `dist` (unchanged for local `npm run build`).
 2. `scripts/split_papers_bundle.py` moves papers paths into `exports/papers-site/`, rewrites article HTML so shared assets point at the main origin, appends redirects/CORS, and enforces the Pages file budget.
 3. Digest and deploy use the **slim** `dist` only.
-4. `scripts/publish_papers_r2.py` incrementally syncs `exports/papers-site` to R2 (hash manifest, orphan delete, public sample verify), in parallel with GitHub downloads / raw archive.
+4. `scripts/publish_papers_r2.py` incrementally syncs `exports/papers-site` to R2, in parallel with GitHub downloads / raw archive. It lists object metadata, verifies local SHA-256 checksums, and compares single-PUT ETags with local MD5 hashes. Matching objects transfer no body bytes, including objects left by an interrupted attempt.
 5. Cloudflare Pages deploy + production verification, then dirty-marker commit.
 
 ## Configuration
@@ -31,6 +31,8 @@ R2_SECRET_ACCESS_KEY=…
 # optional; defaults to CLOUDFLARE_ACCOUNT_ID
 R2_ACCOUNT_ID=
 R2_ENDPOINT_URL=
+# bounded concurrency, 1–32; persistent HTTP connection pool
+R2_PAPERS_UPLOAD_WORKERS=32
 ```
 
 Create an R2 S3 API token (Object Read & Write on `globalid-papers`) and put the
@@ -52,6 +54,40 @@ After preflight, a three-card channel strip summarizes Pages main, GitHub
 downloads, and R2 papers readiness.
 
 ## Operator notes
+
+- The splitter retains unchanged rewritten HTML only when its source hash,
+  output hash, rewrite implementation and origins all match. Removed paths are
+  reconciled locally; `papers-manifest.json` never includes itself.
+- The uploader holds a per-bucket process lock, limits pending futures to twice
+  the worker count, and retries transient transport/429/5xx failures. A failed
+  upload drains in-flight requests without advancing the final manifest.
+- Public verification precedes deletion of obsolete keys declared in the prior
+  manifest. The new manifest is written last. This is a completion marker;
+  independent objects are updated in place, not switched atomically as a site.
+- Browser research shards use record-derived boundaries and content hashes in
+  filenames, preserving the existing ordered-list client contract. The uploader
+  finishes shard uploads before updating `research/index.json` and
+  `research/catalogue.json`. Generation retains retired shards for 48 hours
+  after their last active reference, including legacy numbered shards during
+  migration, so cached indexes keep resolving. Cleanup remains manifest-scoped.
+- When a release introduces new hashed `/_astro/` files, publish a compatibility
+  Pages artifact containing the prior site plus those files before uploading R2
+  HTML. Verify the new asset bytes and CORS on the public origin first. Unchanged
+  assets skip this extra deployment. This prevents new R2 pages referencing
+  unavailable styles while the final Pages deployment is still pending.
+- The complete completion manifest retains its JSON schema and all fields, but
+  uses a deterministic gzip HTTP representation when smaller. The S3 signature
+  covers `Content-Encoding`, encoded length and encoded payload; readers accept
+  old plain JSON and decoded or encoded gzip responses. Ordinary object bytes
+  and their ETags are unchanged. R2 supports this metadata on
+  [PutObject](https://developers.cloudflare.com/r2/api/s3/api/).
+- Repeat a successful publication to measure an unchanged run: the summary
+  should report `uploaded: 0` and `bytes_uploaded: 0`. Object listings still
+  transfer metadata; no existing HTML, PNG or JSON bodies are downloaded.
+- The public probe also uses HTTPX. It retries transient transport/429/5xx
+  failures, falls back to a one-byte range GET when HEAD is unsupported, and
+  retains the HTTP status in failure diagnostics. Authentication/403 failures
+  remain terminal; verification is never skipped to complete a release.
 
 - Main-site `_redirects` send `/research/articles/*`, locale variants, cards, and
   `/site-data/research/*` to the papers host with 301.

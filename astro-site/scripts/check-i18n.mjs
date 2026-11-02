@@ -1,3 +1,4 @@
+import { visibleText, visibleTranslationPlaceholders } from './html-visible-text.mjs';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -160,15 +161,6 @@ if (report50) {
     }
   }
 }
-const visibleText = (html) => html
-  .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
-  .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
-  .replace(/<[^>]+>/g, ' ')
-  .replaceAll('&amp;', '&')
-  .replaceAll('&#39;', "'")
-  .replaceAll('&quot;', '"')
-  .replace(/\s+/g, ' ')
-  .trim();
 
 const walkHtml = (directory) => {
   if (!existsSync(directory)) return [];
@@ -214,16 +206,9 @@ if (process.argv.includes('--dist')) {
     }
   }
 
-  const pendingMarkers = [
-    'Traduction française en attente',
-    'Translation pending.',
-  ];
   for (const fullPath of walkHtml(resolve('dist/fr'))) {
-    const text = visibleText(readFileSync(fullPath, 'utf8'));
-    for (const marker of pendingMarkers) {
-      if (text.includes(marker)) {
-        fail(`${fullPath.replace(`${resolve('dist')}/`, '')} contains visible French translation placeholder: ${marker}`);
-      }
+    for (const marker of visibleTranslationPlaceholders(readFileSync(fullPath, 'utf8'))) {
+      fail(`${fullPath.replace(`${resolve('dist')}/`, '')} contains visible French translation placeholder: ${marker}`);
     }
   }
 }

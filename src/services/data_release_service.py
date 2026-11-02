@@ -89,6 +89,7 @@ GENERATED_DATA_PATHS = (
     "astro-site/src/data/reports",
     "astro-site/src/data/research",
     "astro-site/src/data/situation",
+    "astro-site/src/data/_release-projection",
     "data/current",
     "data/raw",
 )

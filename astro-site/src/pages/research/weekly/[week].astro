@@ -2,13 +2,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
-import researchData from '../../../data/research/index.json';
+import researchData from '../../../data/research/routes.json';
+import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { localizedDiseaseName } from '../../../utils/diseaseNames';
 import { localizedRegionName, localizedResearchTopic } from '../../../utils/i18n';
 import { siteHref } from '../../../lib/papers';
 
 export function getStaticPaths() {
-  return ((researchData as any).facets?.weeks ?? []).map((facet: any) => ({ params: { week: facet.week }, props: { facet, week: facet.week, locale: 'en' } }));
+  return ((researchData as any).facets?.weeks ?? []).filter((facet: any) => shouldBuildPage(`research:weekly:${facet.week}`)).map((facet: any) => ({ params: { week: facet.week }, props: { facet, week: facet.week, locale: 'en' } }));
 }
 
 interface Props { facet?: any; week?: string; locale?: 'en' | 'zh' | 'fr' }

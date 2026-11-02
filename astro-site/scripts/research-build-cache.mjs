@@ -40,7 +40,7 @@ function effectiveMeasurementId() {
 
 export function sharedFingerprint() {
   const files = [
-    ...walk(resolve(siteRoot, 'src')).filter(path => !path.startsWith(resolve(siteRoot, 'src', 'data') + '/')),
+    ...walk(resolve(siteRoot, 'src')).filter(path => !path.startsWith(resolve(siteRoot, 'src', 'data') + '/') || !path.endsWith('.json')),
     ...walk(resolve(siteRoot, 'public')).filter(path => !path.startsWith(resolve(siteRoot, 'public', 'site-data') + '/')),
     resolve(siteRoot, 'package.json'),
     resolve(siteRoot, 'package-lock.json'),
@@ -56,6 +56,7 @@ export function sharedFingerprint() {
   }
   digest.update(JSON.stringify(routes.diseases ?? []));
   digest.update(String(existsSync(resolve(siteRoot, 'src/data/situation/international/latest.json'))));
+  digest.update(String(existsSync(resolve(siteRoot, 'src/data/situation/international/map.json'))));
   for (const key of ['GLOBALID_SITE_URL', 'SITE_URL', 'PUBLIC_GIDS_MAINTENANCE_MESSAGE', 'SITUATION_SHADOW_PREVIEW']) {
     digest.update(`${key}=${process.env[key] ?? ''}\n`);
   }
@@ -144,6 +145,7 @@ export function finalizeResearchSnapshot(snapshot, {
   targetManifest = manifestPath,
   sourcePending = pendingPath,
   pageCache = pageCacheRoot,
+  label = 'research-cache',
 } = {}) {
   if (snapshot?.schema !== 1 || !snapshot.articles || typeof snapshot.articles !== 'object') {
     throw new Error('Invalid research build snapshot');
@@ -176,7 +178,7 @@ export function finalizeResearchSnapshot(snapshot, {
   writeFileSync(temporary, JSON.stringify(snapshot));
   renameSync(temporary, targetManifest);
   rmSync(sourcePending, { force: true });
-  process.stdout.write(`[research-cache] recorded ${Object.keys(snapshot.articles).length} complete article bundles\n`);
+  process.stdout.write(`[${label}] recorded ${Object.keys(snapshot.articles).length} complete page bundles\n`);
 }
 
 export function finalizeResearchBuild() {

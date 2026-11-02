@@ -2,13 +2,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
-import researchData from '../../../data/research/index.json';
+import researchData from '../../../data/research/routes.json';
+import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { normalizeDiseaseHref } from '../../../lib/seo';
 import { siteHref } from '../../../lib/papers';
 import { localizedDiseaseName } from '../../../utils/diseaseNames';
 
 export function getStaticPaths() {
-  return ((researchData as any).facets?.diseases ?? []).map((facet: any) => ({
+  return ((researchData as any).facets?.diseases ?? []).filter((facet: any) => shouldBuildPage(`research:diseases:${facet.slug}`)).map((facet: any) => ({
     params: { slug: facet.slug },
     props: { facet, diseaseSlug: facet.slug, locale: 'en' },
   }));

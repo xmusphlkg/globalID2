@@ -84,6 +84,18 @@ function isRedirectSource(route, redirects) {
 export function auditSeoOutput(distDirectory) {
   const dist = resolve(distDirectory);
   const redirects = redirectMap(dist);
+  // Shared navigation repeats across thousands of pages. Cache only within
+  // this audit so a later audit still observes changed files and redirects.
+  const targets = new Map();
+  const redirectSources = new Map();
+  const hasTarget = pathname => {
+    if (!targets.has(pathname)) targets.set(pathname, targetExists(pathname, dist));
+    return targets.get(pathname);
+  };
+  const hasRedirect = pathname => {
+    if (!redirectSources.has(pathname)) redirectSources.set(pathname, isRedirectSource(pathname, redirects));
+    return redirectSources.get(pathname);
+  };
   const errors = [];
   const pages = new Map();
   const indexableTitles = new Map();
@@ -167,8 +179,8 @@ export function auditSeoOutput(distDirectory) {
       // Papers pages and the paths they link to share one host after the
       // release split, so those links never pass through a redirect.
       const sameHost = PAPERS_ROUTE.test(route) && PAPERS_ROUTE.test(target.pathname);
-      if (!sameHost && (isRedirectSource(target.pathname, redirects) || isRedirectSource(normalized, redirects))) errors.push(`${route}: internal link points through redirect ${href}`);
-      else if (!targetExists(target.pathname, dist)) errors.push(`${route}: broken internal link ${href}`);
+      if (!sameHost && (hasRedirect(target.pathname) || hasRedirect(normalized))) errors.push(`${route}: internal link points through redirect ${href}`);
+      else if (!hasTarget(target.pathname)) errors.push(`${route}: broken internal link ${href}`);
     }
   }
 
@@ -180,14 +192,14 @@ export function auditSeoOutput(distDirectory) {
       // URLs on another host (the papers site) have no page in this dist.
       if (url.origin !== SITE_ORIGIN) continue;
       const page = pages.get(url.pathname);
-      if (!page && isRedirectSource(url.pathname, redirects)) errors.push(`${relative(dist, file)}: sitemap URL redirects to another host ${url.pathname}`);
+      if (!page && hasRedirect(url.pathname)) errors.push(`${relative(dist, file)}: sitemap URL redirects to another host ${url.pathname}`);
       else if (!page) errors.push(`${relative(dist, file)}: sitemap URL has no HTML page ${url.pathname}`);
       else if (!page.isIndexable) errors.push(`${relative(dist, file)}: sitemap includes noindex page ${url.pathname}`);
     }
   }
 
   for (const [source, destination] of redirects) {
-    if (destination.startsWith('/') && !destination.includes(':splat') && !targetExists(destination, dist)) errors.push(`_redirects: ${source} points to missing ${destination}`);
+    if (destination.startsWith('/') && !destination.includes(':splat') && !hasTarget(destination)) errors.push(`_redirects: ${source} points to missing ${destination}`);
   }
 
   return { passed: errors.length === 0, errors, pages: pages.size, indexable, noindex, redirects: redirects.size };

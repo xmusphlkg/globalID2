@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeBuildRedirects } from './build-redirects.mjs';
 import { planPath, planResearchBuild, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, writePending } from './research-build-cache.mjs';
+import { pageSourceSnapshot, planSitePages, pagePlanPath, sitePageCacheRoot, writePagePending } from './page-build-cache.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..', '..');
 const settingsPath = resolve(projectRoot, 'data', 'system-settings.json');
@@ -73,16 +74,21 @@ const astroBinary = resolve(
   process.platform === 'win32' ? 'astro.cmd' : 'astro',
 );
 const snapshot = sourceSnapshot();
+const pageSnapshot = pageSourceSnapshot({ shared: snapshot.shared });
+const incremental = Boolean(process.env.PUBLIC_GIDS_RELEASE_ID || process.env.GIDS_RESEARCH_INCREMENTAL === '1');
+let pagePlan = planSitePages(pageSnapshot, incremental);
 let plan = planResearchBuild({
-  incremental: Boolean(process.env.PUBLIC_GIDS_RELEASE_ID || process.env.GIDS_RESEARCH_INCREMENTAL === '1'),
+  incremental,
   snapshot,
 });
 const elapsedSeconds = started => ((performance.now() - started) / 1000).toFixed(1);
 mkdirSync(resolve(projectRoot, 'data', 'cache'), { recursive: true });
 writeFileSync(planPath, JSON.stringify({ selected: plan.selected }));
+writeFileSync(pagePlanPath, JSON.stringify({ selected: pagePlan.selected, known: Object.keys(pageSnapshot.articles) }));
 process.stdout.write(`[research-cache] ${plan.mode}: render ${plan.selected.length}, reuse ${plan.reused.length} article bundles\n`);
+process.stdout.write(`[page-cache] ${pagePlan.mode}: render ${pagePlan.selected.length}, reuse ${pagePlan.reused.length} collection/country/disease bundles\n`);
 
-const runAstro = selectedPath => {
+const runAstro = (selectedPath, selectedPagePath) => {
   const started = performance.now();
   const result = spawnSync(astroBinary, ['build'], {
     cwd: resolve(import.meta.dirname, '..'),
@@ -90,25 +96,29 @@ const runAstro = selectedPath => {
       ...process.env,
       PUBLIC_GA4_MEASUREMENT_ID: measurementId,
       ...(selectedPath ? { GIDS_RESEARCH_BUILD_PLAN: selectedPath } : { GIDS_RESEARCH_BUILD_PLAN: '' }),
+      GIDS_PAGE_BUILD_PLAN: selectedPagePath ?? '',
     },
     stdio: 'inherit',
   });
   process.stdout.write(`[build-timing] Astro render ${elapsedSeconds(started)}s status=${result.status ?? 'error'}\n`);
   return result;
 };
-let result = runAstro(plan.mode === 'incremental' ? planPath : null);
+let result = runAstro(plan.mode === 'incremental' ? planPath : null, pagePlan.mode === 'incremental' ? pagePlanPath : null);
 
-if ((result.status ?? 1) === 0 && plan.reused.length) {
+if ((result.status ?? 1) === 0 && (plan.reused.length || pagePlan.reused.length)) {
   const restoreStarted = performance.now();
   restoreReusablePages(plan);
-  process.stdout.write(`[build-timing] restore reusable research pages ${elapsedSeconds(restoreStarted)}s\n`);
-  if (!reusedAssetReferencesAvailable(plan)) {
-    process.stdout.write('[research-cache] cached page asset missing; rebuilding all article bundles\n');
-    result = runAstro(null);
+  restoreReusablePages(pagePlan, sitePageCacheRoot);
+  process.stdout.write(`[build-timing] restore reusable pages ${elapsedSeconds(restoreStarted)}s\n`);
+  if (!reusedAssetReferencesAvailable(plan) || !reusedAssetReferencesAvailable(pagePlan)) {
+    process.stdout.write('[page-cache] cached page asset missing; rebuilding all page bundles\n');
+    result = runAstro(null, null);
     plan = { ...plan, mode: 'full', selected: Object.keys(snapshot.articles), reused: [] };
+    pagePlan = { ...pagePlan, mode: 'full', selected: Object.keys(pageSnapshot.articles), reused: [] };
   }
 }
 rmSync(planPath, { force: true });
+rmSync(pagePlanPath, { force: true });
 
 if (result.error) {
   process.stderr.write(`${result.error.message}\n`);
@@ -125,9 +135,13 @@ if (researchFingerprintAfter !== researchFingerprintBefore) {
   );
   process.exit(3);
 }
-if ((result.status ?? 1) === 0 && JSON.stringify(sourceSnapshot()) !== JSON.stringify(snapshot)) {
+if ((result.status ?? 1) === 0 && (JSON.stringify(sourceSnapshot()) !== JSON.stringify(snapshot)
+  || JSON.stringify(pageSourceSnapshot()) !== JSON.stringify(pageSnapshot))) {
   process.stderr.write('Research detail data or shared templates changed during the Astro build.\n');
   process.exit(3);
 }
-if ((result.status ?? 1) === 0) writePending(plan);
+if ((result.status ?? 1) === 0) {
+  writePending(plan);
+  writePagePending(pagePlan);
+}
 process.exit(result.status ?? 1);

@@ -132,6 +132,86 @@ def test_cache_control_policy() -> None:
     assert "immutable" not in _cache_control_for("research/cards/a.png")
 
 
+def test_inventory_paginates_and_encodes_continuation_token():
+    calls = []
+
+    def opener(request, timeout):
+        calls.append(request.full_url)
+        if len(calls) == 1:
+            return _Response(body=b'''<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+              <Contents><Key>a/</Key><ETag>"abc"</ETag><Size>3</Size></Contents>
+              <IsTruncated>true</IsTruncated><NextContinuationToken>a+b/=</NextContinuationToken>
+            </ListBucketResult>''')
+        return _Response(body=b'''<ListBucketResult>
+          <Contents><Key>b</Key><ETag>"def"</ETag><Size>4</Size></Contents>
+          <IsTruncated>false</IsTruncated></ListBucketResult>''')
+
+    result = R2S3Client(CONFIG, opener=opener).list_objects()
+    assert result == {"a/": {"bytes": 3, "etag": "abc"}, "b": {"bytes": 4, "etag": "def"}}
+    assert "continuation-token=a%2Bb%2F%3D&list-type=2" in calls[1]
+
+
+def test_pooled_http_transport_preserves_body_and_status():
+    import httpx
+    client = R2S3Client(CONFIG)
+    client._http.close()
+    client._http = httpx.Client(transport=httpx.MockTransport(
+        lambda request: httpx.Response(200, content=b"payload")
+    ))
+    try:
+        assert client.get_object("test") == b"payload"
+    finally:
+        client.close()
+
+
+def test_public_probe_uses_httpx_and_retries_transient_failures(monkeypatch):
+    import httpx
+    from src.services.data_release import papers_r2
+
+    requests, sleeps = [], []
+    original_client = httpx.Client
+
+    def respond(request):
+        requests.append(request)
+        if len(requests) == 1:
+            raise httpx.ConnectError("connection reset")
+        assert request.headers["user-agent"].startswith("python-httpx/")
+        return httpx.Response(200)
+
+    monkeypatch.setattr(papers_r2.httpx, "Client", lambda **kwargs: original_client(
+        transport=httpx.MockTransport(respond), **kwargs,
+    ))
+    monkeypatch.setattr(papers_r2.time, "sleep", sleeps.append)
+    papers_r2._verify_public_sample("https://papers.example.test/article/")
+    assert len(requests) == 2
+    assert sleeps == [1.0]
+
+
+def test_public_probe_uses_a_range_when_head_is_unsupported():
+    from src.services.data_release.papers_r2 import _verify_public_sample
+
+    def opener(request, timeout):
+        if request.get_method() == "HEAD":
+            raise urllib.error.HTTPError(request.full_url, 405, "Method Not Allowed", {}, io.BytesIO())
+        assert request.get_header("Range") == "bytes=0-0"
+        return _Response(206, b"x")
+
+    _verify_public_sample("https://papers.example.test/article/", opener)
+
+
+def test_public_probe_reports_forbidden_without_retry(monkeypatch):
+    from src.services.data_release import papers_r2
+
+    def opener(request, timeout):
+        raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, io.BytesIO())
+
+    sleeps = []
+    monkeypatch.setattr(papers_r2.time, "sleep", sleeps.append)
+    with pytest.raises(R2S3Error, match="HTTP 403"):
+        papers_r2._verify_public_sample("https://papers.example.test/article/", opener)
+    assert sleeps == []
+
+
 def test_empty_local_manifest_never_wipes_the_bucket(tmp_path: Path) -> None:
     papers = tmp_path / "papers"
     papers.mkdir()
