@@ -1,3 +1,5 @@
+import { absoluteSiteUrl } from './papers.ts';
+
 export type ResearchFeedScope =
   | 'diseases'
   | 'countries'
@@ -259,7 +261,7 @@ export function renderResearchFeedXml({
   const items = articles.map(article => {
     const slug = text(article.slug);
     if (!slug) return '';
-    const url = new URL(`${localePrefix}/research/articles/${slug}/`, origin).toString();
+    const url = absoluteSiteUrl(`${localePrefix}/research/articles/${slug}/`, origin).toString();
     const diseaseName = (item: NonNullable<ResearchFeedArticle['diseases']>[number]) => language === 'fr'
       ? text(item.name_fr) || text(item.name_en)
       : language === 'zh' ? text(item.name_zh) || text(item.name_en) : text(item.name_en);

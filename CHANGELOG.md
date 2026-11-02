@@ -4,6 +4,42 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-11-02
+
+### Added
+
+- Public hosting is three channels: Cloudflare Pages for the main site, GitHub for download partitions, and Cloudflare R2 (`papers.globalinfectiousdisease.com`) for research article pages, cards, and `site-data/research`. Release splits the Astro `dist`, enforces a Pages file-count budget, and incrementally syncs papers assets to R2 before deploy.
+- The papers host has its own `robots.txt` and `sitemap.xml`. Article URLs are no longer listed in the main-site sitemaps. Canonical, hreflang, JSON-LD, social-card, RSS and search-index URLs for articles all point at the papers host through one module (`src/lib/papers.ts`).
+- The control-panel Publish workspace shows a three-channel strip and preflight rows for papers storage and the Pages file budget. A failed release writes a `dist-inventory.json` under `exports/release-failures/<task>/` before artifacts are rolled back.
+- R2 uploads carry a `Cache-Control` policy (HTML revalidates, JSON five minutes, the manifest is never cached), because an R2 custom domain does not read the Pages `_headers` file.
+- The main-site `_headers` allow the papers origin to load `/_astro/*`, `/scripts/*`, logos, `/site-data/*` and `/release.json` cross-origin. Release adds any missing path instead of skipping the file when one rule already exists.
+- Incremental Astro builds keep rendered article bundles in `data/cache/research-pages`, since release moves them out of `dist`.
+- Model center probes native PDF support: it sends a PDF carrying a random marker and records whether the model read it, rechecked after 24 hours. An operator override (`runtime_native_files`) still wins.
+- The ECDC Communicable Disease Threats Report adapter reads the archive back to the collection start date, not only the latest RSS issues. Africa CDC and PAHO collection page further, and WHO periodicals stop on the raw page so a page of policy articles no longer hides older disease articles.
+- A worker that starts releases every model-work lease left by its predecessor, so a restart does not hold route permits until they expire.
+
+### Changed
+
+- Outbreak grouping and the public Situation export look back 1,100 days, so a routine short refresh no longer drops history.
+- Documents are read with pdfium behind one lock; two threads inside pdfium crashed the worker.
+- Anthropic routes use the model center's stored `/v1` root correctly (no `/v1/v1/messages`), and native calls set an explicit timeout so a large token ceiling does not trip the SDK's streaming guard.
+- Peer review reads the first JSON object in a reply; prose or a second object after the payload no longer corrupts it.
+- A published research article keeps its status when the classifier later returns "review". Only a hard exclusion, an integrity change or an editorial action changes it. Unchanged re-upserts no longer reopen automatic exclusions, and a summary whose parent is excluded is deferred instead of archived permanently, with earlier parent-caused archives restored.
+- AI content governance holds content in review until what the reviewers read changes.
+- The French research labels cover Meta-analysis, Commentary, Preprint and Prion, and `check-i18n` fails when a taxonomy label has no translation.
+- The SEO output check understands wildcard redirects, ignores article URLs hosted on the papers host, and reports main-site sitemap entries that still redirect there. Weekly Research Radar links to articles go straight to the papers host.
+
+### Fixed
+
+- The data-release service read `data_release` settings one level too deep, so the R2 preflight and publish step would have raised `AttributeError`.
+- The R2 bucket check signed a different path from the one it requested and always reported the bucket unreachable.
+- Publishing an empty papers bundle would have deleted every object in the bucket. It is now refused.
+- A failure while writing the release failure inventory can no longer hide the original error or skip restoring the backups.
+
+### Removed
+
+- The runtime-route fields `runtime_provider_min_capacity`, `runtime_provider_auto_concurrency`, `runtime_provider_success_streak` and `runtime_provider_backoff_remaining_seconds` from the API and the control panel.
+
 ## [0.16.2] - 2026-11-01
 
 ### Added

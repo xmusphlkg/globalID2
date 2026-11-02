@@ -115,6 +115,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
 <script>
   import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
   import { answerResearchQuestion } from '../../lib/research-ask';
+  import { siteHref } from '../../lib/papers';
 
   const form = document.querySelector<HTMLFormElement>('#research-question-form');
   const input = document.querySelector<HTMLInputElement>('#research-question');
@@ -306,7 +307,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
       const rowHeader = make('div', 'evidence-row-header');
       const heading = make('h3');
       const internal = make('a');
-      internal.href = `${routePrefix}/research/articles/${article.slug}/`;
+      internal.href = siteHref(`${routePrefix}/research/articles/${article.slug}/`);
       internal.textContent = article.title || (isZh() ? '未命名研究' : isFr() ? 'Recherche sans titre' : 'Untitled research');
       heading.append(internal);
       const level = make('span', `evidence-level evidence-level-${item.evidenceLevel}`);
@@ -323,7 +324,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
       finding.textContent = (isZh() ? item.findingZh : isFr() ? item.findingFr : item.findingEn) || (isZh() ? '该记录尚无已发布的结构化结果摘要；请查看原文。' : isFr() ? 'Aucun résultat structuré publié n’est disponible pour cette référence ; consultez la source.' : 'No published structured finding is available for this record; consult the source.');
       const citations = make('div', 'evidence-citations');
       const radar = make('a');
-      radar.href = `${routePrefix}/research/articles/${article.slug}/`;
+      radar.href = siteHref(`${routePrefix}/research/articles/${article.slug}/`);
       radar.textContent = isZh() ? '证据摘要' : isFr() ? 'Résumé des preuves' : 'Evidence summary';
       citations.append(radar);
       if (article.doi) {

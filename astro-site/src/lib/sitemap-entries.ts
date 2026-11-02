@@ -114,6 +114,9 @@ export const SITEMAP_GROUPS = [
 
 export type SitemapGroup = typeof SITEMAP_GROUPS[number];
 
+/** Article entries; rendered into the papers host's own sitemap, not SITEMAP_GROUPS. */
+export const PAPERS_SITEMAP_GROUP = 'papers' as const;
+
 export function normalizeSitemapDate(value: unknown): string | undefined {
   if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) {
     return undefined;
@@ -210,9 +213,10 @@ export function buildSitemapGroups({
   countryDiseaseLimit = 50,
   situation,
   research,
-}: BuildSitemapEntriesOptions): Record<SitemapGroup, SitemapEntry[]> {
+}: BuildSitemapEntriesOptions): Record<SitemapGroup | typeof PAPERS_SITEMAP_GROUP, SitemapEntry[]> {
   const siteLastmod = normalizeSitemapDate(meta.generated_at);
-  const groups: Record<SitemapGroup, SitemapEntry[]> = {
+  const groups: Record<SitemapGroup | typeof PAPERS_SITEMAP_GROUP, SitemapEntry[]> = {
+    [PAPERS_SITEMAP_GROUP]: [],
     // Static legal/navigation pages do not necessarily change with the data
     // snapshot. Omitting lastmod is more accurate than refreshing it on every
     // data release.
@@ -252,7 +256,9 @@ export function buildSitemapGroups({
     for (const article of publicResearchArticles) {
       const slug = pathSegment(article.slug, true);
       if (!slug) continue;
-      groups.research.push(...localizedEntry(`/research/articles/${slug}/`, normalizeSitemapDate(article.updated_at ?? article.published_at) ?? researchLastmod));
+      // Article pages are published on the papers host, so they belong to a
+      // separate sitemap served from that host rather than the main one.
+      groups[PAPERS_SITEMAP_GROUP].push(...localizedEntry(`/research/articles/${slug}/`, normalizeSitemapDate(article.updated_at ?? article.published_at) ?? researchLastmod));
     }
     for (const disease of research.facets?.diseases ?? []) {
       const slug = pathSegment(disease.slug, true);
@@ -362,7 +368,7 @@ export function buildSitemapGroups({
     }
   }
 
-  for (const group of SITEMAP_GROUPS) {
+  for (const group of [...SITEMAP_GROUPS, PAPERS_SITEMAP_GROUP] as const) {
     const unique = new Map<string, SitemapEntry>();
     for (const entry of groups[group]) {
       if (!unique.has(entry.path)) unique.set(entry.path, entry);

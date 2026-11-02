@@ -220,6 +220,10 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
 
 <script is:inline define:vars={{ isChinese, isFrench, languagePrefix: isChinese ? '/zh' : isFrench ? '/fr' : '' }}>
   const localized = (en, zh, fr) => isChinese ? zh : isFrench ? fr : en;
+  // Article pages are served from the papers host, where root-relative URLs
+  // for the search index and for non-article pages must point at the main site.
+  const mainBase = location.hostname === 'papers.globalinfectiousdisease.com' ? 'https://globalinfectiousdisease.com' : '';
+  const siteUrl = href => typeof href === 'string' && href.startsWith('/') && !/^\/(?:(?:zh|fr)\/)?research\/articles\//.test(href) ? mainBase + href : href;
   const themeButtons = [...document.querySelectorAll('[data-theme-toggle]')];
   const themeLabel = document.querySelector('#theme-toggle-label');
   const mobileButton = document.querySelector('#mobile-menu-toggle');
@@ -263,7 +267,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
 
   async function loadSearch() {
     if (searchLoaded) return;
-    try { const response = await fetch('/site-data/search-index.json'); const payload = await response.json(); searchEntries = payload.entries || []; }
+    try { const response = await fetch(`${mainBase}/site-data/search-index.json`); const payload = await response.json(); searchEntries = payload.entries || []; }
     catch { searchEntries = []; }
     searchLoaded = true;
   }
@@ -323,14 +327,14 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   function renderSearch() {
     if (!(searchInput instanceof HTMLInputElement) || !searchResults) return;
     const query = normalized(searchInput.value);
-    if (searchAll instanceof HTMLAnchorElement) searchAll.href = `${languagePrefix}/search/?q=${encodeURIComponent(searchInput.value.trim())}`;
+    if (searchAll instanceof HTMLAnchorElement) searchAll.href = siteUrl(`${languagePrefix}/search/?q=${encodeURIComponent(searchInput.value.trim())}`);
     searchResults.replaceChildren();
     if (query.length < 2) return;
     const matches = searchEntries.map(entry => ({ entry, rank: score(entry, query) })).filter(item => item.rank > 0).sort((a,b) => b.rank-a.rank).slice(0, 8);
     if (!matches.length) { const empty = document.createElement('p'); empty.className='site-search-empty'; empty.textContent=localized('No matching evidence found.', '未找到匹配内容。', 'Aucun résultat trouvé.'); searchResults.append(empty); return; }
     for (const { entry } of matches) {
       const link = document.createElement('a'); link.className='site-search-result'; link.setAttribute('role','option');
-      link.href = isChinese && entry.href.zh ? entry.href.zh : isFrench && entry.href.fr ? entry.href.fr : entry.href.en;
+      link.href = siteUrl(isChinese && entry.href.zh ? entry.href.zh : isFrench && entry.href.fr ? entry.href.fr : entry.href.en);
       const kind = document.createElement('span'); kind.className='site-search-result-kind'; kind.textContent=entry.kind;
       const title = document.createElement('strong'); title.textContent=localizedSearchTitle(entry);
       const summary = document.createElement('small'); summary.textContent=localizedSearchSummary(entry);

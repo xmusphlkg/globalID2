@@ -27,7 +27,7 @@ from src.services._lifecycle import safe_exception_summary
 from src.control_plane.events import control_plane_events
 from src.control_plane.runtime import runtime_registry
 from src.core.task_manager import task_manager
-from src.ai.work_queue import AIWorkDispatcher, waiting_parent_uuids
+from src.ai.work_queue import AIWorkDispatcher, release_leases_on_startup, waiting_parent_uuids
 
 logger = get_logger(__name__)
 
@@ -562,6 +562,10 @@ async def run_worker() -> None:
     )
     if recovered:
         logger.warning("Recovered {} interrupted task(s) on worker startup", recovered)
+
+    released = await release_leases_on_startup()
+    if released:
+        logger.warning("Released {} model work lease(s) left by the previous worker", released)
 
     await ai_concurrency.refresh(force=True)
 

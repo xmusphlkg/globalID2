@@ -107,7 +107,7 @@ test('renders French feeds with localized metadata and links', () => {
   assert.match(xml, /<title>Radar de recherche GIDS · Coqueluche<\/title>/);
   assert.match(xml, /<language>fr<\/language>/);
   assert.match(xml, /href="https:\/\/example\.com\/fr\/research\/rss\/diseases\/pertussis\.xml"/);
-  assert.match(xml, /<link>https:\/\/example\.com\/fr\/research\/articles\/review-one\/<\/link>/);
+  assert.match(xml, /<link>https:\/\/papers\.globalinfectiousdisease\.com\/fr\/research\/articles\/review-one\/<\/link>/);
   assert.match(xml, /Revue et synthèse\./);
   assert.match(xml, /Coqueluche/);
 });

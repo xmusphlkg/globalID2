@@ -37,6 +37,28 @@ for (const [catalogue, entries] of Object.entries({ STUDY_TYPE_LABELS, RESEARCH_
     }
   }
 }
+// The French research graph fail-closes on any classifier label missing from
+// these catalogues. Taxonomy is absent from the astro-site-only CI fixture.
+const taxonomyPath = resolve(import.meta.dirname, '../../configs/literature/taxonomy.json');
+if (existsSync(taxonomyPath)) {
+  const taxonomy = JSON.parse(readFileSync(taxonomyPath, 'utf8'));
+  const requireLabels = (catalogue, labels, values) => {
+    for (const value of values) {
+      if (!value || labels[value]) continue;
+      fail(`${catalogue} is missing classifier label ${JSON.stringify(value)}`);
+    }
+  };
+  requireLabels('RESEARCH_FACET_LABELS', RESEARCH_FACET_LABELS, [
+    ...Object.values(taxonomy.pathogen_types ?? {}).map((item) => item.label),
+    ...Object.values(taxonomy.populations ?? {}).map((item) => item.label),
+  ]);
+  requireLabels('RESEARCH_TOPIC_LABELS', RESEARCH_TOPIC_LABELS, Object.keys(taxonomy.topics ?? {}));
+  requireLabels('STUDY_TYPE_LABELS', STUDY_TYPE_LABELS, [
+    ...Object.keys(taxonomy.study_types ?? {}),
+    'Journal article',
+    'Preprint',
+  ]);
+}
 for (const [source, translation] of Object.entries(FR_UI)) {
   if (!source.trim() || !translation.trim()) fail(`empty French UI entry for ${JSON.stringify(source)}`);
 }

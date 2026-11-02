@@ -2,6 +2,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 
 const SITE_ORIGIN = 'https://globalinfectiousdisease.com';
+// Mirrors PAPERS_PATH in src/lib/papers.ts: paths published on the papers host.
+const PAPERS_ROUTE = /^\/(?:(?:zh|fr)\/)?research\/articles\/|^\/research\/cards\/|^\/site-data\/research\//;
 
 function walk(directory, suffix) {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
@@ -65,8 +67,18 @@ function redirectMap(dist) {
   return output;
 }
 
+// Destination of the first rule matching `pathname`: an exact rule, or a
+// trailing-wildcard rule such as `/research/articles/*` (papers host split).
+export function redirectFor(pathname, redirects) {
+  if (redirects.has(pathname)) return redirects.get(pathname);
+  for (const [source, destination] of redirects) {
+    if (source.endsWith('*') && pathname.startsWith(source.slice(0, -1))) return destination;
+  }
+  return undefined;
+}
+
 function isRedirectSource(route, redirects) {
-  return redirects.has(route);
+  return redirectFor(route, redirects) !== undefined;
 }
 
 export function auditSeoOutput(distDirectory) {
@@ -81,7 +93,9 @@ export function auditSeoOutput(distDirectory) {
 
   for (const file of walk(dist, '.html')) {
     const route = routeFor(file, dist);
-    if (isRedirectSource(route, redirects)) continue;
+    // Exact rules only: a wildcard rule (papers host) must not hide pages that
+    // an unsplit build still contains from the audit.
+    if (redirects.has(route)) continue;
     const html = readFileSync(file, 'utf8');
     const title = decodeHtml(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1] ?? '').replace(/\s+/g, ' ').trim();
     const meta = tags(html, 'meta');
@@ -150,7 +164,10 @@ export function auditSeoOutput(distDirectory) {
       const normalized = target.pathname === '/' || target.pathname.endsWith('/') || extname(target.pathname)
         ? target.pathname
         : `${target.pathname}/`;
-      if (redirects.has(target.pathname) || redirects.has(normalized)) errors.push(`${route}: internal link points through redirect ${href}`);
+      // Papers pages and the paths they link to share one host after the
+      // release split, so those links never pass through a redirect.
+      const sameHost = PAPERS_ROUTE.test(route) && PAPERS_ROUTE.test(target.pathname);
+      if (!sameHost && (isRedirectSource(target.pathname, redirects) || isRedirectSource(normalized, redirects))) errors.push(`${route}: internal link points through redirect ${href}`);
       else if (!targetExists(target.pathname, dist)) errors.push(`${route}: broken internal link ${href}`);
     }
   }
@@ -160,14 +177,17 @@ export function auditSeoOutput(distDirectory) {
     const xml = readFileSync(file, 'utf8');
     for (const match of xml.matchAll(/<loc>([^<]+)<\/loc>/g)) {
       const url = new URL(decodeHtml(match[1]));
+      // URLs on another host (the papers site) have no page in this dist.
+      if (url.origin !== SITE_ORIGIN) continue;
       const page = pages.get(url.pathname);
-      if (!page) errors.push(`${relative(dist, file)}: sitemap URL has no HTML page ${url.pathname}`);
+      if (!page && isRedirectSource(url.pathname, redirects)) errors.push(`${relative(dist, file)}: sitemap URL redirects to another host ${url.pathname}`);
+      else if (!page) errors.push(`${relative(dist, file)}: sitemap URL has no HTML page ${url.pathname}`);
       else if (!page.isIndexable) errors.push(`${relative(dist, file)}: sitemap includes noindex page ${url.pathname}`);
     }
   }
 
   for (const [source, destination] of redirects) {
-    if (destination.startsWith('/') && !targetExists(destination, dist)) errors.push(`_redirects: ${source} points to missing ${destination}`);
+    if (destination.startsWith('/') && !destination.includes(':splat') && !targetExists(destination, dist)) errors.push(`_redirects: ${source} points to missing ${destination}`);
   }
 
   return { passed: errors.length === 0, errors, pages: pages.size, indexable, noindex, redirects: redirects.size };

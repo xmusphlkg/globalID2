@@ -18,6 +18,7 @@ from src.services.global_sources.collection import DEFAULT_SINCE_DAYS, collect
 
 from .export import DEFAULT_OUTPUT_DIR, export_site
 from .pipeline import (
+    HISTORY_SINCE_DAYS,
     extract_pending,
     fetch_pending_documents,
     rebuild_outbreaks,
@@ -129,7 +130,11 @@ async def _run_stages(*, summary, now, run_id, stages, since_days, don_limit, do
     await progress(75)
 
     await stages.transition("store")
-    summary["outbreaks"] = await rebuild_outbreaks(as_of=now.date(), task_uuid=stages.task_uuid)
+    summary["outbreaks"] = await rebuild_outbreaks(
+        since_days=max(int(since_days), HISTORY_SINCE_DAYS),
+        as_of=now.date(),
+        task_uuid=stages.task_uuid,
+    )
     await log_situation_event(
         stages.task_uuid,
         title="Situation store",

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -114,6 +115,7 @@ async def execute_release_task(
         runtime.astro_dir / "public" / "site-data",
         runtime.astro_dir / "dist",
         runtime.root_dir / "exports" / "site-downloads",
+        runtime.root_dir / "exports" / "papers-site",
     ]
     # Snapshots may exceed 18 GiB; /tmp can be a RAM-backed filesystem whose
     # usage is charged against the worker's memory limit. Keep independent
@@ -132,6 +134,32 @@ async def execute_release_task(
         try:
             return await _execute_release_task(service, task, runtime=runtime)
         except BaseException:
+            dist_dir = runtime.astro_dir / "dist"
+            if dist_dir.is_dir():
+                from .papers_bundle import write_dist_inventory
+
+                # Diagnostic only: a failure here must not mask the release error
+                # or skip restoring the pre-release artifacts below.
+                try:
+                    failure_dir = (
+                        runtime.root_dir
+                        / "exports"
+                        / "release-failures"
+                        / str(task.task_uuid)
+                    )
+                    await asyncio.to_thread(
+                        failure_dir.mkdir, parents=True, exist_ok=True
+                    )
+                    await asyncio.to_thread(
+                        write_dist_inventory,
+                        dist_dir,
+                        failure_dir / "dist-inventory.json",
+                    )
+                except Exception:
+                    logging.getLogger(__name__).warning(
+                        "Could not write release failure dist inventory",
+                        exc_info=True,
+                    )
             for path, backup, existed in backups:
                 if path.exists():
                     await asyncio.to_thread(shutil.rmtree, path)
@@ -271,6 +299,7 @@ async def _execute_release_task(
 
     downloads_published = False
     raw_archive_published = False
+    r2_papers_published = False
     pages_deployed = False
     cloudflare_deployment = None
     # Complete every local, side-effect-free release gate before publishing to
@@ -306,6 +335,22 @@ async def _execute_release_task(
         metadata={"event": "situation_release_gate", "release_job_id": job.job_id},
         timeout_seconds=120,
     )
+    r2_enabled_fn = getattr(service, "_r2_papers_enabled", None)
+    r2_papers_enabled = (
+        bool(r2_enabled_fn(job)) if callable(r2_enabled_fn) else False
+    )
+    if job.include_cloudflare_deploy or r2_papers_enabled:
+        # Move long-tail research pages out of the Pages upload set before the
+        # deployable digest is computed. Local npm builds keep a full dist.
+        await service._run_logged_command(
+            task.task_uuid,
+            title="Split Papers Bundle",
+            cmd=service._split_papers_bundle_command(python_path=python_path),
+            cwd=runtime.root_dir,
+            env=git_env,
+            metadata={"event": "split_papers_bundle", "release_job_id": job.job_id},
+            timeout_seconds=1800,
+        )
     if job.include_cloudflare_deploy:
         # The public manifest identifies these exact bytes as well as the
         # source revision. A retry may rebuild different facts at the same
@@ -400,9 +445,69 @@ async def _execute_release_task(
             },
         )
 
+    if r2_papers_enabled:
+        r2_env = {
+            **git_env,
+            "CLOUDFLARE_ACCOUNT_ID": service._cloudflare_account_id(),
+            # Fallback when no R2 key pair is configured: the publisher derives
+            # S3 credentials from this token.
+            "CLOUDFLARE_API_TOKEN": service._cloudflare_api_token(),
+            "R2_PAPERS_BUCKET": str(
+                service._config().r2_papers_bucket or "globalid-papers"
+            ),
+            "R2_PAPERS_PUBLIC_BASE_URL": str(
+                service._config().r2_papers_public_base_url
+                or "https://papers.globalinfectiousdisease.com"
+            ),
+            "R2_ACCESS_KEY_ID": str(
+                service._config().r2_access_key_id or ""
+            ),
+            "R2_SECRET_ACCESS_KEY": str(
+                service._config().r2_secret_access_key or ""
+            ),
+            "R2_ENDPOINT_URL": str(
+                service._config().r2_endpoint_url or ""
+            ),
+            "R2_ACCOUNT_ID": str(
+                service._config().r2_account_id
+                or service._cloudflare_account_id()
+                or ""
+            ),
+        }
+        repository_publications.append(
+            (
+                "r2_papers",
+                service._run_logged_command(
+                    task.task_uuid,
+                    title="Publish Papers Bundle to R2",
+                    cmd=service._publish_papers_r2_command(python_path=python_path),
+                    cwd=runtime.root_dir,
+                    env=r2_env,
+                    metadata={
+                        "event": "r2_papers_publish",
+                        "release_job_id": job.job_id,
+                    },
+                    timeout_seconds=runtime.download_publish_timeout_seconds,
+                ),
+            )
+        )
+    else:
+        await runtime.task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Papers R2 Publish Skipped",
+            content="R2 papers publication is disabled for this release job.",
+            content_type="text",
+            metadata={
+                "event": "r2_papers_publish_skipped",
+                "release_job_id": job.job_id,
+            },
+        )
+
     completed_publications = await _run_repository_publications(repository_publications)
     raw_archive_published = "raw_archive" in completed_publications
     downloads_published = "direct_downloads" in completed_publications
+    r2_papers_published = "r2_papers" in completed_publications
 
     # The site only goes live after its direct public file links exist. This
     # prevents a deployed page from pointing at a package that failed to publish.
@@ -537,6 +642,12 @@ async def _execute_release_task(
         "download_repo_branch": branch,
         "download_url_base": download_url_base,
         "direct_downloads_published": downloads_published,
+        "r2_papers_published": r2_papers_published,
+        "r2_papers_public_base_url": (
+            service._config().r2_papers_public_base_url
+            if r2_papers_enabled
+            else None
+        ),
         "cloudflare_project_name": project_name,
         "cloudflare_deployment_branch": deployment_branch,
         "cloudflare_deployment": cloudflare_deployment,
@@ -564,6 +675,7 @@ async def _execute_release_task(
         content=(
             f"Release job: {job.name}\n"
             f"GitHub direct downloads published: {'yes' if downloads_published else 'no'}\n"
+            f"Papers R2 published: {'yes' if r2_papers_published else 'no'}\n"
             f"Raw crawler archive updated: {'yes' if raw_archive_published else 'no'}\n"
             f"Cloudflare deployed: {'yes' if pages_deployed else 'no'}\n"
             f"Production branch: {deployment_branch or '-'}\n"

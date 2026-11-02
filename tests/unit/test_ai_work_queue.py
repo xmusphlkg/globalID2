@@ -110,6 +110,26 @@ async def test_expired_lease_reuses_id_and_attempt_is_bounded(db):
     assert item.attempt == 3
 
 
+async def test_startup_release_requeues_live_leases_without_spending_an_attempt(db):
+    leased_id = await add()
+    queued_id = await add()
+    claimed = await queue.claim_work(route())
+    assert claimed.id == leased_id
+    before = (await row(db, leased_id)).attempt
+    assert await queue.claim_work(route()) is None  # the permit is held by the old lease
+
+    assert await queue.release_leases_on_startup() == 1
+
+    released = await row(db, leased_id)
+    assert released.status == "queued"
+    assert released.route_key is None
+    assert released.lease_expires_at is None
+    assert released.attempt == before
+    assert (await row(db, queued_id)).status == "queued"
+    assert (await queue.claim_work(route())) is not None  # permit is free again
+    assert await queue.release_leases_on_startup() == 1
+
+
 async def test_dispatcher_calls_only_with_dispatch_context_and_requeues_rate_limit(db):
     work_id = await add()
     live_routes = [route(), route("second")]
@@ -319,14 +339,11 @@ async def test_background_sweep_is_not_queued_twice(db):
     assert await queue.enqueue_runtime_probe() is not None
 
 
-async def test_locally_cooling_route_is_not_claimed(db, monkeypatch):
-    from src.ai.agents.base import BaseAgent
-
+async def test_non_routable_route_is_not_claimed(db):
     work_id = await add()
-    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {"first": 1e18})
 
     async def routes():
-        return [route()]
+        return [{**route(), "available_for_routing": False, "rate_limit_active": True}]
 
     dispatcher = queue.AIWorkDispatcher(route_loader=routes)
     assert await dispatcher.tick() == 0

@@ -28,10 +28,9 @@ def _load_who_don(*, since: date, limit: int) -> list[dict[str, Any]]:
     return who_don.fetch_items(limit=limit, since=since.isoformat())
 
 
-def _load_ecdc_cdtr(**_: Any) -> list[dict[str, Any]]:
-    # The CDTR feed only exposes the ten most recent issues, so no window is
-    # passed down; the collection step trims anything outside the range.
-    return ecdc_cdtr.fetch_items()
+def _load_ecdc_cdtr(*, since: date, **_: Any) -> list[dict[str, Any]]:
+    # RSS only lists the latest issues.  The archive pager stops at ``since``.
+    return ecdc_cdtr.fetch_items(since=since.isoformat())
 
 
 def _load_who_wer(*, since: date, limit: int) -> list[dict[str, Any]]:

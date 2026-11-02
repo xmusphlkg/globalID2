@@ -3670,6 +3670,35 @@ export interface components {
             /** Usage Percent */
             usage_percent?: number | null;
         };
+        /** DataReleaseChannelOut */
+        DataReleaseChannelOut: {
+            /** Bucket */
+            bucket?: string | null;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /** File Budget */
+            file_budget?: number | null;
+            /** File Count */
+            file_count?: number | null;
+            /** Public Base Url */
+            public_base_url?: string | null;
+            /**
+             * Ready
+             * @default false
+             */
+            ready: boolean;
+            /** Repo Url */
+            repo_url?: string | null;
+        };
+        /** DataReleaseChannelsOut */
+        DataReleaseChannelsOut: {
+            github_downloads?: components["schemas"]["DataReleaseChannelOut"];
+            pages_main?: components["schemas"]["DataReleaseChannelOut"];
+            r2_papers?: components["schemas"]["DataReleaseChannelOut"];
+        };
         /** DataReleaseChecksOut */
         DataReleaseChecksOut: {
             /**
@@ -3677,6 +3706,7 @@ export interface components {
              * @default []
              */
             blockers: string[];
+            channels?: components["schemas"]["DataReleaseChannelsOut"];
             /** Checked At */
             checked_at: string;
             cloudflare: components["schemas"]["DataReleaseCloudflareCheckOut"];
@@ -3685,6 +3715,8 @@ export interface components {
             git: components["schemas"]["DataReleaseGitCheckOut"];
             /** Overall Ready */
             overall_ready: boolean;
+            pages_budget?: components["schemas"]["DataReleasePagesBudgetOut"];
+            r2_papers?: components["schemas"]["DataReleaseR2PapersCheckOut"];
             /** Raw */
             raw?: {
                 [key: string]: unknown;
@@ -4000,6 +4032,59 @@ export interface components {
              * @default
              */
             script_path: string;
+        };
+        /** DataReleasePagesBudgetOut */
+        DataReleasePagesBudgetOut: {
+            /**
+             * Budget
+             * @default 20000
+             */
+            budget: number;
+            /**
+             * Dist Present
+             * @default false
+             */
+            dist_present: boolean;
+            /** File Count */
+            file_count?: number | null;
+            /** Ok */
+            ok?: boolean | null;
+            /** Warn */
+            warn?: boolean | null;
+            /**
+             * Warn At
+             * @default 18000
+             */
+            warn_at: number;
+        };
+        /** DataReleaseR2PapersCheckOut */
+        DataReleaseR2PapersCheckOut: {
+            /** Bucket */
+            bucket?: string | null;
+            /**
+             * Bucket Access Ok
+             * @default false
+             */
+            bucket_access_ok: boolean;
+            /**
+             * Configured
+             * @default false
+             */
+            configured: boolean;
+            /**
+             * Credentials Present
+             * @default false
+             */
+            credentials_present: boolean;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /** Error */
+            error?: string | null;
+            /** Public Base Url */
+            public_base_url?: string | null;
         };
         /** DataReleaseRepositoryBoundaryOut */
         DataReleaseRepositoryBoundaryOut: {
@@ -6272,16 +6357,6 @@ export interface components {
              */
             runtime_model_inflight: number;
             /**
-             * Runtime Provider Auto Concurrency
-             * @default true
-             */
-            runtime_provider_auto_concurrency: boolean;
-            /**
-             * Runtime Provider Backoff Remaining Seconds
-             * @default 0
-             */
-            runtime_provider_backoff_remaining_seconds: number;
-            /**
              * Runtime Provider Capacity
              * @default 1
              */
@@ -6296,16 +6371,6 @@ export interface components {
              * @default 1
              */
             runtime_provider_max_capacity: number;
-            /**
-             * Runtime Provider Min Capacity
-             * @default 1
-             */
-            runtime_provider_min_capacity: number;
-            /**
-             * Runtime Provider Success Streak
-             * @default 0
-             */
-            runtime_provider_success_streak: number;
             /**
              * Runtime Success Count
              * @default 0

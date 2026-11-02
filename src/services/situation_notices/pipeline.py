@@ -708,7 +708,12 @@ def _outbreak(key: str, members: list[dict[str, Any]], as_of: date) -> dict[str,
     }
 
 
-async def rebuild_outbreaks(*, since_days: int = 365, as_of: date | None = None, task_uuid: str | None = None) -> int:
+#: How far outbreak grouping and the public export look.  A routine refresh
+#: collects a short window, but rebuilding only that window would drop history.
+HISTORY_SINCE_DAYS = 1100
+
+
+async def rebuild_outbreaks(*, since_days: int = HISTORY_SINCE_DAYS, as_of: date | None = None, task_uuid: str | None = None) -> int:
     """Derive outbreaks from the alerts; derived data, so the table is rebuilt wholesale."""
 
     as_of = as_of or utc_now().date()

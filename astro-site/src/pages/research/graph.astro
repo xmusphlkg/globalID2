@@ -131,6 +131,10 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
 
       const lang = () => root.dataset.graphLocale === 'zh' ? 'zh' : root.dataset.graphLocale === 'fr' ? 'fr' : 'en';
       const routePrefix = root.dataset.graphPrefix || '';
+      // Article pages are served from the papers host; local preview renders them itself.
+      const papersHref = (path) => /^\/(?:(?:zh|fr)\/)?research\/articles\//.test(path) && !['localhost', '127.0.0.1'].includes(location.hostname)
+        ? `https://papers.globalinfectiousdisease.com${path}`
+        : path;
       const setStatus = (en, zh, fr) => {
         if (!detail) return;
         const message = document.createElement('p');
@@ -183,7 +187,7 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
           label.textContent = `${outbound ? '→' : '←'} ${relation[lang()]}`;
           const target = other?.url ? document.createElement('a') : document.createElement('strong');
           target.textContent = (lang() === 'fr' ? other?.label_fr : other?.label) || (outbound ? edge.target : edge.source);
-          if (other?.url) target.href = routePrefix && other.url.startsWith('/') ? `${routePrefix}${other.url}` : other.url;
+          if (other?.url) target.href = papersHref(routePrefix && other.url.startsWith('/') ? `${routePrefix}${other.url}` : other.url);
           const confidence = document.createElement('small');
           confidence.textContent = edge.confidence == null ? (edge.provenance || '') : `${Math.round(Number(edge.confidence) * 100)}%`;
           item.append(label, target, confidence);

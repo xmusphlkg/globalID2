@@ -44,7 +44,8 @@ from .pipeline import utc_now
 
 SCHEMA_VERSION = "gids.situation_alerts.v1"
 DEFAULT_OUTPUT_DIR = ROOT / "astro-site" / "src" / "data" / "situation" / "international"
-DEFAULT_SINCE_DAYS = 365
+#: Public "all" window.  Matches outbreak history so a release does not hide a backfill.
+DEFAULT_SINCE_DAYS = 1100
 #: One short sentence with a link to the original is published for every source
 #: except one whose terms forbid any reuse.
 NO_QUOTE_TERMS = "blocked"

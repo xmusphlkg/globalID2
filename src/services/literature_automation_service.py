@@ -217,7 +217,10 @@ def _diagnostic_reason(decision: AutomationDecision) -> str:
     reason = decision.reasons[0] if decision.reasons else "no reason recorded"
     if _SCORED_REASON.match(reason):
         if reason.startswith("discovery score") and "below" in reason:
-            reason = "discovery score is below the automatic exclusion gate"
+            if "exclusion gate" in reason:
+                reason = "discovery score is below the automatic exclusion gate"
+            else:
+                reason = "discovery score is below the automatic publication gate"
         elif reason.startswith("summary quality") and "below" in reason:
             reason = "summary quality is below the automatic gate"
         elif reason.startswith("summary quality"):
@@ -455,10 +458,15 @@ def decide_article(
                 f"disease confidence {max_disease_confidence:.2f}",
             ))
         return AutomationDecision("publish", tuple(reasons))
-    if score < config.autopilot_article_exclude_below_score:
+    if score < config.autopilot_article_exclude_below_score and max_disease_confidence <= 0.0:
         return AutomationDecision(
             "exclude",
-            (f"discovery score {score:.3f} is below the automatic exclusion gate",),
+            (f"discovery score {score:.3f} is below the automatic exclusion gate and article has no disease link",),
+        )
+    if score < config.autopilot_article_exclude_below_score:
+        return AutomationDecision(
+            "hold",
+            (f"discovery score {score:.3f} is below the automatic publication gate; AI review decides",),
         )
     return AutomationDecision("hold", ("article relevance is inside the exception-review band",))
 
@@ -479,7 +487,13 @@ def decide_summary(
     ):
         return AutomationDecision("hold", ("summary is already published",))
     if article.publication_status == "excluded":
-        return AutomationDecision("archive", ("parent article is excluded",))
+        # An excluded parent already keeps this summary off the public site; do
+        # not archive it permanently, because the article can be reopened. Use
+        # defer so the reconciler leaves a review-status summary alone and moves
+        # any already-archived summary back to review when the article is later
+        # reopened.  The old archive path is restored by
+        # restore_parent_excluded_summaries for rows archived before this change.
+        return AutomationDecision("defer", ("article decision is not final for public release",))
     if article.publication_status != "published":
         return AutomationDecision("defer", ("article decision is not final for public release",))
     if summary.generated_by != "literature-evidence-agent":
@@ -576,6 +590,89 @@ def _audit_payload(decision: AutomationDecision, *, at: datetime, config: Any) -
             "context_relation_min_confidence": config.autopilot_context_relation_min_confidence,
             "summary_min_quality": config.autopilot_summary_min_quality,
         },
+    }
+
+
+_PARENT_EXCLUDED_GATE = "parent-article-excluded"
+# Archived summaries a deferred parent may bring back: archived because of the
+# parent, not judged on their own content.
+_DEFER_RESTORABLE_GATES = frozenset({_PARENT_EXCLUDED_GATE, "awaiting-article-decision"})
+
+
+async def restore_parent_excluded_summaries(
+    db: Any,
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Restore archived summaries whose archive was caused by the parent exclusion.
+
+    Finds LiteratureSummary rows that:
+    - have status "archived"
+    - were archived because the parent article was excluded
+      (generation_metadata["publication_gate"] == "parent-article-excluded")
+    - whose parent article now has publication_status "review" or "published"
+
+    Moves matching summaries back to "review", writes an audit note, and
+    returns counts.  With dry_run=True, changes nothing.
+
+    Never restores summaries archived by AI review, an editor, or any other
+    reason.
+    """
+    at = _now()
+    candidates = 0
+    restored = 0
+    by_parent_status: dict[str, int] = {}
+
+    archived_summaries = (
+        await db.execute(
+            select(LiteratureSummary, LiteratureArticle)
+            .join(
+                LiteratureArticle,
+                LiteratureArticle.article_id == LiteratureSummary.article_id,
+            )
+            .where(
+                LiteratureSummary.status == "archived",
+                LiteratureArticle.publication_status.in_(("review", "published")),
+            )
+        )
+    ).all()
+
+    for summary, article in archived_summaries:
+        gate = (summary.generation_metadata or {}).get("publication_gate")
+        if gate != _PARENT_EXCLUDED_GATE:
+            # Archived for a different reason (AI review, editor, quality gate);
+            # never restore these.
+            continue
+        candidates += 1
+        parent_status = article.publication_status
+        by_parent_status[parent_status] = by_parent_status.get(parent_status, 0) + 1
+        if dry_run:
+            continue
+        summary.status = "review"
+        summary.generation_metadata = {
+            **(summary.generation_metadata or {}),
+            "publication_gate": "restored-from-parent-exclusion",
+            "autopilot_restore": {
+                "restored_at": at.isoformat(),
+                "actor": AUTOPILOT_ACTOR,
+                "policy_version": POLICY_VERSION,
+                "reason": (
+                    f"parent article moved to {parent_status}; "
+                    "summary restored from parent-exclusion archive"
+                ),
+                "previous_gate": _PARENT_EXCLUDED_GATE,
+            },
+        }
+        restored += 1
+
+    if not dry_run and restored:
+        await db.flush()
+
+    return {
+        "dry_run": dry_run,
+        "candidates": candidates,
+        "restored": restored,
+        "by_parent_status": by_parent_status,
     }
 
 
@@ -966,12 +1063,29 @@ class LiteratureAutomationService:
                             }
                     elif decision.action == "defer":
                         counts["summaries_deferred"] += 1
-                        if summary.status == "archived":
+                        gate = (summary.generation_metadata or {}).get("publication_gate")
+                        # Only summaries archived because of the parent come back; an
+                        # AI rejection or quality archive stays final.
+                        restore = summary.status == "archived" and gate in _DEFER_RESTORABLE_GATES
+                        reopen = summary.status == "published" and bool(
+                            (summary.generation_metadata or {}).get("autopilot")
+                        )
+                        if restore:
                             counts["summaries_restored"] += 1
-                        elif summary.status == "published" and (summary.generation_metadata or {}).get("autopilot"):
+                        elif reopen:
                             counts["summaries_reopened"] += 1
+                        if summary.status == "archived" and not restore:
+                            continue
+                        if (
+                            not restore
+                            and not reopen
+                            and summary.status == "review"
+                            and gate == "awaiting-article-decision"
+                        ):
+                            # Already waiting: rewriting the audit each cycle only churns updated_at.
+                            continue
                         if not dry_run:
-                            if summary.status in {"archived", "published"}:
+                            if restore or reopen:
                                 summary.status = "review"
                             summary.generation_metadata = {
                                 **(summary.generation_metadata or {}),
@@ -981,13 +1095,18 @@ class LiteratureAutomationService:
                     elif summary.status == "review":
                         counts["summary_exceptions"] += 1
                     elif (summary.generation_metadata or {}).get("autopilot"):
-                        counts["summaries_reopened"] += 1
+                        # A published summary that no longer passes a quality
+                        # gate stays public. It is flagged for review instead of
+                        # being withdrawn; the parent-article check above is the
+                        # only path that takes a published summary down.
                         counts["summary_exceptions"] += 1
-                        if not dry_run:
-                            summary.status = "review"
+                        previous = (summary.generation_metadata or {}).get("autopilot_revalidation")
+                        unchanged = isinstance(previous, dict) and previous.get("reasons") == list(
+                            decision.reasons
+                        )
+                        if not dry_run and not unchanged:
                             summary.generation_metadata = {
                                 **(summary.generation_metadata or {}),
-                                "publication_gate": "automatic-revalidation-failed",
                                 "autopilot_revalidation": _audit_payload(
                                     decision, at=at, config=config
                                 ),
@@ -1238,4 +1357,5 @@ __all__ = [
     "decide_evidence_link",
     "decide_summary",
     "literature_automation_service",
+    "restore_parent_excluded_summaries",
 ]

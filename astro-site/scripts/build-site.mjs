@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeBuildRedirects } from './build-redirects.mjs';
-import { planPath, planResearchBuild, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, stageReusablePages, writePending } from './research-build-cache.mjs';
+import { planPath, planResearchBuild, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, writePending } from './research-build-cache.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..', '..');
 const settingsPath = resolve(projectRoot, 'data', 'system-settings.json');
@@ -78,9 +78,6 @@ let plan = planResearchBuild({
   snapshot,
 });
 const elapsedSeconds = started => ((performance.now() - started) / 1000).toFixed(1);
-const stagingStarted = performance.now();
-const stage = plan.reused.length ? stageReusablePages(plan) : null;
-process.stdout.write(`[build-timing] stage reusable research pages ${elapsedSeconds(stagingStarted)}s\n`);
 mkdirSync(resolve(projectRoot, 'data', 'cache'), { recursive: true });
 writeFileSync(planPath, JSON.stringify({ selected: plan.selected }));
 process.stdout.write(`[research-cache] ${plan.mode}: render ${plan.selected.length}, reuse ${plan.reused.length} article bundles\n`);
@@ -101,9 +98,9 @@ const runAstro = selectedPath => {
 };
 let result = runAstro(plan.mode === 'incremental' ? planPath : null);
 
-if ((result.status ?? 1) === 0 && stage) {
+if ((result.status ?? 1) === 0 && plan.reused.length) {
   const restoreStarted = performance.now();
-  restoreReusablePages(plan, stage);
+  restoreReusablePages(plan);
   process.stdout.write(`[build-timing] restore reusable research pages ${elapsedSeconds(restoreStarted)}s\n`);
   if (!reusedAssetReferencesAvailable(plan)) {
     process.stdout.write('[research-cache] cached page asset missing; rebuilding all article bundles\n');
@@ -111,7 +108,6 @@ if ((result.status ?? 1) === 0 && stage) {
     plan = { ...plan, mode: 'full', selected: Object.keys(snapshot.articles), reused: [] };
   }
 }
-if (stage) rmSync(stage, { recursive: true, force: true });
 rmSync(planPath, { force: true });
 
 if (result.error) {

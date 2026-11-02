@@ -25,7 +25,9 @@ SEARCH_URL = "https://iris.paho.org/server/api/discover/search/objects"
 HANDLE_URL = "https://iris.paho.org/handle/{handle}"
 QUERY = "epidemiological"
 PAGE_SIZE = 40
-MAX_PAGES = 5
+#: The query is broad, so a three-year window needs more than the first five pages.
+#: Paging still stops once the last hit is older than ``since``.
+MAX_PAGES = 40
 _KEEP_TITLE = re.compile(r"\b(epidemiological\s+(alert|update)|regional\s+update|situation\s+report)\b", re.I)
 
 

@@ -16,6 +16,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+import httpx
+
 from .catalogue import match_countries, match_diseases, parse_date
 from .client import fetch
 from .events import build_event, clean_html_fragment
@@ -27,6 +29,8 @@ REPORTS_URL = f"{API_BASE}/wpdmpro"
 REPORT_QUERY = "epidemic intelligence weekly report"
 FIELDS = "id,date_gmt,modified_gmt,link,title"
 PAGE_SIZE = 50
+#: WordPress numbers pages from 1.  Thirty pages is 1,500 rows, past three years of news.
+MAX_PAGES = 30
 
 
 #: Africa CDC posts each French translation as its own record with no language
@@ -98,6 +102,26 @@ def normalize_payload(rows: list[dict[str, Any]], *, kind: str) -> list[dict[str
     return events
 
 
+def _read_pages(url: str, params: dict[str, Any], client: Any | None) -> list[dict[str, Any]]:
+    """Walk WordPress pages until a short page, or a 400 once the page number runs past the end."""
+
+    rows: list[dict[str, Any]] = []
+    for page in range(1, MAX_PAGES + 1):
+        try:
+            response = fetch(url, params={**params, "page": str(page)}, client=client)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 400 and page > 1:
+                break
+            raise
+        batch = response.json()
+        if not isinstance(batch, list) or not batch:
+            break
+        rows.extend(item for item in batch if isinstance(item, dict))
+        if len(batch) < PAGE_SIZE:
+            break
+    return rows
+
+
 def fetch_items(*, since: str | None = None, client: Any | None = None) -> list[dict[str, Any]]:
     """Read recent outbreak statements and weekly reports.
 
@@ -116,8 +140,7 @@ def fetch_items(*, since: str | None = None, client: Any | None = None) -> list[
         (REPORTS_URL, "report", {"search": REPORT_QUERY}),
     ):
         try:
-            response = fetch(url, params={**base, **extra}, client=client)
-            events.extend(normalize_payload(response.json(), kind=kind))
+            events.extend(normalize_payload(_read_pages(url, {**base, **extra}, client), kind=kind))
         except Exception as exc:  # noqa: BLE001 - one endpoint offline keeps the other
             failures.append(exc)
     if not events and failures:

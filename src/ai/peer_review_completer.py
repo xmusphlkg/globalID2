@@ -318,7 +318,8 @@ class ReviewRoutePool:
         # or failing route stops attracting work. ``avoid`` holds models a failed
         # attempt collapsed onto (route key or bare model name); they are skipped
         # while at least two other routes remain.
-        keys = [key for key in self._capacity if not BaseAgent._is_route_cooling_down(key)] or list(self._capacity)
+        # Capacity already comes from get_active_model_routes (routable only).
+        keys = list(self._capacity)
         avoided = {name for name in avoid if name}
         if avoided:
             remaining = [key for key in keys if key not in avoided and key.split(":", 1)[-1] not in avoided]

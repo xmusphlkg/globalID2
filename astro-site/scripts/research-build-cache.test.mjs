@@ -64,12 +64,16 @@ test('finalizes the exact rendered snapshot after source data advances', () => {
       outputRoot: join(root, 'dist'),
       targetManifest: manifest,
       sourcePending: pending,
+      pageCache: join(root, 'page-cache'),
     });
 
     const recorded = JSON.parse(readFileSync(manifest, 'utf8'));
     assert.equal(recorded.shared, 'rendered-source');
     assert.deepEqual(Object.keys(recorded.articles.alpha.files), paths);
     assert.equal(existsSync(pending), false);
+    // The rendered bundle survives for the next incremental build even after
+    // the release step moves it out of dist.
+    for (const path of paths) assert.equal(readFileSync(join(root, 'page-cache', path), 'utf8'), `rendered:${path}`);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

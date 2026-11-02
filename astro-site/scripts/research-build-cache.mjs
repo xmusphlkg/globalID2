@@ -9,6 +9,10 @@ export const cacheRoot = resolve(projectRoot, 'data', 'cache');
 export const manifestPath = resolve(cacheRoot, 'research-build-manifest.json');
 export const pendingPath = resolve(cacheRoot, 'research-build-pending.json');
 export const planPath = resolve(cacheRoot, 'research-build-plan.json');
+// Rendered article bundles are kept here between releases. The release
+// pipeline moves them out of dist (they are published from the papers host),
+// so dist can no longer serve as the reuse source for incremental builds.
+export const pageCacheRoot = resolve(cacheRoot, 'research-pages');
 const defaultMeasurementId = 'G-8P39XV52NC';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
@@ -94,7 +98,7 @@ function readPreviousManifest() {
   } catch { return null; }
 }
 
-export function planResearchBuild({ incremental = false, snapshot = sourceSnapshot(), previous = readPreviousManifest(), outputRoot = distRoot } = {}) {
+export function planResearchBuild({ incremental = false, snapshot = sourceSnapshot(), previous = readPreviousManifest(), outputRoot = pageCacheRoot } = {}) {
   const selected = [];
   const reused = [];
   const full = !incremental || !previous || previous.shared !== snapshot.shared;
@@ -108,25 +112,12 @@ export function planResearchBuild({ incremental = false, snapshot = sourceSnapsh
   return { mode: full ? 'full' : 'incremental', snapshot, selected, reused };
 }
 
-export function stageReusablePages(plan) {
-  const stage = resolve(cacheRoot, `research-build-stage-${process.pid}`);
-  rmSync(stage, { recursive: true, force: true });
+export function restoreReusablePages(plan, source = pageCacheRoot, target = distRoot) {
   for (const slug of plan.reused) {
     for (const path of plan.snapshot.articles[slug].paths) {
-      const target = resolve(stage, path);
-      mkdirSync(dirname(target), { recursive: true });
-      copyFileSync(resolve(distRoot, path), target);
-    }
-  }
-  return stage;
-}
-
-export function restoreReusablePages(plan, stage) {
-  for (const slug of plan.reused) {
-    for (const path of plan.snapshot.articles[slug].paths) {
-      const target = resolve(distRoot, path);
-      mkdirSync(dirname(target), { recursive: true });
-      copyFileSync(resolve(stage, path), target);
+      const destination = resolve(target, path);
+      mkdirSync(dirname(destination), { recursive: true });
+      copyFileSync(resolve(source, path), destination);
     }
   }
 }
@@ -152,6 +143,7 @@ export function finalizeResearchSnapshot(snapshot, {
   outputRoot = distRoot,
   targetManifest = manifestPath,
   sourcePending = pendingPath,
+  pageCache = pageCacheRoot,
 } = {}) {
   if (snapshot?.schema !== 1 || !snapshot.articles || typeof snapshot.articles !== 'object') {
     throw new Error('Invalid research build snapshot');
@@ -167,6 +159,19 @@ export function finalizeResearchSnapshot(snapshot, {
       article.files[path] = fileHash(output);
     }
   }
+  // Keep the rendered bundles so the next incremental build can reuse them
+  // after the release step has moved them out of dist, and drop bundles that
+  // no longer belong to any article.
+  const keep = new Set();
+  for (const article of Object.values(snapshot.articles)) {
+    for (const path of article.paths) {
+      const target = resolve(pageCache, path);
+      mkdirSync(dirname(target), { recursive: true });
+      copyFileSync(resolve(outputRoot, path), target);
+      keep.add(target);
+    }
+  }
+  for (const stale of walk(pageCache)) if (!keep.has(stale)) rmSync(stale, { force: true });
   const temporary = `${targetManifest}.${process.pid}.tmp`;
   writeFileSync(temporary, JSON.stringify(snapshot));
   renameSync(temporary, targetManifest);

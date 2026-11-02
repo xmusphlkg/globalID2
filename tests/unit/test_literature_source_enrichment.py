@@ -917,6 +917,181 @@ async def test_repository_refreshes_stale_autopilot_exclusion_when_new_classific
     assert event.source == "literature-classifier"
 
 
+async def test_repository_unchanged_fingerprint_keeps_excluded_status_without_event():
+    """Same classification fingerprint re-upserted: excluded stays excluded, no status event written."""
+    from src.literature.repository import _classification_metadata
+
+    classification = Classification()
+    seeded_meta = _classification_metadata({}, classification)
+    article = SimpleNamespace(
+        article_id="lit_existing",
+        slug="existing",
+        doi="10.1000/test",
+        pmid=None,
+        pmcid=None,
+        openalex_id=None,
+        abstract_license=None,
+        source_urls={},
+        open_access_status="unknown",
+        open_access_url=None,
+        license_url=None,
+        integrity_status="current",
+        source_payload={},
+        metadata_=seeded_meta,
+        publication_status="excluded",
+    )
+    db = _UpsertDb(article)
+
+    await LiteratureRepository(db).upsert(_candidate(), classification)
+
+    assert article.publication_status == "excluded"
+    status_events = [v for v in db.added if isinstance(v, LiteratureStatusEvent)]
+    assert status_events == []
+
+
+async def test_repository_ai_governance_exclusion_neutralised_when_classification_changes():
+    """AI-governance excluded + changed classification fingerprint: article reopened to review
+    and the stale ai_content_governance record is neutralised so it no longer looks terminal."""
+    article = SimpleNamespace(
+        article_id="lit_existing",
+        slug="existing",
+        doi="10.1000/test",
+        pmid=None,
+        pmcid=None,
+        openalex_id=None,
+        abstract_license=None,
+        source_urls={},
+        open_access_status="unknown",
+        open_access_url=None,
+        license_url=None,
+        integrity_status="current",
+        source_payload={},
+        metadata_={
+            "ai_content_governance": {
+                "actor": "ai-content-governance",
+                "decision": "excluded",
+                "decided_at": "2026-10-01T00:00:00+00:00",
+                "reasons": ["did not meet publication criteria"],
+            },
+        },
+        publication_status="excluded",
+    )
+    db = _UpsertDb(article)
+
+    # No existing classification_fingerprint in metadata_ so any Classification produces
+    # classification_changed=True, which is the "changed fingerprint" case under test.
+    await LiteratureRepository(db).upsert(
+        _candidate(),
+        Classification(publication_status="review"),
+    )
+
+    assert article.publication_status == "review"
+    gov = article.metadata_["ai_content_governance"]
+    assert gov["decision"] == "hold"
+    assert gov["actor"] == "literature-classifier"
+    assert gov["reopened_from"] == "excluded"
+    assert "reopened" in gov["reasons"][0]
+    event = next(v for v in db.added if isinstance(v, LiteratureStatusEvent))
+    assert event.previous_status == "excluded"
+    assert event.current_status == "review"
+    assert event.source == "literature-classifier"
+
+
+async def test_repository_published_article_not_downgraded_to_review_on_reclassification():
+    """Published + changed classification returning review: publication_status must stay published.
+    A classifier 'review' result can never demote a terminal published decision."""
+    article = SimpleNamespace(
+        article_id="lit_existing",
+        slug="existing",
+        doi="10.1000/test",
+        pmid=None,
+        pmcid=None,
+        openalex_id=None,
+        abstract_license=None,
+        source_urls={},
+        open_access_status="unknown",
+        open_access_url=None,
+        license_url=None,
+        integrity_status="current",
+        source_payload={},
+        metadata_={},  # no fingerprint => classification_changed=True on any classification
+        publication_status="published",
+    )
+    db = _UpsertDb(article)
+
+    await LiteratureRepository(db).upsert(
+        _candidate(),
+        Classification(publication_status="review"),
+    )
+
+    assert article.publication_status == "published"
+
+
+async def test_repository_retracted_published_article_leaves_published():
+    """A retraction reaches the classifier as "review"; the published guard must not keep it public."""
+    article = SimpleNamespace(
+        article_id="lit_existing",
+        slug="existing",
+        doi="10.1000/test",
+        pmid=None,
+        pmcid=None,
+        openalex_id=None,
+        abstract_license=None,
+        source_urls={},
+        open_access_status="unknown",
+        open_access_url=None,
+        license_url=None,
+        integrity_status="current",
+        source_payload={},
+        metadata_={},
+        publication_status="published",
+    )
+    db = _UpsertDb(article)
+
+    await LiteratureRepository(db).upsert(
+        _candidate(integrity_status="retracted"),
+        Classification(publication_status="review"),
+    )
+
+    assert article.integrity_status == "retracted"
+    assert article.publication_status == "review"
+
+
+async def test_repository_retraction_integrity_change_updates_status_despite_same_fingerprint():
+    """Retracted integrity must still take effect even when the classification fingerprint is
+    unchanged (integrity_changed bypasses the fingerprint guard)."""
+    from src.literature.repository import _classification_metadata
+
+    classification = Classification(publication_status="excluded")
+    seeded_meta = _classification_metadata({}, classification)
+    article = SimpleNamespace(
+        article_id="lit_existing",
+        slug="existing",
+        doi="10.1000/test",
+        pmid=None,
+        pmcid=None,
+        openalex_id=None,
+        abstract_license=None,
+        source_urls={},
+        open_access_status="unknown",
+        open_access_url=None,
+        license_url=None,
+        integrity_status="current",
+        source_payload={},
+        metadata_=seeded_meta,
+        publication_status="review",
+    )
+    db = _UpsertDb(article)
+
+    await LiteratureRepository(db).upsert(
+        _candidate(integrity_status="retracted"),
+        classification,
+    )
+
+    assert article.integrity_status == "retracted"
+    assert article.publication_status == "excluded"
+
+
 async def test_degraded_enrichment_preserves_existing_editorial_publication_but_not_integrity_exclusion():
     def existing_article():
         return SimpleNamespace(

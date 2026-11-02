@@ -5,6 +5,7 @@ import ResearchCollectionPage from '../../../components/research/ResearchCollect
 import researchData from '../../../data/research/index.json';
 import { localizedDiseaseName } from '../../../utils/diseaseNames';
 import { localizedRegionName, localizedResearchTopic } from '../../../utils/i18n';
+import { siteHref } from '../../../lib/papers';
 
 export function getStaticPaths() {
   return ((researchData as any).facets?.weeks ?? []).map((facet: any) => ({ params: { week: facet.week }, props: { facet, week: facet.week, locale: 'en' } }));
@@ -105,7 +106,7 @@ const frenchGeography = (item: any) => localizedRegionName('fr', item.code, { en
     <section slot="context" class="card weekly-evidence-section">
       <p class="academic-kicker">{zh ? '有引用的证据' : fr ? 'Preuves citées' : 'Cited evidence'}</p>
       <h2>{zh ? '本周来源层面发现' : fr ? 'Résultats au niveau des sources cette semaine' : 'Source-level findings this week'}</h2>
-      <ol>{citedFindings.map((finding: any) => <li><a href={finding.source_url}><strong>{finding.title}</strong><p>{zh ? finding.finding_zh ?? finding.finding_en : fr ? (finding.finding_fr || 'Synthèse française en cours d’enrichissement par le Centre de modèles.') : finding.finding_en}</p><span>{finding.doi ? `DOI ${finding.doi}` : (zh ? 'GIDS 证据记录' : fr ? 'Référence GIDS' : 'GIDS evidence record')} →</span></a></li>)}</ol>
+      <ol>{citedFindings.map((finding: any) => <li><a href={siteHref(finding.source_url)}><strong>{finding.title}</strong><p>{zh ? finding.finding_zh ?? finding.finding_en : fr ? (finding.finding_fr || 'Synthèse française en cours d’enrichissement par le Centre de modèles.') : finding.finding_en}</p><span>{finding.doi ? `DOI ${finding.doi}` : (zh ? 'GIDS 证据记录' : fr ? 'Référence GIDS' : 'GIDS evidence record')} →</span></a></li>)}</ol>
     </section>
   )}
 

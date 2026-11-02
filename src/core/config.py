@@ -295,17 +295,11 @@ class AISettings(_BaseEnvSettings):
     cache_ttl: int = Field(default=168, description="缓存过期时间（小时）")
     enable_rate_limiting: bool = Field(default=True, description="是否启用限流")
     rate_limit: int = Field(default=50, description="每分钟请求限制")
-    rate_limit_cooldown_seconds: int = Field(default=300, gt=0, description="命中429/额度限制后的冷却秒数")
+    rate_limit_cooldown_seconds: int = Field(default=10, gt=0, description="命中429/额度限制后的冷却秒数（连续限流时递增的上限）")
     rate_limit_wait_cap_seconds: int = Field(
         default=900,
         gt=0,
         description="限流恢复阶段单次最大等待秒数（建议大于等于冷却时间）",
-    )
-    rate_limit_recovery_max_rounds: int = Field(
-        default=4,
-        ge=0,
-        le=20,
-        description="当全部候选因限流失败时，允许的恢复重试轮数",
     )
     route_cache_ttl_seconds: int = Field(default=15, gt=0, description="模型中心运行时路由缓存秒数")
     prompt_auto_reload: bool = Field(
@@ -496,6 +490,60 @@ class DataReleaseSettings(_BaseEnvSettings):
     default_commit_message_template: str = Field(
         default="chore(data-release): publish site data {timestamp}",
         description="默认发布提交消息模板",
+    )
+    pages_file_budget: int = Field(
+        default=20_000,
+        ge=1_000,
+        le=100_000,
+        validation_alias="DATA_RELEASE__PAGES_FILE_BUDGET",
+        description="Cloudflare Pages 主站部署允许的最大文件数",
+    )
+    pages_file_warn: int = Field(
+        default=18_000,
+        ge=1_000,
+        le=100_000,
+        validation_alias="DATA_RELEASE__PAGES_FILE_WARN",
+        description="Cloudflare Pages 主站文件数告警阈值",
+    )
+    r2_papers_enabled: bool = Field(
+        default=True,
+        validation_alias="DATA_RELEASE__R2_PAPERS_ENABLED",
+        description="是否在站点发布时同步 papers 子域到 R2",
+    )
+    r2_papers_bucket: str = Field(
+        default="globalid-papers",
+        validation_alias="R2_PAPERS_BUCKET",
+        description="Research 长尾页面所在的 R2 bucket",
+    )
+    r2_papers_public_base_url: str = Field(
+        default="https://papers.globalinfectiousdisease.com",
+        validation_alias="R2_PAPERS_PUBLIC_BASE_URL",
+        description="papers 子域公开 base URL",
+    )
+    r2_access_key_id: str = Field(
+        default="",
+        validation_alias="R2_ACCESS_KEY_ID",
+        description="R2 S3 API access key id",
+    )
+    r2_secret_access_key: str = Field(
+        default="",
+        validation_alias="R2_SECRET_ACCESS_KEY",
+        description="R2 S3 API secret access key",
+    )
+    r2_endpoint_url: str = Field(
+        default="",
+        validation_alias="R2_ENDPOINT_URL",
+        description="Optional R2 S3 endpoint override",
+    )
+    r2_account_id: str = Field(
+        default="",
+        validation_alias="R2_ACCOUNT_ID",
+        description="Optional R2 account id override; defaults to CLOUDFLARE_ACCOUNT_ID",
+    )
+    main_site_origin: str = Field(
+        default="https://globalinfectiousdisease.com",
+        validation_alias="DATA_RELEASE__MAIN_SITE_ORIGIN",
+        description="主站绝对 origin，用于 papers HTML 根路径改写",
     )
 
 

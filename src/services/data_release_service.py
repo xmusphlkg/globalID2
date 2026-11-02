@@ -37,9 +37,21 @@ from src.services.data_release.commands import (
     build_cloudflare_deploy_command,
     build_generate_site_data_command,
     build_publish_download_repo_command,
+    build_publish_papers_r2_command,
     build_publish_raw_archive_command,
+    build_split_papers_bundle_command,
     build_update_situation_notices_command,
     build_validate_situation_release_command,
+)
+from src.services.data_release.papers_bundle import (
+    DEFAULT_MAIN_SITE_ORIGIN,
+    DEFAULT_PAPERS_ORIGIN,
+    count_files,
+)
+from src.services.data_release.papers_r2 import (
+    R2PapersConfig,
+    derive_r2_credentials_from_api_token,
+    r2_preflight_payload,
 )
 from src.services.data_release.process_runner import (
     run_capture,
@@ -1075,6 +1087,22 @@ class DataReleaseService:
         )
         cloudflare = await self._cloudflare_check(job.cloudflare_project_name)
         raw_archive = await self._raw_archive_check()
+        r2_enabled = self._r2_papers_enabled(job)
+        r2_papers = (
+            self._r2_papers_check(probe=True)
+            if r2_enabled
+            else {
+                "payload": {
+                    **r2_preflight_payload(None, probe=False),
+                    "enabled": False,
+                    "error": "R2 papers publish is disabled for this release job.",
+                },
+                "blockers": [],
+            }
+        )
+        if r2_enabled:
+            r2_papers["payload"]["enabled"] = True
+        pages_budget = self._pages_budget_snapshot()
 
         blockers: list[str] = []
         if job.include_git_push:
@@ -1084,6 +1112,13 @@ class DataReleaseService:
                 "Cloudflare deployment requires direct-download publication so the "
                 "new site never references unpublished CSV/JSON/XLSX partitions."
             )
+        if job.include_cloudflare_deploy and not r2_enabled:
+            blockers.append(
+                "Cloudflare deployment requires R2 papers publication so article "
+                "pages are not left only on the Pages file budget."
+            )
+        if r2_enabled:
+            blockers.extend(r2_papers["blockers"])
         if job.include_cloudflare_deploy:
             blockers.extend(cloudflare["blockers"])
         blockers.extend(raw_archive["blockers"])
@@ -1101,10 +1136,6 @@ class DataReleaseService:
             and not cloudflare["payload"].get("production_branch")
         ):
             blockers.append("Cloudflare Pages project has no production branch configured.")
-        if job.require_clean_worktree and worktree:
-            blockers.append(
-                "Code repository worktree is not clean: " + ", ".join(worktree)
-            )
         if tracked_generated_paths:
             blockers.append(
                 "Generated data is still tracked by the code repository: "
@@ -1145,6 +1176,37 @@ class DataReleaseService:
             },
             "cloudflare": cloudflare["payload"],
             "raw_archive": raw_archive["payload"],
+            "r2_papers": r2_papers["payload"],
+            "pages_budget": pages_budget,
+            "channels": {
+                "pages_main": {
+                    "enabled": bool(job.include_cloudflare_deploy),
+                    "ready": bool(
+                        job.include_cloudflare_deploy
+                        and cloudflare["payload"].get("project_access_ok")
+                        and not cloudflare["blockers"]
+                    ),
+                    "file_count": pages_budget.get("file_count"),
+                    "file_budget": pages_budget.get("budget"),
+                },
+                "github_downloads": {
+                    "enabled": bool(job.include_git_push),
+                    "ready": bool(
+                        job.include_git_push
+                        and download_repo["payload"].get("read_access_ok")
+                        and download_repo["payload"].get("write_access_ok")
+                    ),
+                    "repo_url": download_repo["payload"].get("repo_url"),
+                },
+                "r2_papers": {
+                    "enabled": bool(r2_enabled),
+                    "ready": bool(
+                        r2_enabled and r2_papers["payload"].get("bucket_access_ok")
+                    ),
+                    "public_base_url": r2_papers["payload"].get("public_base_url"),
+                    "bucket": r2_papers["payload"].get("bucket"),
+                },
+            },
             "commands": {
                 "python_path": str(python_path),
                 "python_exists": python_path.exists(),
@@ -1479,6 +1541,91 @@ class DataReleaseService:
             repo_url=archive.repo_url,
             git_timeout_seconds=archive.git_timeout_seconds,
         )
+
+    def _papers_site_dir(self) -> Path:
+        return ROOT_DIR / "exports" / "papers-site"
+
+    def _r2_papers_config(self) -> R2PapersConfig | None:
+        release = self._config()
+        account_id = (
+            str(release.r2_account_id or "").strip()
+            or str(self._cloudflare_account_id() or "").strip()
+        )
+        access_key_id = str(release.r2_access_key_id or "").strip()
+        secret_access_key = str(release.r2_secret_access_key or "").strip()
+        if not (access_key_id and secret_access_key):
+            derived = derive_r2_credentials_from_api_token(self._cloudflare_api_token())
+            if derived:
+                access_key_id, secret_access_key = derived
+        return R2PapersConfig.from_mapping(
+            {
+                "account_id": account_id,
+                "bucket": release.r2_papers_bucket,
+                "access_key_id": access_key_id,
+                "secret_access_key": secret_access_key,
+                "public_base_url": release.r2_papers_public_base_url
+                or DEFAULT_PAPERS_ORIGIN,
+                "endpoint_url": release.r2_endpoint_url,
+            }
+        )
+
+    def _r2_papers_enabled(self, job: DataReleaseJobConfig | None = None) -> bool:
+        cfg = self._config()
+        if not bool(cfg.r2_papers_enabled):
+            return False
+        if job is not None and not job.include_cloudflare_deploy:
+            # Papers hosting is required whenever the public site deploys; when
+            # Cloudflare is off, skip remote papers publish as well.
+            return False
+        return True
+
+    def _split_papers_bundle_command(self, *, python_path: Path) -> list[str]:
+        cfg = self._config()
+        return build_split_papers_bundle_command(
+            python_path=python_path,
+            dist_dir=ASTRO_DIR / "dist",
+            papers_dir=self._papers_site_dir(),
+            main_origin=str(cfg.main_site_origin or DEFAULT_MAIN_SITE_ORIGIN),
+            papers_origin=str(
+                cfg.r2_papers_public_base_url or DEFAULT_PAPERS_ORIGIN
+            ),
+            pages_file_budget=int(cfg.pages_file_budget),
+            pages_file_warn=int(cfg.pages_file_warn),
+        )
+
+    def _publish_papers_r2_command(self, *, python_path: Path) -> list[str]:
+        return build_publish_papers_r2_command(
+            python_path=python_path,
+            source_dir=self._papers_site_dir(),
+        )
+
+    def _r2_papers_check(self, *, probe: bool = True) -> dict[str, Any]:
+        payload = r2_preflight_payload(self._r2_papers_config(), probe=probe)
+        blockers: list[str] = []
+        if not payload.get("credentials_present"):
+            blockers.append(
+                "R2 papers credentials are missing "
+                "(R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / account id)."
+            )
+        elif not payload.get("bucket_access_ok"):
+            detail = str(payload.get("error") or "bucket probe failed").strip()
+            blockers.append(f"R2 papers bucket is not reachable: {detail}")
+        return {"payload": payload, "blockers": blockers}
+
+    def _pages_budget_snapshot(self) -> dict[str, Any]:
+        cfg = self._config()
+        dist_dir = ASTRO_DIR / "dist"
+        file_count = count_files(dist_dir) if dist_dir.is_dir() else None
+        budget = int(cfg.pages_file_budget)
+        warn_at = int(cfg.pages_file_warn)
+        return {
+            "dist_present": dist_dir.is_dir(),
+            "file_count": file_count,
+            "budget": budget,
+            "warn_at": warn_at,
+            "ok": None if file_count is None else file_count < budget,
+            "warn": None if file_count is None else file_count >= warn_at,
+        }
 
     def _env_file_values(self) -> dict[str, str]:
         if dotenv_values is None or not ENV_PATH.exists():

@@ -30,6 +30,7 @@ from src.ai.peer_review import (
     build_reviewer_prompt,
     SameModelReviewError,
     clean_enum,
+    parse_json_object,
     peer_review,
     reviewer_system,
 )
@@ -246,25 +247,24 @@ def _text(value: Any, *, limit: int = 5000) -> str:
     return text[:limit]
 
 
-def _json_payload(text: str) -> dict[str, Any]:
-    cleaned = text.strip()
-    if cleaned.startswith("```"):
-        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.I)
-        cleaned = re.sub(r"\s*```$", "", cleaned)
-    start, end = cleaned.find("{"), cleaned.rfind("}")
-    if start < 0 or end <= start:
-        raise ValueError("AI governance response did not contain a JSON object")
-    payload = json.loads(cleaned[start : end + 1])
-    if not isinstance(payload, dict):
-        raise ValueError("AI governance response must be a JSON object")
-    return payload
-
-
 def _coerce_confidence(value: Any) -> float:
     try:
         return max(0.0, min(1.0, float(value)))
     except (TypeError, ValueError):
         return 0.0
+
+
+def _review_outcome(reviewed: Any) -> str:
+    """``publish``, ``hold`` or the negative decision (``exclude``/``reject``).
+
+    A peer review the reviewer did not accept is a disagreement, not a verdict
+    on the item, so it holds instead of excluding.
+    """
+
+    if not reviewed.published:
+        return "hold"
+    decision = str((reviewed.payload or {}).get("decision") or "hold")
+    return decision if decision in {"publish", "exclude", "reject"} else "hold"
 
 
 def _decisions(payload: Mapping[str, Any], allowed: set[str]) -> list[ModelDecision]:
@@ -340,7 +340,7 @@ async def _call_json_model(
             # after Model Center records the cooling route.
             wait_for_model_recovery=False,
         )
-        return _json_payload(text), _conversation_route(agent.get_latest_conversation())
+        return parse_json_object(text), _conversation_route(agent.get_latest_conversation())
     except Exception as exc:
         route = _conversation_route(agent.get_latest_conversation())
         logger.warning(
@@ -1019,7 +1019,7 @@ class AIContentGovernanceService:
                 "task": "Decide whether this evidence-agent summary is published.",
                 "item": self._literature_review_item(str(summary.id), summary, article),
             },
-            decisions=("publish", "reject"),
+            decisions=("publish", "reject", "hold"),
             rules=LITERATURE_SUMMARY_REVIEW_RULES,
         )
 
@@ -1029,7 +1029,7 @@ class AIContentGovernanceService:
             domain="infectious-disease Research Radar curation",
             author_system=LITERATURE_ARTICLE_REVIEW_SYSTEM,
             task={"task": "Decide whether this article is published in the Research Radar.", "item": self._literature_article_item(article)},
-            decisions=("publish", "exclude"),
+            decisions=("publish", "exclude", "hold"),
             rules=LITERATURE_ARTICLE_REVIEW_RULES,
         )
 
@@ -1114,7 +1114,13 @@ class AIContentGovernanceService:
                     query = query.where(LiteratureArticle.article_id != all_(literal(sorted(claims.ids), ARRAY(String))))
                 articles = (await db.execute(query.limit(limit))).scalars().all()
                 claims.ids.update(article.article_id for article in articles)
-            return len(articles), [(a.article_id, self._article_fingerprint(a), a) for a in articles], 0
+            items = []
+            for article in articles:
+                fingerprint = self._article_fingerprint(article)
+                # Held content waits until what the reviewers read changes.
+                if not self._held(article.metadata_, fingerprint):
+                    items.append((article.article_id, fingerprint, article))
+            return len(articles), items, 0
 
         async with claims.lock:
             # Summaries under an unpublished parent cannot be reviewed yet; leaving them
@@ -1132,7 +1138,9 @@ class AIContentGovernanceService:
                 self._archive_summary(summary, reason)
                 archived += 1
             elif action == "review":
-                items.append((summary.id, self._summary_fingerprint(summary), (summary, article)))
+                fingerprint = self._summary_fingerprint(summary)
+                if not self._held(summary.generation_metadata, fingerprint):
+                    items.append((summary.id, fingerprint, (summary, article)))
         return len(rows), items, archived
 
     @staticmethod
@@ -1166,7 +1174,7 @@ class AIContentGovernanceService:
         cycle, so content is compared by fingerprint rather than by timestamp.
         """
 
-        counts = {"published": 0, "rejected": 0, "stale": 0}
+        counts = {"published": 0, "rejected": 0, "held": 0, "stale": 0}
         keys = [key for key, _seen, _reviewed in results]
         if kind == "articles":
             found = (await db.execute(select(LiteratureArticle).where(LiteratureArticle.article_id.in_(keys)))).scalars().all()
@@ -1181,13 +1189,39 @@ class AIContentGovernanceService:
             if row is None or status != "review" or current != seen:
                 counts["stale"] += 1
                 continue
-            publish = reviewed.published and reviewed.payload["decision"] == "publish"
+            outcome = _review_outcome(reviewed)
+            if outcome == "hold":
+                self._hold(row, reviewed, current, kind)
+                counts["held"] += 1
+                continue
+            publish = outcome == "publish"
             if kind == "articles":
                 self._apply_article(db, row, reviewed, "published" if publish else "excluded")
             else:
                 self._apply_summary(row, reviewed, publish)
             counts["published" if publish else "rejected"] += 1
         return counts
+
+    def _hold(self, row: Any, reviewed: ReviewedOutput, fingerprint: str, kind: str) -> None:
+        """Leave the row in review and remember which content was held.
+
+        The fingerprint keeps the row out of later passes until what the
+        reviewers read changes (new abstract, metadata or regenerated summary).
+        """
+
+        if kind == "articles":
+            metadata = self._metadata(row.metadata_, "hold", reviewed)
+            metadata["ai_content_governance"]["held_fingerprint"] = fingerprint
+            row.metadata_ = metadata
+        else:
+            metadata = self._metadata(row.generation_metadata, "hold", reviewed)
+            metadata["ai_content_governance"]["held_fingerprint"] = fingerprint
+            row.generation_metadata = metadata
+
+    @staticmethod
+    def _held(metadata: Mapping[str, Any] | None, fingerprint: str) -> bool:
+        record = (metadata or {}).get("ai_content_governance")
+        return isinstance(record, Mapping) and record.get("decision") == "hold" and record.get("held_fingerprint") == fingerprint
 
     async def backlog_counts(self, db: AsyncSession) -> dict[str, int]:
         """Rows each review line still has to decide; the idle scheduler picks work from this."""
@@ -1284,7 +1318,7 @@ class AIContentGovernanceService:
         # The cap stays on the live pool, not on a pre-claimed slice.
         todo: asyncio.Queue[Any] = asyncio.Queue(maxsize=max(2, pool_size * 2))
         finished: asyncio.Queue[Any] = asyncio.Queue()
-        totals = {"claimed": 0, "archived": 0, "published": 0, "rejected": 0, "deferred": 0, "stale": 0, "write_errors": 0, "exhausted": 0}
+        totals = {"claimed": 0, "archived": 0, "published": 0, "rejected": 0, "held": 0, "deferred": 0, "stale": 0, "write_errors": 0, "exhausted": 0}
         state: dict[str, Any] = {"failures": 0, "route_error": None}
         tick = object()
 
@@ -1333,7 +1367,7 @@ class AIContentGovernanceService:
             reviewed_rows = [entry for entry in batch if not isinstance(entry[2], Exception)]
             deferred = len(batch) - len(reviewed_rows)
             totals["deferred"] += deferred
-            counts = {"published": 0, "rejected": 0, "stale": 0}
+            counts = {"published": 0, "rejected": 0, "held": 0, "stale": 0}
             if reviewed_rows:
                 try:
                     async with get_db() as db:
@@ -1493,7 +1527,14 @@ class AIContentGovernanceService:
             if self._summary_precheck(summary, article)[0] != "review":
                 counts["deferred"] += 1
                 continue
-            publish = reviewed.published and reviewed.payload["decision"] == "publish"
+            outcome = _review_outcome(reviewed)
+            if outcome == "hold":
+                counts["held"] = counts.get("held", 0) + 1
+                if not dry_run:
+                    self._hold(summary, reviewed, self._summary_fingerprint(summary), "summaries")
+                applied.append({"summary_id": int(item_id), "decision": "hold", "review": reviewed.provenance(PROMPT_VERSION)})
+                continue
+            publish = outcome == "publish"
             counts["published" if publish else "archived"] += 1
             if not dry_run:
                 self._apply_summary(summary, reviewed, publish)
@@ -1542,7 +1583,14 @@ class AIContentGovernanceService:
             if not await _reload_review_input(db, article, snapshots) or article.publication_status != "review":
                 counts["deferred"] += 1
                 continue
-            desired = "published" if reviewed.published and reviewed.payload["decision"] == "publish" else "excluded"
+            outcome = _review_outcome(reviewed)
+            if outcome == "hold":
+                counts["held"] = counts.get("held", 0) + 1
+                if not dry_run:
+                    self._hold(article, reviewed, self._article_fingerprint(article), "articles")
+                applied.append({"article_id": article.article_id, "decision": "hold", "review": reviewed.provenance(PROMPT_VERSION)})
+                continue
+            desired = "published" if outcome == "publish" else "excluded"
             counts[desired] += 1
             if not dry_run:
                 self._apply_article(db, article, reviewed, desired)
@@ -1899,6 +1947,7 @@ LITERATURE_ARTICLE_REVIEW_RULES = [
     "Exclude articles that are clearly off-topic, animal-only without public-health relevance, corrections without new evidence, pure methods with no infectious-disease application, or low-signal catalogue noise.",
     "Hold if relevance depends on expert judgment, if the abstract is too thin, or if the article may be relevant but the public-health connection is uncertain.",
     "Do not publish because a score is high by itself; use scores as hints and justify the semantic decision from title/abstract/evidence.",
+    "Exclusion is final; when unsure between publish and exclude, choose hold. An old publication date or a low discovery score is not a reason to exclude.",
 ]
 
 
@@ -1913,6 +1962,7 @@ LITERATURE_SUMMARY_REVIEW_RULES = [
     "Hold when the abstract is too thin, the summary is vague, or the public-health interpretation overreaches.",
     "Reject only for clear hallucination, unsafe clinical advice, or contradiction with the supplied article.",
     "Do not require stylistic perfection; focus on correctness, traceability, and usefulness for disease surveillance.",
+    "Rejection archives the summary; when unsure, choose hold.",
 ]
 
 KNOWLEDGE_SOURCE_REVIEW_SYSTEM = (

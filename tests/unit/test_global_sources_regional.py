@@ -44,6 +44,34 @@ def test_africa_cdc_weekly_report_is_kept_without_a_disease():
     assert events[0]["record_type"] == "weekly_threat_report"
 
 
+def test_africa_cdc_reads_every_page_until_the_window_is_exhausted():
+    import httpx
+
+    class Client:
+        def __init__(self) -> None:
+            self.pages: list[tuple[str, str]] = []
+
+        def get(self, url, params=None, timeout=None):
+            page = str((params or {}).get("page"))
+            self.pages.append((url, page))
+            if "wpdmpro" in url:
+                rows = [_wp(9, "Africa CDC Epidemic Intelligence Weekly Report, October 2026")] if page == "1" else []
+            elif page == "1":
+                rows = [_wp(index, "Ebola cases in Kenya") for index in range(1, 51)]
+            elif page == "2":
+                rows = [_wp(90, "Measles outbreak in Nigeria")]
+            else:
+                rows = []
+            return httpx.Response(200, json=rows, request=httpx.Request("GET", url))
+
+    client = Client()
+    events = africa_cdc.fetch_items(since="2023-11-01", client=client)
+    assert ("https://africacdc.org/wp-json/wp/v2/news-item", "2") in client.pages
+    assert ("https://africacdc.org/wp-json/wp/v2/news-item", "3") not in client.pages
+    assert any(event["native_id"] == "news-90" for event in events)
+    assert any(event["record_type"] == "weekly_threat_report" for event in events)
+
+
 def _dspace(handle: str, title: str, *, issued="2026-10-22", kind="Newsletters", langs=("en", "es"), subjects=()):
     return {
         "_embedded": {

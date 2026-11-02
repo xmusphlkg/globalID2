@@ -1,3 +1,5 @@
+import { articleHref } from './papers.ts';
+
 export interface ResearchAskArticle {
   article_id?: string;
   slug?: string;
@@ -343,7 +345,7 @@ function citationFor(article: ResearchAskArticle, index: number): ResearchAskCit
       : article.pmcid
         ? `https://pmc.ncbi.nlm.nih.gov/articles/${String(article.pmcid).trim()}/`
         : article.open_access_url?.trim()
-          || (article.slug ? `/research/articles/${article.slug}/` : '/research/');
+          || (article.slug ? articleHref(article.slug) : '/research/');
   const title = String(article.title ?? 'Untitled research record').trim();
   const journal = String(article.journal ?? '').trim();
   const year = String(article.published_at ?? '').slice(0, 4);

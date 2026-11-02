@@ -7,6 +7,7 @@ import {
 } from '../../../lib/research-integrity';
 import { buildAlternatePaths } from '../../../lib/seo';
 import { translateUi } from '../../../utils/i18n';
+import { siteHref } from '../../../lib/papers';
 
 const { locale = 'en' } = Astro.props as { locale?: 'en' | 'zh' | 'fr' };
 const zh = locale === 'zh';
@@ -125,7 +126,7 @@ const structuredData = {
                   </dl>
                   <div class="alert-actions">
                     {alert.source_url && <a class="source-link" href={alert.source_url} target="_blank" rel="noopener noreferrer">{pick('Verify source record ↗', '核对来源记录 ↗', 'Vérifier la source ↗')}</a>}
-                    {alert.article_url && <a href={(zh || fr) && alert.article_url.startsWith('/') ? `${prefix}${alert.article_url}` : alert.article_url}>{pick('View corrected public record →', '查看已更正公开记录 →', 'Voir la référence publique corrigée →')}</a>}
+                    {alert.article_url && <a href={siteHref((zh || fr) && alert.article_url.startsWith('/') ? `${prefix}${alert.article_url}` : alert.article_url)}>{pick('View corrected public record →', '查看已更正公开记录 →', 'Voir la référence publique corrigée →')}</a>}
                   </div>
                 </article>
               </li>

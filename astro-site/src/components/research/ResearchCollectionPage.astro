@@ -2,6 +2,7 @@
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import ResearchArticleCard from './ResearchArticleCard.astro';
 import { buildAlternatePaths, clampSeoTitle, isIndexableResearchCollection } from '../../lib/seo';
+import { absoluteSiteUrl } from '../../lib/papers';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../utils/diseaseNames';
 import { RESEARCH_TOPIC_LABELS, STUDY_TYPE_LABELS } from '../../utils/i18n';
 
@@ -82,7 +83,7 @@ const structuredData = {
       '@type': 'ListItem',
       position: index + 1,
       name: article.title,
-      url: new URL(`${prefix}/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
+      url: absoluteSiteUrl(`${prefix}/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
     })),
   },
 };
@@ -175,6 +176,7 @@ const structuredData = {
 
 <script>
   import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
+  import { siteHref } from '../../lib/papers';
   const list = document.querySelector<HTMLElement>('#collection-list');
   const cards = [...document.querySelectorAll<HTMLElement>('[data-research-card]')].filter(card => card.closest('#collection-list'));
   const count = document.querySelector<HTMLElement>('#collection-result-count');
@@ -297,7 +299,7 @@ const structuredData = {
 
     const title = make('h3', 'research-card-title');
     const titleLink = make('a');
-    titleLink.href = `${routePrefix}/research/articles/${article.slug}/`;
+    titleLink.href = siteHref(`${routePrefix}/research/articles/${article.slug}/`);
     titleLink.textContent = text(article.title);
     title.appendChild(titleLink);
     card.appendChild(title);

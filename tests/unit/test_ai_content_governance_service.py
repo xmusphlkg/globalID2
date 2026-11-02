@@ -742,3 +742,62 @@ def test_route_pool_avoids_collapsed_model_while_two_others_remain() -> None:
     two = ReviewRoutePool({"p:a": 10, "p:b": 10}, line="t", max_tokens=100, rng=random.Random(3))
     c = two.completer({"a"})
     assert {c.preferences["author"][0], c.preferences["reviewer"][0]} == {"p:a", "p:b"}
+
+
+def _reviewed(status: str, decision: str):
+    from src.ai.peer_review import ReviewedOutput
+
+    return ReviewedOutput(status, {"decision": decision, "reasons": ["r"]}, "a", "b", "accept", 1, [], 0.9, None)
+
+
+def _article_row(**overrides):
+    values = dict(
+        article_id="A1", title="t", journal="j", published_at=None, doi=None, pmid=None, authors=[],
+        article_type="journal-article", study_type=None, open_access_status="open", relevance_score=1.0,
+        public_health_score=0.5, discovery_score=0.6, abstract_text="abstract", source_urls={},
+        metadata_={}, publication_status="review",
+    )
+    values.update(overrides)
+    return SimpleNamespace(**values)
+
+
+def test_review_outcome_maps_hold_and_reviewer_disagreement_to_hold() -> None:
+    from src.services.ai_content_governance_service import _review_outcome
+
+    assert _review_outcome(_reviewed("published", "publish")) == "publish"
+    assert _review_outcome(_reviewed("published", "exclude")) == "exclude"
+    assert _review_outcome(_reviewed("published", "reject")) == "reject"
+    assert _review_outcome(_reviewed("published", "hold")) == "hold"
+    # The reviewer never accepted the draft: no verdict on the item, so it holds.
+    assert _review_outcome(_reviewed("rejected", "exclude")) == "hold"
+
+
+def test_stream_write_holds_article_in_review_and_skips_it_until_content_changes() -> None:
+    service = AIContentGovernanceService()
+    row = _article_row()
+    seen = service._article_fingerprint(row)
+
+    class _Result:
+        def scalars(self):
+            return self
+
+        def all(self):
+            return [row]
+
+    class _DB:
+        def add(self, _obj):
+            raise AssertionError("a hold must not write a status event")
+
+        async def execute(self, _query):
+            return _Result()
+
+    counts = asyncio.run(service._write_stream_results(_DB(), "articles", [("A1", seen, _reviewed("published", "hold"))]))
+
+    assert counts == {"published": 0, "rejected": 0, "held": 1, "stale": 0}
+    assert row.publication_status == "review"
+    record = row.metadata_["ai_content_governance"]
+    assert record["decision"] == "hold"
+    assert service._held(row.metadata_, service._article_fingerprint(row))
+
+    row.abstract_text = "a longer abstract with the missing methods"
+    assert not service._held(row.metadata_, service._article_fingerprint(row))

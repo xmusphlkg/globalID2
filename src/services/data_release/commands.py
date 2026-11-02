@@ -115,3 +115,48 @@ def build_publish_raw_archive_command(
         str(git_timeout_seconds),
         "--push",
     ]
+
+
+def build_split_papers_bundle_command(
+    *,
+    python_path: Path,
+    dist_dir: Path,
+    papers_dir: Path,
+    main_origin: str,
+    papers_origin: str,
+    pages_file_budget: int,
+    pages_file_warn: int,
+) -> list[str]:
+    """Slim Astro dist for Pages and stage the papers R2 bundle."""
+
+    return [
+        str(python_path),
+        "scripts/split_papers_bundle.py",
+        "--dist-dir",
+        str(dist_dir),
+        "--papers-dir",
+        str(papers_dir),
+        "--main-origin",
+        main_origin,
+        "--papers-origin",
+        papers_origin,
+        "--pages-file-budget",
+        str(pages_file_budget),
+        "--pages-file-warn",
+        str(pages_file_warn),
+    ]
+
+
+def build_publish_papers_r2_command(
+    *,
+    python_path: Path,
+    source_dir: Path,
+) -> list[str]:
+    """Incrementally publish the papers bundle to Cloudflare R2."""
+
+    return [
+        str(python_path),
+        "scripts/publish_papers_r2.py",
+        "--source-dir",
+        str(source_dir),
+    ]

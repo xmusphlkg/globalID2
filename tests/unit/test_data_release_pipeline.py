@@ -166,6 +166,21 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path):
         def _validate_situation_release_command(self, **_kwargs):
             return ["validate-situation-release"]
 
+        def _r2_papers_enabled(self, _job=None):
+            return False
+
+        def _split_papers_bundle_command(self, **_kwargs):
+            return ["split-papers"]
+
+        def _publish_papers_r2_command(self, **_kwargs):
+            return ["publish-papers-r2"]
+
+        def _cloudflare_account_id(self):
+            return "account"
+
+        def _cloudflare_api_token(self):
+            return "token"
+
         def _publish_download_repo_command(self, **_kwargs):
             return ["publish-downloads"]
 
@@ -512,6 +527,18 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
 
         def _validate_situation_release_command(self, **_kwargs):
             return ["validate"]
+
+        def _r2_papers_enabled(self, _job=None):
+            return False
+
+        def _split_papers_bundle_command(self, **_kwargs):
+            return ["split-papers"]
+
+        def _publish_papers_r2_command(self, **_kwargs):
+            return ["publish-papers-r2"]
+
+        def _cloudflare_account_id(self):
+            return "account"
 
         async def _run_logged_command(self, _task_uuid, *, title, **_kwargs):
             commands.append(title)

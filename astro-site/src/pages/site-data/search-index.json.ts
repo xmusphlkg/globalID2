@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import researchRaw from '../../data/research/index.json';
 import { diseaseIndex, indexableDiseases, publishableReports, siteMeta } from '../../lib/seo-page-data';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
+import { articleHref } from '../../lib/papers';
 import { localizedDynamicText, localizedRegionName } from '../../utils/i18n';
 
 export const prerender = true;
@@ -82,7 +83,7 @@ export const GET: APIRoute = () => {
     entries.push({
       id: `research:${article.article_id ?? article.slug}`,
       kind: 'research',
-      href: localized(`/research/articles/${article.slug}/`),
+      href: { en: articleHref(article.slug, 'en'), zh: articleHref(article.slug, 'zh'), fr: articleHref(article.slug, 'fr') },
       title: { en: article.title, zh: article.title_zh, fr: article.title_fr ?? article.title },
       summary: { en: summaryEn, zh: summaryZh, fr: summaryFr },
       aliases: clean([article.doi, article.pmid, article.journal, article.study_type, ...(article.diseases ?? []).flatMap((item: any) => [item.name_en, item.name_zh, item.name_fr]), ...(article.countries ?? []).flatMap((item: any) => [item.code, item.name_en, item.name_zh, item.name_fr])]),

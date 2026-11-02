@@ -165,14 +165,11 @@ def release_blocking_worktree_paths(
     *,
     runtime_mutable_paths: tuple[str, ...] = (),
 ) -> list[str]:
-    """Return worktree paths that must block a release.
+    """Return dirty paths outside the runtime-registry allow-list.
 
-    A release is built from the current checkout, but a small, explicit set of
-    atomically-written runtime registries is intentionally allowed to change
-    between upstream jobs and the release.  Keeping this allow-list at the
-    preflight boundary prevents background quality jobs from making every
-    automatic release fail while ensuring all unknown code changes remain
-    fail-closed.
+    Preflight reports these paths. A dirty checkout does not block a release;
+    the site is built from the current worktree. Runtime registries such as
+    the weekly AI review file stay in a separate reported list.
     """
     allowed = {str(path).replace("\\", "/").strip() for path in runtime_mutable_paths}
     return [

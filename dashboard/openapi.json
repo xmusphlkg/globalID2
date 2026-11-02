@@ -3189,6 +3189,92 @@
         "title": "CpuSummaryOut",
         "type": "object"
       },
+      "DataReleaseChannelOut": {
+        "properties": {
+          "bucket": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "file_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Budget"
+          },
+          "file_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Count"
+          },
+          "public_base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Base Url"
+          },
+          "ready": {
+            "default": false,
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "repo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repo Url"
+          }
+        },
+        "title": "DataReleaseChannelOut",
+        "type": "object"
+      },
+      "DataReleaseChannelsOut": {
+        "properties": {
+          "github_downloads": {
+            "$ref": "#/components/schemas/DataReleaseChannelOut"
+          },
+          "pages_main": {
+            "$ref": "#/components/schemas/DataReleaseChannelOut"
+          },
+          "r2_papers": {
+            "$ref": "#/components/schemas/DataReleaseChannelOut"
+          }
+        },
+        "title": "DataReleaseChannelsOut",
+        "type": "object"
+      },
       "DataReleaseChecksOut": {
         "properties": {
           "blockers": {
@@ -3198,6 +3284,9 @@
             },
             "title": "Blockers",
             "type": "array"
+          },
+          "channels": {
+            "$ref": "#/components/schemas/DataReleaseChannelsOut"
           },
           "checked_at": {
             "title": "Checked At",
@@ -3218,6 +3307,12 @@
           "overall_ready": {
             "title": "Overall Ready",
             "type": "boolean"
+          },
+          "pages_budget": {
+            "$ref": "#/components/schemas/DataReleasePagesBudgetOut"
+          },
+          "r2_papers": {
+            "$ref": "#/components/schemas/DataReleaseR2PapersCheckOut"
           },
           "raw": {
             "anyOf": [
@@ -4146,6 +4241,119 @@
           }
         },
         "title": "DataReleaseLegacySnapshotOut",
+        "type": "object"
+      },
+      "DataReleasePagesBudgetOut": {
+        "properties": {
+          "budget": {
+            "default": 20000,
+            "title": "Budget",
+            "type": "integer"
+          },
+          "dist_present": {
+            "default": false,
+            "title": "Dist Present",
+            "type": "boolean"
+          },
+          "file_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Count"
+          },
+          "ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ok"
+          },
+          "warn": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warn"
+          },
+          "warn_at": {
+            "default": 18000,
+            "title": "Warn At",
+            "type": "integer"
+          }
+        },
+        "title": "DataReleasePagesBudgetOut",
+        "type": "object"
+      },
+      "DataReleaseR2PapersCheckOut": {
+        "properties": {
+          "bucket": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket"
+          },
+          "bucket_access_ok": {
+            "default": false,
+            "title": "Bucket Access Ok",
+            "type": "boolean"
+          },
+          "configured": {
+            "default": false,
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "credentials_present": {
+            "default": false,
+            "title": "Credentials Present",
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "public_base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Base Url"
+          }
+        },
+        "title": "DataReleaseR2PapersCheckOut",
         "type": "object"
       },
       "DataReleaseRepositoryBoundaryOut": {
@@ -10632,16 +10840,6 @@
             "title": "Runtime Model Inflight",
             "type": "integer"
           },
-          "runtime_provider_auto_concurrency": {
-            "default": true,
-            "title": "Runtime Provider Auto Concurrency",
-            "type": "boolean"
-          },
-          "runtime_provider_backoff_remaining_seconds": {
-            "default": 0,
-            "title": "Runtime Provider Backoff Remaining Seconds",
-            "type": "integer"
-          },
           "runtime_provider_capacity": {
             "default": 1,
             "title": "Runtime Provider Capacity",
@@ -10655,16 +10853,6 @@
           "runtime_provider_max_capacity": {
             "default": 1,
             "title": "Runtime Provider Max Capacity",
-            "type": "integer"
-          },
-          "runtime_provider_min_capacity": {
-            "default": 1,
-            "title": "Runtime Provider Min Capacity",
-            "type": "integer"
-          },
-          "runtime_provider_success_streak": {
-            "default": 0,
-            "title": "Runtime Provider Success Streak",
             "type": "integer"
           },
           "runtime_success_count": {

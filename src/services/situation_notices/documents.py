@@ -77,17 +77,23 @@ def html_to_text(markup: str) -> str:
     return "\n".join(line for line in lines if line)
 
 
+#: pdfium is not thread-safe: documents are fetched on several threads at once, and two
+#: threads inside pdfium crash the whole worker process. Every pdfium call holds this lock.
+_PDFIUM_LOCK = threading.RLock()
+
+
 def pdf_to_text(data: bytes) -> tuple[str, int]:
     """Page text via pdfium: orders of magnitude faster than pdfminer on large reports."""
 
     import pypdfium2
 
-    pdf = pypdfium2.PdfDocument(data)
-    try:
-        pages = _page_texts(pdf)
-        return "\n\n".join(page for page in pages if page), len(pages)
-    finally:
-        pdf.close()
+    with _PDFIUM_LOCK:
+        pdf = pypdfium2.PdfDocument(data)
+        try:
+            pages = _page_texts(pdf)
+            return "\n\n".join(page for page in pages if page), len(pages)
+        finally:
+            pdf.close()
 
 
 def _page_texts(pdf: Any) -> list[str]:
@@ -115,9 +121,11 @@ def pdf_ocr_text(data: bytes) -> tuple[str, int]:
     global _OCR_ENGINE
     import pypdfium2
 
-    pdf = pypdfium2.PdfDocument(data)
+    with _PDFIUM_LOCK:
+        pdf = pypdfium2.PdfDocument(data)
     try:
-        count = len(pdf)
+        with _PDFIUM_LOCK:
+            count = len(pdf)
         if count > MAX_OCR_PAGES:
             raise DocumentUnavailable(f"scanned PDF has {count} pages, over the {MAX_OCR_PAGES}-page OCR limit")
         pages = []
@@ -127,16 +135,19 @@ def pdf_ocr_text(data: bytes) -> tuple[str, int]:
 
                 _OCR_ENGINE = RapidOCR()
             for index in range(count):
-                page = pdf[index]
-                try:
-                    image = page.render(scale=2).to_numpy()
-                finally:
-                    page.close()
+                # Render under the pdfium lock; recognition only needs the image.
+                with _PDFIUM_LOCK:
+                    page = pdf[index]
+                    try:
+                        image = page.render(scale=2).to_numpy()
+                    finally:
+                        page.close()
                 result = _OCR_ENGINE(image)
                 pages.append("\n".join(result.txts or ()).strip())
         return "\n\n".join(page for page in pages if page), count
     finally:
-        pdf.close()
+        with _PDFIUM_LOCK:
+            pdf.close()
 
 
 def _pdf_document(data: bytes) -> FetchedDocument:
@@ -231,25 +242,26 @@ def _article_pages(data: bytes, page_range: Any) -> bytes:
         return data
     import pypdfium2
 
-    source = pypdfium2.PdfDocument(data)
-    try:
-        offset = printed_page_offset(_page_texts(source))
-        if offset is None:
-            return data
-        first = max(0, int(page_range[0]) - offset)
-        last = min(len(source) - 1, int(page_range[1]) - offset)
-        if first > last or (first == 0 and last == len(source) - 1):
-            return data
-        article = pypdfium2.PdfDocument.new()
+    with _PDFIUM_LOCK:
+        source = pypdfium2.PdfDocument(data)
         try:
-            article.import_pages(source, list(range(first, last + 1)))
-            buffer = io.BytesIO()
-            article.save(buffer)
-            return buffer.getvalue()
+            offset = printed_page_offset(_page_texts(source))
+            if offset is None:
+                return data
+            first = max(0, int(page_range[0]) - offset)
+            last = min(len(source) - 1, int(page_range[1]) - offset)
+            if first > last or (first == 0 and last == len(source) - 1):
+                return data
+            article = pypdfium2.PdfDocument.new()
+            try:
+                article.import_pages(source, list(range(first, last + 1)))
+                buffer = io.BytesIO()
+                article.save(buffer)
+                return buffer.getvalue()
+            finally:
+                article.close()
         finally:
-            article.close()
-    finally:
-        source.close()
+            source.close()
 
 
 def _pdf_page(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:

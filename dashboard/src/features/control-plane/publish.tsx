@@ -15,6 +15,11 @@ type Run = components["schemas"]["RunOut"];
 type ReleaseResult = components["schemas"]["DataResponse_dict_"]["data"] & { task_uuid?: string; status?: string; reason?: string };
 const lines = ["surveillance", "literature", "situation", "knowledge"] as const;
 
+function channelTone(enabled: boolean | undefined, ready: boolean | undefined): "success" | "warning" | "neutral" {
+  if (!enabled) return "neutral";
+  return ready ? "success" : "warning";
+}
+
 export function PublishView() {
   const { lang, text } = useModelPublishText();
   const client = useQueryClient();
@@ -49,14 +54,44 @@ export function PublishView() {
     finally { actionLock.current = false; setBusy(null); }
   }
   const reason = result?.reason === "already_running" ? text("cc_mp_already_running") : result?.reason === "already_queued" ? text("cc_mp_already_queued") : result?.reason ?? text("cc_mp_active");
+  const pagesBudgetReady = checks?.pages_budget?.ok !== false;
   const checkRows = checks ? [
-    { label: text("cc_mp_git"), ready: checks.git?.read_access_ok && checks.git?.write_access_ok },
-    { label: text("cc_mp_hosting"), ready: checks.cloudflare?.project_access_ok && checks.cloudflare?.token_present && checks.cloudflare?.account_id_present },
-    { label: text("cc_mp_commands"), ready: checks.commands?.python_exists && checks.commands?.wrangler_available },
-    { label: text("cc_mp_boundary"), ready: checks.repository_boundary?.enforced },
+    { label: text("cc_mp_git"), ready: !!(checks.git?.read_access_ok && checks.git?.write_access_ok) },
+    { label: text("cc_mp_hosting"), ready: !!(checks.cloudflare?.project_access_ok && checks.cloudflare?.token_present && checks.cloudflare?.account_id_present) },
+    { label: text("cc_mp_papers_storage"), ready: !!(checks.r2_papers?.credentials_present && checks.r2_papers?.bucket_access_ok) },
+    { label: text("cc_mp_pages_budget"), ready: pagesBudgetReady },
+    { label: text("cc_mp_commands"), ready: !!(checks.commands?.python_exists && checks.commands?.wrangler_available) },
+    { label: text("cc_mp_boundary"), ready: !!checks.repository_boundary?.enforced },
+  ] : [];
+  const channels = checks?.channels;
+  const channelCards = channels ? [
+    {
+      key: "pages_main",
+      label: text("cc_mp_channel_pages"),
+      enabled: !!channels.pages_main?.enabled,
+      ready: !!channels.pages_main?.ready,
+      detail: channels.pages_main?.file_count != null
+        ? `${channels.pages_main.file_count} / ${channels.pages_main.file_budget ?? "—"} ${text("cc_mp_files")}`
+        : text("cc_mp_no_value"),
+    },
+    {
+      key: "github_downloads",
+      label: text("cc_mp_channel_downloads"),
+      enabled: !!channels.github_downloads?.enabled,
+      ready: !!channels.github_downloads?.ready,
+      detail: channels.github_downloads?.repo_url || text("cc_mp_no_value"),
+    },
+    {
+      key: "r2_papers",
+      label: text("cc_mp_channel_papers"),
+      enabled: !!channels.r2_papers?.enabled,
+      ready: !!channels.r2_papers?.ready,
+      detail: channels.r2_papers?.public_base_url || channels.r2_papers?.bucket || text("cc_mp_no_value"),
+    },
   ] : [];
   return <WorkspacePage eyebrow={text("cc_mp_center")} title={text("cc_mp_publish")} description={text("cc_mp_publish_desc")} actions={<><button className="cc-button" disabled={query.isFetching} onClick={() => query.refetch()}>{text("cc_mp_refresh")}</button><Link className="cc-button" href="/publish/reports">{text("cc_mp_reports")}</Link></>}>
     <MetricStrip items={[{ label: text("cc_mp_pending_count"), value: query.data ? pendingCount : "—", tone: pendingCount ? "warning" : "success" }, { label: text("cc_mp_lines_count"), value: query.data ? `${counts.filter(Boolean).length} / 4` : "—" }, { label: text("cc_mp_release_status"), value: result ? modelPublishLabel(runStatus ?? result.status ?? "queued", lang) : text("cc_mp_no_release"), tone: runStatus === "failed" ? "danger" : runStatus === "completed" ? "success" : "neutral" }, { label: text("cc_mp_mode"), value: text(full ? "cc_mp_full" : "cc_mp_incremental") }]} />
+    {channelCards.length > 0 && <section className="cc-panel space-y-3" aria-labelledby="channels-title"><h2 id="channels-title" className="text-base font-semibold">{text("cc_mp_channels")}</h2><div className="grid gap-3 md:grid-cols-3">{channelCards.map((channel) => <div key={channel.key} className="rounded-md border border-[var(--cc-border)] p-3"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">{channel.label}</h3><StatusBadge tone={channelTone(channel.enabled, channel.ready)}>{text(!channel.enabled ? "cc_mp_channel_disabled" : channel.ready ? "cc_mp_channel_ready" : "cc_mp_channel_blocked")}</StatusBadge></div><p className="cc-muted mt-2 break-all text-xs leading-5">{channel.detail}</p></div>)}</div></section>}
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
       <section className="cc-panel space-y-4" aria-labelledby="pending-title"><div><h2 id="pending-title" className="text-base font-semibold">{text("cc_mp_unpublished")}</h2><p className="cc-muted mt-1">{text("cc_mp_readonly_hint")}</p></div><ModelPublishFeedback query={query} label={text("cc_mp_unpublished").toLowerCase()} />
         {query.data && <><div className="overflow-x-auto"><table className="cc-table w-full text-left text-sm"><thead><tr><th scope="col">{text("cc_mp_line")}</th><th scope="col">{text("cc_mp_scope")}</th></tr></thead><tbody>{lines.slice().sort((a, b) => Number(Boolean(Array.isArray(query.data?.[b]) ? (query.data?.[b] as string[]).length : query.data?.[b])) - Number(Boolean(Array.isArray(query.data?.[a]) ? (query.data?.[a] as string[]).length : query.data?.[a]))).map((line) => { const scopes = query.data[line]; return <tr key={line}><th scope="row" className="font-medium">{modelPublishLabel(line, lang)}</th><td><div className="flex flex-wrap gap-1.5">{Array.isArray(scopes) ? scopes.length ? scopes.map((scope) => <StatusBadge tone="warning" key={scope}><span className="break-all">{scope}</span></StatusBadge>) : <span className="cc-muted">{text("cc_mp_none")}</span> : scopes ? <StatusBadge tone="warning">{text("cc_mp_whole_line")}</StatusBadge> : <span className="cc-muted">{text("cc_mp_none")}</span>}</div></td></tr>; })}</tbody></table></div>{pendingCount === 0 && <p className="cc-muted py-3">{text("cc_mp_no_changes")}</p>}</>}

@@ -211,3 +211,52 @@ def dispatcher_transport_context():
         yield
     finally:
         _DISPATCHING.reset(token)
+
+
+# --- probe-based capability ---
+
+
+def test_probe_result_overrides_the_anthropic_guess():
+    params = {att.PROBE_KEY: {"supported": False, "checked_at_epoch": 1.0}}
+    assert route_accepts_native_files(_route(api_style="anthropic", extra_params=params)) is False
+    params = {att.PROBE_KEY: {"supported": True, "checked_at_epoch": 1.0}}
+    assert route_accepts_native_files(_route(extra_params=params)) is True
+
+
+def test_operator_override_beats_probe_and_ledger_beats_probe():
+    probe = {att.PROBE_KEY: {"supported": True, "checked_at_epoch": 1.0}}
+    forced_off = _route(extra_params={**probe, "runtime_native_files": False})
+    assert route_accepts_native_files(forced_off) is False
+    route = _route(extra_params=probe)
+    att.note_native_rejection(route)
+    assert route_accepts_native_files(route) is False
+
+
+def test_probe_freshness_uses_the_ttl():
+    params = {att.PROBE_KEY: {"supported": False, "checked_at_epoch": 1000.0}}
+    assert att.probe_is_fresh(params, now=1000.0 + att.PROBE_TTL_SECONDS - 1) is True
+    assert att.probe_is_fresh(params, now=1000.0 + att.PROBE_TTL_SECONDS + 1) is False
+    assert att.probe_is_fresh({}, now=0.0) is False
+    assert att.probe_is_fresh({att.PROBE_KEY: {"supported": "yes"}}, now=0.0) is False
+
+
+def test_unrecognized_message_counts_as_a_file_rejection():
+    class Err(Exception):
+        status_code = 400
+
+    assert looks_like_file_rejection(Err("Unrecognized chat message")) is True
+
+
+def test_page_images_hook_is_off_unless_declared():
+    assert att.route_accepts_page_images(_route()) is False
+    assert att.route_accepts_page_images(_route(extra_params={"runtime_page_images": True})) is True
+    probe = {att.PROBE_KEY: {"supported": False, "images": True}}
+    assert att.route_accepts_page_images(_route(extra_params=probe)) is True
+
+
+def test_probe_pdf_is_valid_and_rejects_unsafe_markers():
+    pdfium = pytest.importorskip("pypdfium2")
+    pdf = pdfium.PdfDocument(att.build_probe_pdf("GIDSab12cd34"))
+    assert "GIDSab12cd34" in pdf[0].get_textpage().get_text_range()
+    with pytest.raises(ValueError):
+        att.build_probe_pdf("bad)marker")

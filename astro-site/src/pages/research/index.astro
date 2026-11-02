@@ -6,6 +6,7 @@ import researchData from '../../data/research/index.json';
 import researchHotspotsData from '../../data/research/hotspots.json';
 import { buildResearchFeedDefinitions, filterResearchFeedArticles, toResearchFeedSlug, type ResearchFeedScope } from '../../lib/research-feed';
 import { buildAlternatePaths, normalizeDiseaseHref } from '../../lib/seo';
+import { absoluteSiteUrl, siteHref } from '../../lib/papers';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID, localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedRegionName, localizedResearchFacet, localizedResearchTopic, localizedStudyType, RESEARCH_TOPIC_LABELS, STUDY_TYPE_LABELS, translateUi } from '../../utils/i18n';
 
@@ -117,7 +118,7 @@ const itemList = {
     itemListElement: articles.slice(0, 100).map((article: any, index: number) => ({
       '@type': 'ListItem',
       position: index + 1,
-      url: new URL(`${prefix}/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
+      url: absoluteSiteUrl(`${prefix}/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
       name: article.title,
     })),
   },
@@ -271,7 +272,7 @@ const itemList = {
               {linkedArticles.length > 0
                 ? <ol>{linkedArticles.map((article: any) => <li>{article.detail_available === false
                   ? <div class="surveillance-research-nolink"><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></div>
-                  : <a href={`${prefix}/research/articles/${article.slug}/`}><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></a>}</li>)}</ol>
+                  : <a href={siteHref(`${prefix}/research/articles/${article.slug}/`)}><strong>{article.title}</strong><span>{article.journal ?? pick('Journal unavailable', '期刊信息暂缺')} · {article.study_type ?? pick('Journal article', '期刊论文')}</span></a>}</li>)}</ol>
                 : <p class="surveillance-research-empty">{pick('No public Research Radar article currently meets this relationship threshold.', '目前没有公开的 Research Radar 文献达到此关联阈值。')}</p>}
             </article>;
           })}
@@ -379,6 +380,7 @@ const itemList = {
 
   <script>
   import { loadResearchCatalogue } from '../../lib/research-catalogue-client';
+    import { siteHref } from '../../lib/papers';
     import { readResearchFilterValues, writeResearchFilterValues, type ResearchFilterValues } from '../../lib/research-filter-url';
     const search = document.querySelector<HTMLInputElement>('#research-search');
     const disease = document.querySelector<HTMLSelectElement>('#research-disease');
@@ -532,7 +534,7 @@ const itemList = {
 
       const title = make('h3', 'research-card-title');
       const titleLink = document.createElement('a');
-      titleLink.href = `${routePrefix}/research/articles/${article.slug}/`;
+      titleLink.href = siteHref(`${routePrefix}/research/articles/${article.slug}/`);
       titleLink.textContent = text(article.title);
       title.appendChild(titleLink);
       card.appendChild(title);

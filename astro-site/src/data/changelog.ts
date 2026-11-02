@@ -26,6 +26,85 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.17.1',
+    date: '2026-11-02',
+    titleEn: 'Research articles move to their own host',
+    titleZh: '研究文献页迁移到独立域名',
+    titleFr: 'Les articles de recherche passent sur leur propre domaine',
+    summaryEn:
+      'Research Radar article pages, social cards and research data now live on papers.globalinfectiousdisease.com, which keeps the main site under its file limit. Old article links redirect there, and the Situation history now reaches back three years.',
+    summaryZh:
+      'Research Radar 的文献页、分享卡片和研究数据迁移到 papers.globalinfectiousdisease.com，主站因此保持在文件数上限之内。旧的文献链接会自动跳转，态势历史也回溯到三年前。',
+    summaryFr:
+      'Les pages d’articles du Radar de recherche, leurs cartes de partage et leurs données sont désormais sur papers.globalinfectiousdisease.com, ce qui garde le site principal sous sa limite de fichiers. Les anciens liens redirigent vers ce domaine, et l’historique de Situation remonte à trois ans.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveautés',
+        items: [
+          {
+            en: 'Research article pages, cards and research data are served from papers.globalinfectiousdisease.com. Links, canonical addresses, feeds and search results all point there, and the old addresses redirect.',
+            zh: '研究文献页、分享卡片和研究数据由 papers.globalinfectiousdisease.com 提供。站内链接、规范地址、订阅源和搜索结果都指向新域名，旧地址会自动跳转。',
+            fr: 'Les pages d’articles, les cartes et les données de recherche sont servies depuis papers.globalinfectiousdisease.com. Les liens, adresses canoniques, flux et résultats de recherche y pointent, et les anciennes adresses redirigent.',
+          },
+          {
+            en: 'The new host has its own robots.txt and sitemap, so article URLs are no longer listed in the main-site sitemaps.',
+            zh: '新域名有独立的 robots.txt 和站点地图，主站站点地图不再列出文献页。',
+            fr: 'Le nouveau domaine a son propre robots.txt et son plan du site ; les articles ne figurent plus dans les plans du site principal.',
+          },
+          {
+            en: 'The ECDC Communicable Disease Threats Report is read back through its archive, and Africa CDC, PAHO and WHO periodicals collect further back, so older reports are no longer missed.',
+            zh: '欧洲疾控中心《传染病威胁报告》现在会回溯归档，非洲疾控中心、泛美卫生组织和 WHO 期刊的采集范围也更深，不再漏掉较早的报告。',
+            fr: 'Le rapport hebdomadaire de l’ECDC sur les menaces est lu jusque dans ses archives, et l’Africa CDC, l’OPS et les périodiques de l’OMS sont collectés plus loin dans le passé.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Situation outbreak history and the public export now cover the last three years, so a short refresh no longer drops older alerts.',
+            zh: '态势的疫情历史和公开导出现在覆盖最近三年，短周期刷新不再丢失较早的警报。',
+            fr: 'L’historique des flambées de Situation et l’export public couvrent désormais les trois dernières années ; une courte actualisation ne supprime plus les anciennes alertes.',
+          },
+          {
+            en: 'A published article keeps its status when the classifier later asks for review. Only a hard exclusion, an integrity change or an editorial action changes it.',
+            zh: '已发布的文献在分类器之后建议复核时保持原状态，只有明确排除、完整性变化或编辑操作才会改变。',
+            fr: 'Un article publié conserve son statut lorsque le classifieur demande ensuite une revue ; seuls une exclusion ferme, un changement d’intégrité ou une action éditoriale le modifient.',
+          },
+          {
+            en: 'French labels now cover Meta-analysis, Commentary, Preprint and Prion.',
+            zh: '法语界面补全了荟萃分析、述评、预印本和朊病毒的标签。',
+            fr: 'Les libellés français couvrent désormais Méta-analyse, Commentaire, Prépublication et Prion.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'Weekly Research Radar briefs link straight to the article on the papers host instead of going through a redirect.',
+            zh: 'Research Radar 周报里的文献链接直接指向新域名，不再经过一次跳转。',
+            fr: 'Les bulletins hebdomadaires du Radar de recherche renvoient directement à l’article sur le nouveau domaine, sans redirection.',
+          },
+          {
+            en: 'The footer date, search box and graph links keep working on article pages served from the papers host.',
+            zh: '在新域名下的文献页中，页脚日期、搜索框和图谱链接保持可用。',
+            fr: 'La date du pied de page, la recherche et les liens du graphe continuent de fonctionner sur les pages d’articles du nouveau domaine.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.16.2',
     date: '2026-11-01',
     titleEn: 'The Situation timeline reads like a commit graph',

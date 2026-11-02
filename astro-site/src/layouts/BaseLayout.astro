@@ -5,6 +5,7 @@ import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { buildAlternatePaths, clampSeoDescription, type JsonLdNode, type SeoDocument } from '../lib/seo';
+import { absoluteSiteUrl } from '../lib/papers';
 
 interface Props {
   title: string;
@@ -35,7 +36,7 @@ const siteReleaseId = import.meta.env.PUBLIC_GIDS_RELEASE_ID?.trim() || 'develop
 const siteSourceCommit = import.meta.env.PUBLIC_GIDS_SOURCE_COMMIT?.trim() || '';
 const siteDeploymentBranch = import.meta.env.PUBLIC_GIDS_DEPLOY_BRANCH?.trim() || '';
 const siteBase = Astro.site?.toString() ?? Astro.url.origin;
-const canonicalURL = new URL(seo?.canonicalPath ?? Astro.url.pathname, siteBase);
+const canonicalURL = absoluteSiteUrl(seo?.canonicalPath ?? Astro.url.pathname, siteBase);
 const audiencePixel = `https://stats.globalinfectiousdisease.com/api/track?pixel=1&path=${encodeURIComponent(canonicalURL.pathname)}`;
 const siteOrigin = new URL(siteBase).origin;
 const documentLocale = seo?.locale ?? initialLanguage;
@@ -56,7 +57,7 @@ const alternatePaths = seo?.alternatePaths ?? buildAlternatePaths(
 );
 const alternateUrls = Object.entries(alternatePaths).map(([locale, path]) => ({
   locale,
-  url: new URL(path, siteBase).toString(),
+  url: absoluteSiteUrl(path, siteBase).toString(),
 }));
 const pageType = seo?.pageType ?? 'WebPage';
 const ogType = ['Report', 'Article', 'MedicalWebPage'].includes(pageType) ? 'article' : 'website';
@@ -146,7 +147,7 @@ const structuredData = {
     {alternateUrls.map(({ locale, url }) => (
       <link rel="alternate" hreflang={locale === 'zh' ? 'zh-CN' : locale === 'fr' ? 'fr-FR' : 'en'} href={url} />
     ))}
-    {alternatePaths.en && <link rel="alternate" hreflang="x-default" href={new URL(alternatePaths.en, siteBase)} />}
+    {alternatePaths.en && <link rel="alternate" hreflang="x-default" href={absoluteSiteUrl(alternatePaths.en, siteBase)} />}
     <meta name="robots" content={robotsContent} />
     <meta name="theme-color" content="#102A43" />
 
@@ -157,7 +158,7 @@ const structuredData = {
     <meta property="og:locale:alternate" content={isChinese ? 'en_US' : isFrench ? 'en_US' : 'zh_CN'} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={metaDescription} />
-    <meta property="og:image" content={new URL(pageImage, siteBase)} />
+    <meta property="og:image" content={absoluteSiteUrl(pageImage, siteBase)} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content={pageImageAlt} />
@@ -169,7 +170,7 @@ const structuredData = {
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={metaDescription} />
-    <meta name="twitter:image" content={new URL(pageImage, siteBase)} />
+    <meta name="twitter:image" content={absoluteSiteUrl(pageImage, siteBase)} />
     <meta name="twitter:image:alt" content={pageImageAlt} />
     <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
     {validGaMeasurementId && (

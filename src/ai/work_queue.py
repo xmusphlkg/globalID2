@@ -644,6 +644,35 @@ async def recover_expired_leases(*, now: datetime | None = None) -> int:
         return len(rows)
 
 
+async def release_leases_on_startup(*, now: datetime | None = None) -> int:
+    """Requeue every leased item. Call only while holding the worker singleton lease.
+
+    A restarted worker tracks none of its predecessor's in-flight calls, yet the
+    database still counts those leases against route permits until they expire.
+    A restart is not a model fault, so the attempt counter is left alone.
+    """
+    now = now or _now()
+    async with get_database() as db:
+        await _lock_reservation(db, "lease-recovery")
+        rows = (
+            (
+                await db.execute(
+                    select(AIWorkItem)
+                    .where(AIWorkItem.status == "leased")
+                    .with_for_update()
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for item in rows:
+            item.status = "queued"
+            item.lease_expires_at = None
+            item.route_key = None
+            item.available_at = now
+        return len(rows)
+
+
 async def claim_work(
     route: dict[str, Any],
     *,
@@ -939,20 +968,14 @@ class AIWorkDispatcher:
                 name=f"model-health-{probe.id}",
             )
             self.active[probe.id]._ai_lease_expires_at = probe.lease_expires_at
-        from .agents.base import BaseAgent
-
-        # The transport refuses a route under this process's local cooldown
-        # (set on a 429 or channel failure) even when the persisted state is
-        # already clear. Claiming it would fail the item instantly, requeue it,
-        # and claim it again in a tight loop while real permits sit idle.
+        # Admission comes only from Model Center route snapshots. Durable
+        # rate-limit and runtime circuits already clear available_for_routing.
+        loaded = await self.route_loader()
         routes = [
             r
-            for r in await self.route_loader()
+            for r in loaded
             if r.get("available_for_routing")
             and r.get("runtime_model_capacity", 0) > 0
-            and not BaseAgent._is_route_cooling_down(
-                str(r.get("model_key") or r.get("model_name") or "")
-            )
         ]
         if not routes:
             return 0

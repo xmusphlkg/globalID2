@@ -39,8 +39,9 @@ repository.
 | Hand-authored Astro data modules (`*.ts`) | Code repository | Tracked |
 | Public CSV/JSON/XLSX partitions | Dedicated data repository, `main` | Not tracked |
 | Public download working clone (`external-data/globalID2_data_download`) | Dedicated data repository, `main` | Ignored |
+| Research article HTML, cards, and `site-data/research` | Cloudflare R2 (`globalid-papers` / `papers.globalinfectiousdisease.com`) | Ignored (`exports/papers-site`) |
 | Raw archive working clone (`exports/raw-git-archive`) | Dedicated archive repository, `main` | Ignored |
-| Astro build output | Deployment artifact / Cloudflare Pages | Ignored |
+| Astro build output (slim main site) | Deployment artifact / Cloudflare Pages | Ignored |
 
 The generated working files remain available locally. Removing them from the
 Git index does not delete their contents. Hand-authored TypeScript modules in
