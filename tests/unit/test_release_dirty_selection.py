@@ -11,7 +11,7 @@ import pytest_asyncio
 from sqlalchemy import event, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from src.domain import Base, Country, DataReleaseJob, Task, TaskStatus
+from src.domain import Base, Country, DataReleaseJob, Task, TaskPriority, TaskStatus
 from src.domain.collection import PublishDirty
 from src.services import data_release_service as module
 from src.services.data_release import projection
@@ -94,6 +94,28 @@ async def enqueue(maker, service, *, full=False):
                 select(Task).where(Task.task_uuid == result["task_uuid"])
             )
         ).scalar_one()
+
+
+@pytest.mark.parametrize("stored_priority", ["low", "normal", "high", "bogus"])
+async def test_release_is_always_queued_at_urgent_priority(
+    release_db, stored_priority
+):
+    maker, service, _ = release_db
+    result = await service._enqueue_release_task(
+        DataReleaseJobConfig(
+            job_id="site-release", name="Site Release", priority=stored_priority
+        ),
+        manual=True,
+        trigger="test",
+        trigger_task_uuid=None,
+    )
+    async with maker() as session:
+        task = (
+            await session.execute(
+                select(Task).where(Task.task_uuid == result["task_uuid"])
+            )
+        ).scalar_one()
+    assert task.priority == TaskPriority.URGENT
 
 
 @pytest.mark.parametrize("has_california", [False, True])

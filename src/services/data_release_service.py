@@ -963,7 +963,9 @@ class DataReleaseService:
             task = Task(
                 task_type=TaskType.EXPORT_DATA,
                 task_name=f"Data Release: {job.name}",
-                priority=self._normalize_priority(job.priority),
+                # A release always outranks collection and AI work in the queue,
+                # whatever priority the job row stores.
+                priority=TaskPriority.URGENT,
                 description=" ".join(description_parts),
                 input_data=input_data,
                 status=TaskStatus.QUEUED,
@@ -1321,13 +1323,6 @@ class DataReleaseService:
                 scheduled += timedelta(days=1)
             return scheduled
         return None
-
-    def _normalize_priority(self, value: str) -> TaskPriority:
-        normalized = (value or "high").strip().lower()
-        try:
-            return TaskPriority(normalized)
-        except ValueError:
-            return TaskPriority.HIGH
 
     def _python_executable(self) -> Path:
         venv_python = ROOT_DIR / "venv" / "bin" / "python3"
