@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties } from 'react';
 import './situation.css';
-import type { Locale, MapPoint, MonitoringProduct, OutbreakFile, SeriesGlance, SiteIndex, SituationAlertRecord } from '../../utils/situationTypes.ts';
+import type { Locale, MapPoint, MonitoringProduct, OutbreakFile, SeriesGlance, SiteIndex, SituationAlertRecord, SituationMapDataFile } from '../../utils/situationTypes.ts';
 import { ageDays, buildGraph, DEFAULT_FILTERS, RECENCY_COLORS, filterPoints, placeLabel, recencyOf, sortPoints, type Filters, type GraphRow, type Lane, type WindowKey } from './model.ts';
 import { COPY, STATUS_LABELS, alertSummary, basisLabel, countryName, countsLine, diseaseName, formatCount, formatDay, formatSignedPercent, sourceLabel } from './labels.ts';
 import { seriesKey } from './site.ts';
@@ -19,18 +19,16 @@ interface Props {
   locale: Locale;
   asOf: string;
   generatedAt: string;
-  points: MapPoint[];
+  /** Static JSON with markers and monitoring; kept off the HTML props for the gzip budget. */
+  dataUrl: string;
   site: SiteIndex;
-  monitoring: MonitoringProduct[];
-  activeOutbreaks: number;
-  sourcesOk: number;
-  sourceCount: number;
   links: ArchiveLinks;
 }
 
 type Selection = { kind: 'place'; id: string } | { kind: 'country'; code: string } | null;
 type ListMode = 'auto' | 'open' | 'closed';
 type Remote = OutbreakFile | 'loading' | 'error';
+type DataState = 'loading' | 'ready' | 'error';
 
 interface Option {
   id: string;
@@ -41,6 +39,43 @@ interface Option {
 const LIST_LIMIT = 300;
 const TIMELINE_PAGE = 30;
 const OUTBREAK_URL = (id: string) => `/situation/outbreaks/${encodeURIComponent(id)}.json`;
+
+function applyDeepLinks(
+  points: MapPoint[],
+  site: SiteIndex,
+  asOf: string,
+): { filters: Filters; selection: Selection } {
+  const params = new URLSearchParams(window.location.search);
+  const disease = diseaseIdFromQuery(params.get('disease') ?? '', site, points);
+  const countryRaw = (params.get('country') ?? '').toUpperCase();
+  const country = /^[A-Z]{2}$/.test(countryRaw) && (site.countries[countryRaw] || points.some(point => point.country_code.toUpperCase() === countryRaw))
+    ? countryRaw
+    : '';
+  const windowParam = params.get('window');
+  const nextWindow: WindowKey = windowParam === '7' || windowParam === '90' || windowParam === 'all' || windowParam === '30'
+    ? windowParam
+    : DEFAULT_FILTERS.window;
+  const place = params.get('place');
+  const outbreak = params.get('outbreak');
+  const match = place
+    ? points.find(point => point.alert_id === place) ?? null
+    : outbreak
+      ? sortPoints(points.filter(point => point.outbreak_id === outbreak), asOf)[0] ?? null
+      : null;
+  return {
+    filters: {
+      disease: disease || '',
+      country: country && points.some(point => point.country_code.toUpperCase() === country) ? country : '',
+      source: '',
+      window: match && ageDays(match.published_date, asOf) > 30 ? 'all' : nextWindow,
+    },
+    selection: match
+      ? { kind: 'place', id: match.alert_id }
+      : country
+        ? { kind: 'country', code: country }
+        : null,
+  };
+}
 
 function tally(points: MapPoint[], idOf: (point: MapPoint) => string | null, labelOf: (point: MapPoint) => string): Option[] {
   const counts = new Map<string, Option>();
@@ -195,17 +230,21 @@ function diseaseIdFromQuery(value: string, site: SiteIndex, points: MapPoint[]):
 
 export default function SituationExplorer({
   locale,
-  asOf,
-  generatedAt,
-  points,
+  asOf: initialAsOf,
+  generatedAt: initialGeneratedAt,
+  dataUrl,
   site,
-  monitoring,
-  activeOutbreaks,
-  sourcesOk,
-  sourceCount,
   links,
 }: Props) {
   const copy = COPY[locale];
+  const [asOf, setAsOf] = useState(initialAsOf);
+  const [generatedAt, setGeneratedAt] = useState(initialGeneratedAt);
+  const [points, setPoints] = useState<MapPoint[]>([]);
+  const [monitoring, setMonitoring] = useState<MonitoringProduct[]>([]);
+  const [activeOutbreaks, setActiveOutbreaks] = useState(0);
+  const [sourcesOk, setSourcesOk] = useState(0);
+  const [sourceCount, setSourceCount] = useState(0);
+  const [dataState, setDataState] = useState<DataState>('loading');
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [selection, setSelection] = useState<Selection>(null);
   const [listMode, setListMode] = useState<ListMode>('auto');
@@ -226,33 +265,6 @@ export default function SituationExplorer({
     const applyWide = () => setWide(query.matches);
     applyWide();
     query.addEventListener('change', applyWide);
-
-    const params = new URLSearchParams(window.location.search);
-    const disease = diseaseIdFromQuery(params.get('disease') ?? '', site, points);
-    const countryRaw = (params.get('country') ?? '').toUpperCase();
-    const country = /^[A-Z]{2}$/.test(countryRaw) && (site.countries[countryRaw] || points.some(point => point.country_code.toUpperCase() === countryRaw))
-      ? countryRaw
-      : '';
-    const windowParam = params.get('window');
-    const nextWindow: WindowKey = windowParam === '7' || windowParam === '90' || windowParam === 'all' || windowParam === '30'
-      ? windowParam
-      : DEFAULT_FILTERS.window;
-    const place = params.get('place');
-    const outbreak = params.get('outbreak');
-    const match = place
-      ? points.find(point => point.alert_id === place) ?? null
-      : outbreak
-        ? sortPoints(points.filter(point => point.outbreak_id === outbreak), asOf)[0] ?? null
-        : null;
-    setFilters({
-      disease: disease || '',
-      country: country && points.some(point => point.country_code.toUpperCase() === country) ? country : '',
-      source: '',
-      window: match && ageDays(match.published_date, asOf) > 30 ? 'all' : nextWindow,
-    });
-    if (match) setSelection({ kind: 'place', id: match.alert_id });
-    else if (country) setSelection({ kind: 'country', code: country });
-
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setSelection(null);
     };
@@ -262,9 +274,42 @@ export default function SituationExplorer({
       query.removeEventListener('change', applyWide);
       window.removeEventListener('keydown', onKey);
     };
-    // Deep links are read once, on arrival.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    let live = true;
+    setDataState('loading');
+    fetch(dataUrl)
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json() as Promise<SituationMapDataFile>;
+      })
+      .then(payload => {
+        if (!live) return;
+        const nextPoints = Array.isArray(payload.points) ? payload.points : [];
+        const nextAsOf = payload.as_of || initialAsOf;
+        setPoints(nextPoints);
+        setMonitoring(Array.isArray(payload.monitoring) ? payload.monitoring : []);
+        setActiveOutbreaks(Number(payload.active_outbreaks) || 0);
+        setSourcesOk(Number(payload.sources_ok) || 0);
+        setSourceCount(Number(payload.source_count) || 0);
+        setAsOf(nextAsOf);
+        setGeneratedAt(payload.generated_at || initialGeneratedAt);
+        const deep = applyDeepLinks(nextPoints, site, nextAsOf);
+        setFilters(deep.filters);
+        setSelection(deep.selection);
+        setDataState('ready');
+      })
+      .catch(() => {
+        if (!live) return;
+        setDataState('error');
+      });
+    return () => {
+      live = false;
+    };
+    // Markers load once per page; deep links are applied when the payload arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataUrl]);
 
   useEffect(() => {
     if (skipWrite.current) {
@@ -445,7 +490,11 @@ export default function SituationExplorer({
 
       <div className="sit-map-wrap">
         <section className="sit-map" aria-label={copy.mapLabel}>
-          {Canvas ? (
+          {dataState === 'error' ? (
+            <p className="sit-note" role="status">{copy.dataFailed}</p>
+          ) : dataState !== 'ready' ? (
+            <p className="sit-note" role="status">{copy.mapLoading}</p>
+          ) : Canvas ? (
             <Canvas
               points={visible}
               asOf={asOf}

@@ -13,9 +13,10 @@ export const DEFAULT_PERFORMANCE_BUDGETS = Object.freeze({
   maxOrdinaryRouteCompressedAssetsBytes: 300_000,
   // Raised from 100KB (2026-08-23): the multilingual Research Radar graph page
   // carries enough static graph metadata to sit just over the old cap.
-  // Situation map pages stay inside this cap by embedding markers only.
-  // Embedding full alert prose measured /zh/situation/index.html at 128,703
-  // gzip bytes on 2026-10-30 and is not the generated shape.
+  // Situation map pages stay inside this cap by fetching markers from
+  // /situation/map-data.json. Embedding the three-year marker set (1412 points)
+  // plus monitoring measured /zh/situation/index.html at 139,777 gzip bytes on
+  // 2026-11-02 and is not the generated shape.
   maxPageHtmlGzipBytes: 115_000,
   maxAverageHtmlBytes: 105_000,
   // Use both a fixed site floor and a compressed per-page ceiling. The 18.7KB

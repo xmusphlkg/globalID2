@@ -39,6 +39,7 @@ This file records release-level changes to the GIDS application and its data ope
 - The R2 bucket check signed a different path from the one it requested and always reported the bucket unreachable.
 - Publishing an empty papers bundle would have deleted every object in the bucket. It is now refused.
 - A failure while writing the release failure inventory can no longer hide the original error or skip restoring the backups.
+- The Situation map loads markers from `/situation/map-data.json`, so the three-year history stays inside the page HTML gzip budget.
 
 ### Removed
 

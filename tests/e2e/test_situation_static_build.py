@@ -186,7 +186,10 @@ def test_alert_export_builds_situation_pages_and_passes_the_release_gate(tmp_pat
         # Frontend contract: these paths exist in en/zh/fr after the rewrite.
         latest = (dist / "situation" / "index.html").read_text(encoding="utf-8")
         assert 'rel="canonical" href="https://globalinfectiousdisease.com/situation/"' in latest
-        assert "Influenza" in latest and "China" in latest
+        assert "/situation/map-data.json" in latest
+        map_data = json.loads((dist / "situation" / "map-data.json").read_text(encoding="utf-8"))
+        assert any(point.get("disease_name_en") == "Influenza" for point in map_data.get("points") or [])
+        assert any(point.get("country_name_en") == "China" for point in map_data.get("points") or [])
         for prefix in ("zh/", "fr/"):
             assert (dist / prefix / "situation" / "index.html").is_file()
         assert (dist / "situation" / "methodology" / "index.html").is_file()

@@ -1,13 +1,14 @@
 ---
 /**
  * Situation stage: a map that fills the page under the site header.
- * Each point is one disease in one place. The island also receives a compact
- * join to national surveillance, disease pages, and research.
+ * Each point is one disease in one place. Markers load from
+ * /situation/map-data.json; the island only receives a compact join to
+ * national surveillance, disease pages, and research.
  */
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import SituationExplorer from '../../components/situation/SituationExplorer';
 import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
-import { readMonitoring, readSituationMap, readSources } from '../../utils/international';
+import { readSituationMap, readSources } from '../../utils/international';
 import { readSituationSite } from '../../utils/situationSite';
 import { translateUi } from '../../utils/i18n';
 import type { MapPoint } from '../../utils/situationTypes';
@@ -20,7 +21,6 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
 
 const map = readSituationMap();
 const sources = readSources();
-const monitoring = readMonitoring();
 const published = map !== null;
 const points: MapPoint[] = map?.points ?? [];
 const diseaseIds = [...new Set(points.flatMap(point => point.disease_id ? [point.disease_id] : []))];
@@ -37,8 +37,7 @@ const site = map
       prefix,
     })
   : { countries: {}, diseases: {}, series: {} };
-const activeOutbreaks = (map?.outbreaks ?? []).filter(outbreak => outbreak.status === 'active').length;
-const sourcesOk = sources.filter(source => source.status === 'ok').length;
+const dataUrl = '/situation/map-data.json';
 
 const title = pick('Global Infectious Disease Situation Map', '全球传染病态势地图', 'Carte mondiale de la situation des maladies infectieuses');
 const description = pick(
@@ -77,12 +76,8 @@ const seo: SeoDocument = {
       locale={locale}
       asOf={map.as_of}
       generatedAt={map.generated_at}
-      points={points}
+      dataUrl={dataUrl}
       site={site}
-      monitoring={monitoring}
-      activeOutbreaks={activeOutbreaks}
-      sourcesOk={sourcesOk}
-      sourceCount={sources.length}
       links={{
         weekly: `${prefix}/situation/weekly/`,
         monthly: `${prefix}/situation/monthly/`,

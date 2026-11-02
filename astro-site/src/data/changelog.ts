@@ -100,6 +100,11 @@ export const changelogReleases: ChangelogRelease[] = [
             zh: '在新域名下的文献页中，页脚日期、搜索框和图谱链接保持可用。',
             fr: 'La date du pied de page, la recherche et les liens du graphe continuent de fonctionner sur les pages d’articles du nouveau domaine.',
           },
+          {
+            en: 'The Situation map loads its markers from /situation/map-data.json, so the three-year history stays inside the page HTML gzip budget.',
+            zh: '态势地图改为从 /situation/map-data.json 加载点位，三年历史不再撑破页面 HTML gzip 预算。',
+            fr: 'La carte de Situation charge ses marqueurs depuis /situation/map-data.json, ce qui garde l’historique sur trois ans sous le budget HTML gzip.',
+          },
         ],
       },
     ],
