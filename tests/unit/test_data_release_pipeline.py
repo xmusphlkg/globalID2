@@ -68,6 +68,30 @@ async def test_repository_publisher_failures_are_aggregated_after_all_finish():
 
 
 @pytest.mark.asyncio
+async def test_repository_publisher_preserves_release_stage_for_retry_classification():
+    from src.services.data_release.process_runner import ReleaseCommandError
+
+    async def fail_r2() -> None:
+        raise ReleaseCommandError(
+            "Publish Papers Bundle to R2 failed with exit code 1",
+            release_stage="r2_papers_publish",
+            title="Publish Papers Bundle to R2",
+            returncode=1,
+        )
+
+    async def succeed() -> None:
+        return None
+
+    with pytest.raises(ReleaseCommandError) as raised:
+        await pipeline._run_repository_publications(
+            [("r2_papers", fail_r2()), ("direct_downloads", succeed())]
+        )
+
+    assert raised.value.release_stage == "r2_papers_publish"
+    assert "r2_papers:" in str(raised.value)
+
+
+@pytest.mark.asyncio
 async def test_pipeline_local_only_success_preserves_stage_order(tmp_path):
     commands = []
     timeouts = []

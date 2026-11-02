@@ -72,6 +72,37 @@ def test_put_object_sends_cache_control_and_signs_it() -> None:
     assert "cache-control" in request.get_header("Authorization")
 
 
+def test_put_object_retries_transient_ssl_eof(monkeypatch: pytest.MonkeyPatch) -> None:
+    attempts = {"count": 0}
+    sleeps: list[float] = []
+
+    def opener(request, _timeout):
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise urllib.error.URLError(
+                OSError("UNEXPECTED_EOF_WHILE_READING EOF occurred in violation of protocol")
+            )
+        return _Response()
+
+    monkeypatch.setattr(
+        "src.services.data_release.papers_r2.time.sleep",
+        lambda seconds: sleeps.append(float(seconds)),
+    )
+    R2S3Client(CONFIG, opener=opener).put_object("research/articles/a/", b"<html></html>")
+    assert attempts["count"] == 3
+    assert sleeps == [1.0, 2.0]
+
+
+def test_put_object_gives_up_after_transport_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("src.services.data_release.papers_r2.time.sleep", lambda _seconds: None)
+
+    def opener(request, _timeout):
+        raise urllib.error.URLError(OSError("UNEXPECTED_EOF_WHILE_READING"))
+
+    with pytest.raises(R2S3Error, match="transport failed"):
+        R2S3Client(CONFIG, opener=opener).put_object("research/articles/a/", b"x")
+
+
 def test_get_object_treats_http_404_as_missing() -> None:
     def opener(request, _timeout):
         raise urllib.error.HTTPError(

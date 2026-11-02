@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -18,6 +19,10 @@ from urllib.request import Request, urlopen
 from .papers_bundle import DEFAULT_PAPERS_ORIGIN, build_papers_manifest
 
 MANIFEST_KEY = "papers-manifest.json"
+# Cloudflare R2 occasionally drops TLS mid-PUT on large incremental syncs.
+# Retry a few times inside the publisher so one EOF does not fail the release.
+_TRANSPORT_RETRY_ATTEMPTS = 5
+_TRANSPORT_RETRY_BASE_DELAY_SECONDS = 1.0
 
 _TOKEN_VERIFY_URL = "https://api.cloudflare.com/client/v4/user/tokens/verify"
 _derived_credentials: dict[str, tuple[str, str]] = {}
@@ -237,25 +242,40 @@ class R2S3Client:
         cache_control: str | None = None,
         query: str = "",
     ) -> tuple[int, bytes]:
-        request = self._signed_request(
-            method,
-            key,
-            body=body,
-            content_type=content_type,
-            cache_control=cache_control,
-            query=query,
-        )
-        try:
-            with self._opener(request, self.timeout_seconds) as response:
-                return int(getattr(response, "status", 200)), response.read()
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise R2S3Error(
-                f"R2 {method} {key!r} failed with HTTP {exc.code}: {detail}",
-                status=exc.code,
-            ) from exc
-        except urllib.error.URLError as exc:
-            raise R2S3Error(f"R2 {method} {key!r} transport failed: {exc}") from exc
+        last_error: BaseException | None = None
+        for attempt in range(1, _TRANSPORT_RETRY_ATTEMPTS + 1):
+            request = self._signed_request(
+                method,
+                key,
+                body=body,
+                content_type=content_type,
+                cache_control=cache_control,
+                query=query,
+            )
+            try:
+                with self._opener(request, self.timeout_seconds) as response:
+                    return int(getattr(response, "status", 200)), response.read()
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode("utf-8", errors="replace")
+                # 5xx from the edge is often brief; 4xx is a permanent rejection.
+                if 500 <= int(exc.code) <= 599 and attempt < _TRANSPORT_RETRY_ATTEMPTS:
+                    last_error = R2S3Error(
+                        f"R2 {method} {key!r} failed with HTTP {exc.code}: {detail}",
+                        status=exc.code,
+                    )
+                    time.sleep(_TRANSPORT_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1)))
+                    continue
+                raise R2S3Error(
+                    f"R2 {method} {key!r} failed with HTTP {exc.code}: {detail}",
+                    status=exc.code,
+                ) from exc
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                last_error = R2S3Error(f"R2 {method} {key!r} transport failed: {exc}")
+                if attempt >= _TRANSPORT_RETRY_ATTEMPTS:
+                    raise last_error from exc
+                time.sleep(_TRANSPORT_RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1)))
+        assert last_error is not None
+        raise last_error
 
     def put_object(
         self,

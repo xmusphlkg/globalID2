@@ -89,17 +89,32 @@ async def _run_repository_publications(
     )
     completed: set[str] = set()
     failures: list[str] = []
+    stage_errors: list[BaseException] = []
     for (name, _publication), result in zip(publications, results):
         if isinstance(result, asyncio.CancelledError):
             raise result
         if isinstance(result, BaseException):
             failures.append(f"{name}: {result}")
+            stage_errors.append(result)
         else:
             completed.add(name)
     if failures:
-        raise RuntimeError(
-            "Parallel repository publication failed:\n" + "\n".join(failures)
-        )
+        # Prefer the first publisher's stage tag so transient R2/Git failures
+        # stay eligible for the automatic release retry allow-list.
+        primary = stage_errors[0]
+        message = "Parallel repository publication failed:\n" + "\n".join(failures)
+        stage = getattr(primary, "release_stage", None)
+        if stage:
+            from .process_runner import ReleaseCommandError
+
+            raise ReleaseCommandError(
+                message,
+                release_stage=str(stage),
+                title=str(getattr(primary, "title", None) or "Repository publication"),
+                returncode=getattr(primary, "returncode", None),
+                timed_out=bool(getattr(primary, "timed_out", False)),
+            ) from primary
+        raise RuntimeError(message)
     return completed
 
 
