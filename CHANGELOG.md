@@ -4,6 +4,10 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+### Added
+
+- Situation reads ECDC public health events (`ecdc_events`) as a new source: outbreak pages, seasonal mosquito-borne surveillance and risk assessments in production, which ECDC updates daily and the weekly CDTR only summarizes later. The adapter pages the public listing newest first and keeps the latest version of each event per ISO week. Page bodies are read in full and go through the same two-model review as every other source. The source appears in the control-panel Situation workspace without frontend changes.
+
 ## [0.17.1] - 2026-11-02
 
 ### Added

@@ -14,8 +14,8 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any, Callable
 
+from . import africa_cdc, ecdc_cdtr, ecdc_events, paho, who_don, who_periodicals
 from .catalogue import SOURCE_REGISTRY
-from . import africa_cdc, ecdc_cdtr, paho, who_don, who_periodicals
 from .events import utc_now
 
 #: How far back a scheduled run looks by default.  DON publishes a handful of
@@ -31,6 +31,11 @@ def _load_who_don(*, since: date, limit: int) -> list[dict[str, Any]]:
 def _load_ecdc_cdtr(*, since: date, **_: Any) -> list[dict[str, Any]]:
     # RSS only lists the latest issues.  The archive pager stops at ``since``.
     return ecdc_cdtr.fetch_items(since=since.isoformat())
+
+
+def _load_ecdc_events(*, since: date, **_: Any) -> list[dict[str, Any]]:
+    # The listing has no feed; the pager is sorted newest first and stops at ``since``.
+    return ecdc_events.fetch_items(since=since.isoformat())
 
 
 def _load_who_wer(*, since: date, limit: int) -> list[dict[str, Any]]:
@@ -52,6 +57,7 @@ def _load_paho(*, since: date, **_: Any) -> list[dict[str, Any]]:
 SOURCE_LOADERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "who_don": _load_who_don,
     "ecdc_cdtr": _load_ecdc_cdtr,
+    "ecdc_events": _load_ecdc_events,
     "who_wer": _load_who_wer,
     "who_wpro": _load_who_wpro,
     "africa_cdc": _load_africa_cdc,

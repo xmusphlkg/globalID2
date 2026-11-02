@@ -198,6 +198,39 @@ def _wp_rest(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
     return FetchedDocument(HTML, f"{title}\n\n{body}" if title else body)
 
 
+def ecdc_event_text(markup: str) -> str:
+    """Body of an ECDC public health event page: its titled sections, without site navigation.
+
+    Each section (Key facts, Overview, ECDC assessment, Actions, ...) is a heading
+    with the ``ecdc-section-anchor`` class followed by its content in the same block.
+    """
+
+    soup = BeautifulSoup(markup or "", "html.parser")
+    parts: list[str] = []
+    for heading in soup.select("h2.ecdc-section-anchor"):
+        for link in heading.find_all("a"):
+            link.decompose()
+        name = heading.get_text(" ", strip=True)
+        block = heading.parent
+        heading.extract()
+        body = html_to_text(str(block)) if block is not None else ""
+        if body:
+            parts.append(f"## {name}\n{body}")
+    if not parts:
+        return ""
+    title = soup.find("h1")
+    head = title.get_text(" ", strip=True) if title is not None else ""
+    return "\n\n".join([head, *parts] if head else parts)
+
+
+def _ecdc_event(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
+    page = fetch(_https(ref.get("page_url")), client=client)
+    text = ecdc_event_text(page.text)
+    if not text:
+        raise DocumentUnavailable("ECDC event page has no readable sections")
+    return FetchedDocument(HTML, text)
+
+
 def pdf_link(markup: str, base_url: str) -> str | None:
     """First anchor on a landing page that downloads a PDF (a ``.pdf`` link or a repository bitstream)."""
 
@@ -311,6 +344,7 @@ def _dspace(ref: dict[str, Any], client: httpx.Client) -> FetchedDocument:
 _HANDLERS: dict[str, Callable[[dict[str, Any], httpx.Client], FetchedDocument]] = {
     "who_don": _who_don,
     "wp_rest": _wp_rest,
+    "ecdc_event": _ecdc_event,
     "pdf_page": _pdf_page,
     "dspace": _dspace,
 }

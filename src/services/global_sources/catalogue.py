@@ -50,6 +50,18 @@ SOURCE_REGISTRY: dict[str, dict[str, Any]] = {
         "license": "CC BY 4.0 with attribution to ECDC",
         "license_zh": "CC BY 4.0，需注明来源为 ECDC",
     },
+    "ecdc_events": {
+        "source_id": "ecdc_events",
+        "label": {"en": "ECDC public health events", "zh": "欧洲疾控中心公共卫生事件"},
+        "agency": {"en": "European Centre for Disease Prevention and Control", "zh": "欧洲疾病预防控制中心"},
+        "homepage": "https://www.ecdc.europa.eu/en/public-health-events",
+        # No feed exists; the adapter pages the public listing, newest first.
+        "endpoint": "https://www.ecdc.europa.eu/en/public-health-events",
+        "cadence": {"en": "daily to weekly as events are updated", "zh": "随事件更新，每日至每周"},
+        "redistribution": "metadata_and_extract",
+        "license": "CC BY 4.0 with attribution to ECDC",
+        "license_zh": "CC BY 4.0，需注明来源为 ECDC",
+    },
     "who_wer": {
         "source_id": "who_wer",
         "label": {"en": "WHO Weekly Epidemiological Record", "zh": "世卫组织每周流行病学记录"},

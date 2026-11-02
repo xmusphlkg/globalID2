@@ -9,11 +9,15 @@ the data release (`src/services/situation_notices/runner.py`).
 ## Pipeline
 
 1. **Collect.** Adapters in `src/services/global_sources/` list recent reports
-   from WHO Disease Outbreak News, ECDC CDTR, Africa CDC, PAHO (IRIS) and the
-   WHO WER/WPRO listings. Each report carries a `document_ref` saying where its
-   body lives.
+   from WHO Disease Outbreak News, ECDC CDTR, ECDC public health events, Africa
+   CDC, PAHO (IRIS) and the WHO WER/WPRO listings. Each report carries a
+   `document_ref` saying where its body lives. ECDC public health events have no
+   feed: `ecdc_events.py` pages the public listing (50 cards a page, newest
+   first) and keeps the newest version of each event per ISO week, because an
+   event such as Ebola is republished under a new dated URL almost daily.
 2. **Fetch full text.** `documents.py` downloads the body: WHO DON sections via
-   the hub API, HTML pages, PDFs (text via pdfplumber) and PAHO DSpace items.
+   the hub API, ECDC event pages (their titled sections without site
+   navigation), HTML pages, PDFs (text via pdfplumber) and PAHO DSpace items.
    PDFs are also kept as original files.
 3. **Extract alerts.** An author model reads the whole document and drafts
    alerts; a different reviewer model audits the draft. Routes that read PDFs
