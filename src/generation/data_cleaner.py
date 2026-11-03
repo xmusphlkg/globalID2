@@ -33,6 +33,11 @@ def resolve_frequency(group: pd.DataFrame, time_col: str = "time") -> Frequency 
             continue
         raw = metadata.get("temporal_granularity") or metadata.get("frequency")
         value = FREQUENCY_ALIASES.get(str(raw).strip().lower())
+        # IDWR's source-native MMWR fields identify a weekly observation even
+        # when a report window contains only one point for this disease.
+        if value is None and metadata.get("mmwr_year") and str(metadata.get("mmwr_week", "")).isdigit():
+            if 1 <= int(metadata["mmwr_week"]) <= 53:
+                value = "weekly"
         if value:
             declared.add(value)
     if len(declared) > 1:

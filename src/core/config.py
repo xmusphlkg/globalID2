@@ -520,6 +520,21 @@ class DataReleaseSettings(_BaseEnvSettings):
         validation_alias="R2_PAPERS_PUBLIC_BASE_URL",
         description="papers 子域公开 base URL",
     )
+    r2_reports_enabled: bool = Field(
+        default=True,
+        validation_alias="DATA_RELEASE__R2_REPORTS_ENABLED",
+        description="是否在站点发布时同步 reports 子域到独立 R2 bucket",
+    )
+    r2_reports_bucket: str = Field(
+        default="globalid-reports",
+        validation_alias="R2_REPORTS_BUCKET",
+        description="国家周期报告页面所在的 R2 bucket",
+    )
+    r2_reports_public_base_url: str = Field(
+        default="https://reports.globalinfectiousdisease.com",
+        validation_alias="R2_REPORTS_PUBLIC_BASE_URL",
+        description="reports 子域公开 base URL",
+    )
     r2_access_key_id: str = Field(
         default="",
         validation_alias="R2_ACCESS_KEY_ID",
@@ -896,6 +911,38 @@ class ReportSettings(BaseSettings):
         default=20,
         alias="MAX_PARALLEL_TASKS",
         description="AI并行任务数"
+    )
+    schedule_enabled: bool = Field(
+        default=True,
+        validation_alias="REPORT_SCHEDULE_ENABLED",
+        description="是否根据日本试点监测数据的更新频率自动生成周期报告",
+    )
+    schedule_poll_interval_seconds: int = Field(
+        default=900,
+        ge=60,
+        le=86400,
+        validation_alias="REPORT_SCHEDULE_POLL_INTERVAL_SECONDS",
+        description="检查新完整报告周期的间隔秒数",
+    )
+    schedule_max_tasks_per_tick: int = Field(
+        default=3,
+        ge=1,
+        le=20,
+        validation_alias="REPORT_SCHEDULE_MAX_TASKS_PER_TICK",
+        description="每轮自动排入队列的报告数量上限",
+    )
+    schedule_max_active_tasks: int = Field(
+        default=6,
+        ge=1,
+        le=50,
+        validation_alias="REPORT_SCHEDULE_MAX_ACTIVE_TASKS",
+        description="同时处于排队、运行或重试状态的自动报告任务上限",
+    )
+    schedule_min_records: int = Field(
+        default=1,
+        ge=1,
+        validation_alias="REPORT_SCHEDULE_MIN_RECORDS",
+        description="报告周期内至少需要的旧版生成器记录数",
     )
 
 

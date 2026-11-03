@@ -19,6 +19,7 @@ from ..schemas.report import (
     ReportOut,
     ReportSectionOut,
     ReportSectionRunOut,
+    ReportWorkflowOut,
 )
 from src.domain.country import Country
 from src.domain.report import AIConversation, Report, ReportSection, ReportSectionRun, ReportStatus, ReportType
@@ -255,6 +256,12 @@ async def list_reports(
         )
         for r in rows
     ]
+
+
+@router.get("/reports/workflow", response_model=ReportWorkflowOut)
+async def report_workflow():
+    from src.services.report_schedule_service import report_schedule_service
+    return await report_schedule_service.workflow_snapshot()
 
 
 @router.get("/reports/{report_uuid}", response_model=ReportDetailOut)

@@ -23,7 +23,7 @@ from src.generation.v3_historical import build_historical_context
 
 logger = get_logger(__name__)
 
-METHOD_VERSION = "report_v4.3"
+METHOD_VERSION = "report_v4.6"
 
 ATTENTION_SCORE_SEMANTICS: Dict[str, Any] = {
     "type": "surveillance_attention_priority",

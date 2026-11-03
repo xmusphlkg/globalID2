@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const allowedDevOrigins = (process.env.GLOBALID_DASHBOARD_ALLOWED_DEV_ORIGINS || "localhost,127.0.0.1,192.168.30.10")
   .split(",")
@@ -6,6 +7,8 @@ const allowedDevOrigins = (process.env.GLOBALID_DASHBOARD_ALLOWED_DEV_ORIGINS ||
   .filter(Boolean);
 
 const nextConfig: NextConfig = {
+  // Report chart option builders are shared with the public Astro site.
+  turbopack: { root: path.resolve(__dirname, "..") },
   output: "standalone",
   distDir: process.env.GLOBALID_NEXT_DIST_DIR || ".next",
   poweredByHeader: false,

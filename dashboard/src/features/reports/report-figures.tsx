@@ -1,6 +1,11 @@
 "use client";
 
 import { Chart, echarts } from "@/components/charts/Chart";
+import { reportFigureView } from "../../../../shared/report-figure-options";
+
+import { BoxplotChart } from "echarts/charts";
+import { MarkAreaComponent } from "echarts/components";
+echarts.use([BoxplotChart, MarkAreaComponent]);
 
 type RecordValue = Record<string, unknown>;
 
@@ -492,6 +497,21 @@ function figureTypeLabel(figure: RecordValue, lang: "en" | "zh"): string {
 }
 
 export function ReportFigureList({ figures, figureData, lang, placement }: ReportFigureListProps) {
+  const pilotFigures = figures.filter(figure => figure.contract === "report_v4.figures.1" && (!placement || figure.position === placement));
+  if (pilotFigures.length) return <div className="my-4 space-y-3">{pilotFigures.slice(0, 1).map(figure => {
+    const view = reportFigureView(figure, figureData, lang);
+    if (!view) return null;
+    return <figure key={String(figure.id)} className="min-w-0 rounded-md border border-[var(--cc-border)] p-4">
+      <h4 className="text-sm font-semibold">{lang === "zh" ? "图" : "Figure"} {String(figure.number)} · {view.title}</h4>
+      <Chart option={view.option} height={340} />
+      <figcaption className="cc-muted text-xs leading-5">{view.caption}</figcaption>
+      <details className="mt-3 text-xs"><summary className="cursor-pointer">{lang === "zh" ? "查看图表数据" : "View chart data"}</summary>
+        <table className="cc-table mt-2 w-full text-left"><thead><tr>{view.columns.map(column => <th scope="col" key={column}>{column}</th>)}</tr></thead>
+          <tbody>{view.rows.map((row, index) => <tr key={index}>{row.map((cell, i) => <td key={i}>{cell}</td>)}</tr>)}</tbody>
+        </table>
+      </details>
+    </figure>;
+  })}</div>;
   const visibleFigures = figures
     .filter((figure) => asString(figure.renderer) === "echarts")
     .filter((figure) => (placement ? (asString(figure.position) || "after_content") === placement : true))

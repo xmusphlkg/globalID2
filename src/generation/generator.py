@@ -150,6 +150,7 @@ class ReportGenerator:
                     period_end=period_end,
                     output_dir=self.output_dir,
                     raw_sources=[],
+                    progress_callback=notify,
                 )
             )
             await notify("analysis", 3, 3, "report_v4 quality gate passed")

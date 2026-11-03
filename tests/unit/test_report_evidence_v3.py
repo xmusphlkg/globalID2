@@ -64,7 +64,24 @@ def test_report_v4_treats_case_only_zero_deaths_as_not_reported() -> None:
     reporting = packet["death_reporting"]
     assert reporting["status"] == "not_reported"
     assert reporting["total_deaths"] is None
+    assert packet["summary_metrics"]["latest_deaths"] is None
     assert "未提供死亡数字段" in reporting["display_note"]["zh"]
+
+
+def test_single_idwr_week_keeps_weekly_grain_in_evidence_and_snapshot() -> None:
+    from src.generation.report_v4.surveillance_snapshot import build_surveillance_snapshot
+
+    data = pd.DataFrame([{"disease_id": 1, "time": "2026-10-04", "cases": 12,
+                          "deaths": None, "metadata": {"mmwr_year": "2026", "mmwr_week": "40"}}])
+    start, end = datetime(2026, 9, 28, tzinfo=timezone.utc), datetime(2026, 10, 4, tzinfo=timezone.utc)
+    packet = build_evidence_packet(data=data, historical_data=data, country=_country(),
+                                  diseases=_diseases(), period_start=start, period_end=end,
+                                  source_policy=SourcePolicy(death_counts="not_reported"))
+    snapshot = build_surveillance_snapshot(data, diseases=_diseases(), period_start=start, period_end=end)
+    assert packet["reporting_cadence"] == "weekly"
+    assert snapshot["series"]["D048"]["period_starts"] == ["2026-09-28"]
+    assert snapshot["series"]["D048"]["period_ends_exclusive"] == ["2026-10-05"]
+    assert snapshot["series"]["D048"]["point_quality_statuses"] == [""]
 
 
 def test_report_v4_preserves_true_reported_zero_deaths() -> None:
@@ -89,6 +106,23 @@ def test_report_v4_preserves_true_reported_zero_deaths() -> None:
     reporting = packet["death_reporting"]
     assert reporting["status"] == "reported_zero"
     assert reporting["total_deaths"] == 0
+
+
+def test_death_gate_allows_explicit_uncertainty_but_still_rejects_assertions() -> None:
+    from src.generation.report_v4.quality import ReportV4QualityGate
+
+    def check(text):
+        return ReportV4QualityGate._check_death_claims({
+            "death_reporting": {"status": "not_reported"},
+            "summary": {"zh": text},
+        })
+
+    assert not check("死亡数据缺失不代表无死亡负担。")
+    assert not check("Missing data do not indicate no deaths.")
+    assert not check("Missing data should not be interpreted as zero deaths.")
+    assert check("本期无死亡。")
+    assert check("死亡数据缺失不代表无死亡负担。但本期无死亡。")
+    assert check("Missing data do not indicate no deaths. There were zero deaths.")
 
 
 def test_report_v4_quality_gate_rejects_mixed_language_and_bad_death_claims() -> None:

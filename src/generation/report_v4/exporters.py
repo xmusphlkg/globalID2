@@ -47,6 +47,7 @@ class ReportV4Persistence:
             "report_layout": "report_v4",
             "schema_version": SCHEMA_VERSION,
             "method_version": METHOD_VERSION,
+            "peer_review": document.get("peer_review") or {},
             "language": "zh",
             "default_locale": document.get("default_locale"),
             "locales": document.get("locales"),
@@ -64,7 +65,7 @@ class ReportV4Persistence:
             "risk_ranking": document.get("risk_ranking") or [],
             "references": document.get("references") or [],
             "figures": document.get("figures") or [],
-            "figure_data": {},
+            "figure_data": document.get("figure_data") or {},
             "surveillance_snapshot": surveillance_snapshot,
             "data_signature": (document.get("metrics") or {}).get("data_signature"),
             "evidence_packet": {
