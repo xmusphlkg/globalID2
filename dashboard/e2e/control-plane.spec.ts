@@ -334,6 +334,18 @@ const test = base.extend<{ state: State }>({
   },
 });
 
+async function prepareAccessibilityAudit(page: Page) {
+  // Polling can enable controls during axe's asynchronous scan. Reduced-motion
+  // transitions still occupy a frame, so inspect static states throughout the
+  // audit. This changes no colors, opacity states, semantics, or axe rules.
+  await page.addStyleTag({ content: `
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  ` });
+}
+
 async function fitsViewport(page: Page) {
   const dimensions = await page.evaluate(() => ({
     viewport: innerWidth,
@@ -717,6 +729,7 @@ test("core control center pages meet automated accessibility checks", async ({ p
     await page.goto(path);
     await expect(page.locator("main h1")).toBeVisible();
     await expect(page.getByRole("status").filter({ hasText: /^Loading/ })).toHaveCount(0);
+    await prepareAccessibilityAudit(page);
     const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
     expect(result.violations, `${path} accessibility`).toEqual([]);
   }
@@ -919,14 +932,7 @@ test("source pages and new workbenches meet automated accessibility checks", asy
     await expect(page.locator("main h1")).toBeVisible();
     await expect(page.locator("main").getByRole("status").filter({ hasText: /^Loading/ })).toHaveCount(0);
     if (path.includes("ingestion")) await page.getByRole("button", { name: "New collection run" }).click();
-    // Loading can end before a newly enabled button's opacity transition does.
-    // Audit its settled colors, retaining every contrast rule below.
-    await page.evaluate(async () => {
-      const animations = document.getAnimations().filter(
-        (animation) => animation.effect?.getComputedTiming().endTime !== Infinity,
-      );
-      await Promise.all(animations.map((animation) => animation.finished.catch(() => {})));
-    });
+    await prepareAccessibilityAudit(page);
     const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
     expect(result.violations, `${path} accessibility`).toEqual([]);
   }
