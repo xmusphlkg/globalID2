@@ -6,6 +6,11 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Added
 
+- Japan report generation now has a scheduled control-panel workflow, an AI author/reviewer pass, and a curated library of 12 evidence-bound ECharts templates. Priority diseases can include up to 52 periods of historical context; changes in source or reporting scope are shown as separate segments.
+- Country report archives and report data are published on `reports.globalinfectiousdisease.com` from a dedicated R2 bundle, with its own directory, sitemap, robots policy, preflight, and public-host verification.
+- Reports can be refreshed independently with `--reports-only`; unchanged detail files are reused. Incremental Astro builds retain shared hashed assets needed by cached pages.
+- Research article pages group related Situation signals by disease and geography, keeping exact geographic matches distinct from disease-only context.
+
 - Situation reads ECDC public health events (`ecdc_events`) as a new source: outbreak pages, seasonal mosquito-borne surveillance and risk assessments in production, which ECDC updates daily and the weekly CDTR only summarizes later. The adapter pages the public listing newest first and keeps the latest version of each event per ISO week. Page bodies are read in full and go through the same two-model review as every other source. The source appears in the control-panel Situation workspace without frontend changes.
 
 ## [0.17.1] - 2026-11-02
