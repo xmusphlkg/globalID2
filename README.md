@@ -136,9 +136,10 @@ deploying Pages. Raw archiving is a separate retention channel; the diagram
 shows data flow rather than execution order. Public data freshness depends on
 completion of this release workflow. See [Reports hosting](docs/REPORTS_HOSTING.md)
 for R2 hosting and the automatic country-report schedule.
-When shared asset hashes change, an additional compatibility deployment makes
-the new assets available alongside the previous site before R2 HTML references
-them. Ordinary data-only releases skip this step.
+Papers and Reports bundles include their referenced build assets and transitive
+dependencies. R2 uploads those assets before HTML and retains the preceding
+generation for cached pages. Legacy Papers bundles that still reference main-site
+build assets require a verified compatibility deployment before publication.
 
 Incremental publishing uses scoped data exports, deterministic download files,
 cached article, research collection, country and disease rendering, cached

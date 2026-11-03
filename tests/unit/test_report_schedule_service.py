@@ -1,4 +1,6 @@
 from datetime import date, datetime, timezone
+from contextlib import asynccontextmanager
+import os
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -126,3 +128,67 @@ def test_manual_runs_also_block_duplicate_scheduled_generation():
         SimpleNamespace(input_data={"days": 30}),
     ])
     assert keys == {"JP:WEEKLY:2026-10-12", "JP:*"}
+
+
+@pytest.mark.asyncio
+async def test_report_windows_count_only_eligible_public_national_observations(monkeypatch):
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from src.services import report_schedule_service as module
+
+    url = os.environ.get("TEST_DATABASE_URL") or (
+        os.environ.get("DATABASE_URL") if os.environ.get("CI") == "1" else None
+    )
+    if not url or not url.startswith("postgresql"):
+        pytest.skip("requires an explicit test PostgreSQL database")
+    engine = create_async_engine(url)
+    try:
+        async with engine.connect() as connection, connection.begin():
+            # Temporary tables isolate this fixture from every persistent table.
+            for statement in (
+                "CREATE TEMP TABLE countries (id integer, code text, name_en text, is_active boolean) ON COMMIT DROP",
+                "CREATE TEMP TABLE disease_surveillance_series (series_code text, country_code text, temporal_granularity text, source_system text) ON COMMIT DROP",
+                "CREATE TEMP TABLE disease_series_observations (series_code text, time timestamptz, geography_key text, suppressed boolean, value numeric, quality_status text) ON COMMIT DROP",
+                "INSERT INTO countries VALUES (1, 'JP', 'Japan', true)",
+                "INSERT INTO disease_surveillance_series VALUES ('weekly', 'JP', 'weekly', 'official'), ('private', 'JP', 'daily', 'private'), ('monthly', 'JP', 'monthly', 'official')",
+            ):
+                await connection.execute(text(statement))
+            rows = [
+                ("weekly", "2026-10-12", "national", False, 1, "accepted"),
+                ("weekly", "2026-10-18", "national", False, 2, "accepted"),
+                ("weekly", "2026-10-19", "national", False, 3, "accepted"),
+                ("weekly", "2026-10-20", "prefecture", False, 4, "accepted"),
+                ("weekly", "2026-10-20", "national", True, 5, "accepted"),
+                ("weekly", "2026-10-20", "national", False, None, "accepted"),
+                ("weekly", "2026-10-20", "national", False, 6, "rejected"),
+                ("private", "2026-10-20", "national", False, 7, "accepted"),
+                ("monthly", "2026-10-12", "national", False, 8, "accepted"),
+            ]
+            await connection.execute(text("""
+                INSERT INTO disease_series_observations VALUES
+                (:series, :time, :geography, :suppressed, :value, :quality)
+            """), [dict(series=series, time=datetime.fromisoformat(day).replace(tzinfo=timezone.utc),
+                         geography=f"country:JP:{geography}", suppressed=suppressed,
+                         value=value, quality=quality)
+                    for series, day, geography, suppressed, value, quality in rows])
+
+            @asynccontextmanager
+            async def database():
+                yield connection
+
+            monkeypatch.setattr(module, "get_database", database)
+            monkeypatch.setattr(module, "get_country_bootstrap_config", lambda _: {"public_source_systems": ["official"]})
+            service = ReportScheduleService()
+            monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(schedule_min_records=2))
+            windows = await service._country_report_windows(today=date(2026, 10, 22))
+            assert [(w.country_code, w.frequency, w.period_start, w.record_count) for w in windows] == [
+                ("JP", "WEEKLY", date(2026, 10, 12), 2),
+            ]
+            assert await service._observation_dates([1]) == {
+                1: [date(2026, 10, 12), date(2026, 10, 18), date(2026, 10, 19)],
+            }
+            await connection.execute(text("UPDATE disease_surveillance_series SET temporal_granularity = 'unspecified' WHERE series_code = 'weekly'"))
+            window = ReportWindow(1, "JP", "Japan", "WEEKLY", date(2026, 10, 19), date(2026, 10, 12), date(2026, 10, 18), 0)
+            assert (await service._attach_record_counts([window]))[0].record_count == 2
+    finally:
+        await engine.dispose()

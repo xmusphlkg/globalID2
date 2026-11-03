@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
+from .bundle_assets import copy_bundle_assets
+
 DEFAULT_MAIN_SITE_ORIGIN = "https://globalinfectiousdisease.com"
 DEFAULT_PAPERS_ORIGIN = "https://papers.globalinfectiousdisease.com"
 DEFAULT_PAGES_FILE_BUDGET = 20_000
@@ -119,7 +121,7 @@ def rewrite_papers_html(
     main_origin: str = DEFAULT_MAIN_SITE_ORIGIN,
     papers_origin: str = DEFAULT_PAPERS_ORIGIN,
 ) -> str:
-    """Rewrite article HTML so shared assets resolve on the main site.
+    """Keep versioned build assets on the papers host and navigation on main.
 
     Papers-owned paths stay root-relative (same host after R2 upload). Absolute
     main-site URLs that point at papers content are rewritten to ``papers_origin``.
@@ -130,7 +132,7 @@ def rewrite_papers_html(
 
     def _attr(match: re.Match[str]) -> str:
         url = match.group("url")
-        if is_papers_root_url(url):
+        if is_papers_root_url(url) or url.startswith("/_astro/"):
             return match.group(0)
         return f"{match.group('prefix')}{main}{url}{match.group('suffix')}"
 
@@ -416,6 +418,18 @@ def split_papers_bundle(
             shutil.move(str(path), str(destination))
             moved.append(f"{PAPERS_HOST_DIR}/{relative}")
 
+    assets = copy_bundle_assets(dist_dir, papers_dir, [path for path in expected if path.suffix == ".html"])
+    expected.update(assets)
+    current_assets = sorted(path.relative_to(papers_dir).as_posix() for path in assets)
+    generations = [current_assets]
+    generations.extend(group for group in previous_manifest.get("asset_generations", []) if group != current_assets)
+    generations = generations[:2]
+    for generation in generations:
+        for relative in generation:
+            path = papers_dir / relative
+            if path.resolve().is_relative_to(papers_dir.resolve()) and path.is_file():
+                expected.add(path)
+
     # Remove emptied directories left behind under dist.
     for directory in sorted(
         (path for path in dist_dir.rglob("*") if path.is_dir()),
@@ -448,6 +462,8 @@ def split_papers_bundle(
             stale.unlink()
     manifest = build_papers_manifest(papers_dir, papers_origin=papers_origin)
     manifest["rewrite_fingerprint"] = rewrite_fingerprint
+    manifest["asset_generations"] = generations
+    manifest["local_build_assets"] = True
     for item in manifest["files"]:
         if item["path"] in sources:
             item["source_sha256"] = sources[item["path"]]

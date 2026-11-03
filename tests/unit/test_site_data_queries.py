@@ -49,6 +49,48 @@ def mapped_row(**values):
     return SimpleNamespace(_mapping=values)
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fail", [False, True])
+async def test_export_stream_batches_preserve_order_and_close_on_failure(fail):
+    class Stream:
+        closed = False
+
+        async def partitions(self, size):
+            assert size == 2
+            yield [1, 2]
+            if fail:
+                raise RuntimeError("stream failed")
+            yield [3]
+
+        async def close(self):
+            self.closed = True
+
+    stream = Stream()
+
+    class Session:
+        async def stream(self, statement, params, *, execution_options):
+            assert execution_options == {"yield_per": 2}
+            return stream
+
+    result = []
+    try:
+        async for row in site_data_queries._iter_query_rows(Session(), "query", {}, batch_size=2):
+            result.append(row)
+    except RuntimeError as exc:
+        assert fail and str(exc) == "stream failed"
+    else:
+        assert not fail
+    assert result == ([1, 2] if fail else [1, 2, 3])
+    assert stream.closed
+
+
+@pytest.mark.asyncio
+async def test_export_stream_execute_fallback_keeps_order():
+    assert [row async for row in site_data_queries._iter_query_rows(
+        FakeSession(FakeRows([1, 2, 3])), "query", {}, batch_size=2,
+    )] == [1, 2, 3]
+
+
 def test_generate_script_reexports_query_api_without_wrappers() -> None:
     """Keep historical script imports and monkeypatch targets stable."""
     for name in QUERY_EXPORTS:

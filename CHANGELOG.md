@@ -4,6 +4,17 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+### Changed
+
+- Site export consumes database streams in batches, reducing per-row async overhead while preserving bounded memory and output order.
+- Scheduled report readiness and cadence inference use eligible public national source-series observations instead of the legacy projection.
+
+### Fixed
+
+- Research article Situation context merges repeated countries and source events within each disease/evidence relationship. Historical geographic context has its own label; precise and disease-only matches remain separate.
+- Public research pages share width, spacing and title scales; copyright and terms use the interface font, and subscription panels use the shared flat surface treatment.
+- Papers bundles now carry their referenced build assets and transitive fonts/scripts, uploading assets before HTML and retaining the preceding generation. New self-contained bundles no longer require the missing previous Pages snapshot; legacy bundles retain the verified compatibility-deployment gate.
+
 ## [0.17.2] - 2026-11-03
 
 ### Added

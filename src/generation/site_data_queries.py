@@ -211,8 +211,11 @@ async def _iter_query_rows(session, statement, params, *, batch_size: int = 10_0
         execution_options={"yield_per": batch_size},
     )
     try:
-        async for row in rows:
-            yield row
+        # Cross SQLAlchemy's async/greenlet bridge once per bounded batch,
+        # rather than once per observation in these multi-million-row exports.
+        async for batch in rows.partitions(batch_size):
+            for row in batch:
+                yield row
     finally:
         await rows.close()
 

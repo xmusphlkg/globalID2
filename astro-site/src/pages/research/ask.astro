@@ -393,12 +393,12 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
 </script>
 
 <style is:global>
-  .ask-page { width: min(78rem, calc(100% - 2rem)); margin: 0 auto; padding: clamp(1.25rem, 4vw, 2.75rem) 0 4rem; }
+  .ask-page { width: min(var(--page-tool-width), calc(100% - var(--page-gutter))); margin: 0 auto; padding: var(--page-block-space) 0 3rem; }
   .ask-hero { padding: clamp(1.25rem, 4vw, 2.75rem); background: linear-gradient(135deg, rgb(var(--surface)), rgb(var(--surface-raised) / .46)); }
   .ask-hero-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 21rem); gap: clamp(1.5rem, 5vw, 4.5rem); align-items: stretch; }
   .ask-hero-copy { min-width: 0; }
   .ask-title-row { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-top: .7rem; }
-  .ask-hero h1 { max-width: 62rem; color: rgb(var(--text-strong)); font: 600 clamp(2.35rem, 6vw, 4.7rem)/.98 'IBM Plex Sans', sans-serif; letter-spacing: -.05em; }
+  .ask-hero h1 { max-width: 62rem; color: rgb(var(--text-strong)); font: 600 var(--page-title-size)/.98 'IBM Plex Sans', sans-serif; letter-spacing: -.05em; }
   .ask-title-index { flex: 0 0 auto; padding-bottom: .25rem; color: rgb(var(--text-faint)); font: 600 .62rem/1 ui-monospace, monospace; letter-spacing: .12em; }
   .ask-lede { max-width: 52rem; margin-top: 1rem; color: rgb(var(--text-muted)); font-size: clamp(.92rem, 1.8vw, 1.08rem); line-height: 1.72; }
   .ask-method-card { border-left: 1px solid rgb(var(--border-soft) / .72); padding: .1rem 0 .1rem 1.35rem; }
@@ -488,7 +488,7 @@ const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en
     .ask-method-card small { display: block; }
   }
   @media (max-width: 640px) {
-    .ask-page { width: min(100% - 1rem, 78rem); padding-top: 1rem; }
+    .ask-page { width: min(var(--page-tool-width), calc(100% - var(--page-gutter))); padding-top: 1rem; }
     .ask-title-row { align-items: start; }
     .ask-title-index { padding-top: .4rem; }
     .ask-input-row { grid-template-columns: 1fr; }

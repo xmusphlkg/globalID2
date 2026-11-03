@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ReportLayout from '../../../layouts/ReportLayout.astro';
 import researchRoutes from '../../../data/research/routes.json';
+import { groupResearchSignals } from '../../../lib/research-signal-groups';
 import { integrityAlertLabel, normalizeIntegrityAlerts } from '../../../lib/research-integrity';
 import { buildAlternatePaths, clampSeoDescription, clampSeoTitle, normalizeDiseaseHref } from '../../../lib/seo';
 import { DISEASE_NAMES_FR, DISEASE_NAMES_FR_BY_ID } from '../../../utils/diseaseNames';
@@ -131,19 +132,7 @@ const provenanceDisclosureFr = summaryProvenance?.editorially_approved
   : 'Ce résumé de preuves multilingue a été généré par IA et a passé un contrôle qualité automatisé ; il n’a pas encore été approuvé par la rédaction.';
 const relatedSurveillance = article.related_surveillance ?? [];
 const relatedSignals = (article.related_signals ?? []).filter((signal: any) => signal.visibility === 'public' || import.meta.env.DEV);
-// Keep exact geographic matches separate from disease-only background.
-const signalGroups = Array.from(relatedSignals.reduce((groups: Map<string, any>, signal: any) => {
-  const key = JSON.stringify([signal.disease_id ?? signal.disease_name_en, signal.relation_level]);
-  if (!groups.has(key)) groups.set(key, { disease: signal, relation: signal.relation_level, signals: [], places: new Map(), latest: '' });
-  const group = groups.get(key);
-  group.signals.push(signal);
-  for (const place of signal.geographies ?? []) {
-    group.places.set(place.code ?? place.name_en, place);
-  }
-  if (signal.data_through && signal.data_through > group.latest) group.latest = signal.data_through;
-  return groups;
-}, new Map<string, any>()).values()) as any[];
-signalGroups.sort((a, b) => Number(b.relation === 'exact_disease_geography') - Number(a.relation === 'exact_disease_geography'));
+const signalGroups = groupResearchSignals(relatedSignals);
 const surveillanceGroups = Array.from(relatedSurveillance.reduce((groups: Map<string, any>, link: any) => {
   const key = JSON.stringify([link.disease_id ?? link.disease_name_en, normalizeDiseaseHref(link.url)]);
   if (!groups.has(key)) groups.set(key, { ...link, countries: new Map() });
@@ -298,18 +287,19 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
         {(article.diseases ?? []).length > 0 && (
           <section class="evidence-surveillance">
             <div class="section-title"><span>02</span><h2>{pick('Related GIDS surveillance', '相关 GIDS 监测')}</h2></div>
-            {relatedSignals.length > 0 && <div class="related-signal-context">
+            {relatedSignals.length > 0 && <div class="related-signal-context" data-context-version="2">
               <p class="evidence-kicker">{pick('Active Situation Room context', '当前全球态势室背景')}</p>
               <div class="related-signal-list">{signalGroups.map((group: any) => {
                 const places = Array.from(group.places.values());
                 const placePreview = places.slice(0, 4).map(placeName).join(' · ') || pick('Geography unavailable', '地理范围暂缺', 'Zone géographique indisponible');
                 const extraPlaces = Math.max(0, places.length - 4);
                 const exact = group.relation === 'exact_disease_geography';
+                const historical = group.relation === 'historical_disease_geography_context';
                 return <details class="signal-group">
                   <summary>
                     <span class="signal-group-heading">
                       <strong>{pick(group.disease.disease_name_en, group.disease.disease_name_zh ?? group.disease.disease_name_en, diseaseNameFr(group.disease))}</strong>
-                      <em>{exact ? pick('Exact disease + geography', '疾病 + 地区精确匹配', 'Maladie + zone géographique exacte') : pick('Disease context only', '仅疾病背景', 'Contexte de maladie uniquement')}</em>
+                      <em>{exact ? pick('Exact disease + geography', '疾病 + 地区精确匹配', 'Maladie + zone géographique exacte') : historical ? pick('Historical disease + geography context', '疾病 + 地区历史背景', 'Contexte historique de maladie et de zone géographique') : pick('Disease context only', '仅疾病背景', 'Contexte de maladie uniquement')}</em>
                     </span>
                     <span class="signal-group-places">{placePreview}{extraPlaces > 0 && <span class="signal-more-places">{pick(` +${extraPlaces} more`, ` 等另 ${extraPlaces} 个地区`, ` +${extraPlaces} autres`)}</span>}</span>
                     <span class="signal-group-meta">{pick(`${group.signals.length} ${group.signals.length === 1 ? 'signal' : 'signals'}`, `${group.signals.length} 条信号`, `${group.signals.length} ${group.signals.length === 1 ? 'signal' : 'signaux'}`)}{group.latest && <> · {pick('Latest', '最新', 'Dernière date')} <time datetime={group.latest}>{group.latest}</time></>} · <span class="signal-expand">{pick('Details', '查看详情', 'Détails')}</span></span>
@@ -366,7 +356,7 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
 </ReportLayout>
 
 <style>
-  .evidence-page { width: min(1120px, calc(100% - 2rem)); margin: 0 auto; padding: 2rem 0 3rem; }
+  .evidence-page { width: min(var(--page-reading-width), calc(100% - var(--page-gutter))); margin: 0 auto; padding: var(--page-block-space) 0 3rem; }
   .evidence-header { padding: clamp(1.5rem, 4vw, 3rem); }
   .evidence-badges { display: flex; flex-wrap: wrap; gap: .4rem; }
   .evidence-badges span { border: 1px solid rgb(var(--border)); padding: .2rem .5rem; color: rgb(var(--text-muted)); font-size: .67rem; font-weight: 650; }
@@ -374,11 +364,11 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
   .evidence-badges .oa { border-color: rgb(var(--color-teal) / .55); color: rgb(var(--color-teal)); }
   .evidence-badges .integrity-corrected { border-color: rgb(var(--color-teal) / .58); color: rgb(var(--color-teal)); background: rgb(var(--color-teal) / .08); }
   .evidence-badges .version-available { border-color: rgb(var(--color-brand) / .58); color: rgb(var(--color-brand)); background: rgb(var(--color-brand) / .08); }
-  .evidence-header h1 { max-width: 55rem; margin-top: 1.2rem; font: 600 clamp(2rem, 5vw, 3.9rem)/1.04 'IBM Plex Sans', sans-serif; letter-spacing: -.035em; color: rgb(var(--text-strong)); }
+  .evidence-header h1 { max-width: 55rem; margin-top: 1.2rem; font: 600 var(--page-title-size)/1.04 'IBM Plex Sans', sans-serif; letter-spacing: -.035em; color: rgb(var(--text-strong)); }
   .evidence-citation { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.15rem; color: rgb(var(--text-muted)); font-size: .85rem; }
   .evidence-authors { max-width: 52rem; margin-top: .8rem; color: rgb(var(--text-faint)); font-size: .76rem; line-height: 1.6; }
   .evidence-register { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid rgb(var(--border) / .72); }
-  .evidence-register dt, .evidence-kicker { color: rgb(var(--color-accent)); font-size: .64rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+  .evidence-register dt, .evidence-kicker { color: rgb(var(--color-accent)); font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
   .evidence-register dd { margin-top: .32rem; overflow-wrap: anywhere; color: rgb(var(--text)); font: 500 .72rem/1.4 ui-monospace, monospace; }
   .evidence-layout { display: grid; grid-template-columns: minmax(0, 1fr) 18rem; gap: 1.5rem; margin-top: 1.5rem; }
   .evidence-layout main, .evidence-layout aside { min-width: 0; }
@@ -410,10 +400,10 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
   .evidence-section p { color: rgb(var(--text-muted)); font-size: .86rem; line-height: 1.68; }
   .evidence-section-pending p { color: rgb(var(--text-faint)); font-style: italic; }
   .surveillance-links { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; margin-top: 1.2rem; }
-  .related-signal-context { margin-top: 1.1rem; padding: 1rem; border: 1px solid rgb(var(--border) / .7); background: rgb(var(--surface-raised) / .34); }
+  .related-signal-context { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid rgb(var(--border)); }
   .related-signal-list { display: grid; gap: .5rem; margin-top: .7rem; }
   .signal-group { border-top: 1px solid rgb(var(--border) / .58); }
-  .signal-group summary { position: relative; padding: .75rem 1.2rem .75rem 0; cursor: pointer; list-style: none; }
+  .signal-group summary { position: relative; padding: 1rem 1.5rem 1rem 0; cursor: pointer; list-style: none; }
   .signal-group summary::-webkit-details-marker { display: none; }
   .signal-group summary::after { content: '+'; position: absolute; right: 0; top: .8rem; color: rgb(var(--color-brand)); }
   .signal-group[open] summary::after { content: '−'; }
@@ -421,15 +411,15 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
   .signal-group summary:focus-visible, .signal-group-details a:focus-visible { outline: 2px solid rgb(var(--color-brand)); outline-offset: 3px; }
   .signal-group-heading { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .65rem; }
   .signal-group-heading strong { color: rgb(var(--text-strong)); font: 600 .9rem/1.3 'IBM Plex Sans', sans-serif; }
-  .signal-group-heading em { color: rgb(var(--text-muted)); font-size: .65rem; font-style: normal; }
-  .signal-group-places { display: block; margin-top: .35rem; color: rgb(var(--text-muted)); font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
+  .signal-group-heading em { color: rgb(var(--text-muted)); font-size: .75rem; font-style: normal; }
+  .signal-group-places { display: block; margin-top: .4rem; color: rgb(var(--text-muted)); font-size: .8125rem; line-height: 1.5; overflow-wrap: anywhere; }
   .signal-more-places, .signal-expand { color: rgb(var(--color-brand)); }
-  .signal-group-meta { display: block; margin-top: .25rem; color: rgb(var(--text-faint)); font-size: .65rem; line-height: 1.5; }
+  .signal-group-meta { display: block; margin-top: .25rem; color: rgb(var(--text-faint)); font-size: .75rem; line-height: 1.5; }
   .signal-group-details { padding-bottom: .65rem; }
-  .signal-group-details a { display: flex; flex-wrap: wrap; gap: .35rem .65rem; align-items: baseline; padding: .5rem; border-top: 1px solid rgb(var(--border) / .4); color: rgb(var(--text-muted)); font-size: .72rem; line-height: 1.5; }
+  .signal-group-details a { display: flex; flex-wrap: wrap; gap: .35rem .65rem; align-items: baseline; padding: .5rem; border-top: 1px solid rgb(var(--border) / .4); color: rgb(var(--text-muted)); font-size: .8125rem; line-height: 1.5; }
   .signal-group-details a:hover { background: rgb(var(--surface)); color: rgb(var(--color-brand)); }
   .signal-group-details a > span:first-child { flex: 1 1 10rem; overflow-wrap: anywhere; }
-  .signal-group-details time { color: rgb(var(--text-faint)); font-size: .65rem; }
+  .signal-group-details time { color: rgb(var(--text-faint)); font-size: .75rem; }
   .signal-group-details strong { color: rgb(var(--color-accent)); font: 600 .72rem/1 ui-monospace, monospace; }
   .surveillance-links a { position: relative; padding: 1rem 2.4rem 1rem 1rem; border: 1px solid rgb(var(--border) / .68); }
   .surveillance-links a:hover { border-color: rgb(var(--color-brand) / .7); }
@@ -460,5 +450,5 @@ const pageSeoTitle = `${clampSeoTitle(article.title, 70 - titleSuffix.length - t
   .evidence-provenance dt { color: rgb(var(--text-faint)); font-size: .58rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
   .evidence-provenance dd { margin-top: .15rem; overflow-wrap: anywhere; color: rgb(var(--text)); font-size: .68rem; line-height: 1.4; }
   @media (max-width: 820px) { .evidence-layout { grid-template-columns: 1fr; } .evidence-register { grid-template-columns: repeat(2, 1fr); } .evidence-layout aside { display: grid; grid-template-columns: repeat(2, 1fr); } .integrity-correction-notice, .version-link-notice, .article-integrity-history li { grid-template-columns: 1fr; gap: .6rem; } }
-  @media (max-width: 560px) { .evidence-page { width: min(100% - 1rem, 1120px); } .evidence-header h1 { font-size: 2rem; } .evidence-section { grid-template-columns: 1fr; gap: .45rem; } .surveillance-links, .evidence-layout aside, .related-research ol { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) { .evidence-page { width: min(var(--page-reading-width), calc(100% - var(--page-gutter))); } .evidence-header h1 { font-size: 2rem; } .evidence-section { grid-template-columns: 1fr; gap: .45rem; } .surveillance-links, .evidence-layout aside, .related-research ol { grid-template-columns: 1fr; } }
 </style>

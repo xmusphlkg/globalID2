@@ -725,6 +725,11 @@ async def test_release_preflight_does_not_invent_production_branch_blocker_on_cl
         "_r2_papers_check",
         lambda **_kwargs: {"payload": {"configured": True}, "blockers": []},
     )
+    monkeypatch.setattr(
+        service,
+        "_r2_reports_check",
+        lambda **_kwargs: {"payload": {"configured": True}, "blockers": []},
+    )
     monkeypatch.setattr(service, "_download_repo_url", lambda: "git@example/data.git")
     monkeypatch.setattr(
         service,

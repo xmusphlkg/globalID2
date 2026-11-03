@@ -238,18 +238,33 @@ class ReportScheduleService:
         async with get_database() as db:
             return [dict(row) for row in (await db.execute(query, {"pilot_country": REPORT_PILOT_COUNTRY})).mappings().all()]
 
-    async def _legacy_dates(self, country_ids: list[int]) -> dict[int, list[date]]:
+    @staticmethod
+    def _public_sources() -> list[str]:
+        return [str(item).strip() for item in
+                get_country_bootstrap_config(REPORT_PILOT_COUNTRY).get("public_source_systems", []) or []
+                if str(item).strip()]
+
+    async def _observation_dates(self, country_ids: list[int]) -> dict[int, list[date]]:
         if not country_ids:
             return {}
         query = text("""
-            SELECT dr.country_id, timezone('UTC', dr.time)::date AS observed_date
-            FROM disease_records dr
-            WHERE dr.country_id = ANY(:country_ids)
-            GROUP BY dr.country_id, timezone('UTC', dr.time)::date
-            ORDER BY dr.country_id, observed_date
+            SELECT c.id AS country_id, timezone('UTC', dso.time)::date AS observed_date
+            FROM disease_surveillance_series dss
+            JOIN disease_series_observations dso ON dso.series_code = dss.series_code
+            JOIN countries c ON c.code = dss.country_code
+            WHERE c.id = ANY(:country_ids)
+              AND dso.geography_key = concat('country:', dss.country_code, chr(58), 'national')
+              AND dso.suppressed IS FALSE AND dso.value IS NOT NULL
+              AND dso.quality_status <> 'rejected'
+              AND (cardinality(CAST(:public_sources AS text[])) = 0
+                   OR dss.source_system = ANY(CAST(:public_sources AS text[])))
+            GROUP BY c.id, timezone('UTC', dso.time)::date
+            ORDER BY c.id, observed_date
         """)
         async with get_database() as db:
-            rows = (await db.execute(query, {"country_ids": country_ids})).mappings().all()
+            rows = (await db.execute(query, {
+                "country_ids": country_ids, "public_sources": self._public_sources(),
+            })).mappings().all()
         result: dict[int, list[date]] = {}
         for row in rows:
             result.setdefault(int(row["country_id"]), []).append(row["observed_date"])
@@ -288,37 +303,14 @@ class ReportScheduleService:
             if previous is None or latest > previous:
                 item["frequencies"][cadence] = latest
 
-        # Old DiseaseRecord-only imports do not carry series metadata. Include
-        # those countries in the same conservative date-gap fallback.
-        # Restrict the fallback scan to countries that have legacy observations.
-        async with get_database() as db:
-            legacy_countries = (await db.execute(text("""
-                SELECT c.id AS country_id, upper(c.code) AS country_code, c.name_en AS country_name
-                FROM countries c
-                WHERE c.is_active IS TRUE AND c.code !~ '-'
-                  AND upper(c.code) = :pilot_country
-                  AND EXISTS (SELECT 1 FROM disease_records dr WHERE dr.country_id = c.id)
-            """), {"pilot_country": REPORT_PILOT_COUNTRY})).mappings().all()
-        for row in legacy_countries:
-            if str(row["country_code"]).upper() != REPORT_PILOT_COUNTRY:
-                continue
-            country_id = int(row["country_id"])
-            by_country.setdefault(country_id, {
-                "country_id": country_id,
-                "country_code": str(row["country_code"]),
-                "country_name": str(row["country_name"] or row["country_code"]),
-                "frequencies": {},
-            })
-            inferred_ids.add(country_id)
-        # Use record-gap inference only when series metadata does not provide a
-        # recognized cadence; legacy event dates can be irregular even when a
-        # country's official surveillance feed has a slower fixed cadence.
+        # Infer an undeclared cadence only from eligible national observations.
+        # A recognized series cadence always takes precedence over date gaps.
         inferred_ids.difference_update(
             country_id
             for country_id, item in by_country.items()
             if item["frequencies"]
         )
-        legacy_dates = await self._legacy_dates(sorted(inferred_ids))
+        observation_dates = await self._observation_dates(sorted(inferred_ids))
         windows: list[ReportWindow] = []
         for country_id, item in by_country.items():
             options = [
@@ -326,12 +318,12 @@ class ReportScheduleService:
                 for cadence, latest in item["frequencies"].items()
                 if latest <= now_day and (allow_stale or frequency_is_fresh(cadence, latest, now_day))
             ]
-            inferred = infer_frequency_from_dates(legacy_dates.get(country_id, []))
+            inferred = infer_frequency_from_dates(observation_dates.get(country_id, []))
             if inferred:
-                dates = legacy_dates[country_id]
-                latest_legacy = max(dates)
-                if latest_legacy <= now_day and (allow_stale or frequency_is_fresh(inferred, latest_legacy, now_day)):
-                    options.append((inferred, latest_legacy))
+                dates = observation_dates[country_id]
+                latest_inferred = max(dates)
+                if latest_inferred <= now_day and (allow_stale or frequency_is_fresh(inferred, latest_inferred, now_day)):
+                    options.append((inferred, latest_inferred))
             if not options:
                 continue
             cadence, latest = min(options, key=lambda pair: (_FREQUENCY_ORDER.index(pair[0]), -pair[1].toordinal()))
@@ -356,25 +348,44 @@ class ReportScheduleService:
         return [window for window in windows if window.record_count >= minimum]
 
     async def _attach_record_counts(self, windows: list[ReportWindow]) -> list[ReportWindow]:
+        if not windows:
+            return []
         values: list[str] = []
-        params: dict[str, Any] = {}
+        params: dict[str, Any] = {"public_sources": self._public_sources()}
         for index, window in enumerate(windows):
             values.append(
                 f"(CAST(:country_{index} AS integer), "
                 f"CAST(:start_{index} AS timestamptz), "
-                f"CAST(:end_{index} AS timestamptz))"
+                f"CAST(:end_{index} AS timestamptz), CAST(:cadence_{index} AS text))"
             )
+            params[f"cadence_{index}"] = window.frequency
             params[f"country_{index}"] = window.country_id
             params[f"start_{index}"] = datetime.combine(window.period_start, time.min, timezone.utc)
             params[f"end_{index}"] = datetime.combine(window.period_end + timedelta(days=1), time.min, timezone.utc)
         query = text(f"""
-            WITH candidates(country_id, period_start, period_end) AS (VALUES {', '.join(values)})
-            SELECT candidates.country_id, candidates.period_start, count(dr.time)::int AS record_count
+            WITH candidates(country_id, period_start, period_end, cadence) AS (VALUES {', '.join(values)})
+            SELECT candidates.country_id, candidates.period_start, count(dso.time)::int AS record_count
             FROM candidates
-            LEFT JOIN disease_records dr
-              ON dr.country_id = candidates.country_id
-             AND dr.time >= candidates.period_start
-             AND dr.time < candidates.period_end
+            JOIN countries c ON c.id = candidates.country_id
+            LEFT JOIN disease_surveillance_series dss
+              ON dss.country_code = c.code
+             AND CASE upper(regexp_replace(dss.temporal_granularity, '[^a-zA-Z]', '', 'g'))
+                   WHEN 'DAY' THEN 'DAILY' WHEN 'DAILY' THEN 'DAILY'
+                   WHEN 'WEEK' THEN 'WEEKLY' WHEN 'WEEKLY' THEN 'WEEKLY'
+                   WHEN 'MONTH' THEN 'MONTHLY' WHEN 'MONTHLY' THEN 'MONTHLY'
+                   WHEN 'QUARTER' THEN 'QUARTERLY' WHEN 'QUARTERLY' THEN 'QUARTERLY'
+                   WHEN 'YEAR' THEN 'ANNUAL' WHEN 'YEARLY' THEN 'ANNUAL'
+                   WHEN 'ANNUAL' THEN 'ANNUAL' ELSE 'UNKNOWN'
+                 END IN (candidates.cadence, 'UNKNOWN')
+             AND (cardinality(CAST(:public_sources AS text[])) = 0
+                  OR dss.source_system = ANY(CAST(:public_sources AS text[])))
+            LEFT JOIN disease_series_observations dso
+              ON dso.series_code = dss.series_code
+             AND dso.geography_key = concat('country:', dss.country_code, chr(58), 'national')
+             AND dso.suppressed IS FALSE AND dso.value IS NOT NULL
+             AND dso.quality_status <> 'rejected'
+             AND dso.time >= candidates.period_start
+             AND dso.time < candidates.period_end
             GROUP BY candidates.country_id, candidates.period_start
         """)
         async with get_database() as db:
@@ -537,7 +548,7 @@ class ReportScheduleService:
                 "max_tasks_per_tick": int(cfg.schedule_max_tasks_per_tick),
                 "max_active_tasks": int(getattr(cfg, "schedule_max_active_tasks", 6)),
                 "active_tasks": len(active),
-                "frequency_source": "latest public national series metadata with DiseaseRecord fallback",
+                "frequency_source": "public national series metadata and eligible observations",
             }],
         }
 

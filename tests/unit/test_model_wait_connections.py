@@ -288,7 +288,7 @@ async def test_report_service_finishes_lookup_transaction_before_generation(
     from src.domain import ReportStatus
 
     checkout = False
-    country = SimpleNamespace(id=1, code="US", name="United States")
+    country = SimpleNamespace(id=1, code="JP", name="Japan")
     report = SimpleNamespace(id=4, report_uuid="report-4", status=ReportStatus.APPROVED)
 
     class DB:
@@ -330,7 +330,7 @@ async def test_report_service_finishes_lookup_transaction_before_generation(
     monkeypatch.setattr(generation, "ReportGenerator", Generator)
     result = await service.execute(
         task=SimpleNamespace(task_uuid="task"),
-        country_code="US",
+        country_code="JP",
         report_type="weekly",
         period_start_iso=None,
         period_end_iso=None,

@@ -149,6 +149,20 @@ async def publish_shared_assets(
     release_identity: dict,
     papers_origin: str,
 ) -> None:
+    # Self-contained papers bundles upload their hashed dependencies before HTML.
+    # Legacy bundles still require the verified main-site compatibility deploy.
+    papers_manifest = runtime.root_dir / "exports" / "papers-site" / "papers-manifest.json"
+    if papers_manifest.is_file():
+        manifest = json.loads(papers_manifest.read_text(encoding="utf-8"))
+        if manifest.get("local_build_assets") is True:
+            for item in manifest.get("files", []):
+                if str(item.get("path", "")).startswith("_astro/"):
+                    path = papers_manifest.parent / item["path"]
+                    if not path.resolve().is_relative_to(papers_manifest.parent.resolve()):
+                        raise RuntimeError("Papers asset escapes bundle directory")
+                    if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item.get("sha256"):
+                        raise RuntimeError(f"Papers build asset checksum mismatch: {item['path']}")
+            return
     current = runtime.astro_dir / "dist"
     from .papers_bundle import DEFAULT_MAIN_SITE_ORIGIN
 

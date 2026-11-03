@@ -680,8 +680,8 @@ const subscriptionOptionsUrl = import.meta.env.DEV
 
 .subscribe-form {
   border: 1px solid rgb(var(--border) / 0.82);
-  background: linear-gradient(180deg, rgb(var(--surface) / 0.98), rgb(var(--surface-raised) / 0.74));
-  box-shadow: 0 28px 70px rgb(2 6 23 / 0.18), inset 0 1px 0 rgb(255 255 255 / 0.1);
+  background: rgb(var(--surface));
+  box-shadow: none;
   padding: clamp(1.25rem, 3vw, 2rem);
 }
 
@@ -990,8 +990,8 @@ const subscriptionOptionsUrl = import.meta.env.DEV
   position: relative;
   width: min(100%, 560px);
   border: 1px solid rgb(var(--border) / 0.86);
-  background: linear-gradient(180deg, rgb(var(--surface) / 1), rgb(var(--surface-raised) / 0.96));
-  box-shadow: 0 30px 90px rgb(2 6 23 / 0.34);
+  background: rgb(var(--surface));
+  box-shadow: 0 8px 24px rgb(var(--ring-offset) / .18);
   padding: clamp(1.25rem, 4vw, 2rem);
 }
 

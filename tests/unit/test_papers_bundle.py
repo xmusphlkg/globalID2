@@ -25,7 +25,41 @@ def test_papers_path_classification() -> None:
     assert not is_papers_relative_path("_astro/BaseLayout.css")
 
 
-def test_rewrite_keeps_papers_paths_and_absolutizes_shared_assets() -> None:
+def test_papers_copy_transitive_assets_and_retain_previous_generation(tmp_path: Path) -> None:
+    dist, papers = tmp_path / "dist", tmp_path / "papers"
+    page = dist / "research/articles/example/index.html"
+    page.parent.mkdir(parents=True)
+    assets = dist / "_astro"
+    assets.mkdir()
+    (assets / "a.css").write_text('@font-face { src: url("./font.woff2"); }')
+    (assets / "font.woff2").write_bytes(b"font")
+    (assets / "island.js").write_text('import("./lazy.js")')
+    (assets / "lazy.js").write_text('export default 1')
+    page.write_text('<link href="/_astro/a.css"><astro-island component-url="/_astro/island.js"></astro-island>')
+    split_papers_bundle(dist, papers_dir=papers)
+    for name in ['a.css', 'font.woff2', 'island.js', 'lazy.js']:
+        assert (papers / "_astro" / name).read_bytes() == (assets / name).read_bytes()
+    page.parent.mkdir(parents=True, exist_ok=True)
+    (assets / "b.css").write_text('body { color: blue; }')
+    page.write_text('<link href="/_astro/b.css">')
+    split_papers_bundle(dist, papers_dir=papers)
+    manifest = json.loads((papers / 'papers-manifest.json').read_text())
+    assert manifest['local_build_assets'] is True
+    assert len(manifest['asset_generations']) == 2
+    assert (papers / '_astro/a.css').exists()
+    assert (papers / '_astro/b.css').exists()
+
+
+def test_missing_papers_build_asset_stops_split(tmp_path: Path) -> None:
+    dist = tmp_path / 'dist'
+    page = dist / 'research/articles/example/index.html'
+    page.parent.mkdir(parents=True)
+    page.write_text('<link href="/_astro/missing.css">')
+    with pytest.raises(FileNotFoundError, match='Bundle asset missing'):
+        split_papers_bundle(dist, papers_dir=tmp_path / 'papers')
+
+
+def test_rewrite_keeps_papers_and_build_assets_local() -> None:
     html = """
     <html>
       <link rel="stylesheet" href="/_astro/BaseLayout.css" />
@@ -38,7 +72,7 @@ def test_rewrite_keeps_papers_paths_and_absolutizes_shared_assets() -> None:
     </html>
     """
     rewritten = rewrite_papers_html(html)
-    assert 'href="https://globalinfectiousdisease.com/_astro/BaseLayout.css"' in rewritten
+    assert 'href="/_astro/BaseLayout.css"' in rewritten
     assert 'href="https://papers.globalinfectiousdisease.com/research/articles/slug/"' in rewritten
     assert (
         'content="https://papers.globalinfectiousdisease.com/research/cards/slug.png"'
@@ -77,7 +111,7 @@ def test_split_moves_papers_and_enforces_budget(tmp_path: Path) -> None:
     html = (papers / "research" / "articles" / "slug" / "index.html").read_text(
         encoding="utf-8"
     )
-    assert 'href="https://globalinfectiousdisease.com/_astro/app.js"' in html
+    assert 'href="/_astro/app.js"' in html
     assert 'href="/research/articles/slug/"' in html
     redirects = (dist / "_redirects").read_text(encoding="utf-8")
     assert "papers.globalinfectiousdisease.com/research/articles/:splat" in redirects
@@ -117,6 +151,8 @@ def test_split_reuses_verified_html_and_removes_obsolete_files(tmp_path, monkeyp
     dist, papers = tmp_path / "dist", tmp_path / "papers"
     relative = Path("research/articles/example/index.html")
     original = '<a href="/_astro/app.js">paper</a>'
+    (dist / '_astro').mkdir(parents=True)
+    (dist / '_astro/app.js').write_text('console.log(1)')
 
     def build(content):
         (dist / relative).parent.mkdir(parents=True, exist_ok=True)
@@ -143,7 +179,7 @@ def test_split_reuses_verified_html_and_removes_obsolete_files(tmp_path, monkeyp
     assert not (papers / "obsolete.json").exists()
     assert not (dist / relative).exists()
     manifest = json.loads((papers / "papers-manifest.json").read_text())
-    assert [item["path"] for item in manifest["files"]] == [relative.as_posix()]
-    assert f'{origin}/_astro/app.js' in (papers / relative).read_text()
+    assert {item["path"] for item in manifest["files"]} == {relative.as_posix(), "_astro/app.js"}
+    assert 'href="/_astro/app.js"' in (papers / relative).read_text()
     if change == "none":
         assert (papers / relative).stat().st_mtime_ns == modified

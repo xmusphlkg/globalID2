@@ -80,6 +80,23 @@ def test_missing_previous_snapshot_fails_closed(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_local_papers_assets_require_valid_checksums_before_skipping_compatibility(tmp_path):
+    import hashlib
+    papers = tmp_path / 'exports/papers-site'
+    put(papers, '_astro/site.css', b'style')
+    put(papers, 'papers-manifest.json', json.dumps({
+        'local_build_assets': True,
+        'files': [{'path': '_astro/site.css', 'sha256': hashlib.sha256(b'style').hexdigest()}],
+    }).encode())
+    runtime = SimpleNamespace(root_dir=tmp_path)
+    kwargs = dict(previous=None, project_name='site', deployment_branch='main', release_identity={}, papers_origin='https://papers.test')
+    await shared_assets.publish_shared_assets(None, None, runtime, **kwargs)
+    put(papers, '_astro/site.css', b'corrupt')
+    with pytest.raises(RuntimeError, match='checksum mismatch'):
+        await shared_assets.publish_shared_assets(None, None, runtime, **kwargs)
+
+
+@pytest.mark.asyncio
 async def test_compatibility_deploy_rejects_unverified_previous(tmp_path, monkeypatch):
     old = tmp_path / "old"
     put(old, "index.html", b"development build")

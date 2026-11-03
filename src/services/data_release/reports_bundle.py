@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import posixpath
 import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from xml.sax.saxutils import escape
+
+from .bundle_assets import copy_bundle_assets as _copy_report_assets
 
 from .papers_bundle import (
     DEFAULT_MAIN_SITE_ORIGIN,
@@ -27,8 +28,6 @@ REPORT_DIRECTORY_PAGE_RE = re.compile(r"^(?P<locale>(?:zh|fr)/)?reports/index\.h
 REPORT_ROUTE_RE = re.compile(r"^(?P<locale>(?:zh|fr)/)?countries/(?P<country>[a-z0-9-]+)/reports/")
 REPORT_ROOT_URL_RE = re.compile(r"^/(?:zh/|fr/)?reports(?:/|$)|^/(?:zh/|fr/)?countries/[a-z0-9-]+/reports(?:/|$)")
 REPORT_HOST_CONTROL_FILES = {"robots.txt", "sitemap.xml"}
-ASSET_SUFFIXES = {".js", ".css", ".woff", ".woff2", ".ttf", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".avif", ".ico"}
-ASSET_TOKEN_RE = re.compile(r'''["'`(]([^"'`()\s<>]+)["'`)]''')
 ATTR_ROOT_REF_RE = re.compile(
     r"""(?P<prefix>\b(?:href|src|content|poster|data-graph-src|data-src|action)\s*=\s*[\"'])"""
     r"""(?P<url>/[^\"']*)"""
@@ -203,41 +202,6 @@ def _manifest_for(directory: Path, reports_origin: str) -> dict:
         "files": files,
     }
 
-
-def _copy_report_assets(dist_dir: Path, reports_dir: Path, pages: list[Path]) -> set[Path]:
-    """Follow generated import/CSS references, including Astro hydration attributes.
-
-    Assets are copied, never moved: the main site can use the same build too.
-    Only files referenced by report pages and their dependencies enter R2.
-    """
-    root = dist_dir.resolve()
-    pending = [(page.read_text(encoding="utf-8"), page.relative_to(reports_dir).as_posix()) for page in pages]
-    copied: set[Path] = set()
-    while pending:
-        content, owner = pending.pop()
-        for token in ASSET_TOKEN_RE.findall(content):
-            ref = token.split("?", 1)[0].split("#", 1)[0]
-            if not ref or ":" in ref or ref.startswith("//") or Path(ref).suffix.lower() not in ASSET_SUFFIXES:
-                continue
-            relative = ref.lstrip("/") if ref.startswith(("/", "_astro/")) else posixpath.normpath(posixpath.join(posixpath.dirname(owner), ref))
-            source = (dist_dir / relative).resolve()
-            if not source.is_relative_to(root):
-                raise ValueError(f"Report asset escapes build directory: {ref}")
-            if not source.is_file():
-                if ref.startswith("/_astro/") or (owner.startswith("_astro/") and ref.startswith(("./", "../"))):
-                    raise FileNotFoundError(f"Report asset missing: {owner} -> {ref}")
-                continue
-            target = reports_dir / relative
-            if target in copied:
-                continue
-            copied.add(target)
-            body = source.read_bytes()
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if not target.is_file() or target.read_bytes() != body:
-                target.write_bytes(body)
-            if source.suffix in {".js", ".css"}:
-                pending.append((body.decode("utf-8"), relative))
-    return copied
 
 
 def split_reports_bundle(

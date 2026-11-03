@@ -1,5 +1,15 @@
 # Papers hosting channel (R2)
 
+Article HTML keeps `/_astro/` references on the Papers host. The splitter copies
+referenced CSS, scripts, hydration modules and their transitive fonts/imports
+into the R2 bundle; missing dependencies fail the split. Assets upload before
+HTML, and the preceding generation remains available for cached pages. Navigation,
+logos and non-Papers data still resolve to the main site. New manifests carry
+`local_build_assets: true`; their asset checksums are verified before skipping
+the legacy Pages compatibility deployment. Legacy manifests still require the
+exact verified previous Pages artifact.
+
+
 Research article pages outgrew Cloudflare Pages’ free **20,000-file** ceiling.
 Public hosting is therefore three channels:
 
@@ -12,7 +22,7 @@ Public hosting is therefore three channels:
 ## Release flow
 
 1. Generate site data and build the full Astro `dist` (unchanged for local `npm run build`).
-2. `scripts/split_papers_bundle.py` moves papers paths into `exports/papers-site/`, rewrites article HTML so shared assets point at the main origin, appends redirects/CORS, and enforces the Pages file budget.
+2. `scripts/split_papers_bundle.py` moves papers paths into `exports/papers-site/`, keeps build assets local while sending navigation to the main origin, appends redirects/CORS, and enforces the Pages file budget.
 3. Digest and deploy use the **slim** `dist` only.
 4. `scripts/publish_papers_r2.py` incrementally syncs `exports/papers-site` to R2, in parallel with GitHub downloads / raw archive. It lists object metadata, verifies local SHA-256 checksums, and compares single-PUT ETags with local MD5 hashes. Matching objects transfer no body bytes, including objects left by an interrupted attempt.
 5. Cloudflare Pages deploy + production verification, then dirty-marker commit.
@@ -74,7 +84,7 @@ downloads, and R2 papers readiness.
   `research/catalogue.json`. Generation retains retired shards for 48 hours
   after their last active reference, including legacy numbered shards during
   migration, so cached indexes keep resolving. Cleanup remains manifest-scoped.
-- When a release introduces new hashed `/_astro/` files, publish a compatibility
+- For legacy bundles referencing main-site hashed `/_astro/` files, publish a compatibility
   Pages artifact containing the prior site plus those files before uploading R2
   HTML. Verify the new asset bytes and CORS on the public origin first. Unchanged
   assets skip this extra deployment. This prevents new R2 pages referencing

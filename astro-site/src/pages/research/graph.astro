@@ -217,9 +217,9 @@ const relationLabels: Record<string, { en: string; zh: string; fr: string }> = {
 </ReportLayout>
 
 <style>
-  .graph-page { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 2rem 0 4rem; }
+  .graph-page { width: min(var(--page-tool-width), calc(100% - var(--page-gutter))); margin: 0 auto; padding: var(--page-block-space) 0 3rem; }
   .graph-hero { padding: clamp(1.5rem, 4vw, 3.5rem); }
-  .graph-hero h1 { margin-top: .75rem; color: rgb(var(--text-strong)); font: 600 clamp(2.2rem, 5vw, 4.3rem)/1 'IBM Plex Sans', sans-serif; }
+  .graph-hero h1 { margin-top: .75rem; color: rgb(var(--text-strong)); font: 600 var(--page-title-size)/1 'IBM Plex Sans', sans-serif; }
   .graph-hero > p:last-of-type { max-width: 52rem; margin-top: 1rem; color: rgb(var(--text-muted)); line-height: 1.7; }
   .graph-hero dl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem; padding-top: 1.4rem; border-top: 1px solid rgb(var(--border)); }
   .graph-hero dt { color: rgb(var(--text-faint)); font-size: .68rem; }
