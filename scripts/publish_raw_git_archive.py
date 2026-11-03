@@ -19,6 +19,8 @@ import subprocess
 import sys
 import tempfile
 import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 from typing import BinaryIO, Iterator
@@ -506,6 +508,34 @@ def _atomic_copy(source: Path, destination: Path, *, size: int, sha256: str) -> 
         raise
 
 
+@contextmanager
+def _bounded_copies(workers: int):
+    """Keep at most two copy jobs per worker; join before metadata or Git writes."""
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="raw-copy") as pool:
+        pending = set()
+
+        def drain():
+            nonlocal pending
+            done, pending = wait(pending, return_when=FIRST_COMPLETED)
+            for future in done:
+                future.result()
+
+        def copy(source, destination, *, size, sha256):
+            if len(pending) >= 2 * workers:
+                drain()
+            pending.add(pool.submit(_atomic_copy, source, destination, size=size, sha256=sha256))
+
+        try:
+            yield copy
+            while pending:
+                drain()
+        finally:
+            # Running atomic copies finish while the repository lock is held.
+            # A failed copy prevents every metadata write, commit and push.
+            for future in pending:
+                future.cancel()
+
+
 class _PartWriter:
     def __init__(self, directory: Path, relative_prefix: PurePosixPath):
         self.directory = directory
@@ -801,7 +831,10 @@ def publish_raw_archive(
     repo_url: str = DEFAULT_REPO_URL,
     push: bool = False,
     git_timeout_seconds: float = DEFAULT_GIT_TIMEOUT_SECONDS,
+    copy_workers: int = 8,
 ) -> ArchiveResult:
+    if not 1 <= copy_workers <= 16:
+        raise ValueError("Raw archive copy workers must be between 1 and 16")
     source_root = Path(source_dir).resolve()
     repository_root = Path(repository_dir).resolve()
     try:
@@ -854,104 +887,106 @@ def publish_raw_archive(
                     flush=True,
                 )
 
-        for index, (relative_path, source_path) in enumerate(source_entries, start=1):
-            relative = PurePosixPath(relative_path.as_posix())
-            size, digest = _source_identity(source_path)
-            source_bytes += size
-            direct_relative = DATA_ROOT / relative
-            direct_destination = repository_root.joinpath(*direct_relative.parts)
-            split_relative = PurePosixPath(f"{direct_relative.as_posix()}.parts")
-            split_destination = repository_root.joinpath(*split_relative.parts)
+        print(f"Raw archive copy workers: {copy_workers}", flush=True)
+        with _bounded_copies(copy_workers) as copy:
+            for index, (relative_path, source_path) in enumerate(source_entries, start=1):
+                relative = PurePosixPath(relative_path.as_posix())
+                size, digest = _source_identity(source_path)
+                source_bytes += size
+                direct_relative = DATA_ROOT / relative
+                direct_destination = repository_root.joinpath(*direct_relative.parts)
+                split_relative = PurePosixPath(f"{direct_relative.as_posix()}.parts")
+                split_destination = repository_root.joinpath(*split_relative.parts)
 
-            if size <= MAX_DIRECT_FILE_BYTES:
-                existed = direct_destination.exists() or split_destination.exists()
+                if size <= MAX_DIRECT_FILE_BYTES:
+                    existed = direct_destination.exists() or split_destination.exists()
+                    current = (
+                        direct_destination.is_file()
+                        and direct_destination.stat().st_size == size
+                        and _sha256_file(direct_destination) == digest
+                    )
+                    if not current:
+                        report_change("copy", index, relative, size)
+                        copy(source_path, direct_destination, size=size, sha256=digest)
+                        if existed:
+                            updated += 1
+                        else:
+                            added += 1
+                        sync_items.append(
+                            _SyncItem(
+                                source_path=relative.as_posix(),
+                                storage_paths=(direct_relative.as_posix(),),
+                                stored_bytes=size,
+                            )
+                        )
+                    if split_destination.exists():
+                        shutil.rmtree(split_destination)
+                        sync_items.append(
+                            _SyncItem(
+                                source_path=f"{relative.as_posix()} (obsolete parts)",
+                                storage_paths=(split_relative.as_posix(),),
+                                stored_bytes=0,
+                            )
+                        )
+                    expected_storage_files.add(direct_relative.as_posix())
+                    continue
+
+                previous = previous_large_files.get(relative.as_posix())
                 current = (
-                    direct_destination.is_file()
-                    and direct_destination.stat().st_size == size
-                    and _sha256_file(direct_destination) == digest
+                    previous is not None
+                    and previous.size == size
+                    and previous.sha256 == digest
+                    and _parts_are_current(repository_root, previous)
                 )
-                if not current:
-                    report_change("copy", index, relative, size)
-                    _atomic_copy(source_path, direct_destination, size=size, sha256=digest)
+                existed = direct_destination.exists() or split_destination.exists()
+                if current:
+                    record = previous
+                else:
+                    report_change("split", index, relative, size)
+                    record = _split_file(
+                        source_path,
+                        repository_root,
+                        relative,
+                        size=size,
+                        sha256=digest,
+                    )
                     if existed:
                         updated += 1
                     else:
                         added += 1
+                large_files.append(record)
+                part_paths = tuple(part.path for part in record.parts)
+                expected_storage_files.update(part_paths)
+                if not current:
+                    for part in record.parts:
+                        sync_items.append(
+                            _SyncItem(
+                                source_path=f"{relative.as_posix()} ({part.path})",
+                                storage_paths=(part.path,),
+                                stored_bytes=part.size,
+                            )
+                        )
+                if direct_destination.exists():
+                    direct_destination.unlink()
                     sync_items.append(
                         _SyncItem(
-                            source_path=relative.as_posix(),
+                            source_path=f"{relative.as_posix()} (obsolete direct file)",
                             storage_paths=(direct_relative.as_posix(),),
-                            stored_bytes=size,
-                        )
-                    )
-                if split_destination.exists():
-                    shutil.rmtree(split_destination)
-                    sync_items.append(
-                        _SyncItem(
-                            source_path=f"{relative.as_posix()} (obsolete parts)",
-                            storage_paths=(split_relative.as_posix(),),
                             stored_bytes=0,
                         )
                     )
-                expected_storage_files.add(direct_relative.as_posix())
-                continue
-
-            previous = previous_large_files.get(relative.as_posix())
-            current = (
-                previous is not None
-                and previous.size == size
-                and previous.sha256 == digest
-                and _parts_are_current(repository_root, previous)
-            )
-            existed = direct_destination.exists() or split_destination.exists()
-            if current:
-                record = previous
-            else:
-                report_change("split", index, relative, size)
-                record = _split_file(
-                    source_path,
-                    repository_root,
-                    relative,
-                    size=size,
-                    sha256=digest,
-                )
-                if existed:
-                    updated += 1
-                else:
-                    added += 1
-            large_files.append(record)
-            part_paths = tuple(part.path for part in record.parts)
-            expected_storage_files.update(part_paths)
-            if not current:
-                for part in record.parts:
-                    sync_items.append(
-                        _SyncItem(
-                            source_path=f"{relative.as_posix()} ({part.path})",
-                            storage_paths=(part.path,),
-                            stored_bytes=part.size,
+                if previous is not None:
+                    obsolete_parts = sorted(
+                        {part.path for part in previous.parts} - set(part_paths)
+                    )
+                    if obsolete_parts:
+                        sync_items.append(
+                            _SyncItem(
+                                source_path=f"{relative.as_posix()} (obsolete parts)",
+                                storage_paths=tuple(obsolete_parts),
+                                stored_bytes=0,
+                            )
                         )
-                    )
-            if direct_destination.exists():
-                direct_destination.unlink()
-                sync_items.append(
-                    _SyncItem(
-                        source_path=f"{relative.as_posix()} (obsolete direct file)",
-                        storage_paths=(direct_relative.as_posix(),),
-                        stored_bytes=0,
-                    )
-                )
-            if previous is not None:
-                obsolete_parts = sorted(
-                    {part.path for part in previous.parts} - set(part_paths)
-                )
-                if obsolete_parts:
-                    sync_items.append(
-                        _SyncItem(
-                            source_path=f"{relative.as_posix()} (obsolete parts)",
-                            storage_paths=tuple(obsolete_parts),
-                            stored_bytes=0,
-                        )
-                    )
 
         # A previous run may have copied a file before it was interrupted.
         # Its bytes already match, but Git still needs to commit it.
@@ -1019,6 +1054,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-dir", type=Path, default=DEFAULT_SOURCE_DIR)
     parser.add_argument("--repository-dir", type=Path, default=DEFAULT_REPOSITORY_DIR)
     parser.add_argument("--repo-url", default=DEFAULT_REPO_URL)
+    parser.add_argument("--copy-workers", type=int,
+                        default=int(os.environ.get("RAW_ARCHIVE_COPY_WORKERS", "8")),
+                        help="Concurrent verified atomic copies (1–16; default 8).")
     parser.add_argument(
         "--git-timeout-seconds", type=float, default=DEFAULT_GIT_TIMEOUT_SECONDS
     )
@@ -1044,6 +1082,7 @@ def main() -> None:
         repo_url=args.repo_url,
         push=args.push,
         git_timeout_seconds=args.git_timeout_seconds,
+        copy_workers=args.copy_workers,
     )
     print(json.dumps(asdict(result), ensure_ascii=False, indent=2, sort_keys=True))
 

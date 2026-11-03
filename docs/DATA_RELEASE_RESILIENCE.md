@@ -1,5 +1,19 @@
 # Data release automatic recovery
 
+Raw archive publication uses eight workers for independent atomic file copies.
+Set `RAW_ARCHIVE_COPY_WORKERS` or pass `--copy-workers` to
+`scripts/publish_raw_git_archive.py` to select 1–16 workers. At most twice the
+worker count is queued. Every file retains checksum validation, fsync and atomic
+replacement; the repository lock covers all running copies. All copies must
+finish successfully before stale-file cleanup, metadata writes or sequential
+Git commits/pushes. An interrupted partial copy remains reusable on retry.
+
+On the production archive filesystem, a repeated benchmark of 128 files totaling
+8 MiB took 15.4–19.6 seconds at one worker and 3.2–3.8 seconds at eight, with
+identical checksums. This measures verified copying and disk synchronization;
+source inventory, large-file splitting and Git publication are additional work.
+An already-running publisher keeps its initial implementation.
+
 Scheduled releases and releases triggered by upstream completion recover from
 recognized transient external failures without operator action. The failed task
 keeps the same UUID and moves to the durable `retrying` state. Its task metadata
