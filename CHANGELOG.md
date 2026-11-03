@@ -4,6 +4,8 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-11-03
+
 ### Added
 
 - Japan report generation now has a scheduled control-panel workflow, an AI author/reviewer pass, and a curated library of 12 evidence-bound ECharts templates. Priority diseases can include up to 52 periods of historical context; changes in source or reporting scope are shown as separate segments.
@@ -12,6 +14,24 @@ This file records release-level changes to the GIDS application and its data ope
 - Research article pages group related Situation signals by disease and geography, keeping exact geographic matches distinct from disease-only context.
 
 - Situation reads ECDC public health events (`ecdc_events`) as a new source: outbreak pages, seasonal mosquito-borne surveillance and risk assessments in production, which ECDC updates daily and the weekly CDTR only summarizes later. The adapter pages the public listing newest first and keeps the latest version of each event per ISO week. Page bodies are read in full and go through the same two-model review as every other source. The source appears in the control-panel Situation workspace without frontend changes.
+
+### Changed
+
+- The control panel can queue a reports-only release. An approved fresh report can trigger publication automatically, with periodic reconciliation after missed events; reports-only releases can run alongside collection work while release jobs remain serialized.
+- Japan's scheduled import processes a recent cache window and newly downloaded files, refreshes recent source weeks, and batches observation writes. Explicit local and forced imports retain their historical selection.
+- Report preparation and observation processing move expensive work off the worker's event loop; report aggregation avoids repeated per-group scans. Transient task-claim errors no longer terminate the worker.
+- Full Pages releases retain a verified deployable snapshot for later shared-asset compatibility deployments. A compatibility deployment checks the snapshot against the live release ID and content digest and stops if no matching artifact is available.
+
+### Fixed
+
+- Main-site public shared assets allow cross-origin access by both Papers and Reports; the production response-header rule also supplies the header.
+- The migration for quarterly and annual report types is applied to production. Report generation and publication remain subject to source availability and review gates.
+
+### Validation and operational limits
+
+- Two reports-only production runs with unchanged content completed in 91.2 and 64.8 seconds; each reused all 960 R2 objects and uploaded zero bytes. These timings include export, build, upload checks and public verification, and are not guarantees for changed content.
+- A prior new-report release completed in 166.1 seconds. Unchanged report releases still render the report routes before reusing unchanged output files.
+- Full main-site publication remains blocked until the exact previous Pages artifact is restored as a verified snapshot; the reports-only path is independent of this requirement.
 
 ## [0.17.1] - 2026-11-02
 

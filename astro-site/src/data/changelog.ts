@@ -26,6 +26,62 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.17.2',
+    date: '2026-11-03',
+    titleEn: 'Country reports have their own home',
+    titleZh: '国家报告迁移至独立站点',
+    titleFr: 'Les rapports nationaux ont leur propre site',
+    summaryEn:
+      'Country reports now have a dedicated directory and can be updated independently. Japan is the first country in the scheduled reporting pilot.',
+    summaryZh:
+      '国家报告拥有独立目录，并可单独更新。日本是定时生成报告的首个试点国家。',
+    summaryFr:
+      'Les rapports nationaux disposent désormais de leur propre répertoire et peuvent être actualisés indépendamment. Le Japon est le premier pays du programme pilote de rapports planifiés.',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        labelFr: 'Nouveautés',
+        items: [
+          {
+            en: 'Browse country reports and their disease details at reports.globalinfectiousdisease.com. Report pages and data are hosted separately from the main site.',
+            zh: '可在 reports.globalinfectiousdisease.com 浏览国家报告及疾病详情。报告页面和数据由独立站点提供。',
+            fr: 'Consultez les rapports nationaux et les détails par maladie sur reports.globalinfectiousdisease.com. Les pages et les données des rapports sont hébergées séparément du site principal.',
+          },
+          {
+            en: 'Japan reports use reviewed interpretations and evidence-based charts, with historical context where available.',
+            zh: '日本报告使用经过审核的分析解读和基于证据的图表，并在数据可用时提供历史背景。',
+            fr: 'Les rapports du Japon utilisent des interprétations révisées et des graphiques fondés sur les données, avec un contexte historique lorsqu’il est disponible.',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Approved reports can be published automatically after fresh data arrives, and unchanged report files are reused during publication.',
+            zh: '新数据到达后，通过审核的报告可自动发布；发布时会复用内容未变的报告文件。',
+            fr: 'Les rapports approuvés peuvent être publiés automatiquement après l’arrivée de nouvelles données ; les fichiers inchangés sont réutilisés.',
+          },
+          {
+            en: 'Research articles group related Situation signals by disease and geography, distinguishing exact geographic matches from broader context.',
+            zh: '研究文献页按疾病和地区整理相关态势信号，区分地区完全匹配与更广泛的背景信息。',
+            fr: 'Les articles de recherche regroupent les signaux de Situation par maladie et par zone géographique, en distinguant les correspondances exactes du contexte plus large.',
+          },
+          {
+            en: 'Situation includes ECDC public health events, alongside its existing sources.',
+            zh: '态势模块在现有来源之外，增加了欧洲疾控中心公共卫生事件。',
+            fr: 'Situation inclut les événements de santé publique de l’ECDC en plus de ses sources existantes.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.17.1',
     date: '2026-11-02',
     titleEn: 'Research articles move to their own host',
