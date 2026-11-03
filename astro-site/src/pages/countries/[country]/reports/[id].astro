@@ -14,9 +14,12 @@ import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { buildAlternatePaths, buildSeoTitle } from '../../../../lib/seo';
 import { downloadCatalogue } from '../../../../lib/downloads-data';
+import { shouldBuildPage } from '../../../../lib/page-build-plan';
 
 export async function getStaticPaths() {
-  return readPublishableReports().map(report => ({
+  return readPublishableReports()
+    .filter(report => shouldBuildPage(`report:${report.country}:${report.id}`))
+    .map(report => ({
     params: {
       country: report.country,
       id: report.id,
@@ -68,7 +71,7 @@ const panelReport = {
   country_code: report?.country_code,
   report_document_v4: Object.fromEntries(
     ['metrics', 'death_reporting', 'data_quality', 'attention_ranking', 'risk_ranking',
-      'disease_directory', 'sections', 'key_findings', 'summary']
+      'disease_directory', 'sections', 'key_findings', 'summary', 'figure_data']
       .filter(key => document?.[key] !== undefined)
       .map(key => [key, document[key]]),
   ),
@@ -112,12 +115,9 @@ const scoreColor = !report?.quality_score ? 'text-[rgb(var(--text-muted))]'
   : report.quality_score >= 0.85 ? 'text-green-400'
   : report.quality_score >= 0.65 ? 'text-amber-400'
   : 'text-red-400';
-const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/${country}.json`;
-
 function numericList(value: any): number[] {
-  return Array.isArray(value)
-    ? value.map((item: any) => Number(item || 0)).filter((item: number) => Number.isFinite(item))
-    : [];
+  // Sparse snapshots cannot support a continuous miniature curve.
+  return Array.isArray(value) && value.every((item: any) => typeof item === 'number' && Number.isFinite(item)) ? value : [];
 }
 
 function preferredCaseValues(entry: any): number[] {
@@ -162,7 +162,8 @@ function currentYearCumulativeCases(entry: any): number | null {
 
 const directoryTrendSeries = Object.fromEntries(
   (document?.disease_directory ?? []).map((row: any) => {
-    const entry = countryData?.disease_series?.[row.disease_id];
+    const entry = report?.metadata?.surveillance_snapshot?.series?.[row.disease_id]
+      ?? report?.surveillance_snapshot?.series?.[row.disease_id];
     const weekly = Array.isArray(entry?.weekly_equiv_cases) ? entry.weekly_equiv_cases.slice(-24) : [];
     const cases = Array.isArray(entry?.cases) ? entry.cases.slice(-24) : [];
     const currentYear = latestYear(entry);
@@ -282,7 +283,6 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en' | 'fr') {
         <ReportV4Panel
           client:visible
           report={panelReport}
-          countryDataUrl={countryDataUrl}
           sparklineSeries={directoryTrendSeries}
           initialLanguage={locale}
         />

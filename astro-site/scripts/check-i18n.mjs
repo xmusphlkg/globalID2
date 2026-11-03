@@ -110,7 +110,7 @@ const sourceChecks = [
   },
   {
     path: 'src/components/charts/ReportV4Panel.tsx',
-    required: ["Traduction française en attente.", "fr: 'Évaluation actuelle'", "'Cas (mensuel)'"],
+    required: ["Traduction française en attente.", "fr: 'Évaluation actuelle'", "'Cas sur la période'"],
     forbidden: ['return typeof value === \'string\' ? value : fallback;', 'const zh = record.zh;'],
   },
   {

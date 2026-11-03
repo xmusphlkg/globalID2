@@ -1,0 +1,94 @@
+---
+import ReportLayout from '../layouts/ReportLayout.astro';
+import CountryFlag from './CountryFlag.astro';
+import { reportArchiveCountries } from '../lib/report-routes';
+import { loadCountry } from '../lib/seo-page-data';
+import { readPublishableReports } from '../lib/report-data';
+import { REPORTS_ORIGIN, siteHref } from '../lib/papers';
+
+interface Props { locale?: 'en' | 'zh' | 'fr'; }
+const { locale = 'en' } = Astro.props;
+const zh = locale === 'zh';
+const fr = locale === 'fr';
+const reports = readPublishableReports();
+const countries = reportArchiveCountries(reports).map(code => {
+  const country = loadCountry(code) as Record<string, any> | null;
+  const items = reports.filter(report => report.country === code);
+  return { code, country, items, latest: items[0] };
+});
+const localePrefix = zh ? '/zh' : fr ? '/fr' : '';
+const directoryPath = `${localePrefix}/reports/`;
+const href = (path: string) => siteHref(`${localePrefix}${path}`);
+const alternatePaths = {
+  en: `${REPORTS_ORIGIN}/reports/`,
+  zh: `${REPORTS_ORIGIN}/zh/reports/`,
+  fr: `${REPORTS_ORIGIN}/fr/reports/`,
+};
+const title = zh ? '传染病监测报告' : fr ? 'Rapports de surveillance' : 'Infectious Disease Surveillance Reports';
+const description = zh
+  ? '按国家和数据更新频率浏览 GIDS 的传染病监测报告。'
+  : fr
+    ? 'Parcourez les rapports de surveillance GIDS par pays et fréquence des données.'
+    : 'Browse GIDS infectious-disease surveillance reports by country and reporting cadence.';
+const typeLabel = (type: string) => {
+  const key = type.toUpperCase();
+  if (zh) return ({ DAILY: '日报', WEEKLY: '周报', MONTHLY: '月报', QUARTERLY: '季报', ANNUAL: '年报' } as Record<string, string>)[key] ?? '定期报告';
+  if (fr) return ({ DAILY: 'Quotidien', WEEKLY: 'Hebdomadaire', MONTHLY: 'Mensuel', QUARTERLY: 'Trimestriel', ANNUAL: 'Annuel' } as Record<string, string>)[key] ?? 'Périodique';
+  return `${key.charAt(0)}${key.slice(1).toLowerCase()}`;
+};
+const countLabel = zh ? '份报告' : fr ? 'rapports' : 'reports';
+---
+
+<ReportLayout
+  title={`${title} | GIDS`}
+  description={description}
+  initialLanguage={locale}
+  routePathOverride={directoryPath}
+  siteOriginOverride={REPORTS_ORIGIN}
+  seo={{ title: `${title} | GIDS`, description, locale, canonicalPath: directoryPath, alternatePaths, pageType: 'CollectionPage' }}
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <header class="mb-10 max-w-3xl">
+      <p class="academic-kicker tracking-[0.18em] uppercase mb-3">GIDS · {zh ? '公开报告库' : fr ? 'Archives publiques' : 'Public report archive'}</p>
+      <h1 class="text-3xl sm:text-4xl font-bold text-[rgb(var(--text-strong))] mb-3">{title}</h1>
+      <p class="text-[rgb(var(--text-muted))]">{description}</p>
+      <p class="mt-4 text-sm text-[rgb(var(--text-muted))]">{reports.length} {zh ? '份可公开报告，涵盖' : fr ? 'rapports publics dans' : 'public reports across'} {countries.length} {zh ? '个国家。报告周期按来源数据的实际频率标注。' : fr ? 'pays. Chaque période reflète la fréquence de la source.' : 'countries. Each period follows the source data cadence.'}</p>
+    </header>
+
+    {countries.length ? (
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        {countries.map(({ code, country, items, latest }) => {
+          const name = zh
+            ? country?.country_name_zh ?? country?.country_name_en ?? code
+            : fr
+              ? country?.country_name_fr ?? country?.country_name_en ?? code
+              : country?.country_name_en ?? code;
+          const latestType = String(latest?.summary.report_type ?? '');
+          return (
+            <article class="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-5 shadow-sm">
+              <div class="flex items-center gap-3 mb-4">
+                <CountryFlag code={code} sizeClass="w-9 h-7" name={String(name)} />
+                <div class="min-w-0 flex-1">
+                  <h2 class="font-semibold text-[rgb(var(--text-strong))] truncate">{name}</h2>
+                  <p class="text-xs text-[rgb(var(--text-muted))]">{items.length} {countLabel}</p>
+                </div>
+                <span class="rounded-full bg-brand-500/10 px-2.5 py-1 text-xs font-medium text-brand-500">{typeLabel(latestType)}</span>
+              </div>
+              <a class="block text-sm font-medium text-[rgb(var(--text-strong))] hover:text-brand-500 transition-colors" href={href(`/countries/${code}/reports/`)}>
+                {latest?.summary.title ?? (zh ? '浏览国家报告' : fr ? 'Voir les rapports' : 'Browse country reports')}
+              </a>
+              <p class="mt-2 text-xs text-[rgb(var(--text-muted))]">{latest?.summary.period_start} – {latest?.summary.period_end}</p>
+              <a class="mt-4 inline-flex text-sm font-semibold text-brand-500 hover:text-brand-400 transition-colors" href={href(`/countries/${code}/reports/`)}>
+                {zh ? '查看全部报告 →' : fr ? 'Tous les rapports →' : 'View all reports →'}
+              </a>
+            </article>
+          );
+        })}
+      </div>
+    ) : (
+      <div class="rounded-2xl border border-[rgb(var(--border))] p-10 text-center text-[rgb(var(--text-muted))]">
+        {zh ? '目前还没有可公开的报告。' : fr ? 'Aucun rapport public pour le moment.' : 'No public reports are available yet.'}
+      </div>
+    )}
+  </div>
+</ReportLayout>

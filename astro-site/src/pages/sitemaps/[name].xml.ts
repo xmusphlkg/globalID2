@@ -35,7 +35,7 @@ function loadSituation() {
 }
 
 export function getStaticPaths() {
-  return SITEMAP_GROUPS.map(name => ({ params: { name } }));
+  return SITEMAP_GROUPS.filter(name => name !== 'reports').map(name => ({ params: { name } }));
 }
 
 export const GET: APIRoute = ({ params, site }) => {

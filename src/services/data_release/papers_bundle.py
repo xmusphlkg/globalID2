@@ -209,6 +209,33 @@ def ensure_papers_cors_headers(
     return headers_text.rstrip() + "\n" + comment + "".join("\n" + item for item in lines) + "\n"
 
 
+def ensure_public_shared_cors_headers(headers_text: str) -> str:
+    """Allow both long-tail hosts to fetch public assets without duplicate ACAO values."""
+
+    target_paths = {path for path, _with_methods in PAPERS_CORS_PATHS}
+    lines = headers_text.splitlines()
+    covered: set[str] = set()
+    current: str | None = None
+    for index, line in enumerate(lines):
+        if line.strip() and not line[0].isspace() and not line.lstrip().startswith("#"):
+            current = line.strip()
+        elif current in target_paths and line.strip().lower().startswith("access-control-allow-origin:"):
+            lines[index] = "  Access-Control-Allow-Origin: *"
+            covered.add(current)
+
+    added: list[str] = []
+    for path, with_methods in PAPERS_CORS_PATHS:
+        if path in covered:
+            continue
+        added.extend(["", path, "  Access-Control-Allow-Origin: *"])
+        if with_methods:
+            added.extend([f"  {PAPERS_CORS_METHODS_HEADER}", f"  {PAPERS_CORS_HEADERS_HEADER}"])
+    result = "\n".join(lines)
+    if added:
+        result = result.rstrip() + "\n# Public assets used by the papers and reports hosts.\n" + "\n".join(added) + "\n"
+    return result
+
+
 def count_files(directory: Path) -> int:
     """Count regular files under ``directory``."""
 

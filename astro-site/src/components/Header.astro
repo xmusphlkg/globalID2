@@ -1,13 +1,14 @@
 ---
 import BrandLogo from './BrandLogo.astro';
 import { createTranslator, localizedPath, LOCALES, stripLocalePrefix, type Lang } from '../utils/i18n';
+import { siteHref } from '../lib/papers';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-interface Props { initialLanguage?: Lang; hideLanguageToggle?: boolean; }
+interface Props { initialLanguage?: Lang; hideLanguageToggle?: boolean; pathOverride?: string; }
 
-const { initialLanguage = 'en', hideLanguageToggle = false } = Astro.props;
-const currentPath = Astro.url.pathname;
+const { initialLanguage = 'en', hideLanguageToggle = false, pathOverride } = Astro.props;
+const currentPath = pathOverride ?? Astro.url.pathname;
 const isChinese = initialLanguage === 'zh' || currentPath === '/zh' || currentPath.startsWith('/zh/');
 const isFrench = initialLanguage === 'fr' || currentPath === '/fr' || currentPath.startsWith('/fr/');
 const englishPath = stripLocalePrefix(currentPath);
@@ -28,6 +29,7 @@ const primaryLinks = [
 const dataLinks = [
   { href: '/countries/', en: 'Countries', zh: '国家与地区', fr: 'Pays et régions' },
   { href: '/diseases/', en: 'Diseases', zh: '疾病目录', fr: 'Répertoire des maladies' },
+  { href: '/reports/', en: 'Reports', zh: '监测报告', fr: 'Rapports' },
   { href: '/compare/', en: 'Compare', zh: '对比工具', fr: 'Comparer' },
   { href: '/downloads/', en: 'Downloads', zh: '数据下载', fr: 'Téléchargements' },
 ];
@@ -54,7 +56,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
             {copy('Data', '数据', 'Données')} <span aria-hidden="true">⌄</span>
           </summary>
           <div class="site-nav-popover">
-            {dataLinks.map(link => <a href={localize(link.href)} class="site-nav-popover-link" aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
+        {dataLinks.map(link => <a href={siteHref(localize(link.href))} class="site-nav-popover-link" aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
           </div>
         </details>
         {primaryLinks.slice(1).map(link => <a href={localize(link.href)} class:list={['nav-link focus-ring', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
@@ -91,7 +93,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
       <div class="site-header-mobile-inner">
         {primaryLinks.slice(0, 1).map(link => <a href={localize(link.href)} class:list={['nav-link', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
         <p class="site-mobile-group-label">{copy('Data', '数据', 'Données')}</p>
-        {dataLinks.map(link => <a href={localize(link.href)} class:list={['nav-link site-mobile-sub-link', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
+        {dataLinks.map(link => <a href={siteHref(localize(link.href))} class:list={['nav-link site-mobile-sub-link', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
         {primaryLinks.slice(1).map(link => <a href={localize(link.href)} class:list={['nav-link', active(link.href) && 'nav-link-active']} aria-current={active(link.href) ? 'page' : undefined}>{copy(link.en, link.zh, link.fr)}</a>)}
         <div class="site-mobile-tools">
           {!hideLanguageToggle && <div class="site-mobile-language" aria-label={languageMenuLabel}>
@@ -220,10 +222,16 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
 
 <script is:inline define:vars={{ isChinese, isFrench, languagePrefix: isChinese ? '/zh' : isFrench ? '/fr' : '' }}>
   const localized = (en, zh, fr) => isChinese ? zh : isFrench ? fr : en;
-  // Article pages are served from the papers host, where root-relative URLs
-  // for the search index and for non-article pages must point at the main site.
-  const mainBase = location.hostname === 'papers.globalinfectiousdisease.com' ? 'https://globalinfectiousdisease.com' : '';
-  const siteUrl = href => typeof href === 'string' && href.startsWith('/') && !/^\/(?:(?:zh|fr)\/)?research\/articles\//.test(href) ? mainBase + href : href;
+  // Search results may point to pages on any of the three public hosts.
+  const mainOrigin = 'https://globalinfectiousdisease.com';
+  const papersOrigin = 'https://papers.globalinfectiousdisease.com';
+  const reportsOrigin = 'https://reports.globalinfectiousdisease.com';
+  const siteUrl = href => {
+    if (typeof href !== 'string' || !href.startsWith('/')) return href;
+    if (/^\/(?:(?:zh|fr)\/)?countries\/[^/]+\/reports(?:\/|$)|^\/site-data\/reports\//.test(href)) return reportsOrigin + href;
+    if (/^\/(?:(?:zh|fr)\/)?research\/articles\/|^\/research\/cards\/|^\/site-data\/research\//.test(href)) return papersOrigin + href;
+    return [papersOrigin, reportsOrigin].includes(location.origin) ? mainOrigin + href : href;
+  };
   const themeButtons = [...document.querySelectorAll('[data-theme-toggle]')];
   const themeLabel = document.querySelector('#theme-toggle-label');
   const mobileButton = document.querySelector('#mobile-menu-toggle');

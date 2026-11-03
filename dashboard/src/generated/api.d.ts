@@ -1520,6 +1520,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/workflow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report Workflow */
+        get: operations["report_workflow_api_v1_reports_workflow_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/{report_uuid}": {
         parameters: {
             query?: never;
@@ -3698,6 +3715,7 @@ export interface components {
             github_downloads?: components["schemas"]["DataReleaseChannelOut"];
             pages_main?: components["schemas"]["DataReleaseChannelOut"];
             r2_papers?: components["schemas"]["DataReleaseChannelOut"];
+            r2_reports?: components["schemas"]["DataReleaseChannelOut"];
         };
         /** DataReleaseChecksOut */
         DataReleaseChecksOut: {
@@ -3717,6 +3735,7 @@ export interface components {
             overall_ready: boolean;
             pages_budget?: components["schemas"]["DataReleasePagesBudgetOut"];
             r2_papers?: components["schemas"]["DataReleaseR2PapersCheckOut"];
+            r2_reports?: components["schemas"]["DataReleaseR2ReportsCheckOut"];
             /** Raw */
             raw?: {
                 [key: string]: unknown;
@@ -4059,6 +4078,35 @@ export interface components {
         };
         /** DataReleaseR2PapersCheckOut */
         DataReleaseR2PapersCheckOut: {
+            /** Bucket */
+            bucket?: string | null;
+            /**
+             * Bucket Access Ok
+             * @default false
+             */
+            bucket_access_ok: boolean;
+            /**
+             * Configured
+             * @default false
+             */
+            configured: boolean;
+            /**
+             * Credentials Present
+             * @default false
+             */
+            credentials_present: boolean;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /** Error */
+            error?: string | null;
+            /** Public Base Url */
+            public_base_url?: string | null;
+        };
+        /** DataReleaseR2ReportsCheckOut */
+        DataReleaseR2ReportsCheckOut: {
             /** Bucket */
             bucket?: string | null;
             /**
@@ -6205,6 +6253,29 @@ export interface components {
             token_usage?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** ReportWorkflowOut */
+        ReportWorkflowOut: {
+            /** Country Code */
+            country_code: string;
+            /** Figure Catalog */
+            figure_catalog: {
+                [key: string]: unknown;
+            }[];
+            /** Max Figures */
+            max_figures: number;
+            /** Max Figures Per Section */
+            max_figures_per_section: number;
+            /** Method Version */
+            method_version: string;
+            /** Periods */
+            periods: {
+                [key: string]: unknown;
+            }[];
+            /** Schedule */
+            schedule: {
+                [key: string]: unknown;
+            };
         };
         /** ResponseMeta */
         ResponseMeta: {
@@ -14587,6 +14658,83 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["TaskOut"];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Problem detail */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Problem detail */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    report_workflow_api_v1_reports_workflow_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ReportWorkflowOut"];
                         meta: components["schemas"]["ResponseMeta"];
                     };
                 };

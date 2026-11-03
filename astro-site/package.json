@@ -14,7 +14,7 @@
     "check:surveillance-data": "python3 scripts/check-surveillance-data.py",
     "benchmark:curve": "node --experimental-strip-types scripts/benchmark-surveillance.mjs",
     "test:monthly": "node --experimental-strip-types --test src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
-    "test:charts": "npm run sync:flags && node --experimental-strip-types --test src/lib/echartsReact.test.ts src/lib/country-coverage.test.ts src/lib/country-classifications.test.ts src/components/charts/surveillance/__tests__/*.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
+    "test:charts": "npm run sync:flags && node --experimental-strip-types --test src/lib/echartsReact.test.ts src/lib/country-coverage.test.ts src/lib/country-classifications.test.ts src/components/charts/surveillance/__tests__/*.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts src/components/charts/reportFigureOptions.test.ts",
     "test:knowledge": "node --experimental-strip-types --test src/utils/knowledge.test.ts",
     "test:research": "node --experimental-strip-types --test src/lib/research-ask.test.ts src/lib/research-ui.test.ts",
     "test:i18n": "node --experimental-strip-types --test src/utils/i18n.test.ts",

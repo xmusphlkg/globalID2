@@ -7,8 +7,10 @@
  */
 
 export const PAPERS_ORIGIN = 'https://papers.globalinfectiousdisease.com';
+export const REPORTS_ORIGIN = 'https://reports.globalinfectiousdisease.com';
 
 const PAPERS_PATH = /^\/(?:(?:zh|fr)\/)?research\/articles\/|^\/research\/cards\/|^\/site-data\/research\//;
+const REPORTS_PATH = /^\/(?:(?:zh|fr)\/)?reports(?:\/|$)|^\/(?:(?:zh|fr)\/)?countries\/[^/]+\/reports(?:\/|$)|^\/site-data\/reports\//;
 
 type Locale = 'en' | 'zh' | 'fr';
 
@@ -17,6 +19,11 @@ const localePrefix = (locale: Locale) => (locale === 'zh' ? '/zh' : locale === '
 /** True when a root-relative path is published on the papers host. */
 export function isPapersPath(path: string): boolean {
   return PAPERS_PATH.test(path);
+}
+
+/** True when a root-relative path is published on the reports host. */
+export function isReportsPath(path: string): boolean {
+  return REPORTS_PATH.test(path);
 }
 
 /**
@@ -42,7 +49,9 @@ export function articleHref(slug: string, locale: Locale = 'en'): string {
  */
 export function siteHref(path: string): string {
   const dev = (import.meta as { env?: { DEV?: boolean } }).env?.DEV === true;
-  return !dev && isPapersPath(path) ? `${PAPERS_ORIGIN}${path}` : path;
+  if (dev) return path;
+  if (isReportsPath(path)) return `${REPORTS_ORIGIN}${path}`;
+  return isPapersPath(path) ? `${PAPERS_ORIGIN}${path}` : path;
 }
 
 export const MAIN_ORIGIN = 'https://globalinfectiousdisease.com';
@@ -53,10 +62,17 @@ export const MAIN_ORIGIN = 'https://globalinfectiousdisease.com';
  */
 export function mainSiteBase(): string {
   const host = typeof location === 'undefined' ? '' : location.hostname;
-  return host === new URL(PAPERS_ORIGIN).hostname ? MAIN_ORIGIN : '';
+  return [PAPERS_ORIGIN, REPORTS_ORIGIN].some(origin => host === new URL(origin).hostname)
+    ? MAIN_ORIGIN
+    : '';
 }
 
-/** Resolve a site path to an absolute URL, sending papers paths to their host. */
+/** Resolve a site path to the host that owns the path. */
 export function absoluteSiteUrl(path: string, siteBase: string | URL): URL {
-  return new URL(path, isPapersPath(path) ? PAPERS_ORIGIN : siteBase);
+  const base = isReportsPath(path)
+    ? REPORTS_ORIGIN
+    : isPapersPath(path)
+      ? PAPERS_ORIGIN
+      : siteBase;
+  return new URL(path, base);
 }

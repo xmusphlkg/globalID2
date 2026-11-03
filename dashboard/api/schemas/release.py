@@ -164,6 +164,16 @@ class DataReleaseR2PapersCheckOut(BaseModel):
     error: Optional[str] = None
 
 
+class DataReleaseR2ReportsCheckOut(BaseModel):
+    configured: bool = False
+    enabled: bool = False
+    bucket: Optional[str] = None
+    public_base_url: Optional[str] = None
+    credentials_present: bool = False
+    bucket_access_ok: bool = False
+    error: Optional[str] = None
+
+
 class DataReleasePagesBudgetOut(BaseModel):
     dist_present: bool = False
     file_count: Optional[int] = None
@@ -187,6 +197,7 @@ class DataReleaseChannelsOut(BaseModel):
     pages_main: DataReleaseChannelOut = Field(default_factory=DataReleaseChannelOut)
     github_downloads: DataReleaseChannelOut = Field(default_factory=DataReleaseChannelOut)
     r2_papers: DataReleaseChannelOut = Field(default_factory=DataReleaseChannelOut)
+    r2_reports: DataReleaseChannelOut = Field(default_factory=DataReleaseChannelOut)
 
 
 class DataReleaseChecksOut(BaseModel):
@@ -198,6 +209,7 @@ class DataReleaseChecksOut(BaseModel):
     commands: DataReleaseCommandCheckOut
     repository_boundary: DataReleaseRepositoryBoundaryOut
     r2_papers: DataReleaseR2PapersCheckOut = Field(default_factory=DataReleaseR2PapersCheckOut)
+    r2_reports: DataReleaseR2ReportsCheckOut = Field(default_factory=DataReleaseR2ReportsCheckOut)
     pages_budget: DataReleasePagesBudgetOut = Field(default_factory=DataReleasePagesBudgetOut)
     channels: DataReleaseChannelsOut = Field(default_factory=DataReleaseChannelsOut)
     # Deprecated response alias. Remove only after old frontend bundles can no

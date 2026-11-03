@@ -79,6 +79,9 @@ def compact_report_metadata(
             "risk_ranking": document.get("risk_ranking") or [],
             "references": document.get("references") or [],
         }
+        peer_review = document.get("peer_review") or metadata.get("peer_review")
+        if peer_review:
+            compact["peer_review"] = peer_review
         if include_figures:
             compact["figures"] = document.get("figures") or []
             compact["figure_data"] = metadata.get("figure_data") or {}
@@ -878,6 +881,7 @@ async def fetch_reports(session) -> list[dict]:
                 r.period_start::date  AS period_start,
                 r.period_end::date    AS period_end,
                 r.created_at,
+                r.updated_at,
                 r.summary,
                 r.quality_score,
                 r.metadata,
@@ -889,6 +893,7 @@ async def fetch_reports(session) -> list[dict]:
             FROM reports r
             JOIN countries c ON c.id = r.country_id
             WHERE r.status IN ('COMPLETED', 'APPROVED', 'PUBLISHED')
+              AND c.code = 'JP'
             ORDER BY r.created_at DESC
             """))
     result = []
@@ -908,6 +913,9 @@ async def fetch_reports(session) -> list[dict]:
         )
         report["created_at"] = (
             report["created_at"].isoformat() if report["created_at"] else None
+        )
+        report["updated_at"] = (
+            report["updated_at"].isoformat() if report.get("updated_at") else report["created_at"]
         )
         report["quality_score"] = safe_float(report["quality_score"])
         report_language = "zh"
@@ -937,7 +945,7 @@ async def fetch_report_detail(session, report_id: int) -> dict | None:
                 r.id, r.title, r.report_type,
                 r.period_start::date AS period_start,
                 r.period_end::date   AS period_end,
-                r.created_at, r.ai_model_used, r.quality_score,
+                r.created_at, r.updated_at, r.ai_model_used, r.quality_score,
                 r.summary, r.key_findings,
                 r.metadata,
                 r.generation_config,
@@ -963,6 +971,9 @@ async def fetch_report_detail(session, report_id: int) -> dict | None:
     )
     report["created_at"] = (
         report["created_at"].isoformat() if report["created_at"] else None
+    )
+    report["updated_at"] = (
+        report["updated_at"].isoformat() if report.get("updated_at") else report["created_at"]
     )
     report["quality_score"] = safe_float(report["quality_score"])
     metadata = report.get("metadata") if isinstance(report.get("metadata"), dict) else {}

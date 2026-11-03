@@ -134,6 +134,7 @@ async def execute_release_task(
         runtime.astro_dir / "dist",
         runtime.root_dir / "exports" / "site-downloads",
         runtime.root_dir / "exports" / "papers-site",
+        runtime.root_dir / "exports" / "reports-site",
     ]
     from .artifact_checkpoint import ArtifactCheckpoint, link_immutable_or_copy
 
@@ -323,12 +324,15 @@ async def _execute_release_task(
     downloads_published = False
     raw_archive_published = False
     r2_papers_published = False
+    r2_reports_published = False
     pages_deployed = False
     cloudflare_deployment = None
     r2_enabled_fn = getattr(service, "_r2_papers_enabled", None)
     r2_papers_enabled = (
         bool(r2_enabled_fn(job)) if callable(r2_enabled_fn) else False
     )
+    r2_reports_enabled_fn = getattr(service, "_r2_reports_enabled", None)
+    r2_reports_enabled = bool(r2_reports_enabled_fn(job)) if callable(r2_reports_enabled_fn) else False
     artifact_signature = None
     resumed_identity = None
     if artifact_checkpoint is not None:
@@ -425,7 +429,7 @@ async def _execute_release_task(
             metadata={"event": "situation_release_gate", "release_job_id": job.job_id},
             timeout_seconds=120,
         )
-        if job.include_cloudflare_deploy or r2_papers_enabled:
+        if job.include_cloudflare_deploy or r2_papers_enabled or r2_reports_enabled:
             # Move long-tail research pages out of the Pages upload set before the
             # deployable digest is computed. Local npm builds keep a full dist.
             await service._run_logged_command(
@@ -435,6 +439,16 @@ async def _execute_release_task(
                 cwd=runtime.root_dir,
                 env=git_env,
                 metadata={"event": "split_papers_bundle", "release_job_id": job.job_id},
+                timeout_seconds=1800,
+            )
+        if job.include_cloudflare_deploy or r2_reports_enabled:
+            await service._run_logged_command(
+                task.task_uuid,
+                title="Split Reports Bundle",
+                cmd=service._split_reports_bundle_command(python_path=python_path),
+                cwd=runtime.root_dir,
+                env=git_env,
+                metadata={"event": "split_reports_bundle", "release_job_id": job.job_id},
                 timeout_seconds=1800,
             )
         if job.include_cloudflare_deploy:
@@ -602,10 +616,56 @@ async def _execute_release_task(
             },
         )
 
+    if r2_reports_enabled:
+        reports_env = {
+            **git_env,
+            "CLOUDFLARE_ACCOUNT_ID": service._cloudflare_account_id(),
+            "CLOUDFLARE_API_TOKEN": service._cloudflare_api_token(),
+            "R2_REPORTS_BUCKET": str(service._config().r2_reports_bucket or "globalid-reports"),
+            "R2_REPORTS_PUBLIC_BASE_URL": str(service._config().r2_reports_public_base_url or "https://reports.globalinfectiousdisease.com"),
+            "R2_ACCESS_KEY_ID": str(service._config().r2_access_key_id or ""),
+            "R2_SECRET_ACCESS_KEY": str(service._config().r2_secret_access_key or ""),
+            "R2_ENDPOINT_URL": str(service._config().r2_endpoint_url or ""),
+            "R2_ACCOUNT_ID": str(service._config().r2_account_id or service._cloudflare_account_id() or ""),
+        }
+        repository_publications.append((
+            "r2_reports",
+            service._run_logged_command(
+                task.task_uuid,
+                title="Publish Reports Bundle to R2",
+                cmd=service._publish_reports_r2_command(python_path=python_path),
+                cwd=runtime.root_dir,
+                env=reports_env,
+                metadata={"event": "r2_reports_publish", "release_job_id": job.job_id},
+                timeout_seconds=runtime.download_publish_timeout_seconds,
+            ),
+        ))
+    else:
+        await runtime.task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Reports R2 Publish Skipped",
+            content="R2 reports publication is disabled for this release job.",
+            content_type="text",
+            metadata={"event": "r2_reports_publish_skipped", "release_job_id": job.job_id},
+        )
+
     completed_publications = await _run_repository_publications(repository_publications)
     raw_archive_published = "raw_archive" in completed_publications
     downloads_published = "direct_downloads" in completed_publications
     r2_papers_published = "r2_papers" in completed_publications
+    r2_reports_published = "r2_reports" in completed_publications
+
+    if r2_reports_enabled:
+        await service._run_logged_command(
+            task.task_uuid,
+            title="Verify Reports Host",
+            cmd=service._verify_reports_host_command(python_path=python_path),
+            cwd=runtime.root_dir,
+            env=git_env,
+            metadata={"event": "reports_host_verify", "release_job_id": job.job_id},
+            timeout_seconds=120,
+        )
 
     # The site only goes live after its direct public file links exist. This
     # prevents a deployed page from pointing at a package that failed to publish.
@@ -746,6 +806,10 @@ async def _execute_release_task(
         "download_url_base": download_url_base,
         "direct_downloads_published": downloads_published,
         "r2_papers_published": r2_papers_published,
+        "r2_reports_published": r2_reports_published,
+        "r2_reports_public_base_url": (
+            service._config().r2_reports_public_base_url if r2_reports_enabled else None
+        ),
         "r2_papers_public_base_url": (
             service._config().r2_papers_public_base_url
             if r2_papers_enabled
@@ -779,6 +843,7 @@ async def _execute_release_task(
             f"Release job: {job.name}\n"
             f"GitHub direct downloads published: {'yes' if downloads_published else 'no'}\n"
             f"Papers R2 published: {'yes' if r2_papers_published else 'no'}\n"
+            f"Reports R2 published: {'yes' if r2_reports_published else 'no'}\n"
             f"Raw crawler archive updated: {'yes' if raw_archive_published else 'no'}\n"
             f"Cloudflare deployed: {'yes' if pages_deployed else 'no'}\n"
             f"Production branch: {deployment_branch or '-'}\n"

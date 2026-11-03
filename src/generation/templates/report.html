@@ -99,6 +99,9 @@
         <div class="section-body">
           {{ section.body.zh | markdown }}
         </div>
+        {% for figure in section.figures or [] %}
+          {{ figure_tables.get(figure.id, '') }}
+        {% endfor %}
       </section>
     {% endfor %}
 

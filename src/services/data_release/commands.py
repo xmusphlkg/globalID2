@@ -160,3 +160,32 @@ def build_publish_papers_r2_command(
         "--source-dir",
         str(source_dir),
     ]
+
+
+def build_split_reports_bundle_command(
+    *,
+    python_path: Path,
+    dist_dir: Path,
+    reports_dir: Path,
+    main_origin: str,
+    reports_origin: str,
+    pages_file_budget: int,
+    pages_file_warn: int,
+) -> list[str]:
+    return [
+        str(python_path), "scripts/split_reports_bundle.py",
+        "--dist-dir", str(dist_dir),
+        "--reports-dir", str(reports_dir),
+        "--main-origin", main_origin,
+        "--reports-origin", reports_origin,
+        "--pages-file-budget", str(pages_file_budget),
+        "--pages-file-warn", str(pages_file_warn),
+    ]
+
+
+def build_publish_reports_r2_command(*, python_path: Path, source_dir: Path) -> list[str]:
+    return [str(python_path), "scripts/publish_reports_r2.py", "--source-dir", str(source_dir), "--skip-public-verify"]
+
+
+def build_verify_reports_host_command(*, python_path: Path, reports_dir: Path, reports_origin: str) -> list[str]:
+    return [str(python_path), "scripts/verify_reports_host.py", "--source-dir", str(reports_dir), "--reports-origin", reports_origin]

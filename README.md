@@ -116,6 +116,7 @@ flowchart LR
   E --> H[Raw source archive repository]
   F --> I[Cloudflare Pages main site]
   F --> J[R2 Papers site<br/>Article HTML, cards and research data]
+  F --> M[R2 Reports site<br/>Directory and country report archive]
   I --> K[Subscription page]
   K --> L[Cloudflare Worker + D1]
 ```
@@ -124,15 +125,17 @@ flowchart LR
 | --- | --- | --- |
 | Main site | Countries, diseases, reports, Situation, research indexes, and shared assets | Cloudflare Pages at `globalinfectiousdisease.com` |
 | Papers site | Research article pages, social cards, and `site-data/research/*` | R2 at `papers.globalinfectiousdisease.com` |
+| Reports site | Country report pages, `robots.txt`, and sitemap | R2 bucket custom domain at `reports.globalinfectiousdisease.com` |
 | Data downloads | Time-partitioned CSV/JSON/XLSX files and their manifest | Dedicated GitHub data repository, `main` branch |
 | Subscriptions | Subscription API and subscriber storage | Cloudflare Worker and D1 at `subscriptions.globalinfectiousdisease.com` |
 
 The release task generates data, builds and validates Astro, then splits the
-papers bundle from the main-site artifact. It publishes the enabled download,
-raw-archive, and R2 channels before deploying Pages and verifying the production
-release identity. Raw archiving is a separate retention channel; the diagram
+papers and reports bundles from the main-site artifact. It publishes the enabled
+download, raw-archive, and R2 channels before verifying the reports host and
+deploying Pages. Raw archiving is a separate retention channel; the diagram
 shows data flow rather than execution order. Public data freshness depends on
-completion of this release workflow.
+completion of this release workflow. See [Reports hosting](docs/REPORTS_HOSTING.md)
+for R2 hosting and the automatic country-report schedule.
 When shared asset hashes change, an additional compatibility deployment makes
 the new assets available alongside the previous site before R2 HTML references
 them. Ordinary data-only releases skip this step.

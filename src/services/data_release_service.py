@@ -38,6 +38,9 @@ from src.services.data_release.commands import (
     build_generate_site_data_command,
     build_publish_download_repo_command,
     build_publish_papers_r2_command,
+    build_split_reports_bundle_command,
+    build_publish_reports_r2_command,
+    build_verify_reports_host_command,
     build_publish_raw_archive_command,
     build_split_papers_bundle_command,
     build_update_situation_notices_command,
@@ -53,6 +56,7 @@ from src.services.data_release.papers_r2 import (
     derive_r2_credentials_from_api_token,
     r2_preflight_payload,
 )
+from src.services.data_release.reports_bundle import DEFAULT_REPORTS_ORIGIN
 from src.services.data_release.process_runner import (
     run_capture,
     run_logged_command,
@@ -1105,6 +1109,22 @@ class DataReleaseService:
         )
         if r2_enabled:
             r2_papers["payload"]["enabled"] = True
+        r2_reports_enabled = self._r2_reports_enabled(job)
+        r2_reports = (
+            self._r2_reports_check(probe=True)
+            if r2_reports_enabled
+            else {
+                "payload": {
+                    **r2_preflight_payload(None, probe=False),
+                    "enabled": False,
+                    "public_base_url": DEFAULT_REPORTS_ORIGIN,
+                    "error": "R2 reports publish is disabled for this release job.",
+                },
+                "blockers": [],
+            }
+        )
+        if r2_reports_enabled:
+            r2_reports["payload"]["enabled"] = True
         pages_budget = self._pages_budget_snapshot()
 
         blockers: list[str] = []
@@ -1120,8 +1140,12 @@ class DataReleaseService:
                 "Cloudflare deployment requires R2 papers publication so article "
                 "pages are not left only on the Pages file budget."
             )
+        if job.include_cloudflare_deploy and not r2_reports_enabled:
+            blockers.append("Cloudflare deployment requires the reports R2 channel so report archives are not left on Pages.")
         if r2_enabled:
             blockers.extend(r2_papers["blockers"])
+        if r2_reports_enabled:
+            blockers.extend(r2_reports["blockers"])
         if job.include_cloudflare_deploy:
             blockers.extend(cloudflare["blockers"])
         blockers.extend(raw_archive["blockers"])
@@ -1180,6 +1204,7 @@ class DataReleaseService:
             "cloudflare": cloudflare["payload"],
             "raw_archive": raw_archive["payload"],
             "r2_papers": r2_papers["payload"],
+            "r2_reports": r2_reports["payload"],
             "pages_budget": pages_budget,
             "channels": {
                 "pages_main": {
@@ -1208,6 +1233,12 @@ class DataReleaseService:
                     ),
                     "public_base_url": r2_papers["payload"].get("public_base_url"),
                     "bucket": r2_papers["payload"].get("bucket"),
+                },
+                "r2_reports": {
+                    "enabled": bool(r2_reports_enabled),
+                    "ready": bool(r2_reports_enabled and r2_reports["payload"].get("bucket_access_ok")),
+                    "public_base_url": r2_reports["payload"].get("public_base_url"),
+                    "bucket": r2_reports["payload"].get("bucket"),
                 },
             },
             "commands": {
@@ -1541,6 +1572,9 @@ class DataReleaseService:
     def _papers_site_dir(self) -> Path:
         return ROOT_DIR / "exports" / "papers-site"
 
+    def _reports_site_dir(self) -> Path:
+        return ROOT_DIR / "exports" / "reports-site"
+
     def _r2_papers_config(self) -> R2PapersConfig | None:
         release = self._config()
         account_id = (
@@ -1559,9 +1593,32 @@ class DataReleaseService:
                 "bucket": release.r2_papers_bucket,
                 "access_key_id": access_key_id,
                 "secret_access_key": secret_access_key,
-                "public_base_url": release.r2_papers_public_base_url
-                or DEFAULT_PAPERS_ORIGIN,
+                "public_base_url": release.r2_papers_public_base_url or DEFAULT_PAPERS_ORIGIN,
                 "endpoint_url": release.r2_endpoint_url,
+            }
+        )
+
+    def _r2_reports_config(self) -> R2PapersConfig | None:
+        release = self._config()
+        account_id = (
+            str(release.r2_account_id or "").strip()
+            or str(self._cloudflare_account_id() or "").strip()
+        )
+        access_key_id = str(release.r2_access_key_id or "").strip()
+        secret_access_key = str(release.r2_secret_access_key or "").strip()
+        if not (access_key_id and secret_access_key):
+            derived = derive_r2_credentials_from_api_token(self._cloudflare_api_token())
+            if derived:
+                access_key_id, secret_access_key = derived
+        return R2PapersConfig.from_mapping(
+            {
+                "account_id": account_id,
+                "bucket": release.r2_reports_bucket,
+                "access_key_id": access_key_id,
+                "secret_access_key": secret_access_key,
+                "public_base_url": release.r2_reports_public_base_url or DEFAULT_REPORTS_ORIGIN,
+                "endpoint_url": release.r2_endpoint_url,
+                "manifest_key": "reports-manifest.json",
             }
         )
 
@@ -1572,6 +1629,14 @@ class DataReleaseService:
         if job is not None and not job.include_cloudflare_deploy:
             # Papers hosting is required whenever the public site deploys; when
             # Cloudflare is off, skip remote papers publish as well.
+            return False
+        return True
+
+    def _r2_reports_enabled(self, job: DataReleaseJobConfig | None = None) -> bool:
+        cfg = self._config()
+        if not bool(cfg.r2_reports_enabled):
+            return False
+        if job is not None and not job.include_cloudflare_deploy:
             return False
         return True
 
@@ -1595,6 +1660,29 @@ class DataReleaseService:
             source_dir=self._papers_site_dir(),
         )
 
+    def _split_reports_bundle_command(self, *, python_path: Path) -> list[str]:
+        cfg = self._config()
+        return build_split_reports_bundle_command(
+            python_path=python_path,
+            dist_dir=ASTRO_DIR / "dist",
+            reports_dir=self._reports_site_dir(),
+            main_origin=str(cfg.main_site_origin or DEFAULT_MAIN_SITE_ORIGIN),
+            reports_origin=str(cfg.r2_reports_public_base_url or DEFAULT_REPORTS_ORIGIN),
+            pages_file_budget=int(cfg.pages_file_budget),
+            pages_file_warn=int(cfg.pages_file_warn),
+        )
+
+    def _publish_reports_r2_command(self, *, python_path: Path) -> list[str]:
+        return build_publish_reports_r2_command(python_path=python_path, source_dir=self._reports_site_dir())
+
+    def _verify_reports_host_command(self, *, python_path: Path) -> list[str]:
+        cfg = self._config()
+        return build_verify_reports_host_command(
+            python_path=python_path,
+            reports_dir=self._reports_site_dir(),
+            reports_origin=str(cfg.r2_reports_public_base_url or DEFAULT_REPORTS_ORIGIN),
+        )
+
     def _r2_papers_check(self, *, probe: bool = True) -> dict[str, Any]:
         payload = r2_preflight_payload(self._r2_papers_config(), probe=probe)
         blockers: list[str] = []
@@ -1606,6 +1694,18 @@ class DataReleaseService:
         elif not payload.get("bucket_access_ok"):
             detail = str(payload.get("error") or "bucket probe failed").strip()
             blockers.append(f"R2 papers bucket is not reachable: {detail}")
+        return {"payload": payload, "blockers": blockers}
+
+    def _r2_reports_check(self, *, probe: bool = True) -> dict[str, Any]:
+        payload = r2_preflight_payload(self._r2_reports_config(), probe=probe)
+        if not payload.get("configured"):
+            payload["public_base_url"] = DEFAULT_REPORTS_ORIGIN
+        blockers: list[str] = []
+        if not payload.get("credentials_present"):
+            blockers.append("R2 reports credentials are missing (R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / account id).")
+        elif not payload.get("bucket_access_ok"):
+            detail = str(payload.get("error") or "bucket probe failed").strip()
+            blockers.append(f"R2 reports bucket is not reachable: {detail}")
         return {"payload": payload, "blockers": blockers}
 
     def _pages_budget_snapshot(self) -> dict[str, Any]:

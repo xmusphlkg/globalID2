@@ -13,6 +13,7 @@ import {
   reportArchiveCountries,
   type ReportIndexEntry,
 } from './report-routes.ts';
+import { REPORTS_ORIGIN } from './papers.ts';
 
 export interface SitemapEntry {
   path: string;
@@ -355,6 +356,7 @@ export function buildSitemapGroups({
   }
 
   const publishableReports = buildPublishableReports(reports, loadReport);
+  groups.reports.push(...localizedEntry('/reports/', siteLastmod));
   for (const country of reportArchiveCountries(publishableReports)) {
     groups.reports.push(...localizedEntry(`/countries/${country}/reports/`, siteLastmod));
   }
@@ -411,7 +413,7 @@ export function renderSitemapXml(entries: SitemapEntry[], site: URL | string): s
 export function renderSitemapIndexXml(groups: SitemapGroup[], site: URL | string): string {
   const siteUrl = site instanceof URL ? site : new URL(site);
   const body = groups.map(group => (
-    `  <sitemap>\n    <loc>${escapeXml(new URL(`/sitemaps/${group}.xml`, siteUrl).toString())}</loc>\n  </sitemap>`
+    `  <sitemap>\n    <loc>${escapeXml(group === 'reports' ? `${REPORTS_ORIGIN}/sitemap.xml` : new URL(`/sitemaps/${group}.xml`, siteUrl).toString())}</loc>\n  </sitemap>`
   )).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</sitemapindex>\n`;
 }

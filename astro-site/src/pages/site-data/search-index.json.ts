@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import researchRaw from '../../data/research/index.json';
 import { diseaseIndex, indexableDiseases, publishableReports, siteMeta } from '../../lib/seo-page-data';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
-import { articleHref } from '../../lib/papers';
+import { articleHref, siteHref } from '../../lib/papers';
 import { localizedDynamicText, localizedRegionName } from '../../utils/i18n';
 
 export const prerender = true;
@@ -18,6 +18,10 @@ type SearchEntry = {
 };
 
 const localized = (path: string) => ({ en: path, zh: path === '/' ? '/zh/' : `/zh${path}`, fr: path === '/' ? '/fr/' : `/fr${path}` });
+const localizedReports = (path: string) => {
+  const paths = localized(path);
+  return { en: siteHref(paths.en), zh: siteHref(paths.zh), fr: siteHref(paths.fr) };
+};
 const clean = (values: unknown[]) => [...new Set(values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).map(value => value.trim()))];
 
 export const GET: APIRoute = () => {
@@ -66,7 +70,7 @@ export const GET: APIRoute = () => {
     entries.push({
       id: `report:${report.country}:${report.id}`,
       kind: 'report',
-      href: localized(path),
+      href: localizedReports(path),
       title: { en: title.en ?? `Surveillance report ${report.id}`, zh: title.zh ?? detail.title, fr: reportTitleFr },
       summary: { en: summary.en, zh: summary.zh ?? detail.summary, fr: reportSummaryFr },
       aliases: clean([report.id, report.country, detail.country_name, detail.country_name_en, detail.period_start, detail.period_end]),

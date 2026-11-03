@@ -43,6 +43,15 @@ test('sitemap URLs on the papers host are not looked up in dist', () => {
   } finally { rmSync(dist, { recursive: true, force: true }); }
 });
 
+test('reports directory is on the reports R2 host, outside the main Pages bundle', () => {
+  const dist = fixtureDist('https://reports.example/reports/');
+  try {
+    const result = auditSeoOutput(dist);
+    assert.equal(result.pages, 0);
+    assert.deepEqual(result.errors, []);
+  } finally { rmSync(dist, { recursive: true, force: true }); }
+});
+
 test('main-origin sitemap URLs that redirect to the papers host are reported', () => {
   const dist = fixtureDist('https://globalinfectiousdisease.com/research/articles/a/');
   try {

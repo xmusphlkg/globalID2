@@ -17,6 +17,10 @@ Public hosting is therefore three channels:
 4. `scripts/publish_papers_r2.py` incrementally syncs `exports/papers-site` to R2, in parallel with GitHub downloads / raw archive. It lists object metadata, verifies local SHA-256 checksums, and compares single-PUT ETags with local MD5 hashes. Matching objects transfer no body bytes, including objects left by an interrupted attempt.
 5. Cloudflare Pages deploy + production verification, then dirty-marker commit.
 
+The report directory and report pages use a separate R2 bucket and direct
+custom domain, like this Papers channel. See [`REPORTS_HOSTING.md`](REPORTS_HOSTING.md)
+for the object-key layout, publication, and cadence-based generation.
+
 ## Configuration
 
 ```text

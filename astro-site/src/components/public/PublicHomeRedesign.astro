@@ -1,5 +1,6 @@
 ---
 import CountryCard from '../CountryCard.astro';
+import { siteHref } from '../../lib/papers';
 import CountryFlag from '../CountryFlag.astro';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { localizedRegionName } from '../../utils/i18n';
@@ -422,7 +423,7 @@ const explorePaths = [
             const code = String(report.country_code ?? '').toLowerCase();
             const name = zh ? report.country_name_zh ?? report.country_name_en ?? report.country_name ?? report.country_code : fr ? (report.country_name_fr ?? localizedRegionName('fr', report.country_code, { en: report.country_name_en ?? report.country_name })) : report.country_name_en ?? report.country_name ?? report.country_code;
             return (
-              <a href={href(`/countries/${code}/reports/${report.id}/`)}>
+              <a href={siteHref(href(`/countries/${code}/reports/${report.id}/`))}>
                 <CountryFlag code={report.country_code} name={name} sizeClass="w-9 h-7" />
                 <span><strong>{name}</strong><small>{report.period_start} - {report.period_end}</small></span>
                 <b>{t.openReport} <span aria-hidden="true">-&gt;</span></b>

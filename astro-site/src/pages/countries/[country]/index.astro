@@ -34,6 +34,7 @@ import metaRaw from '../../../data/meta.json';
 import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { localizedDiseaseName } from '../../../utils/diseaseNames';
 import { localizedRegionName } from '../../../utils/i18n';
+import { siteHref } from '../../../lib/papers';
 
 export function getStaticPaths() {
   return ((metaRaw as any).countries ?? []).filter(hasCountryDataSnapshot).filter((c: any) => shouldBuildPage(`country:${c.code.toLowerCase()}`)).map((c: any) => ({
@@ -275,7 +276,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
           </div>
           {reports.length > 0 && (
             <a
-              href={localeHref(`/countries/${country}/reports/`)}
+              href={siteHref(localeHref(`/countries/${country}/reports/`))}
               class="site-action-secondary inline-flex items-center gap-2 px-4 py-2 rounded-none border text-sm font-semibold transition-all"
             >
               <span>{zh ? '查看报告归档' : fr ? 'Ouvrir les rapports archivés' : 'Open report archive'}</span>
@@ -482,7 +483,7 @@ const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series
               {zh ? '近期监测摘要' : fr ? 'Synthèses de surveillance récentes' : 'Recent monitoring summaries'}
             </h2>
           </div>
-          <a href={localeHref(`/countries/${country}/reports/`)} class="text-sm font-semibold text-brand-500 hover:text-brand-400 transition-colors">
+          <a href={siteHref(localeHref(`/countries/${country}/reports/`))} class="text-sm font-semibold text-brand-500 hover:text-brand-400 transition-colors">
             <span>{zh ? '查看全部报告 →' : fr ? 'Voir tous les rapports →' : 'View all reports →'}</span>
           </a>
         </div>

@@ -1,6 +1,7 @@
 ---
 // src/layouts/ReportLayout.astro
 import BaseLayout from './BaseLayout.astro';
+import { REPORTS_ORIGIN } from '../lib/papers';
 import {
   buildBreadcrumbStructuredData,
   type JsonLdNode,
@@ -14,6 +15,8 @@ interface Props {
   structuredData?: JsonLdNode | JsonLdNode[];
   seo?: import('../lib/seo').SeoDocument;
   hideLanguageToggle?: boolean;
+  routePathOverride?: string;
+  siteOriginOverride?: string;
   stage?: boolean;
 }
 
@@ -25,6 +28,8 @@ const {
   structuredData = [],
   seo,
   hideLanguageToggle = false,
+  routePathOverride,
+  siteOriginOverride = REPORTS_ORIGIN,
   stage = false,
 } = Astro.props;
 const homeLabel = initialLanguage === 'zh' ? '首页' : initialLanguage === 'fr' ? 'Accueil' : 'Home';
@@ -48,6 +53,8 @@ const additionalStructuredData = [
   initialLanguage={initialLanguage}
   additionalStructuredData={additionalStructuredData}
   seo={seo}
+  siteOriginOverride={siteOriginOverride}
+  routePathOverride={routePathOverride}
   hideLanguageToggle={hideLanguageToggle}
   stage={stage}
 >

@@ -74,7 +74,7 @@ def derive_r2_credentials_from_api_token(
 
 @dataclass(frozen=True)
 class R2PapersConfig:
-    """Connection settings for the papers R2 bucket."""
+    """Connection settings for one independently published R2 site."""
 
     account_id: str
     bucket: str
@@ -82,6 +82,7 @@ class R2PapersConfig:
     secret_access_key: str
     public_base_url: str = DEFAULT_PAPERS_ORIGIN
     endpoint_url: str | None = None
+    manifest_key: str = MANIFEST_KEY
 
     @property
     def s3_endpoint(self) -> str:
@@ -100,6 +101,7 @@ class R2PapersConfig:
             payload.get("public_base_url") or DEFAULT_PAPERS_ORIGIN
         ).strip()
         endpoint_url = str(payload.get("endpoint_url") or "").strip() or None
+        manifest_key = str(payload.get("manifest_key") or MANIFEST_KEY).strip()
         if not (account_id and bucket and access_key_id and secret_access_key):
             return None
         return cls(
@@ -109,6 +111,7 @@ class R2PapersConfig:
             secret_access_key=secret_access_key,
             public_base_url=public_base_url.rstrip("/"),
             endpoint_url=endpoint_url,
+            manifest_key=manifest_key,
         )
 
 
@@ -181,6 +184,7 @@ class R2S3Client:
         timeout_seconds: float = 120.0,
     ) -> None:
         self.config = config
+        self.manifest_key = config.manifest_key
         self._http = None if opener else httpx.Client(
             limits=httpx.Limits(max_connections=32, max_keepalive_connections=32),
             follow_redirects=False,
@@ -339,7 +343,7 @@ class R2S3Client:
         # representation to avoid transferring ~11 MB of repeated paths and
         # metadata on every changed release; ordinary object ETags stay intact.
         content_encoding = None
-        if key == MANIFEST_KEY and len(body) > 1024:
+        if key == self.manifest_key and len(body) > 1024:
             encoded = gzip.compress(body, compresslevel=6, mtime=0)
             if len(encoded) < len(body):
                 print(f"R2 manifest transport: raw_bytes={len(body)}, encoded_bytes={len(encoded)}", flush=True)
@@ -374,7 +378,7 @@ class R2S3Client:
         # HTTPX decodes Content-Encoding itself; injected/urllib transports
         # may return the encoded representation. Accept both, including legacy
         # uncompressed manifests, without changing the manifest schema.
-        if key == MANIFEST_KEY and payload.startswith(b"\x1f\x8b"):
+        if key == self.manifest_key and payload.startswith(b"\x1f\x8b"):
             try:
                 payload = gzip.decompress(payload)
             except (OSError, EOFError) as exc:
@@ -433,10 +437,20 @@ def _content_type_for(path: str) -> str:
         return "application/xml; charset=utf-8"
     if lowered.endswith(".txt"):
         return "text/plain; charset=utf-8"
+    asset_types = {
+        ".js": "text/javascript; charset=utf-8",
+        ".css": "text/css; charset=utf-8",
+        ".woff": "font/woff", ".woff2": "font/woff2", ".ttf": "font/ttf",
+        ".svg": "image/svg+xml", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".webp": "image/webp", ".avif": "image/avif", ".ico": "image/x-icon",
+    }
+    for suffix, content_type in asset_types.items():
+        if lowered.endswith(suffix):
+            return content_type
     return "application/octet-stream"
 
 
-def _cache_control_for(path: str) -> str:
+def _cache_control_for(path: str, *, manifest_key: str = MANIFEST_KEY) -> str:
     """Cache policy per object type; R2 custom domains ignore Pages ``_headers``.
 
     Keys are stable names (not content-addressed), so nothing is ``immutable``.
@@ -444,7 +458,7 @@ def _cache_control_for(path: str) -> str:
     """
 
     lowered = path.lower()
-    if lowered == MANIFEST_KEY:
+    if lowered == manifest_key.lower():
         return "no-store, max-age=0"
     if lowered.endswith(".html"):
         return "public, max-age=0, must-revalidate"
@@ -453,23 +467,23 @@ def _cache_control_for(path: str) -> str:
     return "public, max-age=86400"
 
 
-def load_remote_manifest(client: R2S3Client) -> dict[str, Any]:
+def load_remote_manifest(client: R2S3Client, *, manifest_key: str = MANIFEST_KEY) -> dict[str, Any]:
     """Load the previously published papers manifest, or an empty one."""
 
-    payload = client.get_object(MANIFEST_KEY)
+    payload = client.get_object(manifest_key)
     if payload is None:
         return {"schema_version": 1, "files": []}
     try:
         data = json.loads(payload.decode("utf-8"))
     except json.JSONDecodeError as exc:
-        raise R2S3Error(f"Remote {MANIFEST_KEY} is not valid JSON") from exc
+        raise R2S3Error(f"Remote {manifest_key} is not valid JSON") from exc
     if not isinstance(data, dict):
-        raise R2S3Error(f"Remote {MANIFEST_KEY} must be a JSON object")
+        raise R2S3Error(f"Remote {manifest_key} must be a JSON object")
     files = data.get("files")
     if files is None:
         data["files"] = []
     elif not isinstance(files, list):
-        raise R2S3Error(f"Remote {MANIFEST_KEY} files must be a list")
+        raise R2S3Error(f"Remote {manifest_key} files must be a list")
     return data
 
 
@@ -559,7 +573,8 @@ def _publish_papers_site(
     if not papers_dir.is_dir():
         raise FileNotFoundError(f"Papers site directory not found: {papers_dir}")
 
-    local_manifest_path = papers_dir / MANIFEST_KEY
+    manifest_key = config.manifest_key
+    local_manifest_path = papers_dir / manifest_key
     if local_manifest_path.exists():
         local_manifest = json.loads(local_manifest_path.read_text(encoding="utf-8"))
     else:
@@ -572,7 +587,7 @@ def _publish_papers_site(
         )
 
     active = client
-    remote_manifest = load_remote_manifest(active)
+    remote_manifest = load_remote_manifest(active, manifest_key=manifest_key)
     remote_by_key = {
         str(item.get("key")): item
         for item in remote_manifest.get("files") or []
@@ -596,7 +611,7 @@ def _publish_papers_site(
     for key, item in local_by_key.items():
         path = (source_root / str(item["path"])).resolve()
         if (not path.is_relative_to(source_root) or not path.is_file()
-                or key == MANIFEST_KEY or ".." in key.split("/")):
+                or key == manifest_key or ".." in key.split("/")):
             raise R2S3Error(f"Invalid papers manifest path: {item['path']}")
         if path.stat().st_size != int(item["bytes"]):
             raise R2S3Error(f"Papers file size changed after build: {item['path']}")
@@ -675,8 +690,11 @@ def _publish_papers_site(
     # Public indexes are commit pointers: never expose new shard URLs before
     # every referenced object exists. Old shards remain in the local retention
     # window and therefore remain in the release manifest until safe to prune.
-    indexes = {"site-data/research/index.json", "site-data/research/catalogue.json"}
-    transfer_batch([item for item in local_files if item["key"] not in indexes])
+    indexes = {"site-data/research/index.json", "site-data/research/catalogue.json", "site-data/reports/index.json"}
+    # Hydration modules and their lazy dependencies must exist before new HTML
+    # can refer to them. Older hashed assets remain in the retained generation.
+    transfer_batch([item for item in local_files if str(item["key"]).startswith("_astro/")])
+    transfer_batch([item for item in local_files if item["key"] not in indexes and not str(item["key"]).startswith("_astro/")])
     transfer_batch([item for item in local_files if item["key"] in indexes])
 
     sample_url = None
@@ -697,7 +715,7 @@ def _publish_papers_site(
 
     removed = 0
     for key in sorted(set(remote_by_key) - set(local_by_key)):
-        if key != MANIFEST_KEY:
+        if key != manifest_key:
             active.delete_object(key)
             removed += 1
     manifest_body = json.dumps(
@@ -705,9 +723,9 @@ def _publish_papers_site(
     ).encode("utf-8")
     if manifest_body != json.dumps(remote_manifest, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8"):
         active.put_object(
-            MANIFEST_KEY, manifest_body,
+            manifest_key, manifest_body,
             content_type="application/json; charset=utf-8",
-            cache_control=_cache_control_for(MANIFEST_KEY),
+            cache_control=_cache_control_for(manifest_key, manifest_key=manifest_key),
         )
     print(f"R2 publish completed in {time.monotonic() - started:.1f}s", flush=True)
 
@@ -716,7 +734,7 @@ def _publish_papers_site(
         removed=removed,
         unchanged=unchanged,
         bytes_uploaded=bytes_uploaded,
-        manifest_url=f"{config.public_base_url.rstrip('/')}/{MANIFEST_KEY}",
+        manifest_url=f"{config.public_base_url.rstrip('/')}/{manifest_key}",
         sample_url=sample_url,
         sample_ok=sample_ok,
     )

@@ -3270,6 +3270,9 @@
           },
           "r2_papers": {
             "$ref": "#/components/schemas/DataReleaseChannelOut"
+          },
+          "r2_reports": {
+            "$ref": "#/components/schemas/DataReleaseChannelOut"
           }
         },
         "title": "DataReleaseChannelsOut",
@@ -3313,6 +3316,9 @@
           },
           "r2_papers": {
             "$ref": "#/components/schemas/DataReleaseR2PapersCheckOut"
+          },
+          "r2_reports": {
+            "$ref": "#/components/schemas/DataReleaseR2ReportsCheckOut"
           },
           "raw": {
             "anyOf": [
@@ -4354,6 +4360,65 @@
           }
         },
         "title": "DataReleaseR2PapersCheckOut",
+        "type": "object"
+      },
+      "DataReleaseR2ReportsCheckOut": {
+        "properties": {
+          "bucket": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket"
+          },
+          "bucket_access_ok": {
+            "default": false,
+            "title": "Bucket Access Ok",
+            "type": "boolean"
+          },
+          "configured": {
+            "default": false,
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "credentials_present": {
+            "default": false,
+            "title": "Credentials Present",
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "public_base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Base Url"
+          }
+        },
+        "title": "DataReleaseR2ReportsCheckOut",
         "type": "object"
       },
       "DataReleaseRepositoryBoundaryOut": {
@@ -10421,6 +10486,58 @@
           "created_at"
         ],
         "title": "ReportSectionRunOut",
+        "type": "object"
+      },
+      "ReportWorkflowOut": {
+        "properties": {
+          "country_code": {
+            "title": "Country Code",
+            "type": "string"
+          },
+          "figure_catalog": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Figure Catalog",
+            "type": "array"
+          },
+          "max_figures": {
+            "title": "Max Figures",
+            "type": "integer"
+          },
+          "max_figures_per_section": {
+            "title": "Max Figures Per Section",
+            "type": "integer"
+          },
+          "method_version": {
+            "title": "Method Version",
+            "type": "string"
+          },
+          "periods": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Periods",
+            "type": "array"
+          },
+          "schedule": {
+            "additionalProperties": true,
+            "title": "Schedule",
+            "type": "object"
+          }
+        },
+        "required": [
+          "country_code",
+          "method_version",
+          "figure_catalog",
+          "max_figures",
+          "max_figures_per_section",
+          "schedule",
+          "periods"
+        ],
+        "title": "ReportWorkflowOut",
         "type": "object"
       },
       "ResponseMeta": {
@@ -23482,6 +23599,99 @@
         "summary": "Start Ai Task",
         "tags": [
           "AI"
+        ]
+      }
+    },
+    "/api/v1/reports/workflow": {
+      "get": {
+        "operationId": "report_workflow_api_v1_reports_workflow_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ReportWorkflowOut"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Report Workflow",
+        "tags": [
+          "Reports"
         ]
       }
     },

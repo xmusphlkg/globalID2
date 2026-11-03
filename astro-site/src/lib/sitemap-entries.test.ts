@@ -78,6 +78,7 @@ test('builds only publishable static, country, disease, and report URLs', () => 
     ...localizedStaticPaths,
     ...localized('/diseases/influenza/'),
     ...localized('/countries/jp/'),
+    ...localized('/reports/'),
     ...localized('/countries/jp/reports/'),
     ...localized('/countries/jp/reports/10/'),
     ...localized('/countries/jp/reports/10/influenza/'),
@@ -255,6 +256,8 @@ test('current generated data matches the Astro static-route intent', () => {
     reports,
     id => details.get(id) ?? null,
   );
+  expectedPaths.add('/reports/');
+  expectedPaths.add('/zh/reports/');
   for (const country of reportArchiveCountries(publishableReports)) {
     expectedPaths.add(`/countries/${country}/reports/`); expectedPaths.add(`/zh/countries/${country}/reports/`);
   }

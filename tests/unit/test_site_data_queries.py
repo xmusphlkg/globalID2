@@ -56,6 +56,48 @@ def test_generate_script_reexports_query_api_without_wrappers() -> None:
 
 
 @pytest.mark.asyncio
+async def test_report_export_exposes_update_marker_and_peer_review_provenance() -> None:
+    created = datetime(2026, 5, 31, tzinfo=timezone.utc)
+    updated = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    document = {
+        "schema_version": "report_v4.1",
+        "default_locale": "zh",
+        "locales": ["zh", "en", "fr"],
+        "title": {"zh": "报告"},
+        "summary": {"zh": "摘要"},
+        "key_findings": {"zh": ["发现"]},
+        "metrics": {"total_cases": 12},
+        "peer_review": {"status": "published", "review_mode": "cross_model"},
+    }
+    row = mapped_row(
+        id=5,
+        title="Report",
+        report_type="weekly",
+        status="approved",
+        period_start=date(2026, 5, 1),
+        period_end=date(2026, 5, 7),
+        created_at=created,
+        updated_at=updated,
+        summary="summary",
+        quality_score=0.9,
+        metadata={"report_layout": "report_v4", "report_document_v4": document},
+        generation_config={},
+        country_code="JP",
+        country_name="Japan",
+        country_name_en="Japan",
+        country_name_local="日本",
+    )
+    session = FakeSession(FakeRows([row]))
+
+    reports = await site_data_queries.fetch_reports(session)
+    assert "AND c.code = 'JP'" in session.calls[0][0]
+
+    assert reports[0]["updated_at"] == updated.isoformat()
+    assert reports[0]["metadata"]["peer_review"]["review_mode"] == "cross_model"
+    assert "r.updated_at" in session.calls[0][0]
+
+
+@pytest.mark.asyncio
 async def test_fetch_countries_preserves_ordering_query_and_plain_dict_rows() -> None:
     session = FakeSession(
         FakeRows(
