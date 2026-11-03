@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 from dataclasses import dataclass
@@ -124,7 +125,8 @@ class ReportV4Pipeline:
         usable_data = context.data[context.data["disease_id"].isin(disease_payloads.keys())].copy()
         if usable_data.empty:
             raise ValueError("Report window has no mapped, publishable disease records")
-        normalized, normalized_history, source_policy = self.dataset_builder.normalize(
+        normalized, normalized_history, source_policy = await asyncio.to_thread(
+            self.dataset_builder.normalize,
             usable_data,
             country_code=country.code,
             historical_data=context.historical_data,
@@ -138,7 +140,8 @@ class ReportV4Pipeline:
             "name_fr": (country.metadata_ or {}).get("name_fr") if isinstance(country.metadata_, dict) else None,
             "name_local": country.name_local,
         }
-        evidence_packet = build_evidence_packet(
+        evidence_packet = await asyncio.to_thread(
+            build_evidence_packet,
             data=normalized,
             historical_data=normalized_history,
             country=country_payload,
@@ -176,8 +179,8 @@ class ReportV4Pipeline:
                 )
             ]
 
-        attach_historical_series(evidence_packet, document, normalized, normalized_history,
-                                 disease_payloads, context.period_end)
+        await asyncio.to_thread(attach_historical_series, evidence_packet, document, normalized,
+                                normalized_history, disease_payloads, context.period_end)
 
         if context.progress_callback:
             await context.progress_callback("review", 0, 1, "Writing evidence-grounded interpretation and starting peer review")

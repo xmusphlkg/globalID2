@@ -100,6 +100,12 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
                     task.task_uuid,
                     exc,
                 )
+            try:
+                from src.services.report_schedule_service import report_schedule_service
+                await report_schedule_service.maybe_trigger_after_crawl(task)
+            except Exception as exc:
+                # The periodic scheduler remains a durable fallback.
+                logger.warning("Post-crawl report scheduling skipped for {}: {}", task.task_uuid, exc)
         try:
             await data_release_service.maybe_trigger_after_task_completion(task.task_uuid, task.task_type)
         except Exception as exc:

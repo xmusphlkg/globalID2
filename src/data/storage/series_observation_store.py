@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import math
@@ -258,7 +259,13 @@ async def _persist_observation_revisions_batch(
     if not current:
         return 0
 
-    history_result = await db.execute(
+    identity_columns = (
+        DiseaseSeriesObservationRevision.time,
+        DiseaseSeriesObservationRevision.series_code,
+        DiseaseSeriesObservationRevision.geography_key,
+        DiseaseSeriesObservationRevision.dimension_key,
+    )
+    history_query = (
         select(
             DiseaseSeriesObservationRevision.time,
             DiseaseSeriesObservationRevision.series_code,
@@ -282,8 +289,13 @@ async def _persist_observation_revisions_batch(
                 DiseaseSeriesObservationRevision.dimension_key,
             ).in_(keys)
         )
-        .order_by(DiseaseSeriesObservationRevision.recorded_at.desc())
+        # Only the latest state per observation participates in comparison.
+        # Fetching every historical revision turns an incremental crawl into a
+        # growing full-history read, especially for frequently revised weeks.
+        .distinct(*identity_columns)
+        .order_by(*identity_columns, DiseaseSeriesObservationRevision.recorded_at.desc())
     )
+    history_result = await db.execute(history_query)
     revisions = [dict(row) for row in history_result.mappings().all()]
 
     inserts: list[dict[str, Any]] = []
@@ -820,6 +832,7 @@ class SeriesObservationStore:
         value_field: str = "Cases",
         geography_key: str | None = None,
         quality_policy: SeriesObservationQualityPolicy | None = None,
+        jp_holding_profiles: dict | None = None,
     ) -> SeriesObservationSaveResult:
         policy = quality_policy or SeriesObservationQualityPolicy()
         if policy.registry_coverage == "legacy_only":
@@ -837,7 +850,8 @@ class SeriesObservationStore:
                 skipped_registry_not_synced=0,
                 quality_report=quality_report,
             )
-        built = self.build_observations(
+        built = await asyncio.to_thread(
+            self.build_observations,
             rows,
             country_code,
             source_id=source_id,
@@ -851,6 +865,7 @@ class SeriesObservationStore:
             source_id=source_id,
             value_field=value_field,
             geography_key=geography_key,
+            jp_holding_profiles=jp_holding_profiles,
         )
         if holding_observations:
             built = SeriesObservationBuildResult(
@@ -897,7 +912,8 @@ class SeriesObservationStore:
             if observations and policy.mode != "off"
             else []
         )
-        quality_report = self.assess_quality(
+        quality_report = await asyncio.to_thread(
+            self.assess_quality,
             observations,
             country_code=country_code,
             source_row_count=len(rows),
@@ -1248,6 +1264,7 @@ class SeriesObservationStore:
         source_id: str | Mapping[str, str] | None,
         value_field: str,
         geography_key: str | None,
+        jp_holding_profiles: dict | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         """Retain valid source facts whose disease category is awaiting review.
 
@@ -1262,7 +1279,7 @@ class SeriesObservationStore:
         observation_by_key: dict[tuple[object, ...], dict[str, Any]] = {}
         series_by_category: dict[int, DiseaseSurveillanceSeries] = {}
         categories_by_identity: dict[tuple, SourceDiseaseCategory | None] = {}
-        jp_profiles = self._jp_mixed_holding_profiles(
+        jp_profiles = jp_holding_profiles if jp_holding_profiles is not None else self._jp_mixed_holding_profiles(
             rows, country_code, source_id, value_field
         )
         jp_splits: dict[int, dict[str, Any]] = {}

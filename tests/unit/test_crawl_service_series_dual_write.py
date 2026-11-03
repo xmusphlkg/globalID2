@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.services.crawl_service import CrawlService
+from src.data.storage.series_observation_store import SeriesObservationSaveResult
 
 
 @pytest.fixture(autouse=True)
@@ -258,6 +259,38 @@ async def test_series_only_save_surfaces_registry_prefilter_counts(monkeypatch) 
     assert result.upserted == 1
     assert result.skipped_unregistered == 1
     assert result.skipped_missing == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("with_weeks,expected", [(False, [10000, 10000, 1]), (True, [12000, 8001])])
+async def test_japan_series_write_is_bounded_and_preserves_all_rows(monkeypatch, with_weeks, expected):
+    batches = []
+
+    class Store:
+        def _jp_mixed_holding_profiles(self, rows, *_args):
+            assert len(rows) == 20001
+            return {("identity",): {"all_case": {}, "sentinel": {}}}
+
+        async def save_rows(self, db, rows, *_args, **_kwargs):
+            batches.append((db, list(rows)))
+            assert ("identity",) in _kwargs["jp_holding_profiles"]
+            return SeriesObservationSaveResult(
+                upserted=len(rows), skipped_unmatched=0, skipped_ambiguous=0,
+                skipped_invalid=0, skipped_registry_not_synced=0,
+                quality_report=SimpleNamespace(issues=(), highest_severity=None),
+            )
+
+    monkeypatch.setattr("src.services.crawl_service.SeriesObservationStore", Store)
+    db = object()
+    rows = [{"n": n, **({"MMWRYear": "2026", "MMWRWeek": str(1 if n < 6000 else 2 if n < 12000 else 3)} if with_weeks else {})} for n in range(20001)]
+    result = await CrawlService._save_series_rows(
+        db, SimpleNamespace(country_code="JP", series_country_code="JP"), rows,
+    )
+
+    assert [len(batch) for _, batch in batches] == expected
+    assert all(session is db for session, _ in batches)
+    assert [row for _, batch in batches for row in batch] == rows
+    assert result.upserted == len(rows)
 
 
 @pytest.mark.asyncio

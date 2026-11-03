@@ -434,7 +434,7 @@ class JapanIDWRCrawler(BaseCrawler):
                     selected_week_pages.append(week_url)
                     logs.append(f"[select] week {y}-W{w:02d}: {week_url}")
 
-        if not force and not fill_missing:
+        if not force:
             selected_week_pages.extend(
                 sorted(
                     discovered_week_pages,
@@ -446,7 +446,9 @@ class JapanIDWRCrawler(BaseCrawler):
                 set(selected_week_pages),
                 key=lambda url: self._parse_year_week_from_url(url),
                 reverse=True,
-            )[: self.max_candidate_csvs]
+            )
+            if not fill_missing:
+                selected_week_pages = selected_week_pages[: self.max_candidate_csvs]
 
         logs.append(f"[discover] missing week pages selected: {len(selected_week_pages)}")
 

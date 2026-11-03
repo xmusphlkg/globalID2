@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
+import { resolve } from 'node:path';
 
 const siteUrl = process.env.GLOBALID_SITE_URL || process.env.SITE_URL || 'https://globalinfectiousdisease.com';
 const buildConcurrency = Number(process.env.GIDS_ASTRO_BUILD_CONCURRENCY ?? 2);
@@ -8,6 +9,11 @@ if (!Number.isInteger(buildConcurrency) || buildConcurrency < 1 || buildConcurre
 }
 
 export default defineConfig({
+  ...(process.env.GIDS_REPORTS_BUILD_DIR ? {
+    srcDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'src'),
+    publicDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'public'),
+    outDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'dist'),
+  } : {}),
   site: siteUrl,
   output: 'static',
   compressHTML: true,

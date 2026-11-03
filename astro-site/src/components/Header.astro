@@ -226,6 +226,7 @@ const active = (path: string) => englishPath === path || (path !== '/' && englis
   const mainOrigin = 'https://globalinfectiousdisease.com';
   const papersOrigin = 'https://papers.globalinfectiousdisease.com';
   const reportsOrigin = 'https://reports.globalinfectiousdisease.com';
+  const mainBase = [papersOrigin, reportsOrigin].includes(location.origin) ? mainOrigin : '';
   const siteUrl = href => {
     if (typeof href !== 'string' || !href.startsWith('/')) return href;
     if (/^\/(?:(?:zh|fr)\/)?countries\/[^/]+\/reports(?:\/|$)|^\/site-data\/reports\//.test(href)) return reportsOrigin + href;

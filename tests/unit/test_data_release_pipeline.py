@@ -566,6 +566,9 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
         def _split_papers_bundle_command(self, **_kwargs):
             return ["split-papers"]
 
+        def _split_reports_bundle_command(self, **_kwargs):
+            return ["split-reports"]
+
         def _publish_papers_r2_command(self, **_kwargs):
             return ["publish-papers-r2"]
 

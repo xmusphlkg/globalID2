@@ -5951,6 +5951,11 @@ export interface components {
              * @default site-release
              */
             job_id: string;
+            /**
+             * Reports Only
+             * @default false
+             */
+            reports_only: boolean;
         };
         /** QualityStats */
         QualityStats: {

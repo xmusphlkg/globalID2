@@ -187,6 +187,19 @@ def test_incremental_discovery_limits_work_to_recent_weeks(
     assert f"/{current_year}/29/" in csv_urls[1]
 
 
+def test_missing_week_discovery_also_refreshes_recent_cached_weeks(crawler, monkeypatch):
+    crawler.max_candidate_csvs = 2
+    year = datetime.now().year
+    index = f"https://example.com/rapid/{year}/index.html"
+    pages = [index.replace("index.html", f"{week}/index.html") for week in (30, 29, 28)]
+    monkeypatch.setattr(crawler, "_discover_year_index_urls", lambda: [index])
+    monkeypatch.setattr(crawler, "_discover_week_index_urls", lambda _url: pages)
+    monkeypatch.setattr(crawler, "get", lambda url: _FakeResponse(text='<a href="./zensu.csv">zensu</a>', url=url))
+    urls, _, _ = crawler._discover_weekly_csv_urls(existing_weeks={(year, 29), (year, 30)}, fill_missing=True)
+    assert len(urls) == 3
+    assert all(any(f"/{year}/{week}/" in url for url in urls) for week in (28, 29, 30))
+
+
 def test_incremental_refresh_merges_existing_standardized_rows(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,

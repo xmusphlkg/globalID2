@@ -6,6 +6,7 @@ decoupling it from the CLI layer in main.py.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from dataclasses import dataclass, replace
@@ -246,8 +247,56 @@ class CrawlService:
         rows,
         *,
         series_rows=None,
+        _bounded_batch=False,
+        _jp_holding_profiles=None,
     ):
         """Persist lossless source-series facts without a legacy projection."""
+
+        # The IDWR cache contains millions of rows. Building normalized
+        # observations and holding-series payloads for the entire history at
+        # once can exhaust the worker's memory. Keep the enclosing transaction
+        # and mutation lock, but bound the intermediate objects for each batch.
+        source_rows = rows if series_rows is None else series_rows
+        if (
+            not _bounded_batch
+            and str(getattr(updater, "series_country_code", "")).upper() == "JP"
+            and len(source_rows) > 10000
+        ):
+            source_id = getattr(updater, "ontology_source_id", None) or "SRC_JP_NIID"
+            profiles = await asyncio.to_thread(
+                SeriesObservationStore()._jp_mixed_holding_profiles,
+                source_rows, "JP", source_id, "Cases",
+            )
+            totals = None
+            fields = (
+                "upserted", "skipped_unmatched", "skipped_ambiguous",
+                "skipped_invalid", "skipped_registry_not_synced",
+                "skipped_unregistered", "skipped_missing", "holding_observations",
+            )
+            offset = 0
+            while offset < len(source_rows):
+                end = min(offset + 10000, len(source_rows))
+                # JP rows are sorted by reporting week. Keep a week together
+                # for cross-series quality checks; bound unusually large weeks.
+                if end < len(source_rows):
+                    boundary = (source_rows[end - 1].get("MMWRYear"), source_rows[end - 1].get("MMWRWeek"))
+                    if all(boundary):
+                        while end < min(offset + 20000, len(source_rows)) and (source_rows[end].get("MMWRYear"), source_rows[end].get("MMWRWeek")) == boundary:
+                            end += 1
+                batch = source_rows[offset:end]
+                result = await CrawlService._save_series_rows(
+                    db, updater, batch, _bounded_batch=True,
+                    _jp_holding_profiles=profiles,
+                )
+                if totals is None:
+                    totals = result
+                else:
+                    totals = replace(totals, **{
+                        field: getattr(totals, field, 0) + getattr(result, field, 0)
+                        for field in fields
+                    })
+                offset = end
+            return totals
 
         quality_policy = CrawlService._series_quality_policy(updater)
         country_code = str(getattr(updater, "country_code", "") or "").upper()
@@ -284,7 +333,8 @@ class CrawlService:
                 disease_mapping_registry_service,
             )
 
-            source_series_rows = series_store.enrich_registry_identities(
+            source_series_rows = await asyncio.to_thread(
+                series_store.enrich_registry_identities,
                 source_series_rows,
                 series_country_code,
                 source_id=source_id,
@@ -305,7 +355,8 @@ class CrawlService:
         skipped_unregistered = 0
         skipped_missing = 0
         if bool(getattr(updater, "series_registered_rows_only", False)):
-            selection = series_store.select_registry_rows(
+            selection = await asyncio.to_thread(
+                series_store.select_registry_rows,
                 source_series_rows,
                 series_country_code,
                 source_id=source_id,
@@ -368,6 +419,7 @@ class CrawlService:
                 source_id=source_id,
                 geography_key=geography_key,
                 quality_policy=quality_policy,
+                **({"jp_holding_profiles": _jp_holding_profiles} if _jp_holding_profiles is not None else {}),
             )
         except SeriesObservationQualityError as exc:
             logger.error(
@@ -788,7 +840,9 @@ class CrawlService:
         """Run the source through durable collection stages."""
         from src.services.ingestion.countries import jp
         from src.services.ingestion.runner import run_surveillance
-        return await run_surveillance(self, task=task, updater=updater, connector=jp, source=source, force=force, process=process, connector_options={"output_csv": updater.output_csv, "force": force, "fill_missing": fill_missing})
+        config = get_country_bootstrap_config("JP").get("crawler_config", {})
+        recent_weeks = max(1, int(config.get("incremental_cache_weeks", 12)))
+        return await run_surveillance(self, task=task, updater=updater, connector=jp, source=source, force=force, process=process, connector_options={"output_csv": updater.output_csv, "force": force, "fill_missing": fill_missing, "incremental_cache_weeks": recent_weeks})
 
 
     async def _execute_configured_monthly(self, country_code: str, **kwargs) -> CrawlResult:

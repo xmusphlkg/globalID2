@@ -151,6 +151,14 @@ class ReportScheduleService:
     def _now(self) -> datetime:
         return datetime.now(timezone.utc)
 
+    async def maybe_trigger_after_crawl(self, task: Task) -> None:
+        """Check report windows immediately after a completed Japan import."""
+        data = task.input_data or {}
+        country = str(data.get("country_code") or data.get("country") or "").upper()
+        if not self._config().schedule_enabled or country != REPORT_PILOT_COUNTRY or data.get("process") is False:
+            return
+        await self.trigger_job(self.JOB_ID, manual=False)
+
     async def _load_state(self) -> None:
         state = (await schedule_state_repository.load(self.KIND)).get(self.JOB_ID, {})
         for name in ("next_run_at", "last_started_at", "last_finished_at", "last_status", "last_error", "last_task_uuid"):

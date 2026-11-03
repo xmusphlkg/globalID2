@@ -81,6 +81,18 @@ describe("publication", () => {
     expect(screen.getByRole("button", { name: "Publish site-release" })).toBeEnabled();
     expect(apiFetch).toHaveBeenCalledWith("/publish/runs", { method: "POST", body: JSON.stringify({ job_id: "site-release", full: false }) });
   });
+  it("queues an isolated reports publication", async () => {
+    vi.mocked(apiFetch).mockImplementation((path) => {
+      if (path === "/publish/pending") return Promise.resolve(pending);
+      if (path === "/publish/runs") return Promise.resolve({ task_uuid: "reports-1", status: "queued" });
+      return Promise.resolve({ task_uuid: "reports-1", status: "running" });
+    });
+    show(<PublishView />);
+    fireEvent.click(screen.getByRole("button", { name: "Publish reports only" }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith("/publish/runs", {
+      method: "POST", body: JSON.stringify({ job_id: "site-release", full: false, reports_only: true }),
+    }));
+  });
   it("renders the same terminology in Chinese", async () => {
     useAppStore.setState({ lang: "zh" });
     vi.mocked(apiFetch).mockResolvedValue(pending);

@@ -1,4 +1,6 @@
 from pathlib import Path
+import json
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -51,24 +53,72 @@ def test_same_url_content_change_and_budget_fail_closed(tmp_path):
         shared_assets.prepare_shared_assets(
             old, new, tmp_path / "candidate", [Path("_astro/b.css")], budget=2
         )
+    assert not (tmp_path / "candidate").exists()
     assert (old / "_astro/a.css").read_bytes() == b"old"
 
 
+def test_snapshot_requires_exact_live_identity_and_content(tmp_path):
+    from src.services.data_release.pipeline import _built_site_digest
+
+    source, snapshot = tmp_path / "source", tmp_path / "snapshot"
+    put(source, "index.html", b"deployed")
+    put(source, "_astro/a.js", b"asset")
+    identity = {"release_id": "r1", "build_digest": _built_site_digest(source)}
+    put(source, "release.json", json.dumps(identity).encode())
+    shared_assets.retain_verified_snapshot(source, snapshot, identity)
+    assert shared_assets.verified_snapshot(snapshot, identity)
+    assert not shared_assets.verified_snapshot(snapshot, {**identity, "release_id": "r2"})
+    put(source, "index.html", b"changed")
+    assert shared_assets.verified_snapshot(snapshot, identity)
+    put(snapshot, "index.html", b"corrupted")
+    assert not shared_assets.verified_snapshot(snapshot, identity)
+
+
+def test_missing_previous_snapshot_fails_closed(tmp_path):
+    with pytest.raises(RuntimeError, match="verified previous"):
+        shared_assets.new_shared_assets(None, tmp_path)
+
+
 @pytest.mark.asyncio
-@pytest.mark.parametrize("failure", [None, "content", "cors"])
+async def test_compatibility_deploy_rejects_unverified_previous(tmp_path, monkeypatch):
+    old = tmp_path / "old"
+    put(old, "index.html", b"development build")
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        shared_assets.httpx,
+        "AsyncClient",
+        lambda **kwargs: real_client(transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"release_id": "live", "build_digest": "digest"})
+        )),
+    )
+    service = SimpleNamespace(_config=lambda: SimpleNamespace(main_site_origin="https://main.test"))
+    runtime = SimpleNamespace(root_dir=tmp_path, astro_dir=tmp_path / "astro")
+    with pytest.raises(RuntimeError, match="No verified previous Pages snapshot"):
+        await shared_assets.publish_shared_assets(
+            service, SimpleNamespace(), runtime, previous=old, project_name="site",
+            deployment_branch="main", release_identity={}, papers_origin="https://papers.test",
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("content", "allow_origin", "ok"),
+    [
+        (b"style", "https://papers.test", True),
+        (b"style", "*", True),
+        (b"wrong", "https://papers.test", False),
+        (b"style", "https://reports.test", False),
+    ],
+)
 async def test_verification_checks_public_bytes_and_cors(
-    tmp_path, monkeypatch, failure
+    tmp_path, monkeypatch, content, allow_origin, ok
 ):
     put(tmp_path, "_astro/new.css", b"style")
     real_client = httpx.AsyncClient
     response = httpx.Response(
         200,
-        content=b"wrong" if failure == "content" else b"style",
-        headers={
-            "access-control-allow-origin": "wrong"
-            if failure == "cors"
-            else "https://papers.test"
-        },
+        content=content,
+        headers={"access-control-allow-origin": allow_origin},
     )
     monkeypatch.setattr(
         shared_assets.httpx,
@@ -88,8 +138,8 @@ async def test_verification_checks_public_bytes_and_cors(
         main_origin="https://main.test",
         papers_origin="https://papers.test",
     )
-    if failure:
+    if ok:
+        await call
+    else:
         with pytest.raises(RuntimeError, match="mismatch"):
             await call
-    else:
-        await call

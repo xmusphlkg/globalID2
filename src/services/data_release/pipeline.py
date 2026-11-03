@@ -122,6 +122,9 @@ async def execute_release_task(
     service: Any, task: Any, *, runtime: ReleasePipelineRuntime
 ) -> dict[str, Any]:
     """Restore generated artifacts if build, deployment, or verification fails."""
+    if (getattr(task, "input_data", None) or {}).get("reports_only"):
+        from .reports_pipeline import execute_reports_release
+        return await execute_reports_release(service, task, runtime=runtime)
     import shutil
     import tempfile
     import time
@@ -760,6 +763,21 @@ async def _execute_release_task(
             },
         )
         pages_deployed = True
+        # Keep the exact verified Pages artifact for the next shared-asset
+        # compatibility deploy. Snapshot failure must not undo a live release.
+        try:
+            from .shared_assets import retain_verified_snapshot
+
+            await asyncio.to_thread(
+                retain_verified_snapshot,
+                runtime.astro_dir / "dist",
+                runtime.root_dir / "exports" / "verified-pages-snapshot",
+                release_identity,
+            )
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "Could not retain the verified Pages snapshot; future compatibility deployments will fail closed"
+            )
         # The v3 subscriber-alert dispatcher read analyst-reviewed statistical
         # signals; the notice-based Situation module publishes none, so no
         # alert step runs after deployment.

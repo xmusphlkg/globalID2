@@ -25,6 +25,8 @@ served with their browser-required MIME types.
 ## Country report schedule
 
 The control-plane scheduler checks for new report windows every 15 minutes.
+A completed Japan import also checks immediately; the periodic check remains
+the fallback after an outage or a concurrent scheduling attempt.
 The pilot is restricted to Japan (`JP`) in scheduling, task creation, the report
 service, generation pipeline, and public export. Existing other-country drafts
 remain in the database but do not enter this pilot's public bundle. It reads public `disease_surveillance_series`
@@ -58,6 +60,15 @@ Manual runs can use an explicitly labelled historical period; automatic runs
 still require fresh data. Duplicate periods are skipped, and a PostgreSQL
 transaction advisory lock prevents scheduler/API processes from concurrently
 queuing the same period. Generation does not itself publish to R2.
+
+Scheduled Japan crawls process the latest 12 weeks of the standardized cache
+and every newly downloaded weekly artifact, including older missing weeks.
+This limits repeated writes of unchanged history; it does not assert that older
+cached rows have already been imported. To backfill the complete cache, use the
+explicit `local` source or a dedicated history import and verify that it
+completes separately. Forced crawls retain their full source selection. The
+incremental window is relative to the latest cached week, so running a crawl
+cannot make a stale source appear fresh.
 
 ## Evidence, AI writing, and peer review
 
@@ -169,6 +180,17 @@ so editing its titles does not invalidate cached paper articles or social cards.
 Durable HTML, Markdown and PDF exports retain selected figures as captioned data
 tables, so they remain readable without an ECharts runtime or a network request.
 
+Full Pages releases retain a copy of the verified deployable artifact under
+`exports/verified-pages-snapshot`. Before publishing shared assets, the release
+compares its release ID and content digest with the live `release.json` and
+recomputes the local digest. If no matching snapshot exists, the compatibility
+deployment stops: a normal local `astro-site/dist` can contain extra pages or
+different data and must not be treated as the deployed site. To bootstrap an
+installation without a snapshot, restore the exact previously deployed, split
+Pages artifact (including `_headers`, `_redirects`, and `release.json`) to that
+path. The same checks apply to the restored copy. A successful verified full
+release refreshes the snapshot automatically.
+
 Renderer usage in a report section:
 
 ```tsx
@@ -230,3 +252,21 @@ dependencies. `--reports-only` refreshes the report index and changed details
 without regenerating surveillance downloads, literature or Situation exports.
 Main-site links can point directly to the R2 host
 without putting report pages on Pages.
+
+The control plane's **Publish reports only** action queues the same exclusive
+release lane as a normal publication. It refreshes report data, builds just
+the report routes in an isolated staging directory, splits the R2 bundle,
+uploads changed objects and verifies the public host. It does not acknowledge
+surveillance or other pending publication markers. The full site and its
+Pages deployment are not rebuilt by this action. A failed attempt restores the
+local report data and bundle; an R2 upload that already started is reconciled
+against the remote manifest on the next attempt. A nonempty report index may
+not be replaced by an empty one through this path.
+
+Set `DATA_RELEASE__REPORTS_AUTO_PUBLISH_ENABLED=true` after the isolated path
+passes production verification to enable scheduler reconciliation. The
+scheduler compares the latest completed Japan report task with the start of
+the latest successfully verified Reports R2 release. A busy release queue or
+process restart leaves the report pending for a later scheduler tick. Failed
+reports-only releases observe `DATA_RELEASE__AUTO_FAILURE_COOLDOWN_MINUTES`;
+ordinary transient automatic releases use the existing bounded retry policy.

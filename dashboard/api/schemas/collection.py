@@ -73,6 +73,7 @@ class LineOut(BaseModel):
 class PublishRunCreate(BaseModel):
     job_id: str = "site-release"
     full: bool = False
+    reports_only: bool = False
 
 
 class PendingOut(BaseModel):

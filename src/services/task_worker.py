@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Iterable, Optional
 
-from sqlalchemy import case, select
+from sqlalchemy import and_, case, or_, select
 
 from src.core import get_database, get_logger
 from src.core.config import get_config
@@ -326,19 +326,23 @@ async def _claim_next_task_uuid(
     mark it RUNNING in the same transaction, and then return the UUID.
     """
     async with get_database() as db:
-        active_task_types = (
+        reports_only = Task.input_data["reports_only"].as_boolean().is_(True)
+        active_tasks = (
             await db.execute(
-                select(Task.task_type).where(
+                select(Task.task_type, reports_only.label("reports_only")).where(
                     Task.status.in_([TaskStatus.RUNNING, TaskStatus.RETRYING])
                 )
             )
-        ).scalars().all()
+        ).all()
+        active_task_types = [task_type for task_type, is_reports_only in active_tasks
+            if not (task_type == TaskType.EXPORT_DATA and is_reports_only)]
         release_waiting = (
             await db.execute(
                 select(Task.id)
                 .where(
                     Task.task_type.in_(RELEASE_EXCLUSIVE_TASK_TYPES),
                     Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]),
+                    ~reports_only,
                 )
                 .limit(1)
             )
@@ -347,7 +351,8 @@ async def _claim_next_task_uuid(
             active_task_types,
             release_waiting=release_waiting,
         )
-        blocked_task_types = set(blocked_task_types or set()) | memory_blocked_task_types
+        lane_blocked = set(blocked_task_types or set())
+        blocked_task_types = lane_blocked | memory_blocked_task_types
 
         priority_rank = case(
             (Task.priority == TaskPriority.URGENT, 0),
@@ -365,7 +370,12 @@ async def _claim_next_task_uuid(
             .limit(64)
         )
         if blocked_task_types:
-            query = query.where(Task.task_type.notin_(list(blocked_task_types)))
+            allowed = Task.task_type.notin_(list(blocked_task_types))
+            if TaskType.EXPORT_DATA in memory_blocked_task_types and TaskType.EXPORT_DATA not in lane_blocked:
+                # Reports read report snapshots only. They do not walk the
+                # surveillance, literature, or Situation tables being stored.
+                allowed = or_(allowed, and_(Task.task_type == TaskType.EXPORT_DATA, reports_only))
+            query = query.where(allowed)
         candidates = list((await db.execute(query)).scalars().all())
         if not candidates:
             return None
@@ -415,6 +425,19 @@ async def _claim_next_task_uuid(
         task.last_error = None
         await db.commit()
         return task.task_uuid, task.task_type
+
+
+async def _claim_next_task_safely(worker_instance_id, *, blocked_task_types=None, excluded_task_uuids=None):
+    try:
+        return await _claim_next_task_uuid(
+            worker_instance_id, blocked_task_types=blocked_task_types,
+            excluded_task_uuids=excluded_task_uuids,
+        )
+    except Exception as exc:
+        # A transient database outage must not unwind asyncio.run() while
+        # active tasks hold transactions and the runtime guard owns the lease.
+        logger.warning("Task claim failed; worker will retry: {}", exc)
+        return None
 
 
 async def _heartbeat_claimed_task(
@@ -692,7 +715,7 @@ async def run_worker() -> None:
             )
             if lane_blocked is None:
                 break
-            claimed = await _claim_next_task_uuid(
+            claimed = await _claim_next_task_safely(
                 instance_id,
                 blocked_task_types=lane_blocked or None,
                 excluded_task_uuids=set(active_task_uuids.values()),

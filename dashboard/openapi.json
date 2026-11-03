@@ -9663,6 +9663,11 @@
             "default": "site-release",
             "title": "Job Id",
             "type": "string"
+          },
+          "reports_only": {
+            "default": false,
+            "title": "Reports Only",
+            "type": "boolean"
           }
         },
         "title": "PublishRunCreate",

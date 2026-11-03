@@ -594,6 +594,20 @@ def test_quality_guard_keeps_an_isolated_reported_zero() -> None:
     assert not any("zero" in issue.code for issue in report.issues)
 
 
+def test_japan_mixed_holding_profiles_span_write_batches() -> None:
+    store = SeriesObservationStore()
+    common = {
+        "MMWRYear": "2026", "MMWRWeek": "40", "Cases": "4",
+        "RawDiseaseLabel": "Unmapped test condition", "SourceDiseaseCode": "test-condition",
+    }
+    all_case = {**common, "SurveillanceType": "all_case"}
+    sentinel = {**common, "SurveillanceType": "sentinel"}
+    assert store._jp_mixed_holding_profiles([all_case], "JP", "SRC_JP_NIID", "Cases") == {}
+    profiles = store._jp_mixed_holding_profiles([all_case, sentinel], "JP", "SRC_JP_NIID", "Cases")
+    assert len(profiles) == 1
+    assert set(next(iter(profiles.values()))) == {"all_case", "sentinel"}
+
+
 def test_quality_guard_quarantines_cross_series_all_zero_tail() -> None:
     observations = [
         _quality_observation(f"SER_{series}", f"2026-0{month}-01", 0)

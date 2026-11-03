@@ -42,9 +42,12 @@ async def pending(db: AsyncSession = DB_DEPENDENCY):
 
 @router.post("/runs", response_model=DataResponse[dict], status_code=202)
 async def start(body: PublishRunCreate):
+    if body.full and body.reports_only:
+        raise HTTPException(400, "A reports-only release cannot be a full site release")
     try:
         result = await data_release_service.trigger_job(
-            body.job_id, manual=True, trigger="dashboard", full=body.full
+            body.job_id, manual=True, trigger="dashboard", full=body.full,
+            reports_only=body.reports_only,
         )
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc

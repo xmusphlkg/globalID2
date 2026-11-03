@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import shutil
 import tempfile
 from pathlib import Path
@@ -18,9 +19,48 @@ class SharedAssetVerificationError(RuntimeError):
     release_stage = "shared_assets_compatibility_deploy"
 
 
+def verified_snapshot(snapshot: Path, live_identity: dict) -> bool:
+    """Accept only a complete local copy of the currently served release."""
+    from .pipeline import _built_site_digest
+
+    try:
+        identity = json.loads((snapshot / "release.json").read_text())
+        digest = identity.get("build_digest")
+        return bool(
+            digest
+            and identity.get("release_id")
+            and identity.get("release_id") == live_identity.get("release_id")
+            and digest == live_identity.get("build_digest")
+            and _built_site_digest(snapshot) == digest
+        )
+    except (OSError, ValueError, TypeError, RuntimeError):
+        return False
+
+
+def retain_verified_snapshot(current: Path, destination: Path, identity: dict) -> None:
+    """Keep independent bytes for subsequent compatibility deployments."""
+    if not verified_snapshot(current, identity):
+        raise RuntimeError("Verified Pages snapshot does not match its release manifest")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="pages-snapshot-", dir=destination.parent) as temp:
+        temp_path = Path(temp)
+        candidate, old = temp_path / "candidate", temp_path / "old"
+        shutil.copytree(current, candidate)
+        if not verified_snapshot(candidate, identity):
+            raise RuntimeError("Copied Pages snapshot failed checksum verification")
+        if destination.exists():
+            destination.rename(old)
+        try:
+            candidate.rename(destination)
+        except BaseException:
+            if old.exists():
+                old.rename(destination)
+            raise
+
+
 def new_shared_assets(previous: Path | None, current: Path) -> list[Path]:
     if previous is None or not previous.is_dir():
-        return []
+        raise RuntimeError("A verified previous Pages deployment is required")
     added = []
     for path in sorted((current / "_astro").rglob("*")):
         if not path.is_file():
@@ -46,6 +86,14 @@ def prepare_shared_assets(
 ) -> None:
     # All linked files are immutable for the lifetime of this candidate. Never
     # overwrite an existing target: that would mutate the rollback snapshot.
+    old_budget = evaluate_pages_budget(previous, budget=budget)
+    if old_budget.file_count + len(added) >= budget:
+        raise RuntimeError(
+            "Shared asset compatibility deployment exceeds the Pages file budget: "
+            f"previous snapshot has {old_budget.file_count} files and "
+            f"{len(added)} assets would be added (limit {budget}). "
+            "Use the verified previous Pages deployment, not a full local build."
+        )
     shutil.copytree(previous, destination, copy_function=link_immutable_or_copy)
     for relative in added:
         target = destination / relative
@@ -76,10 +124,10 @@ async def verify_shared_assets(
                         raise RuntimeError(
                             f"Shared asset checksum mismatch: {relative}"
                         )
-                    if (
-                        response.headers.get("access-control-allow-origin")
-                        != papers_origin
-                    ):
+                    # `*` is valid here: report pages read the same public assets,
+                    # so the header is no longer pinned to the papers origin alone.
+                    allow_origin = response.headers.get("access-control-allow-origin")
+                    if allow_origin not in {papers_origin, "*"}:
                         raise RuntimeError(f"Shared asset CORS mismatch: {relative}")
                     break
                 except (httpx.HTTPError, RuntimeError) as exc:
@@ -102,6 +150,25 @@ async def publish_shared_assets(
     papers_origin: str,
 ) -> None:
     current = runtime.astro_dir / "dist"
+    from .papers_bundle import DEFAULT_MAIN_SITE_ORIGIN
+
+    main_origin = str(service._config().main_site_origin or DEFAULT_MAIN_SITE_ORIGIN).rstrip("/")
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+        response = await client.get(f"{main_origin}/release.json", headers={"Cache-Control": "no-cache"})
+        response.raise_for_status()
+        live_identity = response.json()
+    retained = runtime.root_dir / "exports" / "verified-pages-snapshot"
+    candidates = [retained, previous] if previous is not None else [retained]
+    previous = None
+    for candidate in candidates:
+        if await asyncio.to_thread(verified_snapshot, candidate, live_identity):
+            previous = candidate
+            break
+    if previous is None:
+        raise RuntimeError(
+            "No verified previous Pages snapshot matches the live release; "
+            "restore the exact deployed artifact before a compatibility deployment."
+        )
     added = await asyncio.to_thread(new_shared_assets, previous, current)
     if not added:
         return
@@ -141,13 +208,9 @@ async def publish_shared_assets(
             },
             timeout_seconds=runtime.cloudflare_deploy_timeout_seconds,
         )
-        from .papers_bundle import DEFAULT_MAIN_SITE_ORIGIN
-
         await verify_shared_assets(
             current,
             added,
-            main_origin=str(
-                service._config().main_site_origin or DEFAULT_MAIN_SITE_ORIGIN
-            ),
+            main_origin=main_origin,
             papers_origin=papers_origin,
         )

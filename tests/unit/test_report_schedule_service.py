@@ -14,6 +14,23 @@ from src.services.report_schedule_service import (
 )
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("enabled,country,process,expected", [
+    (True, "JP", True, True), (False, "JP", True, False),
+    (True, "US", True, False), (True, "JP", False, False),
+])
+async def test_completed_crawl_checks_report_windows_immediately(monkeypatch, enabled, country, process, expected):
+    service = ReportScheduleService()
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(schedule_enabled=enabled))
+    trigger = AsyncMock()
+    monkeypatch.setattr(service, "trigger_job", trigger)
+    await service.maybe_trigger_after_crawl(SimpleNamespace(input_data={"country_code": country, "process": process}))
+    if expected:
+        trigger.assert_awaited_once_with(service.JOB_ID, manual=False)
+    else:
+        trigger.assert_not_awaited()
+
+
 def test_normalizes_declared_period_names():
     assert normalize_frequency("yearly") == "ANNUAL"
     assert normalize_frequency("Quarterly") == "QUARTERLY"

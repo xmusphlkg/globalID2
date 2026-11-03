@@ -199,6 +199,26 @@ async def test_us_only_release_then_no_dirty_release_does_not_recompute_countrie
     assert "--incremental-site" in command and "--incremental-country" not in command
 
 
+async def test_reports_only_release_leaves_other_dirty_scopes_pending(release_db):
+    maker, service, statements = release_db
+    async with maker() as session:
+        session.add(PublishDirty(line="surveillance", scope_key="JP", source_task_uuid="crawl", marked_at=datetime.now(timezone.utc)))
+        await session.commit()
+    statements.clear()
+    result = await service._enqueue_release_task(
+        DataReleaseJobConfig(job_id="site-release", name="Site Release"),
+        manual=True, trigger="test", trigger_task_uuid=None, reports_only=True,
+    )
+    async with maker() as session:
+        task = (await session.execute(select(Task).where(Task.task_uuid == result["task_uuid"]))).scalar_one()
+        marker = (await session.execute(select(PublishDirty))).scalar_one()
+    assert task.input_data["reports_only"] is True
+    assert task.input_data["publish_dirty_ids"] == []
+    assert task.input_data["include_git_push"] is False
+    assert task.input_data["include_cloudflare_deploy"] is False
+    assert marker.published_at is None
+
+
 async def test_full_release_does_not_read_dirty_scopes(release_db):
     maker, service, statements = release_db
     async with maker() as session:

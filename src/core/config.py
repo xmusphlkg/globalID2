@@ -450,6 +450,11 @@ class AutomationSettings(_BaseEnvSettings):
 class DataReleaseSettings(_BaseEnvSettings):
     """静态站点数据发布与部署配置"""
 
+    reports_auto_publish_enabled: bool = Field(
+        default=False,
+        validation_alias="DATA_RELEASE__REPORTS_AUTO_PUBLISH_ENABLED",
+        description="报告生成完成后自动发布报告，并在发布队列空闲时补触发",
+    )
     enabled: bool = Field(default=True, description="是否启用 data release 调度")
     timezone: str = Field(default="UTC", description="默认 data release 调度时区")
     poll_interval_seconds: int = Field(default=30, ge=5, description="data release 轮询间隔秒数")

@@ -136,20 +136,13 @@ def long_to_wide(
     # series whose ``.dt`` operations fail or depend on local time.
     df[time_col] = pd.to_datetime(df[time_col], utc=True)
 
-    def _sum_preserve_missing(series: pd.Series) -> float:
-        numeric = pd.to_numeric(series, errors="coerce")
-        return numeric.sum(min_count=1)
-
-    agg_dict = {}
-    for c in cols:
-        if c in df.columns:
-            agg_dict[c] = (
-                _sum_preserve_missing
-                if c in ("cases", "deaths", "new_cases", "new_deaths", "recoveries")
-                else "mean"
-            )
-    if not agg_dict:
+    columns = [c for c in cols if c in df.columns]
+    if not columns:
         return pd.DataFrame()
+    sum_columns = [c for c in columns if c in ("cases", "deaths", "new_cases", "new_deaths", "recoveries")]
+    mean_columns = [c for c in columns if c not in sum_columns]
+    for column in sum_columns:
+        df[column] = pd.to_numeric(df[column], errors="coerce")
 
     if freq in {"monthly", "quarterly", "annual"}:
         monthly_time = df[time_col]
@@ -160,16 +153,22 @@ def long_to_wide(
             monthly_time = monthly_time.dt.tz_convert("UTC").dt.tz_localize(None)
         calendar_period = {"monthly": "M", "quarterly": "Q", "annual": "Y"}[freq]
         df["_period"] = monthly_time.dt.to_period(calendar_period).dt.to_timestamp()
-        wide = df.groupby("_period", as_index=True).agg(agg_dict).reset_index()
+        grouped = df.groupby("_period", as_index=True)
     elif freq == "weekly":
         # W-MON: 周一起始，符合 ISO 周习惯
         grouper = pd.Grouper(key=time_col, freq="W-MON", label="left", closed="left")
         grouped = df.groupby(grouper)
-        wide = grouped.agg(agg_dict).reset_index()
-        wide = wide.rename(columns={time_col: "_period"})
     else:
         df["_period"] = df[time_col].dt.normalize()
-        wide = df.groupby("_period", as_index=True).agg(agg_dict).reset_index()
+        grouped = df.groupby("_period", as_index=True)
+    aggregates = []
+    if sum_columns:
+        aggregates.append(grouped[sum_columns].sum(min_count=1))
+    if mean_columns:
+        aggregates.append(grouped[mean_columns].mean())
+    wide = pd.concat(aggregates, axis=1)[columns].reset_index()
+    if freq == "weekly":
+        wide = wide.rename(columns={time_col: "_period"})
     wide["_period_str"] = wide["_period"].apply(lambda t: _format_period(t, freq))
     wide = wide.sort_values("_period")
     return wide

@@ -79,8 +79,16 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
     const detailHash = hashFile(detailPath);
     const countryHash = hashFile(resolve(dataRoot, 'countries', `${country}.json`));
     const countryDownload = downloads.countries?.find(entry => entry.code?.toLowerCase() === country) ?? null;
+    // Overview pages render links to the adjacent reports in creation order.
+    // A new report must invalidate its neighbor even when that neighbor's own
+    // data is unchanged.
+    const ordered = publishableReports.filter(entry => entry.country === country)
+      .map(entry => entry.summary)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const position = ordered.findIndex(entry => String(entry.id) === id);
+    const neighbors = [ordered[position - 1] ?? null, ordered[position + 1] ?? null];
     add(`report:${country}:${id}`, `countries/${country}/reports/${id}`,
-      [report.summary, detailHash, countryHash, countryDownload]);
+      [report.summary, detailHash, countryHash, countryDownload, neighbors]);
 
     const detail = json(detailPath, {});
     const document = detail.report_document_v4 ?? detail.metadata?.report_document_v4 ?? detail;

@@ -63,6 +63,23 @@ test('tracks report archive, overview, and disease page bundles independently', 
       first.articles['report:jp:50'].fingerprint);
     assert.notEqual(changed.articles['report-disease:jp:50:influenza'].fingerprint,
       first.articles['report-disease:jp:50:influenza'].fingerprint);
+
+    writeJson(dataRoot, 'reports/index.json', [
+      { id: 50, country_code: 'JP', schema_version: 'report_v4.0', title: 'Weekly report', created_at: '2026-10-01' },
+      { id: 51, country_code: 'JP', schema_version: 'report_v4.0', title: 'Next report', created_at: '2026-10-08' },
+    ]);
+    writeJson(dataRoot, 'reports/51.json', {
+      id: 51, country_code: 'JP', report_document_v4: { disease_directory: [] },
+    });
+    const withNeighbor = pageSourceSnapshot({ dataRoot, shared: 'stable-template' });
+    writeJson(dataRoot, 'reports/index.json', [
+      { id: 50, country_code: 'JP', schema_version: 'report_v4.0', title: 'Weekly report', created_at: '2026-10-01' },
+    ]);
+    const withoutNeighbor = pageSourceSnapshot({ dataRoot, shared: 'stable-template' });
+    assert.notEqual(withNeighbor.articles['report:jp:50'].fingerprint,
+      withoutNeighbor.articles['report:jp:50'].fingerprint);
+    assert.equal(withNeighbor.articles['report-disease:jp:50:influenza'].fingerprint,
+      withoutNeighbor.articles['report-disease:jp:50:influenza'].fingerprint);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
