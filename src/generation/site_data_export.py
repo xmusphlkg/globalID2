@@ -232,6 +232,72 @@ def _local_publish_hashes(output_dir: Path, country_codes: list[str]) -> dict[st
     return hashes
 
 
+def _report_update_marker(report: dict) -> str | None:
+    return str(report.get("updated_at") or report.get("created_at") or "") or None
+
+
+async def _collect_report_exports(
+    session,
+    output_dir: Path,
+    public_site_data_dir: Path,
+    *,
+    incremental: bool,
+) -> tuple[list[dict], dict[int, dict]]:
+    """Refresh the report index each release and fetch only changed details."""
+
+    reports = await fetch_reports(session)
+    if not isinstance(reports, list):
+        reports = []
+    cached_index = _read_json_file(output_dir / "reports" / "index.json", [])
+    if not isinstance(cached_index, list):
+        cached_index = []
+    cached_by_id = {
+        str(item.get("id")): item
+        for item in cached_index
+        if isinstance(item, dict) and item.get("id") is not None
+    }
+    details: dict[int, dict] = {}
+    for report in reports:
+        if not isinstance(report, dict) or report.get("id") is None:
+            continue
+        report_id = int(report["id"])
+        detail_path = output_dir / "reports" / f"{report_id}.json"
+        public_detail_path = public_site_data_dir / "reports" / f"{report_id}.json"
+        previous = cached_by_id.get(str(report_id)) or {}
+        changed = (
+            not incremental
+            or not detail_path.is_file()
+            or not public_detail_path.is_file()
+            or _report_update_marker(previous) != _report_update_marker(report)
+        )
+        if not changed:
+            continue
+        detail = await fetch_report_detail(session, report_id)
+        if isinstance(detail, dict):
+            details[report_id] = detail
+    return reports, details
+
+
+async def export_reports_only(
+    output_dir: Path = DEFAULT_OUTPUT,
+    public_site_data_dir: Path = DEFAULT_PUBLIC_SITE_DATA_OUTPUT,
+) -> None:
+    """Refresh report artifacts without querying/rebuilding other data sources."""
+    async with get_db() as session:
+        reports, details = await _collect_report_exports(
+            session, output_dir, public_site_data_dir, incremental=True,
+        )
+    write_pretty_json(output_dir / "reports" / "index.json", reports)
+    write_compact_json(public_site_data_dir / "reports" / "index.json", reports)
+    for report_id, detail in details.items():
+        write_pretty_json(output_dir / "reports" / f"{report_id}.json", detail)
+        write_compact_json(public_site_data_dir / "reports" / f"{report_id}.json", detail)
+    expected = {"index.json", *(f"{report['id']}.json" for report in reports)}
+    remove_stale_json_files(output_dir / "reports", expected)
+    remove_stale_json_files(public_site_data_dir / "reports", expected)
+    print(f"Reports export: {len(reports)} indexed, {len(details)} changed details", flush=True)
+
+
 def _write_publish_hash_manifest(output_dir: Path, context: dict) -> None:
     hashes = context.get("publish_hashes")
     if not isinstance(hashes, dict):
@@ -1066,13 +1132,12 @@ async def collect_site_export_context(
                 }
             )
 
-        reports = (
-            await fetch_reports(session)
-            if not incremental
-            else _read_json_file(output_dir / "reports" / "index.json", [])
+        reports, report_details = await _collect_report_exports(
+            session,
+            output_dir,
+            public_site_data_dir,
+            incremental=incremental,
         )
-        if not isinstance(reports, list):
-            reports = []
         if use_publish_read and publish_states is not None:
             total_record_count = sum(
                 int(state["point_count"]) for state in publish_states.values()
@@ -1347,12 +1412,6 @@ async def collect_site_export_context(
         fresh_results_by_code.clear()
         refreshed_country_data.clear()
 
-        if not incremental:
-            for rep in reports:
-                detail = await fetch_report_detail(session, rep["id"])
-                if detail:
-                    report_details[rep["id"]] = detail
-
         literature_export = await collect_literature_export(
             session,
             diseases_by_id=diseases_by_id,
@@ -1558,11 +1617,19 @@ def write_site_export_artifacts(
     report_phase("disease JSON and knowledge")
 
     write_pretty_json(output_dir / "reports" / "index.json", reports)
+    write_compact_json(public_site_data_dir / "reports" / "index.json", reports)
     print(f"  ✓ reports/index.json ({len(reports)} reports)")
 
     for report_id, detail in report_details.items():
         write_pretty_json(output_dir / "reports" / f"{report_id}.json", detail)
+        write_compact_json(public_site_data_dir / "reports" / f"{report_id}.json", detail)
     print(f"  ✓ reports/<id>.json ({len(report_details)} files)")
+    expected_report_files = {
+        "index.json",
+        *[f"{report['id']}.json" for report in reports if isinstance(report, dict) and report.get("id") is not None],
+    }
+    remove_stale_json_files(output_dir / "reports", expected_report_files)
+    remove_stale_json_files(public_site_data_dir / "reports", expected_report_files)
     report_phase("report JSON")
 
     write_literature_artifacts(
@@ -1776,6 +1843,22 @@ def write_incremental_site_export_artifacts(
         generated_at=context["generated_at"],
     )
     write_pretty_json(output_dir / "about.json", about_snapshot)
+
+    write_pretty_json(output_dir / "reports" / "index.json", context["reports"])
+    write_compact_json(public_site_data_dir / "reports" / "index.json", context["reports"])
+    for report_id, detail in (context.get("report_details") or {}).items():
+        write_pretty_json(output_dir / "reports" / f"{report_id}.json", detail)
+        write_compact_json(public_site_data_dir / "reports" / f"{report_id}.json", detail)
+    expected_report_files = {
+        "index.json",
+        *[
+            f"{report['id']}.json"
+            for report in context.get("reports") or []
+            if isinstance(report, dict) and report.get("id") is not None
+        ],
+    }
+    remove_stale_json_files(output_dir / "reports", expected_report_files)
+    remove_stale_json_files(public_site_data_dir / "reports", expected_report_files)
 
     write_literature_artifacts(
         context["literature_export"],

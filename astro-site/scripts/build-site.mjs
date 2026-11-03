@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeBuildRedirects } from './build-redirects.mjs';
-import { planPath, planResearchBuild, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, writePending } from './research-build-cache.mjs';
+import { astroAssetCacheRoot, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, writePending } from './research-build-cache.mjs';
 import { pageSourceSnapshot, planSitePages, pagePlanPath, sitePageCacheRoot, writePagePending } from './page-build-cache.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..', '..');
@@ -81,6 +81,7 @@ let plan = planResearchBuild({
   incremental,
   snapshot,
 });
+const assetCachePath = resolve(astroAssetCacheRoot, snapshot.shared);
 const elapsedSeconds = started => ((performance.now() - started) / 1000).toFixed(1);
 mkdirSync(resolve(projectRoot, 'data', 'cache'), { recursive: true });
 writeFileSync(planPath, JSON.stringify({ selected: plan.selected }));
@@ -110,6 +111,8 @@ if ((result.status ?? 1) === 0 && (plan.reused.length || pagePlan.reused.length)
   restoreReusablePages(plan);
   restoreReusablePages(pagePlan, sitePageCacheRoot);
   process.stdout.write(`[build-timing] restore reusable pages ${elapsedSeconds(restoreStarted)}s\n`);
+  const restoredAssets = mergeAstroAssetTree(assetCachePath, resolve(import.meta.dirname, '..', 'dist', '_astro'));
+  process.stdout.write(`[asset-cache] restored ${restoredAssets} shared assets\n`);
   if (!reusedAssetReferencesAvailable(plan) || !reusedAssetReferencesAvailable(pagePlan)) {
     process.stdout.write('[page-cache] cached page asset missing; rebuilding all page bundles\n');
     result = runAstro(null, null);
@@ -141,6 +144,11 @@ if ((result.status ?? 1) === 0 && (JSON.stringify(sourceSnapshot()) !== JSON.str
   process.exit(3);
 }
 if ((result.status ?? 1) === 0) {
+  const cachedAssets = replaceAstroAssetCache(
+    resolve(import.meta.dirname, '..', 'dist', '_astro'),
+    assetCachePath,
+  );
+  process.stdout.write(`[asset-cache] saved ${cachedAssets} shared assets\n`);
   writePending(plan);
   writePagePending(pagePlan);
 }

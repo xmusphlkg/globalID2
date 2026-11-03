@@ -127,6 +127,7 @@ from src.generation.site_data_export import (  # noqa: E402
     DEFAULT_PUBLIC_SITE_DATA_OUTPUT,
     ensure_site_export_database_ready,
     export,
+    export_reports_only,
 )
 
 
@@ -215,7 +216,13 @@ def main() -> None:
             "recorded observation states at this timezone-aware ISO datetime"
         ),
     )
+    parser.add_argument("--reports-only", action="store_true", help="Refresh report index and changed details only; reuse all other data")
     args = parser.parse_args()
+    if args.reports_only:
+        if args.incremental_site or args.incremental_country_codes or args.recorded_at_as_of:
+            parser.error("--reports-only cannot be combined with other export scopes")
+        asyncio.run(export_reports_only(args.output, args.public_site_data_output))
+        return
     recorded_at_as_of = None
     if args.recorded_at_as_of:
         try:

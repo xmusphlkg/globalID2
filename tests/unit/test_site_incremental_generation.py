@@ -53,6 +53,7 @@ def snapshot(tmp_path, monkeypatch):
     monkeypatch.setattr(export, "_fetch_publish_states", AsyncMock(return_value=None))
     monkeypatch.setattr(export, "_published_country_codes_by_disease", AsyncMock(side_effect=lambda _: {"D001":{"US", "JP"}, "D002":{"JP"}}))
     monkeypatch.setattr(export, "fetch_countries", AsyncMock(return_value=countries))
+    monkeypatch.setattr(export, "fetch_reports", AsyncMock(return_value=[]))
     monkeypatch.setattr(export, "fetch_disease_knowledge_briefs", AsyncMock(return_value={}))
     monkeypatch.setattr(export, "fetch_country_briefs", AsyncMock(return_value={}))
     literature = AsyncMock(return_value={"articles": []})
@@ -60,6 +61,79 @@ def snapshot(tmp_path, monkeypatch):
     monkeypatch.setattr(export, "latest_situation_snapshot", AsyncMock(return_value={}))
     monkeypatch.setattr(export, "attach_surveillance_evidence", lambda data, *_args, **_kwargs: data)
     return SimpleNamespace(output=output, public=public, country_data=country_data, diseases=diseases, literature=literature)
+
+
+async def test_reports_only_export_reuses_files_and_does_not_collect_other_sources(snapshot, monkeypatch):
+    monkeypatch.setattr(export, "fetch_reports", AsyncMock(return_value=[{"id": 8, "updated_at": "2026-10-01"}]))
+    detail = AsyncMock(return_value={"id": 8, "report_document_v4": {}})
+    monkeypatch.setattr(export, "fetch_report_detail", detail)
+    await export.export_reports_only(snapshot.output, snapshot.public)
+    paths = [snapshot.output / "reports/8.json", snapshot.public / "reports/8.json"]
+    mtimes = [p.stat().st_mtime_ns for p in paths]
+    await export.export_reports_only(snapshot.output, snapshot.public)
+    assert detail.await_count == 1
+    assert [p.stat().st_mtime_ns for p in paths] == mtimes
+    snapshot.literature.assert_not_awaited()
+
+
+async def test_incremental_reports_fetch_only_new_or_updated_detail_json(snapshot, monkeypatch):
+    reports_dir = snapshot.output / "reports"
+    public_reports_dir = snapshot.public / "reports"
+    reports_dir.mkdir(exist_ok=True)
+    public_reports_dir.mkdir(exist_ok=True)
+    cached = [{"id": 1, "created_at": "2026-01-01", "updated_at": "2026-01-02"}]
+    (reports_dir / "index.json").write_text(json.dumps(cached), encoding="utf-8")
+    (reports_dir / "1.json").write_text('{"id":1}', encoding="utf-8")
+    (public_reports_dir / "1.json").write_text('{"id":1}', encoding="utf-8")
+    latest = [
+        {"id": 1, "created_at": "2026-01-01", "updated_at": "2026-01-02"},
+        {"id": 2, "created_at": "2026-02-01", "updated_at": "2026-02-01"},
+        {"id": 3, "created_at": "2026-03-01", "updated_at": "2026-03-02"},
+    ]
+    monkeypatch.setattr(export, "fetch_reports", AsyncMock(return_value=latest))
+    calls = []
+
+    async def fetch_detail(_session, report_id):
+        calls.append(report_id)
+        return {"id": report_id, "updated_at": next(row["updated_at"] for row in latest if row["id"] == report_id)}
+
+    monkeypatch.setattr(export, "fetch_report_detail", fetch_detail)
+    reports, details = await export._collect_report_exports(
+        object(), snapshot.output, snapshot.public, incremental=True
+    )
+
+    assert reports == latest
+    assert calls == [2, 3]
+    assert set(details) == {2, 3}
+
+
+async def test_incremental_writer_publishes_report_json_to_r2_projection(snapshot, monkeypatch):
+    monkeypatch.setattr(export, "build_about_snapshot", lambda **_: {})
+    monkeypatch.setattr(export, "write_literature_artifacts", lambda *_args, **_kwargs: None)
+    context = {
+        "incremental_country_codes": [],
+        "changed_disease_ids": [],
+        "country_exports": [],
+        "disease_exports": [],
+        "countries_simple": [],
+        "diseases": [],
+        "disease_knowledge_briefs": {},
+        "reports": [{"id": 8, "updated_at": "2026-06-01", "title": "Reviewed report"}],
+        "report_details": {8: {"id": 8, "report_document_v4": {"peer_review": {"status": "published"}}}},
+        "generated_at": "2026-06-01T00:00:00Z",
+        "literature_export": {},
+        "retired_country_codes": [],
+    }
+
+    export.write_incremental_site_export_artifacts(context, snapshot.output, snapshot.public)
+    index_path = snapshot.public / "reports" / "index.json"
+    detail_path = snapshot.public / "reports" / "8.json"
+    assert json.loads(index_path.read_text(encoding="utf-8"))[0]["id"] == 8
+    assert json.loads(detail_path.read_text(encoding="utf-8"))["report_document_v4"]["peer_review"]["status"] == "published"
+    before = {path: path.stat().st_mtime_ns for path in (index_path, detail_path)}
+
+    export.write_incremental_site_export_artifacts(context, snapshot.output, snapshot.public)
+    assert {path: path.stat().st_mtime_ns for path in before} == before
 
 
 async def test_empty_scope_does_not_read_or_project_any_curve(snapshot, monkeypatch):

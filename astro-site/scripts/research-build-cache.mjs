@@ -13,6 +13,10 @@ export const planPath = resolve(cacheRoot, 'research-build-plan.json');
 // pipeline moves them out of dist (they are published from the papers host),
 // so dist can no longer serve as the reuse source for incremental builds.
 export const pageCacheRoot = resolve(cacheRoot, 'research-pages');
+export const astroAssetCacheRoot = resolve(cacheRoot, 'astro-assets');
+// This server-only route is imported only by its localized report routes.
+// Its content hash belongs to those bundles, not every paper in the catalogue.
+export const reportDiseaseTemplate = resolve(siteRoot, 'src/pages/countries/[country]/reports/[id]/[disease].astro');
 const defaultMeasurementId = 'G-8P39XV52NC';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
@@ -25,6 +29,29 @@ function walk(directory) {
     const path = join(directory, entry.name);
     return entry.isDirectory() ? walk(path) : entry.isFile() ? [path] : [];
   });
+}
+
+export function mergeAstroAssetTree(sourceRoot, destinationRoot) {
+  if (!existsSync(sourceRoot)) return 0;
+  mkdirSync(destinationRoot, { recursive: true });
+  let copied = 0;
+  for (const entry of readdirSync(sourceRoot, { withFileTypes: true })) {
+    const source = join(sourceRoot, entry.name);
+    const destination = join(destinationRoot, entry.name);
+    if (entry.isDirectory()) {
+      copied += mergeAstroAssetTree(source, destination);
+    } else if (entry.isFile() && !existsSync(destination)) {
+      mkdirSync(dirname(destination), { recursive: true });
+      copyFileSync(source, destination);
+      copied += 1;
+    }
+  }
+  return copied;
+}
+
+export function replaceAstroAssetCache(sourceRoot, destinationRoot) {
+  rmSync(destinationRoot, { recursive: true, force: true });
+  return mergeAstroAssetTree(sourceRoot, destinationRoot);
 }
 
 function effectiveMeasurementId() {
@@ -40,13 +67,14 @@ function effectiveMeasurementId() {
 
 export function sharedFingerprint() {
   const files = [
-    ...walk(resolve(siteRoot, 'src')).filter(path => !path.startsWith(resolve(siteRoot, 'src', 'data') + '/') || !path.endsWith('.json')),
+    ...walk(resolve(siteRoot, 'src')).filter(path => path !== reportDiseaseTemplate && (!path.startsWith(resolve(siteRoot, 'src', 'data') + '/') || !path.endsWith('.json'))),
     ...walk(resolve(siteRoot, 'public')).filter(path => !path.startsWith(resolve(siteRoot, 'public', 'site-data') + '/')),
     resolve(siteRoot, 'package.json'),
     resolve(siteRoot, 'package-lock.json'),
     resolve(siteRoot, 'astro.config.mjs'),
     resolve(siteRoot, 'scripts', 'build-site.mjs'),
     resolve(siteRoot, 'scripts', 'research-build-cache.mjs'),
+    resolve(siteRoot, '..', 'shared', 'report-figure-options.ts'),
   ].filter(existsSync).sort();
   const routes = readJson(resolve(siteRoot, 'src/data/research/routes.json'));
   const digest = createHash('sha256');

@@ -3,7 +3,8 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { hasCountryDataSnapshot } from '../src/lib/country-coverage.ts';
 import { toSeoSlug } from '../src/lib/seo.ts';
-import { cacheRoot, siteRoot, sharedFingerprint, planResearchBuild, finalizeResearchSnapshot } from './research-build-cache.mjs';
+import { buildPublishableReports } from '../src/lib/report-routes.ts';
+import { cacheRoot, siteRoot, sharedFingerprint, planResearchBuild, finalizeResearchSnapshot, reportDiseaseTemplate } from './research-build-cache.mjs';
 
 export const pageManifestPath = resolve(cacheRoot, 'site-page-manifest.json');
 export const pagePendingPath = resolve(cacheRoot, 'site-page-pending.json');
@@ -19,7 +20,7 @@ const safeSegment = value => {
   return segment;
 };
 
-export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), shared = sharedFingerprint() } = {}) {
+export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), shared = sharedFingerprint(), reportDiseaseTemplateHash = hashFile(reportDiseaseTemplate) } = {}) {
   const pages = {};
   const add = (key, path, dependencies) => {
     if (pages[key]) throw new Error(`Duplicate page cache key: ${key}`);
@@ -57,6 +58,47 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
     add(`country:${code}`, `countries/${code}`, [surveillance, reports, countryAlerts,
       downloads.countries?.find(entry => entry.code?.toLowerCase() === code) ?? null]);
   }
+
+  const reportSummaries = json(resolve(dataRoot, 'reports/index.json'), []);
+  const publishableReports = buildPublishableReports(reportSummaries, id => (
+    json(resolve(dataRoot, 'reports', `${id}.json`))
+  ));
+  const diseaseIndexHash = hashFile(resolve(dataRoot, 'diseases/index.json'));
+  const reportCountries = [...new Set(publishableReports.map(report => report.country))].sort();
+  for (const country of reportCountries) {
+    const reportsForCountry = publishableReports
+      .filter(report => report.country === country)
+      .map(report => report.summary);
+    add(`report-archive:${country}`, `countries/${country}/reports`, [reportsForCountry,
+      hashFile(resolve(dataRoot, 'countries', `${country}.json`))]);
+  }
+  for (const report of publishableReports) {
+    const id = safeSegment(report.id);
+    const country = safeSegment(report.country).toLowerCase();
+    const detailPath = resolve(dataRoot, 'reports', `${id}.json`);
+    const detailHash = hashFile(detailPath);
+    const countryHash = hashFile(resolve(dataRoot, 'countries', `${country}.json`));
+    const countryDownload = downloads.countries?.find(entry => entry.code?.toLowerCase() === country) ?? null;
+    add(`report:${country}:${id}`, `countries/${country}/reports/${id}`,
+      [report.summary, detailHash, countryHash, countryDownload]);
+
+    const detail = json(detailPath, {});
+    const document = detail.report_document_v4 ?? detail.metadata?.report_document_v4 ?? detail;
+    const directory = Array.isArray(document?.disease_directory) ? document.disease_directory : [];
+    for (const slugValue of report.diseaseSlugs) {
+      const slug = safeSegment(slugValue);
+      const row = directory.find(value => String(value?.slug ?? '').trim() === slugValue);
+      const diseaseId = String(row?.disease_id ?? '').toLowerCase();
+      const diseaseFileHash = diseaseId
+        ? hashFile(resolve(dataRoot, 'diseases', `${safeSegment(diseaseId)}.json`))
+        : 'missing';
+      const download = downloads.diseases?.find(entry => entry.slug === slug) ?? null;
+      add(`report-disease:${country}:${id}:${slug}`,
+        `countries/${country}/reports/${id}/${slug}`,
+        [detailHash, countryHash, diseaseIndexHash, diseaseFileHash, download, reportDiseaseTemplateHash]);
+    }
+  }
+
   for (const disease of diseases) {
     const id = safeSegment(disease.disease_id);
     const slug = safeSegment(toSeoSlug(disease.slug) || disease.slug);

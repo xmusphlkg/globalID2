@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { articlePaths, finalizeResearchSnapshot, planResearchBuild } from './research-build-cache.mjs';
+import { articlePaths, finalizeResearchSnapshot, mergeAstroAssetTree, planResearchBuild, replaceAstroAssetCache } from './research-build-cache.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 
@@ -74,6 +74,32 @@ test('finalizes the exact rendered snapshot after source data advances', () => {
     // The rendered bundle survives for the next incremental build even after
     // the release step moves it out of dist.
     for (const path of paths) assert.equal(readFileSync(join(root, 'page-cache', path), 'utf8'), `rendered:${path}`);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('restores only missing shared assets and refreshes the fingerprinted asset cache', () => {
+  const root = mkdtempSync(join(tmpdir(), 'gids-astro-assets-'));
+  try {
+    const cache = join(root, 'cache');
+    const output = join(root, 'dist', '_astro');
+    mkdirSync(join(cache, 'chunks'), { recursive: true });
+    mkdirSync(join(output, 'chunks'), { recursive: true });
+    writeFileSync(join(cache, 'chunks', 'report.abc.js'), 'cached asset');
+    writeFileSync(join(output, 'chunks', 'report.abc.js'), 'fresh asset');
+
+    assert.equal(mergeAstroAssetTree(cache, output), 0);
+    assert.equal(readFileSync(join(output, 'chunks', 'report.abc.js'), 'utf8'), 'fresh asset');
+
+    writeFileSync(join(cache, 'chunks', 'chart.def.js'), 'cached chart');
+    assert.equal(mergeAstroAssetTree(cache, output), 1);
+    assert.equal(readFileSync(join(output, 'chunks', 'chart.def.js'), 'utf8'), 'cached chart');
+
+    const refreshed = join(root, 'refreshed-cache');
+    assert.equal(replaceAstroAssetCache(output, refreshed), 2);
+    assert.equal(readFileSync(join(refreshed, 'chunks', 'report.abc.js'), 'utf8'), 'fresh asset');
+    assert.equal(readFileSync(join(refreshed, 'chunks', 'chart.def.js'), 'utf8'), 'cached chart');
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
