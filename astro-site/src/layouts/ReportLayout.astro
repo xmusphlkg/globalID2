@@ -1,7 +1,6 @@
 ---
 // src/layouts/ReportLayout.astro
 import BaseLayout from './BaseLayout.astro';
-import { REPORTS_ORIGIN } from '../lib/papers';
 import {
   buildBreadcrumbStructuredData,
   type JsonLdNode,
@@ -29,7 +28,7 @@ const {
   seo,
   hideLanguageToggle = false,
   routePathOverride,
-  siteOriginOverride = REPORTS_ORIGIN,
+  siteOriginOverride,
   stage = false,
 } = Astro.props;
 const homeLabel = initialLanguage === 'zh' ? '首页' : initialLanguage === 'fr' ? 'Accueil' : 'Home';

@@ -128,15 +128,13 @@
       "week": "2026-W44",
       "brief_fingerprint": "9637b90848fe0942906ad5a3c422978835a4103a126ea9fc2a7e7be8c99fa831",
       "review": {
-        "verdict": "needs_editorial_review",
-        "issue_codes": [
-          "peer_review_unresolved"
-        ],
-        "reviewed_at": "2026-11-02T07:23:29+00:00",
+        "verdict": "pass",
+        "issue_codes": [],
+        "reviewed_at": "2026-11-03T02:39:18+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center",
-        "review_mode": null
+        "review_mode": "cross_model"
       }
     },
     {
@@ -147,7 +145,7 @@
         "issue_codes": [
           "peer_review_unresolved"
         ],
-        "reviewed_at": "2026-11-02T08:22:54+00:00",
+        "reviewed_at": "2026-11-03T08:42:20+00:00",
         "protocol_version": "research-weekly-ai-review.v1",
         "model": "configured-review-model",
         "provider": "model-center",
