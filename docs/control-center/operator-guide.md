@@ -85,6 +85,23 @@ Changing these limits does not restart an active export. Check `memory.pressure`
 and `memory.events` in the service cgroup as well as host `MemAvailable` before
 raising them elsewhere; more memory does not remove single-core export costs.
 
+This host also uses a worker drop-in at
+`/etc/systemd/system/globalid-dashboard-worker.service.d/60-build-concurrency.conf`:
+
+```ini
+[Service]
+Environment=GIDS_ASTRO_BUILD_CONCURRENCY=8
+Environment=UV_THREADPOOL_SIZE=8
+```
+
+The repository default remains two concurrent Astro routes for smaller hosts.
+In a repeated 64-card production-input benchmark, eight concurrent renders took
+1.21–1.34 seconds versus 4.73–4.79 seconds at two, with identical PNG checksums.
+The isolated clean-build/performance gate also passed at eight. Reload systemd
+and drain/restart the worker to apply environment changes; an already-running
+build keeps its initial settings. These are card-render timings, not full-release
+timings.
+
 `/health/ready` is degraded when PostgreSQL or the Redis runtime registry is
 unavailable, or when either the worker or scheduler heartbeat is missing. It
 also reports queued/running counts and the age of the oldest queued task.
