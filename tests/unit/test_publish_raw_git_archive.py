@@ -66,10 +66,13 @@ def test_parallel_copies_preserve_serial_archive_bytes(monkeypatch, tmp_path):
     assert verify_raw_archive(parallel, source_dir=source).file_count == 12
 
 
-def test_failed_parallel_copy_cannot_commit_and_retry_recovers(monkeypatch, tmp_path):
+@pytest.mark.parametrize("previously_split", [False, True])
+def test_failed_parallel_copy_cannot_commit_and_retry_recovers(monkeypatch, tmp_path, previously_split):
     source, repository = tmp_path / "raw", tmp_path / "archive"
     source.mkdir()
-    (source / "bad.bin").write_bytes(b"original")
+    monkeypatch.setattr(archive, "MAX_DIRECT_FILE_BYTES", 16)
+    original_bytes = b"original" * (4 if previously_split else 1)
+    (source / "bad.bin").write_bytes(original_bytes)
     archive.publish_raw_archive(source, repository)
     before = _git_log(repository)
     (source / "bad.bin").write_bytes(b"changed")
@@ -85,7 +88,8 @@ def test_failed_parallel_copy_cannot_commit_and_retry_recovers(monkeypatch, tmp_
         archive.publish_raw_archive(source, repository, copy_workers=2)
     assert _git_log(repository) == before
     assert not list(repository.rglob("*.sync-*"))
-    assert (repository / "data/raw/bad.bin").read_bytes() == b"original"
+    old_path = repository / ("data/raw/bad.bin.parts/part-0001" if previously_split else "data/raw/bad.bin")
+    assert old_path.read_bytes() == original_bytes
     monkeypatch.setattr(archive, "_atomic_copy", original)
     archive.publish_raw_archive(source, repository, copy_workers=2)
     assert verify_raw_archive(repository, source_dir=source).file_count == 2

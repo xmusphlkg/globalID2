@@ -523,7 +523,9 @@ def _bounded_copies(workers: int):
         def copy(source, destination, *, size, sha256):
             if len(pending) >= 2 * workers:
                 drain()
-            pending.add(pool.submit(_atomic_copy, source, destination, size=size, sha256=sha256))
+            future = pool.submit(_atomic_copy, source, destination, size=size, sha256=sha256)
+            pending.add(future)
+            return future
 
         try:
             yield copy
@@ -899,6 +901,7 @@ def publish_raw_archive(
                 split_destination = repository_root.joinpath(*split_relative.parts)
 
                 if size <= MAX_DIRECT_FILE_BYTES:
+                    copy_future = None
                     existed = direct_destination.exists() or split_destination.exists()
                     current = (
                         direct_destination.is_file()
@@ -907,7 +910,7 @@ def publish_raw_archive(
                     )
                     if not current:
                         report_change("copy", index, relative, size)
-                        copy(source_path, direct_destination, size=size, sha256=digest)
+                        copy_future = copy(source_path, direct_destination, size=size, sha256=digest)
                         if existed:
                             updated += 1
                         else:
@@ -920,6 +923,10 @@ def publish_raw_archive(
                             )
                         )
                     if split_destination.exists():
+                        # Preserve the previous split representation if its
+                        # replacement fails verification (large -> small).
+                        if copy_future is not None:
+                            copy_future.result()
                         shutil.rmtree(split_destination)
                         sync_items.append(
                             _SyncItem(
