@@ -919,6 +919,14 @@ test("source pages and new workbenches meet automated accessibility checks", asy
     await expect(page.locator("main h1")).toBeVisible();
     await expect(page.locator("main").getByRole("status").filter({ hasText: /^Loading/ })).toHaveCount(0);
     if (path.includes("ingestion")) await page.getByRole("button", { name: "New collection run" }).click();
+    // Loading can end before a newly enabled button's opacity transition does.
+    // Audit its settled colors, retaining every contrast rule below.
+    await page.evaluate(async () => {
+      const animations = document.getAnimations().filter(
+        (animation) => animation.effect?.getComputedTiming().endTime !== Infinity,
+      );
+      await Promise.all(animations.map((animation) => animation.finished.catch(() => {})));
+    });
     const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze();
     expect(result.violations, `${path} accessibility`).toEqual([]);
   }
