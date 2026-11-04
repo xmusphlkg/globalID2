@@ -1991,6 +1991,18 @@ def test_autopilot_publishes_only_current_well_grounded_model_summaries():
         **fields,
     )
     assert decide_summary(summary, article, _autopilot_config()).action == "publish"
+    summary.status = "archived"
+    summary.generation_metadata["publication_gate"] = "awaiting-peer-review"
+    summary.generation_metadata["ai_content_governance"] = {"decision": "archive"}
+    assert decide_summary(summary, article, _autopilot_config()).action == "hold"
+    # Even a stale parent-exclusion marker cannot override an explicit AI archive.
+    summary.generation_metadata["publication_gate"] = "parent-article-excluded"
+    assert decide_summary(summary, article, _autopilot_config()).action == "hold"
+    summary.generation_metadata["publication_gate"] = "awaiting-article-decision"
+    assert decide_summary(summary, article, _autopilot_config()).action == "hold"
+    del summary.generation_metadata["ai_content_governance"]
+    assert decide_summary(summary, article, _autopilot_config()).action == "publish"
+    summary.status = "review"
     summary.limitations = ""
     missing_limits = decide_summary(summary, article, _autopilot_config())
     assert missing_limits.action == "hold"
@@ -2176,7 +2188,14 @@ async def test_restore_parent_excluded_summaries_restores_and_respects_dry_run()
     )
     article_c = NS(article_id="lit-c", publication_status="published")
 
-    rows = [(summary_a, article_a), (summary_b, article_b), (summary_c, article_c)]
+    # An explicit AI archive remains final even if an older parent gate remains.
+    summary_d = NS(
+        id=4, article_id="lit-d", status="archived",
+        generation_metadata={"publication_gate": "parent-article-excluded",
+                             "ai_content_governance": {"decision": "archive"}},
+    )
+    article_d = NS(article_id="lit-d", publication_status="published")
+    rows = [(summary_a, article_a), (summary_b, article_b), (summary_c, article_c), (summary_d, article_d)]
 
     class _FakeResult:
         def all(self):
@@ -2215,4 +2234,5 @@ async def test_restore_parent_excluded_summaries_restores_and_respects_dry_run()
     assert "autopilot_restore" in summary_a.generation_metadata
     # summary_b must not have been touched
     assert summary_b.status == "archived"
+    assert summary_d.status == "archived"
     assert db2.flushed

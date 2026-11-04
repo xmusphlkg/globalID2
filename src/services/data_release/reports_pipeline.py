@@ -65,6 +65,9 @@ async def execute_reports_release(service, task, *, runtime):
         await runtime.task_manager.update_task_progress(task.task_uuid, 70)
         await run("Publish Reports Bundle to R2", service._publish_reports_r2_command(python_path=python),
             environment=env, timeout=runtime.download_publish_timeout_seconds)
+        from .report_subscription import dispatch_if_enabled
+
+        report_subscription_dispatch = await dispatch_if_enabled(service, runtime, reports_origin=origin)
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid, entry_type="info", title="Website Verification Skipped",
             content="Reports upload completed; public HTTP verification is disabled. Artifacts are retained without rollback.",
@@ -72,6 +75,7 @@ async def execute_reports_release(service, task, *, runtime):
         )
         result = {"release_job_id": job_id, "reports_only": True, "r2_reports_published": True,
             "r2_reports_public_base_url": origin, "pages_deployed": False, "website_verification": "skipped", "artifact_rollback": False,
+            "report_subscription_dispatch": report_subscription_dispatch,
             "release_timing": {"elapsed_seconds": round(time.monotonic() - started, 3)}}
         async with runtime.get_database() as db:
             stored = await db.get(runtime.task_model, task.id)

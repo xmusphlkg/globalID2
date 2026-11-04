@@ -471,6 +471,21 @@ def decide_article(
     return AutomationDecision("hold", ("article relevance is inside the exception-review band",))
 
 
+def _is_parent_archived_summary(summary: Any) -> bool:
+    """Only a parent-caused archive may be automatically restored.
+
+    An AI archive can retain a previous parent-related gate, so its explicit
+    governance decision takes precedence over that historical marker.
+    """
+    metadata = summary.generation_metadata or {}
+    governance = metadata.get("ai_content_governance") or {}
+    return (
+        summary.status == "archived"
+        and metadata.get("publication_gate") in {"parent-article-excluded", "awaiting-article-decision"}
+        and governance.get("decision") not in {"archive", "reject"}
+    )
+
+
 def decide_summary(
     summary: Any,
     article: Any,
@@ -496,6 +511,8 @@ def decide_summary(
         return AutomationDecision("defer", ("article decision is not final for public release",))
     if article.publication_status != "published":
         return AutomationDecision("defer", ("article decision is not final for public release",))
+    if summary.status == "archived" and not _is_parent_archived_summary(summary):
+        return AutomationDecision("hold", ("summary was archived independently of the parent article",))
     if summary.generated_by != "literature-evidence-agent":
         return AutomationDecision("hold", ("summary was not produced by the evidence agent",))
     quality = float(summary.quality_score or 0.0)
@@ -596,7 +613,6 @@ def _audit_payload(decision: AutomationDecision, *, at: datetime, config: Any) -
 _PARENT_EXCLUDED_GATE = "parent-article-excluded"
 # Archived summaries a deferred parent may bring back: archived because of the
 # parent, not judged on their own content.
-_DEFER_RESTORABLE_GATES = frozenset({_PARENT_EXCLUDED_GATE, "awaiting-article-decision"})
 
 
 async def restore_parent_excluded_summaries(
@@ -639,7 +655,7 @@ async def restore_parent_excluded_summaries(
 
     for summary, article in archived_summaries:
         gate = (summary.generation_metadata or {}).get("publication_gate")
-        if gate != _PARENT_EXCLUDED_GATE:
+        if gate != _PARENT_EXCLUDED_GATE or not _is_parent_archived_summary(summary):
             # Archived for a different reason (AI review, editor, quality gate);
             # never restore these.
             continue
@@ -1066,7 +1082,7 @@ class LiteratureAutomationService:
                         gate = (summary.generation_metadata or {}).get("publication_gate")
                         # Only summaries archived because of the parent come back; an
                         # AI rejection or quality archive stays final.
-                        restore = summary.status == "archived" and gate in _DEFER_RESTORABLE_GATES
+                        restore = _is_parent_archived_summary(summary)
                         reopen = summary.status == "published" and bool(
                             (summary.generation_metadata or {}).get("autopilot")
                         )

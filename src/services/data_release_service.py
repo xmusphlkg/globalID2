@@ -209,6 +209,8 @@ class DataReleaseService:
     def __init__(self) -> None:
         self._task: Optional[asyncio.Task] = None
         self._stop_event: Optional[asyncio.Event] = None
+        self._subscription_task: Optional[asyncio.Task] = None
+        self._subscription_stop_event: Optional[asyncio.Event] = None
         self._storage_ready = False
         self._storage_lock = asyncio.Lock()
         self._lock = asyncio.Lock()
@@ -335,6 +337,17 @@ class DataReleaseService:
             await schedule_state_repository.remove("release", job_id)
 
     async def start(self) -> None:
+        # Subscription reconciliation has its own timer and must continue even
+        # when scheduled website releases are disabled. Each dispatcher uses
+        # the shared durable outbox lock and a stable upstream idempotency key.
+        from src.services.data_release import subscription_reconciliation
+
+        if subscription_reconciliation.enabled(self) and (self._subscription_task is None or self._subscription_task.done()):
+            self._subscription_stop_event = asyncio.Event()
+            self._subscription_task = asyncio.create_task(
+                subscription_reconciliation.run_loop(self, root=ROOT_DIR, astro_dir=ASTRO_DIR, stop=self._subscription_stop_event),
+                name="globalid-subscription-reconciliation",
+            )
         cfg = self._config()
         if not cfg.enabled:
             logger.info("Data release scheduler disabled by configuration")
@@ -354,6 +367,8 @@ class DataReleaseService:
         logger.info("Data release scheduler started with {} configured job(s)", len(await self.load_jobs()))
 
     async def stop(self) -> None:
+        if self._subscription_stop_event is not None:
+            self._subscription_stop_event.set()
         if self._stop_event is not None:
             self._stop_event.set()
         if self._task is not None:
@@ -363,6 +378,13 @@ class DataReleaseService:
                 pass
         self._task = None
         self._stop_event = None
+        if self._subscription_task is not None:
+            try:
+                await self._subscription_task
+            except asyncio.CancelledError:
+                pass
+        self._subscription_task = None
+        self._subscription_stop_event = None
 
     async def _run_loop(self) -> None:
         cfg = self._config()

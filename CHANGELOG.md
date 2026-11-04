@@ -4,9 +4,14 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+### Added
+
+- Subscription preferences can be managed through short-lived email links, including list-level pause and resume and an all-lists unsubscribe. Published report, Research Radar, and reviewed official-notice updates have opt-in dispatchers with durable outboxes and scheduled reconciliation.
+
 ### Fixed
 
 - Research Radar review now receives the catalogue's peer-review and integrity statuses and the summary's intended language. Existing holds are reconsidered once under the corrected review context, without bypassing evidence or peer-review gates.
+- Subscription changes now require confirmation without overwriting active preferences; confirmation and unsubscribe links resist automated link scanning, and queued delivery checks subscriber status before sending. Campaign claims, provider feedback and bounded retries reduce duplicate or unwanted email.
 
 ## [0.17.3] - 2026-11-04
 

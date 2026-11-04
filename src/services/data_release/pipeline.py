@@ -271,6 +271,8 @@ async def _execute_release_task(
     r2_reports_published = False
     pages_deployed = False
     cloudflare_deployment = None
+    research_subscription_dispatch: dict[str, Any] = {"status": "disabled"}
+    notice_subscription_dispatch: dict[str, Any] = {"status": "disabled"}
     r2_enabled_fn = getattr(service, "_r2_papers_enabled", None)
     r2_papers_enabled = (
         bool(r2_enabled_fn(job)) if callable(r2_enabled_fn) else False
@@ -603,6 +605,8 @@ async def _execute_release_task(
     r2_papers_published = "r2_papers" in completed_publications
     r2_reports_published = "r2_reports" in completed_publications
 
+    report_subscription_dispatch = None
+
     await runtime.task_manager.add_workbook_entry(
         task.task_uuid,
         entry_type="info",
@@ -704,9 +708,43 @@ async def _execute_release_task(
             logging.getLogger(__name__).exception(
                 "Could not retain the verified Pages snapshot; future compatibility deployments will fail closed"
             )
-        # The v3 subscriber-alert dispatcher read analyst-reviewed statistical
-        # signals; the notice-based Situation module publishes none, so no
-        # alert step runs after deployment.
+        # Research delivery is explicitly activated with a start week and
+        # only runs after the exact built release is visible on the public site.
+        # The outbox stores public content before any Worker request, so a
+        # release retry can resume the same immutable campaign safely.
+        env_value = getattr(service, "_env_value", lambda _name, default="": default)
+        from .subscription_reconciliation import dispatch_safely
+
+        if env_value("SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
+            from .research_subscription import dispatch_after_release
+
+            research_subscription_dispatch = await dispatch_safely(
+                "research", dispatch_after_release,
+                root=runtime.root_dir,
+                astro_dir=runtime.astro_dir,
+                identity=release_identity,
+                worker_base_url=env_value("SUBSCRIPTIONS__PUBLIC_BASE_URL"),
+                public_base_url=env_value("GIDS_PUBLIC_BASE_URL", "https://globalinfectiousdisease.com"),
+                token=env_value("SUBSCRIPTIONS__ADMIN_API_TOKEN"),
+                start_week=env_value("SUBSCRIPTIONS__RESEARCH_DIGEST_START_WEEK"),
+                mode=env_value("SUBSCRIPTIONS__DELIVERY_MODE", "pilot").strip().lower(),
+                guard_activation=True,
+            )
+        if env_value("SUBSCRIPTIONS__NOTICE_ALERTS_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
+            from .notice_subscription import dispatch_after_release as dispatch_notices
+
+            notice_subscription_dispatch = await dispatch_safely(
+                "notices", dispatch_notices,
+                root=runtime.root_dir,
+                astro_dir=runtime.astro_dir,
+                identity=release_identity,
+                worker_base_url=env_value("SUBSCRIPTIONS__PUBLIC_BASE_URL"),
+                public_base_url=env_value("GIDS_PUBLIC_BASE_URL", "https://globalinfectiousdisease.com"),
+                token=env_value("SUBSCRIPTIONS__SITUATION_ALERT_INGEST_TOKEN"),
+                start_date=env_value("SUBSCRIPTIONS__NOTICE_ALERTS_START_DATE"),
+                mode=env_value("SUBSCRIPTIONS__DELIVERY_MODE", "pilot").strip().lower(),
+                guard_activation=True,
+            )
     else:
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid,
@@ -715,6 +753,17 @@ async def _execute_release_task(
             content="Cloudflare Pages deployment is disabled for this release job.",
             content_type="text",
             metadata={"event": "cloudflare_skip", "release_job_id": job.job_id},
+        )
+
+    # The reports bundle has already been published and, when requested, the
+    # main site deploy has succeeded. A subscription failure must not mark an
+    # already-published release failed or prevent the Pages deployment.
+    if r2_reports_published:
+        from .report_subscription import dispatch_if_enabled
+
+        report_subscription_dispatch = await dispatch_if_enabled(
+            service, runtime,
+            reports_origin=str(service._config().r2_reports_public_base_url or "https://reports.globalinfectiousdisease.com").rstrip("/"),
         )
 
     # Consume selected rows after successful publication commands. Concurrent
@@ -753,6 +802,7 @@ async def _execute_release_task(
         "artifact_rollback": False,
         "r2_papers_published": r2_papers_published,
         "r2_reports_published": r2_reports_published,
+        "report_subscription_dispatch": report_subscription_dispatch,
         "r2_reports_public_base_url": (
             service._config().r2_reports_public_base_url if r2_reports_enabled else None
         ),
@@ -772,6 +822,8 @@ async def _execute_release_task(
         "raw_archive_branch": raw_archive_branch if raw_archive_cfg.enabled else None,
         "pages_deployed": pages_deployed,
         "subscription_options_synced": subscription_options_synced,
+        "research_subscription_dispatch": research_subscription_dispatch,
+        "notice_subscription_dispatch": notice_subscription_dispatch,
         "preflight": checks,
     }
 

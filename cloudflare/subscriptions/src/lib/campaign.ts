@@ -196,11 +196,13 @@ export function campaignProgressFromRows(
     return acc;
   }, {});
   const total = Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0);
-  const queued = Number(counts.queued || 0);
+  // In-flight work remains outstanding for existing consumers of `queued`.
+  const queued = Number(counts.queued || 0) + Number(counts.sending || 0);
   const sent = Number(counts.sent || 0);
   const delivered = Number(counts.delivered || 0);
   const deferred = Number(counts.deferred || 0);
-  const failed = Number(counts.failed || 0);
+  // Unknown acceptance must be reviewed, not automatically resent.
+  const failed = Number(counts.failed || 0) + Number(counts.unknown || 0);
   const skipped = Number(counts.skipped || 0);
   const completed = sent + delivered + failed + skipped;
   return {

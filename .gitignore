@@ -54,6 +54,7 @@ node_modules/
 /dashboard/tmp-app/
 
 # Frontend test and build artifacts
+/astro-site/.subscription-build-*/
 coverage/
 test-results/
 playwright-report/

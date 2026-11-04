@@ -4,6 +4,7 @@ export type WorkerRoute =
   | { name: "create_subscription" }
   | { name: "confirm_subscription" }
   | { name: "unsubscribe" }
+  | { name: "manage_subscription"; operation: "get" | "post" }
   | { name: "admin_audience" }
   | { name: "admin_stats" }
   | { name: "admin_subscriptions" }
@@ -11,6 +12,8 @@ export type WorkerRoute =
   | { name: "admin_notification"; operation: "get" | "process"; campaignId: string }
   | { name: "situation_alert_ingest" }
   | { name: "email_delivery_feedback" }
+  | { name: "ses_sns_feedback" }
+  | { name: "internal_scheduled_task"; task: "maintenance" | "confirmation" | "campaign" | "situation" | "feedback" }
   | { name: "admin_situation_alerts"; operation: "list" | "process" }
   | { name: "admin_maintenance" }
   | { name: "not_found" };
@@ -20,10 +23,18 @@ export function matchWorkerRoute(method: string, pathname: string): WorkerRoute 
   if (method === "GET" && path === "/health") return { name: "health" };
   if (method === "GET" && path === "/api/subscriptions/options") return { name: "subscription_options" };
   if (method === "POST" && path === "/api/subscriptions") return { name: "create_subscription" };
-  if (method === "GET" && path === "/api/subscriptions/confirm") return { name: "confirm_subscription" };
-  if (method === "GET" && path === "/api/subscriptions/unsubscribe") return { name: "unsubscribe" };
+  if ((method === "GET" || method === "POST") && path === "/api/subscriptions/confirm") return { name: "confirm_subscription" };
+  if ((method === "GET" || method === "POST") && path === "/api/subscriptions/unsubscribe") return { name: "unsubscribe" };
+  if ((method === "GET" || method === "POST") && path === "/api/subscriptions/manage") {
+    return { name: "manage_subscription", operation: method === "GET" ? "get" : "post" };
+  }
   if (method === "POST" && path === "/api/internal/situation-alerts") return { name: "situation_alert_ingest" };
   if (method === "POST" && path === "/api/internal/email-delivery-events") return { name: "email_delivery_feedback" };
+  if (method === "POST" && path === "/api/internal/ses-sns-feedback") return { name: "ses_sns_feedback" };
+  const scheduledTask = path.match(/^\/api\/internal\/scheduled\/(maintenance|confirmation|campaign|situation|feedback)$/);
+  if (method === "POST" && scheduledTask) {
+    return { name: "internal_scheduled_task", task: scheduledTask[1] as "maintenance" | "confirmation" | "campaign" | "situation" | "feedback" };
+  }
   if (method === "POST" && path === "/api/admin/audience") return { name: "admin_audience" };
   if (method === "GET" && path === "/api/admin/stats") return { name: "admin_stats" };
   if (method === "GET" && path === "/api/admin/subscriptions") return { name: "admin_subscriptions" };

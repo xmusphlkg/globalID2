@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { insertEmailDelivery, updateEmailDelivery, type D1Database } from "../src/lib/db.ts";
+import { insertEmailDelivery, reserveConfirmationEmail, updateEmailDelivery, type D1Database } from "../src/lib/db.ts";
 
 function recordingDb(run: () => Promise<unknown> = async () => ({})) {
   const calls: Array<{ query: string; values: unknown[] }> = [];
@@ -35,7 +35,7 @@ test("writes delivery metadata through the isolated D1 boundary", async () => {
   assert.equal(calls[0].values[13], JSON.stringify({ lists: ["reports"] }));
 });
 
-test("delivery logging failures remain non-blocking", async () => {
+test("optional logging can fail, while delivery ledger updates fail closed", async () => {
   const failure = new Error("D1 unavailable");
   const { db } = recordingDb(async () => { throw failure; });
   await assert.doesNotReject(insertEmailDelivery(db, {
@@ -44,7 +44,20 @@ test("delivery logging failures remain non-blocking", async () => {
     deliveryType: "confirmation", provider: "smtp", status: "queued", attempts: 1,
     source: "website", now: "2026-08-05T00:00:00.000Z",
   }));
-  await assert.doesNotReject(updateEmailDelivery(db, {
+  await assert.rejects(updateEmailDelivery(db, {
     deliveryId: "delivery-1", status: "failed", errorMessage: failure.message,
   }));
+});
+
+test("confirmation reservation fails closed when the delivery ledger is unavailable", async () => {
+  const { db } = recordingDb();
+  const failing: D1Database = { prepare(query) {
+    const statement = db.prepare(query);
+    return { ...statement, bind() { return this; }, async first<T>() { throw new Error("D1 unavailable"); } };
+  } };
+  await assert.rejects(reserveConfirmationEmail(failing, {
+    deliveryId: "delivery-1", subscriberId: "subscriber-1", contactId: "contact-1", subscriptionId: null,
+    recipient: "reader@example.test", subject: "Confirm", source: "website", metadata: {},
+    now: "2026-08-05T00:00:00.000Z", cutoff: "2026-08-04T23:50:00.000Z", limit: 2,
+  }), /D1 unavailable/);
 });

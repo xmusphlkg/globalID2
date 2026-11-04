@@ -1,5 +1,5 @@
+import { deliveryMode, recipientSql } from "../lib/pilot.ts";
 import { buildNotificationEmail } from "../lib/email.ts";
-import { insertEmailDelivery, updateEmailDelivery } from "../lib/db.ts";
 import { HttpError, configInt, json, publicBaseUrl, type JsonValue } from "../lib/http.ts";
 import { boundedText, parseJsonObject } from "../lib/input.ts";
 import { secureTextEqual, sha256Hex } from "../lib/security.ts";
@@ -15,13 +15,45 @@ import {
 } from "../lib/situation-alert.ts";
 import { maskEmail } from "../lib/subscriptions.ts";
 import type { Env } from "../types.ts";
+import { officialNoticeContent, parseOfficialNoticeAlert, type OfficialNoticeAlert } from "../lib/official-notice-alert.ts";
+import { isRecord } from "../lib/input.ts";
+
+type DispatchAlert = {
+  stored: SituationAlertPayload | OfficialNoticeAlert;
+  idempotencyKey: string; reportId: string; signalId: string;
+  basis: string; policyVersion: string | null; publicUrl: string;
+  countries: string[]; diseases: string[]; severity: string[];
+  content(locale: string): { subject: string; markdown: string };
+};
+
+function parseDispatchAlert(value: unknown): DispatchAlert {
+  if (isRecord(value) && value.schema_version === "official-notice-alert.v1") {
+    const notice = parseOfficialNoticeAlert(value);
+    return {
+      stored: notice, idempotencyKey: notice.idempotency_key,
+      reportId: notice.release_id, signalId: notice.alert_id,
+      basis: "official_authority_notice", policyVersion: null,
+      publicUrl: notice.public_url, countries: notice.countries, diseases: notice.diseases,
+      severity: [], content: (locale) => officialNoticeContent(notice, locale),
+    };
+  }
+  const alert = parseSituationAlertPayload(value);
+  return {
+    stored: alert, idempotencyKey: alert.idempotency_key,
+    reportId: alert.report.report_id, signalId: alert.signal.signal_id,
+    basis: alert.signal.verification_basis, policyVersion: alert.signal.verification_policy_version,
+    publicUrl: alert.report.public_url, countries: alert.signal.countries,
+    diseases: alert.signal.diseases, severity: [alert.signal.anomaly_state],
+    content: (locale) => situationAlertContent(alert, locale),
+  };
+}
 
 const MAX_PAYLOAD_BYTES = 64 * 1024;
 
 type Dependencies = {
   createSignedToken(
     env: Env,
-    purpose: "unsubscribe",
+    purpose: "unsubscribe" | "manage",
     subscriptionId: string,
     ttlSeconds: number,
   ): Promise<string>;
@@ -31,7 +63,9 @@ type Dependencies = {
     subject: string;
     text: string;
     html: string;
-  }): Promise<unknown>;
+    messageId?: string;
+    unsubscribeUrl?: string;
+  }): Promise<void | { providerMessageId: string | null }>;
 };
 
 type SmtpConfig = {
@@ -66,6 +100,7 @@ type AlertEventRow = {
 
 type ClaimedDelivery = {
   id: string;
+  claim_token: string;
   event_id: string;
   subscription_id: string;
   contact_id: string;
@@ -86,6 +121,7 @@ export interface AlertProcessResult extends Record<string, JsonValue | undefined
   retried: number;
   skipped: number;
   dead_letter: number;
+  unknown: number;
   reason?: string;
 }
 
@@ -93,28 +129,31 @@ export function createSituationAlertHandlers(deps: Dependencies) {
   async function ingest(request: Request, env: Env): Promise<Response> {
     await requireSituationAlertIngest(request, env);
     const raw = await readBoundedJson(request);
-    let alert: SituationAlertPayload;
+    let alert: DispatchAlert;
     try {
-      alert = parseSituationAlertPayload(raw);
+      alert = parseDispatchAlert(raw);
     } catch (error) {
       if (error instanceof SituationAlertValidationError) {
         throw new HttpError(422, error.message);
       }
       throw error;
     }
+    if (alert.idempotencyKey.startsWith("pilot:") !== (deliveryMode(env) === "pilot")) {
+      throw new HttpError(409, "alert_delivery_mode_mismatch");
+    }
     if (
-      alert.signal.verification_basis === "automated_policy"
+      alert.basis === "automated_policy"
       && env.SITUATION_ALERT_AUTOMATED_POLICY_ENABLED?.trim().toLowerCase() !== "true"
     ) {
       // Keep a second deployment-level kill switch after the report's
       // structured v3.2 policy decision has passed contract validation.
       throw new HttpError(422, "automated_policy_dispatch_disabled");
     }
-    if (!isAllowedSituationPublicUrl(alert.report.public_url, env.SITUATION_PUBLIC_ORIGINS)) {
+    if (!isAllowedSituationPublicUrl(alert.publicUrl, env.SITUATION_PUBLIC_ORIGINS)) {
       throw new HttpError(422, "untrusted_public_report_origin");
     }
 
-    const payloadJson = JSON.stringify(alert);
+    const payloadJson = JSON.stringify(alert.stored);
     const payloadSha256 = await sha256Hex(payloadJson);
     const now = new Date().toISOString();
     const proposedEventId = crypto.randomUUID();
@@ -126,11 +165,11 @@ export function createSituationAlertHandlers(deps: Dependencies) {
        ON CONFLICT(idempotency_key) DO NOTHING`,
     ).bind(
       proposedEventId,
-      alert.idempotency_key,
-      alert.report.report_id,
-      alert.signal.signal_id,
-      alert.signal.verification_basis,
-      alert.signal.verification_policy_version,
+      alert.idempotencyKey,
+      alert.reportId,
+      alert.signalId,
+      alert.basis,
+      alert.policyVersion,
       payloadSha256,
       payloadJson,
       now,
@@ -143,21 +182,24 @@ export function createSituationAlertHandlers(deps: Dependencies) {
        status, received_at, updated_at, completed_at, queued_count, sent_count,
        skipped_count, failed_count, last_error
        FROM situation_alert_events WHERE idempotency_key = ?`,
-    ).bind(alert.idempotency_key).first<AlertEventRow>();
+    ).bind(alert.idempotencyKey).first<AlertEventRow>();
     if (!event) throw new HttpError(500, "situation_alert_not_persisted");
     if (event.payload_sha256 !== payloadSha256) {
       throw new HttpError(409, "idempotency_key_payload_conflict");
     }
 
     const duplicate = event.id !== proposedEventId;
-    const queued = await fanOutSituationAlert(env, event.id, alert, now);
+    // Replays must not fan out to subscribers who joined after the event.
+    // A received event may be a crash between persistence and its first fanout.
+    const queued = !duplicate || event.status === "received"
+      ? await fanOutSituationAlert(env, event.id, alert, now, event.received_at) : 0;
     const dispatch = queued > 0 ? await dispatchSituationAlert(env, event.id) : "not_required";
     structuredLog("info", "situation_alert_accepted", {
       event_id: event.id,
       report_id: event.report_id,
       signal_id: event.signal_id,
-      verification_basis: alert.signal.verification_basis,
-      verification_policy_version: alert.signal.verification_policy_version,
+      verification_basis: alert.basis,
+      verification_policy_version: alert.policyVersion,
       duplicate,
       queued,
       dispatch,
@@ -263,13 +305,15 @@ export async function processSituationAlertOutbox(
       retried: 0,
       skipped: 0,
       dead_letter: 0,
+      unknown: 0,
       reason: "smtp_not_configured",
     };
   }
 
   const now = new Date().toISOString();
   await recoverExpiredClaims(env, now);
-  const batchSize = configInt(env.SITUATION_ALERT_BATCH_SIZE, 20, 1, 100);
+  // Keep a single D1 invocation below the Free plan's query budget.
+  const batchSize = configInt(env.SITUATION_ALERT_BATCH_SIZE, 3, 1, 3);
   const maxAttempts = configInt(env.SITUATION_ALERT_MAX_ATTEMPTS, 5, 1, 20);
   const candidates = await dueDeliveryIds(env, now, batchSize, options.eventId);
   const touchedEvents = new Set<string>();
@@ -280,6 +324,7 @@ export async function processSituationAlertOutbox(
     retried: 0,
     skipped: 0,
     dead_letter: 0,
+    unknown: 0,
   };
 
   for (const candidate of candidates) {
@@ -293,22 +338,22 @@ export async function processSituationAlertOutbox(
       claimed.contact_status !== "active" ||
       claimed.subscriber_status !== "active"
     ) {
-      await markDeliverySkipped(env, claimed.id, "subscription_inactive");
+      await markDeliverySkipped(env, claimed.id, claimed.claim_token, "subscription_inactive");
       result.skipped += 1;
       continue;
     }
 
-    let alert: SituationAlertPayload;
+    let alert: DispatchAlert;
     try {
-      alert = parseSituationAlertPayload(parseJsonObject(claimed.payload_json));
+      alert = parseDispatchAlert(parseJsonObject(claimed.payload_json));
     } catch (error) {
-      await markDeliveryDeadLetter(env, claimed.id, `stored_payload_invalid:${errorMessage(error)}`);
+      await markDeliveryDeadLetter(env, claimed.id, claimed.claim_token, `stored_payload_invalid:${errorMessage(error)}`);
       result.dead_letter += 1;
       continue;
     }
 
     const locale = claimed.locale || "en";
-    const content = situationAlertContent(alert, locale);
+    const content = alert.content(locale);
     const unsubscribeToken = await deps.createSignedToken(
       env,
       "unsubscribe",
@@ -316,78 +361,93 @@ export async function processSituationAlertOutbox(
       60 * 60 * 24 * 365,
     );
     const unsubscribeUrl = `${configuredPublicBaseUrl(env)}/api/subscriptions/unsubscribe?token=${unsubscribeToken}`;
-    const email = buildNotificationEmail(locale, content, unsubscribeUrl);
+    const manageToken = await deps.createSignedToken(env, "manage", claimed.subscription_id, 60 * 60 * 24);
+    const manageUrl = `${configuredPublicBaseUrl(env)}/api/subscriptions/manage?token=${manageToken}`;
+    const email = buildNotificationEmail(locale, content, unsubscribeUrl, manageUrl);
     const transactionId = crypto.randomUUID();
-    await insertEmailDelivery(env.DB, {
-      deliveryId: transactionId,
-      subscriberId: claimed.subscriber_id,
-      contactId: claimed.contact_id,
-      subscriptionId: claimed.subscription_id,
-      recipient: claimed.email,
-      subject: email.subject,
-      deliveryType: "verified_situation_alert",
-      provider: "smtp",
-      status: "queued",
-      attempts: claimed.attempts,
-      source: "situation_alert_outbox",
-      metadata: {
+    const attemptTime = new Date().toISOString();
+    const deliveryMetadata = JSON.stringify({
         event_id: claimed.event_id,
         outbox_delivery_id: claimed.id,
-        report_id: alert.report.report_id,
-        signal_id: alert.signal.signal_id,
-        verification_basis: alert.signal.verification_basis,
-        verification_policy_version: alert.signal.verification_policy_version,
-      },
-      now: new Date().toISOString(),
+        report_id: alert.reportId,
+        signal_id: alert.signalId,
+        verification_basis: alert.basis,
+        verification_policy_version: alert.policyVersion,
     });
-
     try {
-      await deps.sendSmtpEmail(config, {
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT INTO transactional_email_deliveries (
+             id, subscriber_id, contact_id, subscription_id, delivery_type, channel, recipient, subject,
+             provider, status, attempts, request_source, metadata_json, created_at, updated_at
+           ) VALUES (?, ?, ?, ?, 'verified_situation_alert', 'email', ?, ?, 'smtp', 'queued', ?, 'situation_alert_outbox', ?, ?, ?)`,
+        ).bind(transactionId, claimed.subscriber_id, claimed.contact_id, claimed.subscription_id,
+          claimed.email, email.subject, claimed.attempts, deliveryMetadata, attemptTime, attemptTime),
+        env.DB.prepare(
+          `UPDATE situation_alert_deliveries SET transaction_delivery_id = ?
+           WHERE id = ? AND status = 'sending' AND claim_token = ?`,
+        ).bind(transactionId, claimed.id, claimed.claim_token),
+      ]);
+    } catch (error) {
+      await env.DB.prepare(
+        `UPDATE situation_alert_deliveries SET status = 'retry', last_error = 'delivery_ledger_unavailable',
+         claim_token = NULL, claim_expires_at = NULL WHERE id = ? AND status = 'sending' AND claim_token = ?`,
+      ).bind(claimed.id, claimed.claim_token).run().catch(() => {});
+      throw error;
+    }
+    // A contact can unsubscribe or be suppressed after the original fanout.
+    const eligible = await env.DB.prepare(
+      `SELECT d.id FROM situation_alert_deliveries d JOIN subscriptions s ON s.id = d.subscription_id
+       JOIN subscriber_contacts c ON c.id = d.contact_id JOIN subscribers sub ON sub.id = s.subscriber_id
+       WHERE d.id = ? AND d.status = 'sending' AND d.claim_token = ? AND d.claim_expires_at > ?
+       AND s.status = 'active' AND c.status = 'active' AND sub.status = 'active'`,
+    ).bind(claimed.id, claimed.claim_token, new Date().toISOString()).first<{ id: string }>();
+    if (!eligible) {
+      await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE situation_alert_deliveries SET status = 'skipped', last_error = 'subscription_inactive',
+           skipped_at = ?, updated_at = ?, claim_token = NULL, claim_expires_at = NULL
+           WHERE id = ? AND status = 'sending' AND claim_token = ?`,
+        ).bind(new Date().toISOString(), new Date().toISOString(), claimed.id, claimed.claim_token),
+        env.DB.prepare(
+          `UPDATE transactional_email_deliveries SET status = 'skipped', updated_at = ?
+           WHERE id = ? AND status = 'queued'`,
+        ).bind(new Date().toISOString(), transactionId),
+      ]);
+      result.skipped += 1;
+      continue;
+    }
+    let receipt: void | { providerMessageId: string | null };
+    try {
+      receipt = await deps.sendSmtpEmail(config, {
         to: claimed.email,
         subject: email.subject,
         text: email.text,
         html: email.html,
-      });
-      const sentAt = new Date().toISOString();
-      await env.DB.prepare(
-        `UPDATE situation_alert_deliveries
-         SET status = 'sent', transaction_delivery_id = ?, sent_at = ?, updated_at = ?,
-         last_error = NULL, claim_token = NULL, claim_expires_at = NULL
-         WHERE id = ?`,
-      ).bind(transactionId, sentAt, sentAt, claimed.id).run();
-      await updateEmailDelivery(env.DB, { deliveryId: transactionId, status: "sent", sentAt });
-      result.sent += 1;
-      structuredLog("info", "situation_alert_delivery_sent", {
-        event_id: claimed.event_id,
-        delivery_id: claimed.id,
-        attempt: claimed.attempts,
+        unsubscribeUrl,
+        messageId: `${transactionId}@globalinfectiousdisease.com`,
       });
     } catch (error) {
       const message = deliveryErrorMessage(error);
-      const terminal = claimed.attempts >= maxAttempts;
+      const rejected = /_rejected:([45])\d\d$/.exec(message);
+      const retry = rejected?.[1] === "4" && claimed.attempts < maxAttempts;
+      const status = retry ? "retry" : rejected ? "dead_letter" : "unknown";
       const delaySeconds = retryDelaySeconds(claimed.attempts);
       const nextAttemptAt = new Date(Date.now() + delaySeconds * 1000).toISOString();
-      await env.DB.prepare(
-        `UPDATE situation_alert_deliveries
+      const failedAt = new Date().toISOString();
+      await env.DB.batch([
+        env.DB.prepare(`UPDATE situation_alert_deliveries
          SET status = ?, next_attempt_at = ?, last_error = ?, updated_at = ?,
          claim_token = NULL, claim_expires_at = NULL, failed_at = CASE WHEN ? = 'dead_letter' THEN ? ELSE failed_at END
-         WHERE id = ?`,
-      ).bind(
-        terminal ? "dead_letter" : "retry",
-        terminal ? null : nextAttemptAt,
-        message,
-        new Date().toISOString(),
-        terminal ? "dead_letter" : "retry",
-        new Date().toISOString(),
-        claimed.id,
-      ).run();
-      await updateEmailDelivery(env.DB, {
-        deliveryId: transactionId,
-        status: "failed",
-        errorCode: terminal ? "smtp_delivery_dead_letter" : "smtp_delivery_retry",
-        errorMessage: message,
-      });
-      if (terminal) {
+         WHERE id = ? AND status = 'sending' AND claim_token = ?`)
+          .bind(status, nextAttemptAt, message, failedAt, status, failedAt, claimed.id, claimed.claim_token),
+        env.DB.prepare(`UPDATE transactional_email_deliveries SET status = ?, error_code = ?, error_message = ?, updated_at = ?
+          WHERE id = ? AND status = 'queued'`)
+          .bind(status === "unknown" ? "unknown" : "failed", status === "unknown" ? "smtp_result_unknown" : "smtp_delivery_failed", message, failedAt, transactionId),
+      ]);
+      if (status === "unknown") {
+        result.unknown += 1;
+      } else if (!retry) {
         result.dead_letter += 1;
       } else {
         result.retried += 1;
@@ -397,10 +457,24 @@ export async function processSituationAlertOutbox(
         event_id: claimed.event_id,
         delivery_id: claimed.id,
         attempt: claimed.attempts,
-        terminal,
+        terminal: !retry,
         error: message,
       });
+      continue;
     }
+    const sentAt = new Date().toISOString();
+    const providerMessageId = receipt?.providerMessageId || `${transactionId}@globalinfectiousdisease.com`;
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE situation_alert_deliveries
+        SET status = 'sent', sent_at = ?, updated_at = ?, last_error = NULL, claim_token = NULL, claim_expires_at = NULL
+        WHERE id = ? AND status = 'sending' AND claim_token = ?`)
+        .bind(sentAt, sentAt, claimed.id, claimed.claim_token),
+      env.DB.prepare(`UPDATE transactional_email_deliveries
+        SET status = CASE WHEN status = 'queued' THEN 'sent' ELSE status END,
+        sent_at = ?, provider_message_id = ?, updated_at = ? WHERE id = ?`)
+        .bind(sentAt, providerMessageId, sentAt, transactionId),
+    ]);
+    result.sent += 1;
   }
 
   if (options.eventId) touchedEvents.add(options.eventId);
@@ -429,21 +503,20 @@ export async function maintainSituationAlerts(env: Env): Promise<JsonValue> {
   ).bind(now, now).run();
 
   const activeEvents = await env.DB.prepare(
-    `SELECT id, status, payload_json FROM situation_alert_events
-     WHERE status IN ('received', 'queued', 'sending') LIMIT 500`,
-  ).all<{ id: string; status: string; payload_json: string }>();
+    `SELECT id, status, payload_json, received_at FROM situation_alert_events
+     WHERE status IN ('received', 'queued', 'sending') ORDER BY updated_at ASC LIMIT 3`,
+  ).all<{ id: string; status: string; payload_json: string; received_at: string }>();
   let recoveredEvents = 0;
   for (const event of activeEvents.results || []) {
     if (event.status === "received") {
+      let alert: DispatchAlert;
       try {
-        const alert = parseSituationAlertPayload(parseJsonObject(event.payload_json));
-        if (!isAllowedSituationPublicUrl(alert.report.public_url, env.SITUATION_PUBLIC_ORIGINS)) {
+        alert = parseDispatchAlert(parseJsonObject(event.payload_json));
+        if (!isAllowedSituationPublicUrl(alert.publicUrl, env.SITUATION_PUBLIC_ORIGINS)) {
           throw new SituationAlertValidationError("untrusted_public_report_origin");
         }
-        const queued = await fanOutSituationAlert(env, event.id, alert, now);
-        if (queued > 0) await dispatchSituationAlert(env, event.id);
-        recoveredEvents += 1;
       } catch (error) {
+        if (!(error instanceof SituationAlertValidationError)) throw error;
         await env.DB.prepare(
           `UPDATE situation_alert_events
            SET status = 'failed', last_error = 'stored_payload_invalid', completed_at = ?, updated_at = ?
@@ -455,6 +528,14 @@ export async function maintainSituationAlerts(env: Env): Promise<JsonValue> {
         });
         continue;
       }
+      // A pre-pilot event interrupted before fanout must wait until full mode;
+      // otherwise its original audience would be irreversibly narrowed.
+      if (deliveryMode(env) === "pilot" && !alert.idempotencyKey.startsWith("pilot:")) continue;
+      // A temporary database/queue failure is not a bad stored payload. Let
+      // the scheduler retry instead of turning an undelivered event terminal.
+      const queued = await fanOutSituationAlert(env, event.id, alert, now, event.received_at);
+      if (queued > 0) await dispatchSituationAlert(env, event.id);
+      recoveredEvents += 1;
     }
     await refreshSituationAlertStatus(env, event.id);
   }
@@ -463,7 +544,7 @@ export async function maintainSituationAlerts(env: Env): Promise<JsonValue> {
   const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
   const expired = await env.DB.prepare(
     `SELECT id FROM situation_alert_events
-     WHERE completed_at IS NOT NULL AND completed_at < ? LIMIT 500`,
+     WHERE completed_at IS NOT NULL AND completed_at < ? ORDER BY completed_at ASC LIMIT 5`,
   ).bind(cutoff).all<{ id: string }>();
   for (const event of expired.results || []) {
     await env.DB.prepare("DELETE FROM situation_alert_deliveries WHERE event_id = ?").bind(event.id).run();
@@ -471,7 +552,9 @@ export async function maintainSituationAlerts(env: Env): Promise<JsonValue> {
   }
   await env.DB.prepare(
     `DELETE FROM transactional_email_deliveries
-     WHERE delivery_type = 'verified_situation_alert' AND created_at < ?`,
+     WHERE delivery_type = 'verified_situation_alert' AND created_at < ?
+       AND NOT EXISTS (SELECT 1 FROM situation_alert_deliveries d
+         WHERE d.transaction_delivery_id = transactional_email_deliveries.id)`,
   ).bind(cutoff).run();
   return {
     refreshed_events: (activeEvents.results || []).length,
@@ -497,21 +580,29 @@ export async function skipPendingSituationAlertsForSubscription(
 async function fanOutSituationAlert(
   env: Env,
   eventId: string,
-  alert: SituationAlertPayload,
+  alert: DispatchAlert,
   now: string,
+  receivedAt: string,
 ): Promise<number> {
   const clauses = [
     "l.code = 'alerts'",
     "s.status = 'active'",
     "s.frequency = 'instant'",
+    // A replay after an interrupted fanout must never reach someone who only
+    // confirmed the subscription after this event was first persisted.
+    "COALESCE(s.confirmed_at, s.created_at) <= ?",
     "c.channel = 'email'",
     "c.status = 'active'",
     "sub.status = 'active'",
   ];
-  const binds: unknown[] = [];
-  addFilterClause(clauses, binds, "country", alert.signal.countries);
-  addFilterClause(clauses, binds, "disease", alert.signal.diseases);
-  addFilterClause(clauses, binds, "severity", [alert.signal.anomaly_state]);
+  const binds: unknown[] = [receivedAt];
+  // A trial event remains administrator-only even if recovery happens after
+  // full release; its idempotency namespace defines its original audience.
+  const policy = recipientSql(alert.idempotencyKey.startsWith("pilot:") ? { ...env, DELIVERY_MODE: "pilot" } : env, "c.address");
+  clauses.push(policy.sql); binds.push(...policy.binds);
+  addFilterClause(clauses, binds, "country", alert.countries);
+  addFilterClause(clauses, binds, "disease", alert.diseases);
+  addFilterClause(clauses, binds, "severity", alert.severity);
   addFilterClause(clauses, binds, "report_type", ["situation"]);
   await env.DB.prepare(
     `INSERT INTO situation_alert_deliveries (
@@ -602,23 +693,25 @@ async function dueDeliveryIds(
   limit: number,
   eventId?: string,
 ): Promise<Array<{ id: string }>> {
-  const eventClause = eventId ? "AND event_id = ?" : "";
+  const eventClause = eventId ? "AND d.event_id = ?" : "";
+  const policy = recipientSql(env, "c.address");
   const binds: unknown[] = [now];
   if (eventId) binds.push(eventId);
-  binds.push(limit);
+  binds.push(...policy.binds, limit);
   const rows = await env.DB.prepare(
-    `SELECT id FROM situation_alert_deliveries
-     WHERE status IN ('queued', 'retry') AND next_attempt_at <= ? ${eventClause}
-     ORDER BY next_attempt_at ASC, queued_at ASC LIMIT ?`,
+    `SELECT d.id FROM situation_alert_deliveries d JOIN subscriber_contacts c ON c.id=d.contact_id
+     WHERE d.status IN ('queued', 'retry') AND d.next_attempt_at <= ? ${eventClause} AND ${policy.sql}
+     ORDER BY d.next_attempt_at ASC, d.queued_at ASC LIMIT ?`,
   ).bind(...binds).all<{ id: string }>();
   return rows.results || [];
 }
 
 async function hasDueSituationAlertDeliveries(env: Env, eventId: string): Promise<boolean> {
+  const policy = recipientSql(env, "c.address");
   const row = await env.DB.prepare(
-    `SELECT COUNT(*) AS count FROM situation_alert_deliveries
-     WHERE event_id = ? AND status IN ('queued', 'retry') AND next_attempt_at <= ?`,
-  ).bind(eventId, new Date().toISOString()).first<{ count: number }>();
+    `SELECT COUNT(*) AS count FROM situation_alert_deliveries d JOIN subscriber_contacts c ON c.id=d.contact_id
+     WHERE d.event_id = ? AND d.status IN ('queued', 'retry') AND d.next_attempt_at <= ? AND ${policy.sql}`,
+  ).bind(eventId, new Date().toISOString(), ...policy.binds).first<{ count: number }>();
   return Number(row?.count || 0) > 0;
 }
 
@@ -627,10 +720,11 @@ async function claimDelivery(env: Env, deliveryId: string, now: string): Promise
   const claimExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
   await env.DB.prepare(
     `UPDATE situation_alert_deliveries
-     SET status = 'sending', attempts = attempts + 1, claim_token = ?, claim_expires_at = ?, updated_at = ?
+     SET status = 'sending', attempts = attempts + 1, claim_token = ?, claim_expires_at = ?,
+         transaction_delivery_id = NULL, updated_at = ?
      WHERE id = ? AND status IN ('queued', 'retry') AND next_attempt_at <= ?`,
   ).bind(claimToken, claimExpiresAt, now, deliveryId, now).run();
-  return env.DB.prepare(
+  const delivery = await env.DB.prepare(
     `SELECT d.id, d.event_id, d.subscription_id, d.contact_id, d.attempts,
      e.payload_json, s.subscriber_id, s.status AS subscription_status,
      sub.status AS subscriber_status, c.status AS contact_status, c.address AS email, sub.locale
@@ -640,34 +734,49 @@ async function claimDelivery(env: Env, deliveryId: string, now: string): Promise
      JOIN subscribers sub ON sub.id = s.subscriber_id
      JOIN subscriber_contacts c ON c.id = d.contact_id
      WHERE d.id = ? AND d.claim_token = ? AND d.status = 'sending'`,
-  ).bind(deliveryId, claimToken).first<ClaimedDelivery>();
+  ).bind(deliveryId, claimToken).first<Omit<ClaimedDelivery, "claim_token">>();
+  return delivery ? { ...delivery, claim_token: claimToken } : null;
 }
 
 async function recoverExpiredClaims(env: Env, now: string): Promise<void> {
-  await env.DB.prepare(
-    `UPDATE situation_alert_deliveries
-     SET status = 'retry', next_attempt_at = ?, last_error = 'claim_timeout',
-     claim_token = NULL, claim_expires_at = NULL, updated_at = ?
-     WHERE status = 'sending' AND claim_expires_at IS NOT NULL AND claim_expires_at < ?`,
-  ).bind(now, now, now).run();
+  await env.DB.batch([
+    // No ledger means SMTP was never invoked: this particular crash point is
+    // safe to retry. Once a ledger exists, keep the conservative unknown state.
+    env.DB.prepare(`UPDATE situation_alert_deliveries
+      SET status = 'retry', next_attempt_at = ?, last_error = 'claim_expired_before_send',
+      claim_token = NULL, claim_expires_at = NULL, updated_at = ?
+      WHERE status = 'sending' AND transaction_delivery_id IS NULL
+        AND claim_expires_at IS NOT NULL AND claim_expires_at < ?`)
+      .bind(now, now, now),
+    env.DB.prepare(`UPDATE transactional_email_deliveries SET status = 'unknown', error_code = 'claim_timeout_unknown', updated_at = ?
+      WHERE status = 'queued' AND id IN (SELECT transaction_delivery_id FROM situation_alert_deliveries
+        WHERE status = 'sending' AND claim_expires_at IS NOT NULL AND claim_expires_at < ?)`)
+      .bind(now, now),
+    env.DB.prepare(`UPDATE situation_alert_deliveries
+      SET status = 'unknown', last_error = 'claim_timeout_unknown',
+      claim_token = NULL, claim_expires_at = NULL, updated_at = ?
+      WHERE status = 'sending' AND transaction_delivery_id IS NOT NULL
+        AND claim_expires_at IS NOT NULL AND claim_expires_at < ?`)
+      .bind(now, now),
+  ]);
 }
 
-async function markDeliverySkipped(env: Env, deliveryId: string, reason: string): Promise<void> {
+async function markDeliverySkipped(env: Env, deliveryId: string, claimToken: string, reason: string): Promise<void> {
   const now = new Date().toISOString();
   await env.DB.prepare(
     `UPDATE situation_alert_deliveries
      SET status = 'skipped', last_error = ?, skipped_at = ?, updated_at = ?,
-     claim_token = NULL, claim_expires_at = NULL WHERE id = ?`,
-  ).bind(reason, now, now, deliveryId).run();
+     claim_token = NULL, claim_expires_at = NULL WHERE id = ? AND status = 'sending' AND claim_token = ?`,
+  ).bind(reason, now, now, deliveryId, claimToken).run();
 }
 
-async function markDeliveryDeadLetter(env: Env, deliveryId: string, reason: string): Promise<void> {
+async function markDeliveryDeadLetter(env: Env, deliveryId: string, claimToken: string, reason: string): Promise<void> {
   const now = new Date().toISOString();
   await env.DB.prepare(
     `UPDATE situation_alert_deliveries
      SET status = 'dead_letter', last_error = ?, failed_at = ?, updated_at = ?,
-     claim_token = NULL, claim_expires_at = NULL WHERE id = ?`,
-  ).bind(boundedText(reason, "delivery_invalid", 500), now, now, deliveryId).run();
+     claim_token = NULL, claim_expires_at = NULL WHERE id = ? AND status = 'sending' AND claim_token = ?`,
+  ).bind(boundedText(reason, "delivery_invalid", 500), now, now, deliveryId, claimToken).run();
 }
 
 async function refreshSituationAlertStatus(env: Env, eventId: string): Promise<void> {
@@ -679,10 +788,10 @@ async function refreshSituationAlertStatus(env: Env, eventId: string): Promise<v
     result[row.status] = Number(row.count || 0);
     return result;
   }, {});
-  const sent = Number(counts.sent || 0);
+  const sent = Number(counts.sent || 0) + Number(counts.delivered || 0);
   const skipped = Number(counts.skipped || 0);
-  const failed = Number(counts.dead_letter || 0);
-  const pending = Number(counts.queued || 0) + Number(counts.retry || 0) + Number(counts.sending || 0);
+  const failed = Number(counts.dead_letter || 0) + Number(counts.unknown || 0);
+  const pending = Number(counts.queued || 0) + Number(counts.retry || 0) + Number(counts.sending || 0) + Number(counts.deferred || 0);
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
   let status = "skipped";
   if (total === 0) status = "completed_no_audience";
