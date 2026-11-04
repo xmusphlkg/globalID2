@@ -393,3 +393,21 @@ def test_snapshot_upload_rejects_oversized_blob_before_push(tmp_path):
     with pytest.raises(RuntimeError, match="blob exceeds"):
         push_download_snapshot(checkout, "main", batch_bytes=10)
     assert run_git(["rev-parse", "main"], remote) == initial
+
+
+def test_snapshot_staging_reuses_uploaded_objects_under_remote_pack_limit(tmp_path):
+    import random
+
+    remote, checkout, initial = _snapshot_repo(tmp_path)
+    for number in range(6):
+        (checkout / f"partition {number}.csv").write_bytes(random.Random(number).randbytes(2048))
+    run_git(["add", "-A"], checkout)
+    run_git(["commit", "--amend", "--no-edit"], checkout)
+    run_git(["config", "receive.maxInputSize", "4096"], remote)
+    # The unbatched snapshot exceeds this limit, so success also verifies the
+    # final push negotiates and reuses objects received on the staging ref.
+    with pytest.raises(RuntimeError, match="pack exceeds maximum allowed size"):
+        push_branch(checkout, "main", attempts=1)
+    assert run_git(["rev-parse", "main"], remote) == initial
+    push_download_snapshot(checkout, "main", batch_bytes=2500)
+    assert run_git(["rev-parse", "main"], remote) == run_git(["rev-parse", "HEAD"], checkout)

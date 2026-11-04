@@ -204,9 +204,18 @@ def push_download_snapshot(workdir: Path, branch: str, *, batch_bytes: int = PUS
     staging = f"globalid-upload/{branch_key}-{tree}"
     remote = run_git_with_retry(["ls-remote", "--heads", "origin", branch, staging], workdir)
     refs = {line.split()[1]: line.split()[0] for line in remote.splitlines()}
-    base = refs.get(f"refs/heads/{staging}") or refs.get(f"refs/heads/{branch}")
+    remote_head = refs.get(f"refs/heads/{branch}")
+    base = refs.get(f"refs/heads/{staging}") or remote_head
+    staged = f"refs/heads/{staging}" in refs
     if base:
         run_git_with_retry(["fetch", "origin", base], workdir)
+    if staged and remote_head and remote_head != base:
+        run_git_with_retry(["fetch", "origin", remote_head], workdir)
+        if subprocess.run(
+            ["git", "merge-base", "--is-ancestor", remote_head, base], cwd=workdir,
+            capture_output=True,
+        ).returncode != 0:
+            raise RuntimeError("Public download branch advanced during staged upload")
     # A new repository needs an empty tree as the comparison/index base.
     empty_tree = subprocess.run(
         ["git", "hash-object", "-t", "tree", "--stdin", "-w"], cwd=workdir,
@@ -264,9 +273,18 @@ def push_download_snapshot(workdir: Path, branch: str, *, batch_bytes: int = PUS
                 print(f"Upload download batch {number}/{len(batches)} ({sum(sizes[oid] for _, oid, _ in batch)} bytes)", flush=True)
                 run_git_with_retry(["push", "origin", f"{staged_commit}:refs/heads/{staging}"], workdir)
                 base = staged_commit
+                staged = True
+    if staged:
+        # Git's push negotiation is scoped to the destination ref; merely
+        # uploading blobs to an unrelated ref does not keep the final pack
+        # small. Make the completed snapshot a child of the staging history,
+        # so the final fast-forward contains only the remaining bounded blobs.
+        message = run_git(["log", "-1", "--format=%B", target], workdir)
+        final = run_git(["commit-tree", tree, "-p", base, "-m", message], workdir)
+        run_git(["update-ref", f"refs/heads/{branch}", final, target], workdir)
     # This remains a normal fast-forward push: concurrent releases cannot be overwritten.
     push_branch(workdir, branch)
-    if base and (f"refs/heads/{staging}" in refs or sum(sizes[oid] for _, oid, _ in changes) > batch_bytes):
+    if staged:
         try:
             run_git_with_retry(["push", "origin", "--delete", staging], workdir)
         except RuntimeError as exc:
