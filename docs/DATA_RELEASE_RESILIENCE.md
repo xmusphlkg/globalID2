@@ -90,6 +90,8 @@ a content-addressed temporary branch. Once all objects are present, the public
 branch advances in a normal fast-forward push and the temporary branch is
 removed. An interrupted upload of the same snapshot resumes from that branch;
 the public branch keeps its previous complete snapshot until the final push.
+The download Git stage has a three-hour minimum timeout for large backfills;
+the independent R2 upload timeouts are unchanged.
 Build validation caches gzip sizes by content SHA-256 and zlib version, while
 re-evaluating current budgets and dependency graphs on every run. SEO target
 lookups are memoized only within one audit; subsequent audits observe file

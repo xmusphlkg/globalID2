@@ -13,6 +13,9 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS = 30 * 60
+# A large backfill can require many bounded Git pushes; keep the R2 timeout
+# separate while allowing a full download snapshot to finish or resume.
+DOWNLOAD_GIT_PUBLISH_TIMEOUT_SECONDS = 3 * 60 * 60
 
 
 class ReleasePreflightError(RuntimeError):
@@ -539,7 +542,10 @@ async def _execute_release_task(
                         "release_job_id": job.job_id,
                         "branch": branch,
                     },
-                    timeout_seconds=runtime.download_publish_timeout_seconds,
+                    timeout_seconds=max(
+                        runtime.download_publish_timeout_seconds,
+                        DOWNLOAD_GIT_PUBLISH_TIMEOUT_SECONDS,
+                    ),
                 ),
             )
         )
