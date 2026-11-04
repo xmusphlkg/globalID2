@@ -221,6 +221,22 @@ async def download_repo_check(
         blockers.append("Missing GITHUB_DATA_SHARE_REPO_URL.")
         return {"payload": payload, "blockers": blockers}
 
+    # The actual publisher checks new content after export. Re-probing access
+    # for an already verified, unchanged local version adds no release safety.
+    workdir = root_dir / "exports" / "site-downloads"
+    if (workdir / ".git").exists():
+        from scripts.publish_download_repo import publication_is_verified
+
+        if await asyncio.to_thread(publication_is_verified, workdir, repo_url, branch):
+            payload.update(
+                read_access_ok=True,
+                write_access_ok=True,
+                read_check_output="Reused verified local download publication; remote probe skipped.",
+                write_check_output="Changes will be checked by the publisher after export.",
+                cached_publication=True,
+            )
+            return {"payload": payload, "blockers": []}
+
     read_check: dict[str, Any] = {"returncode": 127, "stdout": "read check did not run"}
     fallback_read_output: str | None = None
     for attempt in range(1, 4):

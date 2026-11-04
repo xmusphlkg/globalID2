@@ -12,6 +12,7 @@ from src.core.db_schema import (
 
 from .config import get_config
 from .logging import get_logger
+from .release_admission import collection_database_scope
 
 logger = get_logger(__name__)
 
@@ -53,7 +54,7 @@ def get_session_maker():
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """获取数据库session"""
     session_maker = get_session_maker()
-    async with session_maker() as session:
+    async with collection_database_scope(), session_maker() as session:
         try:
             yield session
             await session.commit()

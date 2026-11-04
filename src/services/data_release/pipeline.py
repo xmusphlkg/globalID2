@@ -124,16 +124,13 @@ async def _run_repository_publications(
 async def execute_release_task(
     service: Any, task: Any, *, runtime: ReleasePipelineRuntime
 ) -> dict[str, Any]:
-    """Restore generated artifacts if build, deployment, or verification fails."""
+    """Publish in place; upload errors retain artifacts without rolling them back."""
     if (getattr(task, "input_data", None) or {}).get("reports_only"):
         from .reports_pipeline import execute_reports_release
         return await execute_reports_release(service, task, runtime=runtime)
-    import shutil
-    import tempfile
     import time
 
     release_started = time.monotonic()
-
     paths = [
         runtime.astro_dir / "src" / "data",
         runtime.astro_dir / "public" / "site-data",
@@ -142,87 +139,28 @@ async def execute_release_task(
         runtime.root_dir / "exports" / "papers-site",
         runtime.root_dir / "exports" / "reports-site",
     ]
-    from .artifact_checkpoint import ArtifactCheckpoint, link_immutable_or_copy
+    from .artifact_checkpoint import ArtifactCheckpoint
 
     checkpoint = (
         ArtifactCheckpoint(runtime.root_dir, str(task.task_uuid), paths, dict(task.input_data or {}))
         if task is not None and hasattr(task, "input_data") else None
     )
-    # Download partitions are immutable: the generator replaces changed files
-    # atomically, and the publisher only reads them. Link their old inodes into
-    # the rollback snapshot instead of copying ~21 GiB on every release. Other
-    # artifacts still use independent copies because not every writer is atomic.
-    backup_root = runtime.root_dir / "exports" / "release-backups"
-    await asyncio.to_thread(backup_root.mkdir, parents=True, exist_ok=True)
-    temporary = tempfile.TemporaryDirectory(prefix="globalid-release-", dir=backup_root)
+    previous = runtime.root_dir / "exports" / "verified-pages-snapshot"
     try:
-        backups = []
-        for index, path in enumerate(paths):
-            backup = Path(temporary.name) / str(index)
-            existed = path.exists()
-            if existed:
-                copy_function = (
-                    link_immutable_or_copy if path == runtime.root_dir / "exports" / "site-downloads"
-                    else shutil.copy2
-                )
-                await asyncio.to_thread(
-                    shutil.copytree, path, backup, copy_function=copy_function
-                )
-            backups.append((path, backup, existed))
-        backup_seconds = time.monotonic() - release_started
-        try:
-            result = await _execute_release_task(
-                service, task, runtime=runtime, artifact_checkpoint=checkpoint,
-                previous_site_dir=backups[2][1] if backups[2][2] else None,
-            )
-            if checkpoint is not None:
-                await asyncio.to_thread(checkpoint.discard)
-        except BaseException:
-            dist_dir = runtime.astro_dir / "dist"
-            if dist_dir.is_dir():
-                from .papers_bundle import write_dist_inventory
-
-                # Diagnostic only: a failure here must not mask the release error
-                # or skip restoring the pre-release artifacts below.
-                try:
-                    failure_dir = (
-                        runtime.root_dir
-                        / "exports"
-                        / "release-failures"
-                        / str(task.task_uuid)
-                    )
-                    await asyncio.to_thread(
-                        failure_dir.mkdir, parents=True, exist_ok=True
-                    )
-                    await asyncio.to_thread(
-                        write_dist_inventory,
-                        dist_dir,
-                        failure_dir / "dist-inventory.json",
-                    )
-                except Exception:
-                    logging.getLogger(__name__).warning(
-                        "Could not write release failure dist inventory",
-                        exc_info=True,
-                    )
-            if checkpoint is not None:
-                try:
-                    await asyncio.to_thread(checkpoint.retain)
-                except Exception:
-                    logging.getLogger(__name__).warning(
-                        "Could not retain release candidate; retry will rebuild", exc_info=True,
-                    )
-                    # An incomplete retained candidate must never authorize reuse.
-                    await asyncio.to_thread(checkpoint.discard)
-            for path, backup, existed in backups:
-                if path.exists():
-                    await asyncio.to_thread(shutil.rmtree, path)
-                if existed:
-                    await asyncio.to_thread(shutil.move, str(backup), str(path))
-            raise
-    finally:
-        # TemporaryDirectory.__exit__ would recursively delete gigabytes on
-        # the scheduling loop and stall the AI dispatcher and task heartbeat.
-        await asyncio.to_thread(temporary.cleanup)
+        result = await _execute_release_task(
+            service, task, runtime=runtime, artifact_checkpoint=checkpoint,
+            previous_site_dir=previous if previous.is_dir() else None,
+        )
+    except BaseException:
+        # Keep the generated files and successful channel publications in place.
+        # A retry can reuse their content hashes, Git receipt and deploy checkpoint.
+        # Never move or restore the worktree after an external upload succeeded.
+        if checkpoint is not None:
+            await asyncio.to_thread(checkpoint.discard)
+        raise
+    if checkpoint is not None:
+        await asyncio.to_thread(checkpoint.discard)
+    backup_seconds = 0.0
     if task is not None and callable(getattr(runtime.task_manager, "add_workbook_entry", None)):
         timings = {
             "elapsed_seconds": round(time.monotonic() - release_started, 3),
@@ -665,16 +603,14 @@ async def _execute_release_task(
     r2_papers_published = "r2_papers" in completed_publications
     r2_reports_published = "r2_reports" in completed_publications
 
-    if r2_reports_enabled:
-        await service._run_logged_command(
-            task.task_uuid,
-            title="Verify Reports Host",
-            cmd=service._verify_reports_host_command(python_path=python_path),
-            cwd=runtime.root_dir,
-            env=git_env,
-            metadata={"event": "reports_host_verify", "release_job_id": job.job_id},
-            timeout_seconds=120,
-        )
+    await runtime.task_manager.add_workbook_entry(
+        task.task_uuid,
+        entry_type="info",
+        title="Website Verification Skipped",
+        content="Publication completes on successful upload/deploy commands. Papers, Reports and main-site public HTTP checks are disabled; artifacts are not rolled back.",
+        content_type="text",
+        metadata={"event": "website_verification_skipped", "release_job_id": job.job_id},
+    )
 
     # The site only goes live after its direct public file links exist. This
     # prevents a deployed page from pointing at a package that failed to publish.
@@ -700,7 +636,7 @@ async def _execute_release_task(
                 content=(
                     "The prior attempt completed the Cloudflare deploy command for "
                     f"{release_identity['release_id']} with identical build content; "
-                    "retrying verification only."
+                    "reusing that successful deployment."
                 ),
                 content_type="text",
                 metadata={
@@ -734,9 +670,8 @@ async def _execute_release_task(
                 },
                 timeout_seconds=runtime.cloudflare_deploy_timeout_seconds,
             )
-            # This checkpoint is committed before production verification.  A
-            # transient fetch failure can retry verification if the rebuilt
-            # bytes still match. Facts may change between worker attempts, so
+            # Persist the successful deploy before the final DB transaction.
+            # Reuse it only if rebuilt bytes still match. Facts may change, so
             # release_id alone must never authorize reusing an older deploy.
             await service._record_release_checkpoint(
                 task.task_uuid,
@@ -748,26 +683,11 @@ async def _execute_release_task(
                     "artifact_digest": artifact_digest,
                 },
             )
-        try:
-            cloudflare_deployment = await service._verify_cloudflare_production_release(
-                project_name=project_name,
-                subdomain=str(cloudflare_check.get("subdomain") or "").strip(),
-                release_identity=release_identity,
-            )
-        except RuntimeError as exc:
-            raise ReleaseVerificationError(str(exc)) from exc
-        await runtime.task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="success",
-            title="Production Release Verified",
-            content=json.dumps(cloudflare_deployment, ensure_ascii=False, indent=2),
-            content_type="json",
-            metadata={
-                "event": "cloudflare_production_verified",
-                "release_job_id": job.job_id,
-                "release_id": release_identity["release_id"],
-            },
-        )
+        cloudflare_deployment = {
+            "release_id": release_identity["release_id"],
+            "status": "deploy_command_succeeded",
+            "verification": "skipped",
+        }
         pages_deployed = True
         # Keep the exact verified Pages artifact for the next shared-asset
         # compatibility deploy. Snapshot failure must not undo a live release.
@@ -797,7 +717,7 @@ async def _execute_release_task(
             metadata={"event": "cloudflare_skip", "release_job_id": job.job_id},
         )
 
-    # Only consume the selected rows after production verification. Concurrent
+    # Consume selected rows after successful publication commands. Concurrent
     # collections outside the worker (for example maintenance imports) have
     # different IDs and remain pending for the next release.
     if pages_deployed:
@@ -829,6 +749,8 @@ async def _execute_release_task(
         "download_repo_branch": branch,
         "download_url_base": download_url_base,
         "direct_downloads_published": downloads_published,
+        "website_verification": "skipped",
+        "artifact_rollback": False,
         "r2_papers_published": r2_papers_published,
         "r2_reports_published": r2_reports_published,
         "r2_reports_public_base_url": (

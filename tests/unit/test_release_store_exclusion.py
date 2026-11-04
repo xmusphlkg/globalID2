@@ -1,11 +1,12 @@
-"""Generation and public-projection commits share one immutable worker interval."""
+"""Release claims preempt cooperative writers and drain unmanaged writers."""
 
 from contextlib import asynccontextmanager
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from src.domain import Base, Task, TaskStatus, TaskType
+from src.core.release_admission import ReleaseAdmission
+from src.domain import Base, Task, TaskPriority, TaskStatus, TaskType
 from src.services import task_worker
 from src.services.task_worker import (
     COLLECTION_STORE_TASK_TYPES,
@@ -102,3 +103,64 @@ async def test_report_only_lane_keeps_full_release_exclusion(
     if expected:
         assert claimed == ("queued", queued_type)
     await engine.dispose()
+
+
+@pytest.fixture
+async def worker_database(tmp_path, monkeypatch):
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'claims.sqlite'}")
+    async with engine.begin() as connection:
+        await connection.run_sync(lambda sync: Base.metadata.create_all(sync, tables=[Task.__table__]))
+    maker = async_sessionmaker(engine, expire_on_commit=False)
+
+    @asynccontextmanager
+    async def database():
+        async with maker() as session:
+            yield session
+
+    monkeypatch.setattr(task_worker, "get_database", database)
+    monkeypatch.setattr(task_worker, "release_admission", ReleaseAdmission())
+    yield maker
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("store_type", COLLECTION_STORE_TASK_TYPES)
+async def test_release_claim_preempts_cooperative_writer_with_full_general_lane(worker_database, store_type):
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="writer", task_name="writer", task_type=store_type, status=TaskStatus.RUNNING),
+            Task(task_uuid="release", task_name="release", task_type=TaskType.EXPORT_DATA, status=TaskStatus.QUEUED),
+        ])
+        await session.commit()
+    with task_worker.release_admission.writer("writer"):
+        assert await task_worker._claim_next_task_uuid(
+            "owner", blocked_task_types=set(task_worker.GENERAL_TASK_TYPES)
+        ) == ("release", TaskType.EXPORT_DATA)
+
+
+@pytest.mark.asyncio
+async def test_release_outranks_older_urgent_tasks_even_with_legacy_low_priority(worker_database):
+    from datetime import datetime, timezone
+
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="urgent", task_name="urgent", task_type=TaskType.SEND_EMAIL,
+                 status=TaskStatus.QUEUED, priority=TaskPriority.URGENT,
+                 created_at=datetime(2026, 1, 1, tzinfo=timezone.utc)),
+            Task(task_uuid="release", task_name="release", task_type=TaskType.EXPORT_DATA,
+                 status=TaskStatus.QUEUED, priority=TaskPriority.LOW),
+        ])
+        await session.commit()
+    assert await task_worker._claim_next_task_uuid("owner") == ("release", TaskType.EXPORT_DATA)
+
+
+@pytest.mark.asyncio
+async def test_waiting_release_without_reports_flag_stops_new_collection_claims(worker_database):
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="writer", task_name="writer", task_type=TaskType.CRAWL_DATA, status=TaskStatus.QUEUED),
+            Task(task_uuid="release", task_name="release", task_type=TaskType.EXPORT_DATA,
+                 status=TaskStatus.QUEUED, input_data={}),
+        ])
+        await session.commit()
+    assert await task_worker._claim_next_task_uuid("owner", blocked_task_types={TaskType.EXPORT_DATA}) is None

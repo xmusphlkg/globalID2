@@ -906,7 +906,12 @@ class DataReleaseService:
         incremental_site = not full
         marked_before = datetime.now(ZoneInfo("UTC")).isoformat()
         async with get_database() as db:
-            dirty = [] if full or reports_only else list((await db.execute(select(PublishDirty).where(PublishDirty.published_at.is_(None)).order_by(PublishDirty.id))).scalars().all())
+            dirty = [] if reports_only else list((await db.execute(select(PublishDirty).where(PublishDirty.published_at.is_(None)).order_by(PublishDirty.id))).scalars().all())
+            if full:
+                # Freeze exact visible log IDs, including for full releases.
+                # A transaction can commit later with an earlier marked_at;
+                # a timestamp-only acknowledgement would lose that change.
+                dirty_ids = [row.id for row in dirty]
             if not full and not reports_only:
                 scopes = sorted({row.scope_key for row in dirty if row.line == "surveillance"})
                 known = list((await db.execute(select(Country.code, Country.is_active))).all()) if scopes else []
@@ -972,7 +977,9 @@ class DataReleaseService:
             "full": full,
             "reports_only": reports_only,
             "publish_dirty_ids": dirty_ids,
-            "publish_dirty_before": marked_before if full else None,
+            "publish_dirty_before": None,
+            "publish_selected_at": marked_before,
+            "publish_change_count": len(dirty_ids),
             "trigger_task_uuid": trigger_task_uuid,
             "generated_paths": list(GENERATED_DATA_PATHS),
             "raw_archive_enabled": raw_archive.enabled,

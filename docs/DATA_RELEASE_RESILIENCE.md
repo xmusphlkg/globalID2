@@ -1,5 +1,90 @@
 # Data release automatic recovery
 
+## Publication completion policy (2026-11-04)
+
+Release tasks complete on successful upload/deploy commands, without probing
+the public Papers, Reports or main-site URLs afterwards. Both full and
+reports-only tasks log `Website Verification Skipped` and return
+`website_verification: "skipped"`, `artifact_rollback: false`. A public-host
+Cloudflare challenge therefore cannot turn a completed upload into a failed
+release. Upload and build failures still fail the task.
+
+Release tasks no longer create rollback copies or restore old generated files.
+Current artifacts, Git history and successful channel receipts stay in place
+after a later failure. The exporter and uploaders reuse their content hashes on
+retry; a successful Pages deploy can also be reused by its recorded digest.
+Legacy retained candidates can still be read, but new failures keep artifacts
+in their working directories instead of moving them to rollback snapshots.
+
+Download publication records Git's successful push acknowledgement without a
+second public-file check. `--verify-remote` remains an explicit operator audit.
+Database change-log acknowledgement follows successful publication commands,
+not public website verification. These rules supersede the older verification
+and rollback behavior described in historical operational notes below.
+
+## Persistent download worktree and publication log
+
+The default download publisher adopts `exports/site-downloads` as its Git
+worktree. Later exports write directly into that worktree: there is no second
+asset copy. Git metadata lives in `exports/.site-downloads.git`, outside artifact
+backup/rollback, and the export tree contains only a `.git` pointer. The first
+publication fetches the remote baseline and resets the index without replacing
+generated files. Later runs retain local commits, including unpushed commits.
+The previous `external-data/globalID2_data_download` checkout is left intact;
+an explicit `--workdir` still supports the legacy separate-checkout workflow.
+
+The download manifest records when its content changed. Re-running the exporter
+does not update that timestamp or commit per-run generation counters. For
+committed files, the exporter uses Git's index and checks that manifest hashes
+still agree with the committed manifest, avoiding repeated SHA-256 reads of
+unchanged CSV/JSON/XLSX files. New or modified files retain checksum validation.
+The generated repository sets `core.trustctime=false`: creating hard-linked
+artifact backups changes ctime without changing content. Git still checks
+mtime, size and inode, including the generator's atomic file replacements.
+
+After a successful push (and remote verification when explicitly requested), the publisher atomically writes
+`exports/.site-downloads.git/download-publication.json`, containing the remote,
+branch, commit and UTC `verified_at` (the legacy name for the publication timestamp). A clean Git worktree at that exact published
+commit skips validation, upload and remote verification. Preflight also reuses
+this record instead of repeating remote read/write probes. A clean tree without
+a matching success record still attempts publication: a prior push or remote
+verification may have failed. Publication is locked per worktree; remote branch
+advancement is rejected before staging upload batches, preserving concurrent
+remote commits.
+
+Each publication success also appends its timestamp and commit to
+`exports/.site-downloads.git/download-publications.jsonl`. The latest receipt is
+the no-op checkpoint; the JSONL file is the audit history. A crash between the
+append and checkpoint replacement can produce a repeated event for the same
+commit on retry, without advancing any database acknowledgements.
+
+This no-op path assumes the publication branch is owned by this publisher. It
+does not continuously detect out-of-band remote deletion or force pushes. Use
+`scripts/publish_download_repo.py --push --verify-remote` for an explicit remote
+check, or add `--verify-checksums` for a full local checksum audit. Destination
+changes require a separate export directory. These audits are operator actions,
+not repeated work in every unchanged release.
+
+## Database change-log boundaries
+
+The existing `publish_dirty` table is the durable database update log. Formal
+data writes and their log entries share a transaction. Entries include the
+affected line/scope, source task and `marked_at`; successful production release
+adds `published_at` and `published_task_uuid`. Pending entries are selected by
+`published_at IS NULL`, so an old reporting period corrected today still
+refreshes its affected country/disease exports.
+
+Both incremental and full tasks now freeze exact `publish_dirty_ids`, plus
+`publish_selected_at` and `publish_change_count` in task input. The final release
+transaction acknowledges only those selected IDs and eligible scopes. A
+transaction committed later remains pending even if its timestamp is older
+than the selection time. A failed download publication does not advance its
+success receipt; a failed website release does not acknowledge database changes.
+Download publication can succeed before
+the website release; its own receipt then avoids re-uploading on retry while
+database markers remain pending until the website deployment succeeds. Older queued
+full tasks retain support for their legacy `publish_dirty_before` boundary.
+
 Raw archive publication uses eight workers for independent atomic file copies.
 Set `RAW_ARCHIVE_COPY_WORKERS` or pass `--copy-workers` to
 `scripts/publish_raw_git_archive.py` to select 1–16 workers. At most twice the
@@ -63,14 +148,15 @@ upstream-triggered failure. It does not replace the short retry sequence.
 
 Retries reuse the original task UUID and persisted release identity. Only one
 release pipeline can be active across all release jobs because generated
-artifacts share directories. When a Cloudflare deploy command has completed but
-production verification fails transiently, a checkpoint is committed before
-verification; the next attempt reuses that deployment and retries verification
-instead of deploying a duplicate, provided the build digest still matches.
+artifacts share directories. When a Cloudflare deploy command completes, a
+checkpoint is committed before final database acknowledgement. If a later step
+fails, the next attempt reuses that deployment instead of deploying a duplicate,
+provided the build digest still matches. Public verification is skipped.
 
-After local validation, failures retain the generated candidate under
-`exports/release-candidates/<task_uuid>/` before restoring the prior local
-artifacts. A retry of that same task skips generation/rendering only when the
+Earlier releases retained failed candidates under
+`exports/release-candidates/<task_uuid>/` before restoring prior local artifacts.
+New failures keep generated files in place without rollback. A retry can still
+reuse a legacy candidate of that same task only when the
 source tree, configuration, selected dirty rows, base release and build digest
 still match. Missing, incomplete or incompatible candidates are discarded and
 rebuilt. A new successful base release invalidates older candidates.
@@ -82,9 +168,9 @@ markers. It does not re-query all observations after deployment. Legacy
 artifacts without this snapshot retain the original full projection behavior
 and are not eligible for candidate reuse.
 
-The download generator atomically replaces changed partitions. Rollback
-snapshots can therefore hard-link their immutable old bytes, avoiding a full
-copy of the download archive. Other artifact trees retain independent copies.
+The download generator atomically replaces changed partitions. Previous rollback
+snapshots could hard-link their immutable old bytes; the current release pipeline
+does not create rollback copies for downloads or other artifact trees.
 Download publication stages at most 1 GiB of uncompressed Git blobs per push on
 a content-addressed temporary branch. Once all objects are present, the public
 branch advances in a normal fast-forward push and the temporary branch is
@@ -111,7 +197,7 @@ XLSX core-property and ZIP timestamps are fixed, including the modification
 timestamp overwritten by openpyxl during save.
 
 Command completion events include `elapsed_seconds`. `Release Timing` records
-the complete execution time including backups and cleanup, the backup time,
+the complete execution time including cleanup, a zero backup time,
 and whether the 600-second target was met. Exceeding the target is measured
 rather than interrupting a valid release halfway through publication. Cold
 builds, initial uploads and remote outages require separate measurements from
@@ -136,6 +222,25 @@ If a task is terminal, fix the reported code/configuration/credential/gate issue
 and use the normal manual retry action. Do not broaden the transient pattern list
 to mask a deterministic failure.
 
+
+## Release admission and collection priority
+
+The worker claims publication tasks ahead of every other priority, including
+older `urgent` tasks. Managed collection tasks remain running but yield before
+opening their next database session. The release waits for already-admitted
+database scopes to commit or roll back and close, then holds admission through
+publication and cleanup. Collection resumes in the same coroutine afterwards,
+including when publication fails or is cancelled; no retry is consumed.
+
+Nested database scopes can finish their admitted unit so draining cannot
+deadlock on task progress or cancellation checks. A long existing database scope
+still delays publication until it closes. Network and model work outside those
+scopes no longer has to finish before a release starts. Reports-only publication
+keeps its existing ability to run alongside collection.
+
+Admission is local to the singleton worker. Running writer tasks outside its
+cooperative execution registry retain the conservative task-level exclusion;
+independent CLI/API mutations are not covered by this in-process gate.
 
 ## Measured rollout on 2026-11-02
 

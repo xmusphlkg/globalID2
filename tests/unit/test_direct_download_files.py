@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import copy
+import subprocess
 
 from openpyxl import load_workbook
 import pytest
@@ -597,6 +598,34 @@ def test_corrupted_reused_artifact_is_regenerated(tmp_path) -> None:
     )
 
     assert 1 <= rebuilt["generation"]["changed_files"] <= len(PUBLIC_FORMATS)
+    assert path.read_bytes() == original
+
+
+def test_committed_exports_reuse_git_cache_and_keep_manifest_bytes(tmp_path, monkeypatch):
+    base = "https://raw.githubusercontent.com/example/data/main"
+    first = build_direct_download_files(_context(), tmp_path, download_url_base=base, workers=1)
+    manifest_path = tmp_path / "manifest.json"
+    before = (manifest_path.read_bytes(), manifest_path.stat().st_mtime_ns)
+    for args in (["init"], ["add", "."], ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "Export"]):
+        subprocess.run(["git", *args], cwd=tmp_path, capture_output=True, check=True)
+    original_hash = direct_download_files._file_sha256
+    def forbidden(_path):
+        raise AssertionError("committed unchanged partitions must not be hashed again")
+    monkeypatch.setattr(direct_download_files, "_file_sha256", forbidden)
+    second = build_direct_download_files(
+        _context(generated_at="2026-11-04T00:00:00Z"), tmp_path,
+        download_url_base=base, workers=1,
+    )
+    assert second["generated_at"] == first["generated_at"]
+    assert second["generation"]["changed_files"] == 0
+    assert (manifest_path.read_bytes(), manifest_path.stat().st_mtime_ns) == before
+    assert "generation" not in json.loads(manifest_path.read_bytes())
+    monkeypatch.setattr(direct_download_files, "_file_sha256", original_hash)
+    file_meta = first["diseases"][0]["parts"][0]["files"]["csv"]
+    path = tmp_path / file_meta["relative_path"]
+    original = path.read_bytes()
+    path.write_bytes(b"x" * len(original))
+    build_direct_download_files(_context(), tmp_path, download_url_base=base, workers=1)
     assert path.read_bytes() == original
 
 

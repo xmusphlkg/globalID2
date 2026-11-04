@@ -4,8 +4,12 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+## [0.17.3] - 2026-11-04
+
 ### Changed
 
+- Data publication now completes when upload/deploy commands succeed. Automatic Papers, Reports, main-site and download public-URL checks are skipped; release failures retain generated artifacts without rollback or full artifact backup copies. Explicit download audits remain available with `--verify-remote`.
+- Downloads now export into a persistent Git worktree, retain stable manifests, and skip upload, file validation and remote probes for an unchanged successfully published version. Git history and publication receipts remain available for retries; interrupted commits remain retryable. Full releases freeze exact database change-log IDs so late commits cannot be lost behind a timestamp boundary.
 - Site export consumes database streams in batches, reducing per-row async overhead while preserving bounded memory and output order.
 - Raw archive publication copies independent files with eight bounded workers by default, retaining per-file checksum verification and fsync. All copies must succeed before metadata, commits or pushes; failed partial runs remain recoverable.
 - Large download snapshots upload their objects in resumable 1 GiB batches before the public branch is advanced, avoiding GitHub's per-push limit while keeping the snapshot switch atomic.
@@ -13,6 +17,7 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Fixed
 
+- Data releases now outrank other urgent tasks and pause managed collection work at database-session boundaries. Existing transactions finish before publication; paused tasks resume in place after success, failure, or cancellation instead of making publication wait for entire collection/model workflows.
 - Research article Situation context merges repeated countries and source events within each disease/evidence relationship. Historical geographic context has its own label; precise and disease-only matches remain separate.
 - Public research pages share width, spacing and title scales; copyright and terms use the interface font, and subscription panels use the shared flat surface treatment.
 - Papers bundles now carry their referenced build assets and transitive fonts/scripts, uploading assets before HTML and retaining the preceding generation. New self-contained bundles no longer require the missing previous Pages snapshot; legacy bundles retain the verified compatibility-deployment gate.

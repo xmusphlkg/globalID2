@@ -603,12 +603,7 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
             recorded.append(_args[2])
 
         async def _verify_cloudflare_production_release(self, **_kwargs):
-            assert _kwargs["release_identity"][
-                "build_digest"
-            ] == pipeline._built_site_digest(dist)
-            if failure_stage == "verification":
-                raise RuntimeError("production verification failed")
-            return {"verified": True, "production_url": "https://globalid.example"}
+            raise AssertionError("Public website verification must never run")
 
     runtime = _runtime(Manager(), tmp_path)
     runtime = pipeline.ReleasePipelineRuntime(
@@ -628,7 +623,7 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
         input_data={"release_job_id": "site-release"},
     )
 
-    if failure_stage:
+    if failure_stage == "build":
         with pytest.raises(RuntimeError, match="failed"):
             await pipeline.execute_release_task(Service(), task, runtime=runtime)
         commit_projection.assert_not_awaited()
@@ -646,6 +641,9 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
     # longer dispatched by releases.
     assert "Dispatch Reviewed Situation Alerts" not in commands
     assert output["pages_deployed"] is True
+    assert output["website_verification"] == "skipped"
+    assert output["artifact_rollback"] is False
+    assert any(entry["title"] == "Website Verification Skipped" for entry in entries)
     assert "situation_alert_dispatch_attempted" not in output
     completion = next(
         entry for entry in entries if entry["title"] == "Data Release Completed"
@@ -678,7 +676,7 @@ async def test_service_execute_release_task_is_compatibility_facade(monkeypatch)
     assert captured["runtime"].raw_archive_branch == "main"
 
 
-async def test_failed_release_restores_generated_files_including_deletions(
+async def test_failed_release_retains_generated_files_including_deletions(
     tmp_path, monkeypatch
 ):
     from dataclasses import replace
@@ -701,57 +699,33 @@ async def test_failed_release_restores_generated_files_including_deletions(
     monkeypatch.setattr(pipeline, "_execute_release_task", failed_build)
     with pytest.raises(RuntimeError, match="Astro build failed"):
         await pipeline.execute_release_task(None, None, runtime=runtime)
-    assert original.read_text() == '{"version": 1}'
-    assert not (snapshot / "new.json").exists()
+    assert not original.exists()
+    assert (snapshot / "new.json").read_text() == '{"version": 2}'
 
 
-async def test_release_backups_use_export_volume_and_never_block_dispatcher(
-    tmp_path, monkeypatch
-):
+async def test_release_does_not_copy_artifact_trees_for_rollback(tmp_path, monkeypatch):
     import shutil
-    import tempfile
-    import threading
 
     runtime = _runtime(SimpleNamespace(), tmp_path)
     snapshot = runtime.astro_dir / "src" / "data"
     snapshot.mkdir(parents=True)
     (snapshot / "meta.json").write_text("original snapshot")
-    backup_root = tmp_path / "exports" / "release-backups"
-    loop_thread = threading.get_ident()
-    original_copytree = shutil.copytree
-    original_cleanup = tempfile.TemporaryDirectory.cleanup
-    copies, removals = [], []
 
-    def copytree(source, destination, *args, **kwargs):
-        assert threading.get_ident() != loop_thread
-        copies.append(Path(destination))
-        return original_copytree(source, destination, *args, **kwargs)
-
-    def cleanup(directory):
-        assert threading.get_ident() != loop_thread
-        removals.append(Path(directory.name))
-        return original_cleanup(directory)
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("Publication must not create rollback copies")
 
     async def release(*_args, **_kwargs):
-        temporary = list(backup_root.iterdir())
-        assert len(temporary) == 1
-        backup = temporary[0] / "0" / "meta.json"
         (snapshot / "meta.json").write_text("new snapshot")
-        assert backup.read_text() == "original snapshot"
         return {"ok": True}
 
-    monkeypatch.setattr(shutil, "copytree", copytree)
-    monkeypatch.setattr(tempfile.TemporaryDirectory, "cleanup", cleanup)
+    monkeypatch.setattr(shutil, "copytree", forbidden)
     monkeypatch.setattr(pipeline, "_execute_release_task", release)
-    assert await pipeline.execute_release_task(None, None, runtime=runtime) == {
-        "ok": True
-    }
-    assert copies and all(path.is_relative_to(backup_root) for path in copies)
-    assert removals and all(path.is_relative_to(backup_root) for path in removals)
-    assert list(backup_root.iterdir()) == []
+    assert await pipeline.execute_release_task(None, None, runtime=runtime) == {"ok": True}
+    assert (snapshot / "meta.json").read_text() == "new snapshot"
+    assert not (tmp_path / "exports" / "release-backups").exists()
 
 
-async def test_download_rollback_links_are_isolated_from_atomic_updates(tmp_path, monkeypatch):
+async def test_later_channel_failure_does_not_restore_published_downloads(tmp_path, monkeypatch):
     from src.generation.direct_download_files import _write_if_changed
 
     runtime = _runtime(SimpleNamespace(), tmp_path)
@@ -761,16 +735,12 @@ async def test_download_rollback_links_are_isolated_from_atomic_updates(tmp_path
     partition.write_bytes(b"old content")
 
     async def failed_release(*_args, **_kwargs):
-        backup = next((tmp_path / "exports" / "release-backups").iterdir()) / "3" / partition.name
-        assert backup.stat().st_ino == partition.stat().st_ino
-        assert _write_if_changed(partition, b"new content")
-        assert backup.read_bytes() == b"old content"
-        assert backup.stat().st_ino != partition.stat().st_ino
-        (downloads / "new.csv").write_bytes(b"new file")
-        raise RuntimeError("publish failed")
+        assert _write_if_changed(partition, b"published content")
+        (downloads / "new.csv").write_bytes(b"published file")
+        raise RuntimeError("another channel failed")
 
     monkeypatch.setattr(pipeline, "_execute_release_task", failed_release)
-    with pytest.raises(RuntimeError, match="publish failed"):
+    with pytest.raises(RuntimeError, match="another channel failed"):
         await pipeline.execute_release_task(None, None, runtime=runtime)
-    assert partition.read_bytes() == b"old content"
-    assert not (downloads / "new.csv").exists()
+    assert partition.read_bytes() == b"published content"
+    assert (downloads / "new.csv").read_bytes() == b"published file"

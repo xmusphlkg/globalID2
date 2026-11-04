@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import copy
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -14,6 +15,7 @@ import os
 import re
 from pathlib import Path
 import shutil
+import subprocess
 import time
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
@@ -231,6 +233,7 @@ def _entry_files_available(
     path_id: str,
     *,
     verify_hash: bool = True,
+    trusted_paths: set[str] | None = None,
 ) -> bool:
     """Require every reused part to exist at its declared path and size.
 
@@ -252,9 +255,35 @@ def _entry_files_available(
             path = output_dir / relative
             if not path.is_file() or path.stat().st_size != file_meta.get("bytes"):
                 return False
-            if verify_hash and _file_sha256(path) != file_meta.get("sha256"):
+            if verify_hash and relative not in (trusted_paths or ()) and _file_sha256(path) != file_meta.get("sha256"):
                 return False
     return True
+
+
+def _git_unchanged_paths(output_dir: Path) -> set[str]:
+    """Reuse committed bytes only while their declared checksums also match."""
+    if not (output_dir / ".git").exists():
+        return set()
+    try:
+        def git(*args):
+            return subprocess.run(
+                ["git", *args], cwd=output_dir, check=True,
+                capture_output=True, text=True,
+            ).stdout
+        tracked = set(git("ls-files", "-z", "--", "countries", "diseases").split("\0"))
+        changed = set(git("diff", "HEAD", "--name-only", "--no-renames", "-z", "--", "countries", "diseases").split("\0"))
+        def assets(manifest):
+            return {
+                item["relative_path"]: (item["bytes"], item["sha256"])
+                for entry in [*manifest.get("countries", []), *manifest.get("diseases", [])]
+                for part in entry.get("parts", [])
+                for item in part.get("files", {}).values()
+            }
+        committed = assets(json.loads(git("show", "HEAD:manifest.json")))
+        current = assets(json.loads((output_dir / "manifest.json").read_text()))
+        return {path for path in tracked - changed - {""} if path in committed and committed[path] == current.get(path)}
+    except (OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError):
+        return set()
 
 
 def _process_pool_context() -> multiprocessing.context.BaseContext:
@@ -1067,6 +1096,7 @@ def build_direct_download_files(
         str(entry.get("disease_id")): entry for entry in existing_manifest.get("diseases") or []
     }
     projection_code = _projection_code_sha256()
+    trusted_paths = _git_unchanged_paths(output_dir)
     country_fingerprints: dict[str, str] = {}
     disease_fingerprints: dict[str, str] = {}
     requested_country_codes = {str(code).strip().upper() for code in changed_country_codes or ()}
@@ -1097,7 +1127,7 @@ def build_direct_download_files(
                     flush=True,
                 )
             continue
-        available = _entry_files_available(existing, output_dir, "countries", path_id)
+        available = _entry_files_available(existing, output_dir, "countries", path_id, trusted_paths=trusted_paths)
         if changed_country_codes is None or code in requested_country_codes or not available:
             fingerprint = _input_sha256(
                 {"country_data": item["country_data"], "source_info": item["source_info"]},
@@ -1135,7 +1165,7 @@ def build_direct_download_files(
                     flush=True,
                 )
             continue
-        available = _entry_files_available(existing, output_dir, "diseases", path_id)
+        available = _entry_files_available(existing, output_dir, "diseases", path_id, trusted_paths=trusted_paths)
         if changed_disease_ids is None or disease_id in requested_disease_ids or not available:
             country_codes = (item["disease_data"].get("country_series") or {}).keys()
             fingerprint = _input_sha256(
@@ -1257,9 +1287,8 @@ def build_direct_download_files(
         processed_disease_results[dataset["dataset_id"]] = result
 
     def reuse_existing_entry(entry: dict) -> dict:
-        reused = dict(entry)
-        reused["generated_at"] = generated_at
-        for part in (entry or {}).get("parts") or []:
+        reused = copy.deepcopy(entry)
+        for part in reused.get("parts") or []:
             for file_meta in (part.get("files") or {}).values():
                 relative_path = str(file_meta.get("relative_path") or "")
                 if relative_path:
@@ -1363,6 +1392,18 @@ def build_direct_download_files(
             "removed_files": removed_files,
         },
     }
+    # Export timings/counters describe a run, not a dataset version. Keep them
+    # in the return value for diagnostics, never in the committed manifest.
+    generation = manifest.pop("generation")
+    def stable(value):
+        if isinstance(value, dict):
+            return {key: stable(item) for key, item in value.items() if key not in {"generated_at", "generation"}}
+        if isinstance(value, list):
+            return [stable(item) for item in value]
+        return value
+    if stable(manifest) == stable(existing_manifest):
+        manifest = copy.deepcopy(existing_manifest)
+        manifest.pop("generation", None)
     manifest_path = output_dir / "manifest.json"
     _write_if_changed(
         manifest_path,
@@ -1373,7 +1414,7 @@ def build_direct_download_files(
             sort_keys=True,
         ).encode("utf-8"),
     )
-    return manifest
+    return {**manifest, "generation": generation}
 
 
 __all__ = [

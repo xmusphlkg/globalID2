@@ -10,7 +10,7 @@ from src.services.data_release.reports_pipeline import execute_reports_release
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("fail_at", [None, "Build Reports Site", "Verify Reports Host", "empty index"])
-async def test_reports_release_is_isolated_and_rolls_back_local_data(tmp_path, fail_at):
+async def test_reports_release_skips_public_verification_and_keeps_local_data(tmp_path, fail_at):
     astro = tmp_path / "astro-site"
     reports = tmp_path / "exports/reports-site"
     paths = [astro / "src/data/reports", astro / "public/site-data/reports", reports]
@@ -46,17 +46,20 @@ async def test_reports_release_is_isolated_and_rolls_back_local_data(tmp_path, f
     runtime = SimpleNamespace(root_dir=tmp_path, astro_dir=astro, task_manager=manager, get_database=database,
         task_model=object, generate_timeout_seconds=60, astro_build_timeout_seconds=60, download_publish_timeout_seconds=60)
     task = SimpleNamespace(id=1, task_uuid="f49f0575-09b8-4d00-82b7-0e79b4056ae8", input_data={"release_job_id": "site-release"})
-    if fail_at:
+    if fail_at and fail_at != "Verify Reports Host":
         with pytest.raises(RuntimeError, match="empty|injected failure"):
             await execute_reports_release(service, task, runtime=runtime)
-        assert (paths[0] / "old.json").read_text() == "old"
+        assert (paths[0] / "old.json").read_text() == "new"
         if fail_at == "empty index":
             assert all(title != "Publish Reports Bundle to R2" for title, _ in commands)
     else:
         result = await execute_reports_release(service, task, runtime=runtime)
         assert result["reports_only"] and result["r2_reports_published"]
         assert not result["pages_deployed"]
+        assert result["website_verification"] == "skipped"
+        assert result["artifact_rollback"] is False
+        assert any(call.kwargs.get("title") == "Website Verification Skipped" for call in manager.add_workbook_entry.await_args_list)
         assert stored.output_data == result
-        assert [title for title, _ in commands] == ["Export Reports Data", "Build Reports Site", "Split Reports Bundle", "Publish Reports Bundle to R2", "Verify Reports Host"]
+        assert [title for title, _ in commands] == ["Export Reports Data", "Build Reports Site", "Split Reports Bundle", "Publish Reports Bundle to R2"]
         assert "--reports-only" in commands[0][1]["cmd"]
         assert all("pages" not in title.lower() for title, _ in commands)

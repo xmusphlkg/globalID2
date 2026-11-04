@@ -159,6 +159,7 @@ def build_publish_papers_r2_command(
         "scripts/publish_papers_r2.py",
         "--source-dir",
         str(source_dir),
+        "--skip-public-verify",
     ]
 
 

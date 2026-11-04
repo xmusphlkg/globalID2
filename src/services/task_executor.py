@@ -15,6 +15,7 @@ from sqlalchemy import select
 
 from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
+from src.core.release_admission import release_admission
 from src.domain import (
     AgentWorkflowRun,
     AgentWorkflowStep,
@@ -439,8 +440,11 @@ async def execute_task(task_uuid: str) -> Dict[str, Any]:
 
     _running.add(task_uuid)
     try:
-        output = await _dispatch(task)
-        return output
+        async with release_admission.task_scope(
+            task_uuid, task.task_type,
+            reports_only=(task.input_data or {}).get("reports_only") is True,
+        ):
+            return await _dispatch(task)
     finally:
         _running.discard(task_uuid)
 

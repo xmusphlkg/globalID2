@@ -26,6 +26,57 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.17.3',
+    date: '2026-11-04',
+    titleEn: 'Smoother publication and clearer research context',
+    titleZh: '发布流程优化与研究背景展示改进',
+    titleFr: 'Publication plus fluide et contexte de recherche plus clair',
+    summaryEn:
+      'This maintenance update reduces repeated publication work and improves the presentation and asset delivery of research pages.',
+    summaryZh:
+      '本次维护更新减少重复发布工作，并改进研究页面的展示和资源加载。',
+    summaryFr:
+      'Cette mise à jour de maintenance réduit les opérations de publication répétées et améliore la présentation et le chargement des ressources des pages de recherche.',
+    sections: [
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        labelFr: 'Améliorations',
+        items: [
+          {
+            en: 'Unchanged download datasets are reused, and large updates upload in resumable batches. Publication retains completed work for retries.',
+            zh: '内容未变的下载数据集会被复用，大规模更新支持分批续传；发布流程保留已完成的工作，供重试使用。',
+            fr: 'Les jeux de données téléchargeables inchangés sont réutilisés et les mises à jour volumineuses sont transférées par lots reprenables. Le travail accompli est conservé pour les nouvelles tentatives.',
+          },
+          {
+            en: 'Research pages use consistent widths, spacing and title sizes. Related Situation context combines repeated places and events and labels historical context separately.',
+            zh: '研究页面统一宽度、间距和标题字号；相关态势背景合并重复地区与事件，并单独标注历史背景。',
+            fr: 'Les pages de recherche harmonisent leurs largeurs, espacements et tailles de titres. Le contexte Situation regroupe les lieux et événements répétés et distingue le contexte historique.',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'Research pages include the scripts and fonts they need when published on the dedicated Papers host.',
+            zh: '研究文献页发布到独立 Papers 站点时，会一并携带所需的脚本和字体资源。',
+            fr: 'Les pages de recherche incluent les scripts et polices nécessaires lors de leur publication sur le site Papers dédié.',
+          },
+          {
+            en: 'Publication can proceed between collection transactions, with collection resuming afterward. Data committed after a release selects its changes remains queued for the next release.',
+            zh: '发布任务可在采集事务之间执行，随后采集继续运行；发布选定变更后才提交的数据，会保留到下一次发布。',
+            fr: 'La publication peut intervenir entre les transactions de collecte, puis la collecte reprend. Les données validées après la sélection des changements restent en attente de la publication suivante.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.17.2',
     date: '2026-11-03',
     titleEn: 'Country reports have their own home',

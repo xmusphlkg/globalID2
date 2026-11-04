@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import json
 import shutil
-import tempfile
 import time
 from pathlib import Path
 
@@ -28,8 +27,6 @@ async def execute_reports_release(service, task, *, runtime):
     reports_dir = service._reports_site_dir()
     stage = root / "exports" / f"reports-stage-{task.task_uuid}"
     paths = [astro / "src/data/reports", astro / "public/site-data/reports", reports_dir]
-    backup_parent = root / "exports" / "release-backups"
-    backup_parent.mkdir(parents=True, exist_ok=True)
     python = service._python_executable()
     config = service._config()
     origin = str(config.r2_reports_public_base_url or DEFAULT_REPORTS_ORIGIN).rstrip("/")
@@ -48,55 +45,44 @@ async def execute_reports_release(service, task, *, runtime):
             env=environment or {}, metadata={"release_job_id": job_id, "reports_only": True},
             timeout_seconds=timeout)
 
-    with tempfile.TemporaryDirectory(prefix="reports-release-", dir=backup_parent) as temporary:
-        backups = []
-        for index, path in enumerate(paths):
-            backup = Path(temporary) / str(index)
-            existed = path.exists()
-            if existed:
-                await asyncio.to_thread(shutil.copytree, path, backup)
-            backups.append((path, backup, existed))
-        try:
-            await runtime.task_manager.update_task_progress(task.task_uuid, 5)
-            await run("Export Reports Data", [str(python), "scripts/generate_site_data.py", "--reports-only"], timeout=runtime.generate_timeout_seconds)
-            old_index = Path(temporary) / "0" / "index.json"
-            new_index = paths[0] / "index.json"
-            if not new_index.is_file():
-                raise RuntimeError("Reports export did not produce an index")
-            if old_index.is_file() and new_index.is_file():
-                if json.loads(old_index.read_text()) and not json.loads(new_index.read_text()):
-                    raise RuntimeError("Reports export became empty; refusing to replace a nonempty published report catalogue")
-            await runtime.task_manager.update_task_progress(task.task_uuid, 25)
-            await run("Build Reports Site", ["node", "scripts/build-reports.mjs"], cwd=astro,
-                environment={"GIDS_REPORTS_BUILD_OUTPUT": str(stage)}, timeout=runtime.astro_build_timeout_seconds)
-            await runtime.task_manager.update_task_progress(task.task_uuid, 55)
-            await run("Split Reports Bundle", [str(python), "scripts/split_reports_bundle.py", "--dist-dir", str(stage),
-                "--reports-dir", str(reports_dir), "--main-origin", str(config.main_site_origin or DEFAULT_MAIN_SITE_ORIGIN),
-                "--reports-origin", origin, "--skip-budget"])
-            await runtime.task_manager.update_task_progress(task.task_uuid, 70)
-            await run("Publish Reports Bundle to R2", service._publish_reports_r2_command(python_path=python),
-                environment=env, timeout=runtime.download_publish_timeout_seconds)
-            await run("Verify Reports Host", service._verify_reports_host_command(python_path=python), timeout=120)
-            result = {"release_job_id": job_id, "reports_only": True, "r2_reports_published": True,
-                "r2_reports_public_base_url": origin, "pages_deployed": False,
-                "release_timing": {"elapsed_seconds": round(time.monotonic() - started, 3)}}
-            async with runtime.get_database() as db:
-                stored = await db.get(runtime.task_model, task.id)
-                if stored is not None:
-                    stored.output_data = result
-                    await db.commit()
-            await runtime.task_manager.add_workbook_entry(task.task_uuid, entry_type="success",
-                title="Reports Release Completed", content=json.dumps(result), content_type="json",
-                metadata={"event": "reports_release_completed", "release_job_id": job_id})
-            await runtime.task_manager.update_task_progress(task.task_uuid, 100)
-            return result
-        except BaseException:
-            for path, backup, existed in backups:
-                if path.exists():
-                    await asyncio.to_thread(shutil.rmtree, path)
-                if existed:
-                    await asyncio.to_thread(shutil.move, str(backup), str(path))
-            raise
-        finally:
-            if stage.exists():
-                await asyncio.to_thread(shutil.rmtree, stage)
+    old_index_path = paths[0] / "index.json"
+    old_index = json.loads(old_index_path.read_text()) if old_index_path.is_file() else []
+    try:
+        await runtime.task_manager.update_task_progress(task.task_uuid, 5)
+        await run("Export Reports Data", [str(python), "scripts/generate_site_data.py", "--reports-only"], timeout=runtime.generate_timeout_seconds)
+        new_index = paths[0] / "index.json"
+        if not new_index.is_file():
+            raise RuntimeError("Reports export did not produce an index")
+        if old_index and not json.loads(new_index.read_text()):
+            raise RuntimeError("Reports export became empty; refusing to replace a nonempty published report catalogue")
+        await runtime.task_manager.update_task_progress(task.task_uuid, 25)
+        await run("Build Reports Site", ["node", "scripts/build-reports.mjs"], cwd=astro,
+            environment={"GIDS_REPORTS_BUILD_OUTPUT": str(stage)}, timeout=runtime.astro_build_timeout_seconds)
+        await runtime.task_manager.update_task_progress(task.task_uuid, 55)
+        await run("Split Reports Bundle", [str(python), "scripts/split_reports_bundle.py", "--dist-dir", str(stage),
+            "--reports-dir", str(reports_dir), "--main-origin", str(config.main_site_origin or DEFAULT_MAIN_SITE_ORIGIN),
+            "--reports-origin", origin, "--skip-budget"])
+        await runtime.task_manager.update_task_progress(task.task_uuid, 70)
+        await run("Publish Reports Bundle to R2", service._publish_reports_r2_command(python_path=python),
+            environment=env, timeout=runtime.download_publish_timeout_seconds)
+        await runtime.task_manager.add_workbook_entry(
+            task.task_uuid, entry_type="info", title="Website Verification Skipped",
+            content="Reports upload completed; public HTTP verification is disabled. Artifacts are retained without rollback.",
+            content_type="text", metadata={"event": "website_verification_skipped", "release_job_id": job_id},
+        )
+        result = {"release_job_id": job_id, "reports_only": True, "r2_reports_published": True,
+            "r2_reports_public_base_url": origin, "pages_deployed": False, "website_verification": "skipped", "artifact_rollback": False,
+            "release_timing": {"elapsed_seconds": round(time.monotonic() - started, 3)}}
+        async with runtime.get_database() as db:
+            stored = await db.get(runtime.task_model, task.id)
+            if stored is not None:
+                stored.output_data = result
+                await db.commit()
+        await runtime.task_manager.add_workbook_entry(task.task_uuid, entry_type="success",
+            title="Reports Release Completed", content=json.dumps(result), content_type="json",
+            metadata={"event": "reports_release_completed", "release_job_id": job_id})
+        await runtime.task_manager.update_task_progress(task.task_uuid, 100)
+        return result
+    finally:
+        if stage.exists():
+            await asyncio.to_thread(shutil.rmtree, stage)

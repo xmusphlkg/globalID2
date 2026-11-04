@@ -27,6 +27,7 @@ from src.services._lifecycle import safe_exception_summary
 from src.control_plane.events import control_plane_events
 from src.control_plane.runtime import runtime_registry
 from src.core.task_manager import task_manager
+from src.core.release_admission import COLLECTION_STORE_TASK_TYPES, release_admission
 from src.ai.work_queue import AIWorkDispatcher, release_leases_on_startup, waiting_parent_uuids
 
 logger = get_logger(__name__)
@@ -74,19 +75,8 @@ KNOWLEDGE_SERIAL_TASK_TYPES = {
     TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
 }
 RELEASE_EXCLUSIVE_TASK_TYPES = {TaskType.EXPORT_DATA}
-# Country export reads observation rows from separate sessions over many
-# minutes. A collection store that commits during that walk would mix two
-# moments into one site snapshot, so those writers stay outside the release.
-# AI review commits finished rows in its own transactions. Site reads do not
-# take those locks, and a parent stays RUNNING only until its own store ends.
-COLLECTION_STORE_TASK_TYPES = {
-    TaskType.CRAWL_DATA,
-    TaskType.PROCESS_DATA,
-    TaskType.SYNC_LITERATURE,
-    TaskType.REFRESH_SITUATION_SOURCES,
-    TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
-    TaskType.UPDATE_DISEASE_KNOWLEDGE,
-}
+# Managed collection tasks yield at database scopes instead of holding up a
+# release through network/model waits. Unmanaged writers still drain fully.
 RELEASE_SHARED_BLOCKED_TASK_TYPES = COLLECTION_STORE_TASK_TYPES
 # These operations persist their checkpoints and are designed to be resumed.
 # On a controlled worker restart, returning them to QUEUED is preferable to
@@ -329,13 +319,19 @@ async def _claim_next_task_uuid(
         reports_only = Task.input_data["reports_only"].as_boolean().is_(True)
         active_tasks = (
             await db.execute(
-                select(Task.task_type, reports_only.label("reports_only")).where(
+                select(Task.task_uuid, Task.task_type, reports_only.label("reports_only")).where(
                     Task.status.in_([TaskStatus.RUNNING, TaskStatus.RETRYING])
                 )
             )
         ).all()
-        active_task_types = [task_type for task_type, is_reports_only in active_tasks
-            if not (task_type == TaskType.EXPORT_DATA and is_reports_only)]
+        active_task_types = [
+            task_type for task_uuid, task_type, is_reports_only in active_tasks
+            if not (task_type == TaskType.EXPORT_DATA and is_reports_only)
+            and not (
+                task_type in COLLECTION_STORE_TASK_TYPES
+                and task_uuid in release_admission.cooperative_tasks
+            )
+        ]
         release_waiting = (
             await db.execute(
                 select(Task.id)
@@ -363,7 +359,10 @@ async def _claim_next_task_uuid(
         query = (
             select(Task)
             .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]))
-            .order_by(priority_rank.asc(), Task.created_at.asc())
+            .order_by(
+                case((Task.task_type == TaskType.EXPORT_DATA, 0), else_=1),
+                priority_rank.asc(), Task.created_at.asc(),
+            )
             .with_for_update(skip_locked=True)
             # Inspect a small window so a deferred task for one disease does
             # not prevent unrelated diseases from using available capacity.

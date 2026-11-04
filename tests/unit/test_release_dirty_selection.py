@@ -219,7 +219,7 @@ async def test_reports_only_release_leaves_other_dirty_scopes_pending(release_db
     assert marker.published_at is None
 
 
-async def test_full_release_does_not_read_dirty_scopes(release_db):
+async def test_full_release_freezes_visible_change_log_ids(release_db):
     maker, service, statements = release_db
     async with maker() as session:
         session.add(
@@ -233,11 +233,13 @@ async def test_full_release_does_not_read_dirty_scopes(release_db):
         await session.commit()
     statements.clear()
     task = await enqueue(maker, service, full=True)
-    assert not any("FROM publish_dirty" in statement for statement in statements)
+    assert any("FROM publish_dirty" in statement for statement in statements)
     assert task.input_data["full"] is True
     assert task.input_data["incremental_site"] is False
-    assert task.input_data["publish_dirty_ids"] == []
-    assert task.input_data["publish_dirty_before"]
+    assert len(task.input_data["publish_dirty_ids"]) == 1
+    assert task.input_data["publish_dirty_before"] is None
+    assert task.input_data["publish_selected_at"]
+    assert task.input_data["publish_change_count"] == 1
     command = service._generate_site_data_command(
         python_path=Path("python"),
         download_url_base="https://example.test/raw",
@@ -305,6 +307,32 @@ async def test_full_projection_consumes_only_pre_enqueue_markers(
         assert rows[0].published_task_uuid == "release-full"
         assert rows[1].published_at is None
         assert rows[2].published_at is None
+
+
+async def test_full_release_keeps_late_committed_backdated_changes_pending(release_db, monkeypatch):
+    maker, service, _ = release_db
+    async with maker() as session:
+        first = PublishDirty(line="surveillance", scope_key="US", source_task_uuid="first", marked_at=datetime(2026, 1, 1, tzinfo=timezone.utc))
+        session.add(first)
+        await session.commit()
+        first_id = first.id
+    task = await enqueue(maker, service, full=True)
+    async with maker() as session:
+        late = PublishDirty(line="surveillance", scope_key="US", source_task_uuid="late", marked_at=datetime(2025, 1, 1, tzinfo=timezone.utc))
+        session.add(late)
+        await session.commit()
+        late_id = late.id
+    monkeypatch.setattr(projection, "_load_publish_context", AsyncMock(return_value={"countries_by_code": {"US": {}}}))
+    monkeypatch.setattr(projection, "_publish_country", AsyncMock())
+    async with maker() as session:
+        await projection.commit_release_projection(
+            session, task_uuid=task.task_uuid, country_codes=[], full=True,
+            dirty_ids=task.input_data["publish_dirty_ids"],
+            marked_before=task.input_data["publish_dirty_before"],
+        )
+        await session.commit()
+        assert (await session.get(PublishDirty, first_id)).published_task_uuid == task.task_uuid
+        assert (await session.get(PublishDirty, late_id)).published_at is None
 
 
 async def test_unknown_dirty_scope_rejects_enqueue_and_preserves_marker(release_db):
@@ -465,7 +493,7 @@ async def test_full_release_does_not_acknowledge_disabled_country(
             task_uuid=task.task_uuid,
             country_codes=[],
             full=True,
-            dirty_ids=[],
+            dirty_ids=task.input_data["publish_dirty_ids"],
             marked_before=task.input_data["publish_dirty_before"],
         )
         await session.commit()
