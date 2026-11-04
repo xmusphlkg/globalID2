@@ -30,6 +30,7 @@ DEFAULT_REPO_URL = get_data_share_repo_url()
 DEFAULT_REPO_BRANCH = get_data_share_repo_branch()
 MANAGED_PATHS = ("countries", "diseases", "manifest.json")
 GITHUB_MAX_FILE_BYTES = 100 * 1024 * 1024
+PUSH_BATCH_BYTES = 1024 * 1024 * 1024
 ASSET_DIRECTORIES = ("countries", "diseases")
 GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
 NETWORK_ATTEMPTS = 4
@@ -185,6 +186,91 @@ def remote_branch_exists(repo_url: str, branch: str) -> bool:
         ROOT,
     )
     return bool(output.strip())
+
+
+def push_download_snapshot(workdir: Path, branch: str, *, batch_bytes: int = PUSH_BATCH_BYTES) -> None:
+    """Preload bounded batches on a resumable ref, then atomically publish HEAD.
+
+    GitHub limits each received pack to 2 GiB. A temporary branch makes each
+    batch's objects available to the next push without exposing partial data
+    on the public branch. Its name is content-addressed so a restarted export
+    with the same tree can resume even if its commit timestamp changed.
+    """
+    if batch_bytes < 1:
+        raise ValueError("Push batch size must be positive")
+    target = run_git(["rev-parse", "HEAD"], workdir)
+    tree = run_git(["rev-parse", "HEAD^{tree}"], workdir)
+    branch_key = hashlib.sha256(branch.encode()).hexdigest()[:12]
+    staging = f"globalid-upload/{branch_key}-{tree}"
+    remote = run_git_with_retry(["ls-remote", "--heads", "origin", branch, staging], workdir)
+    refs = {line.split()[1]: line.split()[0] for line in remote.splitlines()}
+    base = refs.get(f"refs/heads/{staging}") or refs.get(f"refs/heads/{branch}")
+    if base:
+        run_git_with_retry(["fetch", "origin", base], workdir)
+    # A new repository needs an empty tree as the comparison/index base.
+    empty_tree = subprocess.run(
+        ["git", "hash-object", "-t", "tree", "--stdin", "-w"], cwd=workdir,
+        input="", text=True, capture_output=True, check=True,
+    ).stdout.strip()
+    raw = run_git(["diff", "--raw", "-z", "--no-abbrev", "--no-renames", base or empty_tree, target], workdir)
+    fields = raw.split("\0")
+    changes: list[tuple[str, str, str]] = []
+    for offset in range(0, len(fields) - 1, 2):
+        meta, path = fields[offset].split(), fields[offset + 1]
+        if meta[1] != "000000":  # Deletions need no uploaded blob.
+            changes.append((meta[1], meta[3], path))
+    sizes: dict[str, int] = {}
+    if changes:
+        checked = subprocess.run(
+            ["git", "cat-file", "--batch-check=%(objectname) %(objectsize)"], cwd=workdir,
+            input="".join(f"{oid}\n" for _, oid, _ in changes),
+            text=True, capture_output=True, check=True,
+        )
+        sizes = {oid: int(size) for oid, size in (line.split() for line in checked.stdout.splitlines())}
+    if any(sizes[oid] > batch_bytes for _, oid, _ in changes):
+        raise RuntimeError("A download blob exceeds the push batch limit")
+    if sum(sizes[oid] for _, oid, _ in changes) > batch_bytes:
+        with tempfile.TemporaryDirectory(prefix="globalid-upload-index-") as directory:
+            env = {**os.environ, "GIT_INDEX_FILE": str(Path(directory) / "index")}
+
+            def index_git(args: list[str], payload: str | None = None) -> str:
+                return subprocess.run(
+                    ["git", *args], cwd=workdir, env=env, input=payload,
+                    text=True, capture_output=True, check=True,
+                ).stdout.strip()
+
+            index_git(["read-tree", base or empty_tree])
+            batches: list[list[tuple[str, str, str]]] = []
+            current: list[tuple[str, str, str]] = []
+            current_bytes = 0
+            for change in changes:
+                size = sizes[change[1]]
+                if current and current_bytes + size > batch_bytes:
+                    batches.append(current)
+                    current, current_bytes = [], 0
+                current.append(change)
+                current_bytes += size
+            if current:
+                batches.append(current)
+            for number, batch in enumerate(batches, 1):
+                index_git(["update-index", "-z", "--index-info"], "".join(
+                    f"{mode} {oid}\t{path}\0" for mode, oid, path in batch
+                ))
+                staged_tree = index_git(["write-tree"])
+                commit_args = ["commit-tree", staged_tree, "-m", "Stage bounded download objects"]
+                if base:
+                    commit_args.extend(["-p", base])
+                staged_commit = run_git(commit_args, workdir)
+                print(f"Upload download batch {number}/{len(batches)} ({sum(sizes[oid] for _, oid, _ in batch)} bytes)", flush=True)
+                run_git_with_retry(["push", "origin", f"{staged_commit}:refs/heads/{staging}"], workdir)
+                base = staged_commit
+    # This remains a normal fast-forward push: concurrent releases cannot be overwritten.
+    push_branch(workdir, branch)
+    if base and (f"refs/heads/{staging}" in refs or sum(sizes[oid] for _, oid, _ in changes) > batch_bytes):
+        try:
+            run_git_with_retry(["push", "origin", "--delete", staging], workdir)
+        except RuntimeError as exc:
+            print(f"Published successfully; staging ref cleanup deferred: {exc}", file=sys.stderr, flush=True)
 
 
 def _asset_relative_path(relative_path: str) -> Path:
@@ -486,7 +572,7 @@ def commit_and_push(
         return False
     run_git(["add", "countries", "diseases", "manifest.json", "README.md"], workdir)
     run_git(["commit", "-m", commit_message], workdir)
-    push_branch(workdir, branch)
+    push_download_snapshot(workdir, branch)
     return True
 
 

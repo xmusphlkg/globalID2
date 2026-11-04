@@ -8,6 +8,7 @@ This file records release-level changes to the GIDS application and its data ope
 
 - Site export consumes database streams in batches, reducing per-row async overhead while preserving bounded memory and output order.
 - Raw archive publication copies independent files with eight bounded workers by default, retaining per-file checksum verification and fsync. All copies must succeed before metadata, commits or pushes; failed partial runs remain recoverable.
+- Large download snapshots upload their objects in resumable 1 GiB batches before the public branch is advanced, avoiding GitHub's per-push limit while keeping the snapshot switch atomic.
 - Scheduled report readiness and cadence inference use eligible public national source-series observations instead of the legacy projection.
 
 ### Fixed

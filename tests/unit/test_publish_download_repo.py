@@ -12,6 +12,7 @@ from scripts.publish_download_repo import (
     ensure_commit_identity,
     ensure_repo,
     push_branch,
+    push_download_snapshot,
     run_git,
     run_git_with_retry,
     summarize_git_status,
@@ -293,3 +294,102 @@ def test_github_ssh_transport_uses_port_443_and_preserves_options(monkeypatch):
     assert "-i /tmp/release-key" in command
     assert "Hostname=ssh.github.com" in command
     assert "-p 443" in command
+
+
+def _snapshot_repo(tmp_path):
+    remote = tmp_path / "remote.git"
+    checkout = tmp_path / "checkout"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
+    checkout.mkdir()
+    run_git(["init", "-b", "main"], checkout)
+    run_git(["config", "user.name", "Fixture"], checkout)
+    run_git(["config", "user.email", "fixture@example.invalid"], checkout)
+    run_git(["remote", "add", "origin", str(remote)], checkout)
+    (checkout / "manifest.json").write_text("old manifest")
+    (checkout / "obsolete.csv").write_text("old partition")
+    run_git(["add", "."], checkout)
+    run_git(["commit", "-m", "Initial"], checkout)
+    run_git(["push", "origin", "main"], checkout)
+    initial = run_git(["rev-parse", "HEAD"], checkout)
+    (checkout / "obsolete.csv").unlink()
+    (checkout / "manifest.json").write_text("new manifest")
+    for number in range(6):
+        (checkout / f"partition {number}.csv").write_text(str(number) * 40)
+    run_git(["add", "-A"], checkout)
+    run_git(["commit", "-m", "Snapshot"], checkout)
+    return remote, checkout, initial
+
+
+def test_snapshot_upload_keeps_public_branch_atomic_and_cleans_staging(tmp_path, monkeypatch):
+    import scripts.publish_download_repo as publisher
+
+    remote, checkout, initial = _snapshot_repo(tmp_path)
+    original = publisher.run_git_with_retry
+    stages = []
+
+    def observe(args, cwd, **kwargs):
+        result = original(args, cwd, **kwargs)
+        if args[0] == "push" and ":refs/heads/globalid-upload/" in args[-1]:
+            assert run_git(["rev-parse", "main"], remote) == initial
+            assert run_git(["show", "main:manifest.json"], remote) == "old manifest"
+            stages.append(args[-1].split(":")[0])
+        return result
+
+    monkeypatch.setattr(publisher, "run_git_with_retry", observe)
+    push_download_snapshot(checkout, "main", batch_bytes=64)
+    assert len(stages) >= 4
+    assert run_git(["rev-parse", "main"], remote) == run_git(["rev-parse", "HEAD"], checkout)
+    assert run_git(["ls-tree", "-r", "main"], remote) == run_git(["ls-tree", "-r", "HEAD"], checkout)
+    assert run_git(["for-each-ref", "--format=%(refname)", "refs/heads/globalid-upload"], remote) == ""
+
+
+def test_snapshot_upload_resumes_after_interrupted_batch(tmp_path, monkeypatch):
+    import scripts.publish_download_repo as publisher
+
+    remote, checkout, initial = _snapshot_repo(tmp_path)
+    original = publisher.run_git_with_retry
+    pushed = []
+
+    def interrupt(args, cwd, **kwargs):
+        if args[0] == "push" and ":refs/heads/globalid-upload/" in args[-1]:
+            if len(pushed) == 2:
+                raise RuntimeError("simulated network interruption")
+            pushed.append(args[-1])
+        return original(args, cwd, **kwargs)
+
+    monkeypatch.setattr(publisher, "run_git_with_retry", interrupt)
+    with pytest.raises(RuntimeError, match="simulated network"):
+        push_download_snapshot(checkout, "main", batch_bytes=64)
+    assert run_git(["rev-parse", "main"], remote) == initial
+    staged = run_git(["for-each-ref", "--format=%(objectname)", "refs/heads/globalid-upload"], remote)
+    monkeypatch.setattr(publisher, "run_git_with_retry", original)
+    # Recreated commits can have another ID; the content-addressed staging ref survives.
+    run_git(["commit", "--amend", "-m", "Recreated snapshot"], checkout)
+    push_download_snapshot(checkout, "main", batch_bytes=64)
+    assert run_git(["rev-parse", "main"], remote) == run_git(["rev-parse", "HEAD"], checkout)
+    assert staged
+
+
+def test_snapshot_upload_small_changes_need_no_staging_branch(tmp_path, monkeypatch):
+    import scripts.publish_download_repo as publisher
+
+    remote, checkout, _ = _snapshot_repo(tmp_path)
+    original = publisher.run_git_with_retry
+    pushes = []
+
+    def observe(args, cwd, **kwargs):
+        if args[0] == "push":
+            pushes.append(args)
+        return original(args, cwd, **kwargs)
+
+    monkeypatch.setattr(publisher, "run_git_with_retry", observe)
+    push_download_snapshot(checkout, "main", batch_bytes=1024)
+    assert pushes == [["push", "origin", "main"]]
+    assert run_git(["rev-parse", "main"], remote) == run_git(["rev-parse", "HEAD"], checkout)
+
+
+def test_snapshot_upload_rejects_oversized_blob_before_push(tmp_path):
+    remote, checkout, initial = _snapshot_repo(tmp_path)
+    with pytest.raises(RuntimeError, match="blob exceeds"):
+        push_download_snapshot(checkout, "main", batch_bytes=10)
+    assert run_git(["rev-parse", "main"], remote) == initial

@@ -85,6 +85,11 @@ and are not eligible for candidate reuse.
 The download generator atomically replaces changed partitions. Rollback
 snapshots can therefore hard-link their immutable old bytes, avoiding a full
 copy of the download archive. Other artifact trees retain independent copies.
+Download publication stages at most 1 GiB of uncompressed Git blobs per push on
+a content-addressed temporary branch. Once all objects are present, the public
+branch advances in a normal fast-forward push and the temporary branch is
+removed. An interrupted upload of the same snapshot resumes from that branch;
+the public branch keeps its previous complete snapshot until the final push.
 Build validation caches gzip sizes by content SHA-256 and zlib version, while
 re-evaluating current budgets and dependency graphs on every run. SEO target
 lookups are memoized only within one audit; subsequent audits observe file
