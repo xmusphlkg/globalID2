@@ -822,6 +822,41 @@ def _article_row(**overrides):
     return SimpleNamespace(**values)
 
 
+def test_literature_review_includes_status_and_summary_language() -> None:
+    from src.literature.enrichment import SUMMARY_FIELDS
+
+    service = AIContentGovernanceService()
+    article = _article_row(peer_review_status="peer_reviewed", integrity_status="current")
+    summary = SimpleNamespace(
+        language="fr", quality_score=0.9, evidence_map={},
+        generation_metadata={}, **{field: "text" for field in SUMMARY_FIELDS},
+    )
+    article_item = service._literature_article_item(article)
+    summary_item = service._literature_review_item("1", summary, article)
+
+    assert article_item["peer_review_status"] == "peer_reviewed"
+    assert article_item["integrity_status"] == "current"
+    assert summary_item["summary_language"] == "fr"
+    assert summary_item["article"]["peer_review_status"] == "peer_reviewed"
+
+    # Existing held fingerprints are invalidated once by the new context;
+    # another unchanged hold under this context remains parked.
+    old_fingerprint = service._fingerprint({
+        "fields": {field: getattr(summary, field) for field in SUMMARY_FIELDS},
+        "quality": summary.quality_score,
+        "evidence_map": summary.evidence_map,
+        "source": None,
+    })
+    new_fingerprint = service._summary_fingerprint(summary)
+    assert old_fingerprint != new_fingerprint
+    held = {"ai_content_governance": {
+        "decision": "hold", "second_opinion": True, "held_fingerprint": new_fingerprint,
+    }}
+    assert service._held(held, new_fingerprint)
+    summary.language = "zh"
+    assert not service._held(held, service._summary_fingerprint(summary))
+
+
 def test_review_outcome_maps_hold_and_reviewer_disagreement_to_hold() -> None:
     from src.services.ai_content_governance_service import _review_outcome
 

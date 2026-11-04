@@ -4,6 +4,10 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+### Fixed
+
+- Research Radar review now receives the catalogue's peer-review and integrity statuses and the summary's intended language. Existing holds are reconsidered once under the corrected review context, without bypassing evidence or peer-review gates.
+
 ## [0.17.3] - 2026-11-04
 
 ### Changed

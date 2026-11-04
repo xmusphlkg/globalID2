@@ -1180,6 +1180,10 @@ class AIContentGovernanceService:
 
     def _summary_fingerprint(self, summary: Any) -> str:
         return self._fingerprint({
+            # A held item must be reconsidered once when its review context
+            # changes, even when the generated summary itself is unchanged.
+            "review_context_version": 2,
+            "language": getattr(summary, "language", None),
             "fields": {field: getattr(summary, field, None) for field in SUMMARY_FIELDS},
             "quality": summary.quality_score,
             "evidence_map": summary.evidence_map,
@@ -1875,8 +1879,11 @@ class AIContentGovernanceService:
                 "published_at": article.published_at,
                 "doi": article.doi,
                 "pmid": article.pmid,
+                "peer_review_status": getattr(article, "peer_review_status", None),
+                "integrity_status": getattr(article, "integrity_status", None),
                 "abstract": _text(article.abstract_text, limit=3500),
             },
+            "summary_language": getattr(summary, "language", None),
             "summary": {field: _text(getattr(summary, field, None), limit=1200) for field in SUMMARY_FIELDS},
             "quality_score": summary.quality_score,
             "evidence_map": summary.evidence_map,
@@ -1893,6 +1900,8 @@ class AIContentGovernanceService:
             "authors_count": len(article.authors or []),
             "article_type": article.article_type,
             "study_type": article.study_type,
+            "peer_review_status": getattr(article, "peer_review_status", None),
+            "integrity_status": getattr(article, "integrity_status", None),
             "open_access_status": article.open_access_status,
             "relevance_score": article.relevance_score,
             "public_health_score": article.public_health_score,
@@ -1962,6 +1971,7 @@ LITERATURE_ARTICLE_REVIEW_SYSTEM = (
 
 LITERATURE_ARTICLE_REVIEW_RULES = [
     "Publish only peer-reviewed/current articles with clear infectious-disease, outbreak, surveillance, diagnostics, prevention, burden, policy, or public-health relevance.",
+    "The supplied peer_review_status and integrity_status are catalogue metadata, not proof from the full article; use the supplied values when evaluating these fields and do not claim they are absent when present.",
     "Exclude articles that are clearly off-topic, animal-only without public-health relevance, corrections without new evidence, pure methods with no infectious-disease application, or low-signal catalogue noise.",
     "Hold if relevance depends on expert judgment, if the abstract is too thin, or if the article may be relevant but the public-health connection is uncertain.",
     "Do not publish because a score is high by itself; use scores as hints and justify the semantic decision from title/abstract/evidence.",
@@ -1977,6 +1987,9 @@ LITERATURE_SUMMARY_REVIEW_SYSTEM = (
 
 LITERATURE_SUMMARY_REVIEW_RULES = [
     "Publish only when the summary is faithful to the supplied article and does not add unsupported claims.",
+    "The summary_language identifies the intended language; a Chinese or French summary of an English article is an expected translation, not a defect by itself. Assess whether the meaning and qualifications are faithful to the source.",
+    "A source-scope limitation stating that only the supplied abstract and metadata were available is allowed; do not present it as a limitation reported by the study.",
+    "Classifier links are not supplied in this review input: their absence alone does not prove a cited classifier link is false. Hold any material claim that cannot be verified from the available evidence.",
     "Hold when the abstract is too thin, the summary is vague, or the public-health interpretation overreaches.",
     "Reject only for clear hallucination, unsafe clinical advice, or contradiction with the supplied article.",
     "Do not require stylistic perfection; focus on correctness, traceability, and usefulness for disease surveillance.",
