@@ -329,7 +329,7 @@ def test_snapshot_upload_keeps_public_branch_atomic_and_cleans_staging(tmp_path,
 
     def observe(args, cwd, **kwargs):
         result = original(args, cwd, **kwargs)
-        if args[0] == "push" and ":refs/heads/globalid-upload/" in args[-1]:
+        if ":refs/heads/globalid-upload/" in args[-1]:
             assert run_git(["rev-parse", "main"], remote) == initial
             assert run_git(["show", "main:manifest.json"], remote) == "old manifest"
             stages.append(args[-1].split(":")[0])
@@ -351,7 +351,7 @@ def test_snapshot_upload_resumes_after_interrupted_batch(tmp_path, monkeypatch):
     pushed = []
 
     def interrupt(args, cwd, **kwargs):
-        if args[0] == "push" and ":refs/heads/globalid-upload/" in args[-1]:
+        if ":refs/heads/globalid-upload/" in args[-1]:
             if len(pushed) == 2:
                 raise RuntimeError("simulated network interruption")
             pushed.append(args[-1])

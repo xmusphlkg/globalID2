@@ -271,7 +271,13 @@ def push_download_snapshot(workdir: Path, branch: str, *, batch_bytes: int = PUS
                     commit_args.extend(["-p", base])
                 staged_commit = run_git(commit_args, workdir)
                 print(f"Upload download batch {number}/{len(batches)} ({sum(sizes[oid] for _, oid, _ in batch)} bytes)", flush=True)
-                run_git_with_retry(["push", "origin", f"{staged_commit}:refs/heads/{staging}"], workdir)
+                # Large generated partitions are already compressed as Git
+                # objects. Avoid expensive delta searches for these bounded
+                # backfill batches; ordinary small releases retain Git defaults.
+                run_git_with_retry(
+                    ["-c", "pack.window=0", "push", "origin", f"{staged_commit}:refs/heads/{staging}"],
+                    workdir,
+                )
                 base = staged_commit
                 staged = True
     if staged:

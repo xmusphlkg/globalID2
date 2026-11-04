@@ -92,6 +92,10 @@ removed. An interrupted upload of the same snapshot resumes from that branch;
 the public branch keeps its previous complete snapshot until the final push.
 The download Git stage has a three-hour minimum timeout for large backfills;
 the independent R2 upload timeouts are unchanged.
+Only the bounded staging pushes disable Git's delta search. On 15 real changed
+CSV/JSON/XLSX files (128.1 MiB), a local pack benchmark took 8.46 seconds with
+Git defaults and 2.32 seconds without delta search, producing 24.46 and 25.84
+MiB respectively. Transfer times vary; ordinary small pushes keep Git defaults.
 Build validation caches gzip sizes by content SHA-256 and zlib version, while
 re-evaluating current budgets and dependency graphs on every run. SEO target
 lookups are memoized only within one audit; subsequent audits observe file
