@@ -87,7 +87,7 @@ const reportSummary = document?.summary?.zh ?? report?.summary ?? '';
 const reportSummaryEn = document?.summary?.en ?? report?.summary ?? '';
 const reportSummaryFr = document?.summary?.fr ?? report?.summary_fr ?? (reportSummaryEn ? 'Résumé français en attente.' : '');
 const reportCoverage = report?.period_start && report?.period_end
-  ? `${String(report.period_start).slice(0, 7)}–${String(report.period_end).slice(0, 7)}`
+  ? `${String(report.period_start).slice(0, 10)}–${String(report.period_end).slice(0, 10)}`
   : '';
 const canonicalPath = localeHref(`/countries/${country}/reports/${id}/`);
 const reportSeo = {
