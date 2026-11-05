@@ -19,6 +19,7 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Fixed
 
+- Control-panel publication preflight allows bounded Git/Cloudflare probes to finish instead of aborting after the ordinary 10-second read timeout.
 - Surveillance downloads retain complete observation provenance instead of replacing it with lossy public-curve snapshots. Missing untouched download artifacts fail explicitly rather than publishing broken manifest entries.
 - Report SEO titles retain full coverage dates so weekly reports in the same month have distinct titles in all three languages.
 - Research Radar review now receives the catalogue's peer-review and integrity statuses and the summary's intended language. Existing holds are reconsidered once under the corrected review context, without bypassing evidence or peer-review gates.

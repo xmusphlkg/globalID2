@@ -122,7 +122,7 @@ describe("publication", () => {
     expect(screen.getByRole("button", { name: "Publish website code" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Publish website code" }));
     expect(await screen.findByRole("link", { name: "Open release run" })).toBeInTheDocument();
-    expect(apiFetch).toHaveBeenCalledWith("/releases/site-release/checks?code_only=true");
+    expect(apiFetch).toHaveBeenCalledWith("/releases/site-release/checks?code_only=true", { timeoutMs: 120_000 });
     expect(screen.getByRole("button", { name: "Publish website code" })).toBeDisabled();
   });
   it("shows code snapshot blockers, prevents submission and rechecks after recovery", async () => {

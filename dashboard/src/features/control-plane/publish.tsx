@@ -14,6 +14,9 @@ type Run = components["schemas"]["RunOut"];
 // POST /publish/runs currently publishes a generated dictionary envelope.
 type ReleaseResult = components["schemas"]["DataResponse_dict_"]["data"] & { task_uuid?: string; status?: string; reason?: string };
 const lines = ["surveillance", "literature", "situation", "knowledge"] as const;
+// Preflight probes Git and Cloudflare; their bounded network checks outlive
+// the default timeout used for ordinary control-panel reads.
+const PREFLIGHT_TIMEOUT_MS = 120_000;
 
 function channelTone(enabled: boolean | undefined, ready: boolean | undefined): "success" | "warning" | "neutral" {
   if (!enabled) return "neutral";
@@ -39,7 +42,7 @@ export function PublishView() {
   const pendingCount = counts.reduce((sum, count) => sum + count, 0);
   const activeRun = !!result?.task_uuid && (!runStatus || ["queued", "pending", "running", "retrying"].includes(runStatus));
   async function checkCodePublication() {
-    const value = await apiFetch<Checks>("/releases/site-release/checks?code_only=true");
+    const value = await apiFetch<Checks>("/releases/site-release/checks?code_only=true", { timeoutMs: PREFLIGHT_TIMEOUT_MS });
     setCodeChecks(value);
     return value;
   }
@@ -49,7 +52,7 @@ export function PublishView() {
     if (codeOnly) setCodeChecks(null); else setChecks(null);
     try {
       if (codeOnly) await checkCodePublication();
-      else setChecks(await apiFetch<Checks>("/releases/site-release/checks"));
+      else setChecks(await apiFetch<Checks>("/releases/site-release/checks", { timeoutMs: PREFLIGHT_TIMEOUT_MS }));
     }
     catch (e) { setError(e); }
     finally { actionLock.current = false; setBusy(null); }
