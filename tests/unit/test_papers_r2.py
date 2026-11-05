@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from pathlib import Path
 from typing import Self
 
@@ -307,3 +308,88 @@ def test_public_indexes_wait_for_all_shards(tmp_path, fail_shard):
     else:
         publish_papers_site(papers, config, client=client, verify_public=False)
         assert client.objects[index_key] != b"previous index"
+
+
+def test_warm_publish_never_opens_unchanged_artifact_bodies(tmp_path, monkeypatch):
+    papers = _seed_papers(tmp_path)
+    time.sleep(1.01)  # stable timestamps before warming publication receipts
+    client = FakeR2()
+    config = R2PapersConfig("acct", "bucket", "key", "secret")
+    publish_papers_site(papers, config, client=client, verify_public=False)
+    reads = []
+    original_read = Path.read_bytes
+
+    def record_read(path):
+        if path.is_relative_to(papers):
+            reads.append(path)
+        return original_read(path)
+
+    monkeypatch.setattr(Path, "read_bytes", record_read)
+    result = publish_papers_site(papers, config, client=client, verify_public=False)
+    assert (result.uploaded, result.unchanged, result.bytes_uploaded) == (0, 2, 0)
+    assert reads == []
+
+
+def test_one_changed_file_only_reads_and_uploads_that_file(tmp_path, monkeypatch):
+    from src.services.data_release.papers_bundle import build_papers_manifest
+    papers = _seed_papers(tmp_path)
+    time.sleep(1.01)  # stable timestamps before warming publication receipts
+    client = FakeR2()
+    config = R2PapersConfig("acct", "bucket", "key", "secret")
+    publish_papers_site(papers, config, client=client, verify_public=False)
+    changed = papers / "research/cards/slug.png"
+    changed.write_bytes(b"new-card")
+    (papers / "papers-manifest.json").write_text(json.dumps(build_papers_manifest(papers)))
+    reads = []
+    original_read = Path.read_bytes
+
+    def record_read(path):
+        if path.is_relative_to(papers):
+            reads.append(path)
+        return original_read(path)
+
+    monkeypatch.setattr(Path, "read_bytes", record_read)
+    result = publish_papers_site(papers, config, client=client, verify_public=False)
+    assert (result.uploaded, result.unchanged) == (1, 1)
+    assert reads == [changed]
+    assert client.objects["research/cards/slug.png"] == b"new-card"
+
+
+def test_missing_local_receipt_recovers_once_and_then_skips_reads(tmp_path, monkeypatch):
+    from src.services.data_release.artifact_index import ArtifactIndex
+    papers = _seed_papers(tmp_path)
+    time.sleep(1.01)  # stable timestamps before warming publication receipts
+    client = FakeR2()
+    config = R2PapersConfig("acct", "bucket", "key", "secret")
+    publish_papers_site(papers, config, client=client, verify_public=False)
+    ArtifactIndex(papers).path.unlink()
+    reads = []
+    original_read = Path.read_bytes
+
+    def record_read(path):
+        if path.is_relative_to(papers):
+            reads.append(path)
+        return original_read(path)
+
+    monkeypatch.setattr(Path, "read_bytes", record_read)
+    assert publish_papers_site(papers, config, client=client, verify_public=False).uploaded == 0
+    assert len(reads) == 2
+    reads.clear()
+    assert publish_papers_site(papers, config, client=client, verify_public=False).uploaded == 0
+    assert reads == []
+
+
+def test_same_size_tampering_cannot_be_skipped_by_remote_match(tmp_path):
+    import os
+    papers = _seed_papers(tmp_path)
+    time.sleep(1.01)  # stable timestamps before warming publication receipts
+    client = FakeR2()
+    config = R2PapersConfig("acct", "bucket", "key", "secret")
+    publish_papers_site(papers, config, client=client, verify_public=False)
+    path = papers / "research/cards/slug.png"
+    before = path.stat()
+    path.write_bytes(b"bad-bytes")
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    with pytest.raises(R2S3Error, match="checksum"):
+        publish_papers_site(papers, config, client=client, verify_public=False)
+    assert client.objects["research/cards/slug.png"] == b"png-bytes"

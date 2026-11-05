@@ -26,6 +26,7 @@ from xml.etree import ElementTree
 import httpx
 
 from .papers_bundle import DEFAULT_PAPERS_ORIGIN, build_papers_manifest
+from .artifact_index import ArtifactIndex
 
 MANIFEST_KEY = "papers-manifest.json"
 # Cloudflare R2 occasionally drops TLS mid-PUT on large incremental syncs.
@@ -549,14 +550,18 @@ def publish_papers_site(
     with (directory / f"{target}.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         active = client or R2S3Client(config)
+        artifacts = ArtifactIndex(papers_dir)
         try:
             return _publish_papers_site(
                 papers_dir, config, client=active, verify_public=verify_public,
-                public_opener=public_opener, workers=workers,
+                public_opener=public_opener, workers=workers, artifacts=artifacts,
             )
         finally:
-            if client is None:
-                active.close()
+            try:
+                artifacts.save()
+            finally:
+                if client is None:
+                    active.close()
 
 
 def _publish_papers_site(
@@ -567,6 +572,7 @@ def _publish_papers_site(
     verify_public: bool,
     public_opener: Callable[[Request, float | None], Any] | None,
     workers: int,
+    artifacts: ArtifactIndex,
 ) -> PapersPublishResult:
     started = time.monotonic()
 
@@ -628,21 +634,33 @@ def _publish_papers_site(
     def transfer(item: dict) -> tuple[bool, int]:
         key = str(item["key"])
         source_path = papers_dir / str(item["path"])
-        body = source_path.read_bytes()
-        if len(body) != int(item["bytes"]) or _sha256_hex(body) != item["sha256"]:
+        # A stat-bound receipt comes from the bundle writer or a previous
+        # validated read. Cache misses (including legacy manifests) read once.
+        # Unchanged objects never need their local or remote bodies opened.
+        digests = artifacts.cached(source_path)
+        body = None
+        if digests is None:
+            body, digests = artifacts.read(source_path)
+        if (digests is None or digests["bytes"] != int(item["bytes"])
+                or digests["sha256"] != item["sha256"]
+                or (item.get("md5") and digests["md5"] != item["md5"])):
             raise R2S3Error(f"Papers checksum changed after build: {item['path']}")
         if inventory is not None:
             stored = inventory.get(key) or {}
             etag = str(stored.get("etag") or "")
-            if (stored.get("bytes") == len(body) and re.fullmatch(r"[0-9a-f]{32}", etag)
-                    and hashlib.md5(body, usedforsecurity=False).hexdigest() == etag):
+            if (stored.get("bytes") == digests["bytes"] and re.fullmatch(r"[0-9a-f]{32}", etag)
+                    and digests["md5"] == etag):
                 return False, 0
         else:
             # Compatibility with injected legacy clients; production always
             # checks the actual object inventory, never only the manifest.
             remote = remote_by_key.get(key) or {}
-            if remote.get("bytes") == len(body) and remote.get("sha256") == item["sha256"]:
+            if remote.get("bytes") == digests["bytes"] and remote.get("sha256") == item["sha256"]:
                 return False, 0
+        if body is None:
+            body, current = artifacts.read(source_path)
+            if current != digests:
+                raise R2S3Error(f"Papers checksum changed during publish: {item['path']}")
         active.put_object(
             key,
             body,
@@ -727,7 +745,11 @@ def _publish_papers_site(
             content_type="application/json; charset=utf-8",
             cache_control=_cache_control_for(manifest_key, manifest_key=manifest_key),
         )
-    print(f"R2 publish completed in {time.monotonic() - started:.1f}s", flush=True)
+    print(
+        f"R2 publish completed in {time.monotonic() - started:.1f}s; "
+        f"local files read={artifacts.read_files}, local bytes read={artifacts.read_bytes}",
+        flush=True,
+    )
 
     return PapersPublishResult(
         uploaded=uploaded,

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileHash } from './file-fingerprints.mjs';
 import { hasCountryDataSnapshot } from '../src/lib/country-coverage.ts';
 import { toSeoSlug } from '../src/lib/seo.ts';
 import { buildPublishableReports } from '../src/lib/report-routes.ts';
@@ -12,7 +13,7 @@ export const pagePlanPath = resolve(cacheRoot, 'site-page-plan.json');
 export const sitePageCacheRoot = resolve(cacheRoot, 'site-pages');
 const sha = value => createHash('sha256').update(value).digest('hex');
 const json = (path, fallback = null) => existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : fallback;
-const hashFile = path => existsSync(path) ? sha(readFileSync(path)) : 'missing';
+const hashFile = path => existsSync(path) ? fileHash(path) : 'missing';
 const localePaths = path => ['', 'zh/', 'fr/'].map(prefix => `${prefix}${path}/index.html`);
 const safeSegment = value => {
   const segment = String(value ?? '');

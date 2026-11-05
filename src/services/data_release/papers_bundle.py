@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from .bundle_assets import copy_bundle_assets
+from .artifact_index import ArtifactIndex
 
 DEFAULT_MAIN_SITE_ORIGIN = "https://globalinfectiousdisease.com"
 DEFAULT_PAPERS_ORIGIN = "https://papers.globalinfectiousdisease.com"
@@ -311,29 +312,30 @@ def build_papers_manifest(
     papers_dir: Path,
     *,
     papers_origin: str = DEFAULT_PAPERS_ORIGIN,
+    artifact_index: ArtifactIndex | None = None,
 ) -> dict:
     """Build a deterministic papers manifest for incremental R2 sync."""
 
     base = papers_origin.rstrip("/")
     files: list[dict[str, object]] = []
+    index = artifact_index or ArtifactIndex(papers_dir)
     if papers_dir.is_dir():
         for path in sorted(papers_dir.rglob("*")):
             if not path.is_file() or path == papers_dir / "papers-manifest.json":
                 continue
             relative = path.relative_to(papers_dir).as_posix()
             key = _object_key_for_papers(relative)
-            size = path.stat().st_size
-            digest = _sha256_file(path)
+            digests = index.describe(path)
             public_path = f"/{key}" if key else "/"
             files.append(
                 {
                     "path": relative,
                     "key": key,
-                    "bytes": size,
-                    "sha256": digest,
+                    **digests,
                     "url": f"{base}{public_path}",
                 }
             )
+    index.save()
     return {
         "schema_version": 1,
         "papers_origin": base,
@@ -357,6 +359,7 @@ def split_papers_bundle(
         raise FileNotFoundError(f"Astro dist directory not found: {dist_dir}")
 
     papers_dir.mkdir(parents=True, exist_ok=True)
+    index = ArtifactIndex(papers_dir)
     manifest_path = papers_dir / "papers-manifest.json"
     try:
         previous_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -388,16 +391,15 @@ def split_papers_bundle(
             sources[relative] = source_hash
             cached = previous.get(relative) or {}
             if (cached.get("source_sha256") == source_hash and destination.is_file()
-                    and _sha256_file(destination) == cached.get("sha256")):
+                    and index.describe(destination)["sha256"] == cached.get("sha256")):
                 reused_html += 1
             else:
-                destination.write_text(
+                index.write(destination,
                     rewrite_papers_html(
                         body.decode("utf-8"),
                         main_origin=main_origin,
                         papers_origin=papers_origin,
-                    ),
-                    encoding="utf-8",
+                    ).encode("utf-8"),
                 )
             path.unlink()
         else:
@@ -418,7 +420,7 @@ def split_papers_bundle(
             shutil.move(str(path), str(destination))
             moved.append(f"{PAPERS_HOST_DIR}/{relative}")
 
-    assets = copy_bundle_assets(dist_dir, papers_dir, [path for path in expected if path.suffix == ".html"])
+    assets = copy_bundle_assets(dist_dir, papers_dir, [path for path in expected if path.suffix == ".html"], artifact_index=index)
     expected.update(assets)
     current_assets = sorted(path.relative_to(papers_dir).as_posix() for path in assets)
     generations = [current_assets]
@@ -460,7 +462,7 @@ def split_papers_bundle(
     for stale in papers_dir.rglob("*"):
         if stale.is_file() and stale not in expected and stale != manifest_path:
             stale.unlink()
-    manifest = build_papers_manifest(papers_dir, papers_origin=papers_origin)
+    manifest = build_papers_manifest(papers_dir, papers_origin=papers_origin, artifact_index=index)
     manifest["rewrite_fingerprint"] = rewrite_fingerprint
     manifest["asset_generations"] = generations
     manifest["local_build_assets"] = True

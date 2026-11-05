@@ -6,16 +6,19 @@ import posixpath
 import re
 from pathlib import Path
 
+from .artifact_index import ArtifactIndex, content_digests
+
 ASSET_SUFFIXES = {".js", ".css", ".woff", ".woff2", ".ttf", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".avif", ".ico"}
 ASSET_TOKEN_RE = re.compile(r'''["'`(]([^"'`()\s<>]+)["'`)]''')
 
-def copy_bundle_assets(dist_dir: Path, bundle_dir: Path, pages: list[Path]) -> set[Path]:
+def copy_bundle_assets(dist_dir: Path, bundle_dir: Path, pages: list[Path], *, artifact_index: ArtifactIndex | None = None) -> set[Path]:
     """Follow generated import/CSS references, including Astro hydration attributes.
 
     Assets are copied, never moved: the main site can use the same build too.
     Only files referenced by bundle pages and their dependencies enter R2.
     """
     root = dist_dir.resolve()
+    index = artifact_index or ArtifactIndex(bundle_dir)
     pending: list[tuple[str | None, str]] = [(None, page.relative_to(bundle_dir).as_posix()) for page in pages]
     copied: set[Path] = set()
     while pending:
@@ -40,8 +43,8 @@ def copy_bundle_assets(dist_dir: Path, bundle_dir: Path, pages: list[Path]) -> s
             copied.add(target)
             body = source.read_bytes()
             target.parent.mkdir(parents=True, exist_ok=True)
-            if not target.is_file() or target.read_bytes() != body:
-                target.write_bytes(body)
+            if not target.is_file() or index.describe(target)["sha256"] != content_digests(body)["sha256"]:
+                index.write(target, body)
             if source.suffix in {".js", ".css"}:
                 pending.append((body.decode("utf-8"), relative))
     return copied

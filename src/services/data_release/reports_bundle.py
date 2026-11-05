@@ -11,6 +11,7 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 
 from .bundle_assets import copy_bundle_assets as _copy_report_assets
+from .artifact_index import ArtifactIndex
 
 from .papers_bundle import (
     DEFAULT_MAIN_SITE_ORIGIN,
@@ -180,7 +181,8 @@ def _append_redirects(current: str, report_paths: list[str], reports_origin: str
     return existing + block
 
 
-def _manifest_for(directory: Path, reports_origin: str) -> dict:
+def _manifest_for(directory: Path, reports_origin: str, *, artifact_index: ArtifactIndex | None = None) -> dict:
+    index = artifact_index or ArtifactIndex(directory)
     files: list[dict[str, object]] = []
     for path in sorted(directory.rglob("*")):
         if not path.is_file() or path.name == MANIFEST_KEY:
@@ -191,10 +193,10 @@ def _manifest_for(directory: Path, reports_origin: str) -> dict:
         files.append({
             "path": relative,
             "key": key,
-            "bytes": path.stat().st_size,
-            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            **index.describe(path),
             "url": reports_origin.rstrip("/") + public_path,
         })
+    index.save()
     return {
         "schema_version": 1,
         "reports_origin": reports_origin.rstrip("/"),
@@ -216,6 +218,7 @@ def split_reports_bundle(
     if not dist_dir.is_dir():
         raise FileNotFoundError(f"Astro dist directory not found: {dist_dir}")
     reports_dir.mkdir(parents=True, exist_ok=True)
+    index = ArtifactIndex(reports_dir)
     manifest_path = reports_dir / MANIFEST_KEY
     try:
         previous_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -248,17 +251,16 @@ def split_reports_bundle(
             source_hash = hashlib.sha256(source_body).hexdigest()
             source_hashes[relative] = source_hash
             cached = previous.get(relative) or {}
-            digest = hashlib.sha256(destination.read_bytes()).hexdigest() if destination.is_file() else None
-            if cached.get("source_sha256") == source_hash and digest == cached.get("sha256"):
+            if (cached.get("source_sha256") == source_hash and destination.is_file()
+                    and index.describe(destination)["sha256"] == cached.get("sha256")):
                 pass
             else:
-                destination.write_text(
+                index.write(destination,
                     rewrite_reports_html(
                         source_body.decode("utf-8"),
                         main_origin=main_origin,
                         reports_origin=reports_origin,
-                    ),
-                    encoding="utf-8",
+                    ).encode("utf-8"),
                 )
                 rewritten_count += 1
             path.unlink()
@@ -286,7 +288,7 @@ def split_reports_bundle(
             moved.append(f"{REPORTS_HOST_DIR}/{name}")
 
     report_pages = [path for path in expected if path.suffix == ".html"]
-    assets = _copy_report_assets(dist_dir, reports_dir, report_pages)
+    assets = _copy_report_assets(dist_dir, reports_dir, report_pages, artifact_index=index)
     expected.update(assets)
     # Keep the preceding asset generation for cached HTML/open browser tabs.
     # The manifest makes these immutable files no-op uploads on later runs.
@@ -327,7 +329,7 @@ def split_reports_bundle(
         if stale.is_file() and stale not in expected and stale != manifest_path:
             stale.unlink()
 
-    manifest = _manifest_for(reports_dir, reports_origin)
+    manifest = _manifest_for(reports_dir, reports_origin, artifact_index=index)
     manifest["rewrite_fingerprint"] = fingerprint
     manifest["asset_generations"] = generations
     for item in manifest["files"]:

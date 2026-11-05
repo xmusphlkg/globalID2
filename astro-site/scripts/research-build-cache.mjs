@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
+import { fileHash, fileFingerprints, gitSourceIdentities, sourceIdentity } from './file-fingerprints.mjs';
 
 export const siteRoot = resolve(import.meta.dirname, '..');
 export const projectRoot = resolve(siteRoot, '..');
@@ -20,7 +21,6 @@ export const reportDiseaseTemplate = resolve(siteRoot, 'src/pages/countries/[cou
 const defaultMeasurementId = 'G-8P39XV52NC';
 
 const sha = value => createHash('sha256').update(value).digest('hex');
-const fileHash = path => sha(readFileSync(path));
 const readJson = path => JSON.parse(readFileSync(path, 'utf8'));
 
 function walk(directory) {
@@ -74,13 +74,15 @@ export function sharedFingerprint() {
     resolve(siteRoot, 'astro.config.mjs'),
     resolve(siteRoot, 'scripts', 'build-site.mjs'),
     resolve(siteRoot, 'scripts', 'research-build-cache.mjs'),
+    resolve(siteRoot, 'scripts', 'file-fingerprints.mjs'),
     resolve(siteRoot, '..', 'shared', 'report-figure-options.ts'),
   ].filter(existsSync).sort();
   const routes = readJson(resolve(siteRoot, 'src/data/research/routes.json'));
   const digest = createHash('sha256');
+  const identities = gitSourceIdentities(projectRoot);
   for (const path of files) {
     digest.update(relative(siteRoot, path));
-    digest.update(fileHash(path));
+    digest.update(sourceIdentity(path, identities, fileFingerprints));
   }
   digest.update(JSON.stringify(routes.diseases ?? []));
   digest.update(String(existsSync(resolve(siteRoot, 'src/data/situation/international/latest.json'))));
@@ -146,17 +148,17 @@ export function restoreReusablePages(plan, source = pageCacheRoot, target = dist
     for (const path of plan.snapshot.articles[slug].paths) {
       const destination = resolve(target, path);
       mkdirSync(dirname(destination), { recursive: true });
-      copyFileSync(resolve(source, path), destination);
+      fileFingerprints.copy(resolve(source, path), destination);
     }
   }
 }
 
-export function reusedAssetReferencesAvailable(plan) {
+export function reusedAssetReferencesAvailable(plan, outputRoot = distRoot) {
   for (const slug of plan.reused) {
     for (const path of plan.snapshot.articles[slug].paths.filter(path => path.endsWith('.html'))) {
-      const html = readFileSync(resolve(distRoot, path), 'utf8');
+      const html = readFileSync(resolve(outputRoot, path), 'utf8');
       for (const match of html.matchAll(/\/_astro\/([A-Za-z0-9._/-]+)/g)) {
-        if (!existsSync(resolve(distRoot, '_astro', match[1]))) return false;
+        if (!existsSync(resolve(outputRoot, '_astro', match[1]))) return false;
       }
     }
   }
@@ -197,7 +199,7 @@ export function finalizeResearchSnapshot(snapshot, {
     for (const path of article.paths) {
       const target = resolve(pageCache, path);
       mkdirSync(dirname(target), { recursive: true });
-      copyFileSync(resolve(outputRoot, path), target);
+      fileFingerprints.copy(resolve(outputRoot, path), target);
       keep.add(target);
     }
   }

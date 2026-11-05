@@ -4,6 +4,11 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
+### Changed
+
+- Source and page dependency checks reuse Git object identities and persistent local file fingerprints. Isolated report builds reuse unchanged report bundles and recover missing cached assets with a full rebuild.
+- Papers/Reports publication reuses build-time checksum receipts and remote object metadata, avoiding local body reads for unchanged files while preserving interrupted-upload recovery and checksum validation for changed files.
+
 ### Added
 
 - Subscription preferences can be managed through short-lived email links, including list-level pause and resume and an all-lists unsubscribe. Published report, Research Radar, and reviewed official-notice updates have opt-in dispatchers with durable outboxes and scheduled reconciliation.
