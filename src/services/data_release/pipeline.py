@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -405,71 +404,14 @@ async def _execute_release_task(
                 runtime.root_dir / "exports/site-downloads/manifest.json",
             ], identity=release_identity)
 
-        # Complete every local, side-effect-free release gate before publishing to
-        # remote repositories. A failed site build must never leave downloads and
-        # raw archives ahead of the production site.
-        await runtime.task_manager.update_task_progress(task.task_uuid, 45)
-        await service._run_logged_command(
-            task.task_uuid,
-            title="Build Astro Site",
-            cmd=["npm", "run", "build"],
-            cwd=runtime.astro_dir,
-            env={
-                # The full static catalogue can exceed Node's default ~4 GiB old
-                # space on the production worker. Keep the build within its
-                # 14 GiB cgroup while giving Astro enough room to finish.
-                "NODE_OPTIONS": "--max-old-space-size=6144",
-                "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
-                "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
-                "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
-                "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],
-                "PUBLIC_GIDS_DEPLOY_BRANCH": release_identity["deployment_branch"],
-                "PUBLIC_GIDS_BUILT_AT": release_identity["built_at"],
-            },
-            metadata={"event": "astro_build", "release_job_id": job.job_id},
-            timeout_seconds=runtime.astro_build_timeout_seconds,
+        from .build_stage import build_release_site
+
+        release_identity = await build_release_site(
+            service=service, task=task, runtime=runtime, job=job, python_path=python_path,
+            git_env=git_env, release_identity=release_identity,
+            r2_papers_enabled=r2_papers_enabled, r2_reports_enabled=r2_reports_enabled,
+            built_site_digest=_built_site_digest,
         )
-        await service._run_logged_command(
-            task.task_uuid,
-            title="Validate Situation Release Gate",
-            cmd=service._validate_situation_release_command(python_path=python_path),
-            cwd=runtime.root_dir,
-            env=git_env,
-            metadata={"event": "situation_release_gate", "release_job_id": job.job_id},
-            timeout_seconds=120,
-        )
-        if job.include_cloudflare_deploy or r2_papers_enabled or r2_reports_enabled:
-            # Move long-tail research pages out of the Pages upload set before the
-            # deployable digest is computed. Local npm builds keep a full dist.
-            await service._run_logged_command(
-                task.task_uuid,
-                title="Split Papers Bundle",
-                cmd=service._split_papers_bundle_command(python_path=python_path),
-                cwd=runtime.root_dir,
-                env=git_env,
-                metadata={"event": "split_papers_bundle", "release_job_id": job.job_id},
-                timeout_seconds=1800,
-            )
-        if job.include_cloudflare_deploy or r2_reports_enabled:
-            await service._run_logged_command(
-                task.task_uuid,
-                title="Split Reports Bundle",
-                cmd=service._split_reports_bundle_command(python_path=python_path),
-                cwd=runtime.root_dir,
-                env=git_env,
-                metadata={"event": "split_reports_bundle", "release_job_id": job.job_id},
-                timeout_seconds=1800,
-            )
-        if job.include_cloudflare_deploy:
-            # The public manifest identifies these exact bytes as well as the
-            # source revision. A retry may rebuild different facts at the same
-            # revision and must not verify an earlier production manifest.
-            release_identity = {
-                **release_identity,
-                "build_digest": await asyncio.to_thread(
-                    _built_site_digest, runtime.astro_dir / "dist"
-                ),
-            }
     if needs_projection and not projection_manifest.is_file():
         raise RuntimeError("Data release is missing its frozen publication projection")
     release_manifest = service._write_site_release_manifest(release_identity)
@@ -505,144 +447,16 @@ async def _execute_release_task(
             papers_origin=str(service._config().r2_papers_public_base_url or "https://papers.globalinfectiousdisease.com").rstrip("/"),
         )
 
-    repository_publications: list[tuple[str, Awaitable[None]]] = []
-    if job.include_git_push and not literature_only and not code_only:
-        repository_publications.append(
-            (
-                "direct_downloads",
-                service._run_logged_command(
-                    task.task_uuid,
-                    title="Publish Partitioned Data Downloads",
-                    cmd=service._publish_download_repo_command(
-                        python_path=python_path,
-                        repo_url=download_repo_url,
-                        commit_message=publish_commit_message,
-                        branch=branch,
-                    ),
-                    cwd=runtime.root_dir,
-                    env=git_env,
-                    metadata={
-                        "event": "github_direct_download_publish",
-                        "release_job_id": job.job_id,
-                        "branch": branch,
-                    },
-                    timeout_seconds=max(
-                        runtime.download_publish_timeout_seconds,
-                        DOWNLOAD_GIT_PUBLISH_TIMEOUT_SECONDS,
-                    ),
-                ),
-            )
-        )
-    else:
-        await runtime.task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="info",
-            title="Direct Download Publish Skipped",
-            content=(
-                "Literature-triggered release: existing GitHub download files remain published."
-                if literature_only
-                else "The validated CSV/JSON/XLSX partitions remain local for this run."
-            ),
-            content_type="text",
-            metadata={
-                "event": "github_direct_download_publish_skipped",
-                "release_job_id": job.job_id,
-            },
-        )
+    from .repository_publishers import prepare_repository_publications
 
-    if r2_papers_enabled:
-        r2_env = {
-            **git_env,
-            "CLOUDFLARE_ACCOUNT_ID": service._cloudflare_account_id(),
-            # Fallback when no R2 key pair is configured: the publisher derives
-            # S3 credentials from this token.
-            "CLOUDFLARE_API_TOKEN": service._cloudflare_api_token(),
-            "R2_PAPERS_BUCKET": str(
-                service._config().r2_papers_bucket or "globalid-papers"
-            ),
-            "R2_PAPERS_PUBLIC_BASE_URL": str(
-                service._config().r2_papers_public_base_url
-                or "https://papers.globalinfectiousdisease.com"
-            ),
-            "R2_ACCESS_KEY_ID": str(
-                service._config().r2_access_key_id or ""
-            ),
-            "R2_SECRET_ACCESS_KEY": str(
-                service._config().r2_secret_access_key or ""
-            ),
-            "R2_ENDPOINT_URL": str(
-                service._config().r2_endpoint_url or ""
-            ),
-            "R2_ACCOUNT_ID": str(
-                service._config().r2_account_id
-                or service._cloudflare_account_id()
-                or ""
-            ),
-        }
-        repository_publications.append(
-            (
-                "r2_papers",
-                service._run_logged_command(
-                    task.task_uuid,
-                    title="Publish Papers Bundle to R2",
-                    cmd=service._publish_papers_r2_command(python_path=python_path),
-                    cwd=runtime.root_dir,
-                    env=r2_env,
-                    metadata={
-                        "event": "r2_papers_publish",
-                        "release_job_id": job.job_id,
-                    },
-                    timeout_seconds=runtime.download_publish_timeout_seconds,
-                ),
-            )
-        )
-    else:
-        await runtime.task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="info",
-            title="Papers R2 Publish Skipped",
-            content="R2 papers publication is disabled for this release job.",
-            content_type="text",
-            metadata={
-                "event": "r2_papers_publish_skipped",
-                "release_job_id": job.job_id,
-            },
-        )
-
-    if r2_reports_enabled:
-        reports_env = {
-            **git_env,
-            "CLOUDFLARE_ACCOUNT_ID": service._cloudflare_account_id(),
-            "CLOUDFLARE_API_TOKEN": service._cloudflare_api_token(),
-            "R2_REPORTS_BUCKET": str(service._config().r2_reports_bucket or "globalid-reports"),
-            "R2_REPORTS_PUBLIC_BASE_URL": str(service._config().r2_reports_public_base_url or "https://reports.globalinfectiousdisease.com"),
-            "R2_ACCESS_KEY_ID": str(service._config().r2_access_key_id or ""),
-            "R2_SECRET_ACCESS_KEY": str(service._config().r2_secret_access_key or ""),
-            "R2_ENDPOINT_URL": str(service._config().r2_endpoint_url or ""),
-            "R2_ACCOUNT_ID": str(service._config().r2_account_id or service._cloudflare_account_id() or ""),
-        }
-        repository_publications.append((
-            "r2_reports",
-            service._run_logged_command(
-                task.task_uuid,
-                title="Publish Reports Bundle to R2",
-                cmd=service._publish_reports_r2_command(python_path=python_path),
-                cwd=runtime.root_dir,
-                env=reports_env,
-                metadata={"event": "r2_reports_publish", "release_job_id": job.job_id},
-                timeout_seconds=runtime.download_publish_timeout_seconds,
-            ),
-        ))
-    else:
-        await runtime.task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="info",
-            title="Reports R2 Publish Skipped",
-            content="R2 reports publication is disabled for this release job.",
-            content_type="text",
-            metadata={"event": "r2_reports_publish_skipped", "release_job_id": job.job_id},
-        )
-
+    repository_publications = await prepare_repository_publications(
+        service=service, task=task, runtime=runtime, job=job, python_path=python_path,
+        git_env=git_env, branch=branch, download_repo_url=download_repo_url,
+        publish_commit_message=publish_commit_message,
+        download_git_timeout_seconds=DOWNLOAD_GIT_PUBLISH_TIMEOUT_SECONDS,
+        literature_only=literature_only, code_only=code_only,
+        r2_papers_enabled=r2_papers_enabled, r2_reports_enabled=r2_reports_enabled,
+    )
     completed_publications = await _run_repository_publications(repository_publications)
     raw_archive_published = "raw_archive" in completed_publications
     downloads_published = "direct_downloads" in completed_publications
@@ -669,104 +483,15 @@ async def _execute_release_task(
     await runtime.task_manager.update_task_progress(task.task_uuid, 88)
 
     if job.include_cloudflare_deploy:
-        if not deployment_branch:
-            raise RuntimeError("Cloudflare production branch could not be resolved.")
-        artifact_digest = release_identity["build_digest"]
-        deploy_checkpoint = dict(release_checkpoints.get("cloudflare_deploy") or {})
-        if (
-            deploy_checkpoint.get("release_id") == release_identity["release_id"]
-            and deploy_checkpoint.get("artifact_digest") == artifact_digest
-            and deploy_checkpoint.get("project_name") == project_name
-            and deploy_checkpoint.get("account_id") == service._cloudflare_account_id()
-            and deploy_checkpoint.get("deployment_branch") == deployment_branch
-            and await asyncio.to_thread(stage_receipts.is_current_publication, release_identity)
-        ):
-            await runtime.task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="info",
-                title="Cloudflare Deploy Reused",
-                content=(
-                    "The prior attempt completed the Cloudflare deploy command for "
-                    f"{release_identity['release_id']} with identical build content; "
-                    "reusing that successful deployment."
-                ),
-                content_type="text",
-                metadata={
-                    "event": "cloudflare_pages_deploy_reused",
-                    "release_job_id": job.job_id,
-                    "release_id": release_identity["release_id"],
-                },
-            )
-            await asyncio.to_thread(
-                stage_receipts.mark_published, release_identity,
-                data_paths=[runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data"],
-            )
-        else:
-            await service._run_logged_command(
-                task.task_uuid,
-                title="Deploy Cloudflare Pages",
-                cmd=service._cloudflare_deploy_command(
-                    project_name=project_name,
-                    branch=deployment_branch,
-                    source_commit=release_identity["source_commit"],
-                    commit_message=publish_commit_message,
-                    commit_dirty=release_identity["commit_dirty"],
-                ),
-                cwd=runtime.astro_dir,
-                env={
-                    "CI": "1",
-                    "CLOUDFLARE_API_TOKEN": service._cloudflare_api_token(),
-                    "CLOUDFLARE_ACCOUNT_ID": service._cloudflare_account_id(),
-                },
-                metadata={
-                    "event": "cloudflare_pages_deploy",
-                    "release_job_id": job.job_id,
-                    "release_id": release_identity["release_id"],
-                    "deployment_branch": deployment_branch,
-                },
-                timeout_seconds=runtime.cloudflare_deploy_timeout_seconds,
-            )
-            # Record external success before any database checkpoint can fail.
-            await asyncio.to_thread(
-                stage_receipts.mark_published, release_identity,
-                data_paths=[runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data"],
-            )
-            # Persist the successful deploy before the final DB transaction.
-            # Reuse it only if rebuilt bytes still match. Facts may change, so
-            # release_id alone must never authorize reusing an older deploy.
-            await service._record_release_checkpoint(
-                task.task_uuid,
-                "cloudflare_deploy",
-                {
-                    "release_id": release_identity["release_id"],
-                    "source_commit": release_identity["source_commit"],
-                    "deployment_branch": deployment_branch,
-                    "artifact_digest": artifact_digest,
-                    "project_name": project_name,
-                    "account_id": service._cloudflare_account_id(),
-                },
-            )
-        cloudflare_deployment = {
-            "release_id": release_identity["release_id"],
-            "status": "deploy_command_succeeded",
-            "verification": "skipped",
-        }
-        pages_deployed = True
-        # Keep the exact verified Pages artifact for the next shared-asset
-        # compatibility deploy. Snapshot failure must not undo a live release.
-        try:
-            from .shared_assets import retain_verified_snapshot
+        from .cloudflare_deploy import deploy_cloudflare_site
 
-            await asyncio.to_thread(
-                retain_verified_snapshot,
-                runtime.astro_dir / "dist",
-                runtime.root_dir / "exports" / "verified-pages-snapshot",
-                release_identity,
-            )
-        except Exception:
-            logging.getLogger(__name__).exception(
-                "Could not retain the verified Pages snapshot; future compatibility deployments will fail closed"
-            )
+        cloudflare_deployment = await deploy_cloudflare_site(
+            service=service, task=task, runtime=runtime, job=job,
+            stage_receipts=stage_receipts, release_identity=release_identity,
+            release_checkpoints=release_checkpoints, project_name=project_name,
+            deployment_branch=deployment_branch, publish_commit_message=publish_commit_message,
+        )
+        pages_deployed = True
         # Research delivery is explicitly activated with a start week and
         # only runs after the exact built release is visible on the public site.
         # The outbox stores public content before any Worker request, so a

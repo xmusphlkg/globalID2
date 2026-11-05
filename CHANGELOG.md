@@ -6,6 +6,7 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Changed
 
+- Split download projection and encoding, research visualizations and integrity alerts, and release build/deployment stages into focused modules while retaining existing entry points. Added a reproducible large-script audit.
 - Surveillance publication records semantic observation changes and coalesces them into bounded country batches (`DATA_RELEASE__BATCH_MAX_COUNTRIES`, default 8), with durable continuation. Legacy scopes remain conservative and atomic.
 - Download generation reuses existing split windows before constructing XLSX files. Page caches follow route import dependencies, with stable fingerprints across staging and committing unchanged content.
 - Raw-source archival runs as an independent low-priority task. Publication retries reuse validated in-place data/build stages, and report input validation runs before expensive exports.

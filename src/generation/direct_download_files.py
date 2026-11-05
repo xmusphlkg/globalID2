@@ -2,186 +2,68 @@
 
 from __future__ import annotations
 
-import csv
 import copy
-from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
-from dataclasses import dataclass
-from datetime import date, datetime
 import hashlib
-from io import BytesIO, StringIO
 import json
 import multiprocessing
 import os
-import re
-from pathlib import Path
 import shutil
 import subprocess
 import time
-from typing import Any
-from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
+from datetime import date
+from pathlib import Path
 
-from openpyxl import Workbook
-
-from src.services.disease_series_policy import is_case_count_series
-from src.services import disease_series_policy
-from src.generation.site_data_writer import _write_if_changed
-
-
-DOWNLOAD_FIELDS = [
-    "dataset_kind",
-    "dataset_id",
-    "dataset_slug",
-    "dataset_name",
-    "record_kind",
-    "country_code",
-    "country_name",
-    "disease_id",
-    "disease_name_en",
-    "disease_name_zh",
-    "category",
-    "date",
-    "year_month",
-    "value",
-    "cases",
-    "weekly_equiv_cases",
-    "deaths",
-    "incidence_rate_per_100k",
-    "incidence_rate_source",
-    "mortality_rate",
-    "series_code",
-    "source_series_code",
-    "source_system",
-    "source_label",
-    "metric_type",
-    "reporting_basis",
-    "temporal_granularity",
-    "unit",
-    "geography_key",
-    "dimension_key",
-    "mapping_relation",
-    "comparability",
-    "aggregation_policy",
-    "availability_status",
-    "missing_value_policy",
-    "definition_version",
-    "case_definition",
-    "case_definition_uri",
-    "quality_status",
-    "is_selected_series",
-    "data_layer",
-    "projection_policy",
-    "coverage_status",
-    "loss_risk",
-    "selected_series_codes",
-    "available_series_count",
-    "provenance_note",
-    "primary_source_scope",
-    "primary_source_label",
-    "primary_source_url",
-    "primary_source_type",
-    "source_scopes",
-    "source_labels",
-    "source_urls",
-    "source_types",
-]
-
-SOURCE_SERIES_FIELDS = (
-    "source_series_code",
-    "source_system",
-    "source_label",
-    "metric_type",
-    "reporting_basis",
-    "temporal_granularity",
-    "unit",
-    "geography_key",
-    "dimension_key",
-    "mapping_relation",
-    "comparability",
-    "aggregation_policy",
-    "availability_status",
-    "missing_value_policy",
-    "definition_version",
-    "case_definition",
-    "case_definition_uri",
+from src.generation.direct_download import (
+    disease_merge,
+    formats,
+    rows,
+    runtime,
+    windows,
 )
+from src.generation.direct_download.disease_merge import (
+    _merge_existing_disease_rows,
+    _read_disease_baseline_json,  # noqa: F401 - compatibility re-export
+)
+from src.generation.direct_download.formats import (
+    _XLSX_TIMESTAMP,  # noqa: F401 - compatibility re-export
+    DOWNLOAD_FIELDS,
+    _csv_bytes,
+    _json_bytes,
+    _xlsx_bytes,
+    _xlsx_cell,  # noqa: F401 - compatibility re-export
+)
+from src.generation.direct_download.rows import (
+    SOURCE_SERIES_FIELDS,  # noqa: F401 - compatibility re-export
+    _projection_provenance_columns,  # noqa: F401 - compatibility re-export
+    _require_lossless_download_series,  # noqa: F401 - compatibility re-export
+    _sort_rows,  # noqa: F401 - compatibility re-export
+    _source_columns,  # noqa: F401 - compatibility re-export
+    _source_observation_rows,  # noqa: F401 - compatibility re-export
+    build_country_download_rows,
+    build_disease_download_rows,
+)
+from src.generation.direct_download.runtime import (
+    _default_export_workers,
+    _read_cgroup_memory_limit_bytes,
+)
+from src.generation.direct_download.windows import (
+    BRIDGE_WINDOW_END,  # noqa: F401 - compatibility re-export
+    BRIDGE_WINDOW_START,  # noqa: F401 - compatibility re-export
+    ROLLING_WINDOW_START,
+    ROLLING_WINDOW_YEARS,  # noqa: F401 - compatibility re-export
+    SPECIAL_WINDOW_END,  # noqa: F401 - compatibility re-export
+    SPECIAL_WINDOW_START,  # noqa: F401 - compatibility re-export
+    PartitionSpec,
+    _window_for_year,  # noqa: F401 - compatibility re-export
+    partition_rows,
+)
+from src.generation.site_data_writer import _write_if_changed
+from src.services import disease_series_policy
 
 PUBLIC_FORMATS = ("csv", "json", "xlsx")
 GITHUB_MAX_FILE_BYTES = 100 * 1024 * 1024
 DEFAULT_TARGET_FILE_BYTES = 90 * 1024 * 1024
-SPECIAL_WINDOW_START = 2020
-SPECIAL_WINDOW_END = 2025
-BRIDGE_WINDOW_START = 2026
-BRIDGE_WINDOW_END = 2029
-ROLLING_WINDOW_START = 2030
-ROLLING_WINDOW_YEARS = 5
-_XLSX_TIMESTAMP = (2000, 1, 1, 0, 0, 0)
-
-
-def _read_cgroup_memory_limit_bytes(
-    *,
-    cgroup_root: Path | None = None,
-    membership_path: Path | None = None,
-) -> int | None:
-    """Return the tightest cgroup memory guardrail for this process.
-
-    A systemd service usually runs below a child cgroup, while the cgroup v2
-    mount root remains unlimited.  Reading only ``/sys/fs/cgroup/memory.*``
-    therefore misses the service's actual ``memory.high`` limit and can make
-    a memory-heavy export choose too many workers.
-    """
-    cgroup_root = cgroup_root or Path("/sys/fs/cgroup")
-    membership_path = membership_path or Path("/proc/self/cgroup")
-    roots = [cgroup_root]
-    try:
-        for line in membership_path.read_text(encoding="utf-8").splitlines():
-            hierarchy, controllers, relative_path = line.split(":", 2)
-            if hierarchy != "0" or controllers:
-                continue
-            normalized = relative_path.strip().lstrip("/")
-            if normalized:
-                roots.insert(0, cgroup_root / normalized)
-            break
-    except (OSError, ValueError):
-        pass
-
-    candidates = tuple(
-        root / setting
-        for root in roots
-        for setting in ("memory.high", "memory.max")
-    )
-    values: list[int] = []
-    for path in candidates:
-        try:
-            raw = path.read_text(encoding="utf-8").strip()
-        except OSError:
-            continue
-        if not raw or raw == "max":
-            continue
-        try:
-            values.append(int(raw))
-        except ValueError:
-            continue
-    return min(values) if values else None
-
-
-def _default_export_workers(cpu_count: int | None, memory_limit_bytes: int | None) -> int:
-    """Scale partition workers by CPU and the cgroup memory guardrail.
-
-    Unknown memory stays at 4. A known limit keeps 1 worker through 4 GiB and
-    2 through 8 GiB. Above that, add one worker per 2 GiB, capped at 8, so a
-    16 GiB worker cgroup uses 6 cores while the parent still holds the curves.
-    """
-    cpus = max(1, cpu_count or 1)
-    if not memory_limit_bytes:
-        return min(4, cpus)
-
-    gib = 1024 * 1024 * 1024
-    if memory_limit_bytes <= 4 * gib:
-        return 1
-    if memory_limit_bytes <= 8 * gib:
-        return min(2, cpus)
-    grown = 2 + (memory_limit_bytes - 8 * gib) // (2 * gib)
-    return min(cpus, grown, 8)
 
 
 DEFAULT_EXPORT_WORKERS = _default_export_workers(os.cpu_count(), _read_cgroup_memory_limit_bytes())
@@ -190,7 +72,11 @@ DEFAULT_EXPORT_WORKERS = _default_export_workers(os.cpu_count(), _read_cgroup_me
 def _projection_code_sha256() -> str:
     """Invalidate dataset reuse whenever download projection rules change."""
     digest = hashlib.sha256()
-    for source in (Path(__file__), Path(disease_series_policy.__file__)):
+    for source in (
+        Path(__file__),
+        Path(disease_series_policy.__file__),
+        *(Path(module.__file__) for module in (rows, windows, disease_merge, runtime, formats)),
+    ):
         digest.update(source.read_bytes())
     return digest.hexdigest()
 
@@ -293,17 +179,6 @@ def _process_pool_context() -> multiprocessing.context.BaseContext:
         return multiprocessing.get_context()
 
 
-@dataclass(frozen=True)
-class PartitionSpec:
-    """One stable calendar window used as a public file name."""
-
-    key: str
-    start: date
-    end: date
-    label: str
-    is_current: bool = False
-
-
 def _download_url(base_url: str, relative_path: str) -> str:
     return f"{base_url.rstrip('/')}/{relative_path.lstrip('/')}"
 
@@ -320,355 +195,6 @@ def _file_sha256(path: Path) -> str:
         while chunk := source.read(1024 * 1024):
             digest.update(chunk)
     return digest.hexdigest()
-
-
-def _source_columns(source_info: dict) -> dict:
-    sources = source_info.get("sources") or []
-    return {
-        "primary_source_scope": source_info.get("primary_scope"),
-        "primary_source_label": source_info.get("primary_label"),
-        "primary_source_url": source_info.get("primary_url"),
-        "primary_source_type": source_info.get("primary_type"),
-        "source_scopes": "; ".join(
-            source.get("scope") or "" for source in sources if source.get("scope")
-        ),
-        "source_labels": "; ".join(
-            source.get("label") or "" for source in sources if source.get("label")
-        ),
-        "source_urls": "; ".join(
-            source.get("url") or "" for source in sources if source.get("url")
-        ),
-        "source_types": "; ".join(
-            source.get("type") or "" for source in sources if source.get("type")
-        ),
-    }
-
-
-def _projection_provenance_columns(
-    series: dict,
-    source_series: dict | None = None,
-) -> dict:
-    selected_codes = [
-        str(code) for code in series.get("selected_series_codes") or []
-    ]
-    data_provenance = series.get("data_provenance") or {}
-    columns = {
-        "series_code": (
-            source_series.get("series_code")
-            if source_series
-            else (selected_codes[0] if len(selected_codes) == 1 else None)
-        ),
-        "is_selected_series": (
-            source_series.get("series_code") in selected_codes
-            if source_series else None
-        ),
-        "data_layer": series.get("data_layer"),
-        "projection_policy": series.get("projection_policy"),
-        "coverage_status": series.get("coverage_status"),
-        "loss_risk": series.get("loss_risk"),
-        "selected_series_codes": "; ".join(selected_codes),
-        "available_series_count": series.get("available_series_count") or 0,
-        "provenance_note": data_provenance.get("note_en"),
-    }
-    if source_series:
-        columns.update(
-            {field: source_series.get(field) for field in SOURCE_SERIES_FIELDS}
-        )
-        quality_statuses = source_series.get("quality_statuses") or []
-        columns["quality_status"] = "; ".join(
-            str(value) for value in quality_statuses if value
-        )
-    else:
-        columns["temporal_granularity"] = series.get("period_granularity")
-    return columns
-
-
-def _source_observation_rows(
-    series: dict,
-    base_columns: dict,
-    source_columns: dict,
-) -> list[dict]:
-    rows: list[dict] = []
-    for source_series in series.get("source_series") or []:
-        dates = source_series.get("dates") or []
-        values = source_series.get("values") or []
-        granularity = str(source_series.get("temporal_granularity") or "").lower()
-        for index, value_date in enumerate(dates):
-            value = values[index] if index < len(values) else None
-            case_value = value if is_case_count_series(source_series) else None
-            rows.append(
-                {
-                    **base_columns,
-                    "record_kind": "source_series_observation",
-                    "date": value_date,
-                    "year_month": value_date[:7] if value_date else None,
-                    "value": value,
-                    "cases": case_value,
-                    "weekly_equiv_cases": (
-                        float(value)
-                        if granularity == "weekly" and case_value is not None
-                        else None
-                    ),
-                    "deaths": None,
-                    "incidence_rate_per_100k": None,
-                    "incidence_rate_source": None,
-                    "mortality_rate": None,
-                    **_projection_provenance_columns(series, source_series),
-                    **source_columns,
-                }
-            )
-    return rows
-
-
-def _require_lossless_download_series(series: dict) -> None:
-    if series.get("projection_policy") == "published_series":
-        raise ValueError(
-            "Public curve snapshots omit source provenance and cannot generate "
-            "lossless downloads; refresh the affected country from observations."
-        )
-
-
-def build_country_download_rows(country_data: dict, source_info: dict) -> list[dict]:
-    """Flatten a country projection without release-volatile fields."""
-
-    rows: list[dict] = []
-    source_columns = _source_columns(source_info)
-    dataset_id = str(country_data.get("country_code") or "").lower()
-    for series in (country_data.get("disease_series") or {}).values():
-        _require_lossless_download_series(series)
-        base_columns = {
-            "dataset_kind": "country",
-            "dataset_id": dataset_id,
-            "dataset_slug": dataset_id,
-            "dataset_name": country_data.get("country_name"),
-            "country_code": country_data.get("country_code"),
-            "country_name": country_data.get("country_name"),
-            "disease_id": series.get("disease_id"),
-            "disease_name_en": series.get("name_en"),
-            "disease_name_zh": series.get("name_zh"),
-            "category": series.get("category"),
-        }
-        rows.extend(
-            _source_observation_rows(series, base_columns, source_columns)
-        )
-        dates = series.get("dates") or []
-        cases = series.get("cases") or []
-        weekly_equiv = series.get("weekly_equiv_cases") or []
-        deaths = series.get("deaths") or []
-        incidence_rates = series.get("incidence_rates") or []
-        incidence_sources = series.get("incidence_sources") or []
-        mortality_rates = series.get("mortality_rates") or []
-        for index, value_date in enumerate(dates):
-            rows.append(
-                {
-                    **base_columns,
-                    "record_kind": "public_projection",
-                    "date": value_date,
-                    "year_month": value_date[:7] if value_date else None,
-                    "cases": cases[index] if index < len(cases) else 0,
-                    "value": cases[index] if index < len(cases) else 0,
-                    "weekly_equiv_cases": (
-                        weekly_equiv[index] if index < len(weekly_equiv) else None
-                    ),
-                    "deaths": deaths[index] if index < len(deaths) else 0,
-                    "incidence_rate_per_100k": (
-                        incidence_rates[index] if index < len(incidence_rates) else None
-                    ),
-                    "incidence_rate_source": (
-                        incidence_sources[index] if index < len(incidence_sources) else None
-                    ),
-                    "mortality_rate": (
-                        mortality_rates[index] if index < len(mortality_rates) else None
-                    ),
-                    **_projection_provenance_columns(series),
-                    **source_columns,
-                }
-            )
-    return _sort_rows(rows)
-
-
-def build_disease_download_rows(
-    disease_data: dict,
-    source_info_by_country: dict[str, dict],
-    country_name_by_code: dict[str, str],
-) -> list[dict]:
-    """Flatten a disease projection without release-volatile fields."""
-
-    rows: list[dict] = []
-    dataset_id = disease_data.get("disease_id")
-    for country_code, series in (disease_data.get("country_series") or {}).items():
-        try:
-            _require_lossless_download_series(series)
-        except ValueError as error:
-            raise ValueError(f"Disease {dataset_id}, country {country_code}: {error}") from error
-        dates = series.get("dates") or []
-        cases = series.get("cases") or []
-        weekly_equiv = series.get("weekly_equiv_cases") or []
-        deaths = series.get("deaths") or []
-        incidence_rates = series.get("incidence_rates") or []
-        incidence_sources = series.get("incidence_sources") or []
-        source_columns = _source_columns(
-            source_info_by_country.get(country_code, {"sources": []})
-        )
-        base_columns = {
-            "dataset_kind": "disease",
-            "dataset_id": dataset_id,
-            "dataset_slug": disease_data.get("slug"),
-            "dataset_name": disease_data.get("name_en"),
-            "country_code": country_code,
-            "country_name": country_name_by_code.get(country_code),
-            "disease_id": dataset_id,
-            "disease_name_en": disease_data.get("name_en"),
-            "disease_name_zh": disease_data.get("name_zh"),
-            "category": disease_data.get("category"),
-        }
-        rows.extend(
-            _source_observation_rows(series, base_columns, source_columns)
-        )
-        for index, value_date in enumerate(dates):
-            rows.append(
-                {
-                    **base_columns,
-                    "record_kind": "public_projection",
-                    "date": value_date,
-                    "year_month": value_date[:7] if value_date else None,
-                    "cases": cases[index] if index < len(cases) else 0,
-                    "value": cases[index] if index < len(cases) else 0,
-                    "weekly_equiv_cases": (
-                        weekly_equiv[index] if index < len(weekly_equiv) else None
-                    ),
-                    "deaths": deaths[index] if index < len(deaths) else 0,
-                    "incidence_rate_per_100k": (
-                        incidence_rates[index] if index < len(incidence_rates) else None
-                    ),
-                    "incidence_rate_source": (
-                        incidence_sources[index] if index < len(incidence_sources) else None
-                    ),
-                    "mortality_rate": None,
-                    **_projection_provenance_columns(series),
-                    **source_columns,
-                }
-            )
-    return _sort_rows(rows)
-
-
-def _sort_rows(rows: list[dict]) -> list[dict]:
-    return sorted(
-        rows,
-        key=lambda row: (
-            str(row.get("date") or ""),
-            str(row.get("country_code") or ""),
-            str(row.get("disease_id") or ""),
-            str(row.get("record_kind") or ""),
-            str(row.get("series_code") or ""),
-        ),
-    )
-
-
-def _window_for_year(year: int, latest_year: int) -> PartitionSpec:
-    if year < SPECIAL_WINDOW_START:
-        start_year = year - (year % 5)
-        end_year = start_year + 4
-    elif year <= SPECIAL_WINDOW_END:
-        start_year = SPECIAL_WINDOW_START
-        end_year = SPECIAL_WINDOW_END
-    elif year <= BRIDGE_WINDOW_END:
-        start_year = BRIDGE_WINDOW_START
-        end_year = BRIDGE_WINDOW_END
-    else:
-        start_year = year - (year % ROLLING_WINDOW_YEARS)
-        end_year = start_year + ROLLING_WINDOW_YEARS - 1
-
-    current = start_year <= latest_year <= end_year
-    label = f"{start_year}–now" if current else f"{start_year}–{end_year}"
-    return PartitionSpec(
-        key=f"{start_year}-{end_year}",
-        start=date(start_year, 1, 1),
-        end=date(end_year, 12, 31),
-        label=label,
-        is_current=current,
-    )
-
-
-def partition_rows(rows: list[dict]) -> list[tuple[PartitionSpec, list[dict]]]:
-    """Group rows into stable historical windows and one current window."""
-
-    valid_rows = [row for row in rows if str(row.get("date") or "")[:4].isdigit()]
-    if not valid_rows:
-        return []
-    latest_year = max(int(str(row["date"])[:4]) for row in valid_rows)
-    grouped: dict[str, tuple[PartitionSpec, list[dict]]] = {}
-    for row in valid_rows:
-        spec = _window_for_year(int(str(row["date"])[:4]), latest_year)
-        grouped.setdefault(spec.key, (spec, []))[1].append(row)
-    return sorted(grouped.values(), key=lambda item: item[0].start, reverse=True)
-
-
-def _csv_bytes(rows: list[dict]) -> bytes:
-    stream = StringIO(newline="")
-    writer = csv.DictWriter(stream, fieldnames=DOWNLOAD_FIELDS, lineterminator="\n")
-    writer.writeheader()
-    writer.writerows(
-        {field: row.get(field) for field in DOWNLOAD_FIELDS} for row in rows
-    )
-    return stream.getvalue().encode("utf-8")
-
-
-def _json_bytes(metadata: dict, rows: list[dict]) -> bytes:
-    return json.dumps(
-        {"metadata": metadata, "records": rows},
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
-
-
-def _xlsx_cell(value: Any) -> Any:
-    if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-    return value
-
-
-def _xlsx_bytes(metadata: dict, rows: list[dict]) -> bytes:
-    workbook = Workbook(write_only=True)
-    fixed = datetime(*_XLSX_TIMESTAMP)
-    workbook.properties.created = fixed
-    workbook.properties.modified = fixed
-    records_sheet = workbook.create_sheet("records")
-    records_sheet.append(DOWNLOAD_FIELDS)
-    for row in rows:
-        records_sheet.append([_xlsx_cell(row.get(field)) for field in DOWNLOAD_FIELDS])
-    metadata_sheet = workbook.create_sheet("metadata")
-    metadata_sheet.append(["field", "value"])
-    for key in sorted(metadata):
-        metadata_sheet.append([key, _xlsx_cell(metadata[key])])
-
-    original = BytesIO()
-    workbook.save(original)
-    original.seek(0)
-    canonical = BytesIO()
-    with ZipFile(original, "r") as source_zip, ZipFile(
-        canonical, "w", compression=ZIP_DEFLATED, compresslevel=9
-    ) as target_zip:
-        for name in sorted(source_zip.namelist()):
-            source_info = source_zip.getinfo(name)
-            target_info = ZipInfo(name, date_time=_XLSX_TIMESTAMP[:6])
-            target_info.compress_type = ZIP_DEFLATED
-            target_info.external_attr = source_info.external_attr
-            target_info.create_system = source_info.create_system
-            payload = source_zip.read(name)
-            if name == "docProps/core.xml":
-                # openpyxl.save_workbook overwrites properties.modified with
-                # wall-clock time. Normalize after save, not only before it.
-                payload, replacements = re.subn(
-                    rb"(<dcterms:modified\b[^>]*>)[^<]*(</dcterms:modified>)",
-                    lambda match: match[1] + fixed.isoformat().encode() + b"Z" + match[2],
-                    payload,
-                )
-                if replacements != 1:
-                    raise ValueError("XLSX core properties lack a unique modified timestamp")
-            target_zip.writestr(target_info, payload)
-    return canonical.getvalue()
 
 
 def _row_provenance_counts(rows: list[dict]) -> dict:
@@ -1072,87 +598,6 @@ def _build_country_parts_task(
     )
     result["source_info"] = country_export["source_info"]
     return result
-
-
-def _read_disease_baseline_json(output_dir: Path, relative: str, file: dict) -> bytes:
-    """Recover an interrupted in-place write only from matching local HEAD bytes."""
-    def matches(body: bytes) -> bool:
-        return len(body) == file.get("bytes") and _sha256(body) == file.get("sha256")
-
-    try:
-        body = (output_dir / relative).read_bytes()
-        if matches(body):
-            return body
-    except FileNotFoundError:
-        pass
-    if (output_dir / ".git").exists():
-        try:
-            result = subprocess.run(
-                ["git", "show", f"HEAD:{relative}"], cwd=output_dir,
-                check=True, capture_output=True, timeout=60,
-            )
-            if matches(result.stdout):
-                return result.stdout
-        except (OSError, subprocess.SubprocessError):
-            pass
-    raise ValueError("baseline JSON does not match its manifest checksum in the worktree or local Git HEAD")
-
-
-def _merge_existing_disease_rows(
-    disease_data: dict,
-    fresh_rows: list[dict],
-    *,
-    changed_country_codes: set[str],
-    country_names: dict[str, str],
-    output_dir: Path,
-    existing_parts: dict[str, dict],
-) -> tuple[list[dict], int]:
-    """Replace selected countries while retaining every existing unselected row.
-
-    Old public-only rows are retained as historical published content, never
-    reconstructed or relabelled as recovered source observations. Each JSON
-    body must match its manifest before any retained row is used.
-    """
-    disease_id = disease_data["disease_id"]
-    retained = []
-    legacy_count = 0
-    for part in existing_parts.values():
-        file = (part.get("files") or {}).get("json") or {}
-        relative = str(file.get("relative_path") or "")
-        expected = f"diseases/{str(disease_id).lower()}/{part.get('id')}.json"
-        if relative != expected or ".." in Path(relative).parts:
-            raise ValueError(f"Disease {disease_id}: invalid baseline partition path {relative!r}")
-        try:
-            body = _read_disease_baseline_json(output_dir, relative, file)
-            payload = json.loads(body)
-            del body
-            metadata = payload["metadata"]
-            if metadata.get("dataset_kind") != "disease" or metadata.get("dataset_id") != disease_id:
-                raise ValueError("baseline JSON belongs to another dataset")
-            records = payload["records"]
-            if len(records) != metadata.get("record_count"):
-                raise ValueError("baseline JSON record count is inconsistent")
-            for row in records:
-                code = row.get("country_code")
-                if code in changed_country_codes or code not in country_names:
-                    continue
-                if row.get("disease_id") != disease_id or row.get("record_kind") not in {"public_projection", "source_series_observation"}:
-                    raise ValueError(f"invalid retained row for country {code}")
-                # Preserve the published per-source fields. Only independently
-                # supplied display metadata is allowed to refresh these rows.
-                row.update({
-                    "dataset_slug": disease_data.get("slug"),
-                    "dataset_name": disease_data.get("name_en"),
-                    "disease_name_en": disease_data.get("name_en"),
-                    "disease_name_zh": disease_data.get("name_zh"),
-                    "category": disease_data.get("category"),
-                    "country_name": country_names[code],
-                })
-                retained.append(row)
-                legacy_count += int(row.get("record_kind") == "public_projection" and row.get("projection_policy") == "published_series")
-        except (OSError, ValueError, KeyError, TypeError) as error:
-            raise ValueError(f"Disease {disease_id}, partition {part.get('id')}: {error}") from error
-    return _sort_rows([*retained, *fresh_rows]), legacy_count
 
 
 def _build_disease_parts_task(
@@ -1670,7 +1115,7 @@ __all__ = [
     "PUBLIC_FORMATS",
     "PartitionSpec",
     "build_country_download_rows",
-    "build_disease_download_rows",
     "build_direct_download_files",
+    "build_disease_download_rows",
     "partition_rows",
 ]

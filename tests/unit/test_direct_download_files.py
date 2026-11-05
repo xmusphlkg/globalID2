@@ -1,20 +1,21 @@
 from __future__ import annotations
 
-import json
 import copy
+import json
 import subprocess
+from pathlib import Path
 
-from openpyxl import load_workbook
 import pytest
+from openpyxl import load_workbook
 
+from src.generation import direct_download_files
 from src.generation.direct_download_files import (
     PUBLIC_FORMATS,
     build_country_download_rows,
-    build_disease_download_rows,
     build_direct_download_files,
+    build_disease_download_rows,
     partition_rows,
 )
-from src.generation import direct_download_files
 from src.generation.site_data_views import (
     build_country_data,
     build_country_site_data,
@@ -22,11 +23,24 @@ from src.generation.site_data_views import (
 from src.generation.site_series_projection import apply_series_first_projection
 
 
+@pytest.mark.parametrize("module_name", ["rows", "windows", "disease_merge", "runtime", "formats"])
+def test_projection_fingerprint_tracks_extracted_module_changes(tmp_path, monkeypatch, module_name):
+    module = getattr(direct_download_files, module_name)
+    copied_source = tmp_path / f"{module_name}.py"
+    copied_source.write_bytes(Path(module.__file__).read_bytes())
+    monkeypatch.setattr(module, "__file__", str(copied_source))
+    before = direct_download_files._projection_code_sha256()
+    with copied_source.open("ab") as source:
+        source.write(b"\n# projection dependency changed\n")
+    assert direct_download_files._projection_code_sha256() != before
+
+
 def test_xlsx_is_identical_across_save_times(monkeypatch):
     import datetime
-    from types import SimpleNamespace
     from io import BytesIO
+    from types import SimpleNamespace
     from zipfile import ZipFile
+
     import openpyxl.writer.excel
 
     class Clock(datetime.datetime):
