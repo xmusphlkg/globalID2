@@ -19,6 +19,7 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Fixed
 
+- Cross-country download updates replace only selected countries and preserve other countries' verified published rows, including source observations and explicitly counted legacy projections. Disease input fingerprints now use country dependency summaries rather than serializing entire cross-country histories.
 - Control-panel publication preflight allows bounded Git/Cloudflare probes to finish instead of aborting after the ordinary 10-second read timeout.
 - Surveillance downloads retain complete observation provenance instead of replacing it with lossy public-curve snapshots. Missing untouched download artifacts fail explicitly rather than publishing broken manifest entries.
 - Report SEO titles retain full coverage dates so weekly reports in the same month have distinct titles in all three languages.

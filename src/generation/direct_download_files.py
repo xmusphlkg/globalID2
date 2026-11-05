@@ -497,7 +497,10 @@ def build_disease_download_rows(
     rows: list[dict] = []
     dataset_id = disease_data.get("disease_id")
     for country_code, series in (disease_data.get("country_series") or {}).items():
-        _require_lossless_download_series(series)
+        try:
+            _require_lossless_download_series(series)
+        except ValueError as error:
+            raise ValueError(f"Disease {dataset_id}, country {country_code}: {error}") from error
         dates = series.get("dates") or []
         cases = series.get("cases") or []
         weekly_equiv = series.get("weekly_equiv_cases") or []
@@ -1071,6 +1074,87 @@ def _build_country_parts_task(
     return result
 
 
+def _read_disease_baseline_json(output_dir: Path, relative: str, file: dict) -> bytes:
+    """Recover an interrupted in-place write only from matching local HEAD bytes."""
+    def matches(body: bytes) -> bool:
+        return len(body) == file.get("bytes") and _sha256(body) == file.get("sha256")
+
+    try:
+        body = (output_dir / relative).read_bytes()
+        if matches(body):
+            return body
+    except FileNotFoundError:
+        pass
+    if (output_dir / ".git").exists():
+        try:
+            result = subprocess.run(
+                ["git", "show", f"HEAD:{relative}"], cwd=output_dir,
+                check=True, capture_output=True, timeout=60,
+            )
+            if matches(result.stdout):
+                return result.stdout
+        except (OSError, subprocess.SubprocessError):
+            pass
+    raise ValueError("baseline JSON does not match its manifest checksum in the worktree or local Git HEAD")
+
+
+def _merge_existing_disease_rows(
+    disease_data: dict,
+    fresh_rows: list[dict],
+    *,
+    changed_country_codes: set[str],
+    country_names: dict[str, str],
+    output_dir: Path,
+    existing_parts: dict[str, dict],
+) -> tuple[list[dict], int]:
+    """Replace selected countries while retaining every existing unselected row.
+
+    Old public-only rows are retained as historical published content, never
+    reconstructed or relabelled as recovered source observations. Each JSON
+    body must match its manifest before any retained row is used.
+    """
+    disease_id = disease_data["disease_id"]
+    retained = []
+    legacy_count = 0
+    for part in existing_parts.values():
+        file = (part.get("files") or {}).get("json") or {}
+        relative = str(file.get("relative_path") or "")
+        expected = f"diseases/{str(disease_id).lower()}/{part.get('id')}.json"
+        if relative != expected or ".." in Path(relative).parts:
+            raise ValueError(f"Disease {disease_id}: invalid baseline partition path {relative!r}")
+        try:
+            body = _read_disease_baseline_json(output_dir, relative, file)
+            payload = json.loads(body)
+            del body
+            metadata = payload["metadata"]
+            if metadata.get("dataset_kind") != "disease" or metadata.get("dataset_id") != disease_id:
+                raise ValueError("baseline JSON belongs to another dataset")
+            records = payload["records"]
+            if len(records) != metadata.get("record_count"):
+                raise ValueError("baseline JSON record count is inconsistent")
+            for row in records:
+                code = row.get("country_code")
+                if code in changed_country_codes or code not in country_names:
+                    continue
+                if row.get("disease_id") != disease_id or row.get("record_kind") not in {"public_projection", "source_series_observation"}:
+                    raise ValueError(f"invalid retained row for country {code}")
+                # Preserve the published per-source fields. Only independently
+                # supplied display metadata is allowed to refresh these rows.
+                row.update({
+                    "dataset_slug": disease_data.get("slug"),
+                    "dataset_name": disease_data.get("name_en"),
+                    "disease_name_en": disease_data.get("name_en"),
+                    "disease_name_zh": disease_data.get("name_zh"),
+                    "category": disease_data.get("category"),
+                    "country_name": country_names[code],
+                })
+                retained.append(row)
+                legacy_count += int(row.get("record_kind") == "public_projection" and row.get("projection_policy") == "published_series")
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            raise ValueError(f"Disease {disease_id}, partition {part.get('id')}: {error}") from error
+    return _sort_rows([*retained, *fresh_rows]), legacy_count
+
+
 def _build_disease_parts_task(
     disease_export: dict,
     country_sources_by_code: dict[str, dict],
@@ -1080,6 +1164,7 @@ def _build_disease_parts_task(
     max_file_bytes: int,
     existing_parts: dict[str, dict],
     trusted_paths: set[str] | None = None,
+    changed_country_codes: set[str] | None = None,
 ) -> dict:
     did = disease_export["disease_id"]
     path_id = did.lower()
@@ -1092,11 +1177,23 @@ def _build_disease_parts_task(
         "slug": disease_data.get("slug"),
         "name": disease_data.get("name_en"),
     }
+    fresh_data = disease_data
+    if changed_country_codes is not None:
+        fresh_data = {**disease_data, "country_series": {
+            code: series for code, series in (disease_data.get("country_series") or {}).items()
+            if code in changed_country_codes
+        }}
     rows = build_disease_download_rows(
-        disease_data,
+        fresh_data,
         country_sources_by_code,
         country_names,
     )
+    legacy_count = 0
+    if changed_country_codes is not None:
+        rows, legacy_count = _merge_existing_disease_rows(
+            disease_data, rows, changed_country_codes=changed_country_codes,
+            country_names=country_names, output_dir=output_dir, existing_parts=existing_parts,
+        )
     result = _build_dataset_parts_task(
         kind="disease",
         dataset=dataset,
@@ -1107,11 +1204,35 @@ def _build_disease_parts_task(
         existing_parts=existing_parts,
         trusted_paths=trusted_paths,
     )
-    result["country_codes"] = sorted(
-        (disease_data.get("country_series") or {}).keys()
-    )
+    result["country_codes"] = sorted({row["country_code"] for row in rows})
     result["source_info"] = disease_data.get("source_info") or []
+    result["preserved_legacy_projection_rows"] = legacy_count
     return result
+
+
+def _disease_dependency_sha256(
+    item: dict, existing: dict, country_entries: dict, country_fingerprints: dict,
+    country_names: dict, country_sources: dict, *, projection_code: str, max_file_bytes: int,
+) -> str:
+    """Fingerprint country inputs, never the previous disease output itself."""
+    data = item["disease_data"]
+    codes = set((data.get("country_series") or {}).keys())
+    codes.update(str(country["code"]) for country in existing.get("countries", []) if country.get("code"))
+    codes &= set(country_names)
+    dependencies = {}
+    for code in sorted(codes):
+        entry = country_entries.get(code.lower()) or {}
+        fingerprint = country_fingerprints.get(code.lower()) or entry.get("input_sha256")
+        if not fingerprint:
+            fingerprint = {part.get("id"): {
+                "content_sha256": part.get("content_sha256"),
+                "files": {name: file.get("sha256") for name, file in (part.get("files") or {}).items()},
+            } for part in entry.get("parts") or []}
+        dependencies[code] = {"input": fingerprint, "name": country_names.get(code), "source_info": country_sources.get(code)}
+    return _input_sha256({
+        "contract": "disease-country-inputs-v1", "countries": dependencies,
+        "metadata": {key: data.get(key) for key in ("disease_id", "slug", "name_en", "name_zh", "category", "source_info")},
+    }, projection_code=projection_code, max_file_bytes=max_file_bytes)
 
 
 def build_direct_download_files(
@@ -1177,6 +1298,7 @@ def build_direct_download_files(
     verified_paths = set(trusted_paths)
     country_fingerprints: dict[str, str] = {}
     disease_fingerprints: dict[str, str] = {}
+    disease_dependencies: dict[str, str] = {}
     requested_country_codes = {str(code).strip().upper() for code in changed_country_codes or ()}
     requested_disease_ids = {str(disease_id).strip() for disease_id in changed_disease_ids or ()}
     selected_country_codes: set[str] = set()
@@ -1248,8 +1370,14 @@ def build_direct_download_files(
         if available:
             verified_paths.update(file["relative_path"] for part in existing["parts"] for file in part["files"].values())
         if changed_disease_ids is None or disease_id in requested_disease_ids or not available:
+            dependency = _disease_dependency_sha256(
+                item, existing, existing_country_entries, country_fingerprints,
+                country_names, context["country_sources_by_code"],
+                projection_code=projection_code, max_file_bytes=max_file_bytes,
+            )
+            disease_dependencies[disease_id] = dependency
             country_codes = (item["disease_data"].get("country_series") or {}).keys()
-            fingerprint = _input_sha256(
+            fingerprint = dependency if changed_country_codes is not None else _input_sha256(
                 {
                     "disease_data": item["disease_data"],
                     "country_sources": {code: context["country_sources_by_code"].get(code) for code in country_codes},
@@ -1259,7 +1387,8 @@ def build_direct_download_files(
                 max_file_bytes=max_file_bytes,
             )
             disease_fingerprints[disease_id] = fingerprint
-            if fingerprint != existing.get("input_sha256") or not available:
+            expected_fingerprint = existing.get("dependency_sha256") if changed_country_codes is not None else existing.get("input_sha256")
+            if fingerprint != expected_fingerprint or not available:
                 selected_disease_ids.add(disease_id)
         if index % 25 == 0 or index == len(disease_exports):
             print(
@@ -1317,6 +1446,24 @@ def build_direct_download_files(
                 else:
                     disease_export = item
                     previous_parts = existing_disease_parts.get(disease_export["disease_id"], {})
+                    if changed_country_codes is not None:
+                        # Avoid pickling historical curves into every worker.
+                        # Unselected rows come from verified published JSON.
+                        disease_data = disease_export["disease_data"]
+                        if not previous_parts:
+                            missing = sorted(code for code, series in (disease_data.get("country_series") or {}).items()
+                                             if code not in requested_country_codes and (series.get("dates") or series.get("source_series")))
+                            if missing:
+                                raise ValueError(
+                                    f"Disease {disease_export['disease_id']}, countries {', '.join(missing)}: "
+                                    "no published download baseline exists; refresh these country scopes before merging."
+                                )
+                        disease_export = {**disease_export, "disease_data": {
+                            **disease_data, "country_series": {
+                                code: series for code, series in (disease_data.get("country_series") or {}).items()
+                                if code in requested_country_codes
+                            },
+                        }}
                     future = executor.submit(
                         _build_disease_parts_task,
                         disease_export,
@@ -1329,6 +1476,7 @@ def build_direct_download_files(
                         {file["relative_path"] for part in previous_parts.values()
                          for file in part.get("files", {}).values()
                          if file.get("relative_path") in verified_paths},
+                        requested_country_codes if changed_country_codes is not None else None,
                     )
                 pending[future] = index
 
@@ -1434,6 +1582,7 @@ def build_direct_download_files(
         entry = dict(disease_entries_by_id[dataset["dataset_id"]])
         entry.update(
             {
+                "dependency_sha256": disease_dependencies.get(disease_id),
                 "input_sha256": disease_fingerprints.get(disease_id) or _input_sha256(
                     {
                         "disease_data": disease_export["disease_data"],
@@ -1479,6 +1628,7 @@ def build_direct_download_files(
         "generation": {
             "changed_files": changed_files,
             "removed_files": removed_files,
+            "preserved_legacy_projection_rows": sum(result.get("preserved_legacy_projection_rows", 0) for result in results_by_index.values()),
             "selected_datasets": task_count,
             "rebuilt_partitions": sum(result["rebuilt_partitions"] for result in results_by_index.values()),
             "reused_partitions": sum(result["reused_partitions"] for result in results_by_index.values())

@@ -25,6 +25,19 @@ an old public-curve snapshot cannot replace provenance in the download source.
 Missing files outside the selected refresh scope fail with the affected scope
 instead of silently preserving a broken manifest.
 
+Cross-country disease downloads replace only the selected countries' rows. They
+retain every other public country's rows from checksum-verified local download
+JSON; disabled countries are removed. Historical `published_series` rows remain
+explicitly counted as legacy projections, not relabelled as recovered source
+observations. Only freshly generated rows must pass the lossless-input gate.
+Disease input fingerprints combine country input summaries and display metadata
+instead of reserializing the entire cross-country history. Affected local JSON
+partitions still need to be read for verification and merging.
+If an interrupted generation replaced a partition before updating its manifest,
+the merger can read that partition from the download repository's local Git
+`HEAD`, but only when its size and SHA-256 exactly match the manifest. It neither
+fetches remote files nor overwrites the working tree during recovery.
+
 In-place stage receipts live in `exports/release-stages/`. A retry checks source,
 configuration, destinations, selected IDs, the successful release baseline, and
 output file inventories. Successful export survives a later template build failure;
