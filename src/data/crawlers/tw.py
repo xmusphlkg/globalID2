@@ -138,7 +138,7 @@ def parse_monthly_export(payload: bytes, *, disease: TWDiseaseSource, months, da
     output = []
     for index in range(1, len(month_numbers)):
         year = years[index] if index < len(years) else ""
-        if re.fullmatch(r"20\d{2}", year):
+        if re.fullmatch(r"(?:19|20)\d{2}", year):
             current_year = int(year)
         month = _parse_int(month_numbers[index])
         if current_year is None or month is None or not 1 <= month <= 12:

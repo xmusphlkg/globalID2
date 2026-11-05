@@ -61,6 +61,7 @@ def organize(artifacts, *, updater, source, months=None, output_csv):
     labels = {row["DiseaseCode"]: row["RawDiseaseLabel"] for row in prior_rows if row.get("DiseaseCode")}
     live, cached = [], []
     export_groups = {}
+    rejected_exports = []
     for artifact in artifacts:
         if artifact.kind == "monthly_ods":
             export_groups.setdefault(artifact.metadata_["code"], []).append({"payload": read_artifact(artifact), "metadata": artifact.metadata_})
@@ -75,7 +76,15 @@ def organize(artifacts, *, updater, source, months=None, output_csv):
         (live if artifact.kind == "monthly_csv" else cached).extend(rows)
     for code, exports in export_groups.items():
         disease = TWDiseaseSource(code, exports[0]["metadata"]["name"], "", "")
-        live.extend(normalize_monthly_exports(exports, disease=disease))
+        try:
+            normalized = normalize_monthly_exports(exports, disease=disease)
+        except ValueError as exc:
+            # Reject the whole disease/population batch, retaining valid peers
+            # and explicitly marked cache coverage without inventing counts.
+            rejected_exports.append({"code": code, "reason": str(exc)})
+            logger.warning("[TW-NIDSS] Monthly export rejected | code={} error={}", code, exc)
+            continue
+        live.extend(normalized)
     live_rows = updater.parse_source_csv(normalized_csv(live)) if live else []
     if not live_rows:
         raise RuntimeError("TW live refresh produced no usable rows; cached data is not a successful refresh")
@@ -84,7 +93,7 @@ def organize(artifacts, *, updater, source, months=None, output_csv):
         is_open = row["Date"][:7] == today.strftime("%Y-%m")
         row["DatasetStatus"] = "provisional" if is_open else "closed_revisable"
         row["IsProvisional"] = "true" if is_open else "false"
-    prior = updater._filter_rows_for_months(prior_rows, requested) if updater._rows_cover_months(prior_rows, requested) else []
+    prior = updater._filter_rows_for_months(prior_rows, requested)
     # A richer old snapshot must not discard freshly fetched values merely
     # because a few disease exports are unavailable. Retain fallback coverage
     # while letting each live disease/month replace its own previous value.
@@ -104,5 +113,5 @@ def organize(artifacts, *, updater, source, months=None, output_csv):
     live_codes = {row["DiseaseCode"] for row in live_rows if row.get("DiseaseCode")}
     fallback_rows = [row for row in rows if row.get("SourceFreshness") == "cache_fallback"]
     missing_codes = sorted(expected_codes - live_codes)
-    audit = {"status": "partial" if fallback_rows or missing_codes else "fresh", "live_disease_codes": sorted(live_codes), "missing_live_disease_codes": missing_codes, "live_rows": len(live_keys), "fallback_rows": len(fallback_rows), "fallback_disease_dates": [{"code": row.get("DiseaseCode"), "date": row["Date"]} for row in fallback_rows]}
+    audit = {"status": "partial" if fallback_rows or missing_codes or rejected_exports else "fresh", "live_disease_codes": sorted(live_codes), "missing_live_disease_codes": missing_codes, "live_rows": len(live_keys), "fallback_rows": len(fallback_rows), "fallback_disease_dates": [{"code": row.get("DiseaseCode"), "date": row["Date"]} for row in fallback_rows], "rejected_exports": rejected_exports}
     return TWUpdateFetchResult(rows, updater._latest_row_date(rows), Path(output_csv), [f"[organize] live_rows={len(live_keys)} fallback_rows={len(fallback_rows)}"], source_audit=audit)

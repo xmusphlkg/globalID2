@@ -203,6 +203,30 @@ function countryDiseaseEntries(
     .flatMap(entry => localizedEntry(entry.path, entry.lastmod));
 }
 
+/** Reports builds must never load the multi-GB surveillance/research corpus. */
+export function buildReportsSitemapEntries({
+  meta,
+  reports,
+  loadReport,
+}: Pick<BuildSitemapEntriesOptions, 'meta' | 'reports' | 'loadReport'>): SitemapEntry[] {
+  const siteLastmod = normalizeSitemapDate(meta.generated_at);
+  const entries = localizedEntry('/reports/', siteLastmod);
+  const publishableReports = buildPublishableReports(reports, loadReport);
+  for (const country of reportArchiveCountries(publishableReports)) {
+    entries.push(...localizedEntry(`/countries/${country}/reports/`, siteLastmod));
+  }
+  for (const report of publishableReports) {
+    const lastmod = normalizeSitemapDate(report.summary.created_at)
+      ?? normalizeSitemapDate(report.detail.created_at)
+      ?? siteLastmod;
+    entries.push(...localizedEntry(`/countries/${report.country}/reports/${report.id}/`, lastmod));
+    for (const slug of report.diseaseSlugs) {
+      entries.push(...localizedEntry(`/countries/${report.country}/reports/${report.id}/${toSeoSlug(slug)}/`, lastmod));
+    }
+  }
+  return [...new Map(entries.map(entry => [entry.path, entry])).values()];
+}
+
 export function buildSitemapGroups({
   meta,
   diseases,
@@ -355,20 +379,7 @@ export function buildSitemapGroups({
     ));
   }
 
-  const publishableReports = buildPublishableReports(reports, loadReport);
-  groups.reports.push(...localizedEntry('/reports/', siteLastmod));
-  for (const country of reportArchiveCountries(publishableReports)) {
-    groups.reports.push(...localizedEntry(`/countries/${country}/reports/`, siteLastmod));
-  }
-  for (const report of publishableReports) {
-    const lastmod = normalizeSitemapDate(report.summary.created_at)
-      ?? normalizeSitemapDate(report.detail.created_at)
-      ?? siteLastmod;
-    groups.reports.push(...localizedEntry(`/countries/${report.country}/reports/${report.id}/`, lastmod));
-    for (const slug of report.diseaseSlugs) {
-      groups.reports.push(...localizedEntry(`/countries/${report.country}/reports/${report.id}/${toSeoSlug(slug)}/`, lastmod));
-    }
-  }
+  groups.reports = buildReportsSitemapEntries({ meta, reports, loadReport });
 
   for (const group of [...SITEMAP_GROUPS, PAPERS_SITEMAP_GROUP] as const) {
     const unique = new Map<string, SitemapEntry>();

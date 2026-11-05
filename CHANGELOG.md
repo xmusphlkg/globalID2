@@ -13,6 +13,15 @@ This file records release-level changes to the GIDS application and its data ope
 - Research Radar review now receives the catalogue's peer-review and integrity statuses and the summary's intended language. Existing holds are reconsidered once under the corrected review context, without bypassing evidence or peer-review gates.
 - Subscription changes now require confirmation without overwriting active preferences; confirmation and unsubscribe links resist automated link scanning, and queued delivery checks subscriber status before sending. Campaign claims, provider feedback and bounded retries reduce duplicate or unwanted email.
 
+## [0.17.4] - 2026-11-05
+
+### Fixed
+
+- Taiwan NIDSS monthly ODS imports now recognize pre-2000 years. Invalid disease exports are isolated and audited while valid peers continue; retained cached observations remain explicitly marked as fallback data.
+- Ingestion restores missing surveillance-series definitions from the validated local registry within the observation transaction. Existing mappings are preserved, and unknown definitions remain subject to the quality gate.
+- Report sitemaps build from report data only instead of loading the full surveillance and research corpus. Isolated report builds use the same 6 GiB Node heap allowance as the main site.
+- Report publication records each execution stage and applies the existing bounded automatic retry policy to transient R2 upload failures. Build, validation and credential failures remain terminal.
+
 ## [0.17.3] - 2026-11-04
 
 ### Changed

@@ -92,6 +92,17 @@ def test_classifier_keeps_preflight_syntax_and_credentials_terminal():
     assert credential.retryable is False
 
 
+@pytest.mark.parametrize("stage,message,expected", [
+    ("r2_reports_publish", "Connection reset by peer", True),
+    ("r2_reports_publish", "HTTP 503 Service unavailable", True),
+    ("r2_reports_publish", "HTTP 403 Forbidden", False),
+    ("reports_build", "JavaScript heap out of memory", False),
+    ("reports_bundle", "validation failed", False),
+])
+def test_reports_retry_is_limited_to_transient_upload_failures(stage, message, expected):
+    assert classify_release_failure(_command_error(message, stage=stage)).retryable is expected
+
+
 def test_classifier_allows_transient_cloudflare_preflight_diagnostic():
     failure = ReleasePreflightError(
         {

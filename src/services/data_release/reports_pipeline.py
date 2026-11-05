@@ -40,16 +40,16 @@ async def execute_reports_release(service, task, *, runtime):
         "R2_ENDPOINT_URL": str(config.r2_endpoint_url or ""),
         "R2_ACCOUNT_ID": str(config.r2_account_id or service._cloudflare_account_id() or ""),
     }
-    async def run(title, cmd, *, cwd=root, environment=None, timeout=1800):
+    async def run(title, cmd, *, stage_name, cwd=root, environment=None, timeout=1800):
         await service._run_logged_command(task.task_uuid, title=title, cmd=cmd, cwd=cwd,
-            env=environment or {}, metadata={"release_job_id": job_id, "reports_only": True},
+            env=environment or {}, metadata={"release_job_id": job_id, "reports_only": True, "event": stage_name},
             timeout_seconds=timeout)
 
     old_index_path = paths[0] / "index.json"
     old_index = json.loads(old_index_path.read_text()) if old_index_path.is_file() else []
     try:
         await runtime.task_manager.update_task_progress(task.task_uuid, 5)
-        await run("Export Reports Data", [str(python), "scripts/generate_site_data.py", "--reports-only"], timeout=runtime.generate_timeout_seconds)
+        await run("Export Reports Data", [str(python), "scripts/generate_site_data.py", "--reports-only"], stage_name="reports_export", timeout=runtime.generate_timeout_seconds)
         new_index = paths[0] / "index.json"
         if not new_index.is_file():
             raise RuntimeError("Reports export did not produce an index")
@@ -57,14 +57,14 @@ async def execute_reports_release(service, task, *, runtime):
             raise RuntimeError("Reports export became empty; refusing to replace a nonempty published report catalogue")
         await runtime.task_manager.update_task_progress(task.task_uuid, 25)
         await run("Build Reports Site", ["node", "scripts/build-reports.mjs"], cwd=astro,
-            environment={"GIDS_REPORTS_BUILD_OUTPUT": str(stage)}, timeout=runtime.astro_build_timeout_seconds)
+            stage_name="reports_build", environment={"GIDS_REPORTS_BUILD_OUTPUT": str(stage), "NODE_OPTIONS": "--max-old-space-size=6144"}, timeout=runtime.astro_build_timeout_seconds)
         await runtime.task_manager.update_task_progress(task.task_uuid, 55)
         await run("Split Reports Bundle", [str(python), "scripts/split_reports_bundle.py", "--dist-dir", str(stage),
             "--reports-dir", str(reports_dir), "--main-origin", str(config.main_site_origin or DEFAULT_MAIN_SITE_ORIGIN),
-            "--reports-origin", origin, "--skip-budget"])
+            "--reports-origin", origin, "--skip-budget"], stage_name="reports_bundle")
         await runtime.task_manager.update_task_progress(task.task_uuid, 70)
         await run("Publish Reports Bundle to R2", service._publish_reports_r2_command(python_path=python),
-            environment=env, timeout=runtime.download_publish_timeout_seconds)
+            stage_name="r2_reports_publish", environment=env, timeout=runtime.download_publish_timeout_seconds)
         from .report_subscription import dispatch_if_enabled
 
         report_subscription_dispatch = await dispatch_if_enabled(service, runtime, reports_origin=origin)

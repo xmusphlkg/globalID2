@@ -20,6 +20,7 @@ _EXTERNAL_RETRY_STAGES = frozenset(
         "raw_git_archive_publish",
         "github_direct_download_publish",
         "r2_papers_publish",
+        "r2_reports_publish",
         "subscription_options_sync",
         "research_digest_dispatch",
         "report_digest_dispatch",

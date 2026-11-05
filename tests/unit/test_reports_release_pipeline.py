@@ -62,4 +62,8 @@ async def test_reports_release_skips_public_verification_and_keeps_local_data(tm
         assert stored.output_data == result
         assert [title for title, _ in commands] == ["Export Reports Data", "Build Reports Site", "Split Reports Bundle", "Publish Reports Bundle to R2"]
         assert "--reports-only" in commands[0][1]["cmd"]
+        assert commands[1][1]["env"]["NODE_OPTIONS"] == "--max-old-space-size=6144"
+        assert [kwargs["metadata"]["event"] for _, kwargs in commands] == [
+            "reports_export", "reports_build", "reports_bundle", "r2_reports_publish",
+        ]
         assert all("pages" not in title.lower() for title, _ in commands)

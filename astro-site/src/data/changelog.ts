@@ -26,6 +26,41 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.17.4',
+    date: '2026-11-05',
+    titleEn: 'More reliable data refreshes and report publication',
+    titleZh: '数据更新与报告发布可靠性改进',
+    titleFr: 'Actualisation des données et publication des rapports plus fiables',
+    summaryEn: 'This maintenance update fixes historical data imports and reduces report publication failures, with automatic recovery for known recoverable conditions.',
+    summaryZh: '本次维护更新修复历史数据导入问题，减少报告发布失败，并对已知可恢复异常进行自动处理。',
+    summaryFr: 'Cette mise à jour corrige l’importation de données historiques et réduit les échecs de publication des rapports, avec une reprise automatique pour les incidents connus et récupérables.',
+    sections: [
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        labelFr: 'Corrections',
+        items: [
+          {
+            en: 'Taiwan historical imports now recognize years before 2000. An invalid disease export no longer interrupts valid exports, and reused cached values remain identified.',
+            zh: '台湾历史数据导入现可识别 2000 年以前的年份；单个病种导出异常不再中断其他有效数据，复用的缓存值仍有明确标记。',
+            fr: 'L’importation des données historiques de Taïwan reconnaît désormais les années antérieures à 2000. Un export invalide pour une maladie n’interrompt plus les autres exports valides, et les valeurs mises en cache restent identifiées.',
+          },
+          {
+            en: 'Data imports can restore missing, previously reviewed series definitions, including those that blocked the Canada refresh. Existing mappings and data quality checks are preserved.',
+            zh: '数据导入可自动补齐已审定但缺失的序列定义，解决此次加拿大更新受阻的问题，同时保留已有映射和数据质量检查。',
+            fr: 'L’importation peut rétablir les définitions de séries déjà validées mais manquantes, notamment celles qui bloquaient l’actualisation du Canada. Les correspondances existantes et les contrôles de qualité sont conservés.',
+          },
+          {
+            en: 'Report publication uses less build memory and automatically retries temporary upload failures within a fixed limit.',
+            zh: '报告发布减少构建内存占用，并在限定次数内自动重试临时上传故障。',
+            fr: 'La publication des rapports utilise moins de mémoire pendant la compilation et réessaie automatiquement les transferts temporairement défaillants, dans une limite définie.',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.17.3',
     date: '2026-11-04',
     titleEn: 'Smoother publication and clearer research context',

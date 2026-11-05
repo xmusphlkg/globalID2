@@ -903,6 +903,20 @@ class SeriesObservationStore:
             )
         )
         available_codes = set(existing.scalars())
+        missing_codes = requested_codes - available_codes
+        if missing_codes:
+            from src.services.disease_ontology_sync_service import restore_missing_registry_series
+            from src.core.logging import get_logger
+
+            restored = await restore_missing_registry_series(
+                db, self.ontology, missing_codes, country_code=country_code,
+            )
+            available_codes.update(restored)
+            if restored:
+                get_logger(__name__).warning(
+                    "Disease source-series registry restored in ingestion transaction | country={} series={}",
+                    country_code, sorted(restored),
+                )
         observations = [
             row for row in built.observations if row["series_code"] in available_codes
         ]

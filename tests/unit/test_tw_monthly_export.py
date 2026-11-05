@@ -1,6 +1,8 @@
 """Official NIDSS ODS snapshots preserve the existing monthly source semantics."""
 from pathlib import Path
 from types import SimpleNamespace
+import io
+import zipfile
 
 import pytest
 
@@ -29,6 +31,22 @@ def test_actual_official_export_uses_national_total_not_regional_subtotals():
     assert rows[0]["Date"] == "2026-09-01"
     assert (rows[0]["Cases"], rows[0]["LocalCases"], rows[0]["ImportedCases"]) == ("25", "2", "23")
     assert rows[0]["SourceURL"] == DEFAULT_MONTHLY_EXPORT_URL
+
+
+def test_historical_export_accepts_pre_2000_years():
+    data = exports()
+    for item in data:
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(io.BytesIO(item["payload"])) as original, zipfile.ZipFile(buffer, "w") as output:
+            for name in original.namelist():
+                content = original.read(name)
+                if name == "content.xml":
+                    content = content.replace(b"2026", b"1998")
+                output.writestr(name, content)
+        item["payload"] = buffer.getvalue()
+        item["metadata"]["months"] = [(1998, 9)]
+    rows = normalize_monthly_exports(data, disease=DISEASE)
+    assert [(row["Date"], row["Cases"]) for row in rows] == [("1998-09-01", "25")]
 
 
 def test_aids_diagnosis_and_nationality_are_not_imported_infections():
@@ -155,3 +173,35 @@ def test_missing_disease_without_a_cache_is_recorded_as_partial(monkeypatch, tmp
     assert result.source_audit["status"] == "partial"
     assert result.source_audit["missing_live_disease_codes"] == ["010"]
     assert result.source_audit["fallback_rows"] == 0
+
+
+def test_invalid_disease_export_is_isolated_and_partial_prior_coverage_is_retained(monkeypatch, tmp_path):
+    from src.data.processors.tw import TWMonthlyUpdater
+    from src.services.ingestion.countries import tw
+    from src.services.ingestion.countries.monthly_common import normalized_csv
+
+    monkeypatch.setattr(tw, "read_artifact", lambda item: item.payload)
+    prior = normalized_csv([{"Date": "2026-09-01", "RawDiseaseLabel": "另一病種", "DiseaseCode": "bad", "Cases": "7"}])
+    artifacts = [SimpleNamespace(kind="prior_csv", payload=prior)]
+    artifacts.extend(SimpleNamespace(kind="monthly_ods", payload=item["payload"], metadata_=item["metadata"]) for item in exports())
+    # The second disease lacks its imported population, so none of it is live.
+    item = exports()[0]
+    artifacts.append(SimpleNamespace(kind="monthly_ods", payload=item["payload"], metadata_={**item["metadata"], "code": "bad", "name": "另一病種"}))
+    updater = TWMonthlyUpdater(output_csv=tmp_path / "monthly.csv")
+    result = tw.organize(artifacts, updater=updater, source="nidss_open_data", months=[(2026, 9), (2026, 10)], output_csv=updater.output_csv)
+    assert {row["DiseaseCode"]: row["Cases"] for row in result.rows} == {"061": "25", "bad": "7"}
+    assert result.source_audit["status"] == "partial"
+    assert result.source_audit["rejected_exports"] == [{"code": "bad", "reason": "NIDSS export batch has missing or duplicate populations"}]
+    assert next(row for row in result.rows if row["DiseaseCode"] == "bad")["SourceFreshness"] == "cache_fallback"
+
+
+def test_all_invalid_exports_still_fail_closed(monkeypatch, tmp_path):
+    from src.data.processors.tw import TWMonthlyUpdater
+    from src.services.ingestion.countries import tw
+
+    monkeypatch.setattr(tw, "read_artifact", lambda item: item.payload)
+    item = exports()[0]
+    artifacts = [SimpleNamespace(kind="monthly_ods", payload=item["payload"], metadata_=item["metadata"])]
+    updater = TWMonthlyUpdater(output_csv=tmp_path / "monthly.csv")
+    with pytest.raises(RuntimeError, match="cached data is not a successful refresh"):
+        tw.organize(artifacts, updater=updater, source="nidss_open_data", months=[(2026, 9)], output_csv=updater.output_csv)
