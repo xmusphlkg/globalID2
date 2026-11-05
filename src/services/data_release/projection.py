@@ -58,6 +58,7 @@ async def commit_release_projection(
     dirty_ids: list[int],
     marked_before: str | None = None,
     prepared_dir: Path | None = None,
+    country_scopes_exact: bool = False,
 ) -> None:
     published_codes = []
     if full or country_codes:
@@ -71,10 +72,10 @@ async def commit_release_projection(
             )
         published_codes = [
             code
-            for code in expand_country_scopes(
+            for code in (sorted(country_codes) if country_scopes_exact and not full else expand_country_scopes(
                 context["countries_by_code"] if full else country_codes,
                 available_codes=context["countries_by_code"],
-            )
+            ))
             if code in available
         ]
         manifest = None

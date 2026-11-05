@@ -455,6 +455,11 @@ class DataReleaseSettings(_BaseEnvSettings):
         validation_alias="DATA_RELEASE__REPORTS_AUTO_PUBLISH_ENABLED",
         description="报告生成完成后自动发布报告，并在发布队列空闲时补触发",
     )
+    batch_max_countries: int = Field(
+        default=8, ge=1, le=500,
+        validation_alias="DATA_RELEASE__BATCH_MAX_COUNTRIES",
+        description="一次增量发布的国家/地区预算；旧父级标记作为完整依赖组发布",
+    )
     enabled: bool = Field(default=True, description="是否启用 data release 调度")
     timezone: str = Field(default="UTC", description="默认 data release 调度时区")
     poll_interval_seconds: int = Field(default=30, ge=5, description="data release 轮询间隔秒数")

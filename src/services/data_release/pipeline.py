@@ -125,6 +125,9 @@ async def execute_release_task(
     service: Any, task: Any, *, runtime: ReleasePipelineRuntime
 ) -> dict[str, Any]:
     """Publish in place; upload errors retain artifacts without rolling them back."""
+    if (getattr(task, "input_data", None) or {}).get("raw_archive_only"):
+        from .raw_archive_jobs import execute
+        return await execute(task, service=service, runtime=runtime)
     if (getattr(task, "input_data", None) or {}).get("reports_only"):
         from .reports_pipeline import execute_reports_release
         return await execute_reports_release(service, task, runtime=runtime)
@@ -183,6 +186,7 @@ async def _execute_release_task(
     previous_site_dir: Path | None = None,
 ) -> dict[str, Any]:
     input_data = dict(task.input_data or {})
+    code_only = bool(input_data.get("code_only"))
     job_id = str(input_data.get("release_job_id") or "").strip()
     if not job_id:
         raise RuntimeError("Release task is missing release_job_id")
@@ -192,7 +196,7 @@ async def _execute_release_task(
     if job is None:
         raise RuntimeError(f"Release job not found: {job_id}")
 
-    checks = await service.integration_checks(job.job_id)
+    checks = await service.integration_checks(job.job_id, **({"code_only": True} if code_only else {}))
     await runtime.task_manager.add_workbook_entry(
         task.task_uuid,
         entry_type="info",
@@ -295,6 +299,27 @@ async def _execute_release_task(
         resumed_identity = await asyncio.to_thread(
             artifact_checkpoint.restore, artifact_signature, release_identity, _built_site_digest,
         )
+    from .stage_receipts import StageReceipts
+    config = service._config()
+    stage_receipts = StageReceipts(runtime.root_dir, task.task_uuid, input_data, {
+        "config": config.model_dump() if hasattr(config, "model_dump") else vars(config),
+        "job": job.model_dump() if hasattr(job, "model_dump") else vars(job),
+        "download_url_base": download_url_base, "deployment_branch": deployment_branch,
+    })
+    ready_signature = await asyncio.to_thread(stage_receipts.signature, "ready", release_identity)
+    generated_signature = await asyncio.to_thread(stage_receipts.signature, "generated", release_identity)
+    ready_record = await asyncio.to_thread(stage_receipts.matches, "ready", ready_signature)
+    if resumed_identity is None and ready_record:
+        resumed_identity = ready_record["identity"]
+    generated_record = None if resumed_identity else await asyncio.to_thread(
+        stage_receipts.matches, "generated", generated_signature,
+    )
+    needs_projection = not code_only and bool(input_data.get("full") or input_data.get("incremental_country_codes"))
+    projection_manifest = runtime.astro_dir / "src/data/_release-projection/manifest.json"
+    if needs_projection and not projection_manifest.is_file():
+        # Never acknowledge fresh DB facts against a reused older site snapshot.
+        resumed_identity = None
+        generated_record = None
     if resumed_identity is not None:
         release_identity = resumed_identity
         await runtime.task_manager.add_workbook_entry(
@@ -303,44 +328,82 @@ async def _execute_release_task(
             content_type="text", metadata={"event": "release_candidate_reused", "release_job_id": job.job_id},
         )
     else:
-        await service._run_logged_command(
-            task.task_uuid,
-            title="Export Situation",
-            cmd=service._update_situation_notices_command(python_path=python_path),
-            cwd=runtime.root_dir,
-            env=git_env,
-            metadata={"event": "refresh_situation_notices", "release_job_id": job.job_id},
-            timeout_seconds=min(
-                runtime.generate_timeout_seconds,
-                SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS,
-            ),
-        )
-        await runtime.task_manager.update_task_progress(task.task_uuid, 22)
+        if code_only:
+            await asyncio.to_thread(
+                stage_receipts.assert_published_data,
+                [runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data"],
+            )
+            for required in ("meta.json", "downloads.json", "research/routes.json"):
+                if not (runtime.astro_dir / "src/data" / required).is_file():
+                    raise RuntimeError("Code-only release requires an existing data snapshot: " + required)
+        elif generated_record:
+            await runtime.task_manager.add_workbook_entry(
+                task.task_uuid, entry_type="info", title="Generated Data Reused",
+                content="The frozen data export and downloads still match their stage receipt; rebuilding templates only.",
+                content_type="text", metadata={"event": "generated_data_reused"},
+            )
+        else:
+            # Reports are cheap to export and validate before reading surveillance
+            # history or generating spreadsheet partitions.
+            report_check = runtime.astro_dir / "scripts/check-report-inputs.mjs"
+            if report_check.is_file():
+                await service._run_logged_command(
+                    task.task_uuid, title="Refresh Report Inputs",
+                    cmd=[str(python_path), "scripts/generate_site_data.py", "--reports-only"],
+                    cwd=runtime.root_dir, env=git_env,
+                    metadata={"event": "report_inputs_refresh"}, timeout_seconds=300,
+                )
+                await service._run_logged_command(
+                    task.task_uuid, title="Validate Report Inputs",
+                    cmd=["node", "--experimental-strip-types", str(report_check)],
+                    cwd=runtime.astro_dir, metadata={"event": "report_inputs_validate"}, timeout_seconds=120,
+                )
+            await service._run_logged_command(
+                task.task_uuid,
+                title="Export Situation",
+                cmd=service._update_situation_notices_command(python_path=python_path),
+                cwd=runtime.root_dir,
+                env=git_env,
+                metadata={"event": "refresh_situation_notices", "release_job_id": job.job_id},
+                timeout_seconds=min(
+                    runtime.generate_timeout_seconds,
+                    SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS,
+                ),
+            )
+            await runtime.task_manager.update_task_progress(task.task_uuid, 22)
 
-        # EXPORT_DATA holds the worker's collection-store exclusion until task
-        # completion, covering both this read and commit_release_projection after
-        # production verification. Waiting AI parents retain RUNNING until their
-        # store completes, so their eventual writes cannot enter this interval.
-        generate_cmd = service._generate_site_data_command(
-            python_path=python_path,
-            download_url_base=download_url_base,
-            incremental_country_codes=input_data.get("incremental_country_codes") or [],
-            incremental_site=bool(input_data.get("incremental_site")),
-        )
-        await service._run_logged_command(
-            task.task_uuid,
-            title="Generate Site Data",
-            cmd=generate_cmd,
-            cwd=runtime.root_dir,
-            env={
-                **git_env,
-                "PYTHONUNBUFFERED": "1",
-                "GLOBALID_RELEASE_FROM_OBSERVATIONS": "1",
-            },
-            metadata={"event": "generate_site_data", "release_job_id": job.job_id},
-            timeout_seconds=runtime.generate_timeout_seconds,
-        )
-        await runtime.task_manager.update_task_progress(task.task_uuid, 35)
+            # EXPORT_DATA holds the worker's collection-store exclusion until task
+            # completion, covering both this read and commit_release_projection after
+            # production verification. Waiting AI parents retain RUNNING until their
+            # store completes, so their eventual writes cannot enter this interval.
+            generate_cmd = service._generate_site_data_command(
+                python_path=python_path,
+                download_url_base=download_url_base,
+                incremental_country_codes=input_data.get("incremental_country_codes") or [],
+                incremental_site=bool(input_data.get("incremental_site")),
+                country_scopes_exact=bool(input_data.get("country_scopes_exact")),
+            )
+            await service._run_logged_command(
+                task.task_uuid,
+                title="Generate Site Data",
+                cmd=generate_cmd,
+                cwd=runtime.root_dir,
+                env={
+                    **git_env,
+                    "PYTHONUNBUFFERED": "1",
+                    "GLOBALID_RELEASE_FROM_OBSERVATIONS": "1",
+                },
+                metadata={"event": "generate_site_data", "release_job_id": job.job_id},
+                timeout_seconds=runtime.generate_timeout_seconds,
+            )
+            await runtime.task_manager.update_task_progress(task.task_uuid, 35)
+
+            await asyncio.to_thread(stage_receipts.save, "generated", generated_signature, [
+                runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data",
+                runtime.root_dir / "exports/site-downloads/countries",
+                runtime.root_dir / "exports/site-downloads/diseases",
+                runtime.root_dir / "exports/site-downloads/manifest.json",
+            ], identity=release_identity)
 
         # Complete every local, side-effect-free release gate before publishing to
         # remote repositories. A failed site build must never leave downloads and
@@ -407,7 +470,19 @@ async def _execute_release_task(
                     _built_site_digest, runtime.astro_dir / "dist"
                 ),
             }
+    if needs_projection and not projection_manifest.is_file():
+        raise RuntimeError("Data release is missing its frozen publication projection")
     release_manifest = service._write_site_release_manifest(release_identity)
+    if resumed_identity is None:
+        stage_paths = [runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data", runtime.astro_dir / "dist"]
+        stage_paths.extend(path for path in [
+            runtime.root_dir / "exports/site-downloads/countries",
+            runtime.root_dir / "exports/site-downloads/diseases",
+            runtime.root_dir / "exports/site-downloads/manifest.json",
+            runtime.root_dir / "exports/papers-site",
+            runtime.root_dir / "exports/reports-site",
+        ] if path.exists())
+        await asyncio.to_thread(stage_receipts.save, "ready", ready_signature, stage_paths, identity=release_identity)
     if artifact_checkpoint is not None and resumed_identity is None:
         await asyncio.to_thread(artifact_checkpoint.save_ready, artifact_signature, release_identity)
     await runtime.task_manager.add_workbook_entry(
@@ -431,38 +506,7 @@ async def _execute_release_task(
         )
 
     repository_publications: list[tuple[str, Awaitable[None]]] = []
-    if raw_archive_cfg.enabled and not literature_only:
-        raw_git_transport = str(
-            (checks.get("raw_archive") or {}).get("ssh_transport") or "default"
-        )
-        raw_git_env = service._build_git_env(
-            raw_archive_cfg.repo_url,
-            use_github_ssh_over_443=(raw_git_transport == "github-ssh-over-443"),
-        )
-        repository_publications.append(
-            (
-                "raw_archive",
-                service._run_logged_command(
-                    task.task_uuid,
-                    title="Archive Raw Crawler Data",
-                    cmd=service._publish_raw_archive_command(
-                        python_path=python_path,
-                        archive=raw_archive_cfg,
-                    ),
-                    cwd=runtime.root_dir,
-                    env={**raw_git_env, "RAW_ARCHIVE__BRANCH": raw_archive_branch},
-                    metadata={
-                        "event": "raw_git_archive_publish",
-                        "release_job_id": job.job_id,
-                        "branch": raw_archive_branch,
-                    },
-                    timeout_seconds=float(raw_archive_cfg.git_timeout_seconds)
-                    + 60 * 60,
-                ),
-            )
-        )
-
-    if job.include_git_push and not literature_only:
+    if job.include_git_push and not literature_only and not code_only:
         repository_publications.append(
             (
                 "direct_downloads",
@@ -632,6 +676,10 @@ async def _execute_release_task(
         if (
             deploy_checkpoint.get("release_id") == release_identity["release_id"]
             and deploy_checkpoint.get("artifact_digest") == artifact_digest
+            and deploy_checkpoint.get("project_name") == project_name
+            and deploy_checkpoint.get("account_id") == service._cloudflare_account_id()
+            and deploy_checkpoint.get("deployment_branch") == deployment_branch
+            and await asyncio.to_thread(stage_receipts.is_current_publication, release_identity)
         ):
             await runtime.task_manager.add_workbook_entry(
                 task.task_uuid,
@@ -648,6 +696,10 @@ async def _execute_release_task(
                     "release_job_id": job.job_id,
                     "release_id": release_identity["release_id"],
                 },
+            )
+            await asyncio.to_thread(
+                stage_receipts.mark_published, release_identity,
+                data_paths=[runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data"],
             )
         else:
             await service._run_logged_command(
@@ -674,6 +726,11 @@ async def _execute_release_task(
                 },
                 timeout_seconds=runtime.cloudflare_deploy_timeout_seconds,
             )
+            # Record external success before any database checkpoint can fail.
+            await asyncio.to_thread(
+                stage_receipts.mark_published, release_identity,
+                data_paths=[runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data"],
+            )
             # Persist the successful deploy before the final DB transaction.
             # Reuse it only if rebuilt bytes still match. Facts may change, so
             # release_id alone must never authorize reusing an older deploy.
@@ -685,6 +742,8 @@ async def _execute_release_task(
                     "source_commit": release_identity["source_commit"],
                     "deployment_branch": deployment_branch,
                     "artifact_digest": artifact_digest,
+                    "project_name": project_name,
+                    "account_id": service._cloudflare_account_id(),
                 },
             )
         cloudflare_deployment = {
@@ -715,7 +774,7 @@ async def _execute_release_task(
         env_value = getattr(service, "_env_value", lambda _name, default="": default)
         from .subscription_reconciliation import dispatch_safely
 
-        if env_value("SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
+        if not code_only and env_value("SUBSCRIPTIONS__RESEARCH_DIGEST_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
             from .research_subscription import dispatch_after_release
 
             research_subscription_dispatch = await dispatch_safely(
@@ -730,7 +789,7 @@ async def _execute_release_task(
                 mode=env_value("SUBSCRIPTIONS__DELIVERY_MODE", "pilot").strip().lower(),
                 guard_activation=True,
             )
-        if env_value("SUBSCRIPTIONS__NOTICE_ALERTS_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
+        if not code_only and env_value("SUBSCRIPTIONS__NOTICE_ALERTS_ENABLED", "false").lower() in {"1", "true", "yes", "on"}:
             from .notice_subscription import dispatch_after_release as dispatch_notices
 
             notice_subscription_dispatch = await dispatch_safely(
@@ -758,7 +817,7 @@ async def _execute_release_task(
     # The reports bundle has already been published and, when requested, the
     # main site deploy has succeeded. A subscription failure must not mark an
     # already-published release failed or prevent the Pages deployment.
-    if r2_reports_published:
+    if r2_reports_published and not code_only:
         from .report_subscription import dispatch_if_enabled
 
         report_subscription_dispatch = await dispatch_if_enabled(
@@ -766,10 +825,15 @@ async def _execute_release_task(
             reports_origin=str(service._config().r2_reports_public_base_url or "https://reports.globalinfectiousdisease.com").rstrip("/"),
         )
 
+    raw_archive_task = {"status": "disabled"}
+    if raw_archive_cfg.enabled and not literature_only and not code_only:
+        from .raw_archive_jobs import enqueue
+        raw_archive_task = await enqueue(task, service=service, runtime=runtime)
+
     # Consume selected rows after successful publication commands. Concurrent
     # collections outside the worker (for example maintenance imports) have
     # different IDs and remain pending for the next release.
-    if pages_deployed:
+    if pages_deployed and not code_only:
         from .projection import commit_release_projection
 
         async with runtime.get_database() as db:
@@ -778,6 +842,7 @@ async def _execute_release_task(
                 task_uuid=task.task_uuid,
                 country_codes=input_data.get("incremental_country_codes") or [],
                 full=bool(input_data.get("full")),
+                country_scopes_exact=bool(input_data.get("country_scopes_exact")),
                 dirty_ids=input_data.get("publish_dirty_ids") or [],
                 marked_before=input_data.get("publish_dirty_before"),
                 prepared_dir=(
@@ -793,6 +858,8 @@ async def _execute_release_task(
     output = {
         "release_job_id": job.job_id,
         "release_job_name": job.name,
+        "code_only": code_only,
+        "release_plan": input_data.get("release_plan"),
         "incremental_country_codes": input_data.get("incremental_country_codes") or [],
         "github_repo_url": download_repo_url,
         "download_repo_branch": branch,
@@ -818,6 +885,7 @@ async def _execute_release_task(
         "commit_message": publish_commit_message,
         "git_pushed": downloads_published,
         "raw_archive_published": raw_archive_published,
+        "raw_archive_task": raw_archive_task,
         "raw_archive_repo_url": raw_archive_cfg.repo_url or None,
         "raw_archive_branch": raw_archive_branch if raw_archive_cfg.enabled else None,
         "pages_deployed": pages_deployed,
@@ -842,7 +910,7 @@ async def _execute_release_task(
             f"GitHub direct downloads published: {'yes' if downloads_published else 'no'}\n"
             f"Papers R2 published: {'yes' if r2_papers_published else 'no'}\n"
             f"Reports R2 published: {'yes' if r2_reports_published else 'no'}\n"
-            f"Raw crawler archive updated: {'yes' if raw_archive_published else 'no'}\n"
+            f"Raw crawler archive: {raw_archive_task['status']}\n"
             f"Cloudflare deployed: {'yes' if pages_deployed else 'no'}\n"
             f"Production branch: {deployment_branch or '-'}\n"
             f"Site release: {release_identity['release_id']}\n"
@@ -853,4 +921,5 @@ async def _execute_release_task(
         content_type="text",
         metadata={"event": "release_completed", "release_job_id": job.job_id},
     )
+    await asyncio.to_thread(stage_receipts.discard)
     return output

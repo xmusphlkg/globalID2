@@ -75,6 +75,9 @@ KNOWLEDGE_SERIAL_TASK_TYPES = {
     TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES,
 }
 RELEASE_EXCLUSIVE_TASK_TYPES = {TaskType.EXPORT_DATA}
+# Archival has a separate single-job lane; it cannot consume the main release
+# slot merely because it shares the persisted EXPORT_DATA enum.
+_claimed_raw_archive_uuids: set[str] = set()
 # Managed collection tasks yield at database scopes instead of holding up a
 # release through network/model waits. Unmanaged writers still drain fully.
 RELEASE_SHARED_BLOCKED_TASK_TYPES = COLLECTION_STORE_TASK_TYPES
@@ -317,16 +320,22 @@ async def _claim_next_task_uuid(
     """
     async with get_database() as db:
         reports_only = Task.input_data["reports_only"].as_boolean().is_(True)
+        raw_archive_only = Task.input_data["raw_archive_only"].as_boolean().is_(True)
+        nonexclusive_export = or_(reports_only, raw_archive_only)
         active_tasks = (
             await db.execute(
-                select(Task.task_uuid, Task.task_type, reports_only.label("reports_only")).where(
-                    Task.status.in_([TaskStatus.RUNNING, TaskStatus.RETRYING])
+                select(Task.task_uuid, Task.task_type, nonexclusive_export.label("nonexclusive"),
+                       raw_archive_only.label("raw_archive_only")).where(
+                    or_(
+                        Task.status == TaskStatus.RUNNING,
+                        and_(Task.status == TaskStatus.RETRYING, ~raw_archive_only),
+                    )
                 )
             )
         ).all()
         active_task_types = [
-            task_type for task_uuid, task_type, is_reports_only in active_tasks
-            if not (task_type == TaskType.EXPORT_DATA and is_reports_only)
+            task_type for task_uuid, task_type, is_nonexclusive, _is_archive in active_tasks
+            if not (task_type == TaskType.EXPORT_DATA and is_nonexclusive)
             and not (
                 task_type in COLLECTION_STORE_TASK_TYPES
                 and task_uuid in release_admission.cooperative_tasks
@@ -338,7 +347,7 @@ async def _claim_next_task_uuid(
                 .where(
                     Task.task_type.in_(RELEASE_EXCLUSIVE_TASK_TYPES),
                     Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]),
-                    ~reports_only,
+                    ~nonexclusive_export,
                 )
                 .limit(1)
             )
@@ -360,7 +369,11 @@ async def _claim_next_task_uuid(
             select(Task)
             .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]))
             .order_by(
-                case((Task.task_type == TaskType.EXPORT_DATA, 0), else_=1),
+                case(
+                    (and_(Task.task_type == TaskType.EXPORT_DATA, ~raw_archive_only), 0),
+                    (and_(Task.task_type == TaskType.EXPORT_DATA, raw_archive_only), 2),
+                    else_=1,
+                ),
                 priority_rank.asc(), Task.created_at.asc(),
             )
             .with_for_update(skip_locked=True)
@@ -370,11 +383,16 @@ async def _claim_next_task_uuid(
         )
         if blocked_task_types:
             allowed = Task.task_type.notin_(list(blocked_task_types))
+            # Archival owns neither the publication lane nor its database gate.
+            allowed = or_(allowed, and_(Task.task_type == TaskType.EXPORT_DATA, raw_archive_only))
             if TaskType.EXPORT_DATA in memory_blocked_task_types and TaskType.EXPORT_DATA not in lane_blocked:
                 # Reports read report snapshots only. They do not walk the
                 # surveillance, literature, or Situation tables being stored.
                 allowed = or_(allowed, and_(Task.task_type == TaskType.EXPORT_DATA, reports_only))
             query = query.where(allowed)
+        if any(task_type == TaskType.EXPORT_DATA and is_archive
+               for _uuid, task_type, _nonexclusive, is_archive in active_tasks):
+            query = query.where(~raw_archive_only)
         candidates = list((await db.execute(query)).scalars().all())
         if not candidates:
             return None
@@ -423,6 +441,8 @@ async def _claim_next_task_uuid(
         task.input_data = {**(task.input_data or {}), "ai_waiting": False}
         task.last_error = None
         await db.commit()
+        if (task.input_data or {}).get("raw_archive_only") is True:
+            _claimed_raw_archive_uuids.add(task.task_uuid)
         return task.task_uuid, task.task_type
 
 
@@ -676,6 +696,7 @@ async def run_worker() -> None:
                     "Failed to persist worker execution failure: {}", finalize_exc
                 )
         finally:
+            _claimed_raw_archive_uuids.discard(task_uuid)
             if task_type in AI_TASK_TYPES:
                 ai_concurrency.record_result(success=succeeded, error=execution_error)
             finished.set()
@@ -705,7 +726,8 @@ async def run_worker() -> None:
         while not stop_event.is_set():
             waiting = waiting_parent_uuids()
             executing_types = [task_type for task, task_type in active_task_types.items()
-                               if active_task_uuids.get(task) not in waiting]
+                               if active_task_uuids.get(task) not in waiting
+                               and active_task_uuids.get(task) not in _claimed_raw_archive_uuids]
             # Parent tasks use separate lanes. Model HTTP permits stay per model
             # inside AIWorkDispatcher and are not collapsed into one AI parent.
             lane_blocked = _lane_blocked_task_types(

@@ -755,6 +755,7 @@ async def collect_site_export_context(
     public_site_data_dir: Path = DEFAULT_PUBLIC_SITE_DATA_OUTPUT,
     recorded_at_as_of=None,
     incremental_site: bool = False,
+    country_scopes_exact: bool = False,
 ) -> dict:
     """Read and project all database-backed data without writing artifacts."""
     # Validate before readiness helpers can auto-create missing tables. A site
@@ -877,13 +878,17 @@ async def collect_site_export_context(
         missing_incremental_codes = {
             code for code in missing_incremental_codes
             if not (
+                not country_scopes_exact
+                and
                 "-" in code and code.split("-", 1)[0] in incremental_codes
                 and code in registered_codes
             )
         }
-        incremental_codes = set(expand_country_scopes(
-            incremental_codes, available_codes=available_country_codes
-        )) & available_country_codes
+        if not country_scopes_exact:
+            incremental_codes = set(expand_country_scopes(
+                incremental_codes, available_codes=available_country_codes
+            ))
+        incremental_codes &= available_country_codes
         countries_to_refresh = (
             [country for country in countries if country["code"] in incremental_codes]
             if incremental
@@ -898,13 +903,13 @@ async def collect_site_export_context(
         publish_states = None
         publish_coverage = None
         curve_refresh_codes: set[str] | None = None
-        import os
         # A literature-only release has no surveillance curves to refresh.
         # Reuse published coverage instead of scanning every disease artifact.
+        # public-series-v1 is a curve cache, not a lossless export: it omits
+        # source observations, quality and provenance. Never reconstruct a data
+        # download from that cache, regardless of how the export was invoked.
         literature_only = incremental and not incremental_codes
-        if recorded_at_as_of is None and (
-            os.environ.get("GLOBALID_RELEASE_FROM_OBSERVATIONS") != "1" or literature_only
-        ):
+        if recorded_at_as_of is None and literature_only:
             publish_states = await _fetch_publish_states(session)
             if publish_states is not None:
                 publish_states = {
@@ -1459,6 +1464,7 @@ async def collect_site_export_context(
         "situation_monthly": situation_monthly,
         "situation_weekly": situation_weekly,
         "incremental": incremental,
+        "country_scopes_exact": country_scopes_exact,
         "incremental_country_codes": sorted(incremental_codes),
         "retired_country_codes": sorted(retired_country_codes),
         "changed_disease_ids": sorted(changed_disease_ids),
@@ -1892,6 +1898,7 @@ async def export(
     incremental_country_codes: list[str] | tuple[str, ...] | None = None,
     recorded_at_as_of=None,
     incremental_site: bool = False,
+    country_scopes_exact: bool = False,
 ) -> None:
     """Package and write one complete or scoped incremental export."""
     collect_started = time.perf_counter()
@@ -1902,6 +1909,7 @@ async def export(
         public_site_data_dir=public_site_data_dir,
         recorded_at_as_of=recorded_at_as_of,
         incremental_site=incremental_site,
+        country_scopes_exact=country_scopes_exact,
     )
     print(
         "  Phase timing: database reads and projections "

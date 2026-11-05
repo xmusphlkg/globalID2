@@ -323,20 +323,59 @@ async def test_disabled_ie_is_removed_from_site_and_all_download_formats(snapsho
     assert repeat["changed_disease_ids"] == []
 
 
-async def test_cached_full_export_invalidates_retired_ie_slices(snapshot, monkeypatch):
+async def test_full_export_reads_lossless_observations_and_invalidates_retired_ie_slices(snapshot, monkeypatch):
     snapshot = _historical_ie_snapshot(snapshot, monkeypatch)
     monkeypatch.setattr(export, "fetch_countries", AsyncMock(return_value=[dict(code="US", name="United States", language="en")]))
     monkeypatch.setattr(export, "_fetch_publish_states", AsyncMock(return_value={"US":{"content_hash":"same", "point_count":1}, "IE":{"content_hash":"retired", "point_count":2}}))
     monkeypatch.setattr(export, "_local_publish_hashes", lambda *_: {"US":"same"})
     monkeypatch.setattr(export, "_fetch_published_rows_by_country", AsyncMock(return_value={}))
     monkeypatch.setattr(export, "fetch_reports", AsyncMock(return_value=[]))
-    monkeypatch.setattr(export, "_collect_country_export", AsyncMock(side_effect=AssertionError("no active country changed")))
+    data = copy.deepcopy(snapshot.country_data["US"])
+    records = [dict(disease_id="D001", date="2026-01-01", year_month="2026-01", cases=1, deaths=0)]
+    collect = AsyncMock(return_value=dict(code="US", country_name="United States", country_name_zh="美国", country_data=data, records=records, source_records=[], source_info=data["source_info"]))
+    monkeypatch.setattr(export, "_collect_country_export", collect)
     context = await export.collect_site_export_context(snapshot.output, public_site_data_dir=snapshot.public)
-    assert context["publish_curve_refresh_codes"] == []
+    collect.assert_awaited_once()
+    export._fetch_published_rows_by_country.assert_not_awaited()
+    assert context["publish_curve_refresh_codes"] is None
     assert context["retired_country_codes"] == ["IE"]
     assert context["changed_disease_ids"] == ["D001", "D002"]
-    assert "IE" not in context["publish_hashes"]
+    assert not context["publish_hashes"]
     assert all("IE" not in item["disease_data"]["country_series"] for item in context["disease_exports"])
+
+
+async def test_exact_country_scope_does_not_expand_parent(snapshot, monkeypatch):
+    def unexpected_expansion(*_args, **_kwargs):
+        raise AssertionError("an already resolved dirty scope must not expand again")
+
+    monkeypatch.setattr(export, "expand_country_scopes", unexpected_expansion)
+    data = copy.deepcopy(snapshot.country_data["US"])
+    collect = AsyncMock(return_value=dict(code="US", country_name="United States", country_name_zh="美国", country_data=data, records=[], source_records=[], source_info=data["source_info"]))
+    monkeypatch.setattr(export, "_collect_country_export", collect)
+    context = await export.collect_site_export_context(
+        snapshot.output, incremental_country_codes=["US"],
+        public_site_data_dir=snapshot.public, country_scopes_exact=True,
+    )
+    assert context["incremental_country_codes"] == ["US"]
+    assert context["country_scopes_exact"] is True
+    collect.assert_awaited_once()
+
+
+async def test_changed_country_ignores_lossy_published_cache(snapshot, monkeypatch):
+    monkeypatch.delenv("GLOBALID_RELEASE_FROM_OBSERVATIONS", raising=False)
+    states = AsyncMock(return_value={"US": {"content_hash": "same", "point_count": 1}})
+    monkeypatch.setattr(export, "_fetch_publish_states", states)
+    data = copy.deepcopy(snapshot.country_data["US"])
+    data["disease_series"]["D001"]["source_series"] = [{"series_code": "test", "dates": ["2026-01-01"], "values": [3]}]
+    collect = AsyncMock(return_value=dict(code="US", country_name="United States", country_name_zh="美国", country_data=data, records=[], source_records=[], source_info=data["source_info"]))
+    monkeypatch.setattr(export, "_collect_country_export", collect)
+    context = await export.collect_site_export_context(
+        snapshot.output, incremental_country_codes=["US"], public_site_data_dir=snapshot.public,
+    )
+    states.assert_not_awaited()
+    collect.assert_awaited_once()
+    country = next(row for row in context["country_exports"] if row["code"] == "US")
+    assert country["country_data"]["disease_series"]["D001"]["source_series"] == data["disease_series"]["D001"]["source_series"]
 
 
 def test_incremental_merge_filters_disallowed_country_even_when_not_updated():

@@ -119,8 +119,57 @@ async def worker_database(tmp_path, monkeypatch):
 
     monkeypatch.setattr(task_worker, "get_database", database)
     monkeypatch.setattr(task_worker, "release_admission", ReleaseAdmission())
+    monkeypatch.setattr(task_worker, "_claimed_raw_archive_uuids", set())
     yield maker
     await engine.dispose()
+
+
+@pytest.mark.parametrize("active_archive,queued_archive,queued_type,expected", [
+    (True, False, TaskType.EXPORT_DATA, True),
+    (True, False, TaskType.CRAWL_DATA, True),
+    (False, True, TaskType.EXPORT_DATA, True),
+    (True, True, TaskType.EXPORT_DATA, False),
+])
+async def test_archive_has_independent_serial_lane(
+    worker_database, active_archive, queued_archive, queued_type, expected,
+):
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="active", task_name="active", task_type=TaskType.EXPORT_DATA,
+                 status=TaskStatus.RUNNING, input_data={"raw_archive_only": active_archive}),
+            Task(task_uuid="next", task_name="next", task_type=queued_type,
+                 status=TaskStatus.QUEUED, input_data={"raw_archive_only": queued_archive}),
+        ])
+        await session.commit()
+    result = await task_worker._claim_next_task_uuid("worker")
+    assert (result is not None) is expected
+    if result and queued_archive:
+        assert "next" in task_worker._claimed_raw_archive_uuids
+
+
+async def test_archive_queue_does_not_steal_release_priority_or_pause_collection(worker_database):
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="archive", task_name="Archive", task_type=TaskType.EXPORT_DATA,
+                 status=TaskStatus.QUEUED, priority=TaskPriority.URGENT,
+                 input_data={"raw_archive_only": True}),
+            Task(task_uuid="crawl", task_name="Crawl", task_type=TaskType.CRAWL_DATA,
+                 status=TaskStatus.QUEUED, priority=TaskPriority.NORMAL),
+        ])
+        await session.commit()
+    assert await task_worker._claim_next_task_uuid("worker") == ("crawl", TaskType.CRAWL_DATA)
+
+
+async def test_waiting_archive_retry_does_not_deadlock_queued_successor(worker_database):
+    async with worker_database() as session:
+        session.add_all([
+            Task(task_uuid="retry", task_name="Retry", task_type=TaskType.EXPORT_DATA,
+                 status=TaskStatus.RETRYING, input_data={"raw_archive_only": True}),
+            Task(task_uuid="next", task_name="Next archive", task_type=TaskType.EXPORT_DATA,
+                 status=TaskStatus.QUEUED, input_data={"raw_archive_only": True}),
+        ])
+        await session.commit()
+    assert await task_worker._claim_next_task_uuid("worker") == ("next", TaskType.EXPORT_DATA)
 
 
 @pytest.mark.asyncio

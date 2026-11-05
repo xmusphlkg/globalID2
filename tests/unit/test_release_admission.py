@@ -197,6 +197,19 @@ async def test_network_or_model_wait_does_not_hold_publication():
 
 
 @pytest.mark.asyncio
+async def test_raw_archive_does_not_wait_for_or_block_database_publication():
+    gate = ReleaseAdmission()
+    async with asyncio.timeout(1):
+        with gate.writer("crawl"):
+            async with collection_database_scope():
+                async with gate.task_scope("archive", TaskType.EXPORT_DATA, raw_archive_only=True):
+                    assert gate._publishing is False
+        async with gate.publication():
+            async with gate.task_scope("archive", TaskType.EXPORT_DATA, raw_archive_only=True):
+                assert gate._publishing is True
+
+
+@pytest.mark.asyncio
 async def test_store_rollback_and_close_finish_before_publication(tmp_path, monkeypatch):
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'rollback.sqlite'}")
     async with engine.begin() as connection:

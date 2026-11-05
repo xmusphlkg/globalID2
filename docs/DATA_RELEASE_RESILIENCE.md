@@ -1,5 +1,62 @@
 # Data release automatic recovery
 
+## Bounded publication and stage recovery (unreleased)
+
+Migration `0026_publish_dirty_changes` adds nullable `publish_dirty.change_set`.
+Apply this migration before restarting API, scheduler, and workers with the new
+code. Existing rows remain valid and conservatively retain their original scope.
+
+New ingestion writes a precise change set only when it can account for every
+published observation change. Verified no-op imports create no publication marker.
+Legacy-only imports, incomplete mappings, deletions, and supplemental legacy
+metrics retain conservative invalidation. A precise country marker never expands
+again into its children during export or publication acknowledgement.
+
+`DATA_RELEASE__BATCH_MAX_COUNTRIES=8` limits normal incremental batches. All dirty
+IDs for the same scope are coalesced, and only selected IDs are acknowledged.
+An indivisible legacy parent scope may exceed this limit; the release plan records
+that exception. Continuations carry the original deferred IDs, not newly arriving
+changes. Completion hooks and scheduler reconciliation enqueue the remaining
+batches. Disabled scopes remain pending without creating an endless continuation.
+
+Downloads plan previously split child windows before creating formats, reusing
+unchanged files and their modification times. Refreshes use lossless observations;
+an old public-curve snapshot cannot replace provenance in the download source.
+Missing files outside the selected refresh scope fail with the affected scope
+instead of silently preserving a broken manifest.
+
+In-place stage receipts live in `exports/release-stages/`. A retry checks source,
+configuration, destinations, selected IDs, the successful release baseline, and
+output file inventories. Successful export survives a later template build failure;
+successful rendering survives a later upload failure. An unrelated later deployment
+invalidates the earlier receipt. The independent atomic
+`exports/successful-site-release.json` marker does not depend on retention of the
+large Pages snapshot. File inventory checks read metadata and only hash files
+within the timestamp uncertainty window; they still enumerate local files.
+
+Raw-source archival has a separate low-priority queued task, worker admission lane,
+preflight, and retry record. Its failure cannot turn a successful site publication
+into a failed one. Queued archive work coalesces; an active archive can have one
+trailing job so newly collected files are not lost.
+The enqueue trigger is still a successful data publication: new raw files from
+semantic no-op collections wait for a later data release. An independent periodic
+archive trigger is not part of this change.
+
+The control panel's code-only action rebuilds templates using the last attested
+published local data. It does not export observations, publish downloads, acknowledge
+dirty markers, or start data notifications. A missing attestation or changed local
+data requires a normal release first. This includes local data changed by a failed
+generation. The first normal successful release after upgrading creates the
+attestation. Files under the frozen data roots, including authored data modules,
+must remain unchanged for code-only publication.
+
+Limits: a selected country still reads its historical observations, and unchanged
+download windows still compute their JSON content summaries. This is not yet
+time-window-level SQL projection. Literature markers coalesce but do not yet drive
+article-level database exports. Shared layout/style changes legitimately rebuild
+their dependent routes. The new page fingerprint format requires one initial cache
+rebuild. Fixture timings do not establish production end-to-end performance.
+
 ## Publication completion policy (2026-11-04)
 
 Release tasks complete on successful upload/deploy commands, without probing

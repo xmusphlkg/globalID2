@@ -25,11 +25,12 @@ export function PublishView() {
   const client = useQueryClient();
   const query = useQuery({ queryKey: ["/publish/pending"], queryFn: () => apiFetch<Pending>("/publish/pending"), refetchInterval: 15000, retry: (count, error) => !(error instanceof ApiError && error.status < 500) && count < 1 });
   const [checks, setChecks] = useState<Checks | null>(null);
+  const [codeChecks, setCodeChecks] = useState<Checks | null>(null);
   const [result, setResult] = useState<ReleaseResult | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [full, setFull] = useState(false);
-  const [lastReportsOnly, setLastReportsOnly] = useState(false);
-  const [busy, setBusy] = useState<"preflight" | "publish" | null>(null);
+  const [lastMode, setLastMode] = useState<"incremental" | "full" | "reports" | "code" | null>(null);
+  const [busy, setBusy] = useState<"preflight" | "code-preflight" | "publish" | null>(null);
   const actionLock = useRef(false);
   const run = useQuery({ queryKey: ["/collection/runs", result?.task_uuid], queryFn: () => apiFetch<Run>(`/collection/runs/${encodeURIComponent(result!.task_uuid!)}`), enabled: !!result?.task_uuid, refetchInterval: (query) => ["completed", "failed", "cancelled"].includes(query.state.data?.status ?? "") ? false : 5000, retry: (count, error) => !(error instanceof ApiError && error.status < 500) && count < 1 });
   const runStatus = run.data?.status;
@@ -37,20 +38,30 @@ export function PublishView() {
   const counts = lines.map((line) => { const scope = query.data?.[line]; return Array.isArray(scope) ? scope.length : scope ? 1 : 0; });
   const pendingCount = counts.reduce((sum, count) => sum + count, 0);
   const activeRun = !!result?.task_uuid && (!runStatus || ["queued", "pending", "running", "retrying"].includes(runStatus));
-  async function preflight() {
+  async function checkCodePublication() {
+    const value = await apiFetch<Checks>("/releases/site-release/checks?code_only=true");
+    setCodeChecks(value);
+    return value;
+  }
+  async function preflight(codeOnly = false) {
     if (actionLock.current) return;
-    actionLock.current = true; setBusy("preflight"); setError(null); setChecks(null);
-    try { setChecks(await apiFetch<Checks>("/releases/site-release/checks")); }
+    actionLock.current = true; setBusy(codeOnly ? "code-preflight" : "preflight"); setError(null);
+    if (codeOnly) setCodeChecks(null); else setChecks(null);
+    try {
+      if (codeOnly) await checkCodePublication();
+      else setChecks(await apiFetch<Checks>("/releases/site-release/checks"));
+    }
     catch (e) { setError(e); }
     finally { actionLock.current = false; setBusy(null); }
   }
-  async function publish(reportsOnly = false) {
+  async function publish(mode: "data" | "reports" | "code" = "data") {
     if (actionLock.current) return;
     actionLock.current = true; setBusy("publish"); setError(null);
     try {
-      const body: Omit<components["schemas"]["PublishRunCreate"], "reports_only"> & { reports_only?: boolean } = { job_id: "site-release", full: reportsOnly ? false : full, ...(reportsOnly ? { reports_only: true } : {}) };
+      if (mode === "code" && !(await checkCodePublication()).overall_ready) return;
+      const body: components["schemas"]["PublishRunCreate"] = { job_id: "site-release", full: mode === "data" ? full : false, reports_only: mode === "reports", code_only: mode === "code" };
       setResult(await apiFetch<ReleaseResult>("/publish/runs", { method: "POST", body: JSON.stringify(body) }));
-      setLastReportsOnly(reportsOnly);
+      setLastMode(mode === "data" ? (full ? "full" : "incremental") : mode);
       await client.invalidateQueries({ queryKey: ["/publish/pending"] });
     } catch (e) { setError(e); }
     finally { actionLock.current = false; setBusy(null); }
@@ -100,7 +111,7 @@ export function PublishView() {
     },
   ] : [];
   return <WorkspacePage eyebrow={text("cc_mp_center")} title={text("cc_mp_publish")} description={text("cc_mp_publish_desc")} actions={<><button className="cc-button" disabled={query.isFetching} onClick={() => query.refetch()}>{text("cc_mp_refresh")}</button><Link className="cc-button" href="/publish/reports">{text("cc_mp_reports")}</Link></>}>
-    <MetricStrip items={[{ label: text("cc_mp_pending_count"), value: query.data ? pendingCount : "—", tone: pendingCount ? "warning" : "success" }, { label: text("cc_mp_lines_count"), value: query.data ? `${counts.filter(Boolean).length} / 4` : "—" }, { label: text("cc_mp_release_status"), value: result ? modelPublishLabel(runStatus ?? result.status ?? "queued", lang) : text("cc_mp_no_release"), tone: runStatus === "failed" ? "danger" : runStatus === "completed" ? "success" : "neutral" }, { label: text("cc_mp_mode"), value: result && lastReportsOnly ? (lang === "zh" ? "仅报告" : "Reports only") : text(full ? "cc_mp_full" : "cc_mp_incremental") }]} />
+    <MetricStrip items={[{ label: text("cc_mp_pending_count"), value: query.data ? pendingCount : "—", tone: pendingCount ? "warning" : "success" }, { label: text("cc_mp_lines_count"), value: query.data ? `${counts.filter(Boolean).length} / 4` : "—" }, { label: text("cc_mp_release_status"), value: result ? modelPublishLabel(runStatus ?? result.status ?? "queued", lang) : text("cc_mp_no_release"), tone: runStatus === "failed" ? "danger" : runStatus === "completed" ? "success" : "neutral" }, { label: text("cc_mp_mode"), value: text(lastMode === "code" ? "cc_mp_code_only" : lastMode === "reports" ? "cc_mp_reports_only" : (lastMode === "full" || (!lastMode && full)) ? "cc_mp_full" : "cc_mp_incremental") }]} />
     {channelCards.length > 0 && <section className="cc-panel space-y-3" aria-labelledby="channels-title"><h2 id="channels-title" className="text-base font-semibold">{text("cc_mp_channels")}</h2><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{channelCards.map((channel) => <div key={channel.key} className="rounded-md border border-[var(--cc-border)] p-3"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">{channel.label}</h3><StatusBadge tone={channelTone(channel.enabled, channel.ready)}>{text(!channel.enabled ? "cc_mp_channel_disabled" : channel.ready ? "cc_mp_channel_ready" : "cc_mp_channel_blocked")}</StatusBadge></div><p className="cc-muted mt-2 break-all text-xs leading-5">{channel.detail}</p></div>)}</div></section>}
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
       <section className="cc-panel space-y-4" aria-labelledby="pending-title"><div><h2 id="pending-title" className="text-base font-semibold">{text("cc_mp_unpublished")}</h2><p className="cc-muted mt-1">{text("cc_mp_readonly_hint")}</p></div><ModelPublishFeedback query={query} label={text("cc_mp_unpublished").toLowerCase()} />
@@ -108,10 +119,15 @@ export function PublishView() {
       </section>
       <section className="cc-panel space-y-4" aria-labelledby="release-title"><h2 id="release-title" className="text-base font-semibold">{text("cc_mp_release")}</h2><ModelPublishProblem error={error} conflict={text("cc_mp_release_conflict")} />
         <div className="rounded-md border border-[var(--cc-border)] p-4"><h3 className="text-sm font-semibold">{text("cc_mp_incremental")}</h3><p className="cc-muted mt-1">{text("cc_mp_incremental_hint")}</p><label className="mt-4 flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={full} disabled={busy !== null || activeRun} onChange={(e) => setFull(e.target.checked)} className="h-4 w-4 accent-[var(--cc-brand)]" />{text("cc_mp_full")}</label><p className={`mt-2 text-xs leading-5 ${full ? "rounded bg-amber-50 p-2 text-amber-900" : "cc-muted"}`}>{text("cc_mp_full_hint")}</p></div>
-        <div className="flex flex-wrap gap-2"><button className="cc-button" disabled={busy !== null} onClick={() => void preflight()}>{text(busy === "preflight" ? "cc_mp_checking" : "cc_mp_preflight")}</button><button className="cc-button cc-button-primary" disabled={busy !== null || activeRun || checks?.overall_ready === false} onClick={() => void publish()}>{text(busy === "publish" ? "cc_mp_submitting" : "cc_mp_submit")}</button><button className="cc-button" disabled={busy !== null || activeRun} onClick={() => void publish(true)}>{lang === "zh" ? "仅发布报告" : "Publish reports only"}</button></div>
+        <div className="flex flex-wrap gap-2"><button className="cc-button" disabled={busy !== null} onClick={() => void preflight()}>{text(busy === "preflight" ? "cc_mp_checking" : "cc_mp_preflight")}</button><button className="cc-button cc-button-primary" disabled={busy !== null || activeRun || checks?.overall_ready === false} onClick={() => void publish()}>{text(busy === "publish" ? "cc_mp_submitting" : "cc_mp_submit")}</button><button className="cc-button" disabled={busy !== null || activeRun} onClick={() => void publish("reports")}>{text("cc_mp_submit_reports")}</button></div>
+        <div className="rounded-md border border-[var(--cc-border)] p-4 space-y-3">
+          <div><h3 className="text-sm font-semibold">{text("cc_mp_code_only")}</h3><p className="cc-muted mt-1" id="code-publication-hint">{text("cc_mp_code_hint")}</p></div>
+          <div className="flex flex-wrap gap-2"><button className="cc-button" disabled={busy !== null} onClick={() => void preflight(true)}>{text(busy === "code-preflight" ? "cc_mp_checking" : "cc_mp_code_preflight")}</button><button className="cc-button" aria-describedby="code-publication-hint" disabled={busy !== null || activeRun || codeChecks?.overall_ready === false} onClick={() => void publish("code")}>{text("cc_mp_submit_code")}</button></div>
+          {codeChecks && <section aria-label={text("cc_mp_code_checks")} className="space-y-2 border-t border-[var(--cc-border)] pt-3"><h4 className="text-sm font-semibold">{text("cc_mp_code_checks")}</h4><StatusBadge tone={codeChecks.overall_ready ? "success" : "danger"}>{text(codeChecks.overall_ready ? "cc_mp_ready" : "cc_mp_blocked")}</StatusBadge><p className="cc-muted text-xs">{text("cc_mp_checked")}: {modelPublishDate(codeChecks.checked_at, lang)}</p>{!!codeChecks.blockers?.length && <ul className="list-inside list-disc space-y-1 rounded-md bg-rose-50 p-3 text-sm text-rose-800">{codeChecks.blockers.map((blocker, index) => <li className="break-words" key={index}>{blocker}</li>)}</ul>}</section>}
+        </div>
         {checks && <div className="space-y-3 border-t border-[var(--cc-border)] pt-4"><h3 className="font-semibold">{text("cc_mp_checks")}</h3><StatusBadge tone={checks.overall_ready ? "success" : "danger"}>{text(checks.overall_ready ? "cc_mp_ready" : "cc_mp_blocked")}</StatusBadge><p className="cc-muted">{text("cc_mp_checked")}: {modelPublishDate(checks.checked_at, lang)}</p><dl className="divide-y divide-[var(--cc-border)]">{checkRows.map((check) => <div key={check.label} className="flex flex-wrap justify-between gap-2 py-2 text-sm"><dt>{check.label}</dt><dd><StatusBadge tone={check.ready ? "success" : "warning"}>{text(check.ready ? "cc_mp_pass" : "cc_mp_check_failed")}</StatusBadge></dd></div>)}</dl>{!!checks.blockers?.length && <ul className="list-inside list-disc space-y-1 rounded-md bg-rose-50 p-3 text-sm text-rose-800">{checks.blockers.map((blocker, i) => <li className="break-words" key={i}>{blocker}</li>)}</ul>}</div>}
       </section>
     </div>
-    {result && <section className="cc-panel space-y-3" aria-labelledby="release-status-title"><h2 id="release-status-title" className="font-semibold">{text("cc_mp_release_status")}</h2><p role="status" className="text-sm">{result.status === "skipped" ? `${text("cc_mp_not_queued")}: ${reason}.` : text("cc_mp_accepted")}</p>{result.task_uuid && <><div className="flex flex-wrap items-center gap-3"><StatusBadge status={runStatus ?? result.status}>{modelPublishLabel(runStatus ?? result.status ?? "queued", lang)}</StatusBadge><Link className="break-all font-mono text-sm text-[var(--cc-link)] underline" href={`/publish/tasks?detail=${encodeURIComponent(result.task_uuid)}`}>{text("cc_mp_open_run")}</Link><span className="break-all font-mono text-xs text-[var(--cc-text-muted)]">{result.task_uuid}</span></div><ModelPublishFeedback query={run} label={text("cc_mp_release_status").toLowerCase()} />{runStatus === "failed" && <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-800">{text("cc_mp_release_failed")}</p>}{runStatus === "completed" && <p className="text-sm text-emerald-800">{text("cc_mp_release_complete")}</p>}</>}</section>}
+    {result && <section className="cc-panel space-y-3" aria-labelledby="release-status-title"><h2 id="release-status-title" className="font-semibold">{text("cc_mp_release_status")}</h2><p role="status" className="text-sm">{result.status === "skipped" ? `${text("cc_mp_not_queued")}: ${reason}.` : text(lastMode === "code" ? "cc_mp_code_accepted" : "cc_mp_accepted")}</p>{result.task_uuid && <><div className="flex flex-wrap items-center gap-3"><StatusBadge status={runStatus ?? result.status}>{modelPublishLabel(runStatus ?? result.status ?? "queued", lang)}</StatusBadge><Link className="break-all font-mono text-sm text-[var(--cc-link)] underline" href={`/publish/tasks?detail=${encodeURIComponent(result.task_uuid)}`}>{text("cc_mp_open_run")}</Link><span className="break-all font-mono text-xs text-[var(--cc-text-muted)]">{result.task_uuid}</span></div><ModelPublishFeedback query={run} label={text("cc_mp_release_status").toLowerCase()} />{runStatus === "failed" && <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-800">{text("cc_mp_release_failed")}</p>}{runStatus === "completed" && <p className="text-sm text-emerald-800">{text(lastMode === "code" ? "cc_mp_code_complete" : "cc_mp_release_complete")}</p>}</>}</section>}
   </WorkspacePage>;
 }

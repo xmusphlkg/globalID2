@@ -15,7 +15,7 @@ from typing import Any, Optional
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from src.core import get_config, get_database, get_logger
 from src.core.data_share import (
@@ -23,7 +23,7 @@ from src.core.data_share import (
     get_data_share_repo_branch,
     get_data_share_repo_url,
 )
-from src.core.country_library import expand_country_scopes, get_country_bootstrap_config
+from src.core.country_library import get_country_bootstrap_config
 from src.core.task_manager import task_manager
 from src.domain import Country, DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
 from src.domain.report import Report, ReportStatus
@@ -393,6 +393,7 @@ class DataReleaseService:
             self._last_tick_at = datetime.now(ZoneInfo("UTC"))
             try:
                 await self.requeue_due_automatic_retries()
+                await self.reconcile_release_continuations()
                 for job in await self.load_jobs():
                     if not job.enabled:
                         continue
@@ -611,6 +612,7 @@ class DataReleaseService:
                         .where(
                             Task.id != task.id,
                             Task.task_type == TaskType.EXPORT_DATA,
+                            Task.input_data["raw_archive_only"].as_boolean().is_(True) == bool(input_data.get("raw_archive_only")),
                             Task.status.in_(
                                 [TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING]
                             ),
@@ -678,9 +680,11 @@ class DataReleaseService:
         trigger_task_uuid: Optional[str] = None,
         full: bool = False,
         reports_only: bool = False,
+        code_only: bool = False,
+        pending_ids: list[int] | None = None,
     ) -> dict[str, Any]:
-        if full and reports_only:
-            raise ValueError("A reports-only release cannot be a full site release")
+        if sum(bool(value) for value in (full, reports_only, code_only)) > 1:
+            raise ValueError("Full, reports-only and code-only release modes are mutually exclusive")
         async with self._lock:
             job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
             if job is None:
@@ -701,6 +705,8 @@ class DataReleaseService:
                     trigger_task_uuid=trigger_task_uuid,
                     full=full,
                     reports_only=reports_only,
+                    code_only=code_only,
+                    pending_ids=pending_ids,
                 )
                 state.last_finished_at = datetime.now(ZoneInfo(tz_name))
                 state.last_task_uuid = result["task_uuid"]
@@ -734,6 +740,9 @@ class DataReleaseService:
         try:
             normalized_task_type = TaskType(trigger_task_type)
         except ValueError:
+            return
+        if normalized_task_type == TaskType.EXPORT_DATA:
+            await self._continue_completed_release(trigger_task_uuid)
             return
         if normalized_task_type not in AUTO_RELEASE_TASK_TYPES:
             return
@@ -806,6 +815,66 @@ class DataReleaseService:
     async def maybe_trigger_after_crawl_completion(self, crawl_task_uuid: str) -> None:
         await self.maybe_trigger_after_task_completion(crawl_task_uuid, TaskType.CRAWL_DATA)
 
+    async def _continue_completed_release(self, task_uuid: str) -> None:
+        """Continue only the predecessor's frozen IDs, never newly arrived work."""
+        async with get_database() as db:
+            parent = (await db.execute(select(Task).where(Task.task_uuid == task_uuid))).scalar_one_or_none()
+        if parent is None or parent.task_type != TaskType.EXPORT_DATA or parent.status != TaskStatus.COMPLETED:
+            return
+        data = dict(parent.input_data or {})
+        metadata = dict(parent.metadata_ or {})
+        if any(data.get(flag) for flag in ("raw_archive_only", "reports_only", "code_only")):
+            return
+        if (metadata.get("release_continuation") or {}).get("status") in {"queued", "exhausted"}:
+            return
+        ids = data.get("continuation_dirty_ids") or []
+        if not ids:
+            return
+        if not isinstance(ids, list) or any(type(value) is not int or value <= 0 for value in ids):
+            logger.warning("Release {} has invalid continuation IDs; refusing to widen scope", task_uuid)
+            return
+        job_id = str(data.get("release_job_id") or metadata.get("release_job_id") or "")
+        job = next((item for item in await self.load_jobs() if item.job_id == job_id and item.enabled), None)
+        if job is None or await self._release_failure_cooldown_reason(job_id):
+            return
+        result = await self.trigger_job(
+            job_id, manual=False, trigger="upstream_completion",
+            trigger_task_uuid=task_uuid, pending_ids=sorted(set(ids)),
+        )
+        if result.get("status") == "queued" or result.get("reason") == "continuation_already_queued":
+            continuation = {"status": "queued", "task_uuid": result["task_uuid"]}
+        elif result.get("reason") in {"no_pending_changes", "no_publishable_changes"}:
+            continuation = {"status": "exhausted", "task_uuid": None}
+        else:
+            # A busy pipeline is a deferred attempt, not a consumed chain.
+            return
+        async with get_database() as db:
+            stored = (await db.execute(select(Task).where(Task.id == parent.id).with_for_update())).scalar_one_or_none()
+            if stored is not None:
+                current = dict(stored.metadata_ or {})
+                if (current.get("release_continuation") or {}).get("status") not in {"queued", "exhausted"}:
+                    stored.metadata_ = {**current, "release_continuation": continuation}
+                    await db.commit()
+
+    async def reconcile_release_continuations(self) -> None:
+        """Recover a missed completion hook after a restart or a busy pipeline."""
+        async with get_database() as db:
+            continuation_status = Task.metadata_["release_continuation"]["status"].as_string()
+            candidates = (await db.execute(select(Task.task_uuid).where(
+                Task.task_type == TaskType.EXPORT_DATA,
+                Task.status == TaskStatus.COMPLETED,
+                Task.input_data["raw_archive_only"].as_boolean().is_not(True),
+                Task.input_data["reports_only"].as_boolean().is_not(True),
+                Task.input_data["code_only"].as_boolean().is_not(True),
+                Task.input_data["continuation_dirty_ids"].as_string().notin_(["[]", "null"]),
+                or_(continuation_status.is_(None), continuation_status.notin_(["queued", "exhausted"])),
+            ).order_by(Task.completed_at.asc(), Task.id.asc()).limit(100))).scalars().all()
+        for task_uuid in candidates:
+            try:
+                await self._continue_completed_release(task_uuid)
+            except Exception as exc:
+                logger.warning("Release continuation {} deferred for next scheduler tick: {}", task_uuid, exc)
+
     async def reconcile_pending_reports(self) -> None:
         """Retry report publication after busy queues, restarts, or transient failures."""
         jobs = [job for job in await self.load_jobs() if job.enabled and self._r2_reports_enabled(job)]
@@ -814,6 +883,7 @@ class DataReleaseService:
         async with get_database() as db:
             active = (await db.execute(select(Task.id).where(
                 Task.task_type == TaskType.EXPORT_DATA,
+                Task.input_data["raw_archive_only"].as_boolean().is_not(True),
                 Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.RETRYING]),
             ).limit(1))).scalar_one_or_none()
             if active is not None:
@@ -830,11 +900,15 @@ class DataReleaseService:
                 return
             releases = list((await db.execute(
                 select(Task).where(Task.task_type == TaskType.EXPORT_DATA,
+                    Task.input_data["raw_archive_only"].as_boolean().is_not(True),
+                    Task.input_data["code_only"].as_boolean().is_not(True),
                     Task.status.in_([TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]))
                 .order_by(Task.completed_at.desc().nullslast(), Task.created_at.desc()).limit(100)
             )).scalars().all())
         report_time = _as_aware_utc(latest_report.completed_at)
         for release in releases:
+            if any((release.input_data or {}).get(flag) for flag in ("code_only", "raw_archive_only")):
+                continue
             if release.status == TaskStatus.COMPLETED and (release.output_data or {}).get("r2_reports_published"):
                 snapshot_time = _as_aware_utc(release.started_at)
                 if snapshot_time and report_time and snapshot_time >= report_time:
@@ -856,13 +930,16 @@ class DataReleaseService:
                     .where(
                         Task.task_type == TaskType.EXPORT_DATA,
                         Task.status == TaskStatus.COMPLETED,
+                        Task.input_data["raw_archive_only"].as_boolean().is_not(True),
+                        Task.input_data["reports_only"].as_boolean().is_not(True),
+                        Task.input_data["code_only"].as_boolean().is_not(True),
                     )
                     .order_by(Task.created_at.desc())
                 )
             ).scalars().all()
         for task in tasks:
             metadata = dict(task.metadata_ or {})
-            if metadata.get("release_job_id") != job_id or (task.input_data or {}).get("reports_only"):
+            if metadata.get("release_job_id") != job_id or any((task.input_data or {}).get(flag) for flag in ("reports_only", "raw_archive_only", "code_only")):
                 continue
             task_time = _as_aware_utc(task.completed_at or task.created_at)
             crawl_time = _as_aware_utc(crawl_completed_at)
@@ -896,6 +973,9 @@ class DataReleaseService:
                 .where(
                     Task.task_type == TaskType.EXPORT_DATA,
                     Task.status.in_([TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]),
+                    Task.input_data["raw_archive_only"].as_boolean().is_not(True),
+                    Task.input_data["reports_only"].as_boolean().is_not(True),
+                    Task.input_data["code_only"].as_boolean().is_not(True),
                 )
                 .order_by(Task.completed_at.desc().nullslast(), Task.created_at.desc())
                 .limit(100)
@@ -903,7 +983,7 @@ class DataReleaseService:
             tasks = list(result.scalars().all())
         for task in tasks:
             metadata = dict(task.metadata_ or {})
-            if metadata.get("release_job_id") == job_id and not (task.input_data or {}).get("reports_only"):
+            if metadata.get("release_job_id") == job_id and not any((task.input_data or {}).get(flag) for flag in ("reports_only", "raw_archive_only", "code_only")):
                 return task
         return None
 
@@ -916,6 +996,8 @@ class DataReleaseService:
         trigger_task_uuid: Optional[str],
         full: bool = False,
         reports_only: bool = False,
+        code_only: bool = False,
+        pending_ids: list[int] | None = None,
     ) -> dict[str, Any]:
         branch = self._download_repo_branch(job)
         project_name = self._cloudflare_project_name(job.cloudflare_project_name)
@@ -924,17 +1006,23 @@ class DataReleaseService:
         raw_archive = self._raw_archive_runtime()
         incremental_country_codes: list[str] = []
         dirty_ids: list[int] = []
+        release_plan = {}
         # An empty incremental run never becomes a full country rebuild.
         incremental_site = not full
         marked_before = datetime.now(ZoneInfo("UTC")).isoformat()
         async with get_database() as db:
-            dirty = [] if reports_only else list((await db.execute(select(PublishDirty).where(PublishDirty.published_at.is_(None)).order_by(PublishDirty.id))).scalars().all())
+            selection_query = select(PublishDirty).where(PublishDirty.published_at.is_(None))
+            if pending_ids is not None:
+                selection_query = selection_query.where(PublishDirty.id.in_(pending_ids))
+            dirty = [] if reports_only or code_only else list((await db.execute(selection_query.order_by(PublishDirty.id))).scalars().all())
+            if pending_ids is not None and not dirty:
+                return {"job_id": job.job_id, "status": "skipped", "task_uuid": trigger_task_uuid, "reason": "no_pending_changes"}
             if full:
                 # Freeze exact visible log IDs, including for full releases.
                 # A transaction can commit later with an earlier marked_at;
                 # a timestamp-only acknowledgement would lose that change.
                 dirty_ids = [row.id for row in dirty]
-            if not full and not reports_only:
+            if not full and not reports_only and not code_only:
                 scopes = sorted({row.scope_key for row in dirty if row.line == "surveillance"})
                 known = list((await db.execute(select(Country.code, Country.is_active))).all()) if scopes else []
                 known_codes = {str(code).strip().upper() for code, _active in known}
@@ -948,18 +1036,16 @@ class DataReleaseService:
                     str(code).strip().upper() for code, active in known
                     if active and get_country_bootstrap_config(code).get("public_release_enabled", True) is not False
                 }
-                publishable_scopes = [scope for scope in scopes if scope in available_codes]
-                incremental_country_codes = [
-                    code for code in expand_country_scopes(publishable_scopes, available_codes=available_codes)
-                    if code in available_codes
-                ]
-                # Disabled countries retain their pending marker until their
-                # publication policy permits export. They do not block other
-                # scopes, and must never be acknowledged by this release.
-                dirty_ids = [
-                    row.id for row in dirty
-                    if row.line != "surveillance" or row.scope_key in available_codes
-                ]
+                from .data_release.planning import plan_changes
+                release_plan = plan_changes(
+                    dirty, available_codes,
+                    max_countries=int(getattr(self._config(), "batch_max_countries", 8)),
+                )
+                incremental_country_codes = release_plan["country_codes"]
+                dirty_ids = release_plan["dirty_ids"]
+                if (pending_ids is not None or not manual) and not dirty_ids:
+                    return {"job_id": job.job_id, "status": "skipped", "task_uuid": trigger_task_uuid,
+                            "reason": "no_publishable_changes"}
         description_parts = [
             f"Refresh and generate site data, then build Astro site for release job {job.job_id}.",
             (
@@ -974,6 +1060,8 @@ class DataReleaseService:
             ),
             f"Pages: {project_name}" if job.include_cloudflare_deploy else "Cloudflare deploy disabled.",
         ]
+        if code_only:
+            description_parts = ["Build and publish code/templates using the existing data snapshot; no collection or download generation."]
         if reports_only:
             description_parts = ["Refresh report data, build report pages, publish changed files to Reports R2, and verify the public report host."]
 
@@ -982,7 +1070,7 @@ class DataReleaseService:
             "release_job_name": job.name,
             "priority": job.priority,
             "auto_after_crawls": job.auto_after_crawls,
-            "include_git_push": bool(job.include_git_push and not reports_only),
+            "include_git_push": bool(job.include_git_push and not reports_only and not code_only),
             "include_cloudflare_deploy": bool(job.include_cloudflare_deploy and not reports_only),
             "require_clean_worktree": job.require_clean_worktree,
             "download_repo_branch": branch,
@@ -998,6 +1086,11 @@ class DataReleaseService:
             "incremental_site": incremental_site,
             "full": full,
             "reports_only": reports_only,
+            "code_only": code_only,
+            "country_scopes_exact": True,
+            "release_plan": release_plan,
+            "continuation_dirty_ids": release_plan.get("continuation_dirty_ids", []),
+            "continuation_parent_task_uuid": trigger_task_uuid if pending_ids is not None else None,
             "publish_dirty_ids": dirty_ids,
             "publish_dirty_before": None,
             "publish_selected_at": marked_before,
@@ -1019,11 +1112,20 @@ class DataReleaseService:
                 .order_by(DataReleaseJob.id.asc())
                 .with_for_update()
             )
+            if pending_ids is not None and trigger_task_uuid:
+                child = (await db.execute(select(Task).where(
+                    Task.task_type == TaskType.EXPORT_DATA,
+                    Task.input_data["continuation_parent_task_uuid"].as_string() == trigger_task_uuid,
+                ).order_by(Task.id).limit(1))).scalar_one_or_none()
+                if child is not None:
+                    return {"job_id": job.job_id, "status": "skipped", "task_uuid": child.task_uuid,
+                            "reason": "continuation_already_queued"}
             existing_tasks = (
                 await db.execute(
                     select(Task)
                     .where(
                         Task.task_type == TaskType.EXPORT_DATA,
+                        Task.input_data["raw_archive_only"].as_boolean().is_not(True),
                         Task.status.in_(
                             [
                                 TaskStatus.PENDING,
@@ -1072,6 +1174,16 @@ class DataReleaseService:
                 },
             )
             db.add(task)
+            await db.flush()
+            if pending_ids is not None and trigger_task_uuid:
+                parent = (await db.execute(select(Task).where(
+                    Task.task_uuid == trigger_task_uuid,
+                ).with_for_update())).scalar_one_or_none()
+                if parent is not None:
+                    parent.metadata_ = {
+                        **(parent.metadata_ or {}),
+                        "release_continuation": {"status": "queued", "task_uuid": task.task_uuid},
+                    }
             await db.commit()
             await db.refresh(task)
 
@@ -1129,14 +1241,14 @@ class DataReleaseService:
             "jobs": jobs_payload,
         }
 
-    async def integration_checks(self, job_id: str) -> dict[str, Any]:
+    async def integration_checks(self, job_id: str, *, code_only: bool = False) -> dict[str, Any]:
         await self.ensure_storage()
         job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
         if job is None:
             raise ValueError(f"Data release job not found: {job_id}")
 
         branch = self._download_repo_branch(job)
-        download_repo = await self._download_repo_check(job) if job.include_git_push else {
+        download_repo = await self._download_repo_check(job) if job.include_git_push and not code_only else {
             "payload": {
                 "repo_url": self._download_repo_url() or None,
                 "branch": branch,
@@ -1161,22 +1273,34 @@ class DataReleaseService:
         tracked_generated_paths = await self._tracked_generated_paths()
 
         python_path = self._python_executable()
-        situation_notices_check = (
-            await self._run_capture(
+        if code_only:
+            situation_notices_check = {"returncode": 0, "stdout": "Skipped for code-only release."}
+        elif python_path.exists():
+            situation_notices_check = await self._run_capture(
                 [*self._update_situation_notices_command(python_path=python_path), "--help"],
                 cwd=ROOT_DIR,
                 timeout=60,
             )
-            if python_path.exists()
-            else {"returncode": 127, "stdout": f"Python executable not found: {python_path}"}
-        )
+        else:
+            situation_notices_check = {"returncode": 127, "stdout": f"Python executable not found: {python_path}"}
         wrangler_check = await self._run_capture(
             ["npm", "exec", "--", "wrangler", "--version"],
             cwd=ASTRO_DIR,
             timeout=60,
         )
         cloudflare = await self._cloudflare_check(job.cloudflare_project_name)
-        raw_archive = await self._raw_archive_check()
+        archive_config = self._raw_archive_runtime()
+        raw_archive = {
+            "payload": {
+                "enabled": archive_config.enabled, "repo_url": archive_config.repo_url or None,
+                "branch": archive_config.branch, "independent": True,
+                "read_access_ok": None, "write_access_ok": None,
+                "ssh_transport": "deferred",
+                "read_check_output": "Checked by the independent raw archive task.",
+                "write_check_output": "Checked by the independent raw archive task.",
+            },
+            "blockers": [],
+        }
         r2_enabled = self._r2_papers_enabled(job)
         r2_papers = (
             self._r2_papers_check(probe=True)
@@ -1213,7 +1337,7 @@ class DataReleaseService:
         blockers: list[str] = []
         if job.include_git_push:
             blockers.extend(download_repo["blockers"])
-        if job.include_cloudflare_deploy and not job.include_git_push:
+        if job.include_cloudflare_deploy and not job.include_git_push and not code_only:
             blockers.append(
                 "Cloudflare deployment requires direct-download publication so the "
                 "new site never references unpublished CSV/JSON/XLSX partitions."
@@ -1231,7 +1355,17 @@ class DataReleaseService:
             blockers.extend(r2_reports["blockers"])
         if job.include_cloudflare_deploy:
             blockers.extend(cloudflare["blockers"])
-        blockers.extend(raw_archive["blockers"])
+        if code_only:
+            from .data_release.stage_receipts import StageReceipts
+
+            try:
+                await asyncio.to_thread(
+                    StageReceipts(ROOT_DIR, "preflight", {}, {}).assert_published_data,
+                    [ASTRO_DIR / "src/data", ASTRO_DIR / "public/site-data"],
+                )
+            except RuntimeError as exc:
+                blockers.append(str(exc))
+        # The independent archive job owns its own access checks and retries.
         if not python_path.exists():
             blockers.append(f"Python executable not found: {python_path}")
         elif situation_notices_check["returncode"] != 0:
@@ -1301,9 +1435,9 @@ class DataReleaseService:
                     "file_budget": pages_budget.get("budget"),
                 },
                 "github_downloads": {
-                    "enabled": bool(job.include_git_push),
+                    "enabled": bool(job.include_git_push and not code_only),
                     "ready": bool(
-                        job.include_git_push
+                        job.include_git_push and not code_only
                         and download_repo["payload"].get("read_access_ok")
                         and download_repo["payload"].get("write_access_ok")
                     ),
@@ -1565,10 +1699,8 @@ class DataReleaseService:
             **identity,
             "visual_modules": visual_modules,
         }
-        SITE_RELEASE_MANIFEST.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        from src.generation.site_data_writer import _write_if_changed
+        _write_if_changed(SITE_RELEASE_MANIFEST, (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
         return payload
 
     def _cloudflare_deploy_command(
@@ -1595,12 +1727,14 @@ class DataReleaseService:
         download_url_base: str,
         incremental_country_codes: list[str] | tuple[str, ...] | None = None,
         incremental_site: bool = False,
+        country_scopes_exact: bool = False,
     ) -> list[str]:
         return build_generate_site_data_command(
             python_path=python_path,
             download_url_base=download_url_base,
             incremental_country_codes=incremental_country_codes,
             incremental_site=incremental_site,
+            country_scopes_exact=country_scopes_exact,
         )
 
     def _update_situation_notices_command(self, *, python_path: Path) -> list[str]:

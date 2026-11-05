@@ -9654,6 +9654,11 @@
       },
       "PublishRunCreate": {
         "properties": {
+          "code_only": {
+            "default": false,
+            "title": "Code Only",
+            "type": "boolean"
+          },
           "full": {
             "default": false,
             "title": "Full",
@@ -23162,6 +23167,16 @@
             "schema": {
               "title": "Job Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "code_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Code Only",
+              "type": "boolean"
             }
           }
         ],

@@ -5942,6 +5942,11 @@ export interface components {
         /** PublishRunCreate */
         PublishRunCreate: {
             /**
+             * Code Only
+             * @default false
+             */
+            code_only: boolean;
+            /**
              * Full
              * @default false
              */
@@ -14406,7 +14411,9 @@ export interface operations {
     };
     get_data_release_checks_api_v1_releases__job_id__checks_get: {
         parameters: {
-            query?: never;
+            query?: {
+                code_only?: boolean;
+            };
             header?: never;
             path: {
                 job_id: string;

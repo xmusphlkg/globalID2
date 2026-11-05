@@ -242,7 +242,7 @@ def _entry_files_available(
     """
     parts = entry.get("parts") or []
     if not parts:
-        return False
+        return bool(entry) and entry.get("record_count") == 0 and isinstance(entry.get("parts"), list)
     prefix = f"{directory}/{path_id}/"
     for part in parts:
         files = part.get("files") or {}
@@ -420,6 +420,14 @@ def _source_observation_rows(
     return rows
 
 
+def _require_lossless_download_series(series: dict) -> None:
+    if series.get("projection_policy") == "published_series":
+        raise ValueError(
+            "Public curve snapshots omit source provenance and cannot generate "
+            "lossless downloads; refresh the affected country from observations."
+        )
+
+
 def build_country_download_rows(country_data: dict, source_info: dict) -> list[dict]:
     """Flatten a country projection without release-volatile fields."""
 
@@ -427,6 +435,7 @@ def build_country_download_rows(country_data: dict, source_info: dict) -> list[d
     source_columns = _source_columns(source_info)
     dataset_id = str(country_data.get("country_code") or "").lower()
     for series in (country_data.get("disease_series") or {}).values():
+        _require_lossless_download_series(series)
         base_columns = {
             "dataset_kind": "country",
             "dataset_id": dataset_id,
@@ -488,6 +497,7 @@ def build_disease_download_rows(
     rows: list[dict] = []
     dataset_id = disease_data.get("disease_id")
     for country_code, series in (disease_data.get("country_series") or {}).items():
+        _require_lossless_download_series(series)
         dates = series.get("dates") or []
         cases = series.get("cases") or []
         weekly_equiv = series.get("weekly_equiv_cases") or []
@@ -710,15 +720,6 @@ def _partition_metadata(dataset: dict, spec: PartitionSpec, rows: list[dict]) ->
     }
 
 
-def _partition_bytes(dataset: dict, spec: PartitionSpec, rows: list[dict]) -> dict[str, bytes]:
-    metadata = _partition_metadata(dataset, spec, rows)
-    return {
-        "csv": _csv_bytes(rows),
-        "json": _json_bytes(metadata, rows),
-        "xlsx": _xlsx_bytes(metadata, rows),
-    }
-
-
 def _split_spec(spec: PartitionSpec, rows: list[dict]) -> tuple[tuple[PartitionSpec, list[dict]], tuple[PartitionSpec, list[dict]]]:
     """Bisect an oversized window at a stable calendar boundary."""
 
@@ -790,10 +791,18 @@ def _bounded_partition_artifacts(
     spec: PartitionSpec,
     rows: list[dict],
     max_file_bytes: int,
+    *,
+    json_content: bytes | None = None,
 ) -> list[tuple[PartitionSpec, list[dict], dict[str, bytes]]]:
-    artifacts = _partition_bytes(dataset, spec, rows)
-    if max(len(content) for content in artifacts.values()) < max_file_bytes:
-        return [(spec, rows, artifacts)]
+    # JSON is normally the largest representation. Reject an oversized parent
+    # before spending time constructing CSV and an XLSX workbook for it.
+    artifacts = {"json": json_content if json_content is not None else _json_bytes(_partition_metadata(dataset, spec, rows), rows)}
+    if len(artifacts["json"]) < max_file_bytes:
+        artifacts["csv"] = _csv_bytes(rows)
+        if len(artifacts["csv"]) < max_file_bytes:
+            artifacts["xlsx"] = _xlsx_bytes(_partition_metadata(dataset, spec, rows), rows)
+            if len(artifacts["xlsx"]) < max_file_bytes:
+                return [(spec, rows, artifacts)]
     left, right = _split_spec(spec, rows)
     return _bounded_partition_artifacts(dataset, *left, max_file_bytes) + _bounded_partition_artifacts(
         dataset, *right, max_file_bytes
@@ -813,6 +822,55 @@ def _remove_stale_files(root: Path, expected: set[Path]) -> int:
     return removed
 
 
+def _planned_partition_rows(
+    rows: list[dict], existing_parts: dict[str, dict]
+) -> list[tuple[PartitionSpec, list[dict]]]:
+    """Keep existing calendar subdivisions instead of rebuilding their parent.
+
+    Reuse only a complete, non-overlapping cover of a stable base window. Old
+    single-date row chunks and malformed manifests fall back to normal splitting;
+    they cannot safely assign new/deleted observations by calendar bounds.
+    """
+    planned = []
+    for base, base_rows in partition_rows(rows):
+        children = []
+        for part in existing_parts.values():
+            try:
+                start = date.fromisoformat(part["window"]["start"])
+                end = date.fromisoformat(part["window"]["end"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if (base.start <= start <= end <= base.end
+                    and part.get("id") == f"{start.isoformat()}_{end.isoformat()}"):
+                children.append((start, end, part))
+        children.sort(key=lambda child: (child[0], child[1]))
+        cursor = base.start.toordinal()
+        for start, end, _ in children:
+            if start.toordinal() != cursor:
+                break
+            cursor = end.toordinal() + 1
+        else:
+            if len(children) > 1 and cursor == base.end.toordinal() + 1:
+                buckets = [[] for _ in children]
+                # Binary search avoids scanning all observations for each part.
+                from bisect import bisect_left
+                ends = [end.isoformat() for _, end, _ in children]
+                for row in base_rows:
+                    buckets[bisect_left(ends, str(row["date"])[:10])].append(row)
+                for (start, end, part), part_rows in zip(children, buckets):
+                    if not part_rows:
+                        continue
+                    current = base.is_current and end == base.end
+                    planned.append((PartitionSpec(
+                        key=part["id"], start=start, end=end,
+                        label=f"{start.isoformat()} – {'now' if current else end.isoformat()}",
+                        is_current=current,
+                    ), part_rows))
+                continue
+        planned.append((base, base_rows))
+    return planned
+
+
 def _dataset_parts(
     *,
     dataset: dict,
@@ -822,12 +880,15 @@ def _dataset_parts(
     max_file_bytes: int,
     expected_paths: set[Path],
     existing_parts: dict[str, dict],
+    trusted_paths: set[str] | None = None,
+    counters: dict[str, int] | None = None,
 ) -> tuple[list[dict], int]:
     parts: list[dict] = []
     changed = 0
-    for base_spec, base_rows in partition_rows(rows):
+    for base_spec, base_rows in _planned_partition_rows(rows, existing_parts):
         base_metadata = _partition_metadata(dataset, base_spec, base_rows)
-        base_content_sha = _sha256(_json_bytes(base_metadata, base_rows))
+        base_json = _json_bytes(base_metadata, base_rows)
+        base_content_sha = _sha256(base_json)
         existing = existing_parts.get(base_spec.key)
         existing_files = (existing or {}).get("files") or {}
         can_reuse = bool(
@@ -835,20 +896,24 @@ def _dataset_parts(
             and existing.get("content_sha256") == base_content_sha
             and set(existing_files) == set(PUBLIC_FORMATS)
         )
-        for format_name in PUBLIC_FORMATS:
+        for format_name in PUBLIC_FORMATS if can_reuse else ():
             file_meta = existing_files.get(format_name) or {}
             relative_path = str(file_meta.get("relative_path") or "")
             path = output_dir / relative_path
             if (
                 not relative_path
+                or relative_path != f"{dataset['directory']}/{dataset['path_id']}/{base_spec.key}.{format_name}"
                 or not path.is_file()
                 or path.stat().st_size != int(file_meta.get("bytes") or -1)
                 or path.stat().st_size >= max_file_bytes
-                or _file_sha256(path) != str(file_meta.get("sha256") or "")
+                or (relative_path not in (trusted_paths or ())
+                    and _file_sha256(path) != str(file_meta.get("sha256") or ""))
             ):
                 can_reuse = False
                 break
         if can_reuse:
+            if counters is not None:
+                counters["reused_partitions"] += 1
             dates = [str(row["date"]) for row in base_rows]
             files: dict[str, dict] = {}
             for format_name in PUBLIC_FORMATS:
@@ -887,8 +952,11 @@ def _dataset_parts(
             base_spec,
             base_rows,
             max_file_bytes,
+            json_content=base_json,
         )
         for spec, part_rows, artifacts in bounded:
+            if counters is not None:
+                counters["rebuilt_partitions"] += 1
             files: dict[str, dict] = {}
             for format_name in PUBLIC_FORMATS:
                 relative_path = (
@@ -939,10 +1007,12 @@ def _build_dataset_parts_task(
     download_url_base: str,
     max_file_bytes: int,
     existing_parts: dict[str, dict],
+    trusted_paths: set[str] | None = None,
 ) -> dict:
     """Build one dataset tree independently so changed partitions can overlap."""
 
     expected_paths: set[Path] = set()
+    counters = {"reused_partitions": 0, "rebuilt_partitions": 0}
     parts, changed = _dataset_parts(
         dataset=dataset,
         rows=rows,
@@ -951,6 +1021,8 @@ def _build_dataset_parts_task(
         max_file_bytes=max_file_bytes,
         expected_paths=expected_paths,
         existing_parts=existing_parts,
+        trusted_paths=trusted_paths,
+        counters=counters,
     )
     return {
         "kind": kind,
@@ -960,6 +1032,7 @@ def _build_dataset_parts_task(
         "parts": parts,
         "changed": changed,
         "paths": expected_paths,
+        **counters,
     }
 
 
@@ -969,6 +1042,7 @@ def _build_country_parts_task(
     download_url_base: str,
     max_file_bytes: int,
     existing_parts: dict[str, dict],
+    trusted_paths: set[str] | None = None,
 ) -> dict:
     code = country_export["code"]
     path_id = code.lower()
@@ -991,6 +1065,7 @@ def _build_country_parts_task(
         download_url_base=download_url_base,
         max_file_bytes=max_file_bytes,
         existing_parts=existing_parts,
+        trusted_paths=trusted_paths,
     )
     result["source_info"] = country_export["source_info"]
     return result
@@ -1004,6 +1079,7 @@ def _build_disease_parts_task(
     download_url_base: str,
     max_file_bytes: int,
     existing_parts: dict[str, dict],
+    trusted_paths: set[str] | None = None,
 ) -> dict:
     did = disease_export["disease_id"]
     path_id = did.lower()
@@ -1029,6 +1105,7 @@ def _build_disease_parts_task(
         download_url_base=download_url_base,
         max_file_bytes=max_file_bytes,
         existing_parts=existing_parts,
+        trusted_paths=trusted_paths,
     )
     result["country_codes"] = sorted(
         (disease_data.get("country_series") or {}).keys()
@@ -1097,6 +1174,7 @@ def build_direct_download_files(
     }
     projection_code = _projection_code_sha256()
     trusted_paths = _git_unchanged_paths(output_dir)
+    verified_paths = set(trusted_paths)
     country_fingerprints: dict[str, str] = {}
     disease_fingerprints: dict[str, str] = {}
     requested_country_codes = {str(code).strip().upper() for code in changed_country_codes or ()}
@@ -1116,10 +1194,9 @@ def build_direct_download_files(
                 path_id,
                 verify_hash=False,
             ):
-                print(
-                    f"  Download files for unchanged country {code} are missing; "
-                    "left until its published curve changes",
-                    flush=True,
+                raise RuntimeError(
+                    f"Cannot reuse downloads for unchanged country {code}: files are missing or invalid. "
+                    f"Refresh country scope {code} (or run a full data export) before publishing."
                 )
             if index % 25 == 0 or index == len(country_exports):
                 print(
@@ -1128,9 +1205,11 @@ def build_direct_download_files(
                 )
             continue
         available = _entry_files_available(existing, output_dir, "countries", path_id, trusted_paths=trusted_paths)
+        if available:
+            verified_paths.update(file["relative_path"] for part in existing["parts"] for file in part["files"].values())
         if changed_country_codes is None or code in requested_country_codes or not available:
             fingerprint = _input_sha256(
-                {"country_data": item["country_data"], "source_info": item["source_info"]},
+                {"country_data": item["country_data"], "country_name": item["country_name"], "source_info": item["source_info"]},
                 projection_code=projection_code,
                 max_file_bytes=max_file_bytes,
             )
@@ -1154,10 +1233,10 @@ def build_direct_download_files(
                 path_id,
                 verify_hash=False,
             ):
-                print(
-                    f"  Download files for unchanged disease {disease_id} are missing; "
-                    "left until a published curve for it changes",
-                    flush=True,
+                raise RuntimeError(
+                    f"Cannot reuse downloads for unchanged disease {disease_id}: files are missing or invalid. "
+                    f"Refresh country scopes contributing to disease {disease_id} "
+                    "(or run a full data export) before publishing."
                 )
             if index % 25 == 0 or index == len(disease_exports):
                 print(
@@ -1166,6 +1245,8 @@ def build_direct_download_files(
                 )
             continue
         available = _entry_files_available(existing, output_dir, "diseases", path_id, trusted_paths=trusted_paths)
+        if available:
+            verified_paths.update(file["relative_path"] for part in existing["parts"] for file in part["files"].values())
         if changed_disease_ids is None or disease_id in requested_disease_ids or not available:
             country_codes = (item["disease_data"].get("country_series") or {}).keys()
             fingerprint = _input_sha256(
@@ -1221,16 +1302,21 @@ def build_direct_download_files(
                 if kind == "country":
                     country_export = item
                     path_id = country_export["code"].lower()
+                    previous_parts = existing_country_parts.get(path_id, {})
                     future = executor.submit(
                         _build_country_parts_task,
                         country_export,
                         output_dir,
                         download_url_base,
                         max_file_bytes,
-                        existing_country_parts.get(path_id, {}),
+                        previous_parts,
+                        {file["relative_path"] for part in previous_parts.values()
+                         for file in part.get("files", {}).values()
+                         if file.get("relative_path") in verified_paths},
                     )
                 else:
                     disease_export = item
+                    previous_parts = existing_disease_parts.get(disease_export["disease_id"], {})
                     future = executor.submit(
                         _build_disease_parts_task,
                         disease_export,
@@ -1239,7 +1325,10 @@ def build_direct_download_files(
                         output_dir,
                         download_url_base,
                         max_file_bytes,
-                        existing_disease_parts.get(disease_export["disease_id"], {}),
+                        previous_parts,
+                        {file["relative_path"] for part in previous_parts.values()
+                         for file in part.get("files", {}).values()
+                         if file.get("relative_path") in verified_paths},
                     )
                 pending[future] = index
 
@@ -1316,7 +1405,7 @@ def build_direct_download_files(
         entry.update(
             {
                 "input_sha256": country_fingerprints.get(dataset["path_id"]) or _input_sha256(
-                    {"country_data": country_export["country_data"], "source_info": country_export["source_info"]},
+                    {"country_data": country_export["country_data"], "country_name": country_export["country_name"], "source_info": country_export["source_info"]},
                     projection_code=projection_code,
                     max_file_bytes=max_file_bytes,
                 ),
@@ -1390,6 +1479,13 @@ def build_direct_download_files(
         "generation": {
             "changed_files": changed_files,
             "removed_files": removed_files,
+            "selected_datasets": task_count,
+            "rebuilt_partitions": sum(result["rebuilt_partitions"] for result in results_by_index.values()),
+            "reused_partitions": sum(result["reused_partitions"] for result in results_by_index.values())
+            + sum(len(entry.get("parts") or []) for entry in country_entries
+                  if entry["id"] not in processed_country_results)
+            + sum(len(entry.get("parts") or []) for entry in disease_entries
+                  if entry["disease_id"] not in processed_disease_results),
         },
     }
     # Export timings/counters describe a run, not a dataset version. Keep them

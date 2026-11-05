@@ -11,7 +11,7 @@ from src.services.data_release_service import DataReleaseService
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("state,expected", [("none", True), ("old", True), ("covered", False), ("failed", False)])
+@pytest.mark.parametrize("state,expected", [("none", True), ("old", True), ("covered", False), ("failed", False), ("code_only", True), ("raw_archive_only", True)])
 async def test_pending_report_reconciler_retries_without_losing_busy_events(monkeypatch, state, expected):
     now = datetime.now(timezone.utc)
     report = SimpleNamespace(completed_at=now - timedelta(minutes=2), task_uuid="report-task")
@@ -22,6 +22,9 @@ async def test_pending_report_reconciler_retries_without_losing_busy_events(monk
     if state == "failed":
         releases.append(SimpleNamespace(status=TaskStatus.FAILED, input_data={"reports_only": True}, output_data={},
             completed_at=now - timedelta(minutes=1), created_at=now - timedelta(minutes=2)))
+    if state in {"code_only", "raw_archive_only"}:
+        releases.append(SimpleNamespace(status=TaskStatus.COMPLETED, input_data={state: True},
+            output_data={"r2_reports_published": True}, started_at=now - timedelta(minutes=1)))
     class Result:
         def __init__(self, value=None): self.value = value
         def scalar_one_or_none(self): return self.value

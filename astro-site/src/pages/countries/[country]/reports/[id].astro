@@ -12,7 +12,8 @@ import {
 } from '../../../../lib/report-data';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import { buildAlternatePaths, buildSeoTitle } from '../../../../lib/seo';
+import { buildAlternatePaths } from '../../../../lib/seo';
+import { reportCoverage as coverageForReport, reportOverviewTitle } from '../../../../lib/report-seo';
 import { downloadCatalogue } from '../../../../lib/downloads-data';
 import { shouldBuildPage } from '../../../../lib/page-build-plan';
 
@@ -86,12 +87,10 @@ const reportTitleFr = document?.title?.fr ?? report?.title_fr ?? `Titre françai
 const reportSummary = document?.summary?.zh ?? report?.summary ?? '';
 const reportSummaryEn = document?.summary?.en ?? report?.summary ?? '';
 const reportSummaryFr = document?.summary?.fr ?? report?.summary_fr ?? (reportSummaryEn ? 'Résumé français en attente.' : '');
-const reportCoverage = report?.period_start && report?.period_end
-  ? `${String(report.period_start).slice(0, 10)}–${String(report.period_end).slice(0, 10)}`
-  : '';
+const reportCoverage = coverageForReport(report);
 const canonicalPath = localeHref(`/countries/${country}/reports/${id}/`);
 const reportSeo = {
-  title: zh ? `${countryNameZh}传染病监测报告${reportCoverage ? ` ${reportCoverage}` : ''} | GIDS` : fr ? `${countryNameFr} — rapport de surveillance${reportCoverage ? ` ${reportCoverage}` : ''} | GIDS` : buildSeoTitle(countryNameEn, 'weekly infectious disease surveillance report', reportCoverage),
+  title: reportOverviewTitle(report ?? {}, country ?? '', locale, countryData),
   description: zh ? `${countryNameZh}传染病监测报告${reportCoverage ? `，覆盖 ${reportCoverage}` : ''}，包含报告周期、摘要、疾病信号、官方来源数据和下载。` : fr ? `Rapport de surveillance des maladies infectieuses pour ${countryNameFr}${reportCoverage ? ` (${reportCoverage})` : ''}, avec période, résumé, signaux, sources officielles et téléchargements.` : `${countryNameEn} infectious disease surveillance report${reportCoverage ? ` for ${reportCoverage}` : ''}. Includes reporting period, summary, disease signals, official-source data, and downloads.`,
   locale,
   canonicalPath,

@@ -294,7 +294,11 @@ class CrawlService:
                     totals = replace(totals, **{
                         field: getattr(totals, field, 0) + getattr(result, field, 0)
                         for field in fields
-                    })
+                    }, publication_changes=(
+                        totals.publication_changes + result.publication_changes
+                        if totals.publication_changes is not None
+                        and result.publication_changes is not None else None
+                    ))
                 offset = end
             return totals
 
@@ -435,6 +439,10 @@ class CrawlService:
                 series_result,
                 skipped_unregistered=skipped_unregistered,
                 skipped_missing=skipped_missing,
+                publication_changes=(
+                    series_result.publication_changes
+                    if not (skipped_unregistered or skipped_missing) else None
+                ),
             )
         else:
             # Test doubles and compatibility stores may return a namespace.
@@ -480,6 +488,7 @@ class CrawlService:
         db_latest_date,
         source_latest_date,
         force: bool,
+        publication_results: list | None = None,
     ):
         """Persist legacy projections and lossless source-series facts atomically."""
 
@@ -501,6 +510,21 @@ class CrawlService:
             rows,
             series_rows=series_rows,
         )
+        # Public curves still attach legacy supplemental metrics. A complete
+        # case-series comparison cannot prove that deaths/recoveries or rates
+        # did not change on the legacy side (including clearing a prior value).
+        supplemental_keys = {
+            "Deaths", "deaths", "Recoveries", "recoveries",
+            "MortalityRate", "mortality_rate", "RecoveryRate", "recovery_rate",
+        }
+        if (
+            int(getattr(import_result, "inserted_or_updated", 0) or 0) > 0
+            and any(supplemental_keys.intersection(row) for row in rows)
+            and isinstance(series_result, SeriesObservationSaveResult)
+        ):
+            series_result = replace(series_result, publication_changes=None)
+        if publication_results is not None:
+            publication_results.append(series_result)
         # Source-native integrations can intentionally have no legacy disease
         # projection.  Surface their successfully persisted fact count to the
         # task/control-plane result instead of incorrectly reporting zero.

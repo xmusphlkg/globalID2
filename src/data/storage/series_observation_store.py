@@ -185,6 +185,15 @@ def _revision_state(row: Mapping[str, Any]) -> str:
     # refresh. Preserve them in snapshots, but only create a new value revision
     # when the reported observation or its interpretation actually changes.
     state = {key: row.get(key) for key in _REVISION_COMPARISON_COLUMNS}
+    metadata = row.get("metadata") or {}
+    state["interpretation"] = {
+        key: metadata.get(key)
+        for key in (
+            "source_id", "local_code", "local_label", "measure", "frequency",
+            "rollup_policy", "population_scope", "missing_value_status",
+            "dynamic_holding", "source_category_id",
+        )
+    }
     return json.dumps(state, sort_keys=True, separators=(",", ":"), default=str)
 
 
@@ -204,6 +213,7 @@ async def _persist_observation_revisions(
     *,
     recorded_at: datetime,
     seed_current_state: bool,
+    changed_observations: list[dict[str, Any]] | None = None,
 ) -> int:
     """Seed legacy current rows once, then append only changed accepted states."""
     # Each identity expands to four bind parameters in both lookup queries,
@@ -216,6 +226,7 @@ async def _persist_observation_revisions(
             observations[offset : offset + _WRITE_BATCH_SIZE],
             recorded_at=recorded_at,
             seed_current_state=seed_current_state,
+            changed_observations=changed_observations,
         )
     return inserted
 
@@ -226,6 +237,7 @@ async def _persist_observation_revisions_batch(
     *,
     recorded_at: datetime,
     seed_current_state: bool,
+    changed_observations: list[dict[str, Any]] | None = None,
 ) -> int:
     if not observations:
         return 0
@@ -316,6 +328,12 @@ async def _persist_observation_revisions_batch(
 
     if not inserts:
         return 0
+    if not seed_current_state and changed_observations is not None:
+        # Capture the accepted database state, not the incoming proposal or
+        # PostgreSQL upsert count. Seeding pre-existing history is not a change.
+        changed_observations.extend(
+            {key: row[key] for key in _REVISION_KEY_COLUMNS} for row in inserts
+        )
     statement = pg_insert(DiseaseSeriesObservationRevision.__table__)
     statement = statement.on_conflict_do_nothing(
         constraint="uq_disease_series_observation_revision"
@@ -506,6 +524,30 @@ class SeriesObservationSaveResult:
     skipped_unregistered: int = 0
     skipped_missing: int = 0
     holding_observations: int = 0
+    # None means coverage is unknown; an empty tuple proves a semantic no-op.
+    # Keep None as the default for compatibility stores and legacy-only imports.
+    publication_changes: tuple[dict[str, Any], ...] | None = None
+
+
+def observation_publication_changes(
+    observations: list[dict[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    """Compact changed fact identities without merging distinct historical years."""
+    ranges: dict[tuple[str, str, int], dict[str, Any]] = {}
+    for row in observations:
+        when = _as_utc(row["time"])
+        key = (row["geography_key"], row["series_code"], when.year)
+        timestamp = when.isoformat()
+        if key not in ranges:
+            ranges[key] = {
+                "geography_key": key[0], "series_code": key[1],
+                "time_start": timestamp, "time_end": timestamp,
+                "operation": "upsert",
+            }
+        else:
+            ranges[key]["time_start"] = min(ranges[key]["time_start"], timestamp)
+            ranges[key]["time_end"] = max(ranges[key]["time_end"], timestamp)
+    return tuple(ranges[key] for key in sorted(ranges))
 
 
 @dataclass(frozen=True)
@@ -893,6 +935,7 @@ class SeriesObservationStore:
                 skipped_registry_not_synced=0,
                 quality_report=quality_report,
                 holding_observations=0,
+                publication_changes=() if not rows else None,
             )
 
         await acquire_disease_data_mutation_lock(db)
@@ -1008,11 +1051,13 @@ class SeriesObservationStore:
             write_result = await db.execute(statement, batch)
             affected_rows += len(write_result.scalars().all())
 
+        changed_observations: list[dict[str, Any]] = []
         await _persist_observation_revisions(
             db,
             observations,
             recorded_at=revision_time,
             seed_current_state=False,
+            changed_observations=changed_observations,
         )
 
         return SeriesObservationSaveResult(
@@ -1023,6 +1068,12 @@ class SeriesObservationStore:
             skipped_registry_not_synced=skipped_registry,
             quality_report=quality_report,
             holding_observations=len(holding_observations),
+            publication_changes=(
+                observation_publication_changes(changed_observations)
+                if not (missing_codes or skipped_registry or built.skipped_unmatched
+                        or built.skipped_ambiguous or built.skipped_invalid)
+                else None
+            ),
         )
 
     def _jp_mixed_holding_profiles(

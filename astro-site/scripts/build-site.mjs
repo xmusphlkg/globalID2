@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeBuildRedirects } from './build-redirects.mjs';
-import { astroAssetCacheRoot, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, writePending } from './research-build-cache.mjs';
+import { astroAssetCacheRoot, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, sharedFingerprint, writePending } from './research-build-cache.mjs';
 import { pageSourceSnapshot, planSitePages, pagePlanPath, sitePageCacheRoot, writePagePending } from './page-build-cache.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..', '..');
@@ -74,14 +74,14 @@ const astroBinary = resolve(
   process.platform === 'win32' ? 'astro.cmd' : 'astro',
 );
 const snapshot = sourceSnapshot();
-const pageSnapshot = pageSourceSnapshot({ shared: snapshot.shared });
+const pageSnapshot = pageSourceSnapshot();
 const incremental = Boolean(process.env.PUBLIC_GIDS_RELEASE_ID || process.env.GIDS_RESEARCH_INCREMENTAL === '1');
 let pagePlan = planSitePages(pageSnapshot, incremental);
 let plan = planResearchBuild({
   incremental,
   snapshot,
 });
-const assetCachePath = resolve(astroAssetCacheRoot, snapshot.shared);
+const assetCachePath = resolve(astroAssetCacheRoot, sharedFingerprint());
 const elapsedSeconds = started => ((performance.now() - started) / 1000).toFixed(1);
 mkdirSync(resolve(projectRoot, 'data', 'cache'), { recursive: true });
 writeFileSync(planPath, JSON.stringify({ selected: plan.selected }));

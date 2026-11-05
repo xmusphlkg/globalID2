@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { articlePaths, finalizeResearchSnapshot, mergeAstroAssetTree, planResearchBuild, replaceAstroAssetCache } from './research-build-cache.mjs';
+import { articlePaths, finalizeResearchSnapshot, mergeAstroAssetTree, planResearchBuild, replaceAstroAssetCache, reusedAssetReferencesAvailable } from './research-build-cache.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 
@@ -103,4 +103,16 @@ test('restores only missing shared assets and refreshes the fingerprinted asset 
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('reused HTML is rejected when a referenced client asset is missing', () => {
+  const root = mkdtempSync(join(tmpdir(), 'gids-missing-asset-'));
+  try {
+    writeFileSync(join(root, 'index.html'), '<script src="/_astro/client.abc.js"></script>');
+    const plan = { reused: ['page'], snapshot: { articles: { page: { paths: ['index.html'] } } } };
+    assert.equal(reusedAssetReferencesAvailable(plan, root), false);
+    mkdirSync(join(root, '_astro'));
+    writeFileSync(join(root, '_astro/client.abc.js'), 'export {};');
+    assert.equal(reusedAssetReferencesAvailable(plan, root), true);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

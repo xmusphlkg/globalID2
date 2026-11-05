@@ -609,6 +609,8 @@ def _legacy_transient_probe_unavailable(message: Any) -> bool:
             "connection reset",
             "returned html",
             "invalid structured json",
+            "no available channel",
+            "可用渠道不存在",
         )
     )
 
@@ -1344,7 +1346,7 @@ def _extract_error_codes(error: Any) -> List[str]:
 
 def is_model_unavailable_error(error: Any) -> bool:
     """Detect unrecoverable model-level errors (missing model or no access)."""
-    if is_provider_authentication_error(error):
+    if is_provider_authentication_error(error) or is_model_channel_failure(error):
         return False
 
     status_code = getattr(error, "status_code", None)
@@ -1398,14 +1400,13 @@ def is_model_channel_failure(error: Any) -> bool:
     if any(code in _ROUTE_CHANNEL_FAILURE_CODES for code in code_candidates):
         return True
 
-    # NewAI/compatible providers emit this as a 500 code with explicit channel
-    # routing context in the message.
+    # Gateways can use model_not_found even for a temporary routing failure.
     try:
         normalized_status = int(status_code) if status_code is not None else None
     except (TypeError, ValueError):
         normalized_status = None
 
-    if normalized_status == 500:
+    if normalized_status in {500, 503, None}:
         message = str(error).lower()
         return "可用渠道不存在" in str(error) or "no available channel" in message
 

@@ -443,6 +443,7 @@ async def execute_task(task_uuid: str) -> Dict[str, Any]:
         async with release_admission.task_scope(
             task_uuid, task.task_type,
             reports_only=(task.input_data or {}).get("reports_only") is True,
+            raw_archive_only=(task.input_data or {}).get("raw_archive_only") is True,
         ):
             return await _dispatch(task)
     finally:

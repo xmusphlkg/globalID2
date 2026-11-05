@@ -26,20 +26,32 @@ export class FileFingerprints {
     } catch { /* first run / damaged cache: read content */ }
   }
 
-  hash(path) {
+  hash(path, { gitAlgorithm } = {}) {
     const key = normalize(path);
     const before = signature(key);
     const entry = this.files[key];
-    if (entry?.stable && entry.stat === before && /^[a-f0-9]{64}$/.test(entry.sha256)) return entry.sha256;
+    const gitField = gitAlgorithm === 'sha256' ? 'gitSha256' : 'gitSha1';
+    if (entry?.stable && entry.stat === before && /^[a-f0-9]{64}$/.test(entry.sha256)
+      && (!gitAlgorithm || entry[gitField])) return entry.sha256;
     const body = this.read(key);
     if (signature(key) !== before) throw new Error(`Build input changed while hashing: ${key}`);
     const sha256 = digest(body);
+    const gitHash = gitAlgorithm
+      ? createHash(gitAlgorithm).update(`blob ${body.length}\0`).update(body).digest('hex')
+      : undefined;
     const timestamps = before.split(':').slice(-2).map(BigInt);
     const cutoff = BigInt(Date.now() - 1000) * 1000000n;
-    this.files[key] = { stat: before, sha256, stable: timestamps.every(value => value < cutoff) };
+    this.files[key] = { stat: before, sha256, ...(gitHash ? { [gitField]: gitHash } : {}), stable: timestamps.every(value => value < cutoff) };
     this.dirty = true;
     this.readCount += 1;
     return sha256;
+  }
+
+  gitBlobHash(path, algorithm = 'sha1') {
+    const key = normalize(path);
+    const field = algorithm === 'sha256' ? 'gitSha256' : 'gitSha1';
+    this.hash(key, { gitAlgorithm: algorithm });
+    return this.files[key][field];
   }
 
   copy(source, target) {
@@ -73,6 +85,7 @@ export function gitSourceIdentities(root) {
     });
     const changed = new Set(git(['diff', '--no-ext-diff', '--name-only', '-z']).split('\0'));
     const entries = new Map();
+    entries.objectFormat = git(['rev-parse', '--show-object-format']).trim();
     for (const row of git(['ls-files', '--stage', '-z']).split('\0')) {
       const match = /^(100644|100755) ([a-f0-9]+) 0\t([\s\S]+)$/.exec(row);
       if (match && !changed.has(match[3])) entries.set(resolve(root, match[3]), `${match[1]}:${match[2]}`);
@@ -85,10 +98,14 @@ export function sourceIdentity(path, identities, fingerprints) {
   const key = normalize(path);
   // Git hashes symlink contents, while the compiler follows them.
   if (identities.has(key) && !lstatSync(key).isSymbolicLink()) return `git:${identities.get(key)}`;
+  if (identities.objectFormat && !lstatSync(key).isSymbolicLink()) {
+    const mode = (statSync(key).mode & 0o100) ? '100755' : '100644';
+    return `git:${mode}:${fingerprints.gitBlobHash(key, identities.objectFormat)}`;
+  }
   return `file:${fingerprints.hash(key)}`;
 }
 
 const project = resolve(import.meta.dirname, '../..');
-export const fileFingerprints = new FileFingerprints(resolve(project, 'data/cache/build-file-fingerprints.json'));
+export const fileFingerprints = new FileFingerprints(process.env.GIDS_BUILD_FINGERPRINT_CACHE || resolve(project, 'data/cache/build-file-fingerprints.json'));
 export const fileHash = path => fileFingerprints.hash(path);
 process.once('exit', () => fileFingerprints.save());

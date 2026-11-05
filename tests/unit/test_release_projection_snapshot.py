@@ -76,3 +76,22 @@ async def test_snapshot_scope_must_match_release(tmp_path, monkeypatch):
             AsyncMock(), task_uuid="release", country_codes=["US"], full=False,
             dirty_ids=[], prepared_dir=tmp_path,
         )
+
+
+async def test_precise_projection_does_not_expand_selected_country(tmp_path, monkeypatch):
+    write_projection_snapshot(context(), tmp_path, {})
+    monkeypatch.setattr(projection, "_load_publish_context", AsyncMock(return_value={
+        "countries_by_code": {"JP": {}, "US": {}}, "stored_disease_ids": {"D001"},
+    }))
+    def unexpected_expansion(*args, **kwargs):
+        raise AssertionError("An exact plan must not expand its scopes a second time")
+    monkeypatch.setattr(projection, "expand_country_scopes", unexpected_expansion)
+    replace = AsyncMock()
+    monkeypatch.setattr(public_series_store, "_replace_country_rows", replace)
+    monkeypatch.setattr(projection, "_retire_disabled_publications", AsyncMock(return_value=set()))
+    await projection.commit_release_projection(
+        AsyncMock(), task_uuid="exact", country_codes=["JP"], country_scopes_exact=True,
+        full=False, dirty_ids=[7], prepared_dir=tmp_path,
+    )
+    replace.assert_awaited_once()
+    assert replace.await_args.args[1] == "JP"

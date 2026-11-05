@@ -11,7 +11,7 @@ import pytest_asyncio
 from sqlalchemy import event, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from src.domain import Base, Country, DataReleaseJob, Task, TaskPriority, TaskStatus
+from src.domain import Base, Country, DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
 from src.domain.collection import PublishDirty
 from src.services import data_release_service as module
 from src.services.data_release import projection
@@ -94,6 +94,175 @@ async def enqueue(maker, service, *, full=False):
                 select(Task).where(Task.task_uuid == result["task_uuid"])
             )
         ).scalar_one()
+
+
+async def _continuation_parent(release_db, monkeypatch, *, flags=None):
+    maker, service, _ = release_db
+    service._storage_ready = True
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(
+        enabled=True, timezone="UTC", batch_max_countries=1, auto_failure_cooldown_minutes=0,
+    ))
+    monkeypatch.setattr(service, "load_jobs", AsyncMock(return_value=[
+        DataReleaseJobConfig(job_id="site-release", name="Site Release", auto_after_crawls=False),
+    ]))
+    monkeypatch.setattr(module.schedule_state_repository, "save", AsyncMock())
+    async with maker() as session:
+        marker = PublishDirty(
+            line="surveillance", scope_key="JP", source_task_uuid="crawl-1",
+            marked_at=datetime.now(timezone.utc),
+            change_set={"version": 1, "precise": True, "changes": []},
+        )
+        session.add(marker)
+        await session.flush()
+        parent = Task(
+            task_uuid="parent", task_type=TaskType.EXPORT_DATA, task_name="First batch",
+            status=TaskStatus.COMPLETED, completed_at=datetime.now(timezone.utc),
+            input_data={"release_job_id": "site-release", "continuation_dirty_ids": [marker.id], **(flags or {})},
+            metadata_={"release_job_id": "site-release"}, output_data={"pages_deployed": True},
+        )
+        session.add(parent)
+        await session.commit()
+        return maker, service, marker.id, parent.id
+
+
+@pytest.mark.parametrize("line", [None, "literature", "situation", "knowledge"])
+async def test_automatic_noop_skips_release_but_other_data_lines_still_publish(release_db, line):
+    maker, service, _ = release_db
+    if line:
+        async with maker() as session:
+            session.add(PublishDirty(
+                line=line, scope_key="changed", source_task_uuid="upstream",
+                marked_at=datetime.now(timezone.utc),
+            ))
+            await session.commit()
+    result = await service._enqueue_release_task(
+        DataReleaseJobConfig(job_id="site-release", name="Site Release"),
+        manual=False, trigger="upstream_completion", trigger_task_uuid="upstream",
+    )
+    async with maker() as session:
+        tasks = (await session.execute(select(Task))).scalars().all()
+    if line is None:
+        assert result["reason"] == "no_publishable_changes"
+        assert tasks == []
+    else:
+        assert result["status"] == "queued"
+        assert len(tasks) == 1
+        assert tasks[0].input_data["publish_change_count"] == 1
+
+
+async def test_continuation_freezes_ids_and_does_not_absorb_new_changes(release_db, monkeypatch):
+    maker, service, marker_id, parent_id = await _continuation_parent(release_db, monkeypatch)
+    async with maker() as session:
+        # Same country, later transaction: must wait for another release chain.
+        newer = PublishDirty(line="surveillance", scope_key="JP", source_task_uuid="crawl-2",
+                             marked_at=datetime.now(timezone.utc))
+        session.add(newer)
+        await session.commit()
+        newer_id = newer.id
+    await service.maybe_trigger_after_task_completion("parent", TaskType.EXPORT_DATA)
+    async with maker() as session:
+        tasks = (await session.execute(select(Task).order_by(Task.id))).scalars().all()
+        assert len(tasks) == 2
+        child = tasks[1]
+        assert child.input_data["publish_dirty_ids"] == [marker_id]
+        assert child.input_data["continuation_dirty_ids"] == []
+        assert child.input_data["continuation_parent_task_uuid"] == "parent"
+        assert child.input_data["manual_trigger"] is False
+        assert (await session.get(Task, parent_id)).metadata_["release_continuation"]["task_uuid"] == child.task_uuid
+        child.status = TaskStatus.COMPLETED
+        child.completed_at = datetime.now(timezone.utc)
+        (await session.get(PublishDirty, marker_id)).published_at = datetime.now(timezone.utc)
+        await session.commit()
+        child_uuid = child.task_uuid
+    await service.maybe_trigger_after_task_completion(child_uuid, TaskType.EXPORT_DATA)
+    await service.reconcile_release_continuations()
+    async with maker() as session:
+        assert len((await session.execute(select(Task))).scalars().all()) == 2
+        assert (await session.get(PublishDirty, newer_id)).published_at is None
+
+
+async def test_scheduler_recovers_missed_continuation_hook_once(release_db, monkeypatch):
+    maker, service, _marker_id, _parent_id = await _continuation_parent(release_db, monkeypatch)
+    await service.reconcile_release_continuations()
+    await service.reconcile_release_continuations()
+    async with maker() as session:
+        assert len((await session.execute(select(Task))).scalars().all()) == 2
+
+
+async def test_drained_continuation_does_not_enqueue_empty_release(release_db, monkeypatch):
+    maker, service, marker_id, parent_id = await _continuation_parent(release_db, monkeypatch)
+    async with maker() as session:
+        (await session.get(PublishDirty, marker_id)).published_at = datetime.now(timezone.utc)
+        await session.commit()
+    await service.reconcile_release_continuations()
+    async with maker() as session:
+        assert len((await session.execute(select(Task))).scalars().all()) == 1
+        assert (await session.get(Task, parent_id)).metadata_["release_continuation"]["status"] == "exhausted"
+
+
+@pytest.mark.parametrize("flag", ["raw_archive_only", "reports_only", "code_only"])
+async def test_non_data_release_never_continues_surveillance_batches(release_db, monkeypatch, flag):
+    maker, service, _marker_id, _parent_id = await _continuation_parent(release_db, monkeypatch, flags={flag: True})
+    await service.maybe_trigger_after_task_completion("parent", TaskType.EXPORT_DATA)
+    await service.reconcile_release_continuations()
+    async with maker() as session:
+        assert len((await session.execute(select(Task))).scalars().all()) == 1
+
+
+async def test_busy_continuation_waits_and_raw_archive_does_not_block_it(release_db, monkeypatch):
+    maker, service, _marker_id, _parent_id = await _continuation_parent(release_db, monkeypatch)
+    async with maker() as session:
+        busy = Task(task_uuid="busy", task_name="Another release", task_type=TaskType.EXPORT_DATA,
+                    status=TaskStatus.RUNNING, input_data={"code_only": True})
+        session.add(busy)
+        await session.commit()
+        busy_id = busy.id
+    await service.reconcile_release_continuations()
+    async with maker() as session:
+        assert len((await session.execute(select(Task))).scalars().all()) == 2
+        # A raw archive may remain running while the next site batch starts.
+        busy = await session.get(Task, busy_id)
+        busy.input_data = {"raw_archive_only": True}
+        await session.commit()
+    await service.reconcile_release_continuations()
+    async with maker() as session:
+        assert len((await session.execute(select(Task))).scalars().all()) == 3
+
+
+async def test_continuation_recovers_existing_failed_child_without_forking(release_db, monkeypatch):
+    maker, service, _marker_id, parent_id = await _continuation_parent(release_db, monkeypatch)
+    await service.reconcile_release_continuations()
+    async with maker() as session:
+        parent = await session.get(Task, parent_id)
+        parent.metadata_ = {"release_job_id": "site-release"}
+        child = (await session.execute(select(Task).where(Task.id != parent_id))).scalar_one()
+        child.status = TaskStatus.FAILED
+        child_uuid = child.task_uuid
+        await session.commit()
+    await service.reconcile_release_continuations()
+    async with maker() as session:
+        assert len((await session.execute(select(Task))).scalars().all()) == 2
+        assert (await session.get(Task, parent_id)).metadata_["release_continuation"]["task_uuid"] == child_uuid
+
+
+async def test_raw_archive_history_cannot_hide_main_release_failure(release_db):
+    maker, service, _ = release_db
+    async with maker() as session:
+        session.add(Task(
+            task_uuid="site-failed", task_name="Site", task_type=TaskType.EXPORT_DATA,
+            status=TaskStatus.FAILED, completed_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            metadata_={"release_job_id": "site-release"},
+        ))
+        session.add_all([
+            Task(task_uuid=f"archive-{index}", task_name="Archive", task_type=TaskType.EXPORT_DATA,
+                 status=TaskStatus.COMPLETED, completed_at=datetime(2026, 1, 2, tzinfo=timezone.utc),
+                 input_data={"raw_archive_only": True}, metadata_={"release_job_id": "site-release"})
+            for index in range(105)
+        ])
+        await session.commit()
+    latest = await service._latest_terminal_release_task("site-release")
+    assert latest.task_uuid == "site-failed"
+    assert not await service._release_up_to_date("site-release", datetime(2026, 1, 1, tzinfo=timezone.utc))
 
 
 @pytest.mark.parametrize("stored_priority", ["low", "normal", "high", "bogus"])

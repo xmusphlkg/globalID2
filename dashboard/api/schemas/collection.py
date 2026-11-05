@@ -74,6 +74,7 @@ class PublishRunCreate(BaseModel):
     job_id: str = "site-release"
     full: bool = False
     reports_only: bool = False
+    code_only: bool = False
 
 
 class PendingOut(BaseModel):

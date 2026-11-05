@@ -217,6 +217,7 @@ def main() -> None:
         ),
     )
     parser.add_argument("--reports-only", action="store_true", help="Refresh report index and changed details only; reuse all other data")
+    parser.add_argument("--exact-country-scopes", action="store_true", help="Country selection is already expanded by the release planner")
     args = parser.parse_args()
     if args.reports_only:
         if args.incremental_site or args.incremental_country_codes or args.recorded_at_as_of:
@@ -250,6 +251,7 @@ def main() -> None:
             incremental_country_codes=args.incremental_country_codes,
             recorded_at_as_of=recorded_at_as_of,
             incremental_site=args.incremental_site,
+            country_scopes_exact=args.exact_country_scopes,
         )
     )
 

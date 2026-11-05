@@ -10,6 +10,7 @@ import pytest
 from src.generation.direct_download_files import (
     PUBLIC_FORMATS,
     build_country_download_rows,
+    build_disease_download_rows,
     build_direct_download_files,
     partition_rows,
 )
@@ -655,6 +656,96 @@ def test_direct_download_files_reject_non_raw_base(tmp_path) -> None:
             tmp_path,
             download_url_base="/downloads",
         )
+
+
+def test_split_windows_reuse_children_and_serialize_only_changed_child(tmp_path, monkeypatch):
+    dates = [f"{year}-{month:02d}-01" for year in (2026, 2027) for month in range(1, 13)]
+    context = _context(dates, dataset_name="Hepatitis A " + "x" * 1000)
+    country = context["country_exports"][0]
+    base = "https://raw.githubusercontent.com/example/data/main"
+    initial = direct_download_files._build_country_parts_task(country, tmp_path, base, 12_000, {})
+    assert len(initial["parts"]) > 1
+    existing = {part["id"]: part for part in initial["parts"]}
+    before = {path: (path.read_bytes(), path.stat().st_mtime_ns) for path in initial["paths"]}
+    trusted = {path.relative_to(tmp_path).as_posix() for path in initial["paths"]}
+    original_xlsx = direct_download_files._xlsx_bytes
+    serialized = []
+
+    def record_xlsx(metadata, rows):
+        serialized.append(metadata["partition_id"])
+        return original_xlsx(metadata, rows)
+
+    def unexpected_hash(_path):
+        raise AssertionError("verified files must not be hashed again")
+
+    monkeypatch.setattr(direct_download_files, "_xlsx_bytes", record_xlsx)
+    monkeypatch.setattr(direct_download_files, "_file_sha256", unexpected_hash)
+    repeat = direct_download_files._build_country_parts_task(country, tmp_path, base, 12_000, existing, trusted)
+    assert repeat["changed"] == 0
+    assert repeat["rebuilt_partitions"] == 0
+    assert repeat["reused_partitions"] == len(existing)
+    assert serialized == []
+    assert all((path.read_bytes(), path.stat().st_mtime_ns) == state for path, state in before.items())
+
+    changed_date = dates[0]
+    changed_id = next(part["id"] for part in initial["parts"] if part["window"]["start"] <= changed_date <= part["window"]["end"])
+    country["country_data"]["disease_series"]["D007"]["cases"][0] = 2
+    revised = direct_download_files._build_country_parts_task(country, tmp_path, base, 12_000, existing, trusted)
+    assert serialized == [changed_id]
+    assert revised["changed"] == 3
+    assert revised["rebuilt_partitions"] == 1
+    assert revised["reused_partitions"] == len(existing) - 1
+    for part in initial["parts"]:
+        if part["id"] != changed_id:
+            for file in part["files"].values():
+                path = tmp_path / file["relative_path"]
+                assert (path.read_bytes(), path.stat().st_mtime_ns) == before[path]
+
+
+def test_partition_metadata_change_invalidates_unchanged_observations(tmp_path):
+    context = _context()
+    country = context["country_exports"][0]
+    base = "https://raw.githubusercontent.com/example/data/main"
+    initial = direct_download_files._build_country_parts_task(country, tmp_path, base, 12_000, {})
+    country["country_name"] = "Updated country display name"
+    revised = direct_download_files._build_country_parts_task(
+        country, tmp_path, base, 12_000, {part["id"]: part for part in initial["parts"]}
+    )
+    assert revised["reused_partitions"] == 0
+    assert revised["rebuilt_partitions"] == len(initial["parts"])
+    assert all(json.loads((tmp_path / part["files"]["json"]["relative_path"]).read_text())["metadata"]["dataset_name"] == country["country_name"] for part in revised["parts"])
+
+
+def test_curve_only_snapshots_cannot_replace_lossless_downloads():
+    context = _context()
+    context["country_exports"][0]["country_data"]["disease_series"]["D007"]["projection_policy"] = "published_series"
+    with pytest.raises(ValueError, match="omit source provenance"):
+        build_country_download_rows(context["country_exports"][0]["country_data"], {})
+    with pytest.raises(ValueError, match="omit source provenance"):
+        build_disease_download_rows(context["disease_exports"][0]["disease_data"], {}, {})
+
+
+@pytest.mark.parametrize("kind, scope", [("countries", "country CN"), ("diseases", "disease D007")])
+def test_missing_unselected_download_scope_fails_before_replacing_manifest(tmp_path, kind, scope):
+    base = "https://raw.githubusercontent.com/example/data/main"
+    initial = build_direct_download_files(_context(), tmp_path, download_url_base=base)
+    manifest_path = tmp_path / "manifest.json"
+    before = manifest_path.read_bytes()
+    missing = initial[kind][0]["parts"][0]["files"]["json"]["relative_path"]
+    (tmp_path / missing).unlink()
+    with pytest.raises(RuntimeError, match=f"unchanged {scope}.*missing or invalid"):
+        build_direct_download_files(
+            _context(), tmp_path, download_url_base=base,
+            changed_country_codes=set(), changed_disease_ids=set(),
+        )
+    assert manifest_path.read_bytes() == before
+
+
+def test_empty_download_dataset_is_a_valid_unchanged_scope(tmp_path):
+    assert direct_download_files._entry_files_available(
+        {"record_count": 0, "parts": []}, tmp_path, "countries", "empty"
+    )
+    assert not direct_download_files._entry_files_available({}, tmp_path, "countries", "empty")
 
 
 def test_scoped_unchanged_inputs_do_not_start_download_processes(tmp_path, monkeypatch):

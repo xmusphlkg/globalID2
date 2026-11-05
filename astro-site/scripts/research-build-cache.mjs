@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileHash, fileFingerprints, gitSourceIdentities, sourceIdentity } from './file-fingerprints.mjs';
+import { createSourceDependencyFingerprinter } from './source-dependencies.mjs';
 
 export const siteRoot = resolve(import.meta.dirname, '..');
 export const projectRoot = resolve(siteRoot, '..');
@@ -67,24 +68,27 @@ function effectiveMeasurementId() {
 
 export function sharedFingerprint() {
   const files = [
-    ...walk(resolve(siteRoot, 'src')).filter(path => path !== reportDiseaseTemplate && (!path.startsWith(resolve(siteRoot, 'src', 'data') + '/') || !path.endsWith('.json'))),
+    ...walk(resolve(siteRoot, 'src/styles')),
+    ...['middleware.ts', 'middleware.js', 'env.d.ts', 'content.config.ts'].map(name => resolve(siteRoot, 'src', name)),
     ...walk(resolve(siteRoot, 'public')).filter(path => !path.startsWith(resolve(siteRoot, 'public', 'site-data') + '/')),
     resolve(siteRoot, 'package.json'),
     resolve(siteRoot, 'package-lock.json'),
     resolve(siteRoot, 'astro.config.mjs'),
+    resolve(siteRoot, 'tsconfig.json'),
+    ...readdirSync(siteRoot).filter(name => /(?:tailwind|postcss).*config/.test(name)).map(name => resolve(siteRoot, name)),
     resolve(siteRoot, 'scripts', 'build-site.mjs'),
     resolve(siteRoot, 'scripts', 'research-build-cache.mjs'),
     resolve(siteRoot, 'scripts', 'file-fingerprints.mjs'),
-    resolve(siteRoot, '..', 'shared', 'report-figure-options.ts'),
+    resolve(siteRoot, 'scripts', 'source-dependencies.mjs'),
   ].filter(existsSync).sort();
-  const routes = readJson(resolve(siteRoot, 'src/data/research/routes.json'));
   const digest = createHash('sha256');
   const identities = gitSourceIdentities(projectRoot);
   for (const path of files) {
     digest.update(relative(siteRoot, path));
     digest.update(sourceIdentity(path, identities, fileFingerprints));
   }
-  digest.update(JSON.stringify(routes.diseases ?? []));
+  const graph = createSourceDependencyFingerprinter({ siteRoot, projectRoot });
+  digest.update(graph(['astro.config.mjs', 'src/middleware.ts', 'src/middleware.js']));
   digest.update(String(existsSync(resolve(siteRoot, 'src/data/situation/international/latest.json'))));
   digest.update(String(existsSync(resolve(siteRoot, 'src/data/situation/international/map.json'))));
   for (const key of ['GLOBALID_SITE_URL', 'SITE_URL', 'PUBLIC_GIDS_MAINTENANCE_MESSAGE', 'SITUATION_SHADOW_PREVIEW']) {
@@ -119,7 +123,14 @@ export function sourceSnapshot() {
       paths: articlePaths(slug, route.indexable !== false),
     };
   }
-  return { schema: 1, shared: sharedFingerprint(), articles };
+  const graph = createSourceDependencyFingerprinter({ siteRoot, projectRoot });
+  const templates = graph([
+    'src/pages/research/articles/[slug].astro',
+    'src/pages/fr/research/articles/[slug].astro',
+    'src/pages/zh/research/articles/[slug].astro',
+    'src/pages/research/cards/[slug].png.ts',
+  ]);
+  return { schema: 1, shared: sha(`${sharedFingerprint()}:${templates}:${JSON.stringify(routes.diseases ?? [])}`), articles };
 }
 
 function readPreviousManifest() {

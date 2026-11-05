@@ -264,7 +264,11 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
 
 
 @pytest.mark.asyncio
-async def test_pipeline_passes_local_gates_before_remote_publication(tmp_path):
+async def test_pipeline_passes_local_gates_before_remote_publication(tmp_path, monkeypatch):
+    from unittest.mock import AsyncMock
+    from src.services.data_release import raw_archive_jobs
+    enqueue = AsyncMock(return_value={"status": "queued", "task_uuid": "archive-1"})
+    monkeypatch.setattr(raw_archive_jobs, "enqueue", enqueue)
     commands = []
     stored_task = SimpleNamespace(output_data=None)
 
@@ -394,9 +398,9 @@ async def test_pipeline_passes_local_gates_before_remote_publication(tmp_path):
 
     await pipeline.execute_release_task(Service(), task, runtime=runtime)
 
-    assert commands.index("Build Astro Site") < commands.index(
-        "Archive Raw Crawler Data"
-    )
+    assert "Archive Raw Crawler Data" not in commands
+    enqueue.assert_awaited_once()
+    assert stored_task.output_data["raw_archive_task"]["task_uuid"] == "archive-1"
     assert commands.index("Validate Situation Release Gate") < commands.index(
         "Publish Partitioned Data Downloads"
     )
@@ -405,6 +409,7 @@ async def test_pipeline_passes_local_gates_before_remote_publication(tmp_path):
     await pipeline.execute_release_task(Service(), task, runtime=runtime)
     assert "Archive Raw Crawler Data" not in commands
     assert "Publish Partitioned Data Downloads" not in commands
+    enqueue.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -459,6 +464,10 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
     astro_dir = tmp_path / "astro-site"
     dist = astro_dir / "dist"
     dist.mkdir(parents=True)
+    (astro_dir / "src/data").mkdir(parents=True)
+    (astro_dir / "src/data/meta.json").write_text("{}")
+    (astro_dir / "public/site-data").mkdir(parents=True)
+    (astro_dir / "public/site-data/index.json").write_text("{}")
     (dist / "index.html").write_text("first attempt published old observations")
     original_digest = pipeline._built_site_digest(dist)
 
@@ -490,6 +499,10 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
         "built_at": "2026-08-05T00:00:00+00:00",
         "commit_dirty": False,
     }
+    from src.services.data_release.stage_receipts import StageReceipts
+    StageReceipts(tmp_path, "retry-task", {}, {}).mark_published(
+        {**identity, "build_digest": original_digest},
+    )
 
     class Service:
         def _config(self):
@@ -546,7 +559,8 @@ async def test_retry_reuses_deploy_only_for_identical_build_content(
             return "main"
 
         async def _release_identity_for_task(self, *_args):
-            checkpoint = {"release_id": "release-retry-1"}
+            checkpoint = {"release_id": "release-retry-1", "project_name": "globalid",
+                          "account_id": "account", "deployment_branch": "main"}
             if checkpoint_state != "missing_digest":
                 checkpoint["artifact_digest"] = original_digest
             return identity, {"cloudflare_deploy": checkpoint}

@@ -60,7 +60,7 @@ describe("publication", () => {
     fireEvent.click(screen.getByLabelText("Full generation"));
     fireEvent.click(screen.getByRole("button", { name: "Publish site-release" }));
     expect(await screen.findByRole("link", { name: "Open release run" })).toHaveAttribute("href", "/publish/tasks?detail=release-1");
-    expect(apiFetch).toHaveBeenCalledWith("/publish/runs", { method: "POST", body: JSON.stringify({ job_id: "site-release", full: true }) });
+    expect(apiFetch).toHaveBeenCalledWith("/publish/runs", { method: "POST", body: JSON.stringify({ job_id: "site-release", full: true, reports_only: false, code_only: false }) });
     await waitFor(() => expect(apiFetch).toHaveBeenCalledWith("/collection/runs/release-1"));
     expect(screen.getByRole("button", { name: "Publish site-release" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: /collect|retry|download/i })).toBeNull();
@@ -79,7 +79,7 @@ describe("publication", () => {
     expect(await screen.findByText("Publication failed. Pending changes remain available for another release.")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByRole("button", { name: "Publish site-release" })).toBeEnabled();
-    expect(apiFetch).toHaveBeenCalledWith("/publish/runs", { method: "POST", body: JSON.stringify({ job_id: "site-release", full: false }) });
+    expect(apiFetch).toHaveBeenCalledWith("/publish/runs", { method: "POST", body: JSON.stringify({ job_id: "site-release", full: false, reports_only: false, code_only: false }) });
   });
   it("queues an isolated reports publication", async () => {
     vi.mocked(apiFetch).mockImplementation((path) => {
@@ -90,8 +90,58 @@ describe("publication", () => {
     show(<PublishView />);
     fireEvent.click(screen.getByRole("button", { name: "Publish reports only" }));
     await waitFor(() => expect(apiFetch).toHaveBeenCalledWith("/publish/runs", {
-      method: "POST", body: JSON.stringify({ job_id: "site-release", full: false, reports_only: true }),
+      method: "POST", body: JSON.stringify({ job_id: "site-release", full: false, reports_only: true, code_only: false }),
     }));
+  });
+  it("publishes website code without combining pending data, full generation or report mode", async () => {
+    vi.mocked(apiFetch).mockImplementation((path) => {
+      if (path === "/publish/pending") return Promise.resolve(pending);
+      if (path === "/releases/site-release/checks?code_only=true") return Promise.resolve(checks);
+      if (path === "/publish/runs") return Promise.resolve({ task_uuid: "code-1", status: "queued" });
+      return Promise.resolve({ task_uuid: "code-1", status: "completed" });
+    });
+    show(<PublishView />);
+    expect(await screen.findByText("Entire line")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Full generation"));
+    fireEvent.click(screen.getByRole("button", { name: "Publish website code" }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith("/publish/runs", {
+      method: "POST", body: JSON.stringify({ job_id: "site-release", full: false, reports_only: false, code_only: true }),
+    }));
+    expect(await screen.findByText("Website code update completed. Pending data changes remain queued.")).toBeInTheDocument();
+    expect(screen.getByText("Entire line")).toBeInTheDocument();
+  });
+  it("uses independent code checks even if a normal preflight is blocked by download publishing", async () => {
+    vi.mocked(apiFetch).mockImplementation((path) => Promise.resolve(path === "/publish/pending" ? pending
+      : path === "/releases/site-release/checks" ? { ...checks, overall_ready: false, blockers: ["Download repository unavailable"] }
+      : path === "/releases/site-release/checks?code_only=true" ? checks
+      : { task_uuid: "code-1", status: "running" }));
+    show(<PublishView />);
+    fireEvent.click(screen.getByRole("button", { name: "Run preflight" }));
+    expect(await screen.findByText("Download repository unavailable")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Publish site-release" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Publish website code" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Publish website code" }));
+    expect(await screen.findByRole("link", { name: "Open release run" })).toBeInTheDocument();
+    expect(apiFetch).toHaveBeenCalledWith("/releases/site-release/checks?code_only=true");
+    expect(screen.getByRole("button", { name: "Publish website code" })).toBeDisabled();
+  });
+  it("shows code snapshot blockers, prevents submission and rechecks after recovery", async () => {
+    let hasPublishedSnapshot = false;
+    vi.mocked(apiFetch).mockImplementation((path) => Promise.resolve(path === "/publish/pending" ? pending
+      : path === "/releases/site-release/checks?code_only=true" ? { ...checks, overall_ready: hasPublishedSnapshot, blockers: hasPublishedSnapshot ? [] : ["Run a normal data release before publishing code"] }
+      : { task_uuid: "code-1", status: "running" }));
+    show(<PublishView />);
+    fireEvent.click(screen.getByRole("button", { name: "Publish website code" }));
+    expect(await screen.findByText("Run a normal data release before publishing code")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Website code preflight results" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Publish website code" })).toBeDisabled();
+    expect(vi.mocked(apiFetch).mock.calls.some(([path]) => path === "/publish/runs")).toBe(false);
+    hasPublishedSnapshot = true;
+    fireEvent.click(screen.getByRole("button", { name: "Check website code update" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Publish website code" })).toBeEnabled());
+    expect(screen.queryByText("Run a normal data release before publishing code")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Publish website code" }));
+    expect(await screen.findByRole("link", { name: "Open release run" })).toBeInTheDocument();
   });
   it("renders the same terminology in Chinese", async () => {
     useAppStore.setState({ lang: "zh" });
@@ -99,6 +149,7 @@ describe("publication", () => {
     show(<PublishView />);
     expect(await screen.findByText("整条数据线")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "执行预检" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "仅发布网站代码" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /^发布$/ })).toBeInTheDocument();
   });
 });

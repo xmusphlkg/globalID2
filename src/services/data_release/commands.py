@@ -40,6 +40,7 @@ def build_generate_site_data_command(
     download_url_base: str,
     incremental_country_codes: list[str] | tuple[str, ...] | None = None,
     incremental_site: bool = False,
+    country_scopes_exact: bool = False,
 ) -> list[str]:
     """Generate site assets and partitioned CSV/JSON/XLSX downloads locally."""
 
@@ -55,6 +56,8 @@ def build_generate_site_data_command(
             command.extend(["--incremental-country", normalized])
     if incremental_site:
         command.append("--incremental-site")
+    if country_scopes_exact:
+        command.append("--exact-country-scopes")
     return command
 
 

@@ -102,8 +102,11 @@ class ReleaseAdmission:
                 self._condition.notify_all()
 
     @asynccontextmanager
-    async def task_scope(self, task_uuid: str, task_type: TaskType, *, reports_only: bool = False):
-        if task_type == TaskType.EXPORT_DATA and not reports_only:
+    async def task_scope(
+        self, task_uuid: str, task_type: TaskType, *,
+        reports_only: bool = False, raw_archive_only: bool = False,
+    ):
+        if task_type == TaskType.EXPORT_DATA and not (reports_only or raw_archive_only):
             logger.info(
                 "Release {} requesting priority; draining {} active collection database scope(s)",
                 task_uuid, self._active_scopes,

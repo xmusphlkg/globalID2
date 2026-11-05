@@ -335,6 +335,29 @@ async def test_us_registered_only_selection_blocks_missing_resident_scope(
         )
 
 
+@pytest.mark.parametrize("deaths", ["7", "", None])
+async def test_legacy_supplemental_write_cannot_be_declared_case_series_noop(monkeypatch, deaths):
+    async def save(*_args, **_kwargs):
+        return SeriesObservationSaveResult(
+            upserted=1, skipped_unmatched=0, skipped_ambiguous=0,
+            skipped_invalid=0, skipped_registry_not_synced=0,
+            quality_report=SimpleNamespace(), publication_changes=(),
+        )
+
+    class Updater:
+        async def import_rows(self, *_args, **_kwargs):
+            return SimpleNamespace(inserted_or_updated=1)
+
+    monkeypatch.setattr(CrawlService, "_save_series_rows", save)
+    results = []
+    await CrawlService._import_rows_with_series(
+        object(), Updater(), [{"Cases": "10", "Deaths": deaths}],
+        db_latest_date=None, source_latest_date=None, force=True,
+        publication_results=results,
+    )
+    assert results[0].publication_changes is None
+
+
 def test_legacy_only_updater_can_explicitly_disable_registry_requirement() -> None:
     updater = SimpleNamespace(
         country_code="US",

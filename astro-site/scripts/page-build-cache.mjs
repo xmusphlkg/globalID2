@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileHash } from './file-fingerprints.mjs';
+import { createSourceDependencyFingerprinter } from './source-dependencies.mjs';
+import { selectCountryDiseaseCandidates } from '../src/lib/country-disease-candidates.ts';
 import { hasCountryDataSnapshot } from '../src/lib/country-coverage.ts';
 import { toSeoSlug } from '../src/lib/seo.ts';
 import { buildPublishableReports } from '../src/lib/report-routes.ts';
@@ -22,10 +24,29 @@ const safeSegment = value => {
 };
 
 export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), shared = sharedFingerprint(), reportDiseaseTemplateHash = hashFile(reportDiseaseTemplate) } = {}) {
+  const graph = createSourceDependencyFingerprinter({ siteRoot });
+  const templates = new Map();
+  const routeTemplates = {
+    country: 'countries/[country]/index.astro',
+    disease: 'diseases/[disease].astro',
+    'report-archive': 'countries/[country]/reports/index.astro',
+    report: 'countries/[country]/reports/[id].astro',
+    'report-disease': 'countries/[country]/reports/[id]/[disease].astro',
+    'research:countries': 'research/countries/[code].astro',
+    'research:diseases': 'research/diseases/[slug].astro',
+    'research:topics': 'research/topics/[topic].astro',
+    'research:weekly': 'research/weekly/[week].astro',
+  };
   const pages = {};
   const add = (key, path, dependencies) => {
     if (pages[key]) throw new Error(`Duplicate page cache key: ${key}`);
-    pages[key] = { fingerprint: sha(JSON.stringify(dependencies)), paths: localePaths(path) };
+    const group = key.startsWith('research:') ? key.split(':').slice(0, 2).join(':') : key.split(':')[0];
+    if (!templates.has(group)) {
+      const route = routeTemplates[group];
+      if (!route) throw new Error(`Missing template dependencies for ${group}`);
+      templates.set(group, graph(['', 'fr/', 'zh/'].map(prefix => `src/pages/${prefix}${route}`)));
+    }
+    pages[key] = { fingerprint: sha(JSON.stringify([templates.get(group), ...dependencies])), paths: localePaths(path) };
   };
   const routes = json(resolve(dataRoot, 'research/routes.json'), {});
   const facets = routes.facets ?? json(resolve(dataRoot, 'research/index.json'), {}).facets ?? {};
@@ -40,27 +61,36 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   const countries = json(resolve(dataRoot, 'meta.json'), {}).countries ?? [];
   const diseases = json(resolve(dataRoot, 'diseases/index.json'), []);
   const downloads = json(resolve(dataRoot, 'downloads.json'), {});
-  // countryDiseaseCandidates() ranks across all countries. Changes to those
-  // inputs can change navigation on every country/disease page, not just one.
-  const surveillance = sha(JSON.stringify([countries, countries.map(country => [country.code,
-    hashFile(resolve(dataRoot, 'countries', `${safeSegment(country.code).toLowerCase()}.json`))]) ]));
+  const countryRecords = new Map();
+  const loadCountry = code => {
+    const key = safeSegment(code).toLowerCase();
+    if (!countryRecords.has(key)) countryRecords.set(key, json(resolve(dataRoot, 'countries', `${key}.json`)));
+    return countryRecords.get(key);
+  };
+  // Share the renderer's ranking algorithm. Pages consume membership, not the
+  // scores or unrelated countries' full histories; hash only those links.
+  const candidates = selectCountryDiseaseCandidates(countries, loadCountry);
   const alertsDir = resolve(dataRoot, 'situation/international');
   const alertHash = path => {
     const value = json(path);
     // The panel reads schema_version and alerts, never the export's as_of timestamp.
     return sha(JSON.stringify(value ? [value.schema_version, value.alerts] : null));
   };
-  const countryAlertsDir = resolve(alertsDir, 'by-country');
-  const countryAlerts = existsSync(countryAlertsDir) ? readdirSync(countryAlertsDir).filter(name => name.endsWith('.json')).sort()
-    .map(name => [name, alertHash(resolve(countryAlertsDir, name))]) : [];
-  const reports = hashFile(resolve(dataRoot, 'reports/index.json'));
+  const reportSummaries = json(resolve(dataRoot, 'reports/index.json'), []);
   for (const country of countries.filter(hasCountryDataSnapshot)) {
     const code = safeSegment(country.code).toLowerCase();
-    add(`country:${code}`, `countries/${code}`, [surveillance, reports, countryAlerts,
+    const record = loadCountry(code);
+    const alertKeys = [...new Set([code, ...['iso2', 'iso3', 'alpha2', 'alpha3', 'code', 'country_code', 'iso_code']
+      .map(field => record?.[field]).filter(value => typeof value === 'string' && value.trim())]
+      .map(value => value.trim().toUpperCase()).filter(value => /^[A-Za-z0-9_-]+$/.test(value)))];
+    const countryAlerts = alertKeys.map(key => [key, alertHash(resolve(alertsDir, 'by-country', `${key}.json`))]);
+    add(`country:${code}`, `countries/${code}`, [hashFile(resolve(dataRoot, 'countries', `${code}.json`)),
+      countries.filter(entry => entry.parent_code === code.toUpperCase() && hasCountryDataSnapshot(entry)),
+      candidates.filter(entry => entry.code === code).map(entry => entry.slug).sort(),
+      reportSummaries.filter(entry => entry.country_code?.toLowerCase() === code).slice(0, 6), countryAlerts,
       downloads.countries?.find(entry => entry.code?.toLowerCase() === code) ?? null]);
   }
 
-  const reportSummaries = json(resolve(dataRoot, 'reports/index.json'), []);
   const publishableReports = buildPublishableReports(reportSummaries, id => (
     json(resolve(dataRoot, 'reports', `${id}.json`))
   ));
@@ -111,7 +141,7 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   for (const disease of diseases) {
     const id = safeSegment(disease.disease_id);
     const slug = safeSegment(toSeoSlug(disease.slug) || disease.slug);
-    add(`disease:${id}`, `diseases/${slug}`, [surveillance, disease,
+    add(`disease:${id}`, `diseases/${slug}`, [countries, candidates.filter(entry => entry.slug === slug).map(entry => entry.code).sort(), disease,
       hashFile(resolve(dataRoot, 'diseases', `${id.toLowerCase()}.json`)),
       hashFile(resolve(dataRoot, 'disease-knowledge', `${id.toLowerCase()}.json`)),
       hashFile(resolve(dataRoot, 'research/diseases', `${id.toLowerCase()}.json`)),
