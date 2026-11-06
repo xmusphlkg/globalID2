@@ -25,6 +25,17 @@ def release(tmp_path, monkeypatch):
     async def db():
         yield database
 
+    snapshot_state = {"open": False, "count": 0}
+
+    @asynccontextmanager
+    async def read_snapshot():
+        snapshot_state["open"] = True
+        snapshot_state["count"] += 1
+        try:
+            yield {"GLOBALID_RELEASE_DB_SNAPSHOT": "00000003-0000001B-1"}
+        finally:
+            snapshot_state["open"] = False
+
     def put(path, content="{}"):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
@@ -77,6 +88,12 @@ def release(tmp_path, monkeypatch):
 
         async def _run_logged_command(self, task_uuid, *, title, **kwargs):
             self.commands.append(title)
+            if title in {"Export Situation", "Generate Site Data", "Refresh Report Inputs"}:
+                assert snapshot_state["open"]
+                assert kwargs["env"]["GLOBALID_RELEASE_DB_SNAPSHOT"] == "00000003-0000001B-1"
+            elif title != "Validate Report Inputs":
+                assert not snapshot_state["open"], "Build/upload must not retain a database snapshot"
+                assert "GLOBALID_RELEASE_DB_SNAPSHOT" not in (kwargs.get("env") or {})
             if title == self.failure:
                 raise RuntimeError("injected " + title)
             if title == "Generate Site Data":
@@ -89,11 +106,12 @@ def release(tmp_path, monkeypatch):
                 put(astro / "dist/index.html", "<html>test</html>")
 
     runtime = ReleasePipelineRuntime(manager, lambda: SimpleNamespace(raw_archive=SimpleNamespace(enabled=False, repo_url="")),
-                                     db, object, tmp_path, astro, "main", "main", 60, 60, 60, 60)
+                                     db, object, tmp_path, astro, "main", "main", 60, 60, 60, 60,
+                                     read_snapshot=read_snapshot)
     service = Service()
     service.commands = []
     return SimpleNamespace(service=service, task=task, runtime=runtime, commit=commit, put=put, root=tmp_path,
-                           astro=astro, stored=stored, manager=manager)
+                           astro=astro, stored=stored, manager=manager, snapshot_state=snapshot_state)
 
 
 @pytest.mark.asyncio
@@ -103,10 +121,12 @@ async def test_retry_skips_completed_stages(release, failure):
     r.service.failure = failure
     with pytest.raises(RuntimeError, match="injected"):
         await execute_release_task(r.service, r.task, runtime=r.runtime)
+    assert r.snapshot_state == {"open": False, "count": 1}
     r.commit.assert_not_awaited()
     r.service.commands.clear()
     r.service.failure = None
     result = await execute_release_task(r.service, r.task, runtime=r.runtime)
+    assert r.snapshot_state == {"open": False, "count": 1}, "Retry must reuse files without reopening a newer database view"
     assert "Generate Site Data" not in r.service.commands
     assert ("Build Astro Site" in r.service.commands) == (failure == "Build Astro Site")
     assert result["pages_deployed"]
@@ -244,3 +264,15 @@ async def test_deploy_checkpoint_reuse_requires_same_target(release, project):
     r.service.commands.clear()
     await execute_release_task(r.service, r.task, runtime=r.runtime)
     assert ("Deploy Cloudflare Pages" in r.service.commands) == (project != "site")
+
+
+async def test_export_failure_closes_snapshot_before_retry(release):
+    r = release
+    r.service.failure = 'Generate Site Data'
+    with pytest.raises(RuntimeError, match='injected'):
+        await execute_release_task(r.service, r.task, runtime=r.runtime)
+    assert r.snapshot_state == {'open': False, 'count': 1}
+    r.commit.assert_not_awaited()
+    r.service.failure = None
+    await execute_release_task(r.service, r.task, runtime=r.runtime)
+    assert r.snapshot_state == {'open': False, 'count': 2}

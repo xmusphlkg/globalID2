@@ -78,9 +78,8 @@ RELEASE_EXCLUSIVE_TASK_TYPES = {TaskType.EXPORT_DATA}
 # Archival has a separate single-job lane; it cannot consume the main release
 # slot merely because it shares the persisted EXPORT_DATA enum.
 _claimed_raw_archive_uuids: set[str] = set()
-# Managed collection tasks yield at database scopes instead of holding up a
-# release through network/model waits. Unmanaged writers still drain fully.
-RELEASE_SHARED_BLOCKED_TASK_TYPES = COLLECTION_STORE_TASK_TYPES
+# Releases share one filesystem lane; their database readers use an MVCC
+# snapshot, so ordinary collection/network/model work keeps its own lanes.
 # These operations persist their checkpoints and are designed to be resumed.
 # On a controlled worker restart, returning them to QUEUED is preferable to
 # waiting for a long model timeout or treating the deployment as a failure.
@@ -96,12 +95,14 @@ def _release_memory_blocked_task_types(
     *,
     release_waiting: bool = False,
 ) -> set[TaskType]:
-    """Keep site export off the formal tables a collection store is rewriting."""
+    """Serialize releases sharing output paths, without blocking collection.
+
+    Export readers import one PostgreSQL snapshot. Latest formal facts and
+    their dirty markers may advance independently throughout the release.
+    """
     active = set(active_task_types)
     blocked: set[TaskType] = set()
-    if release_waiting or active & RELEASE_EXCLUSIVE_TASK_TYPES:
-        blocked.update(RELEASE_SHARED_BLOCKED_TASK_TYPES)
-    if active & (RELEASE_SHARED_BLOCKED_TASK_TYPES | RELEASE_EXCLUSIVE_TASK_TYPES):
+    if active & RELEASE_EXCLUSIVE_TASK_TYPES:
         blocked.update(RELEASE_EXCLUSIVE_TASK_TYPES)
     return blocked
 
@@ -341,20 +342,8 @@ async def _claim_next_task_uuid(
                 and task_uuid in release_admission.cooperative_tasks
             )
         ]
-        release_waiting = (
-            await db.execute(
-                select(Task.id)
-                .where(
-                    Task.task_type.in_(RELEASE_EXCLUSIVE_TASK_TYPES),
-                    Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]),
-                    ~nonexclusive_export,
-                )
-                .limit(1)
-            )
-        ).scalar_one_or_none() is not None
         memory_blocked_task_types = _release_memory_blocked_task_types(
             active_task_types,
-            release_waiting=release_waiting,
         )
         lane_blocked = set(blocked_task_types or set())
         blocked_task_types = lane_blocked | memory_blocked_task_types

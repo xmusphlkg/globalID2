@@ -668,3 +668,48 @@ async def test_full_release_does_not_acknowledge_disabled_country(
         await session.commit()
     async with maker() as session:
         assert (await session.get(PublishDirty, marker_id)).published_at is None
+
+
+async def test_frozen_release_does_not_consume_same_country_change_committed_during_build(release_db, monkeypatch, tmp_path):
+    from src.core.database_snapshot import SNAPSHOT_ENV
+    from src.generation.release_projection_snapshot import write_projection_snapshot
+    from src.generation import public_series_store
+
+    maker, _, _ = release_db
+    async with maker() as db:
+        old = PublishDirty(line='surveillance', scope_key='US', source_task_uuid='old', marked_at=datetime.now(timezone.utc))
+        db.add(old)
+        await db.commit()
+        old_id = old.id
+    monkeypatch.setenv(SNAPSHOT_ENV, '00000003-0000001B-1')
+    write_projection_snapshot({
+        'incremental': True, 'incremental_country_codes': ['US'],
+        'country_exports': [{'code': 'US', 'country_data': {'disease_series': {'D001': {
+            'dates': ['2026-01-01'], 'cases': [7], 'deaths': [0], 'incidence_rates': [0.2],
+            'period_granularity': 'year',
+        }}}}],
+    }, tmp_path, {})
+    # A late commit may carry an old marked_at. A timestamp cutoff must never
+    # absorb it, even when it targets the same country as the current release.
+    async with maker() as db:
+        newer = PublishDirty(line='surveillance', scope_key='US', source_task_uuid='new', marked_at=datetime(2020, 1, 1, tzinfo=timezone.utc))
+        db.add(newer)
+        await db.commit()
+        new_id = newer.id
+    monkeypatch.setattr(projection, '_load_publish_context', AsyncMock(return_value={
+        'countries_by_code': {'US': {}}, 'stored_disease_ids': {'D001'},
+    }))
+    monkeypatch.setattr(projection, '_retire_disabled_publications', AsyncMock(return_value=set()))
+    monkeypatch.setattr(projection, '_publish_country', AsyncMock(side_effect=AssertionError('must not reread newer facts')))
+    replace = AsyncMock()
+    monkeypatch.setattr(public_series_store, '_replace_country_rows', replace)
+    async with maker() as db:
+        await projection.commit_release_projection(
+            db, task_uuid='release', country_codes=['US'], full=False,
+            dirty_ids=[old_id], prepared_dir=tmp_path, require_prepared=True,
+        )
+        await db.commit()
+    assert replace.await_args.args[2][0]['cases'] == [7]
+    async with maker() as db:
+        assert (await db.get(PublishDirty, old_id)).published_task_uuid == 'release'
+        assert (await db.get(PublishDirty, new_id)).published_at is None

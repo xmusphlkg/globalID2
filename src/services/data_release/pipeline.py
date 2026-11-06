@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
+from src.core.database_snapshot import export_read_snapshot
 
 SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS = 30 * 60
 # A large backfill can require many bounded Git pushes; keep the R2 timeout
@@ -76,6 +77,7 @@ class ReleasePipelineRuntime:
     astro_build_timeout_seconds: float
     download_publish_timeout_seconds: float
     cloudflare_deploy_timeout_seconds: float
+    read_snapshot: Callable = export_read_snapshot
 
 
 async def _run_repository_publications(
@@ -185,6 +187,8 @@ async def _execute_release_task(
     previous_site_dir: Path | None = None,
 ) -> dict[str, Any]:
     input_data = dict(task.input_data or {})
+    if input_data.get("publish_dirty_before"):
+        raise RuntimeError("Legacy release uses a timestamp cutoff; enqueue a new release with exact dirty IDs")
     code_only = bool(input_data.get("code_only"))
     job_id = str(input_data.get("release_job_id") or "").strip()
     if not job_id:
@@ -342,60 +346,16 @@ async def _execute_release_task(
                 content_type="text", metadata={"event": "generated_data_reused"},
             )
         else:
-            # Reports are cheap to export and validate before reading surveillance
-            # history or generating spreadsheet partitions.
-            report_check = runtime.astro_dir / "scripts/check-report-inputs.mjs"
-            if report_check.is_file():
-                await service._run_logged_command(
-                    task.task_uuid, title="Refresh Report Inputs",
-                    cmd=[str(python_path), "scripts/generate_site_data.py", "--reports-only"],
-                    cwd=runtime.root_dir, env=git_env,
-                    metadata={"event": "report_inputs_refresh"}, timeout_seconds=300,
-                )
-                await service._run_logged_command(
-                    task.task_uuid, title="Validate Report Inputs",
-                    cmd=["node", "--experimental-strip-types", str(report_check)],
-                    cwd=runtime.astro_dir, metadata={"event": "report_inputs_validate"}, timeout_seconds=120,
-                )
-            await service._run_logged_command(
-                task.task_uuid,
-                title="Export Situation",
-                cmd=service._update_situation_notices_command(python_path=python_path),
-                cwd=runtime.root_dir,
-                env=git_env,
-                metadata={"event": "refresh_situation_notices", "release_job_id": job.job_id},
-                timeout_seconds=min(
-                    runtime.generate_timeout_seconds,
-                    SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS,
-                ),
-            )
-            await runtime.task_manager.update_task_progress(task.task_uuid, 22)
+            from .input_snapshot import generate_release_inputs
 
-            # EXPORT_DATA holds the worker's collection-store exclusion until task
-            # completion, covering both this read and commit_release_projection after
-            # production verification. Waiting AI parents retain RUNNING until their
-            # store completes, so their eventual writes cannot enter this interval.
-            generate_cmd = service._generate_site_data_command(
-                python_path=python_path,
-                download_url_base=download_url_base,
-                incremental_country_codes=input_data.get("incremental_country_codes") or [],
-                incremental_site=bool(input_data.get("incremental_site")),
-                country_scopes_exact=bool(input_data.get("country_scopes_exact")),
+            await generate_release_inputs(
+                service=service, task=task, runtime=runtime, job=job,
+                python_path=python_path, git_env=git_env,
+                download_url_base=download_url_base, input_data=input_data,
             )
-            await service._run_logged_command(
-                task.task_uuid,
-                title="Generate Site Data",
-                cmd=generate_cmd,
-                cwd=runtime.root_dir,
-                env={
-                    **git_env,
-                    "PYTHONUNBUFFERED": "1",
-                    "GLOBALID_RELEASE_FROM_OBSERVATIONS": "1",
-                },
-                metadata={"event": "generate_site_data", "release_job_id": job.job_id},
-                timeout_seconds=runtime.generate_timeout_seconds,
-            )
-            await runtime.task_manager.update_task_progress(task.task_uuid, 35)
+            if needs_projection:
+                from src.generation.release_projection_snapshot import validate_read_snapshot_projection
+                await asyncio.to_thread(validate_read_snapshot_projection, projection_manifest.parent)
 
             await asyncio.to_thread(stage_receipts.save, "generated", generated_signature, [
                 runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data",
@@ -404,6 +364,9 @@ async def _execute_release_task(
                 runtime.root_dir / "exports/site-downloads/manifest.json",
             ], identity=release_identity)
 
+        if needs_projection and generated_record:
+            from src.generation.release_projection_snapshot import validate_read_snapshot_projection
+            await asyncio.to_thread(validate_read_snapshot_projection, projection_manifest.parent)
         from .build_stage import build_release_site
 
         release_identity = await build_release_site(
@@ -414,6 +377,9 @@ async def _execute_release_task(
         )
     if needs_projection and not projection_manifest.is_file():
         raise RuntimeError("Data release is missing its frozen publication projection")
+    if needs_projection and resumed_identity is not None:
+        from src.generation.release_projection_snapshot import validate_read_snapshot_projection
+        await asyncio.to_thread(validate_read_snapshot_projection, projection_manifest.parent)
     release_manifest = service._write_site_release_manifest(release_identity)
     if resumed_identity is None:
         stage_paths = [runtime.astro_dir / "src/data", runtime.astro_dir / "public/site-data", runtime.astro_dir / "dist"]
@@ -570,6 +536,7 @@ async def _execute_release_task(
                 country_scopes_exact=bool(input_data.get("country_scopes_exact")),
                 dirty_ids=input_data.get("publish_dirty_ids") or [],
                 marked_before=input_data.get("publish_dirty_before"),
+                require_prepared=True,
                 prepared_dir=(
                     runtime.astro_dir / "src" / "data" / "_release-projection"
                     if (runtime.astro_dir / "src" / "data" / "_release-projection" / "manifest.json").is_file()

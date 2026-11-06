@@ -1,6 +1,7 @@
 """GlobalID V2 数据库连接管理"""
 
 from contextlib import asynccontextmanager
+import os
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from src.domain import Base
@@ -13,6 +14,7 @@ from src.core.db_schema import (
 from .config import get_config
 from .logging import get_logger
 from .release_admission import collection_database_scope
+from .database_snapshot import SNAPSHOT_ENV, bind_read_snapshot
 
 logger = get_logger(__name__)
 
@@ -56,6 +58,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     session_maker = get_session_maker()
     async with collection_database_scope(), session_maker() as session:
         try:
+            snapshot_id = os.environ.get(SNAPSHOT_ENV)
+            if snapshot_id is not None:
+                bind_read_snapshot(session, snapshot_id)
             yield session
             await session.commit()
         except Exception:

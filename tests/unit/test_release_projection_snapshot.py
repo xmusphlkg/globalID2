@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -8,6 +9,7 @@ from src.generation.release_projection_snapshot import (
     load_projection_manifest,
     read_projection_country,
     write_projection_snapshot,
+    validate_read_snapshot_projection,
 )
 from src.services.data_release import projection
 
@@ -95,3 +97,30 @@ async def test_precise_projection_does_not_expand_selected_country(tmp_path, mon
     )
     replace.assert_awaited_once()
     assert replace.await_args.args[1] == "JP"
+
+
+def test_concurrent_release_requires_snapshot_provenance_and_checksums(tmp_path, monkeypatch):
+    from src.core.database_snapshot import SNAPSHOT_ENV
+    write_projection_snapshot(context(), tmp_path, {})
+    with pytest.raises(ValueError, match="snapshot identifier"):
+        validate_read_snapshot_projection(tmp_path)
+    monkeypatch.setenv(SNAPSHOT_ENV, "00000003-0000001B-1")
+    write_projection_snapshot(context(), tmp_path, {})
+    assert validate_read_snapshot_projection(tmp_path)["database_snapshot"] == "00000003-0000001B-1"
+    (tmp_path / "jp.json").write_text('{}')
+    with pytest.raises(ValueError, match="checksum"):
+        validate_read_snapshot_projection(tmp_path)
+
+
+@pytest.mark.parametrize("options,match", [
+    ({"prepared_dir": None}, "frozen publication projection"),
+    ({"prepared_dir": Path("unused"), "marked_before": "2026-11-01T00:00:00Z"}, "exact dirty IDs"),
+])
+async def test_concurrent_release_never_falls_back_to_live_projection(options, match):
+    db = AsyncMock()
+    with pytest.raises(ValueError, match=match):
+        await projection.commit_release_projection(
+            db, task_uuid="release", country_codes=["JP"], full=False,
+            dirty_ids=[1], require_prepared=True, **options,
+        )
+    db.execute.assert_not_awaited()

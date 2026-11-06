@@ -13,7 +13,7 @@ from src.services import task_executor
 
 
 @pytest.mark.asyncio
-async def test_release_preempts_between_commits_and_resumes_the_same_task(tmp_path, monkeypatch):
+async def test_release_task_runs_while_collection_commits(tmp_path, monkeypatch):
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'data.sqlite'}")
     async with engine.begin() as connection:
         await connection.execute(text("CREATE TABLE observations (value INTEGER)"))
@@ -27,7 +27,6 @@ async def test_release_preempts_between_commits_and_resumes_the_same_task(tmp_pa
     monkeypatch.setattr(task_executor.task_manager, "get_task_by_uuid", AsyncMock(side_effect=tasks.get))
     monkeypatch.setattr(task_executor.task_manager, "is_cancel_requested", AsyncMock(return_value=False))
     writing, commit, publishing, finish_release = (asyncio.Event() for _ in range(4))
-    order = []
 
     async def dispatch(task):
         if task.task_type == TaskType.CRAWL_DATA:
@@ -35,17 +34,12 @@ async def test_release_preempts_between_commits_and_resumes_the_same_task(tmp_pa
                 await db.execute(text("INSERT INTO observations VALUES (1)"))
                 writing.set()
                 await commit.wait()
-            order.append("committed")
             async with database.get_db() as db:
-                order.append("resumed")
                 await db.execute(text("INSERT INTO observations VALUES (2)"))
         else:
-            async with database.get_db() as db:
-                assert (await db.execute(text("SELECT value FROM observations"))).scalars().all() == [1]
-            order.append("publishing")
+            assert not gate._publishing
             publishing.set()
             await finish_release.wait()
-            order.append("published")
         return {"done": task.task_uuid}
 
     monkeypatch.setattr(task_executor, "_dispatch", dispatch)
@@ -55,16 +49,11 @@ async def test_release_preempts_between_commits_and_resumes_the_same_task(tmp_pa
                 writer = group.create_task(task_executor.execute_task("writer"))
                 await writing.wait()
                 release = group.create_task(task_executor.execute_task("release"))
-                await asyncio.sleep(0)
-                assert not publishing.is_set()
-                commit.set()
                 await publishing.wait()
-                assert not writer.done()
-                assert order == ["committed", "publishing"]
+                commit.set()
+                assert await writer == {"done": "writer"}
+                assert not release.done()
                 finish_release.set()
-            assert writer.result() == {"done": "writer"}
-            assert release.result() == {"done": "release"}
-            assert order == ["committed", "publishing", "published", "resumed"]
             async with database.get_db() as db:
                 assert (await db.execute(text("SELECT value FROM observations ORDER BY value"))).scalars().all() == [1, 2]
             assert not gate.cooperative_tasks
@@ -192,8 +181,8 @@ async def test_network_or_model_wait_does_not_hold_publication():
             async with gate.task_scope("release", TaskType.EXPORT_DATA):
                 assert not work.done()
                 finish_network.set()
-                await asyncio.sleep(0)
-                assert not work.done()
+                await work
+                assert work.done()
 
 
 @pytest.mark.asyncio

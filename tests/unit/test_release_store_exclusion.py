@@ -1,4 +1,4 @@
-"""Release claims preempt cooperative writers and drain unmanaged writers."""
+"""Read snapshots let release and collection lanes run independently."""
 
 from contextlib import asynccontextmanager
 
@@ -25,27 +25,27 @@ from src.services.task_worker import (
         TaskType.PROCESS_DATA,
     ],
 )
-def test_each_formal_store_prevents_release_from_claiming(store_type):
+def test_each_formal_store_allows_snapshot_release_claim(store_type):
     assert store_type in COLLECTION_STORE_TASK_TYPES
-    assert TaskType.EXPORT_DATA in _release_memory_blocked_task_types([store_type])
+    assert TaskType.EXPORT_DATA not in _release_memory_blocked_task_types([store_type])
 
 
-def test_release_blocks_every_collection_store_until_projection_commit():
+def test_release_serializes_only_other_release_tasks():
     assert TaskType.EXPORT_DATA in _release_memory_blocked_task_types(
         [TaskType.EXPORT_DATA]
     )
-    assert COLLECTION_STORE_TASK_TYPES <= _release_memory_blocked_task_types(
+    assert not COLLECTION_STORE_TASK_TYPES & _release_memory_blocked_task_types(
         [TaskType.EXPORT_DATA]
     )
 
 
-def test_waiting_release_drains_existing_writers_without_claiming_new_ones():
+def test_waiting_release_does_not_pause_collection_claims():
     blocked = _release_memory_blocked_task_types([], release_waiting=True)
-    assert COLLECTION_STORE_TASK_TYPES <= blocked
+    assert not COLLECTION_STORE_TASK_TYPES & blocked
     assert TaskType.EXPORT_DATA not in blocked
     assert TaskType.SEND_EMAIL not in blocked
-    # Existing writes finish before EXPORT_DATA becomes runnable.
-    assert TaskType.EXPORT_DATA in _release_memory_blocked_task_types(
+    # PostgreSQL snapshot isolation permits active formal writes.
+    assert TaskType.EXPORT_DATA not in _release_memory_blocked_task_types(
         [TaskType.CRAWL_DATA], release_waiting=True
     )
 
@@ -53,7 +53,7 @@ def test_waiting_release_drains_existing_writers_without_claiming_new_ones():
 def test_store_exclusion_does_not_change_other_task_concurrency():
     assert _release_memory_blocked_task_types([TaskType.SEND_EMAIL]) == set()
     # Knowledge brief upserts still rewrite rows the site reads up front.
-    assert TaskType.EXPORT_DATA in _release_memory_blocked_task_types(
+    assert TaskType.EXPORT_DATA not in _release_memory_blocked_task_types(
         [TaskType.UPDATE_DISEASE_KNOWLEDGE]
     )
 
@@ -73,10 +73,10 @@ def test_ai_review_parents_leave_the_release_slot_open():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("active_type,active_reports,queued_type,queued_reports,lane_blocked,expected", [
     (TaskType.CRAWL_DATA, False, TaskType.EXPORT_DATA, True, set(), True),
-    (TaskType.CRAWL_DATA, False, TaskType.EXPORT_DATA, False, set(), False),
+    (TaskType.CRAWL_DATA, False, TaskType.EXPORT_DATA, False, set(), True),
     (TaskType.EXPORT_DATA, True, TaskType.CRAWL_DATA, False, set(), True),
     (TaskType.EXPORT_DATA, True, TaskType.EXPORT_DATA, True, {TaskType.EXPORT_DATA}, False),
-    (TaskType.EXPORT_DATA, False, TaskType.CRAWL_DATA, False, set(), False),
+    (TaskType.EXPORT_DATA, False, TaskType.CRAWL_DATA, False, set(), True),
 ])
 async def test_report_only_lane_keeps_full_release_exclusion(
     tmp_path, monkeypatch, active_type, active_reports, queued_type, queued_reports, lane_blocked, expected
@@ -204,7 +204,7 @@ async def test_release_outranks_older_urgent_tasks_even_with_legacy_low_priority
 
 
 @pytest.mark.asyncio
-async def test_waiting_release_without_reports_flag_stops_new_collection_claims(worker_database):
+async def test_waiting_release_without_reports_flag_allows_new_collection_claims(worker_database):
     async with worker_database() as session:
         session.add_all([
             Task(task_uuid="writer", task_name="writer", task_type=TaskType.CRAWL_DATA, status=TaskStatus.QUEUED),
@@ -212,4 +212,4 @@ async def test_waiting_release_without_reports_flag_stops_new_collection_claims(
                  status=TaskStatus.QUEUED, input_data={}),
         ])
         await session.commit()
-    assert await task_worker._claim_next_task_uuid("owner", blocked_task_types={TaskType.EXPORT_DATA}) is None
+    assert await task_worker._claim_next_task_uuid("owner", blocked_task_types={TaskType.EXPORT_DATA}) == ("writer", TaskType.CRAWL_DATA)

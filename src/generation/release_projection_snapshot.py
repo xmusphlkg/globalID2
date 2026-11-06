@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 
 from src.generation.site_data_writer import _write_if_changed, remove_stale_json_files
@@ -45,7 +46,9 @@ def write_projection_snapshot(context: dict, directory: Path, high_water: dict) 
         name = f"{code.lower()}.json"
         _write_if_changed(directory / name, body)
         entries[code] = {"file": name, "sha256": hashlib.sha256(body).hexdigest()}
-    manifest = {"schema": 1, "projection_version": PROJECTION_VERSION, "countries": entries}
+    from src.core.database_snapshot import SNAPSHOT_ENV
+    manifest = {"schema": 1, "projection_version": PROJECTION_VERSION, "countries": entries,
+                "database_snapshot": os.environ.get(SNAPSHOT_ENV)}
     _write_if_changed(directory / "manifest.json", json.dumps(manifest, sort_keys=True).encode())
     remove_stale_json_files(directory, {"manifest.json", *(item["file"] for item in entries.values())})
 
@@ -73,3 +76,14 @@ def read_projection_country(directory: Path, manifest: dict, code: str) -> dict:
     if payload.get("country_code") != code:
         raise ValueError(f"Prepared release projection country mismatch: {code}")
     return payload
+
+
+def validate_read_snapshot_projection(directory: Path) -> dict:
+    """Reject legacy/live projections before any remote publication."""
+    from src.core.database_snapshot import validate_snapshot_id
+
+    manifest = load_projection_manifest(directory)
+    validate_snapshot_id(str(manifest.get("database_snapshot") or ""))
+    for code in manifest["countries"]:
+        read_projection_country(directory, manifest, code)
+    return manifest

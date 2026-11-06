@@ -73,7 +73,7 @@ flowchart TB
 
 Scheduler 的 schedule 适配器只有四类：`ingestion`、`release`、`literature`、`situation`。id 形式是 `{kind}:{job_id}`。知识 autopilot、mapping automation、idle backlog 由 scheduler 自己循环，不出现在 `GET /schedules`。
 
-Worker 单元限制：`MemoryHigh=28G`，`MemoryMax=32G`，`RestartPreventExitStatus=75`，`TimeoutStopSec=900`。`EXPORT_DATA` 与文献同步、AI、知识源任务互斥，常量是 `RELEASE_EXCLUSIVE_TASK_TYPES` 和 `RELEASE_SHARED_BLOCKED_TASK_TYPES`。
+Worker 单元限制：`MemoryHigh=28G`，`MemoryMax=32G`，`RestartPreventExitStatus=75`，`TimeoutStopSec=900`。`EXPORT_DATA` 保留独立的串行文件发布通道，采集、文献同步、AI、知识源任务可以并行；数据库导出使用共享只读快照，详见 [发布与采集并发](RELEASE_READ_SNAPSHOTS.md)。
 
 ## 3. 现在乱在哪里
 
@@ -331,7 +331,7 @@ CREATE INDEX ix_ai_work_items_parent
 
 只有第 10 步成功，才在同一事务提交本次国家公开投影和选中脏标记的 `published_task_uuid`、`published_at`。构建失败、部署失败时公开投影不变、脏行保留，下一次发布会再读到；本地候选站点文件恢复到任务开始前的快照。
 
-最终投影通过 `commit_release_projection()` 调用单国家投影逻辑。非脏国家不进入增量投影；`full=true` 显式重算全量。原直接批量写投影的维护入口已删除，回填命令也只能入队全量发布。发布与正式数据写入互斥，确保站点生成和最终公开投影使用相同事实。部署重试只有构建内容摘要一致时才复用检查点，生产验证同样核对摘要。
+最终投影通过 `commit_release_projection()` 调用单国家投影逻辑。非脏国家不进入增量投影；`full=true` 显式重算全量。原直接批量写投影的维护入口已删除，回填命令也只能入队全量发布。发布导出使用同一 PostgreSQL 只读快照；正式数据写入可以并行，最终公开投影只读取已冻结的文件并确认本批变更 ID。部署重试只有构建内容摘要一致时才复用检查点，生产验证同样核对摘要。
 
 文献触发的增量发布已经会设置 `incremental_site`。C1 之后以脏标记为准，触发任务 uuid 仍写入 `input_data.trigger_task_uuid` 供排查。
 

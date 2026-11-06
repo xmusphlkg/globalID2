@@ -244,20 +244,20 @@ def test_knowledge_source_cap_stays_inside_the_general_lane():
     assert blocked == {TaskType.REFRESH_DISEASE_KNOWLEDGE_SOURCES}
 
 
-def test_release_export_runs_beside_ai_review_and_excludes_collection_stores():
+def test_release_export_runs_beside_ai_review_and_collection_stores():
     blocked_by_release = task_worker._release_memory_blocked_task_types([TaskType.EXPORT_DATA])
-    assert TaskType.SYNC_LITERATURE in blocked_by_release
-    assert TaskType.UPDATE_DISEASE_KNOWLEDGE in blocked_by_release
+    assert TaskType.SYNC_LITERATURE not in blocked_by_release
+    assert TaskType.UPDATE_DISEASE_KNOWLEDGE not in blocked_by_release
     assert TaskType.ENRICH_LITERATURE not in blocked_by_release
     assert TaskType.AGENT_WORKFLOW not in blocked_by_release
     assert task_worker._release_memory_blocked_task_types([TaskType.ENRICH_LITERATURE]) == set()
     assert task_worker._release_memory_blocked_task_types([TaskType.AGENT_WORKFLOW]) == set()
     waiting = task_worker._release_memory_blocked_task_types([], release_waiting=True)
-    assert TaskType.SYNC_LITERATURE in waiting
-    assert TaskType.UPDATE_DISEASE_KNOWLEDGE in waiting
+    assert TaskType.SYNC_LITERATURE not in waiting
+    assert TaskType.UPDATE_DISEASE_KNOWLEDGE not in waiting
     assert TaskType.ENRICH_LITERATURE not in waiting
     assert TaskType.AGENT_WORKFLOW not in waiting
-    assert task_worker._release_memory_blocked_task_types([TaskType.CRAWL_DATA]) == {TaskType.EXPORT_DATA}
+    assert task_worker._release_memory_blocked_task_types([TaskType.CRAWL_DATA]) == set()
 
 
 def test_knowledge_task_disease_id_uses_single_task_resource():

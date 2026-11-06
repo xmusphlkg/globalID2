@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -9,6 +10,11 @@ import pytest
 from src.services import data_release_service as release_module
 from src.services.data_release import pipeline
 from src.services.data_release_service import DataReleaseService
+
+
+@asynccontextmanager
+async def read_snapshot():
+    yield {"GLOBALID_RELEASE_DB_SNAPSHOT": "00000003-0000001B-1"}
 
 
 def _runtime(manager, root_dir: Path) -> pipeline.ReleasePipelineRuntime:
@@ -25,6 +31,7 @@ def _runtime(manager, root_dir: Path) -> pipeline.ReleasePipelineRuntime:
         astro_build_timeout_seconds=900,
         download_publish_timeout_seconds=900,
         cloudflare_deploy_timeout_seconds=900,
+        read_snapshot=read_snapshot,
     )
 
 

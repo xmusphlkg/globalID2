@@ -1,9 +1,8 @@
 """Commit public curves and the selected publication acknowledgements together.
 
-The worker excludes every COLLECTION_STORE_TASK_TYPE for the whole EXPORT_DATA
-execution. File generation and this final transaction therefore read identical
-formal facts, even though production verification separates the two reads.
-The worker singleton lease also prevents independent claim loops from racing.
+Normal releases commit the frozen curves they actually rendered. Formal facts
+may advance during export/build/upload; only the selected dirty IDs are
+acknowledged, so later collections remain pending.
 """
 
 from __future__ import annotations
@@ -59,7 +58,12 @@ async def commit_release_projection(
     marked_before: str | None = None,
     prepared_dir: Path | None = None,
     country_scopes_exact: bool = False,
+    require_prepared: bool = False,
 ) -> None:
+    if require_prepared and (full or country_codes) and prepared_dir is None:
+        raise ValueError("Concurrent release requires a frozen publication projection")
+    if require_prepared and marked_before:
+        raise ValueError("Concurrent release requires exact dirty IDs, not a timestamp cutoff")
     published_codes = []
     if full or country_codes:
         context = await _load_publish_context()
@@ -80,9 +84,9 @@ async def commit_release_projection(
         ]
         manifest = None
         if prepared_dir is not None:
-            from src.generation.release_projection_snapshot import load_projection_manifest
+            from src.generation.release_projection_snapshot import load_projection_manifest, validate_read_snapshot_projection
 
-            manifest = load_projection_manifest(prepared_dir)
+            manifest = (validate_read_snapshot_projection if require_prepared else load_projection_manifest)(prepared_dir)
             if set(manifest["countries"]) != set(published_codes):
                 raise ValueError("Prepared release projection does not match release scopes")
         for code in published_codes:

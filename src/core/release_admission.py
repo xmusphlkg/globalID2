@@ -1,9 +1,8 @@
-"""Cooperative publication admission inside the singleton task worker.
+"""Optional short database barriers and collection scope tracking.
 
-Collection tasks keep their coroutine and checkpoints while a release owns the
-database boundary. An admitted database scope finishes (including cleanup)
-before publication starts; subsequent scopes wait without holding a connection.
-This does not coordinate independent CLI/API writers in other processes.
+Normal releases use PostgreSQL read snapshots and never own this barrier for
+their task lifetime. The explicit publication context remains available for
+operations that really require draining cooperative database scopes.
 """
 
 from __future__ import annotations
@@ -14,12 +13,6 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 
 from src.domain import TaskType
-from .logging import get_logger
-
-
-logger = get_logger(__name__)
-
-
 COLLECTION_STORE_TASK_TYPES = frozenset({
     TaskType.CRAWL_DATA,
     TaskType.PROCESS_DATA,
@@ -106,18 +99,7 @@ class ReleaseAdmission:
         self, task_uuid: str, task_type: TaskType, *,
         reports_only: bool = False, raw_archive_only: bool = False,
     ):
-        if task_type == TaskType.EXPORT_DATA and not (reports_only or raw_archive_only):
-            logger.info(
-                "Release {} requesting priority; draining {} active collection database scope(s)",
-                task_uuid, self._active_scopes,
-            )
-            try:
-                async with self.publication():
-                    logger.info("Release {} admitted; collection database work is paused", task_uuid)
-                    yield
-            finally:
-                logger.info("Release {} relinquished database admission", task_uuid)
-        elif task_type in COLLECTION_STORE_TASK_TYPES:
+        if task_type in COLLECTION_STORE_TASK_TYPES:
             with self.writer(task_uuid):
                 yield
         else:

@@ -1934,8 +1934,8 @@ async def export(
         flush=True,
     )
 
-    # Freeze exactly the curves rendered by this release. The worker excludes
-    # collection-store writes for this entire generation/deployment interval.
+    # Freeze the curves and watermarks from the shared release read snapshot;
+    # concurrent collections can already have committed newer formal facts.
     import os
     projection_dir = output_dir / "_release-projection"
     if os.environ.get("GLOBALID_RELEASE_FROM_OBSERVATIONS") == "1" and recorded_at_as_of is None:
