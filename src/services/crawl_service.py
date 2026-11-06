@@ -888,7 +888,7 @@ class CrawlService:
             current = (now.year, now.month)
             recent = updater._default_recent_months(as_of=now.date())
             scheduled = bool(task_input.get("scheduled_trigger")) and not bool(task_input.get("manual_trigger"))
-            if kwargs["fill_missing"] and (not scheduled or kwargs["force"]):
+            if kwargs["fill_missing"] and not scheduled:
                 raw_start = task_input.get("start_year")
                 if raw_start is not None:
                     try:
@@ -899,7 +899,11 @@ class CrawlService:
                         raise ValueError(f"TW start_year must be between {config.start_year} and {now.year}")
                     config = replace(config, start_year=start_year)
                 planned = await _months_to_fetch(config, updater, fill_missing=True, force=kwargs["force"], get_database=get_database)
-                months = sorted(set(recent) | {month for month in planned if updater.include_current_month or month < current})
+                historical = sorted({month for month in planned if month not in recent and (updater.include_current_month or month < current)})
+                batch = historical[:12]
+                months = sorted(set(recent) | set(batch))
+                if len(historical) > len(batch):
+                    logger.warning("TW manual historical backfill limited to %s months; %s country-level missing months remain unverified", len(batch), len(historical) - len(batch))
             else:
                 months = recent
                 if scheduled and kwargs["fill_missing"]:

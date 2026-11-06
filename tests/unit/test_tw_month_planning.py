@@ -38,6 +38,7 @@ def test_tw_runtime_configuration_applies_revision_window_and_open_month():
     ({'scheduled_trigger': True}, False, False, 'recent'),
     ({'scheduled_trigger': True, 'backfill_history': True}, False, False, 'recent'),
     ({'scheduled_trigger': True}, False, True, 'recent'),
+    ({'scheduled_trigger': True}, True, True, 'recent'),
     ({'manual_trigger': True}, True, False, 'missing'),
     ({'manual_trigger': True, 'start_year': 2000}, True, False, 'bounded'),
     ({'manual_trigger': True}, True, True, 'missing'),
@@ -80,6 +81,38 @@ async def test_tw_dispatch_plans_automatic_and_explicit_history(monkeypatch, opt
         assert months == [(2024, 3), (2025, 11), (2025, 12), (2026, 1)]
     else:
         assert months == [(1999, 3), (2024, 3), (2025, 11), (2025, 12), (2026, 1)]
+
+
+@pytest.mark.asyncio
+async def test_tw_manual_history_limits_each_batch_to_twelve_missing_months(monkeypatch):
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 2, 15, tzinfo=tz)
+
+    monkeypatch.setattr(crawl_service, 'datetime', FixedDateTime)
+    captured = {}
+
+    async def staged(_service, **kwargs):
+        captured.update(kwargs)
+    monkeypatch.setattr(runner, 'run_surveillance', staged)
+
+    @asynccontextmanager
+    async def fake_database():
+        yield object()
+    monkeypatch.setattr(crawl_service, 'get_database', fake_database)
+    updater = TWMonthlyUpdater()
+    async def existing(_db):
+        return set()
+    updater.get_db_months = existing
+    await CrawlService()._execute_configured_monthly(
+        'TW', task=SimpleNamespace(input_data={'manual_trigger': True, 'start_year': 2000}),
+        updater=updater, source='nidss_open_data', force=False, process=True,
+        save_raw=True, fill_missing=True,
+    )
+    assert captured['connector_options']['months'] == [
+        *((2000, month) for month in range(1, 13)), (2025, 11), (2025, 12), (2026, 1)
+    ]
 
 
 @pytest.mark.asyncio

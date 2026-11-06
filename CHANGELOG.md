@@ -20,7 +20,7 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Fixed
 
-- Taiwan NIDSS collection bounds retry and export windows during TLS outages, preserves transport provenance, and excludes unverified historical zeroes and observations outside reviewed series validity.
+- Taiwan NIDSS collection bounds retries and export windows during TLS outages, limits manual historical backfills to 12 missing months per task, preserves transport provenance, and excludes unverified historical zeroes and observations outside reviewed series validity.
 - Preserve collection cancellation semantics, drain failed literature-provider and enrichment requests, and keep non-resumable jobs running during controlled worker shutdown. Retry model work on another eligible route when possible and record otherwise-empty timeout errors.
 - Mark a recovered release's retry metadata as succeeded while retaining its historical failure details.
 - Bound control-panel shutdown when long-lived event streams prevent Next.js from exiting during a service restart.
