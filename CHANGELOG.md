@@ -6,6 +6,12 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Changed
 
+- Release jobs can reuse verified, already split site artifacts across task IDs when rendering inputs and outputs are unchanged; release identity is stamped after rendering. Data changes still rebuild affected pages. Default rendering concurrency is 8, with source checks running alongside rendering and SEO page checks using multiple CPU cores before global catalogue validation. Bundle asset-reference parsing uses independent reader processes while manifests and routing retain one writer.
+- Large generated research and country JSON is read as build data instead of imported into Vite/TypeScript, keeping it outside the compilation graph.
+
+- Build planning persists compact country/disease directories and shares verified summaries with static rendering. Unchanged histories are no longer repeatedly parsed for ranking, aliases or indexability, and candidate links load full records only when rendering their detail pages.
+- Historical Situation weeks, months and outbreak JSON join incremental page caching with per-period dependencies and adjacent-period navigation. RSS feeds share a facet index and sitemap endpoints share one build catalogue. Parsed JSON uses bounded file-identity caches; route directories keep compact summaries instead of retaining every surveillance history.
+- Site builds run independent validation gates in bounded Node processes, cache country/disease pages in all three locales, and report per-stage timings and rebuild reasons. Unchanged page-cache files retain their identity; verified asset-reference caches avoid reparsing unchanged HTML during restoration and bundle splitting.
 - Release exporters share one PostgreSQL read-only snapshot while collection continues writing. Website builds and uploads release the snapshot before running; publication acknowledges only frozen curves and selected change IDs.
 - Split download projection and encoding, research visualizations and integrity alerts, and release build/deployment stages into focused modules while retaining existing entry points. Added a reproducible large-script audit.
 - Surveillance publication records semantic observation changes and coalesces them into bounded country batches (`DATA_RELEASE__BATCH_MAX_COUNTRIES`, default 8), with durable continuation. Legacy scopes remain conservative and atomic.
@@ -21,6 +27,8 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Fixed
 
+- Weekly Situation pages use source-notice dates for publication metadata instead of treating every map export as a historical-page modification. Country/disease ranking discards losing candidates during selection, and sitemap directories avoid unbounded full-history retention that exhausted the 6 GiB Astro heap.
+- SEO validation detaches retained title and canonical strings from full HTML documents to keep catalogue audits within the bounded checker heap.
 - Taiwan NIDSS collection bounds retries and export windows during TLS outages, limits manual historical backfills to 12 missing months per task, preserves transport provenance, and excludes unverified historical zeroes and observations outside reviewed series validity.
 - Preserve collection cancellation semantics, drain failed literature-provider and enrichment requests, and keep non-resumable jobs running during controlled worker shutdown. Retry model work on another eligible route when possible and record otherwise-empty timeout errors.
 - Mark a recovered release's retry metadata as succeeded while retaining its historical failure details.
@@ -31,6 +39,15 @@ This file records release-level changes to the GIDS application and its data ope
 - Report SEO titles retain full coverage dates so weekly reports in the same month have distinct titles in all three languages.
 - Research Radar review now receives the catalogue's peer-review and integrity statuses and the summary's intended language. Existing holds are reconsidered once under the corrected review context, without bypassing evidence or peer-review gates.
 - Subscription changes now require confirmation without overwriting active preferences; confirmation and unsubscribe links resist automated link scanning, and queued delivery checks subscriber status before sending. Campaign claims, provider feedback and bounded retries reduce duplicate or unwanted email.
+
+## [0.17.5] - 2026-11-06
+
+### Changed
+
+- Data refreshes reuse verified unchanged pages, per-page audit facts and bundle asset dependencies. Cache finalization copies only changed page bundles; missing or changed dependencies invalidate reuse.
+- Partitioning preserves unchanged images and JSON files, consumes strong build-time checksum receipts, and rewrites changed HTML on multiple CPU cores with a single artifact writer.
+- Static rendering uses eight parallel Astro workers. The build pins Astro 7.4.7 and its compatible project-local Node 22.23.4 runtime.
+- Release preparation preserves validation gates and destination reconciliation while avoiding repeated rendering and partitioning of unchanged artifacts.
 
 ## [0.17.4] - 2026-11-05
 

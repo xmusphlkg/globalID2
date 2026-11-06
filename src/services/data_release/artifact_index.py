@@ -30,7 +30,8 @@ def content_digests(body: bytes) -> dict:
 
 
 class ArtifactIndex:
-    def __init__(self, root: Path, *, cache_dir: Path | None = None):
+    def __init__(self, root: Path, *, cache_dir: Path | None = None, resolve_keys: bool = False):
+        self.resolve_keys = resolve_keys
         self.root = root.resolve()
         directory = cache_dir or Path(__file__).resolve().parents[3] / "data/cache/artifact-index"
         key = hashlib.sha256(str(self.root).encode()).hexdigest()
@@ -43,8 +44,11 @@ class ArtifactIndex:
         self.read_files = 0
         self.read_bytes = 0
 
+    def key(self, path: Path) -> str:
+        return str(path.resolve() if self.resolve_keys else path.absolute())
+
     def cached(self, path: Path) -> dict | None:
-        entry = self.entries.get(str(path.resolve()))
+        entry = self.entries.get(self.key(path))
         if not isinstance(entry, dict) or not entry.get("stable"):
             return None
         try:
@@ -68,7 +72,7 @@ class ArtifactIndex:
         # tick can have identical metadata. Like Git's racy-stat protection,
         # don't trust a receipt captured in the file's current timestamp window.
         stable = max(signature[3:]) < time.time_ns() - 1_000_000_000
-        self.entries[str(path.resolve())] = {**digests, "stat": signature, "stable": stable}
+        self.entries[self.key(path)] = {**digests, "stat": signature, "stable": stable}
         return digests
 
     def read(self, path: Path) -> tuple[bytes, dict]:

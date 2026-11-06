@@ -9,8 +9,7 @@ import { readSituationMap } from '../../utils/international';
 import metaRaw from '../../data/meta.json';
 import diseasesRaw from '../../data/diseases/index.json';
 import reportsRaw from '../../data/reports/index.json';
-import japanDataRaw from '../../data/countries/jp.json';
-import chinaDataRaw from '../../data/countries/cn.json';
+import { readGeneratedObject } from '../../lib/generated-site-data.ts';
 
 interface Props { locale?: 'en' | 'zh' | 'fr'; }
 
@@ -238,8 +237,8 @@ const makeBars = (primary: number[], secondary: number[], count = 72) => {
 };
 // The hero background is generated from real public surveillance series, then
 // normalized to an abstract visual layer so it does not imply comparable counts.
-const japanInfluenza = numericCases((japanDataRaw as any).disease_series?.D038);
-const chinaInfluenza = numericCases((chinaDataRaw as any).disease_series?.D038);
+const japanInfluenza = numericCases((readGeneratedObject('countries/jp.json') as any).disease_series?.D038);
+const chinaInfluenza = numericCases((readGeneratedObject('countries/cn.json') as any).disease_series?.D038);
 const backgroundCurves = [
   { className: 'curve-line-a', points: makeCurvePoints(japanInfluenza, { baseline: 724, amplitude: 246 }) },
   { className: 'curve-line-b', points: makeCurvePoints(chinaInfluenza, { baseline: 738, amplitude: 224 }) },

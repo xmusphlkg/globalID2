@@ -1,73 +1,24 @@
-import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import diseasesRaw from '../data/diseases/index.json';
 import metaRaw from '../data/meta.json';
 import reportsRaw from '../data/reports/index.json';
-import { selectCountryDiseaseCandidates, type CountryDiseaseCandidate } from './country-disease-candidates';
+import { type CountryDiseaseCandidate } from './country-disease-candidates';
 import { buildPublishableReports } from './report-routes';
-import { isIndexableDisease, toSeoSlug } from './seo';
+import { toSeoSlug } from './seo';
+import { selectDirectoryCandidates, hydrateDirectoryCandidates } from './directory-facts';
+import { createSiteDataLoaders } from './site-data-loaders';
 
 const DATA_ROOT = resolve('./src/data');
-const jsonCache = new Map<string, Record<string, any> | null>();
-const diseaseCache = new Map<string, Record<string, any> | null>();
-const knowledgeCache = new Map<string, Record<string, any> | null>();
-const countryCache = new Map<string, Record<string, any> | null>();
-const reportCache = new Map<string, Record<string, any> | null>();
 let indexableDiseaseCache: Array<Record<string, any>> | null = null;
 const countryDiseaseCandidateCache = new Map<number, CountryDiseaseCandidate[]>();
 let publishableReportCache: ReturnType<typeof buildPublishableReports> | null = null;
-
-function readJson(path: string): Record<string, any> | null {
-  if (jsonCache.has(path)) return jsonCache.get(path) ?? null;
-  if (!existsSync(path)) {
-    jsonCache.set(path, null);
-    return null;
-  }
-  try {
-    const payload = JSON.parse(readFileSync(path, 'utf-8')) as Record<string, any>;
-    jsonCache.set(path, payload);
-    return payload;
-  } catch {
-    jsonCache.set(path, null);
-    return null;
-  }
-}
 
 export const siteMeta = metaRaw as Record<string, any>;
 export const diseaseIndex = diseasesRaw as Array<Record<string, any>>;
 export const reportIndex = reportsRaw as Array<Record<string, any>>;
 
-export function loadDisease(id: string): Record<string, any> | null {
-  const key = id.toLowerCase();
-  if (!diseaseCache.has(key)) {
-    diseaseCache.set(key, readJson(resolve(DATA_ROOT, 'diseases', `${key}.json`)));
-  }
-  return diseaseCache.get(key) ?? null;
-}
-
-export function loadKnowledge(id: string): Record<string, any> | null {
-  const key = id.toLowerCase();
-  if (!knowledgeCache.has(key)) {
-    knowledgeCache.set(key, readJson(resolve(DATA_ROOT, 'disease-knowledge', `${key}.json`)));
-  }
-  return knowledgeCache.get(key) ?? null;
-}
-
-export function loadCountry(code: string): Record<string, any> | null {
-  const key = code.toLowerCase();
-  if (!countryCache.has(key)) {
-    countryCache.set(key, readJson(resolve(DATA_ROOT, 'countries', `${key}.json`)));
-  }
-  return countryCache.get(key) ?? null;
-}
-
-export function loadReport(id: string): Record<string, any> | null {
-  if (!reportCache.has(id)) {
-    reportCache.set(id, readJson(resolve(DATA_ROOT, 'reports', `${id}.json`)));
-  }
-  return reportCache.get(id) ?? null;
-}
+export const { loadCountry, loadDisease, loadKnowledge, loadReport, loadCountryDirectory, loadDiseaseDirectory, loadCountryFacts } = createSiteDataLoaders(DATA_ROOT);
 
 export function diseaseBySlug(slug: string): Record<string, any> | null {
   return diseaseIndex.find(item => toSeoSlug(item.slug) === slug) ?? null;
@@ -77,20 +28,14 @@ export function indexableDiseases(): Array<Record<string, any>> {
   if (indexableDiseaseCache) return indexableDiseaseCache;
   indexableDiseaseCache = diseaseIndex.filter((disease) => {
     const id = String(disease.disease_id ?? '').toLowerCase();
-    const data = loadDisease(id);
-    const knowledge = loadKnowledge(id);
-    return isIndexableDisease({
-      countrySeries: data?.country_series,
-      knowledgeStatus: knowledge?.knowledge_status ?? data?.knowledge_status,
-      knowledgeSources: knowledge?.knowledge_sources ?? data?.knowledge_sources,
-    });
+    return loadDiseaseDirectory(id).indexable;
   });
   return indexableDiseaseCache;
 }
 
 export function countryDiseaseCandidates(limit = 50): CountryDiseaseCandidate[] {
   if (!countryDiseaseCandidateCache.has(limit)) {
-    countryDiseaseCandidateCache.set(limit, selectCountryDiseaseCandidates(siteMeta.countries ?? [], loadCountry, limit));
+    countryDiseaseCandidateCache.set(limit, hydrateDirectoryCandidates(selectDirectoryCandidates(siteMeta.countries ?? [], loadCountryFacts, limit), loadCountry));
   }
   return countryDiseaseCandidateCache.get(limit) ?? [];
 }

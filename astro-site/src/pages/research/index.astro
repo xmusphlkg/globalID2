@@ -1,8 +1,8 @@
 ---
+import { readResearchIndex } from '../../lib/generated-site-data.ts';
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import ResearchArticleCard from '../../components/research/ResearchArticleCard.astro';
 import ResearchHotspotCharts from '../../components/research/ResearchHotspotCharts';
-import researchData from '../../data/research/index.json';
 import researchHotspotsData from '../../data/research/hotspots.json';
 import { buildResearchFeedDefinitions, filterResearchFeedArticles, toResearchFeedSlug, type ResearchFeedScope } from '../../lib/research-feed';
 import { buildAlternatePaths, normalizeDiseaseHref } from '../../lib/seo';
@@ -21,7 +21,7 @@ const prefix = zh ? '/zh' : locale === 'fr' ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
 const localeHref = (href: string | null | undefined) => href && (zh || fr) && href.startsWith('/') ? `${prefix}${href}` : href;
 
-const data: any = researchData;
+const data: any = readResearchIndex();
 const articles = (data.articles ?? []).filter((article: any) => (
   article.peer_review_status === 'peer_reviewed'
   || article.source_kind === 'historical_seed'

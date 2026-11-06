@@ -12,6 +12,9 @@ from xml.sax.saxutils import escape
 
 from .bundle_assets import copy_bundle_assets as _copy_report_assets
 from .artifact_index import ArtifactIndex
+from .build_fingerprints import BuildFingerprints
+from .artifact_paths import artifact_files, relative_key
+from .bundle_html_workers import rewrite_changed_pages
 
 from .papers_bundle import (
     DEFAULT_MAIN_SITE_ORIGIN,
@@ -184,10 +187,9 @@ def _append_redirects(current: str, report_paths: list[str], reports_origin: str
 def _manifest_for(directory: Path, reports_origin: str, *, artifact_index: ArtifactIndex | None = None) -> dict:
     index = artifact_index or ArtifactIndex(directory)
     files: list[dict[str, object]] = []
-    for path in sorted(directory.rglob("*")):
-        if not path.is_file() or path.name == MANIFEST_KEY:
+    for relative, path in artifact_files(directory):
+        if path.name == MANIFEST_KEY:
             continue
-        relative = path.relative_to(directory).as_posix()
         key = _reports_object_key(relative)
         public_path = "/" + key
         files.append({
@@ -219,6 +221,7 @@ def split_reports_bundle(
         raise FileNotFoundError(f"Astro dist directory not found: {dist_dir}")
     reports_dir.mkdir(parents=True, exist_ok=True)
     index = ArtifactIndex(reports_dir)
+    fingerprints = BuildFingerprints(index)
     manifest_path = reports_dir / MANIFEST_KEY
     try:
         previous_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -235,10 +238,8 @@ def split_reports_bundle(
     source_hashes: dict[str, str] = {}
     expected: set[Path] = set()
     rewritten_count = 0
-    for path in sorted(dist_dir.rglob("*")):
-        if not path.is_file():
-            continue
-        relative = path.relative_to(dist_dir).as_posix()
+    pending_html = []
+    for relative, path in artifact_files(dist_dir):
         # The report-host directory is a staging wrapper: its contents become
         # the root of the reports host instead of retaining a /reports-host prefix.
         if not is_reports_relative_path(relative) or relative.startswith(REPORTS_HOST_DIR + "/"):
@@ -247,26 +248,25 @@ def split_reports_bundle(
         expected.add(destination)
         destination.parent.mkdir(parents=True, exist_ok=True)
         if relative.endswith(".html"):
-            source_body = path.read_bytes()
-            source_hash = hashlib.sha256(source_body).hexdigest()
+            source_hash = fingerprints.sha256(path)
             source_hashes[relative] = source_hash
             cached = previous.get(relative) or {}
             if (cached.get("source_sha256") == source_hash and destination.is_file()
                     and index.describe(destination)["sha256"] == cached.get("sha256")):
-                pass
+                path.unlink()
             else:
-                index.write(destination,
-                    rewrite_reports_html(
-                        source_body.decode("utf-8"),
-                        main_origin=main_origin,
-                        reports_origin=reports_origin,
-                    ).encode("utf-8"),
-                )
+                pending_html.append((path, destination, source_hash))
                 rewritten_count += 1
-            path.unlink()
         else:
-            shutil.move(str(path), str(destination))
+            source_hash = fingerprints.sha256(path)
+            if destination.is_file() and index.describe(destination)["sha256"] == source_hash:
+                path.unlink()
+            else:
+                shutil.move(str(path), str(destination))
         moved.append(relative)
+
+    rewrite_changed_pages(pending_html, index, kind="reports",
+                          origins={"main_origin": main_origin, "reports_origin": reports_origin})
 
     host_dir = dist_dir / REPORTS_HOST_DIR
     if host_dir.is_dir():
@@ -292,7 +292,7 @@ def split_reports_bundle(
     expected.update(assets)
     # Keep the preceding asset generation for cached HTML/open browser tabs.
     # The manifest makes these immutable files no-op uploads on later runs.
-    current_assets = sorted(path.relative_to(reports_dir).as_posix() for path in assets)
+    current_assets = sorted(relative_key(path, reports_dir) for path in assets)
     prior_generations = previous_manifest.get("asset_generations") or []
     generations = [current_assets]
     generations.extend(group for group in prior_generations if group != current_assets)

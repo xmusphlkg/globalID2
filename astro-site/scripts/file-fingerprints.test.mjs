@@ -13,6 +13,21 @@ function fixture(run) {
   try { run(root); } finally { rmSync(root, { recursive: true, force: true }); }
 }
 
+test('unchanged copies preserve the cache inode and rewritten outputs cannot alter it', () => fixture(root => {
+  const source = join(root, 'source.html');
+  const target = join(root, 'cache.html');
+  const fingerprints = new FileFingerprints(join(root, 'hashes.json'));
+  writeFileSync(source, 'first');
+  assert.equal(fingerprints.copy(source, target), true);
+  const before = statSync(target, { bigint: true });
+  assert.equal(fingerprints.copy(source, target), false);
+  assert.deepEqual(statSync(target, { bigint: true }), before);
+  writeFileSync(source, 'other');
+  assert.equal(readFileSync(target, 'utf8'), 'first');
+  assert.equal(fingerprints.copy(source, target), true);
+  assert.equal(readFileSync(target, 'utf8'), 'other');
+}));
+
 test('persistent cache skips unchanged bodies and catches same-size edits', () => fixture(root => {
   const file = join(root, 'page.html');
   const cache = join(root, 'cache.json');

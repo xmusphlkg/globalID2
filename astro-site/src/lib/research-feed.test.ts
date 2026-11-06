@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   buildResearchFeedDefinitions,
+  createResearchFeedSelector,
   filterResearchFeedArticles,
   renderResearchFeedXml,
   type ResearchFeedData,
@@ -110,4 +111,27 @@ test('renders French feeds with localized metadata and links', () => {
   assert.match(xml, /<link>https:\/\/papers\.globalinfectiousdisease\.com\/fr\/research\/articles\/review-one\/<\/link>/);
   assert.match(xml, /Revue et synthèse\./);
   assert.match(xml, /Coqueluche/);
+});
+
+test('indexed feed memberships, counts and localized XML preserve the filtering contract', () => {
+  const source: ResearchFeedData = structuredClone(data);
+  source.articles!.push({ slug: 'legacy', title: 'Legacy', study_type: 'Review',
+    diseases: [{ slug: 'dengue', disease_id: 'dengue' }, { slug: 'dengue' }], countries: [{ code: 'BR', slug: 'br' }] });
+  const select = createResearchFeedSelector(source);
+  const definitions = buildResearchFeedDefinitions(source, select);
+  assert.deepEqual(definitions, buildResearchFeedDefinitions(source, (scope, value) => filterResearchFeedArticles(source, scope, value)));
+  for (const definition of [...definitions, { scope: 'peer-review', value: 'peer-reviewed-paper' },
+    { scope: 'peer-review', value: 'preprints' }, { scope: 'diseases', value: 'dengue' },
+    { scope: 'countries', value: 'br' }, { scope: 'topics', value: 'missing' }] as any[]) {
+    assert.deepEqual(select(definition.scope, definition.value), filterResearchFeedArticles(source, definition.scope, definition.value));
+  }
+  for (const definition of definitions) for (const language of ['en', 'zh', 'fr'] as const) {
+    const options = { data: source, definition, language, site: 'https://example.test' };
+    assert.equal(renderResearchFeedXml({ ...options, selectArticles: select }), renderResearchFeedXml(options));
+  }
+  const originalCount = select('countries', 'br').length;
+  select('countries', 'br').pop();
+  assert.equal(select('countries', 'br').length, originalCount);
+  source.articles!.push({ slug: 'new', countries: [{ code: 'BR' }] });
+  assert.equal(createResearchFeedSelector(source)('countries', 'br').length, originalCount + 1);
 });

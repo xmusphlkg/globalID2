@@ -3,12 +3,17 @@ import react from '@astrojs/react';
 import { resolve } from 'node:path';
 
 const siteUrl = process.env.GLOBALID_SITE_URL || process.env.SITE_URL || 'https://globalinfectiousdisease.com';
-const buildConcurrency = Number(process.env.GIDS_ASTRO_BUILD_CONCURRENCY ?? 2);
+const buildConcurrency = Number(process.env.GIDS_ASTRO_BUILD_CONCURRENCY ?? 8);
 if (!Number.isInteger(buildConcurrency) || buildConcurrency < 1 || buildConcurrency > 8) {
   throw new Error('GIDS_ASTRO_BUILD_CONCURRENCY must be an integer from 1 to 8');
 }
 
+const renderWorkers = Number(process.env.GIDS_ASTRO_RENDER_WORKERS ?? 8);
+if (!Number.isInteger(renderWorkers) || renderWorkers < 0 || renderWorkers > 32) {
+  throw new Error('GIDS_ASTRO_RENDER_WORKERS must be an integer from 0 to 32');
+}
 export default defineConfig({
+  experimental: { parallelPrerender: renderWorkers ? { workers: renderWorkers } : false },
   ...(process.env.GIDS_REPORTS_BUILD_DIR ? {
     srcDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'src'),
     publicDir: resolve(process.env.GIDS_REPORTS_BUILD_DIR, 'public'),

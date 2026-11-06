@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { auditPerformance } from './check-performance-budgets.mjs';
+import { openPageAuditCache } from './page-audit-cache.mjs';
 
 function fixture() {
   const directory = mkdtempSync(join(tmpdir(), 'gids-performance-budget-'));
@@ -13,6 +15,43 @@ function fixture() {
   writeFileSync(join(directory, 'data', 'world.json'), '{"type":"FeatureCollection","features":[]}');
   return directory;
 }
+
+test('persisted asset facts do not retain the complete HTML catalogue', t => {
+  const directory = fixture();
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const padding = 'x'.repeat(1024 * 1024);
+  for (let i = 0; i < 96; i++) {
+    writeFileSync(join(directory, `${i}.html`), `<script src="/_astro/catalogue-entry-abcdefghij.js"></script><main>${i}${padding}</main>`);
+  }
+  const script = `import {auditPerformance} from ${JSON.stringify(new URL('./check-performance-budgets.mjs', import.meta.url).href)};
+    import {openPageAuditCache} from ${JSON.stringify(new URL('./page-audit-cache.mjs', import.meta.url).href)};
+    const cache=openPageAuditCache(process.argv[1]+'/facts.json','test');
+    const result=auditPerformance(process.argv[1],{}, {pageCache:cache});
+    if(result.pages!==96 || cache.stats.misses!==96) throw new Error('Missing catalogue entries');
+    cache.save();`;
+  const result = spawnSync(process.execPath, ['--max-old-space-size=64', '--input-type=module', '-e', script, directory],
+    { encoding: 'utf8', timeout: 30000 });
+  assert.equal(result.status, 0, result.stderr || String(result.error));
+});
+
+test('cached page facts still enforce current budgets and changed asset dependencies', t => {
+  const directory = fixture();
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  writeFileSync(join(directory, 'index.html'), '<script src="/_astro/entry.js"></script>');
+  writeFileSync(join(directory, '_astro', 'entry.js'), 'export const ready = true;');
+  const path = join(directory, 'facts.json');
+  const first = openPageAuditCache(path, 'test');
+  assert.equal(auditPerformance(directory, {}, { pageCache: first }).passed, true);
+  first.save();
+  const cached = openPageAuditCache(path, 'test');
+  assert.equal(auditPerformance(directory, { maxPageHtmlGzipBytes: 1 }, { pageCache: cached }).passed, false);
+  assert.equal(cached.stats.hits, 1);
+  writeFileSync(join(directory, '_astro', 'entry.js'), 'import "./large.js";');
+  writeFileSync(join(directory, '_astro', 'large.js'), randomBytes(2000));
+  const changed = auditPerformance(directory, { maxRouteCompressedAssetsBytes: 100 }, { pageCache: cached });
+  assert.equal(changed.passed, false);
+  assert.equal(changed.largestRoute.assetCount, 2);
+});
 
 test('audits the complete dependency graph referenced by an Astro island', (t) => {
   const directory = fixture();

@@ -3,8 +3,9 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { directoryFactsPath, directoryFactsVersion } from './directory-build-cache.mjs';
 import { writeBuildRedirects } from './build-redirects.mjs';
-import { astroAssetCacheRoot, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, sharedFingerprint, writePending } from './research-build-cache.mjs';
+import { astroAssetCacheRoot, mergeAstroAssetTree, planPath, planResearchBuild, replaceAstroAssetCache, restoreReusablePages, reusedAssetReferencesAvailable, sourceSnapshot, sharedFingerprint, summarizeBuildPlan, writePending } from './research-build-cache.mjs';
 import { pageSourceSnapshot, planSitePages, pagePlanPath, sitePageCacheRoot, writePagePending } from './page-build-cache.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..', '..');
@@ -73,8 +74,11 @@ const astroBinary = resolve(
   '.bin',
   process.platform === 'win32' ? 'astro.cmd' : 'astro',
 );
+const planningStarted = performance.now();
 const snapshot = sourceSnapshot();
-const pageSnapshot = pageSourceSnapshot();
+const directoryStats = {};
+const pageSnapshot = pageSourceSnapshot({ directoryStats });
+process.stdout.write(`[directory-cache] ${JSON.stringify(directoryStats)}\n`);
 const incremental = Boolean(process.env.PUBLIC_GIDS_RELEASE_ID || process.env.GIDS_RESEARCH_INCREMENTAL === '1');
 let pagePlan = planSitePages(pageSnapshot, incremental);
 let plan = planResearchBuild({
@@ -88,6 +92,14 @@ writeFileSync(planPath, JSON.stringify({ selected: plan.selected }));
 writeFileSync(pagePlanPath, JSON.stringify({ selected: pagePlan.selected, known: Object.keys(pageSnapshot.articles) }));
 process.stdout.write(`[research-cache] ${plan.mode}: render ${plan.selected.length}, reuse ${plan.reused.length} article bundles\n`);
 process.stdout.write(`[page-cache] ${pagePlan.mode}: render ${pagePlan.selected.length}, reuse ${pagePlan.reused.length} collection/country/disease bundles\n`);
+process.stdout.write(`[build-timing] plan inputs and verify cache ${elapsedSeconds(planningStarted)}s\n`);
+for (const [label, value] of [['research', plan], ['pages', pagePlan]]) {
+  process.stdout.write(`[build-plan] ${label} ${JSON.stringify(summarizeBuildPlan(value))}\n`);
+}
+writeFileSync(resolve(projectRoot, 'data/cache/site-build-plan-report.json'), JSON.stringify({
+  research: { ...summarizeBuildPlan(plan), reasons: plan.reasons, removed: plan.removed },
+  pages: { ...summarizeBuildPlan(pagePlan), reasons: pagePlan.reasons, removed: pagePlan.removed },
+}));
 
 const runAstro = (selectedPath, selectedPagePath) => {
   const started = performance.now();
@@ -95,6 +107,9 @@ const runAstro = (selectedPath, selectedPagePath) => {
     cwd: resolve(import.meta.dirname, '..'),
     env: {
       ...process.env,
+      GIDS_STATIC_RENDER: '1',
+      GIDS_SITE_DIRECTORY_FACTS: directoryFactsPath(),
+      GIDS_SITE_DIRECTORY_VERSION: directoryFactsVersion(),
       PUBLIC_GA4_MEASUREMENT_ID: measurementId,
       ...(selectedPath ? { GIDS_RESEARCH_BUILD_PLAN: selectedPath } : { GIDS_RESEARCH_BUILD_PLAN: '' }),
       GIDS_PAGE_BUILD_PLAN: selectedPagePath ?? '',
@@ -111,9 +126,12 @@ if ((result.status ?? 1) === 0 && (plan.reused.length || pagePlan.reused.length)
   restoreReusablePages(plan);
   restoreReusablePages(pagePlan, sitePageCacheRoot);
   process.stdout.write(`[build-timing] restore reusable pages ${elapsedSeconds(restoreStarted)}s\n`);
+  const assetsStarted = performance.now();
   const restoredAssets = mergeAstroAssetTree(assetCachePath, resolve(import.meta.dirname, '..', 'dist', '_astro'));
   process.stdout.write(`[asset-cache] restored ${restoredAssets} shared assets\n`);
-  if (!reusedAssetReferencesAvailable(plan) || !reusedAssetReferencesAvailable(pagePlan)) {
+  const available = reusedAssetReferencesAvailable(plan) && reusedAssetReferencesAvailable(pagePlan);
+  process.stdout.write(`[build-timing] restore and validate shared assets ${elapsedSeconds(assetsStarted)}s\n`);
+  if (!available) {
     process.stdout.write('[page-cache] cached page asset missing; rebuilding all page bundles\n');
     result = runAstro(null, null);
     plan = { ...plan, mode: 'full', selected: Object.keys(snapshot.articles), reused: [] };
@@ -132,6 +150,7 @@ if ((result.status ?? 1) === 0) {
   process.stdout.write(`[redirects] generated ${redirects.generatedRules} legacy situation rules\n`);
 }
 const researchFingerprintAfter = contentFingerprint(researchIndexPath);
+const recheckStarted = performance.now();
 if (researchFingerprintAfter !== researchFingerprintBefore) {
   process.stderr.write(
     'Research Radar source data changed during the Astro build; retry after the publication task finishes.\n',
@@ -144,6 +163,8 @@ if ((result.status ?? 1) === 0 && (JSON.stringify(sourceSnapshot()) !== JSON.str
   process.exit(3);
 }
 if ((result.status ?? 1) === 0) {
+  process.stdout.write(`[build-timing] recheck source consistency ${elapsedSeconds(recheckStarted)}s\n`);
+  const cacheStarted = performance.now();
   const cachedAssets = replaceAstroAssetCache(
     resolve(import.meta.dirname, '..', 'dist', '_astro'),
     assetCachePath,
@@ -151,5 +172,6 @@ if ((result.status ?? 1) === 0) {
   process.stdout.write(`[asset-cache] saved ${cachedAssets} shared assets\n`);
   writePending(plan);
   writePagePending(pagePlan);
+  process.stdout.write(`[build-timing] save shared assets and pending plans ${elapsedSeconds(cacheStarted)}s\n`);
 }
 process.exit(result.status ?? 1);

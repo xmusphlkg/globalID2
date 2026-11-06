@@ -16,7 +16,9 @@ import {
   sourceLabel,
 } from '../../../components/situation/labels';
 import { weeklyDiff } from '../../../components/situation/text';
-import { listWeeks, readSituationMap, readWeek, weekAlerts } from '../../../utils/international';
+import { listWeeks } from '../../../utils/international';
+import { weeklyArchive } from '../../../lib/situation-archive';
+import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { translateUi } from '../../../utils/i18n';
 
 export function getStaticPaths() {
@@ -25,7 +27,7 @@ export function getStaticPaths() {
   return periods.map((period, index) => ({
     params: { period },
     props: { reportPeriod: period, locale: 'en', previous: periods[index - 1], next: periods[index + 1] },
-  }));
+  })).filter(entry => shouldBuildPage(`situation-week:${entry.params.period}`));
 }
 
 const { reportPeriod, previous, next, locale = 'en' } = Astro.props as { reportPeriod?: string; previous?: string; next?: string; locale?: 'en' | 'zh' | 'fr' };
@@ -34,17 +36,9 @@ const zh = locale === 'zh';
 const fr = locale === 'fr';
 const prefix = zh ? '/zh' : fr ? '/fr' : '';
 const pick = <T,>(en: T, zhValue: T, frValue?: T) => fr ? (frValue ?? (typeof en === 'string' ? translateUi(en) as T : en)) : zh ? zhValue : en;
-const week = readWeek(period);
-if (!week) return Astro.redirect(`${prefix}/situation/weekly/`, 302);
-
-const map = readSituationMap();
-const outbreakById = new Map((map?.outbreaks ?? []).map(outbreak => [outbreak.outbreak_id, outbreak]));
-const section = (ids: string[]) =>
-  ids
-    .map(id => ({ outbreak: outbreakById.get(id), alerts: weekAlerts(id, period) }))
-    .filter(group => group.outbreak && group.alerts.length > 0);
-const fresh = section(week.new_outbreaks);
-const updated = section(week.updated_outbreaks);
+const archive = weeklyArchive(period);
+if (!archive) return Astro.redirect(`${prefix}/situation/weekly/`, 302);
+const { week, fresh, updated, published } = archive;
 const copy = COPY[locale];
 
 const title = pick(`Situation changes ${period}`, `${period} 态势变化`, `Changements de situation ${period}`);
@@ -57,8 +51,7 @@ const seo: SeoDocument = {
   locale,
   alternatePaths: buildAlternatePaths(canonicalPath, locale),
   pageType: 'Report',
-  datePublished: map?.generated_at ?? null,
-  dateModified: map?.generated_at ?? null,
+  datePublished: published,
 };
 const groups = [
   { id: 'new', heading: pick('New outbreaks', '新增疫情', 'Nouvelles flambées'), rows: fresh },

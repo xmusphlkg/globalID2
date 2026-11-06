@@ -100,7 +100,7 @@ const sourceChecks = [
   },
   {
     path: 'src/components/public/PublicCopyright.astro',
-    required: ['Missing French copyright translation', "const fr = locale === 'fr'", "'18 août 2026'"],
+    required: ['Missing French copyright translation', "const fr = locale === 'fr'", "'Dernière mise à jour'"],
     forbidden: [],
   },
   {

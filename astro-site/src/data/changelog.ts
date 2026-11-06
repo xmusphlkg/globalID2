@@ -26,6 +26,24 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.17.5',
+    date: '2026-11-06',
+    titleEn: 'Faster incremental data publication',
+    titleZh: '加快增量数据发布',
+    titleFr: 'Publication incrémentale des données plus rapide',
+    summaryEn: 'Data refreshes reuse unchanged pages and verified assets, with parallel rendering and validation to shorten publication time.',
+    summaryZh: '数据更新复用未变化的页面和已验证资源，通过并行渲染与检查缩短发布时间。',
+    summaryFr: 'Les actualisations réutilisent les pages inchangées et les ressources vérifiées, avec un rendu et des contrôles parallèles pour réduire le délai de publication.',
+    sections: [{
+      kind: 'improved', labelEn: 'Improved', labelZh: '改进', labelFr: 'Améliorations',
+      items: [{
+        en: 'Country and disease updates rebuild affected pages while retaining unchanged research, reports and historical pages. Publication still validates page content and required assets.',
+        zh: '国家与疾病数据变化时重建受影响页面，复用未变化的研究、报告及历史页面；发布前仍检查页面内容和必需资源。',
+        fr: 'Les mises à jour par pays et maladie reconstruisent les pages concernées tout en réutilisant les pages de recherche, les rapports et les archives inchangés. Le contenu et les ressources nécessaires restent contrôlés avant publication.',
+      }],
+    }],
+  },
+  {
     version: '0.17.4',
     date: '2026-11-05',
     titleEn: 'More reliable data refreshes and report publication',

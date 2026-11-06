@@ -3,10 +3,12 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileHash } from './file-fingerprints.mjs';
 import { createSourceDependencyFingerprinter } from './source-dependencies.mjs';
-import { selectCountryDiseaseCandidates } from '../src/lib/country-disease-candidates.ts';
+import { selectDirectoryCandidates } from '../src/lib/directory-facts.ts';
+import { openDirectoryBuildCache, directoryFactsVersion } from './directory-build-cache.mjs';
 import { hasCountryDataSnapshot } from '../src/lib/country-coverage.ts';
 import { toSeoSlug } from '../src/lib/seo.ts';
 import { buildPublishableReports } from '../src/lib/report-routes.ts';
+import { addSituationPages } from './situation-build-cache.mjs';
 import { cacheRoot, siteRoot, sharedFingerprint, planResearchBuild, finalizeResearchSnapshot, reportDiseaseTemplate } from './research-build-cache.mjs';
 
 export const pageManifestPath = resolve(cacheRoot, 'site-page-manifest.json');
@@ -23,11 +25,12 @@ const safeSegment = value => {
   return segment;
 };
 
-export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), shared = sharedFingerprint(), reportDiseaseTemplateHash = hashFile(reportDiseaseTemplate) } = {}) {
+export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), shared = sharedFingerprint(), reportDiseaseTemplateHash = hashFile(reportDiseaseTemplate), directoryCachePath, directoryStats } = {}) {
   const graph = createSourceDependencyFingerprinter({ siteRoot });
   const templates = new Map();
   const routeTemplates = {
     country: 'countries/[country]/index.astro',
+    'country-disease': 'countries/[country]/diseases/[disease].astro',
     disease: 'diseases/[disease].astro',
     'report-archive': 'countries/[country]/reports/index.astro',
     report: 'countries/[country]/reports/[id].astro',
@@ -36,18 +39,22 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
     'research:diseases': 'research/diseases/[slug].astro',
     'research:topics': 'research/topics/[topic].astro',
     'research:weekly': 'research/weekly/[week].astro',
+    'situation-week': 'situation/weekly/[period].astro',
+    'situation-month': 'situation/monthly/[period].astro',
+    'situation-outbreak': 'situation/outbreaks/[id].json.ts',
   };
   const pages = {};
-  const add = (key, path, dependencies) => {
+  const add = (key, path, dependencies, { locales = ['', 'fr/', 'zh/'], paths } = {}) => {
     if (pages[key]) throw new Error(`Duplicate page cache key: ${key}`);
     const group = key.startsWith('research:') ? key.split(':').slice(0, 2).join(':') : key.split(':')[0];
     if (!templates.has(group)) {
       const route = routeTemplates[group];
       if (!route) throw new Error(`Missing template dependencies for ${group}`);
-      templates.set(group, graph(['', 'fr/', 'zh/'].map(prefix => `src/pages/${prefix}${route}`)));
+      templates.set(group, graph(locales.map(prefix => `src/pages/${prefix}${route}`)));
     }
-    pages[key] = { fingerprint: sha(JSON.stringify([templates.get(group), ...dependencies])), paths: localePaths(path) };
+    pages[key] = { fingerprint: sha(JSON.stringify([templates.get(group), ...dependencies])), paths: paths ?? localePaths(path) };
   };
+  addSituationPages({ dataRoot, add, hashFile });
   const routes = json(resolve(dataRoot, 'research/routes.json'), {});
   const facets = routes.facets ?? json(resolve(dataRoot, 'research/index.json'), {}).facets ?? {};
   for (const [group, facetGroup] of Object.entries({ countries: 'countries', diseases: 'diseases', topics: 'topics', weekly: 'weeks' })) {
@@ -61,15 +68,8 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   const countries = json(resolve(dataRoot, 'meta.json'), {}).countries ?? [];
   const diseases = json(resolve(dataRoot, 'diseases/index.json'), []);
   const downloads = json(resolve(dataRoot, 'downloads.json'), {});
-  const countryRecords = new Map();
-  const loadCountry = code => {
-    const key = safeSegment(code).toLowerCase();
-    if (!countryRecords.has(key)) countryRecords.set(key, json(resolve(dataRoot, 'countries', `${key}.json`)));
-    return countryRecords.get(key);
-  };
-  // Share the renderer's ranking algorithm. Pages consume membership, not the
-  // scores or unrelated countries' full histories; hash only those links.
-  const candidates = selectCountryDiseaseCandidates(countries, loadCountry);
+  const directory = openDirectoryBuildCache(dataRoot, { path: directoryCachePath });
+  const candidates = selectDirectoryCandidates(countries, code => directory.country(safeSegment(code)));
   const alertsDir = resolve(dataRoot, 'situation/international');
   const alertHash = path => {
     const value = json(path);
@@ -79,16 +79,22 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   const reportSummaries = json(resolve(dataRoot, 'reports/index.json'), []);
   for (const country of countries.filter(hasCountryDataSnapshot)) {
     const code = safeSegment(country.code).toLowerCase();
-    const record = loadCountry(code);
-    const alertKeys = [...new Set([code, ...['iso2', 'iso3', 'alpha2', 'alpha3', 'code', 'country_code', 'iso_code']
-      .map(field => record?.[field]).filter(value => typeof value === 'string' && value.trim())]
-      .map(value => value.trim().toUpperCase()).filter(value => /^[A-Za-z0-9_-]+$/.test(value)))];
+    const alertKeys = directory.country(code)?.alertKeys ?? [code.toUpperCase()];
     const countryAlerts = alertKeys.map(key => [key, alertHash(resolve(alertsDir, 'by-country', `${key}.json`))]);
     add(`country:${code}`, `countries/${code}`, [hashFile(resolve(dataRoot, 'countries', `${code}.json`)),
       countries.filter(entry => entry.parent_code === code.toUpperCase() && hasCountryDataSnapshot(entry)),
       candidates.filter(entry => entry.code === code).map(entry => entry.slug).sort(),
       reportSummaries.filter(entry => entry.country_code?.toLowerCase() === code).slice(0, 6), countryAlerts,
       downloads.countries?.find(entry => entry.code?.toLowerCase() === code) ?? null]);
+    for (const candidate of candidates.filter(entry => entry.code === code)) {
+      const slug = safeSegment(candidate.slug);
+      const diseaseId = candidate.diseaseId;
+      add(`country-disease:${code}:${slug}`, `countries/${code}/diseases/${slug}`, [
+        hashFile(resolve(dataRoot, 'countries', `${code}.json`)), countryAlerts,
+        hashFile(resolve(dataRoot, 'research/diseases', `${safeSegment(diseaseId || slug).toLowerCase()}.json`)),
+        downloads.countries?.find(entry => entry.code?.toLowerCase() === code) ?? null,
+      ]);
+    }
   }
 
   const publishableReports = buildPublishableReports(reportSummaries, id => (
@@ -140,6 +146,7 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
 
   for (const disease of diseases) {
     const id = safeSegment(disease.disease_id);
+    directory.disease(id);
     const slug = safeSegment(toSeoSlug(disease.slug) || disease.slug);
     add(`disease:${id}`, `diseases/${slug}`, [countries, candidates.filter(entry => entry.slug === slug).map(entry => entry.code).sort(), disease,
       hashFile(resolve(dataRoot, 'diseases', `${id.toLowerCase()}.json`)),
@@ -148,8 +155,10 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
       alertHash(resolve(alertsDir, 'by-disease', `${id}.json`)),
       downloads.diseases?.find(entry => entry.disease_id === id || entry.slug === slug || entry.id === id.toLowerCase()) ?? null]);
   }
+  directory.save();
+  if (directoryStats) Object.assign(directoryStats, directory.stats);
   // Reuse the bundle integrity planner, including all three locale outputs.
-  return { schema: 1, shared: sha(`${shared}:${hashFile(new URL(import.meta.url))}`), articles: pages };
+  return { schema: 1, shared: sha(`${shared}:${hashFile(new URL(import.meta.url))}:${hashFile(new URL('./situation-build-cache.mjs', import.meta.url))}:${directoryFactsVersion()}`), articles: pages };
 }
 
 export function planSitePages(snapshot, incremental) {
@@ -159,7 +168,7 @@ export function planSitePages(snapshot, incremental) {
 }
 
 export function writePagePending(plan) {
-  writeFileSync(pagePendingPath, JSON.stringify(plan.snapshot));
+  writeFileSync(pagePendingPath, JSON.stringify({ ...plan.snapshot, reusedKeys: plan.reused }));
 }
 
 export function finalizeSitePages() {

@@ -1,6 +1,7 @@
-import { researchCatalogueChunks, researchCatalogueChunkNames, researchCatalogueGeneratedAt, researchCatalogueArticles } from '../../../lib/research-catalogue-shards';
+import { researchCatalogue } from '../../../lib/research-catalogue-shards';
 
 export function GET() {
+  const { researchCatalogueChunks, researchCatalogueChunkNames, researchCatalogueGeneratedAt, researchCatalogueArticles } = researchCatalogue();
   const slugifyTopic = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const facets = (articles: any[]) => ({
     disease: [...new Set(articles.flatMap(article => (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase())).filter(Boolean))],

@@ -6,6 +6,7 @@ export interface CountryDiseaseCandidate {
   country: Record<string, any>;
   series: Record<string, any>;
   slug: string;
+  score: number;
 }
 
 export function selectCountryDiseaseCandidates(
@@ -38,6 +39,10 @@ export function selectCountryDiseaseCandidates(
       if (!identity || !enoughHistory || !slug) continue;
       candidates.push({ code, country, series, slug, score: Number(series.total_cases ?? 0) + dates.length });
     }
+    // Discard losing records as we scan. Keeping every candidate until the end
+    // also retained every country's complete multi-series history in memory.
+    candidates.sort((a, b) => b.score - a.score || `${a.code}/${a.slug}`.localeCompare(`${b.code}/${b.slug}`));
+    if (Number.isFinite(limit) && limit >= 0) candidates.splice(limit);
   }
   return candidates
     .sort((a, b) => b.score - a.score || `${a.code}/${a.slug}`.localeCompare(`${b.code}/${b.slug}`))

@@ -2,7 +2,7 @@
 // ctime/inode so same-size edits with restored mtime cannot reuse old content.
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, lstatSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { constants, copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -57,12 +57,19 @@ export class FileFingerprints {
   copy(source, target) {
     const before = signature(source);
     const sha256 = this.hash(source);
-    copyFileSync(source, target);
+    // Keep unchanged cache entries and their trusted metadata intact. Reflinks
+    // isolate later HTML rewrites; hard links would corrupt the page cache.
+    if (existsSync(target) && this.hash(target) === sha256) {
+      if (before !== signature(source)) throw new Error(`Build input changed while copying: ${source}`);
+      return false;
+    }
+    copyFileSync(source, target, constants.COPYFILE_FICLONE);
     if (before !== signature(source)) throw new Error(`Build input changed while copying: ${source}`);
     // The new target's timestamps may still be in the filesystem's current
     // clock tick. Revalidate it once after that window before trusting metadata.
     this.files[normalize(target)] = { stat: signature(target), sha256, stable: false };
     this.dirty = true;
+    return true;
   }
 
   save() {

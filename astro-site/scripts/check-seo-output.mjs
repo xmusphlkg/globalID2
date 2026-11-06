@@ -5,6 +5,11 @@ const SITE_ORIGIN = 'https://globalinfectiousdisease.com';
 // Mirrors PAPERS_PATH in src/lib/papers.ts: paths published on the papers host.
 const PAPERS_ROUTE = /^\/(?:(?:zh|fr)\/)?research\/articles\/|^\/research\/cards\/|^\/site-data\/research\//;
 
+// Regex captures can be slices backed by an entire HTML document. The global
+// uniqueness maps must own small strings, otherwise one canonical per page
+// keeps the whole catalogue's HTML alive until the audit ends.
+const ownedString = value => Buffer.from(value, 'utf8').toString('utf8');
+
 function walk(directory, suffix) {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     const path = join(directory, entry.name);
@@ -81,7 +86,7 @@ function isRedirectSource(route, redirects) {
   return redirectFor(route, redirects) !== undefined;
 }
 
-export function auditSeoOutput(distDirectory) {
+export function auditSeoOutput(distDirectory, { files, partial = false, catalogue } = {}) {
   const dist = resolve(distDirectory);
   const redirects = redirectMap(dist);
   // Shared navigation repeats across thousands of pages. Cache only within
@@ -96,14 +101,14 @@ export function auditSeoOutput(distDirectory) {
     if (!redirectSources.has(pathname)) redirectSources.set(pathname, isRedirectSource(pathname, redirects));
     return redirectSources.get(pathname);
   };
-  const errors = [];
-  const pages = new Map();
+  const errors = [...(catalogue?.errors ?? [])];
+  const pages = new Map(catalogue?.pages);
   const indexableTitles = new Map();
   const indexableCanonicals = new Map();
-  let indexable = 0;
-  let noindex = 0;
+  let indexable = catalogue?.indexable ?? 0;
+  let noindex = catalogue?.noindex ?? 0;
 
-  for (const file of walk(dist, '.html')) {
+  for (const file of files ?? walk(dist, '.html')) {
     const route = routeFor(file, dist);
     // Exact rules only: a wildcard rule (papers host) must not hide pages that
     // an unsplit build still contains from the audit.
@@ -144,12 +149,12 @@ export function auditSeoOutput(distDirectory) {
       // Localized routes are expected to reuse the same subject title in each
       // language. Detect collisions within a locale, not across translations.
       const locale = route.startsWith('/fr/') ? 'fr' : route.startsWith('/zh/') ? 'zh' : 'en';
-      const titleKey = `${locale}:${title}`;
+      const titleKey = ownedString(`${locale}:${title}`);
       if (indexableTitles.has(titleKey)) errors.push(`${route}: duplicate indexable title also used by ${indexableTitles.get(titleKey)}`);
       else indexableTitles.set(titleKey, route);
       if (canonical[0]?.href) {
         if (indexableCanonicals.has(canonical[0].href)) errors.push(`${route}: duplicate canonical also used by ${indexableCanonicals.get(canonical[0].href)}`);
-        else indexableCanonicals.set(canonical[0].href, route);
+        else indexableCanonicals.set(ownedString(canonical[0].href), route);
       }
     }
 
@@ -183,6 +188,9 @@ export function auditSeoOutput(distDirectory) {
       else if (!hasTarget(target.pathname)) errors.push(`${route}: broken internal link ${href}`);
     }
   }
+
+  if (partial) return { errors, pages: [...pages], indexable, noindex,
+    titles: [...indexableTitles], canonicals: [...indexableCanonicals] };
 
   const sitemapFiles = existsSync(resolve(dist, 'sitemaps')) ? walk(resolve(dist, 'sitemaps'), '.xml') : [];
   for (const file of sitemapFiles) {

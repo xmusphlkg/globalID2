@@ -14,6 +14,7 @@ import {
   type ReportIndexEntry,
 } from './report-routes.ts';
 import { REPORTS_ORIGIN } from './papers.ts';
+import type { CountryDirectory, DiseaseDirectory } from './site-data-loaders.ts';
 
 export interface SitemapEntry {
   path: string;
@@ -44,6 +45,8 @@ export interface BuildSitemapEntriesOptions {
   loadDisease?: (id: string) => unknown | null;
   loadKnowledge?: (id: string) => unknown | null;
   loadCountry?: (code: string) => unknown | null;
+  loadCountryDirectory?: (code: string) => CountryDirectory | null;
+  loadDiseaseDirectory?: (id: string) => DiseaseDirectory;
   countryDiseaseLimit?: number;
   situation?: {
     latest?: { public_enabled?: unknown; generated_at?: unknown; content_updated_at?: unknown; report?: { as_of?: unknown } } | null;
@@ -164,13 +167,22 @@ function countryDiseaseEntries(
   meta: SitemapMeta,
   loadCountry?: (code: string) => unknown | null,
   limit = 50,
+  loadDirectory?: (code: string) => CountryDirectory | null,
 ): SitemapEntry[] {
-  if (!loadCountry) return [];
+  if (!loadCountry && !loadDirectory) return [];
   const candidates: Array<{ path: string; lastmod?: string; score: number }> = [];
   for (const country of meta.countries ?? []) {
     const code = pathSegment(country.code, true);
     if (!code || !hasCountryDataSnapshot(country)) continue;
-    const data = loadCountry(code) as Record<string, any> | null;
+    if (loadDirectory) {
+      const summary = loadDirectory(code);
+      for (const candidate of summary?.candidates ?? []) candidates.push({
+        path: `/countries/${code}/diseases/${candidate.slug}/`, score: candidate.score,
+        lastmod: normalizeSitemapDate(summary?.generated_at),
+      });
+      continue;
+    }
+    const data = loadCountry!(code) as Record<string, any> | null;
     const sourceUrls = [
       data?.source_info?.primary_url,
       ...(data?.source_info?.sources ?? []).map((source: any) => source?.url),
@@ -235,6 +247,8 @@ export function buildSitemapGroups({
   loadDisease,
   loadKnowledge,
   loadCountry,
+  loadCountryDirectory,
+  loadDiseaseDirectory,
   countryDiseaseLimit = 50,
   situation,
   research,
@@ -249,7 +263,7 @@ export function buildSitemapGroups({
     diseases: [],
     countries: [],
     reports: [],
-    'country-diseases': countryDiseaseEntries(meta, loadCountry, countryDiseaseLimit),
+    'country-diseases': countryDiseaseEntries(meta, loadCountry, countryDiseaseLimit, loadCountryDirectory),
     situation: [],
     research: [],
   };
@@ -360,10 +374,11 @@ export function buildSitemapGroups({
   if (Array.isArray(diseases)) {
     for (const disease of diseases as SitemapDisease[]) {
       const slug = toSeoSlug(disease?.slug);
-      if (!slug || !diseaseIsIndexable(disease, loadDisease, loadKnowledge)) continue;
       const id = typeof disease.disease_id === 'string' ? disease.disease_id.toLowerCase() : '';
-      const data = id && loadDisease ? loadDisease(id) as Record<string, any> | null : null;
-      const knowledge = id && loadKnowledge ? loadKnowledge(id) as Record<string, any> | null : null;
+      const summary = loadDiseaseDirectory && id ? loadDiseaseDirectory(id) : null;
+      if (!slug || !(summary ? summary.indexable : diseaseIsIndexable(disease, loadDisease, loadKnowledge))) continue;
+      const data = summary ?? (id && loadDisease ? loadDisease(id) as Record<string, any> | null : null);
+      const knowledge = summary ?? (id && loadKnowledge ? loadKnowledge(id) as Record<string, any> | null : null);
       const lastmod = normalizeSitemapDate(data?.generated_at ?? knowledge?.knowledge_updated_at) ?? siteLastmod;
       groups.diseases.push(...localizedEntry(`/diseases/${slug}/`, lastmod));
     }
@@ -372,7 +387,7 @@ export function buildSitemapGroups({
   for (const country of meta.countries ?? []) {
     const code = pathSegment(country.code, true);
     if (!code || !hasCountryDataSnapshot(country)) continue;
-    const data = loadCountry?.(code) as Record<string, any> | null;
+    const data = loadCountryDirectory ? loadCountryDirectory(code) : loadCountry?.(code) as Record<string, any> | null;
     groups.countries.push(...localizedEntry(
       `/countries/${code}/`,
       normalizeSitemapDate(data?.generated_at) ?? siteLastmod,

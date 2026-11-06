@@ -1,12 +1,37 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { articlePaths, finalizeResearchSnapshot, mergeAstroAssetTree, planResearchBuild, replaceAstroAssetCache, reusedAssetReferencesAvailable } from './research-build-cache.mjs';
+import { articlePaths, finalizeResearchSnapshot, mergeAstroAssetTree, planResearchBuild, replaceAstroAssetCache, reusedAssetReferencesAvailable, summarizeBuildPlan } from './research-build-cache.mjs';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
+
+test('incremental finalization preserves unchanged cache files and repairs missing or changed bundles', t => {
+  const root = mkdtempSync(join(tmpdir(), 'gids-finalize-reuse-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const outputRoot = join(root, 'dist');
+  const pageCache = join(root, 'pages');
+  const targetManifest = join(root, 'manifest.json');
+  mkdirSync(outputRoot);
+  writeFileSync(join(outputRoot, 'index.html'), '<main>one</main>');
+  const snapshot = { schema: 1, shared: 'one', articles: { page: { fingerprint: 'one', paths: ['index.html'] } } };
+  const options = { outputRoot, pageCache, targetManifest, sourcePending: join(root, 'pending.json') };
+  const finalize = reused => finalizeResearchSnapshot({ ...structuredClone(snapshot), reusedKeys: reused }, options);
+  finalize([]);
+  const cached = join(pageCache, 'index.html');
+  const original = statSync(cached, { bigint: true });
+  finalize(['page']);
+  assert.equal(statSync(cached, { bigint: true }).ctimeNs, original.ctimeNs);
+  rmSync(cached);
+  finalize(['page']);
+  assert.equal(readFileSync(cached, 'utf8'), '<main>one</main>');
+  writeFileSync(join(outputRoot, 'index.html'), '<main>two</main>');
+  finalize(['page']);
+  assert.equal(readFileSync(cached, 'utf8'), '<main>two</main>');
+  assert.equal(JSON.parse(readFileSync(targetManifest)).articles.page.files['index.html'], hash('<main>two</main>'));
+});
 
 test('selects only changed article bundles and rebuilds when shared inputs change', () => {
   const root = mkdtempSync(join(tmpdir(), 'gids-research-cache-'));
@@ -29,9 +54,17 @@ test('selects only changed article bundles and rebuilds when shared inputs chang
       beta: { fingerprint: 'new-beta', paths: articlePaths('beta', true) },
     } };
     assert.deepEqual(planResearchBuild({ incremental: true, snapshot, previous, outputRoot: root }).selected, ['beta']);
+    assert.deepEqual(planResearchBuild({ incremental: true, snapshot, previous, outputRoot: root }).reasons,
+      { alpha: 'reused', beta: 'inputs' });
     assert.deepEqual(planResearchBuild({ incremental: true, snapshot: { ...snapshot, shared: 'new' }, previous, outputRoot: root }).selected, ['alpha', 'beta']);
     rmSync(join(root, articlePaths('alpha', true)[0]));
     assert.deepEqual(planResearchBuild({ incremental: true, snapshot, previous, outputRoot: root }).selected, ['alpha', 'beta']);
+    assert.equal(planResearchBuild({ incremental: true, snapshot, previous, outputRoot: root }).reasons.alpha, 'missing-output');
+    writeFileSync(join(root, articlePaths('alpha', true)[0]), 'damaged');
+    assert.equal(planResearchBuild({ incremental: true, snapshot, previous, outputRoot: root }).reasons.alpha, 'damaged-output');
+    const removed = planResearchBuild({ incremental: true, snapshot: { ...snapshot, articles: {} }, previous, outputRoot: root });
+    assert.deepEqual(removed.removed, ['alpha', 'beta']);
+    assert.equal(summarizeBuildPlan(removed).removed, 2);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -114,5 +147,32 @@ test('reused HTML is rejected when a referenced client asset is missing', () => 
     mkdirSync(join(root, '_astro'));
     writeFileSync(join(root, '_astro/client.abc.js'), 'export {};');
     assert.equal(reusedAssetReferencesAvailable(plan, root), true);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('finalized asset references survive reuse and still reject missing assets', () => {
+  const root = mkdtempSync(join(tmpdir(), 'gids-cached-asset-references-'));
+  try {
+    const outputRoot = join(root, 'dist');
+    const pageCache = join(root, 'pages');
+    const targetManifest = join(root, 'manifest.json');
+    mkdirSync(join(outputRoot, '_astro'), { recursive: true });
+    writeFileSync(join(outputRoot, 'index.html'), '<script src="/_astro/client.js"></script>');
+    writeFileSync(join(outputRoot, '_astro/client.js'), 'export {};');
+    const snapshot = { schema: 1, shared: 'one', articles: { page: { fingerprint: 'one', paths: ['index.html'] } } };
+    finalizeResearchSnapshot(structuredClone(snapshot), {
+      outputRoot, pageCache, targetManifest, sourcePending: join(root, 'pending.json'),
+    });
+    const plan = planResearchBuild({ incremental: true, snapshot, outputRoot: pageCache,
+      previous: JSON.parse(readFileSync(targetManifest, 'utf8')) });
+    assert.deepEqual(plan.reused, ['page']);
+    assert.deepEqual(plan.assetReferences.page['index.html'], ['client.js']);
+    assert.equal(reusedAssetReferencesAvailable(plan, outputRoot), true);
+    rmSync(join(outputRoot, '_astro/client.js'));
+    assert.equal(reusedAssetReferencesAvailable(plan, outputRoot), false);
+    finalizeResearchSnapshot({ ...snapshot, articles: {} }, {
+      outputRoot, pageCache, targetManifest, sourcePending: join(root, 'pending.json'),
+    });
+    assert.equal(existsSync(join(pageCache, 'index.html')), false);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

@@ -4,6 +4,7 @@ import ReportLayout from '../../../layouts/ReportLayout.astro';
 import { buildAlternatePaths, type SeoDocument } from '../../../lib/seo';
 import { weeklyDiff } from '../../../components/situation/text';
 import { listMonths, weeksOfMonth } from '../../../utils/international';
+import { shouldBuildPage } from '../../../lib/page-build-plan';
 import { translateUi } from '../../../utils/i18n';
 
 export function getStaticPaths() {
@@ -11,7 +12,7 @@ export function getStaticPaths() {
   return months.map((month, index) => ({
     params: { period: month },
     props: { reportPeriod: month, locale: 'en', previous: months[index - 1], next: months[index + 1] },
-  }));
+  })).filter(entry => shouldBuildPage(`situation-month:${entry.params.period}`));
 }
 
 const { reportPeriod, previous, next, locale = 'en' } = Astro.props as { reportPeriod?: string; previous?: string; next?: string; locale?: 'en' | 'zh' | 'fr' };

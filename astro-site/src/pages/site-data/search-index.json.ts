@@ -1,5 +1,5 @@
+import { readResearchIndex } from '../../lib/generated-site-data.ts';
 import type { APIRoute } from 'astro';
-import researchRaw from '../../data/research/index.json';
 import { diseaseIndex, indexableDiseases, publishableReports, siteMeta } from '../../lib/seo-page-data';
 import { localizedDiseaseName } from '../../utils/diseaseNames';
 import { articleHref, siteHref } from '../../lib/papers';
@@ -78,7 +78,7 @@ export const GET: APIRoute = () => {
     });
   }
 
-  const research: any = researchRaw;
+  const research: any = readResearchIndex();
   for (const article of [...(research.articles ?? []), ...(research.preprints ?? [])]) {
     if (article.indexable === false || !article.slug) continue;
     const summaryEn = article.why_it_matters_en ?? article.summary?.en?.gids_interpretation ?? article.summary?.en?.main_findings;

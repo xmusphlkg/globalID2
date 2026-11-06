@@ -151,7 +151,47 @@ export function filterResearchFeedArticles(
   });
 }
 
-export function buildResearchFeedDefinitions(data: ResearchFeedData): ResearchFeedDefinition[] {
+export type ResearchFeedSelector = (scope?: ResearchFeedScope, value?: string) => ResearchFeedArticle[];
+
+/** Build each normalized membership once instead of filtering the entire
+ * catalogue separately for every facet and language. The result is a snapshot;
+ * call again when source data changes. Returned arrays can be sorted safely. */
+export function createResearchFeedSelector(data: ResearchFeedData): ResearchFeedSelector {
+  const articles = filterResearchFeedArticles(data);
+  const groups = new Map<string, ResearchFeedArticle[]>();
+  const add = (scope: ResearchFeedScope, value: string, article: ResearchFeedArticle) => {
+    const key = `${scope}:${value}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(article);
+  };
+  const reviews = new Set((data.reviews_and_guidelines ?? []).map(articleIdentity).filter(Boolean));
+  for (const article of articles) {
+    const memberships: Array<[ResearchFeedScope, unknown[]]> = [
+      ['diseases', (article.diseases ?? []).flatMap(item => [item.slug, item.disease_id])],
+      ['countries', (article.countries ?? []).flatMap(item => [item.slug, item.code])],
+      ['topics', (article.topics ?? []).map(item => item.slug ?? item.name)],
+      ['study-types', [article.study_type]],
+      ['peer-review', [normalizePeerReviewStatus(article.peer_review_status)]],
+    ];
+    for (const [scope, values] of memberships) {
+      for (const value of new Set(values.map(toResearchFeedSlug).filter((item): item is string => Boolean(item)))) add(scope, value, article);
+    }
+    if (reviews.has(articleIdentity(article)) || isReviewOrGuideline(article)) add('collections', 'reviews-and-guidelines', article);
+  }
+  const preprints = filterResearchFeedArticles(data, 'peer-review', 'preprint');
+  return (scope, rawValue) => {
+    if (!scope) return [...articles];
+    let value = toResearchFeedSlug(rawValue);
+    if (!value) return [];
+    if (scope === 'peer-review') {
+      if (preprintValues.has(value)) return [...preprints];
+      if (peerReviewedValues.has(value)) value = 'peer-reviewed';
+    }
+    return [...(groups.get(`${scope}:${value}`) ?? [])];
+  };
+}
+
+export function buildResearchFeedDefinitions(data: ResearchFeedData, select: ResearchFeedSelector = createResearchFeedSelector(data)): ResearchFeedDefinition[] {
   const definitions = new Map<string, Omit<ResearchFeedDefinition, 'count'>>();
   const add = (scope: ResearchFeedScope, rawValue: unknown, rawLabel: unknown, rawLabelZh?: unknown, rawLabelFr?: unknown) => {
     const value = toResearchFeedSlug(rawValue);
@@ -195,7 +235,7 @@ export function buildResearchFeedDefinitions(data: ResearchFeedData): ResearchFe
 
   return [...definitions.values()].map(definition => ({
     ...definition,
-    count: filterResearchFeedArticles(data, definition.scope, definition.value).length,
+    count: select(definition.scope, definition.value).length,
   }));
 }
 
@@ -239,12 +279,14 @@ export function renderResearchFeedXml({
   site,
   limit = 50,
   language = 'en',
+  selectArticles = (scope, value) => filterResearchFeedArticles(data, scope, value),
 }: {
   data: ResearchFeedData;
   definition?: ResearchFeedDefinition | null;
   site: URL | string;
   limit?: number;
   language?: ResearchFeedLanguage;
+  selectArticles?: ResearchFeedSelector;
 }): string {
   const origin = site instanceof URL ? site : new URL(site);
   const localePrefix = language === 'fr' ? '/fr' : language === 'zh' ? '/zh' : '';
@@ -256,7 +298,7 @@ export function renderResearchFeedXml({
   const feedDescription = definition
     ? language === 'fr' ? `Publications sur les maladies infectieuses filtrées par ${label}.` : language === 'zh' ? `按${label}筛选的已发表传染病文献。` : `Published infectious-disease literature filtered to ${label}.`
     : language === 'fr' ? 'Métadonnées de la littérature sur les maladies infectieuses et résumés GIDS contrôlés par la qualité.' : language === 'zh' ? '传染病文献元数据及通过质量门禁的 GIDS 证据摘要。' : 'Published infectious-disease literature metadata and quality-gated GIDS evidence summaries.';
-  const articles = sortedArticles(filterResearchFeedArticles(data, definition?.scope, definition?.value))
+  const articles = sortedArticles(selectArticles(definition?.scope, definition?.value))
     .slice(0, Math.max(0, limit));
   const items = articles.map(article => {
     const slug = text(article.slug);

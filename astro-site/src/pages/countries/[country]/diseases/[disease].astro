@@ -8,6 +8,7 @@ import InternationalNoticePanel from '../../../../components/InternationalNotice
 import { readAlertsForCountryPage, recentAlerts } from '../../../../utils/international';
 import { buildChartSourceMeta } from '../../../../utils/chartMeta';
 import { countryDiseaseCandidates } from '../../../../lib/seo-page-data';
+import { shouldBuildPage } from '../../../../lib/page-build-plan';
 import { downloadCatalogue } from '../../../../lib/downloads-data';
 import {
   buildAlternatePaths,
@@ -20,9 +21,10 @@ import { localizedDiseaseName } from '../../../../utils/diseaseNames';
 import { localizedRegionName } from '../../../../utils/i18n';
 
 export function getStaticPaths() {
-  return countryDiseaseCandidates().map(candidate => ({
+  return countryDiseaseCandidates()
+    .filter(candidate => shouldBuildPage(`country-disease:${candidate.code}:${candidate.slug}`)).map(candidate => ({
     params: { country: candidate.code, disease: candidate.slug },
-    props: { ...candidate, countryCode: candidate.code, diseaseSlug: candidate.slug, locale: 'en' },
+    props: { countryCode: candidate.code, diseaseSlug: candidate.slug, locale: 'en' },
   }));
 }
 

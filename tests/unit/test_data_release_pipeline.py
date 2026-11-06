@@ -261,7 +261,7 @@ async def test_pipeline_local_only_success_preserves_stage_order(tmp_path, monke
     assert commands == ([] if resume else expected_commands)
     if not resume:
         assert timeouts[0] == pipeline.SITUATION_ROOM_REFRESH_TIMEOUT_SECONDS
-        assert command_envs["Build Astro Site"]["NODE_OPTIONS"] == "--max-old-space-size=6144"
+        assert command_envs["Build Astro Site"]["NODE_OPTIONS"] == "--max-old-space-size=12288"
     assert progress == ([5, 15, 60, 88, 100] if resume else [5, 15, 22, 35, 45, 60, 88, 100])
     assert output["release_timing"]["within_target"]
     assert output["direct_downloads_published"] is False

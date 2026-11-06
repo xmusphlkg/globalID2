@@ -36,9 +36,10 @@ const {
   stage = false,
 } = Astro.props;
 
-const siteReleaseId = import.meta.env.PUBLIC_GIDS_RELEASE_ID?.trim() || 'development';
-const siteSourceCommit = import.meta.env.PUBLIC_GIDS_SOURCE_COMMIT?.trim() || '';
-const siteDeploymentBranch = import.meta.env.PUBLIC_GIDS_DEPLOY_BRANCH?.trim() || '';
+// Publication identity is stamped onto the three homepages after rendering.
+const siteReleaseId = 'development';
+const siteSourceCommit = '';
+const siteDeploymentBranch = '';
 const siteBase = siteOriginOverride ?? Astro.site?.toString() ?? Astro.url.origin;
 const canonicalURL = absoluteSiteUrl(seo?.canonicalPath ?? Astro.url.pathname, siteBase);
 const audiencePixel = `https://stats.globalinfectiousdisease.com/api/track?pixel=1&path=${encodeURIComponent(canonicalURL.pathname)}`;

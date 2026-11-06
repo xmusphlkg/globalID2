@@ -1,9 +1,10 @@
+import { readResearchIndex } from '../../lib/generated-site-data.ts';
 import type { APIRoute } from 'astro';
-import researchData from '../../data/research/index.json';
 
 export const prerender = true;
 
-const graph: any = (researchData as any).knowledge_graph ?? { nodes: [], edges: [] };
+export const GET: APIRoute = () => {
+const graph: any = (readResearchIndex() as any).knowledge_graph ?? { nodes: [], edges: [] };
 
 // Export only fields the public graph UI consumes. The source graph also
 // carries indexing metadata that belongs in the catalogue, not in every graph
@@ -23,9 +24,11 @@ const edges: any[] = (graph.edges ?? []).map((edge: any) => ({
   ...(edge.provenance ? { provenance: edge.provenance } : {}),
 }));
 
-export const GET: APIRoute = () => new Response(JSON.stringify({ nodes, edges }), {
+return new Response(JSON.stringify({ nodes, edges }), {
   headers: {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'public, max-age=0, must-revalidate',
   },
 });
+
+};

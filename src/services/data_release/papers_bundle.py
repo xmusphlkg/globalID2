@@ -16,6 +16,9 @@ from urllib.parse import urlparse
 
 from .bundle_assets import copy_bundle_assets
 from .artifact_index import ArtifactIndex
+from .build_fingerprints import BuildFingerprints
+from .artifact_paths import artifact_files, relative_key
+from .bundle_html_workers import rewrite_changed_pages
 
 DEFAULT_MAIN_SITE_ORIGIN = "https://globalinfectiousdisease.com"
 DEFAULT_PAPERS_ORIGIN = "https://papers.globalinfectiousdisease.com"
@@ -320,10 +323,9 @@ def build_papers_manifest(
     files: list[dict[str, object]] = []
     index = artifact_index or ArtifactIndex(papers_dir)
     if papers_dir.is_dir():
-        for path in sorted(papers_dir.rglob("*")):
-            if not path.is_file() or path == papers_dir / "papers-manifest.json":
+        for relative, path in artifact_files(papers_dir):
+            if relative == "papers-manifest.json":
                 continue
-            relative = path.relative_to(papers_dir).as_posix()
             key = _object_key_for_papers(relative)
             digests = index.describe(path)
             public_path = f"/{key}" if key else "/"
@@ -360,6 +362,7 @@ def split_papers_bundle(
 
     papers_dir.mkdir(parents=True, exist_ok=True)
     index = ArtifactIndex(papers_dir)
+    fingerprints = BuildFingerprints(index)
     manifest_path = papers_dir / "papers-manifest.json"
     try:
         previous_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -374,37 +377,35 @@ def split_papers_bundle(
     sources: dict[str, str] = {}
     expected: set[Path] = set()
     reused_html = 0
+    pending_html = []
 
     moved: list[str] = []
-    for path in sorted(dist_dir.rglob("*")):
-        if not path.is_file():
-            continue
-        relative = path.relative_to(dist_dir).as_posix()
+    for relative, path in artifact_files(dist_dir):
         if not is_papers_relative_path(relative):
             continue
         destination = papers_dir / relative
         expected.add(destination)
         destination.parent.mkdir(parents=True, exist_ok=True)
         if relative.endswith(".html"):
-            body = path.read_bytes()
-            source_hash = hashlib.sha256(body).hexdigest()
+            source_hash = fingerprints.sha256(path)
             sources[relative] = source_hash
             cached = previous.get(relative) or {}
             if (cached.get("source_sha256") == source_hash and destination.is_file()
                     and index.describe(destination)["sha256"] == cached.get("sha256")):
                 reused_html += 1
+                path.unlink()
             else:
-                index.write(destination,
-                    rewrite_papers_html(
-                        body.decode("utf-8"),
-                        main_origin=main_origin,
-                        papers_origin=papers_origin,
-                    ).encode("utf-8"),
-                )
-            path.unlink()
+                pending_html.append((path, destination, source_hash))
         else:
-            shutil.move(str(path), str(destination))
+            source_hash = fingerprints.sha256(path)
+            if destination.is_file() and index.describe(destination)["sha256"] == source_hash:
+                path.unlink()
+            else:
+                shutil.move(str(path), str(destination))
         moved.append(relative)
+
+    rewrite_changed_pages(pending_html, index, kind="papers",
+                          origins={"main_origin": main_origin, "papers_origin": papers_origin})
 
     # Astro emits the papers host's own robots.txt and sitemap.xml under
     # dist/papers-host/; they belong at the root of the papers host.
@@ -413,7 +414,7 @@ def split_papers_bundle(
         for path in sorted(host_dir.rglob("*")):
             if not path.is_file():
                 continue
-            relative = path.relative_to(host_dir).as_posix()
+            relative = relative_key(path, host_dir)
             destination = papers_dir / relative
             expected.add(destination)
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -422,7 +423,7 @@ def split_papers_bundle(
 
     assets = copy_bundle_assets(dist_dir, papers_dir, [path for path in expected if path.suffix == ".html"], artifact_index=index)
     expected.update(assets)
-    current_assets = sorted(path.relative_to(papers_dir).as_posix() for path in assets)
+    current_assets = sorted(relative_key(path, papers_dir) for path in assets)
     generations = [current_assets]
     generations.extend(group for group in previous_manifest.get("asset_generations", []) if group != current_assets)
     generations = generations[:2]
