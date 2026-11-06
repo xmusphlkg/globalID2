@@ -49,7 +49,8 @@ async def execute_reports_release(service, task, *, runtime):
     old_index = json.loads(old_index_path.read_text()) if old_index_path.is_file() else []
     try:
         await runtime.task_manager.update_task_progress(task.task_uuid, 5)
-        await run("Export Reports Data", [str(python), "scripts/generate_site_data.py", "--reports-only"], stage_name="reports_export", timeout=runtime.generate_timeout_seconds)
+        async with runtime.read_snapshot() as snapshot_env:
+            await run("Export Reports Data", [str(python), "scripts/generate_site_data.py", "--reports-only"], stage_name="reports_export", environment=snapshot_env, timeout=runtime.generate_timeout_seconds)
         new_index = paths[0] / "index.json"
         if not new_index.is_file():
             raise RuntimeError("Reports export did not produce an index")

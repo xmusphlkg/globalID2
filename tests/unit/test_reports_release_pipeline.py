@@ -25,12 +25,26 @@ async def test_reports_release_skips_public_verification_and_keeps_local_data(tm
         async def commit(self): pass
     @asynccontextmanager
     async def database(): yield Database()
+    snapshot_open = False
+    @asynccontextmanager
+    async def read_snapshot():
+        nonlocal snapshot_open
+        snapshot_open = True
+        try:
+            yield {"GLOBALID_RELEASE_DB_SNAPSHOT": "00000003-0000001B-1"}
+        finally:
+            snapshot_open = False
     async def run(_task_uuid, *, title, **kwargs):
         commands.append((title, kwargs))
         if title == "Export Reports Data":
+            assert snapshot_open
+            assert kwargs["env"]["GLOBALID_RELEASE_DB_SNAPSHOT"] == "00000003-0000001B-1"
             (paths[0] / "old.json").write_text("new")
             if fail_at == "empty index":
                 (paths[0] / "index.json").write_text("[]")
+        else:
+            assert not snapshot_open
+            assert "GLOBALID_RELEASE_DB_SNAPSHOT" not in kwargs["env"]
         if title == fail_at:
             raise RuntimeError("injected failure")
     config = SimpleNamespace(r2_reports_public_base_url="https://reports.test", r2_reports_bucket="reports",
@@ -44,7 +58,8 @@ async def test_reports_release_skips_public_verification_and_keeps_local_data(tm
         _run_logged_command=run)
     manager = SimpleNamespace(update_task_progress=AsyncMock(), add_workbook_entry=AsyncMock())
     runtime = SimpleNamespace(root_dir=tmp_path, astro_dir=astro, task_manager=manager, get_database=database,
-        task_model=object, generate_timeout_seconds=60, astro_build_timeout_seconds=60, download_publish_timeout_seconds=60)
+        task_model=object, generate_timeout_seconds=60, astro_build_timeout_seconds=60, download_publish_timeout_seconds=60,
+        read_snapshot=read_snapshot)
     task = SimpleNamespace(id=1, task_uuid="f49f0575-09b8-4d00-82b7-0e79b4056ae8", input_data={"release_job_id": "site-release"})
     if fail_at and fail_at != "Verify Reports Host":
         with pytest.raises(RuntimeError, match="empty|injected failure"):
