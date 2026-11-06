@@ -102,21 +102,22 @@ class TWMonthlyUpdater:
         country_code: str = "TW",
         source_name: str = DEFAULT_SOURCE_NAME,
         output_csv: Path = DEFAULT_OUTPUT_CSV,
+        include_current_month: bool = False,
+        refresh_recent_months: int = 3,
     ) -> None:
         self.country_code = country_code.upper()
         self.source_name = source_name
         self.output_csv = output_csv
+        self.include_current_month = include_current_month
+        self.refresh_recent_months = max(1, min(24, int(refresh_recent_months)))
 
-    @staticmethod
-    def _default_recent_months() -> List[Tuple[int, int]]:
-        now = datetime.now()
+    def _default_recent_months(self, *, as_of: Optional[date] = None) -> List[Tuple[int, int]]:
+        now = as_of or datetime.now().date()
         months_to_fetch: List[Tuple[int, int]] = []
-        for delta in range(3):
-            month = now.month - delta
-            year = now.year
-            if month <= 0:
-                month += 12
-                year -= 1
+        first_delta = 0 if self.include_current_month else 1
+        for delta in range(first_delta, first_delta + self.refresh_recent_months):
+            year, month_zero = divmod(now.year * 12 + now.month - 1 - delta, 12)
+            month = month_zero + 1
             months_to_fetch.append((year, month))
         return sorted(set(months_to_fetch))
 

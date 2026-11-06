@@ -882,7 +882,30 @@ class CrawlService:
         if kwargs["fill_missing"] and not config.supports_fill_missing:
             raise ValueError(f"{country_code} publishes a complete snapshot; fill_missing is not supported")
         updater, task = kwargs["updater"], kwargs["task"]
-        months = await _months_to_fetch(config, updater, fill_missing=kwargs["fill_missing"], force=kwargs["force"], get_database=get_database)
+        task_input = task.input_data or {}
+        if country_code == "TW":
+            now = datetime.now()
+            current = (now.year, now.month)
+            recent = updater._default_recent_months(as_of=now.date())
+            scheduled = bool(task_input.get("scheduled_trigger")) and not bool(task_input.get("manual_trigger"))
+            if kwargs["fill_missing"] and (not scheduled or kwargs["force"]):
+                raw_start = task_input.get("start_year")
+                if raw_start is not None:
+                    try:
+                        start_year = int(raw_start)
+                    except (TypeError, ValueError) as exc:
+                        raise ValueError("TW start_year must be a valid year") from exc
+                    if not config.start_year <= start_year <= now.year:
+                        raise ValueError(f"TW start_year must be between {config.start_year} and {now.year}")
+                    config = replace(config, start_year=start_year)
+                planned = await _months_to_fetch(config, updater, fill_missing=True, force=kwargs["force"], get_database=get_database)
+                months = sorted(set(recent) | {month for month in planned if updater.include_current_month or month < current})
+            else:
+                months = recent
+                if scheduled and kwargs["fill_missing"]:
+                    logger.warning("TW scheduled refresh covers only the recent revision window; historical gaps remain unverified and require an explicit backfill")
+        else:
+            months = await _months_to_fetch(config, updater, fill_missing=kwargs["fill_missing"], force=kwargs["force"], get_database=get_database)
         options = {"months": months, "output_csv": updater.output_csv}
         if country_code == "AU":
             options.update(country_code=updater.country_code, include_current_month=updater.include_current_month, refresh_recent_months=updater.refresh_recent_months)
