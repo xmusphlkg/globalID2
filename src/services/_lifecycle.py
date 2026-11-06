@@ -89,6 +89,17 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
         if await task_manager.is_cancel_requested(task.task_uuid):
             raise TaskCancelledError("Cancellation requested by user")
         await task_manager.update_task_status(task.task_uuid, TaskStatus.COMPLETED)
+        if task.task_type == TaskType.EXPORT_DATA:
+            try:
+                await data_release_service.mark_automatic_retry_succeeded(task.task_uuid)
+            except Exception as exc:
+                # A metadata update must not turn a completed publication into
+                # a failed one or cause its remote side effects to repeat.
+                logger.warning(
+                    "Failed to finalize release retry metadata for {}: {}",
+                    task.task_uuid,
+                    exc,
+                )
         if task.task_type == TaskType.CRAWL_DATA:
             try:
                 await automation_service.mark_automatic_retry_succeeded(

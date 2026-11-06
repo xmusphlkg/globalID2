@@ -310,6 +310,53 @@ def test_controlled_restart_requeues_only_resumable_tasks(monkeypatch):
     ]
 
 
+def test_restart_interrupts_resumable_work_but_drains_active_crawl(monkeypatch):
+    calls = []
+
+    async def fake_requeue(task_uuid, owner, reason):
+        calls.append((task_uuid, owner))
+        return True
+
+    async def fake_workbook(*_args, **_kwargs):
+        pass
+
+    monkeypatch.setattr(task_worker.task_manager, "requeue_owned_task_lease", fake_requeue)
+    monkeypatch.setattr(task_worker.task_manager, "add_workbook_entry", fake_workbook)
+
+    async def exercise():
+        crawl_finished = asyncio.Event()
+        ai_started = asyncio.Event()
+        crawl_started = asyncio.Event()
+
+        async def ai_work():
+            ai_started.set()
+            await asyncio.Event().wait()
+
+        async def crawl_work():
+            crawl_started.set()
+            await crawl_finished.wait()
+            return "crawl completed"
+
+        ai = asyncio.create_task(ai_work())
+        crawl = asyncio.create_task(crawl_work())
+        await ai_started.wait()
+        await crawl_started.wait()
+        interrupted = await task_worker._interrupt_resumable_tasks_for_restart(
+            {ai, crawl},
+            {ai: "ai-task", crawl: "crawl-task"},
+            {ai: TaskType.ENRICH_LITERATURE, crawl: TaskType.CRAWL_DATA},
+            "worker-1",
+        )
+        assert interrupted == {ai}
+        assert ai.cancelled()
+        assert not crawl.done()
+        crawl_finished.set()
+        assert await crawl == "crawl completed"
+
+    asyncio.run(exercise())
+    assert calls == [("ai-task", "worker-1")]
+
+
 def test_controlled_restart_keeps_requested_cancellation_terminal(monkeypatch):
     now = datetime.now(timezone.utc)
     task = SimpleNamespace(

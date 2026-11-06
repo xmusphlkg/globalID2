@@ -20,6 +20,9 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Fixed
 
+- Preserve collection cancellation semantics, drain failed literature-provider and enrichment requests, and keep non-resumable jobs running during controlled worker shutdown. Retry model work on another eligible route when possible and record otherwise-empty timeout errors.
+- Mark a recovered release's retry metadata as succeeded while retaining its historical failure details.
+- Bound control-panel shutdown when long-lived event streams prevent Next.js from exiting during a service restart.
 - Cross-country download updates replace only selected countries and preserve other countries' verified published rows, including source observations and explicitly counted legacy projections. Disease input fingerprints now use country dependency summaries rather than serializing entire cross-country histories.
 - Control-panel publication preflight allows bounded Git/Cloudflare probes to finish instead of aborting after the ordinary 10-second read timeout.
 - Surveillance downloads retain complete observation provenance instead of replacing it with lossy public-curve snapshots. Missing untouched download artifacts fail explicitly rather than publishing broken manifest entries.

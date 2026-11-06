@@ -1009,14 +1009,19 @@ class BaseAgent(ABC):
         # 所有模型都失败
         self.model = original_model
 
-        logger.error(f"All models failed for agent '{self.name}': {last_error}")
+        # TimeoutError and other exceptions may have an empty string
+        # representation; preserve the class in task logs and retry records.
+        failure_detail = str(last_error).strip() if last_error is not None else ""
+        if not failure_detail and last_error is not None:
+            failure_detail = type(last_error).__name__
+        logger.error(f"All models failed for agent '{self.name}': {failure_detail}")
         if not attempted_models:
             raise NoModelAvailable(
                 f"Agent completion failed: no model route could take the request for agent '{self.name}' (all cooling down, rate limited or removed)"
             )
         raise Exception(
-            f"Agent completion failed after trying models {attempted_models}: {last_error}"
-        )
+            f"Agent completion failed after trying models {attempted_models}: {failure_detail}"
+        ) from last_error
 
     async def _complete_with_runtime_route(
         self,

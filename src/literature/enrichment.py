@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import re
+import sys
 from typing import Any
 
 from sqlalchemy import func, or_, select
@@ -713,9 +714,31 @@ class LiteratureEnrichmentPipeline:
                                 provider_auth_failure_count += 1
                             errors.append({"article_id": article.article_id, "language": language, "error": str(exc)[:500]})
                     finally:
-                        await record_progress()
+                        original_error = sys.exception()
+                        try:
+                            await record_progress()
+                        except Exception as progress_error:
+                            if original_error is None:
+                                raise
+                            logger.warning(
+                                "Could not record literature progress while propagating an existing error: {}",
+                                progress_error,
+                            )
 
-        await asyncio.gather(*(process_article(index, article) for index, article in enumerate(articles)))
+        # gather propagates the first failure without cancelling its siblings.
+        # A failed parent must not leave article tasks writing to the database
+        # or calling models after its lifecycle has already ended.
+        article_tasks = [
+            asyncio.create_task(process_article(index, article))
+            for index, article in enumerate(articles)
+        ]
+        try:
+            await asyncio.gather(*article_tasks)
+        except BaseException:
+            for article_task in article_tasks:
+                article_task.cancel()
+            await asyncio.gather(*article_tasks, return_exceptions=True)
+            raise
         await task_manager.update_task_progress(task.task_uuid, 100)
         automation = None
         if self.config.autopilot_enabled:

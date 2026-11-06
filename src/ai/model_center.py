@@ -124,7 +124,8 @@ async def record_model_call_log(
     model response into an application failure.
     """
     route = route or {}
-    error_message = _SECRET_VALUE_RE.sub(r"\1[REDACTED]", str(error))[:1000] if error else None
+    error_text = (str(error).strip() or type(error).__name__) if error is not None else None
+    error_message = _SECRET_VALUE_RE.sub(r"\1[REDACTED]", error_text)[:1000] if error_text else None
     try:
         async with get_db() as db:
             db.add(
@@ -2503,7 +2504,7 @@ async def record_route_runtime_failure(
         return {"recorded": False, "reason": "route_has_no_persistent_ids"}
 
     now = _utcnow()
-    message = str(error or "")[:1000]
+    message = (str(error).strip() or type(error).__name__)[:1000]
     async with get_db() as db:
         model = await db.get(AIModelConfig, model_id, with_for_update=True)
         if model is None:

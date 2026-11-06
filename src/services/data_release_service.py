@@ -547,6 +547,51 @@ class DataReleaseService:
             )
         return scheduled
 
+    async def mark_automatic_retry_succeeded(self, task_uuid: str) -> bool:
+        """Close a prior failure record after the same release succeeds.
+
+        Both automatic and operator-initiated retries reuse the original task.
+        Keep the original failure details for diagnosis, but do not leave a
+        completed release advertised as a terminal or queued retry.
+        """
+        changed = False
+        async with get_database() as db:
+            task = (
+                await db.execute(
+                    select(Task).where(Task.task_uuid == task_uuid).with_for_update()
+                )
+            ).scalar_one_or_none()
+            if (
+                task is None
+                or task.task_type != TaskType.EXPORT_DATA
+                or task.status != TaskStatus.COMPLETED
+            ):
+                return False
+            metadata = dict(task.metadata_ or {})
+            retry = dict(metadata.get("automatic_retry") or {})
+            if retry.get("status") in {"scheduled", "queued", "terminal"}:
+                completed_at = _as_aware_utc(getattr(task, "completed_at", None))
+                retry.update({
+                    "status": "succeeded",
+                    "succeeded_at": (completed_at or datetime.now(ZoneInfo("UTC"))).isoformat(),
+                    "next_attempt_at": None,
+                    "exhausted": False,
+                })
+                metadata["automatic_retry"] = retry
+                task.metadata_ = metadata
+                await db.commit()
+                changed = True
+        if changed:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="success",
+                title="Release Retry Recovered",
+                content="The same release task completed after an earlier failure.",
+                content_type="text",
+                metadata={"event": "release_retry_succeeded"},
+            )
+        return changed
+
     async def requeue_due_automatic_retries(
         self,
         *,

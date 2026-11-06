@@ -606,6 +606,24 @@ async def test_per_route_timeout_falls_through_to_next_model(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_single_route_timeout_retains_error_type_and_cause(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [runtime_route("slow-model")], raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
+    agent = TimeoutFallbackAgent()
+    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
+
+    with pytest.raises(Exception, match="TimeoutError") as raised:
+        await agent._complete_transport(
+            prompt="hello", system="system", model_request_timeout_seconds=0.01,
+            max_attempts_per_model=1, max_quota_recovery_rounds=0,
+            wait_for_model_recovery=False,
+        )
+
+    assert isinstance(raised.value.__cause__, TimeoutError)
+
+
+@pytest.mark.asyncio
 async def test_runtime_request_timeout_starts_after_model_center_admission(monkeypatch):
     agent = AdmissionBoundaryAgent(name="AdmissionBoundary", model="dummy", provider="dummy")
 

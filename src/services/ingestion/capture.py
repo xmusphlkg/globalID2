@@ -82,6 +82,12 @@ class SourceCapture:
                     metadata={"media_type": media_type},
                 )
             return await run_artifact_io(read_artifact, artifact)
+        except asyncio.CancelledError:
+            # Cancellation can stop an optional source request after its
+            # siblings fail or while a worker is shutting down. The writer
+            # finishes (or reports an actual persistence error) before it
+            # propagates cancellation; no parser receives incomplete bytes.
+            raise
         except BaseException as exc:
             if self.error is None:
                 self.error = exc

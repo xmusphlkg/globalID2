@@ -14,6 +14,7 @@ import json
 import random
 import tempfile
 from collections import defaultdict, deque
+from collections.abc import Mapping
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -677,7 +678,7 @@ async def claim_work(
     route: dict[str, Any],
     *,
     now: datetime | None = None,
-    alternatives: set[str] | None = None,
+    alternatives: set[str] | Mapping[str, list[str]] | None = None,
 ) -> AIWorkItem | None:
     """Atomically reserve a remaining route permit and highest-priority due item."""
     if not route.get("available_for_routing"):
@@ -714,7 +715,9 @@ async def claim_work(
                     AIWorkItem.id,
                     rank.label("priority_rank"),
                     AIWorkItem.created_at,
+                    AIWorkItem.capability,
                     AIWorkItem.payload["avoid_models"].label("avoid_models"),
+                    AIWorkItem.payload["last_failed_route"].label("last_failed_route"),
                 )
                 .where(*due)
                 .order_by(rank, AIWorkItem.created_at, AIWorkItem.id)
@@ -728,7 +731,11 @@ async def claim_work(
             if not page:
                 return None
             for candidate in page:
-                if not _route_accepts_work(key, candidate.avoid_models, alternatives):
+                if not _route_accepts_work(
+                    key, candidate.avoid_models,
+                    _capable_alternatives(alternatives, candidate.capability),
+                    candidate.last_failed_route,
+                ):
                     continue
                 # A different route may have leased this candidate after the
                 # metadata scan. Only the selected row is locked, and SKIP
@@ -745,7 +752,9 @@ async def claim_work(
                     )
                 ).scalar_one_or_none()
                 if item is None or not _route_accepts_work(
-                    key, item.payload.get("avoid_models"), alternatives
+                    key, item.payload.get("avoid_models"),
+                    _capable_alternatives(alternatives, item.capability),
+                    item.payload.get("last_failed_route"),
                 ):
                     continue
                 item.status = "leased"
@@ -759,18 +768,34 @@ async def claim_work(
             cursor = (last.priority_rank, last.created_at, last.id)
 
 
+def _capable_alternatives(
+    alternatives: set[str] | Mapping[str, list[str]] | None, capability: str,
+) -> set[str] | None:
+    """Only routes able to execute this work may justify deferring it."""
+    if isinstance(alternatives, Mapping):
+        return {key for key, capabilities in alternatives.items() if capability in capabilities}
+    return alternatives
+
+
 def _route_accepts_work(
-    key: str, avoid_models: list[str] | None, alternatives: set[str] | None
+    key: str, avoid_models: list[str] | None, alternatives: set[str] | None,
+    last_failed_route: str | None = None,
 ) -> bool:
     avoided = set(avoid_models or ())
-    if key not in avoided and key.split(":", 1)[-1] not in avoided:
-        return True
     # With one route, self-review can proceed. With another healthy route,
     # preserve the work for that route and keep scanning lower-priority items.
-    return not any(
+    alternative_available = any(
         other != key and other not in avoided and other.split(":", 1)[-1] not in avoided
         for other in (alternatives or set())
     )
+    if key in avoided or key.split(":", 1)[-1] in avoided:
+        return not alternative_available
+    # A single transient timeout may not open the route-wide circuit. On the
+    # next attempt, prefer a different currently idle and eligible route; do
+    # not stall when it is the only route or all alternatives are avoided.
+    if key == last_failed_route and alternative_available:
+        return False
+    return True
 
 
 class AIWorkDispatcher:
@@ -850,6 +875,10 @@ class AIWorkDispatcher:
                 current.route_key = None
                 if cooling or current.attempt < MAX_ATTEMPTS:
                     current.status = "queued"
+                    if not refused:
+                        payload = dict(current.payload or {})
+                        payload["last_failed_route"] = str(route.get("model_key") or "") or None
+                        current.payload = payload
                     # Route cooldown belongs to the route; another healthy route
                     # must be able to consume this item immediately.
                     current.available_at = _now()
@@ -1005,7 +1034,7 @@ class AIWorkDispatcher:
             # now. A full route is no alternative: waiting for it would leave
             # this permit idle while the item sits queued.
             idle = {
-                r["model_key"]
+                r["model_key"]: r.get("capabilities") or ["text"]
                 for r, weight in zip(routes, weights)
                 if weight > 0
             }

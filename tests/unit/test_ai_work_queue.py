@@ -84,6 +84,70 @@ async def test_cooling_route_leaves_item_queued_for_other_route(db):
     assert (await queue.claim_work(route("second"))).id == work_id
 
 
+async def test_retry_prefers_another_idle_route_after_transient_failure(db):
+    work_id = await add()
+    live = [route(), route("second")]
+
+    async def routes():
+        return live
+
+    async def complete(item, chosen):
+        if chosen["model_key"] == "first":
+            raise TimeoutError()
+        return "recovered"
+
+    dispatcher = queue.AIWorkDispatcher(routes, complete)
+    first = await queue.claim_work(live[0])
+    await dispatcher._execute(first, live[0])
+    waiting = await row(db, work_id)
+    assert (waiting.status, waiting.attempt, waiting.payload["last_failed_route"]) == (
+        "queued", 2, "first"
+    )
+    assert await queue.claim_work(live[0], alternatives={"first", "second"}) is None
+    second = await queue.claim_work(live[1], alternatives={"first", "second"})
+    assert second.id == work_id
+    await dispatcher._execute(second, live[1])
+    assert (await row(db, work_id)).status == "succeeded"
+
+
+@pytest.mark.parametrize("alternatives,avoid", [
+    ({"first"}, []),
+    ({"first", "second"}, ["second"]),
+])
+async def test_failed_route_can_retry_when_no_eligible_alternative(db, alternatives, avoid):
+    work_id = await queue.enqueue_work(
+        parent_task_uuid="parent", line="knowledge_brief", priority="low",
+        payload={"avoid_models": avoid, "last_failed_route": "first"},
+    )
+    assert (await queue.claim_work(route(), alternatives=alternatives)).id == work_id
+
+
+@pytest.mark.parametrize("payload", [
+    {"last_failed_route": "first"},
+    {"avoid_models": ["first"]},
+])
+async def test_incompatible_idle_route_does_not_starve_vision_work(db, monkeypatch, payload):
+    work_id = await queue.enqueue_work(
+        parent_task_uuid="parent", line="knowledge_brief", priority="low",
+        payload=payload, capability="vision",
+    )
+    vision = {**route(), "capabilities": ["vision"]}
+    text_only = {**route("second"), "capabilities": ["text"]}
+
+    async def routes():
+        return [vision, text_only]
+
+    async def complete(item, chosen):
+        assert chosen["model_key"] == "first"
+        return "recovered"
+
+    monkeypatch.setattr(queue.random, "choices", lambda options, weights: [options[0]])
+    dispatcher = queue.AIWorkDispatcher(routes, complete)
+    assert await dispatcher.tick() == 1
+    await asyncio.gather(*dispatcher.active.values())
+    assert (await row(db, work_id)).status == "succeeded"
+
+
 async def test_no_routable_routes_never_fail_parent_or_work(db):
     work_id = await add()
 

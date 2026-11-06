@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta, timezone
@@ -1116,7 +1117,10 @@ class LiteraturePipeline:
             await self._finish_run(run_uuid, "failed", error=type(exc).__name__ or "Exception")
             raise
         finally:
-            capture.__exit__(None, None, None)
+            # Preserve an in-flight cancellation or collection exception.
+            # Passing a successful exit here causes capture verification to
+            # replace it with an unrelated persistence failure.
+            capture.__exit__(*sys.exc_info())
 
     async def _enrich_candidates(self, candidates: list[ArticleCandidate]) -> dict[str, Any]:
         """Apply optional enrichers independently without blocking core ingestion."""

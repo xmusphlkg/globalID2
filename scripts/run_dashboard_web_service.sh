@@ -82,6 +82,15 @@ if [[ "$needs_build" == "1" ]]; then
   "$NPM_BIN" run build
 fi
 
+# Preserve the server's Node options without applying preload hooks or opening
+# debugger ports in the supervisor too. The build above keeps its original env.
+if [[ ${NODE_OPTIONS+x} ]]; then
+  export GLOBALID_DASHBOARD_CHILD_NODE_OPTIONS="$NODE_OPTIONS"
+else
+  unset GLOBALID_DASHBOARD_CHILD_NODE_OPTIONS
+fi
+unset NODE_OPTIONS
+
 standalone_app=""
 standalone_entry="server.js"
 if [[ -f ".next/standalone/dashboard/server.js" ]]; then
@@ -118,7 +127,12 @@ if [[ -f ".next/standalone/$standalone_entry" ]]; then
 
   export HOSTNAME="$DASHBOARD_HOST"
   export PORT="$DASHBOARD_PORT"
-  exec "$NODE_BIN" "$release_dir/$standalone_entry"
+  exec "$NODE_BIN" "$ROOT_DIR/scripts/dashboard_web_supervisor.cjs" \
+    "$NODE_BIN" "$release_dir/$standalone_entry"
 fi
 
-exec "$NPM_BIN" run start -- --hostname "$DASHBOARD_HOST" --port "$DASHBOARD_PORT"
+# package.json's start script is "next start". Invoke the same CLI directly so
+# the supervisor can wait for and, if necessary, stop the actual server process.
+exec "$NODE_BIN" "$ROOT_DIR/scripts/dashboard_web_supervisor.cjs" \
+  "$NODE_BIN" "$DASHBOARD_DIR/node_modules/next/dist/bin/next" start \
+  --hostname "$DASHBOARD_HOST" --port "$DASHBOARD_PORT"

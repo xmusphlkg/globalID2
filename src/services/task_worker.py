@@ -520,6 +520,29 @@ async def _requeue_interrupted_tasks_for_restart(
     return requeued
 
 
+async def _interrupt_resumable_tasks_for_restart(
+    active_tasks: set[asyncio.Task[None]],
+    task_uuids: dict[asyncio.Task[None], str],
+    task_types: dict[asyncio.Task[None], TaskType],
+    worker_instance_id: str,
+) -> set[asyncio.Task[None]]:
+    """Cancel only tasks whose owned lease can safely return to the queue."""
+    interrupted = [
+        (task, task_uuids.get(task), task_types.get(task))
+        for task in active_tasks
+        if task_uuids.get(task) and task_types.get(task) in GRACEFUL_REQUEUE_TASK_TYPES
+    ]
+    for task, _task_uuid, _task_type in interrupted:
+        task.cancel()
+    await asyncio.gather(*(task for task, _task_uuid, _task_type in interrupted), return_exceptions=True)
+    requeued = await _requeue_interrupted_tasks_for_restart(
+        [(task_uuid, task_type) for _task, task_uuid, task_type in interrupted],
+        worker_instance_id,
+    )
+    logger.info("Requeued {} interrupted resumable task(s) after controlled restart", requeued)
+    return {task for task, _task_uuid, _task_type in interrupted}
+
+
 async def _recover_stale_tasks(
     stop_event: asyncio.Event, worker_instance_id: str
 ) -> None:
@@ -709,6 +732,7 @@ async def run_worker() -> None:
     model_center_was_routable: bool | None = None
     idle_ticks = 0
     shutdown_deadline: float | None = None
+    shutdown_grace_handled = False
     while not stop_event.is_set() or active_tasks:
         if not stop_event.is_set():
             await ai_concurrency.refresh()
@@ -716,7 +740,7 @@ async def run_worker() -> None:
             if model_center_is_routable and model_center_was_routable is not True:
                 await _resume_knowledge_repairs_after_model_recovery()
             model_center_was_routable = model_center_is_routable
-        elif shutdown_deadline is None:
+        elif shutdown_deadline is None and not shutdown_grace_handled:
             shutdown_deadline = time.monotonic() + SHUTDOWN_GRACE_SECONDS
             logger.info(
                 "Worker is draining {} active task(s) for up to {}s before restart",
@@ -767,32 +791,22 @@ async def run_worker() -> None:
             if done:
                 idle_ticks = 0
             if shutdown_deadline is not None and time.monotonic() >= shutdown_deadline and active_tasks:
-                interrupted = [
-                    (task, active_task_uuids.get(task), active_task_types.get(task))
-                    for task in active_tasks
-                ]
+                interrupted = await _interrupt_resumable_tasks_for_restart(
+                    active_tasks, active_task_uuids, active_task_types, instance_id,
+                )
+                active_tasks.difference_update(interrupted)
+                for task in interrupted:
+                    active_task_types.pop(task, None)
+                    active_task_uuids.pop(task, None)
                 logger.warning(
-                    "Worker shutdown grace period elapsed; interrupting {} resumable task(s)",
-                    len(interrupted),
+                    "Worker shutdown grace period elapsed; waiting for {} non-resumable task(s) to finish",
+                    len(active_tasks),
                 )
-                for task, _task_uuid, _task_type in interrupted:
-                    task.cancel()
-                await asyncio.gather(*(task for task, _task_uuid, _task_type in interrupted), return_exceptions=True)
-                requeued = await _requeue_interrupted_tasks_for_restart(
-                    [
-                        (task_uuid, task_type)
-                        for _task, task_uuid, task_type in interrupted
-                        if task_uuid and task_type is not None
-                    ],
-                    instance_id,
-                )
-                logger.warning(
-                    "Requeued {} interrupted resumable task(s) after controlled restart",
-                    requeued,
-                )
-                active_tasks.clear()
-                active_task_types.clear()
-                active_task_uuids.clear()
+                # Non-resumable work keeps its lease and heartbeat until it
+                # finishes (or the service manager's stop timeout expires).
+                # Clear the deadline so waiting does not become a busy loop.
+                shutdown_deadline = None
+                shutdown_grace_handled = True
             continue
 
         idle_ticks += 1
