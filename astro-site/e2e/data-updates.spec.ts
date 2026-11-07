@@ -12,7 +12,7 @@ test('shows real published events, filters channels, and loads monthly archives'
   await page.route('**/site-data/current.json', route => route.fulfill({ status: 404 }));
   await page.route('**/site-data/meta.json', route => route.fulfill({ json: { total_countries: 294, total_diseases: 239, countries: [{ data_available: true, record_count: 180 }, { data_available: true, record_count: 220 }] } }));
   await page.goto('/zh/data-updates/');
-  await expect(page.getByRole('heading', { name: '网站与数据更新' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '网站与数据更新', level: 1, exact: true })).toBeVisible();
   await expect(page.getByText('294', { exact: true })).toBeVisible();
   await expect(page.getByText('400', { exact: true })).toBeVisible();
   await expect(page.getByText('91', { exact: true })).toBeVisible();
