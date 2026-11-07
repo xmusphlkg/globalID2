@@ -21,7 +21,7 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Changed
 
-- Release jobs can reuse verified, already split site artifacts across task IDs when rendering inputs and outputs are unchanged; release identity is stamped after rendering. Data changes still rebuild affected pages. Default rendering concurrency is 8, with source checks running alongside rendering and SEO page checks using multiple CPU cores before global catalogue validation. Bundle asset-reference parsing uses independent reader processes while manifests and routing retain one writer.
+- Static template and content releases reuse verified split artifacts when inputs and outputs are unchanged; release identity is stamped after rendering. Surveillance and Situation JSON changes publish independently. Astro shares one prerender process by default with page concurrency 8; source checks and bounded SEO readers run alongside rendering while manifests and routing retain one writer.
 - Large generated research and country JSON is read as build data instead of imported into Vite/TypeScript, keeping it outside the compilation graph.
 
 - Build planning persists compact country/disease directories and shares verified summaries with static rendering. Unchanged histories are no longer repeatedly parsed for ranking, aliases or indexability, and candidate links load full records only when rendering their detail pages.
@@ -42,6 +42,7 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Fixed
 
+- French country/disease surveillance titles retain their full country suffix within the SEO title limit; full disease names remain visible in the page heading.
 - Weekly Situation pages use source-notice dates for publication metadata instead of treating every map export as a historical-page modification. Country/disease ranking discards losing candidates during selection, and sitemap directories avoid unbounded full-history retention that exhausted the 6 GiB Astro heap.
 - SEO validation detaches retained title and canonical strings from full HTML documents to keep catalogue audits within the bounded checker heap.
 - Taiwan NIDSS collection bounds retries and export windows during TLS outages, limits manual historical backfills to 12 missing months per task, preserves transport provenance, and excludes unverified historical zeroes and observations outside reviewed series validity.
