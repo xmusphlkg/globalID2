@@ -9,6 +9,7 @@ import { hasCountryDataSnapshot } from '../src/lib/country-coverage.ts';
 import { toSeoSlug } from '../src/lib/seo.ts';
 import { buildPublishableReports } from '../src/lib/report-routes.ts';
 import { addSituationPages } from './situation-build-cache.mjs';
+import { prerenderSituationJson } from '../src/lib/situation-build-mode.ts';
 import { cacheRoot, siteRoot, sharedFingerprint, planResearchBuild, finalizeResearchSnapshot, reportDiseaseTemplate } from './research-build-cache.mjs';
 
 export const pageManifestPath = resolve(cacheRoot, 'site-page-manifest.json');
@@ -25,7 +26,7 @@ const safeSegment = value => {
   return segment;
 };
 
-export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), shared = sharedFingerprint(), reportDiseaseTemplateHash = hashFile(reportDiseaseTemplate), directoryCachePath, directoryStats } = {}) {
+export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), shared = sharedFingerprint(), reportDiseaseTemplateHash = hashFile(reportDiseaseTemplate), directoryCachePath, directoryStats, env = process.env } = {}) {
   const graph = createSourceDependencyFingerprinter({ siteRoot });
   const templates = new Map();
   const routeTemplates = {
@@ -54,7 +55,7 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
     }
     pages[key] = { fingerprint: sha(JSON.stringify([templates.get(group), ...dependencies])), paths: paths ?? localePaths(path) };
   };
-  addSituationPages({ dataRoot, add, hashFile });
+  addSituationPages({ dataRoot, add, hashFile, env });
   const routes = json(resolve(dataRoot, 'research/routes.json'), {});
   const facets = routes.facets ?? json(resolve(dataRoot, 'research/index.json'), {}).facets ?? {};
   for (const [group, facetGroup] of Object.entries({ countries: 'countries', diseases: 'diseases', topics: 'topics', weekly: 'weeks' })) {
@@ -158,7 +159,7 @@ export function pageSourceSnapshot({ dataRoot = resolve(siteRoot, 'src/data'), s
   directory.save();
   if (directoryStats) Object.assign(directoryStats, directory.stats);
   // Reuse the bundle integrity planner, including all three locale outputs.
-  return { schema: 1, shared: sha(`${shared}:${hashFile(new URL(import.meta.url))}:${hashFile(new URL('./situation-build-cache.mjs', import.meta.url))}:${directoryFactsVersion()}`), articles: pages };
+  return { schema: 1, shared: sha(`${shared}:${hashFile(new URL(import.meta.url))}:${hashFile(new URL('./situation-build-cache.mjs', import.meta.url))}:situation-json=${prerenderSituationJson(env)}:${directoryFactsVersion()}`), articles: pages };
 }
 
 export function planSitePages(snapshot, incremental) {

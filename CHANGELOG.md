@@ -4,8 +4,6 @@ This file records release-level changes to the GIDS application and its data ope
 
 ## [Unreleased]
 
-- Knowledge catalogue quality assessment yields between diseases so realtime JSON publication, cancellation and worker heartbeats can progress during governance reconciliation without changing catalogue results.
-
 ## [0.18.0] - 2026-11-07
 
 ### Added
@@ -44,6 +42,8 @@ This file records release-level changes to the GIDS application and its data ope
 
 ### Fixed
 
+- Knowledge catalogue quality assessment yields between diseases so realtime JSON publication, cancellation and worker heartbeats can progress during governance reconciliation without changing catalogue results.
+- Situation runtime JSON routes and static cache planning share the same mode predicate. Pages deployments no longer require or restore outbreak JSON that belongs to the independent data channel; legacy and standalone builds retain their static output.
 - French country/disease surveillance titles retain their full country suffix within the SEO title limit; full disease names remain visible in the page heading.
 - Weekly Situation pages use source-notice dates for publication metadata instead of treating every map export as a historical-page modification. Country/disease ranking discards losing candidates during selection, and sitemap directories avoid unbounded full-history retention that exhausted the 6 GiB Astro heap.
 - SEO validation detaches retained title and canonical strings from full HTML documents to keep catalogue audits within the bounded checker heap.

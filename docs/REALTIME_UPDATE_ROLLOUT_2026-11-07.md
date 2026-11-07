@@ -52,6 +52,13 @@ Advanced Mode：每次模板构建携带 `_worker.js` 与 `_routes.json`，普�
 本次迁移静态任务设置 `suppress_subscription_dispatch=true`，只执行站点与数据发布。
 已有独立订阅配置不随此次切换修改。
 
+第二轮通过 SEO、多语言和性能门后，缓存收尾仍要求已迁往 Worker 的 outbreak JSON，
+因此同样在上传前停止。路由和缓存计划现复用唯一模式判断；带两个疫情分组的回归
+验证 legacy 继续缓存，而 Pages 模式能够收尾并且不会恢复旧 JSON。
+现场监测另发现知识目录批量质量评估占住 worker 事件循环；线程栈确认根因后，
+按病种让出执行权，目录结果完全不变，数据回调、心跳和取消可以及时推进。
+该后台调度修复通过 151 项知识相关回归，使用平滑重启加载。
+
 ## 上线验收
 
 1. API `/health/live`、`/health/ready` 返回 200；scheduler、worker 和监测 timer 正常运行。
